@@ -29,7 +29,7 @@ function inheritedWorkspacePolicy(request: NativeSdkChildRuntimeRequest): Sandbo
 function policyFor(request: NativeSdkChildRuntimeRequest, home: string): SandboxPolicy | undefined {
   if (request.parentPolicy.mode === 'danger-full-access' && request.builtinTools.includes('write_file')) return undefined
   return inheritedWorkspacePolicy(request) ?? {
-    mode: 'workspace-write',
+    mode: 'read-only',
     workspaceRoot: home,
     sessionId: request.parentSessionId,
   }
@@ -115,7 +115,8 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
               enforcement = 'unconfined'
             } else {
               const childArgv = [runtime.command, ...runtime.args]
-              const confined = sandbox.confine(childArgv, policy)
+              const cwd = await realpath(runtime.cwd ?? request.cwd)
+              const confined = sandbox.confineChildProcess(childArgv, policy, { cwd, privateHome: home })
               argv = confined.argv
               enforcement = confined.enforcement
             }

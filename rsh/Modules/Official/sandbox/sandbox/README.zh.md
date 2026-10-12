@@ -91,6 +91,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`SandboxProvider` 服务、模式/强制执行/策略类型、故障关闭错误 |
+| [`src/native.ts`](src/native.ts) | 仅供 Host 使用的 `ProcessSandbox` 服务与 child 路径类型 |
 | [`src/escalation.ts`](src/escalation.ts) | 升权词汇：更宽模式阶梯、参数校验、拒绝与提示标记、审批编排 |
 | [`src/roots.ts`](src/roots.ts) | 仅供 Host 使用的 `./roots` 出口：Seatbelt profile 与进程内 fs 栅栏共享的可写根目录推导 |
 | — | 不发布运行时不变式伴生入口；除所属 seam 强制执行的约定外，本包不公开独立的事件序列或可变数据关系。 |
@@ -120,7 +121,7 @@ kind: "package-reference"
 
 -----
 
-仅供 Host 使用的 `./native` 出口为原生组合声明 `ProcessSandbox`，并导出与 Cordis 服务共用的策略、升级授权、路径规则、执行器诊断和不可用错误。它是 Definition，不是安装器；组合必须选择提供 `sandbox` 的 backend。
+仅供 Host 使用的 `./native` 出口为原生组合声明 `ProcessSandbox`，并导出与 Cordis 服务共用的策略、升级授权、路径规则、执行器诊断和不可用错误。`confineChildProcess()` 会暴露所选 `cwd`；除非既有策略授权包含该路径，否则它为只读，并将 launcher 所有的 `privateHome` 作为唯一额外的调用方可写路径；既有授权（包括 backend 管理的临时路径）继续生效。自定义 `runnerCommand` 依赖本地 backend 现有的 bwrap 兼容操作方断言。它是 Definition，不是安装器；组合必须选择提供 `sandbox` 的 backend。
 
 <a id="model-experience"></a>
 ## 模型体验

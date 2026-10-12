@@ -5,8 +5,9 @@ import type {
   NativeModeControls, NativePermissionControls, NativeSessionClient,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import { SESSION_FORMAT_VERSION, type SessionId } from '@deepseek-ai/dsh-session/types'
-import { NativeConversationController } from '../src/controller.ts'
-import { ModelControls } from '../src/model-controls.tsx'
+import { NativeConversationController, type ConversationSnapshot } from '../src/controller.ts'
+import type { ConversationLocaleKey } from '../src/locales.ts'
+import { ModelControls, ModelPickerControl } from '../src/model-controls.tsx'
 import { en } from '../src/locales.ts'
 
 const controllers: NativeConversationController[] = []
@@ -84,4 +85,25 @@ it.each(['mode', 'plan', 'permission'] as const)('routes the %s composer control
     })
     expect(controller.getSnapshot().permissionControls?.currentValue).toBe('read-only')
   }
+})
+
+it('keeps initial catalog failures retryable before a Session is selected', async () => {
+  const snapshot: ConversationSnapshot = {
+    sessions: [], events: [], state: 'ready', error: 'catalog offline',
+  }
+  const refreshModelControls = vi.fn(async () => undefined)
+  const t = (key: ConversationLocaleKey, params?: Record<string, unknown>): string =>
+    key === 'error.action' ? `Failed: ${String(params?.message)}` : key
+
+  render(<ModelPickerControl snapshot={snapshot} selectModel={async () => undefined}
+    refreshModelControls={refreshModelControls} t={t} />)
+
+  const trigger = screen.getByRole<HTMLButtonElement>('button', { name: 'trigger.selectAria' })
+  expect(trigger.disabled).toBe(false)
+  fireEvent.click(trigger)
+  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
+  expect(await screen.findByText('Failed: catalog offline')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'retry' }))
+
+  expect(refreshModelControls).toHaveBeenCalledTimes(2)
 })

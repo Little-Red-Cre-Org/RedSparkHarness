@@ -26,6 +26,28 @@ import { MockAdapter, textResponse } from '../../../../../Engine/core/agent-loop
 import { plugin as carrierPlugin, NativeAcpApplication } from '../src/native.ts'
 
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
+const instructionPrompt = 'ACP_INSTRUCTIONS_FIRST_TURN_3af85d'
+const resumedInstructionPrompt = 'ACP_INSTRUCTIONS_COLD_RESTORE_3af85d'
+const workspaceInstruction = 'ACP_WORKSPACE_INSTRUCTIONS_3af85d'
+const globalInstruction = 'ACP_GLOBAL_INSTRUCTIONS_3af85d'
+
+function modelRequestText(value: unknown): string {
+  if (typeof value !== 'object' || value === null || !('messages' in value) || !Array.isArray(value.messages)) return ''
+  return value.messages.flatMap((message: unknown) => {
+    if (typeof message !== 'object' || message === null || !('role' in message) || message.role !== 'user' || !('content' in message)) return []
+    if (typeof message.content === 'string') return [message.content]
+    if (!Array.isArray(message.content)) return []
+    return message.content.flatMap((block: unknown) => typeof block === 'object' && block !== null
+      && 'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : [])
+  }).join('\n')
+}
+
+function launchAcp(home: string, patch: string) {
+  return execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
+    cwd: home, env: { DSH_HOME: home, NATIVE_ACP_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+    reject: false, timeout: 30_000, killSignal: 'SIGKILL',
+  })
+}
 
 async function failedClose(home: string): Promise<void> {
   const scope = new NativeScope()
@@ -207,6 +229,10 @@ async function failedClose(home: string): Promise<void> {
 
 it('admits ordered ACP images, rejects malformed data, restores history and drains cancellation and EOF', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-acp-lifecycle-'))
+  const instructionWorkspace = join(home, 'instruction-workspace')
+  await mkdir(join(instructionWorkspace, '.git'), { recursive: true })
+  await writeFile(join(instructionWorkspace, 'AGENTS.md'), `# Workspace fixture\n${workspaceInstruction}\n`)
+  await writeFile(join(home, 'AGENTS.md'), `# Isolated global fixture\n${globalInstruction}\n`)
   const entered = Promise.withResolvers<undefined>()
   let toolTurn = false
   let mcpCall: { name: string; arguments: string } | undefined
@@ -226,6 +252,13 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       const payload = JSON.parse(body) as { messages: readonly { role: string }[] }
       requests.push(payload)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
+      if (JSON.stringify(payload.messages).includes(instructionPrompt)) {
+        response.end([
+          { choices: [{ delta: { role: 'assistant', content: 'ACP workspace guidance received.' } }] },
+          { choices: [{ delta: {}, finish_reason: 'stop' }] },
+        ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+        return
+      }
       if (toolTurn) {
         const events = payload.messages.at(-1)?.role === 'tool'
           ? [{ choices: [{ delta: { role: 'assistant', content: 'permission tool settled' } }] },
@@ -250,29 +283,30 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_ACP_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
-  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
-    cwd: home, env: { DSH_HOME: home, NATIVE_ACP_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
-    reject: false, timeout: 30_000, killSignal: 'SIGKILL',
-  })
-  const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
-  transport.onNotification((method, params) => { if (method === 'session/update') {
-    lastUpdate = params.update
-    sessionUpdates.push(params.update)
-  } })
-  transport.onRequest(async (method, params) => {
-    expect(method).toBe('session/request_permission')
-    expect(lastUpdate).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-call' })
-    expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
-    permissionRequests.push(params)
-    if (!holdPermission) return { outcome: { outcome: 'selected', optionId: 'unknown-grant' } }
-    permissionEntered.resolve(undefined)
-    try {
-      await permissionRelease.promise
-      return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
-    } finally { permissionSettled.resolve(undefined) }
-  })
+  let child = launchAcp(home, patch)
+  let transport = new JsonRpcLineTransport(child.stdout, child.stdin)
+  const bindTransport = (current: JsonRpcLineTransport): void => {
+    current.onNotification((method, params) => { if (method === 'session/update') {
+      lastUpdate = params.update
+      sessionUpdates.push(params.update)
+    } })
+    current.onRequest(async (method, params) => {
+      expect(method).toBe('session/request_permission')
+      expect(lastUpdate).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-call' })
+      expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
+      permissionRequests.push(params)
+      if (!holdPermission) return { outcome: { outcome: 'selected', optionId: 'unknown-grant' } }
+      permissionEntered.resolve(undefined)
+      try {
+        await permissionRelease.promise
+        return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
+      } finally { permissionSettled.resolve(undefined) }
+    })
+  }
+  bindTransport(transport)
   transport.start()
   const signal = AbortSignal.timeout(20_000)
+  let instructionSessionId: string | undefined
   const http = await startHttpMcpFixture()
   try {
     expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
@@ -359,6 +393,15 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await transport.request('session/close', { sessionId: stdioSession.sessionId }, signal)
     await transport.request('session/close', { sessionId: httpSession.sessionId }, signal)
     mcpCall = undefined
+    const instructionsSession = await transport.request('session/new', { cwd: instructionWorkspace, mcpServers: [] }, signal) as { sessionId: string }
+    instructionSessionId = instructionsSession.sessionId
+    const firstInstructionRequest = requests.length
+    expect(await transport.request('session/prompt', { sessionId: instructionsSession.sessionId,
+      prompt: [{ type: 'text', text: instructionPrompt }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(requests).toHaveLength(firstInstructionRequest + 1)
+    expect(modelRequestText(requests[firstInstructionRequest])).toContain(workspaceInstruction)
+    expect(modelRequestText(requests[firstInstructionRequest])).toContain(globalInstruction)
+    await transport.request('session/close', { sessionId: instructionsSession.sessionId }, signal)
     permissionEntered = Promise.withResolvers<undefined>()
     permissionRelease = Promise.withResolvers<undefined>()
     permissionSettled = Promise.withResolvers<undefined>()
@@ -369,12 +412,41 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal).catch((error: unknown) => error)
     child.stdin.end()
     const exit = await child
+    expect(exit.timedOut).toBe(false)
+    expect(exit.signal).toBeUndefined()
     expect(exit.exitCode, exit.stderr).toBe(0)
+    const firstProcessPid = child.pid
+    transport.close()
     await pending
     expect(await closingSelection).toBeInstanceOf(Error)
+
+    child = launchAcp(home, patch)
+    expect(child.pid).toBeDefined()
+    expect(child.pid).not.toBe(firstProcessPid)
+    transport = new JsonRpcLineTransport(child.stdout, child.stdin)
+    bindTransport(transport)
+    transport.start()
+    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
+      .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
+    await transport.request('session/resume', { sessionId: instructionSessionId, cwd: instructionWorkspace, mcpServers: [] }, signal)
+    const beforeColdPrompt = requests.length
+    expect(await transport.request('session/prompt', { sessionId: instructionSessionId,
+      prompt: [{ type: 'text', text: resumedInstructionPrompt }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(requests).toHaveLength(beforeColdPrompt + 1)
+    expect(modelRequestText(requests[beforeColdPrompt])).toContain(workspaceInstruction)
+    expect(modelRequestText(requests[beforeColdPrompt])).toContain(globalInstruction)
+    expect(modelRequestText(requests[beforeColdPrompt])).toContain(resumedInstructionPrompt)
+    await transport.request('session/close', { sessionId: instructionSessionId }, signal)
+    child.stdin.end()
+    const coldExit = await child
+    expect(coldExit.timedOut).toBe(false)
+    expect(coldExit.signal).toBeUndefined()
+    expect(coldExit.exitCode, coldExit.stderr).toBe(0)
+    transport.close()
+
     const paths = await readdir(join(home, 'sessions'), { recursive: true })
     const logs = await Promise.all(paths.filter(path => path.endsWith('session.v3.jsonl')).map(path => readFile(join(home, 'sessions', path), 'utf8')))
-    expect(logs).toHaveLength(4)
+    expect(logs).toHaveLength(5)
     const previous = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === created.sessionId)
     if (previous === undefined) throw new Error('durable ACP Session missing')
     const current = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === fresh.sessionId)
@@ -386,6 +458,28 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       .toMatchObject([{ outcome: 'rejected' }, { outcome: 'cancelled' }, { outcome: 'unavailable' }, { outcome: 'cancelled' }])
     expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)
     expect(events.at(-1)?.type).toBe('turn/end')
+    const instructionLog = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === instructionSessionId)
+    if (instructionLog === undefined) throw new Error('durable ACP instructions Session missing')
+    const instructionEvents = instructionLog.trim().split('\n').slice(1).map(line => JSON.parse(line) as {
+      type: string
+      data: { source?: { kind?: string }; content?: unknown }
+    }).filter(event => event.type === 'user/message' && event.data.source?.kind === 'agent-instructions')
+    expect(instructionEvents).toHaveLength(1)
+    const instructionText = Array.isArray(instructionEvents[0]?.data.content)
+      ? (instructionEvents[0].data.content as { type?: unknown; text?: unknown }[])
+        .flatMap(block => block.type === 'text' && typeof block.text === 'string' ? [block.text] : []).join('\n')
+      : ''
+    expect(instructionText).toContain(workspaceInstruction)
+    expect(instructionText).toContain(globalInstruction)
+    const instructionRequests = requests.filter(value => JSON.stringify(value).includes(instructionPrompt)) as {
+      messages: readonly { role: string; content: unknown }[]
+    }[]
+    expect(instructionRequests).toHaveLength(2)
+    for (const request of instructionRequests) {
+      const text = modelRequestText(request)
+      expect(text).toContain(instructionText)
+      expect(text.split(instructionText)).toHaveLength(2)
+    }
   } catch (error: unknown) {
     child.kill('SIGKILL')
     const exit = await child

@@ -42,10 +42,50 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Prepare Linux workspace-write sandbox
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
       - name: Build Web and desktop sources
         run: pnpm run build
       - name: Typecheck
         run: pnpm run typecheck:contracts-ready
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.10'
+      - name: Prepare keyless Python SDK runner
+        id: sdk-python
+        run: |
+          python -m pip install uv==0.11.23
+          if ($LASTEXITCODE -ne 0) { throw "Installing uv failed with exit code $LASTEXITCODE" }
+          $sdkPython = (& uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python -c "import sys; print(sys.executable)" | Select-Object -Last 1).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
+          "python=$sdkPython" >> $env:GITHUB_OUTPUT
+      - name: Native profile and pi-ai lifecycle regressions
+        run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts
+      - name: Native SDK and ACP workspace instructions regressions
+        run: >-
+          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
+          rsh/Programs/CLI/tests/profiles/native-sdk/native-sdk-dsh-child.e2e.ts
+          rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
+          && pnpm exec vitest run --config vitest.snapshot.config.ts
+          snapshots/native-sdk/scheduled-root-origin.snapshot.ts
+      - name: SDK child bwrap mount regressions
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
+          rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
+        env:
+          DSH_REQUIRE_BWRAP_E2E: '1'
+      - name: Windows SDK child operator path regression
+        if: runner.os == 'Windows'
+        run: >-
+          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
+          rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
+      - name: Python SDK workspace instructions replay
+        run: pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1 snapshots/native-sdk/scheduled-root-origin.snapshot.ts
+        env:
+          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions
         run: pnpm --filter @deepseek-ai/dsh-rsh test
       - name: RSH profile smoke

@@ -127,19 +127,21 @@ export function collectNativeEntryAliases(): NativeEntryAlias[] {
       if (exported === null || typeof exported !== 'object' || Array.isArray(exported)) continue
       const types = (exported as { types?: unknown }).types
       if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) continue
-      const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts'
+      const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length)
       const sourceRoot = resolve(packageDir, 'src')
-      const sourcePath = resolve(sourceRoot, sourceRelative)
+      const sourcePath = resolve(sourceRoot, sourceRelative + '.ts')
+      const sourceTsxPath = resolve(sourceRoot, sourceRelative + '.tsx')
+      const resolvedSourcePath = existsSync(sourcePath) ? sourcePath : sourceTsxPath
       const within = relative(sourceRoot, sourcePath)
       if (within.startsWith('..') || isAbsolute(within)) {
         throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' escapes its source directory')
       }
-      if (!existsSync(sourcePath)) {
+      if (!existsSync(resolvedSourcePath)) {
         throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' has no source ' + sourcePath)
       }
       aliases.push({
         specifier: name + entryName.slice(1),
-        source: './' + relativePath + '/src/' + sourceRelative.replaceAll('\\', '/'),
+        source: './' + relativePath + '/src/' + relative(sourceRoot, resolvedSourcePath).replaceAll('\\', '/'),
       })
     }
   }

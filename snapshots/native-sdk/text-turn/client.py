@@ -56,6 +56,8 @@ def serialized(result):
 if scheduled_origin:
     control_url = os.environ["NATIVE_SDK_SCHEDULED_ORIGIN_CONTROL_URL"]
     session_id = "sdk-scheduled-root-origin"
+    first_task = arguments[0]
+    restored_task = arguments[1]
 
     def endpoint(path, expected=None):
         request = Request(f"{control_url}/{path}", data=b"" if path == "start-origin" else None,
@@ -80,8 +82,9 @@ if scheduled_origin:
         initializing.start()
         endpoint("start-origin", "accepted")
         endpoint("await-origin-ready", "ready")
+        initializing.start_session(session_id).run(first_task)
     with DeepSeekHarness(config) as restored:
-        result = restored.start_session(session_id).run(task)
+        result = restored.start_session(session_id).run(restored_task)
         print(json.dumps({"run": serialized(result)}))
     raise SystemExit(0)
 

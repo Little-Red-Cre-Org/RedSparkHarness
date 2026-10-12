@@ -51,6 +51,12 @@ function runtimeFixture(stdoutText: string, exitCode: number, stderrText = '', o
       return { argv: [...argv], enforcement: 'partial', denialSignatures: [],
         runnerFailureRules: [{ fatalSignatures: ['fake-runner: unavailable'] }] }
     },
+    confineChildProcess: (argv: readonly string[], policy: { mode: string; workspaceRoot: string }) => {
+      observed.mode = policy.mode
+      observed.workspaceRoot = policy.workspaceRoot
+      return { argv: [...argv], enforcement: 'partial', denialSignatures: [],
+        runnerFailureRules: [{ fatalSignatures: ['fake-runner: unavailable'] }] }
+    },
   } as ProcessSandbox
   const policy = options.policy ?? new NativeSandboxPolicy({ mode: 'workspace-write', workspaceRoot: process.cwd() })
   const currentSession = options.session ?? makeSession()

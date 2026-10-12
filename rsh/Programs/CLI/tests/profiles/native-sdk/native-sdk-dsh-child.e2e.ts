@@ -14,6 +14,8 @@ const slowParentTask = 'SDK_CHILD_START_CANCEL_FIXTURE_3d0e8c'
 const slowChildTask = 'SDK_CHILD_START_CANCEL_CHILD_FIXTURE_3d0e8c'
 const readOnlyParentTask = 'SDK_CHILD_READ_ONLY_PARENT_FIXTURE_3d0e8c'
 const readOnlyChildTask = 'SDK_CHILD_READ_ONLY_CHILD_FIXTURE_3d0e8c'
+const readOnlyWorkspaceInstruction = 'SDK_CHILD_WORKSPACE_INSTRUCTIONS_3d0e8c'
+const readOnlyGlobalInstruction = 'SDK_CHILD_PARENT_GLOBAL_INSTRUCTIONS_3d0e8c'
 const directStepLimitTask = 'SDK_DIRECT_STEP_LIMIT_FIXTURE_3d0e8c'
 
 function finishModelResponse(response: ServerResponse, content: string,
@@ -62,6 +64,29 @@ function modelToolNames(value: unknown): string[] {
   })
 }
 
+function modelRequestText(value: unknown): string {
+  if (typeof value !== 'object' || value === null || !('messages' in value) || !Array.isArray(value.messages)) return ''
+  return value.messages.flatMap((message: unknown) => {
+    if (typeof message !== 'object' || message === null || !('role' in message) || message.role !== 'user' || !('content' in message)) return []
+    if (typeof message.content === 'string') return [message.content]
+    if (!Array.isArray(message.content)) return []
+    return message.content.flatMap((block: unknown) => typeof block === 'object' && block !== null
+      && 'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : [])
+  }).join('\n')
+}
+
+function instructionTexts(events: readonly unknown[]): string[] {
+  return events.flatMap((event: unknown) => {
+    if (typeof event !== 'object' || event === null || !('type' in event) || event.type !== 'user/message' || !('data' in event)) return []
+    const data = event.data
+    if (typeof data !== 'object' || data === null || !('source' in data) || typeof data.source !== 'object'
+      || data.source === null || !('kind' in data.source) || data.source.kind !== 'agent-instructions' || !('content' in data)) return []
+    if (!Array.isArray(data.content)) return []
+    return [data.content.flatMap((block: unknown) => typeof block === 'object' && block !== null
+      && 'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : []).join('\n')]
+  })
+}
+
 async function pathExists(path: string): Promise<boolean> {
   try { await access(path); return true }
   catch (error: unknown) {
@@ -95,6 +120,12 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
   let directCalls = 0
   let rootCalls = 0
   let readOnlyDelegationStarted = false
+  let childResult: {
+    readonly exitCode: number | undefined
+    readonly signal: NodeJS.Signals | undefined
+    readonly timedOut: boolean
+    readonly failed: boolean
+  } | undefined
   const server = createServer((request, response) => {
     let body = ''
     request.setEncoding('utf8')
@@ -150,8 +181,12 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
   const readOnlyPatch = join(home, 'read-only-parent.patch.json')
   const readOnlyHome = join(home, 'read-only-parent-home')
   const readOnlyWorkspace = join(home, 'read-only-workspace')
+  await mkdir(readOnlyHome, { recursive: true })
   await mkdir(readOnlyWorkspace, { recursive: true })
+  await mkdir(join(readOnlyWorkspace, '.git'))
   await writeFile(join(readOnlyWorkspace, 'readable.txt'), 'parent-readable-content')
+  await writeFile(join(readOnlyWorkspace, 'AGENTS.md'), `# Workspace fixture\n${readOnlyWorkspaceInstruction}\n`)
+  await writeFile(join(readOnlyHome, 'AGENTS.md'), `# Parent-only global fixture\n${readOnlyGlobalInstruction}\n`)
   const providerPatch = { id: 'pi-ai', config: { providers: { 'deepseek-official': {
     apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions', baseURL, models: [{ id: 'sdk-child-fixture' }],
   } } } }
@@ -189,13 +224,16 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     }
   })
   child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
-  void child.then(() => { exited = true }, () => { exited = true })
+  void child.then((result) => {
+    childResult = { exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, failed: result.failed }
+    exited = true
+  }, () => { exited = true })
   const receive = async (predicate: (frame: Record<string, unknown>) => boolean): Promise<Record<string, unknown>> => {
     const deadline = Date.now() + 30_000
     for (;;) {
       const index = frames.findIndex(predicate)
       if (index >= 0) return frames.splice(index, 1)[0]!
-      if (exited) throw new Error(`native SDK child profile exited early: ${stderr}`)
+      if (exited) throw new Error(`native SDK child profile exited early: ${JSON.stringify({ stderr, childResult, frames, partialOutput: buffer })}`)
       if (Date.now() > deadline) throw new Error(`native SDK child profile timed out: ${JSON.stringify({
         stderr, rootCalls, childCalls, directCalls, rootRequestCount: rootRequests.length,
         childRequestCount: childRequests.length,
@@ -361,9 +399,27 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
       expect(await receiveReadOnly(frame => frame.id === 2)).toMatchObject({ result: { messageId: expect.any(String) as unknown } })
       await readOnlyChildRequest.promise
       const noWriterHome = (await childHomes(runnerTempRoot))[0]
-      expect(noWriterHome).toBeDefined()
+      if (noWriterHome === undefined) throw new Error('read-only child DSH_HOME was not observed')
       expect(modelToolNames(childRequests[2])).toContain('read_file')
       expect(modelToolNames(childRequests[2])).not.toContain('write_file')
+      const childInstructionRequest = childRequests.find(value => JSON.stringify(value).includes(readOnlyChildTask))
+      expect(JSON.stringify(childInstructionRequest)).toContain(readOnlyWorkspaceInstruction)
+      expect(JSON.stringify(childInstructionRequest)).not.toContain(readOnlyGlobalInstruction)
+      const childSessionLogs = (await readdir(join(noWriterHome, 'sessions'), { recursive: true }))
+        .filter(path => path.endsWith('.jsonl'))
+      expect(childSessionLogs).toHaveLength(1)
+      const [childSessionLog] = childSessionLogs
+      if (childSessionLog === undefined) throw new Error('private child Session log was not observed')
+      const childSessionEvents = (await readFile(join(noWriterHome, 'sessions', childSessionLog), 'utf8'))
+        .split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line) as Record<string, unknown>)
+      const [instructionText] = instructionTexts(childSessionEvents)
+      expect(instructionTexts(childSessionEvents)).toHaveLength(1)
+      if (instructionText === undefined) throw new Error('private child Session has no instructions message')
+      expect(instructionText).toContain(readOnlyWorkspaceInstruction)
+      expect(instructionText).not.toContain(readOnlyGlobalInstruction)
+      const childRequestText = modelRequestText(childInstructionRequest)
+      expect(childRequestText).toContain(instructionText)
+      expect(childRequestText.split(instructionText)).toHaveLength(2)
       const readCall = readOnlyModelResponses.shift()
       if (readCall === undefined) throw new Error('read-only child did not hold its file-read model request')
       finishModelResponse(readCall, '', { id: 'read-parent-file', name: 'read_file', arguments: JSON.stringify({ path: 'readable.txt' }) })
@@ -383,11 +439,20 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
         id: readOnlyStart?.id, provider: 'dsh-sdk', stopReason: 'completed',
       }) as unknown)
       expect(readOnlyFrames.some(frame => frame.method === 'approval/request')).toBe(false)
-      expect(await pathExists(noWriterHome!)).toBe(false)
+      expect(await pathExists(noWriterHome)).toBe(false)
       readOnlyChild.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'shutdown' })}\n`)
       expect(await receiveReadOnly(frame => frame.id === 3)).toMatchObject({ result: {} })
       expect((await readOnlyChild).exitCode, readOnlyStderr).toBe(0)
       const readOnlyDurable = await persistedSessionEvents(join(readOnlyHome, 'sessions'), 'native-sdk-child-read-only-parent')
+      const [parentInstructionText] = instructionTexts(readOnlyDurable)
+      expect(instructionTexts(readOnlyDurable)).toHaveLength(1)
+      if (parentInstructionText === undefined) throw new Error('opt-in parent Session has no instructions message')
+      expect(parentInstructionText).toContain(readOnlyWorkspaceInstruction)
+      expect(parentInstructionText).toContain(readOnlyGlobalInstruction)
+      const parentInstructionRequest = rootRequests.find(value => JSON.stringify(value).includes(readOnlyParentTask))
+      const parentRequestText = modelRequestText(parentInstructionRequest)
+      expect(parentRequestText).toContain(parentInstructionText)
+      expect(parentRequestText.split(parentInstructionText)).toHaveLength(2)
       const durableReadOnlyStart = eventData(readOnlyDurable, 'subagent/external-start')[0]
       expect(eventData(readOnlyDurable, 'subagent/external-end')).toContainEqual(expect.objectContaining({
         id: durableReadOnlyStart?.id, provider: 'dsh-sdk', stopReason: 'completed',

@@ -100,6 +100,7 @@ class ResizeObserverStub {
 afterEach(() => {
   cleanup()
   document.body.replaceChildren()
+  localStorage.clear()
   document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"], meta[name="theme-color"]')
     .forEach((element) => { element.remove() })
   document.documentElement.removeAttribute('lang')
@@ -111,6 +112,7 @@ afterEach(() => {
 })
 
 it('installs modular Native navigation, Session selection, details, locale and theme, then drains them', async () => {
+  localStorage.setItem('dsh.native.onboarding.welcome', '2026-08-13.1')
   vi.stubEnv('DSH_CLIENT_TITLE', 'Product')
   vi.stubGlobal('innerWidth', 1280)
   vi.stubGlobal('ResizeObserver', ResizeObserverStub)
@@ -208,7 +210,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
   const close = vi.fn(async () => undefined)
   const clientMock = {
     close,
-    settingsDescribe: vi.fn(),
+    settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [],
+      limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(),
     authorizationList: vi.fn(async () => []), authorizationBegin: vi.fn(), authorizationFrames: vi.fn(),

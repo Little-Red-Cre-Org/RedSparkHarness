@@ -91,6 +91,7 @@ This section explains the design decisions behind the contract and points at the
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `SandboxProvider` service, mode/enforcement/policy types, fail-closed error |
+| [`src/native.ts`](src/native.ts) | Host-only `ProcessSandbox` service and child-path types |
 | [`src/escalation.ts`](src/escalation.ts) | Escalation vocabulary: wider-mode ladder, argument validation, denial and hint markers, approval choreography |
 | [`src/roots.ts`](src/roots.ts) | Host-only `./roots` export: writable-root derivation shared by the Seatbelt profile and the in-process fs fence |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |
@@ -120,7 +121,7 @@ Start with the subsystem reference for the exhaustive contract, then the backend
 
 -----
 
-The Host-only `./native` export declares `ProcessSandbox` for native compositions and exports the same policy, escalation, path rules, runner diagnostics, and unavailable error used by the Cordis service. It is a Definition, not an installer; select a backend that provides `sandbox`.
+The Host-only `./native` export declares `ProcessSandbox` for native compositions and exports the same policy, escalation, path rules, runner diagnostics, and unavailable error used by the Cordis service. `confineChildProcess()` exposes the selected `cwd` read-only unless an existing policy grant includes it, and adds the launcher-owned `privateHome` as the only additional caller-supplied writable path; existing grants, including backend-managed temporary paths, remain in force. A custom `runnerCommand` relies on the local backend's existing bwrap-compatible operator assertion. This is a Definition, not an installer; select a backend that provides `sandbox`.
 
 <a id="model-experience"></a>
 ## Model Experience

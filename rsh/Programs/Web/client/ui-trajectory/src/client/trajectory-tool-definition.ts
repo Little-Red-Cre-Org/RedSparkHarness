@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {
   ConversationMatch, ConversationNodeContext, ConversationNodeDefinition, RunningToolCall,
   ToolCallBlock, ToolResultNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
 import type {} from '@deepseek-ai/dsh-tools/types'
 import { trajectoryNode } from './trajectory-definition-common.ts'
 
