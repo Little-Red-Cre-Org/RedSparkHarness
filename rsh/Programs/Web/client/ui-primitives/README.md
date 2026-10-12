@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build web-client controls, sidebar rows, directory pickers, chat presentation, and agent output with shared React UI. It includes standard controls, a callback-driven directory browser, chat transcript and composer layouts, the mascot, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. Renderers drop raw HTML, restrict links, and parse ANSI escapes in untrusted model output. Nothing imports Cordis; callers supply localized labels and data callbacks, and colors use `--dsw-*` design tokens.
+Use `dsh-client-ui-primitives` to build shared controls, sidebars, chat views, and agent-output cards in the Web client. It includes workspace and Session rows, directory browsing, `SidebarPathBar`, chat and composer layouts, icons, overlays, Settings forms, and safe Markdown, code, terminal, file, diff, search, web, and JSON rendering. Components use React and `--dsw-*` tokens, accept localized labels and data callbacks, and do not import Cordis.
 
 ## Table of Contents
 
@@ -46,6 +46,7 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows are focusable; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
+| `SidebarPathBar` | Responsive path header shared by file panes and Session details; callers supply the path and trailing controls. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
 | `ChatTranscript`, `ChatTurnGroup`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatReasoningDisclosure`, `ChatContextMessage`, `ChatTurnActivity` | Shared turn grouping, transcript rhythm, message frames, collapsed reasoning and context rows, and running-turn label for legacy and Native chat views. |
 | `ChatMessageActionRow`, `ChatMessageCopyAction`, `ChatMessageActionMeta` | Shared message copy control and muted metadata row. |
@@ -110,6 +111,7 @@ The package owns Cordis-free React components styled through `--dsw-*` tokens. F
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | Search and web-retrieval cards |
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
 | [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
+| [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | Token-styled path row shared by file panes and Session details |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
 | [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
 | [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
