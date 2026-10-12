@@ -69,7 +69,9 @@ function exportSource(directory: string, exportName: string, exports: Record<str
   const types = (entry as Record<string, unknown>).types
   if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) return undefined
   const sourceRoot = resolve(directory, 'src')
-  const source = resolve(sourceRoot, types.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
+  const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length)
+  const sourceTs = resolve(sourceRoot, sourceRelative + '.ts')
+  const source = existsSync(sourceTs) ? sourceTs : resolve(sourceRoot, sourceRelative + '.tsx')
   const within = relative(sourceRoot, source)
   return within.startsWith('..') || isAbsolute(within) ? undefined : source
 }

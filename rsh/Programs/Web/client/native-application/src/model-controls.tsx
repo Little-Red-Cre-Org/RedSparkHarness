@@ -1,7 +1,7 @@
-/** Native model picker and Agent preset control backed by existing Session actions. */
-import { ChatComposerSelect, ModelPicker, type ModelPickerState } from '@deepseek-ai/dsh-client-ui-primitives'
+/** Native model picker and Session mode controls for the composer. */
+import { useState } from 'react'
+import { ChatComposerSelect, IconCloseFill14, ModelPicker, type ModelPickerState } from '@deepseek-ai/dsh-client-ui-primitives'
 import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
-import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 import css from './model-controls.module.css'
@@ -36,26 +36,58 @@ export function ModelPickerControl({ snapshot, selectModel, refreshModelControls
   />
 }
 
-/** Render the Agent preset selector from the selected Host's roster. */
-export function ModelControls({ snapshot, selectPreset, t }: {
+/** Render the selected Session's mode and permission controls. */
+export function ModelControls({ snapshot, selectPreset, selectPlanMode, selectPermissionPreset, t }: {
   snapshot: ConversationSnapshot
   selectPreset: NativeConversationController['selectPreset']
+  selectPlanMode: NativeConversationController['selectPlanMode']
+  selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   t: (key: ConversationLocaleKey) => string
 }) {
-  const controls = snapshot.modelControls
+  const [selectingPlan, setSelectingPlan] = useState(false)
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined
-  const preset = snapshot.header === undefined ? undefined : foldNativeAgentPresetFacts(snapshot.header, snapshot.events)
+  const mode = snapshot.modeControls
+  const planMode = mode?.planMode
+  const permission = snapshot.permissionControls
+  const planSelectable = snapshot.selected !== undefined && snapshot.state !== 'loading' && snapshot.state !== 'closed'
   return (
-    <div className={css.root}>
+    <div className={css.root} role="group" aria-label={t('modelControls')}>
       <div className={css.row}>
-        <ChatComposerSelect label={t('preset')} className={css.select}
-          value={preset?.preset ?? ''}
-          disabled={!ready || preset?.locked !== false || controls?.presets.length === 0}
-          onChange={(event) => { void selectPreset(event.target.value) }}>
-          {preset?.preset == null ? <option value="">{t('noPreset')}</option> : !controls?.presets.some(item => item.id === preset.preset)
-            ? <option value={preset.preset}>{preset.preset}</option> : null}
-          {controls?.presets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </ChatComposerSelect>
+        {snapshot.selected === undefined ? null : mode === undefined
+          ? <ChatComposerSelect label={t('mode')} className={css.select} disabled value="">
+            <option value="">{t('modeUnavailable')}</option>
+          </ChatComposerSelect>
+          : <ChatComposerSelect label={t('mode')} className={css.select}
+            value={mode.current ?? ''}
+            disabled={!ready || !mode.canSelect || mode.locked}
+            onChange={(event) => { void selectPreset(event.target.value) }}>
+            {mode.current === null ? <option value="">{t('modeUnavailable')}</option>
+              : !mode.options.some(item => item.id === mode.current)
+                ? <option value={mode.current}>{mode.current}</option> : null}
+            {mode.options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </ChatComposerSelect>}
+        {planMode?.available === true ? <button type="button" className={css.plan}
+          aria-label={t(planMode.active ? 'planModeOn' : 'planModeOff')}
+          aria-pressed={planMode.active} aria-busy={planMode.pending === true || selectingPlan}
+          data-active={planMode.active || undefined} data-pending={planMode.pending || undefined}
+          title={planMode.pending === true ? t('planPending') : t(planMode.active ? 'planModeOn' : 'planModeOff')}
+          disabled={!planSelectable || selectingPlan}
+          onClick={() => {
+            setSelectingPlan(true)
+            void selectPlanMode(!planMode.active).finally(() => { setSelectingPlan(false) })
+          }}>
+          {t('planLabel')}
+          {planMode.pending === true ? <span className={css.planPending}>{t('planPending')}</span> : null}
+          {planMode.active ? <IconCloseFill14 size={12} /> : null}
+        </button> : null}
+        {permission?.available === true ? <ChatComposerSelect label={t('permission')} className={css.select}
+          value={permission.currentValue ?? ''} disabled={!ready}
+          onChange={(event) => { void selectPermissionPreset(event.target.value) }}>
+          {permission.currentValue === null ? <option value="">{t('unavailable')}</option>
+            : !permission.options.some(item => item.value === permission.currentValue)
+              ? <option value={permission.currentValue}>{permission.currentValue}</option> : null}
+          {permission.options.map(item => <option key={item.value} value={item.value}>{item.name}</option>)}
+        </ChatComposerSelect> : null}
       </div>
     </div>
   )

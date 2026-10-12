@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {
   ConversationMatch, ConversationNodeDefinition, RequestView,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
 import type {} from '@deepseek-ai/dsh-compaction/types'
 import { trajectoryNode } from './trajectory-definition-common.ts'
 

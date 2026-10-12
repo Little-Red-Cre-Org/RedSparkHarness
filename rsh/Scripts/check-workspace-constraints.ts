@@ -188,6 +188,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
   '@deepseek-ai/dsh-client-ui-attachment': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-goal': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-trajectory': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],

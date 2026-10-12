@@ -53,6 +53,15 @@ describe('generated tsconfig package aliases', () => {
     })
   })
 
+  it.each([
+    {
+      specifier: '@deepseek-ai/dsh-client-ui-trajectory/native',
+      source: './rsh/Programs/Web/client/ui-trajectory/src/native.tsx',
+    },
+  ])('maps TSX native export $specifier to its source file', ({ specifier, source }) => {
+    expect(collectNativeEntryAliases()).toContainEqual({ specifier, source })
+  })
+
   it('yields to a hand-written alias and closes without a trailing comma', () => {
     const aliases = [
       { specifier: '@deepseek-ai/dsh-a', source: './packages/g/a/src', hasInvariant: true },

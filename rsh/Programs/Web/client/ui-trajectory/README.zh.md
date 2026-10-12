@@ -35,6 +35,10 @@ Trajectory 标签页让你以按轮次组织的事件记录表和交互式时间
 
 固定在记录表上方的 Overview 区域从左到右投影记录的真实开始时间与耗时；助手时间条区分记录到的 TTFT 与解码时间，悬停 500 ms 后可查看精确时刻与耗时详情。拖选区间会把记录表聚焦到该闭区间内任何时刻处于活动的记录；滚轮手势用于缩放时间域；右键单击会清除所选区间，在已放大的视口上按住右键拖动则会平移。初始视图与流式更新都停留在尾部；向上滚动会暂停跟随，因此新记录不会打断对旧记录的检查。
 
+### Native Client
+
+`@deepseek-ai/dsh-client-ui-trajectory/native` 入口导出仅依赖 props 的记录表、时间线和轮次视图，以及 `NativeTrajectoryView`。它从 Native Session controller 已持有的 append-origin 用户、助手和工具结果事件构建记录表。Native 视图只显示收到的事件窗口，不加载更早页面或持久化图片数据。
+
 -----
 
 <a id="understand-the-implementation"></a>

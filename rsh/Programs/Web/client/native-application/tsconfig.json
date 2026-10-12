@@ -60,6 +60,9 @@
       "path": "../ui-goal"
     },
     {
+      "path": "../ui-trajectory"
+    },
+    {
       "path": "../ui-primitives"
     }
   ]
