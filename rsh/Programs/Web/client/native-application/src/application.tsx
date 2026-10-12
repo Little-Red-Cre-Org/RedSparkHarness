@@ -22,6 +22,7 @@ import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
+import { NativeOnboarding } from './onboarding.tsx'
 import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
@@ -257,7 +258,8 @@ export const plugin: NativePlugin = {
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
-      context.provide('clientApplication', { render: () => slots.renderSlot('root', {}) })
+      context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
+        themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
       void controller.load()
     }
   },
