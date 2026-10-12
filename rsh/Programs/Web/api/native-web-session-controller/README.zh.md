@@ -22,7 +22,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session 和 Workspace 流的并发跟随者数量。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
+配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session、工作区文件和 Workspace 流的并发跟随者数量。`workspaceFiles` 限制默认为每个文本页 2 MiB、每个完整文件 32 MiB、每页 5,000 行和 2,000 个目录项。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
@@ -33,6 +33,8 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 经过身份认证的 `session/command` 端点接受 `{ sessionId, line }` 形式的一条完整已注册斜杠命令。它要求所选 Session 空闲，在确切 Program root owner 上重新校验命令，并在维护操作结算后返回共享的 `CommandExecution`。请求取消信号会传入命令；Host 会在结算前将其排空。
 
 经过身份认证的 `session/commands` 端点接受 `{ sessionId }`，并返回所选 Session 确切 Program root Agent 可用的 `{ commands }`。每个有效描述符包含名称、说明，以及可选的输入提示和附件支持信息；查询会检查 Web Program 的命令可见性，但不会分派命令处理器。
+
+Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` 和 `read-related`，请求包含 `{ sessionId, path }`，必要时还包含 `range` 或 `relativePath`。Host 将每个路径（包括从基础文件目录解析的 `readRelated` 路径）限制在 Session 的 `cwd` 内；header 缺少 `cwd` 时使用所选 Workspace 或配置根目录。绝对路径以及解析到根目录外的路径或符号链接会以 `native/session-files` 失败。`list` 返回 `{ path, entries, truncated }`；`stat` 返回文件身份与版本；`read` 接受从 1 开始的行范围；完整读取返回 base64 字节。经过身份验证的 POST `/api/native-session/files-follow` 会为该根目录内由文件系统操作产生的观察发送 `ready` 和 `change` 帧；断开或取消会关闭流并释放跟随者槽位。
 
 控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
 
