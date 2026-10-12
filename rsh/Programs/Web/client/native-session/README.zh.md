@@ -113,6 +113,8 @@ interface NativeSettingsDescription {
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
+`queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求；`submissions(sessionId)` 返回待处理 inbox 的位置。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
+
 <a id="invariants"></a>
 
 跟随流也传输临时审批与问题批次。answerHuman 只使用本 Consumer 尚未结算的调用标识；Host 校验待答根所有者与输入。审批决定为允许一次或拒绝。问题答案保留所选标签与自定义文本。这些展示不形成第二份持久日志。

@@ -6,6 +6,7 @@ import type { NativeResponsesJsonValue } from '../src/native-responses.ts'
 import { attributionHeaders } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from '../src/adapter.ts'
 import { resolveProfiles } from '../src/config.ts'
+import type { CodexUsageIdentity, CodexUsageObservation } from '../src/rate-limits.ts'
 import { memoryAuth } from './auth-double.ts'
 
 const MODEL = 'gpt-6.1-sol'
@@ -306,6 +307,68 @@ describe('Native Codex Responses transport', () => {
     expect(redirectResponse.status).toBe(307)
     expect(server.requests.filter(request => request.path === '/redirected')).toHaveLength(0)
     await new Response(redirectResponse.body).text()
+
+    await transport.close()
+    await adapter.dispose()
+    await server.close()
+  })
+
+  it('records native Responses quota headers and rate-limit events for the resolved account', async () => {
+    const server = await localServer()
+    const sse = Buffer.from([
+      'data: {"type":"codex.rate_limits","rate_limits":{"primary":{"used_percent":67,"window_minutes":300,"reset_at":1800000000}}}',
+      '',
+      '',
+    ].join('\n'))
+    server.responses = (_request, response) => {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream',
+        'x-codex-primary-used-percent': '23',
+        'x-codex-primary-window-minutes': '300',
+        'x-codex-primary-reset-at': '1800000000',
+      }).end(sse)
+    }
+    routeFetchThrough(server)
+    const observations: Array<{
+      identity: CodexUsageIdentity
+      observation: CodexUsageObservation
+      replaceQuotas: boolean
+    }> = []
+    const auth = memoryAuth({ 'openai-codex': siwcCredential('account-one') })
+    const adapter = new PiAiAdapter({
+      profiles: () => resolveProfiles({ 'openai-codex': {} }),
+      resolveApiKey: () => Promise.resolve(undefined),
+      auth,
+      onCodexUsage: (identity, observation, replaceQuotas) => {
+        observations.push({ identity, observation, replaceQuotas })
+      },
+    })
+    const prepared = await adapter.prepareCall('openai-codex', MODEL)
+    const capture = prepared.nativeResponses
+    expect(capture).toBeDefined()
+    if (capture === undefined) throw new Error('Codex preparation omitted its Native Responses capture')
+    const transport = await capture.capture({ route: { provider: 'openai-codex', model: MODEL } }, new AbortController().signal)
+    const projected = await transport.projectRequest(requestBody(), new AbortController().signal)
+    const response = await transport.forward(projected, new AbortController().signal)
+
+    expect(Buffer.from(await new Response(response.body).arrayBuffer())).toEqual(sse)
+    expect(observations).toEqual([
+      {
+        identity: { issuer: 'https://auth.openai.com', subject: 'subject-account-one' },
+        observation: {
+          quotas: [{ name: 'codex', primary: { usedPercent: 23, windowSeconds: 18000, resetsAt: 1800000000 }, secondary: null }],
+          credits: null,
+        },
+        replaceQuotas: true,
+      },
+      {
+        identity: { issuer: 'https://auth.openai.com', subject: 'subject-account-one' },
+        observation: {
+          quotas: [{ name: 'codex', primary: { usedPercent: 67, windowSeconds: 18000, resetsAt: 1800000000 }, secondary: null }],
+        },
+        replaceQuotas: false,
+      },
+    ])
 
     await transport.close()
     await adapter.dispose()

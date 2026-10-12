@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
@@ -34,7 +35,7 @@ import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permissi
 import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 
@@ -134,6 +135,13 @@ function errorMessage(error: unknown): string {
   return `${error.message}: ${error.errors.map(errorMessage).join('; ')}`
 }
 
+function submissionErrorDetails(endpoint: string, payload: unknown): Record<string, unknown> {
+  if (endpoint !== 'session/queue' && endpoint !== 'session/steer' && endpoint !== 'session/dequeue'
+    || payload === null || typeof payload !== 'object' || Array.isArray(payload)) return {}
+  const requestId = (payload as Record<string, unknown>)['requestId']
+  return typeof requestId === 'string' ? { requestId } : {}
+}
+
 function latestTurnState(events: readonly SessionEvent[]): {
   running: boolean
   completed: boolean
@@ -190,8 +198,8 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
-  'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/commands', 'session/command',
-  'settings/describe', 'settings/mutate', 'settings/open-document',
+  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/answer-human', 'session/rename-title', 'session/refresh-title',
+  'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -285,6 +293,7 @@ export class NativeWebSessionService {
     settled: boolean
     feed: NativeSessionFeed | undefined
     following: boolean
+    submissions: Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>
   }>()
   private readonly human: NativeWebHumanInteraction
   private followers = 0
@@ -401,6 +410,7 @@ export class NativeWebSessionService {
     let admitted!: () => void
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
+    const submissions = new Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>()
     const execution = this.requests.run(this.lifetime, async (accepted) => {
       admitted()
       const turnSignal = AbortSignal.any([accepted, controller.signal])
@@ -417,7 +427,43 @@ export class NativeWebSessionService {
               preparationSignal.throwIfAborted()
               return createUserMessage({ source: { kind: 'user' }, content })
             } },
-          ...feed === undefined ? {} : { onEvent: (event) => { feed.push({ type: 'event', event }) }, onChunk: (chunk) => {
+          ...feed === undefined ? {} : { onEvent: (event) => {
+            feed.push({ type: 'event', event })
+            if (event.type === 'agent/inbox/spliced') {
+              for (const message of event.data.inserted) {
+                const requestId = brandString<NativeSubmissionRequestId>(message.id)
+                if (submissions.get(requestId) === 'submitting') {
+                  submissions.set(requestId, 'accepted')
+                  feed.push({ type: 'submission-update', requestId, status: 'accepted' })
+                }
+              }
+              if (event.data.outcome === 'canceled') {
+                const owner = this.active.owners().find(candidate => candidate.session.id === id
+                  && candidate.invocation === 'root' && candidate.writerAvailable)
+                const pendingIds = new Set(owner === undefined ? [] : [
+                  ...owner.messages('next-turn'), ...owner.messages('next-step'),
+                ].map(message => message.id))
+                for (const [requestId, status] of submissions) {
+                  if (status === 'accepted' && !pendingIds.has(MessageId(requestId))) {
+                    submissions.delete(requestId)
+                    feed.push({ type: 'submission-update', requestId, status: 'rejected' })
+                  }
+                }
+              }
+            }
+            if (event.type === 'user/message') {
+              const requestId = brandString<NativeSubmissionRequestId>(event.data.id)
+              if (submissions.get(requestId) === 'accepted') submissions.set(requestId, 'claimed')
+            }
+            if (event.type === 'turn/end') {
+              for (const [requestId, status] of submissions) {
+                if (status === 'claimed') {
+                  submissions.delete(requestId)
+                  feed.push({ type: 'submission-update', requestId, status: 'settled' })
+                }
+              }
+            }
+          }, onChunk: (chunk) => {
             if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
             if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
           } } }, turnSignal)
@@ -452,7 +498,7 @@ export class NativeWebSessionService {
     }).finally(() => { feed?.finish() })
     this.followTasks.add(followTask)
     void followTask.then(() => { this.followTasks.delete(followTask) })
-    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false }
+    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false, submissions }
     this.turns.set(id, turn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
     const markSettled = (): void => { turn.settled = true; this.publishListChange(id) }
@@ -568,6 +614,77 @@ export class NativeWebSessionService {
     }, signal)
   }
 
+  private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativePendingSubmission> {
+    const request = z.strictObject({
+      sessionId: z.string().min(1).max(256),
+      prompt: z.string().min(1).max(this.config.maxPromptChars),
+      requestId: z.string().min(1).max(256),
+    }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const turn = this.turns.get(id)
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (turn === undefined || turn.settled || turn.controller.signal.aborted || owner === undefined) {
+      throw new Error('native web session: queued submission requires an active browser turn')
+    }
+    this.executor.rootExecution.capture(owner)
+    const requestId = brandString<NativeSubmissionRequestId>(request.requestId)
+    if (turn.submissions.has(requestId)) throw new Error('native web session: duplicate submission request id')
+    const message = freezeMessage({ id: MessageId(request.requestId), role: 'user' as const, source: { kind: 'user' as const },
+      content: [{ type: 'text' as const, text: request.prompt }] })
+    turn.submissions.set(requestId, 'submitting')
+    try { await owner.enqueue(message, target, true, signal) }
+    catch (error: unknown) { turn.submissions.delete(requestId); throw error }
+    return { requestId, placement: target === 'next-turn' ? 'queued' : 'steering', status: 'accepted' }
+  }
+
+  private async dequeue(payload: unknown, signal: AbortSignal): Promise<{ requestId: NativeSubmissionRequestId }> {
+    const request = z.strictObject({ sessionId: z.string().min(1).max(256), requestId: z.string().min(1).max(256) }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const messageId = MessageId(request.requestId)
+    const remove = async (owner: NativeActiveSessionOwner): Promise<{ requestId: NativeSubmissionRequestId }> => {
+      for (const target of ['next-turn', 'next-step'] as const) {
+        if (owner.messages(target).some(message => message.id === messageId)) {
+          await owner.remove([messageId], target, signal)
+          return { requestId: brandString<NativeSubmissionRequestId>(request.requestId) }
+        }
+      }
+      throw new Error('native web session: pending submission not found')
+    }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return remove(owner)
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, remove, signal)
+  }
+
+  private async pendingSubmissions(id: SessionId, signal: AbortSignal): Promise<{ submissions: readonly NativePendingSubmission[] }> {
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      this.executor.rootExecution.capture(owner)
+      return { submissions: this.projectPendingSubmissions(owner) }
+    }
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    const submissions = await this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
+      Promise.resolve(this.projectPendingSubmissions(activeOwner)), signal)
+    return { submissions }
+  }
+
+  private projectPendingSubmissions(owner: NativeActiveSessionOwner): readonly NativePendingSubmission[] {
+    return [
+      ...owner.messages('next-turn').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'queued' as const, status: 'accepted' as const })),
+      ...owner.messages('next-step').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'steering' as const, status: 'accepted' as const })),
+    ]
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -634,6 +751,13 @@ export class NativeWebSessionService {
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
+      if (endpoint === 'session/queue' || endpoint === 'session/steer') {
+        const target = endpoint === 'session/queue' ? 'next-turn' : 'next-step'
+        return { ok: true, value: await this.requests.run(signal, accepted => this.submit(payload, target, accepted)) }
+      }
+      if (endpoint === 'session/dequeue') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.dequeue(payload, accepted)) }
+      }
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
@@ -782,6 +906,7 @@ export class NativeWebSessionService {
           label: 'native web session', onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
         }, accepted)
         if (endpoint === 'session/commands') return this.commandCatalog(id, accepted)
+        if (endpoint === 'session/submissions') return this.pendingSubmissions(id, accepted)
         if (endpoint === 'session/answer-human') {
           accepted.throwIfAborted()
           const turn = this.turns.get(id)
@@ -831,7 +956,8 @@ export class NativeWebSessionService {
       if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
         return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session', message: errorMessage(error), details: {} } }
+      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session',
+        message: errorMessage(error), details: submissionErrorDetails(endpoint, payload) } }
     }
   }
 
