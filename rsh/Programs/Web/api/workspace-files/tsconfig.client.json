@@ -11,7 +11,8 @@
     "src/client/provider.ts",
     "src/client/remote.ts",
     "src/client/types.ts",
-    "src/types.ts"
+    "src/types.ts",
+    "src/remote-types.ts"
   ],
   "references": [
     { "path": "../../../../Core/vendor/cordis" },

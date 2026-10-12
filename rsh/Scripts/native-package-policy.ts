@@ -292,7 +292,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ]],
 ])
 
-/** Additional Cordis-free exports shared by mixed packages' native entries. */
+/** Additional Cordis-free exports consumed by Native package entries. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
@@ -310,6 +310,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
+  ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
@@ -353,6 +354,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Additional native exports compiled only for the Host. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/api/workspace-files/native-helpers', ['host']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],
   ['rsh/Engine/session/session-projection/definition', ['host']],

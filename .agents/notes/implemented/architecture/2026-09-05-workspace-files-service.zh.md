@@ -12,7 +12,7 @@ Web 客户端需要从一个未必在 Host 机器上的浏览器查看会话工�
 
 ## Decision
 
-`rsh/Programs/Web/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。Session Controller 不再携带任何工作区文件代码。
+`rsh/Programs/Web/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。旧版 Cordis Session Controller 不包含工作区文件代码。Native Web Session Controller 为右栏提供独立的 `session/files/*` RPC，复用不引用 Cordis 的 `./native-types` 响应和 `./native-helpers` 切页器，并将每个操作限制在 Session 的 `cwd`，或在 `cwd` 缺失时限制在所选 Workspace／配置根目录内。
 
 ### 包拓扑
 

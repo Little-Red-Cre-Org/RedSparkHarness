@@ -1,5 +1,6 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import { posix, relative, sep, win32 } from 'node:path'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
@@ -38,6 +39,18 @@ import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-
 import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
+import type { FileSystemOperations, FsInfo, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
+import type {} from '@deepseek-ai/dsh-fs/native'
+import type {
+  WorkspaceDirectoryEntry,
+  WorkspaceDirectoryListing,
+  WorkspaceFileBytes,
+  WorkspaceFileRange,
+  WorkspaceFileStat,
+  WorkspaceFileText,
+  WorkspaceFileWatchFrame,
+} from '@deepseek-ai/dsh-api-workspace-files/native-types'
+import { cutWorkspaceFilePage } from '@deepseek-ai/dsh-api-workspace-files/native-helpers'
 
 import { NativeWebHumanInteraction } from './human.ts'
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
@@ -78,6 +91,12 @@ interface NativeAgentPresetListRow {
 const nativeAgentPresetEmpty = z.strictObject({})
 const nativeAgentPresetId = z.strictObject({ id: z.string() })
 const nativeAgentPresetCopy = z.strictObject({ from: z.string(), id: z.string(), name: z.string().optional() })
+const nativeWorkspaceFileList = z.strictObject({ sessionId: z.string().min(1).max(256), path: z.string() })
+const nativeWorkspaceFilePath = z.strictObject({ sessionId: z.string().min(1).max(256), path: z.string().min(1) })
+const nativeWorkspaceFileRead = nativeWorkspaceFilePath.extend({
+  range: z.strictObject({ offset: z.number().optional(), limit: z.number().optional() }),
+})
+const nativeWorkspaceFileRelated = nativeWorkspaceFilePath.extend({ relativePath: z.string().min(1) })
 
 declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
@@ -100,6 +119,13 @@ export interface Config extends TurnConfig {
   readonly maxSettingsOperations: number
   /** Credential keys whose authorization flows the page may drive; defaults to empty. */
   readonly authorizationKeys: readonly string[]
+  /** Caps on Native Session file pages, complete reads and directory listings. */
+  readonly workspaceFiles: {
+    readonly maxBytes: number
+    readonly maxFileBytes: number
+    readonly maxLines: number
+    readonly maxEntries: number
+  }
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -178,22 +204,98 @@ function searchSnippet(events: readonly SessionEvent[], query: string): string |
   return undefined
 }
 
+type WorkspaceFileObservation = readonly [target: FsTarget, observation: FsObservation]
+
+/** Queue observations that arrive while a Session root resolves or its Client is paused. */
+class WorkspaceFileObservationQueue {
+  private readonly values: WorkspaceFileObservation[] = []
+  private waiter: ((result: IteratorResult<WorkspaceFileObservation>) => void) | undefined
+  private closed = false
+
+  next(): Promise<IteratorResult<WorkspaceFileObservation>> {
+    const value = this.values.shift()
+    if (value !== undefined) return Promise.resolve({ done: false, value })
+    if (this.closed) return Promise.resolve({ done: true, value: undefined })
+    return new Promise((resolve) => { this.waiter = resolve })
+  }
+
+  push(value: WorkspaceFileObservation): void {
+    if (this.closed) return
+    const waiter = this.waiter
+    if (waiter === undefined) this.values.push(value)
+    else {
+      this.waiter = undefined
+      waiter({ done: false, value })
+    }
+  }
+
+  close(): void {
+    if (this.closed) return
+    this.closed = true
+    this.values.length = 0
+    this.waiter?.({ done: true, value: undefined })
+    this.waiter = undefined
+  }
+
+  async *read(signal: AbortSignal): AsyncIterable<WorkspaceFileObservation> {
+    const stop = (): void => { this.close() }
+    signal.addEventListener('abort', stop, { once: true })
+    if (signal.aborted) stop()
+    try {
+      while (!this.closed) {
+        const next = await this.next()
+        if (next.done) return
+        yield next.value
+      }
+    } finally {
+      signal.removeEventListener('abort', stop)
+    }
+  }
+}
+
+function workspaceFilePath(path: string, allowRoot = false): string {
+  if (path.includes('\0') || path.startsWith('/') || win32.isAbsolute(path) || /^[a-z]:/iu.test(path)) {
+    throw new TypeError('native Session file paths must be workspace-relative')
+  }
+  const normalized = path.replace(/\\/g, '/')
+  if (normalized.length === 0) {
+    if (allowRoot) return '.'
+    throw new TypeError('native Session file path is required')
+  }
+  return normalized
+}
+
+function workspacePathOf(fs: FileSystemOperations, root: FsTarget, target: FsTarget): string {
+  return relative(fs.processPath(root), fs.processPath(target)).split(sep).join('/')
+}
+
+function workspaceFileEntry(child: { name: string; type: WorkspaceDirectoryEntry['type']; size?: number }): WorkspaceDirectoryEntry {
+  return { name: child.name, type: child.type, ...child.size === undefined ? {} : { size: child.size } }
+}
+
 /** Resolve Program settings and resource limits before installing routes.
  * @param input - profile configuration.
  * @returns validated native Session configuration.
  */
 export function resolveNativeWebSessionConfig(input: unknown): Config {
   const { maxPendingRequests, maxHistoryEvents, maxPromptChars, maxFollowBufferBytes, maxFollowers,
-    maxPendingHumanRequests, maxCredentialRefsPerRead, maxSettingsOperations, authorizationKeys, ...turn } = object(input)
+    maxPendingHumanRequests, maxCredentialRefsPerRead, maxSettingsOperations, authorizationKeys,
+    workspaceFiles, ...turn } = object(input)
   const settingsLimits = z.strictObject({
     maxCredentialRefsPerRead: z.number().int().min(1).refine(Number.isSafeInteger).default(64),
     maxSettingsOperations: z.number().int().min(1).refine(Number.isSafeInteger).default(512),
     authorizationKeys: z.array(z.string()).default([]),
   }).parse({ maxCredentialRefsPerRead, maxSettingsOperations, authorizationKeys })
+  const fileLimits = z.strictObject({
+    maxBytes: z.number().int().refine(Number.isSafeInteger).min(1).default(2 * 1024 * 1024),
+    maxFileBytes: z.number().int().refine(Number.isSafeInteger).min(1).max(Number.MAX_SAFE_INTEGER - 1).default(32 * 1024 * 1024),
+    maxLines: z.number().int().refine(Number.isSafeInteger).min(1).default(5000),
+    maxEntries: z.number().int().refine(Number.isSafeInteger).min(1).default(2000),
+  }).parse(workspaceFiles ?? {})
   return { ...resolveNativeHeadlessConfig(turn), maxPendingRequests: positive(maxPendingRequests, 'maxPendingRequests'),
     maxHistoryEvents: positive(maxHistoryEvents, 'maxHistoryEvents'), maxPromptChars: positive(maxPromptChars, 'maxPromptChars'), maxFollowBufferBytes: positive(maxFollowBufferBytes, 'maxFollowBufferBytes'),
     maxFollowers: positive(maxFollowers, 'maxFollowers'),
-    maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests'), ...settingsLimits }
+    maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests'), ...settingsLimits, workspaceFiles: fileLimits }
 }
 
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
@@ -208,7 +310,8 @@ const endpoints = new Set(['session/list', 'session/history', 'session/create', 
   'accounts/list', 'accounts/usage', 'accounts/balance', 'accounts/sign-out',
   'workspaces/list', 'workspaces/create', 'workspaces/rename', 'workspaces/delete', 'workspaces/reorder', 'workspaces/reorder-session',
   'workspaces/archive-session', 'workspaces/search', 'workspaces/connect',
-  'directories/pick', 'directories/list', 'directories/create-directory'])
+  'directories/pick', 'directories/list', 'directories/create-directory',
+  'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
@@ -303,6 +406,7 @@ export class NativeWebSessionService {
   private readonly settlements: NativeConnectionRequestOwner
   private readonly followTasks = new Set<Promise<void>>()
   private readonly listFeeds = new Map<NativeSessionListFeed, () => void>()
+  private readonly workspaceFileFollowers = new Set<WorkspaceFileObservationQueue>()
   private readonly ownerEvents = new Map<NativeActiveSessionOwner, () => void>()
   private readonly removeAttached: () => Promise<void>
   private readonly removeDetached: () => Promise<void>
@@ -314,13 +418,15 @@ export class NativeWebSessionService {
    * @param config - validated execution and wire limits.
    * @param lifetime - installation cancellation.
    * @param selections - selected catalog, model intent and standing composition authorities.
+   * @param fileSystem - selected Native filesystem Provider for Session file operations.
    */
   constructor(private readonly executor: NativeHeadlessApplication,
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
     private readonly config: Config, private readonly lifetime: AbortSignal,
     private readonly selections: NativeWebSelectionProviders = {},
-    private readonly notifyAgentPresetsUpdated: () => void = () => {}) {
+    private readonly notifyAgentPresetsUpdated: () => void = () => {},
+    private readonly fileSystem: FileSystemOperations | undefined = undefined) {
     this.human = new NativeWebHumanInteraction(config.maxPendingHumanRequests, (agent) => {
       const owner = this.active.owners().find(candidate => candidate.agent === agent)
       if (owner !== undefined) this.publishListChange(owner.session.id)
@@ -548,6 +654,81 @@ export class NativeWebSessionService {
       id => this.projectSession(id, this.listProjectionContext(), signal))
   }
 
+  /** Follow instrumented filesystem observations inside one Session workspace.
+   * @param request - authenticated Fetch request with a Session id.
+   * @returns `ready` followed by workspace file change frames.
+   */
+  async followWorkspaceFiles(request: Request): Promise<Response> {
+    const fields = z.strictObject({ sessionId: z.string().min(1).max(256) }).parse(await request.json())
+    const id = sessionId(fields.sessionId)
+    const disconnect = new AbortController()
+    const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal, disconnect.signal])
+    signal.throwIfAborted()
+    if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
+      return new Response('native Session workspace file follow: capacity reached', { status: 429 })
+    }
+    this.followers++
+    let released = false
+    const release = (): void => {
+      if (released) return
+      released = true
+      signal.removeEventListener('abort', release)
+      this.followers--
+    }
+    signal.addEventListener('abort', release, { once: true })
+    const iterator = this.followWorkspaceFileChanges(id, signal)[Symbol.asyncIterator]()
+    const encoder = new TextEncoder()
+    const body = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try {
+          const next = await iterator.next()
+          if (next.done) {
+            release()
+            controller.close()
+          } else controller.enqueue(encoder.encode(`data: ${JSON.stringify(next.value)}\n\n`))
+        } catch (error: unknown) {
+          release()
+          controller.error(error)
+        }
+      },
+      async cancel() {
+        disconnect.abort()
+        release()
+        await iterator.return?.()
+      },
+    }, { highWaterMark: 0 })
+    return new Response(body, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' } })
+  }
+
+  private async *followWorkspaceFileChanges(id: SessionId, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame> {
+    signal.throwIfAborted()
+    const follower = new WorkspaceFileObservationQueue()
+    this.workspaceFileFollowers.add(follower)
+    const stop = (): void => {
+      follower.close()
+      this.workspaceFileFollowers.delete(follower)
+    }
+    signal.addEventListener('abort', stop, { once: true })
+    if (signal.aborted) stop()
+    try {
+      const fs = this.requireFileSystem()
+      const rootPath = await this.workspaceFileRoot(id, signal)
+      const root = await fs.resolve(rootPath, { signal })
+      if (signal.aborted || !this.workspaceFileFollowers.has(follower)) return
+      yield { kind: 'ready' }
+      for await (const [target, observation] of follower.read(signal)) {
+        if (!fs.contains(root, target)) continue
+        const absolutePath = fs.processPath(target)
+        yield { kind: 'change', change: observation.kind === 'present'
+          ? { absolutePath, version: observation.version }
+          : { absolutePath, absent: true } }
+      }
+    } finally {
+      signal.removeEventListener('abort', stop)
+      stop()
+    }
+  }
+
   private async finishFollow(id: SessionId, feed: NativeSessionFeed | undefined): Promise<void> {
     const titles = this.selections.titles
     if (feed === undefined || titles === undefined) return
@@ -685,6 +866,167 @@ export class NativeWebSessionService {
     ]
   }
 
+  /** Deliver one Native filesystem observation to every open Session file feed.
+   * @param target - resolved filesystem target.
+   * @param observation - observed presence or absence and its version.
+   */
+  observeWorkspaceFile(target: FsTarget, observation: FsObservation): void {
+    for (const follower of this.workspaceFileFollowers) follower.push([target, observation])
+  }
+
+  private requireFileSystem(): FileSystemOperations {
+    if (this.fileSystem === undefined) throw new Error('native Session workspace files are unavailable')
+    return this.fileSystem
+  }
+
+  private async workspaceFileRoot(id: SessionId, signal: AbortSignal): Promise<string> {
+    const owner = this.active.owners().find(candidate => candidate.session.id === id)
+    const snapshot = owner === undefined ? await this.persistence.stat(id, { signal }) : undefined
+    const header = owner?.session.header ?? snapshot?.header
+    if (header === undefined) throw new Error('native web session: unknown Session')
+    return header.cwd ?? this.workspaceForSession(id)?.path ?? this.config.cwd
+  }
+
+  private async inspectWorkspaceFilePath(rootPath: string, path: string, signal: AbortSignal, allowRoot = false): Promise<{
+    readonly root: FsTarget
+    readonly target: FsTarget
+    readonly entry: FsPathInfo
+  }> {
+    const fs = this.requireFileSystem()
+    const acceptedPath = workspaceFilePath(path, allowRoot)
+    const root = await fs.resolve(rootPath, { signal })
+    const entry = await fs.lstat(acceptedPath, { cwd: rootPath }, signal)
+    if (entry === undefined) throw new Error(`no entry at "${path}"`)
+    const target = await fs.resolve(acceptedPath, { cwd: rootPath, signal })
+    if (!fs.contains(root, target)) throw new Error(`"${path}" is outside the Session workspace`)
+    return { root, target, entry }
+  }
+
+  private async locateWorkspaceFile(rootPath: string, path: string, signal: AbortSignal): Promise<{
+    readonly root: FsTarget
+    readonly target: FsTarget
+    readonly info: FsInfo
+  }> {
+    const fs = this.requireFileSystem()
+    const located = await this.inspectWorkspaceFilePath(rootPath, path, signal)
+    if (located.entry.type !== 'file') throw new Error(`"${path}" is a ${located.entry.type}`)
+    const info = await fs.stat(located.target, signal)
+    if (info === undefined) throw new Error(`no entry at "${path}"`)
+    if (info.type !== 'file') throw new Error(`"${path}" is a ${info.type}`)
+    return { root: located.root, target: located.target, info }
+  }
+
+  private workspaceFileStat(target: FsTarget, info: FsInfo): WorkspaceFileStat {
+    return {
+      absolutePath: this.requireFileSystem().processPath(target),
+      version: info.version,
+      ...info.size === undefined ? {} : { bytes: info.size },
+    }
+  }
+
+  private resolveWorkspaceFileRange(range: WorkspaceFileRange): { offset: number; limit: number } {
+    const offset = range.offset ?? 1
+    const limit = range.limit ?? this.config.workspaceFiles.maxLines
+    if (!Number.isSafeInteger(offset) || offset < 1 || !Number.isSafeInteger(limit) || limit < 1
+      || limit > this.config.workspaceFiles.maxLines || !Number.isSafeInteger(offset + limit - 1)) {
+      throw new TypeError('native Session file range is outside its configured limits')
+    }
+    return { offset, limit }
+  }
+
+  private async cutWorkspaceFilePage(target: FsTarget, offset: number, limit: number, signal: AbortSignal, path: string): Promise<{
+    readonly text: string
+    readonly lines: number
+    readonly eof: boolean
+  }> {
+    return cutWorkspaceFilePage(await this.requireFileSystem().streamText(target, signal), offset, limit,
+      this.config.workspaceFiles.maxBytes, path)
+  }
+
+  private async listWorkspaceFiles(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceDirectoryListing> {
+    const rootPath = await this.workspaceFileRoot(id, signal)
+    const located = await this.inspectWorkspaceFilePath(rootPath, path, signal, true)
+    if (located.entry.type !== 'directory') throw new Error(`"${path}" is a ${located.entry.type}`)
+    const children = await this.requireFileSystem().listDir(located.target, signal)
+    for (const child of children) {
+      if (!this.requireFileSystem().contains(located.root, child.target)) {
+        throw new Error(`"${child.name}" resolves outside the Session workspace`)
+      }
+    }
+    const entries = children.slice(0, this.config.workspaceFiles.maxEntries).map(workspaceFileEntry)
+    return { path: workspacePathOf(this.requireFileSystem(), located.root, located.target), entries,
+      truncated: children.length > entries.length }
+  }
+
+  private async statWorkspaceFile(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceFileStat> {
+    const rootPath = await this.workspaceFileRoot(id, signal)
+    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
+    return this.workspaceFileStat(target, info)
+  }
+
+  private async readWorkspaceFile(id: SessionId, path: string, range: WorkspaceFileRange, signal: AbortSignal): Promise<WorkspaceFileText> {
+    const rootPath = await this.workspaceFileRoot(id, signal)
+    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
+    const { offset, limit } = this.resolveWorkspaceFileRange(range)
+    const page = await this.cutWorkspaceFilePage(target, offset, limit, signal, path)
+    if (page.text.includes(String.fromCharCode(0))) throw new Error(`"${path}" is not text`)
+    return { ...this.workspaceFileStat(target, info), offset, text: page.text, lines: page.lines, eof: page.eof }
+  }
+
+  private async readAllWorkspaceFileAtRoot(rootPath: string, path: string, signal: AbortSignal): Promise<WorkspaceFileBytes> {
+    const fs = this.requireFileSystem()
+    const { target, info } = await this.locateWorkspaceFile(rootPath, path, signal)
+    const limit = this.config.workspaceFiles.maxFileBytes
+    if (info.size !== undefined && info.size > limit) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
+    const bytes = await fs.readByteRange(target, { offset: 0, length: limit + 1 }, signal)
+    if (bytes.length > limit) throw new Error(`"${path}" exceeds the ${limit} byte file cap`)
+    return { ...this.workspaceFileStat(target, info), offset: 0, data: Buffer.from(bytes).toString('base64'), eof: true }
+  }
+
+  private async readAllWorkspaceFile(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceFileBytes> {
+    return this.readAllWorkspaceFileAtRoot(await this.workspaceFileRoot(id, signal), path, signal)
+  }
+
+  private async readRelatedWorkspaceFile(
+    id: SessionId, path: string, relativePath: string, signal: AbortSignal,
+  ): Promise<WorkspaceFileBytes> {
+    const rootPath = await this.workspaceFileRoot(id, signal)
+    const basePath = workspaceFilePath(path)
+    const relatedPath = workspaceFilePath(relativePath)
+    const fs = this.requireFileSystem()
+    const { root, target } = await this.locateWorkspaceFile(rootPath, basePath, signal)
+    const resolved = posix.normalize(posix.join(posix.dirname(workspacePathOf(fs, root, target)), relatedPath))
+    return this.readAllWorkspaceFileAtRoot(rootPath, resolved, signal)
+  }
+
+  private async workspaceFileRequest(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
+    if (endpoint === 'session/files/list') {
+      const request = nativeWorkspaceFileList.parse(payload)
+      return this.listWorkspaceFiles(sessionId(request.sessionId), request.path, signal)
+    }
+    if (endpoint === 'session/files/stat') {
+      const request = nativeWorkspaceFilePath.parse(payload)
+      return this.statWorkspaceFile(sessionId(request.sessionId), request.path, signal)
+    }
+    if (endpoint === 'session/files/read') {
+      const request = nativeWorkspaceFileRead.parse(payload)
+      const range: WorkspaceFileRange = {
+        ...request.range.offset === undefined ? {} : { offset: request.range.offset },
+        ...request.range.limit === undefined ? {} : { limit: request.range.limit },
+      }
+      return this.readWorkspaceFile(sessionId(request.sessionId), request.path, range, signal)
+    }
+    if (endpoint === 'session/files/read-all') {
+      const request = nativeWorkspaceFilePath.parse(payload)
+      return this.readAllWorkspaceFile(sessionId(request.sessionId), request.path, signal)
+    }
+    if (endpoint === 'session/files/read-related') {
+      const request = nativeWorkspaceFileRelated.parse(payload)
+      return this.readRelatedWorkspaceFile(sessionId(request.sessionId), request.path, request.relativePath, signal)
+    }
+    throw new Error('native Session workspace file endpoint is unsupported')
+  }
+
   /** Read only an image already recorded in this Program's workspace Session.
    * @param request - authenticated image lookup with Session and attachment identities.
    * @returns verified raster bytes; caller-supplied paths and references are never accepted.
@@ -747,6 +1089,9 @@ export class NativeWebSessionService {
       }
       if (endpoint.startsWith('settings/') || endpoint.startsWith('credentials/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.configuration(endpoint, payload, accepted)) }
+      }
+      if (endpoint.startsWith('session/files/')) {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.workspaceFileRequest(endpoint, payload, accepted)) }
       }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
@@ -952,6 +1297,9 @@ export class NativeWebSessionService {
             : 'Settings changed since it was loaded.',
           details: conflict ?? {},
         } }
+      }
+      if (endpoint.startsWith('session/files/')) {
+        return { ok: false, error: { code: 'native/session-files', message: 'Session workspace file request failed.', details: {} } }
       }
       if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
         return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
@@ -1324,7 +1672,7 @@ export const plugin: NativePlugin = {
       const { maxPendingRequests: _pending, maxHistoryEvents: _history, maxPromptChars: _prompt,
         maxFollowBufferBytes: _buffer, maxFollowers: _followers, maxPendingHumanRequests: _human,
         maxCredentialRefsPerRead: _credentialRefs, maxSettingsOperations: _settingsOperations,
-        authorizationKeys: _authorizationKeys, ...turn } = config
+        authorizationKeys: _authorizationKeys, workspaceFiles: _workspaceFiles, ...turn } = config
       const workspaceRegistry = context.require('workspaceRegistry')
       const settings = context.optional('settings')
       const defaultSettings = settings?.register<'agent-default-model', NativeDefaultModelSettings>(
@@ -1379,7 +1727,8 @@ export const plugin: NativePlugin = {
           workspaceRegistry,
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },
-        () => { settingsEvents.agentPresetsUpdated() })
+        () => { settingsEvents.agentPresetsUpdated() }, context.require('fs'))
+      context.on('fs/observed', (target, observation) => { service.observeWorkspaceFile(target, observation) })
       service.bindHuman(context, context.optional('approval'), context.optional('userQuestions'))
       context.own(() => service.close())
       context.own(context.require('hostConnection').rpc.intercept('/api', endpoint => endpoints.has(endpoint),
@@ -1397,6 +1746,8 @@ export const plugin: NativePlugin = {
         fetch: request => service.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/list-follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.followList(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/files-follow', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.followWorkspaceFiles(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/image', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.image(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/authorization', methods: ['POST'], requestBody: 'buffered',
