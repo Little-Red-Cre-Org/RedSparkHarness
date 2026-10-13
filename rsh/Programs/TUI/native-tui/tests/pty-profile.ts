@@ -130,8 +130,9 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
       const env = Object.fromEntries(Object.entries(process.env).filter(
         (entry): entry is [string, string] => entry[1] !== undefined && !/KEY|SECRET|TOKEN|PASSWORD/i.test(entry[0]),
       ))
+      // Ink suppresses interactive frames in CI, while this child is an actual PTY session.
       const child = spawn(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-tui', ...args], {
-        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, DSH_HOME: home, FORCE_COLOR: '0' },
+        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, CI: 'false', DSH_HOME: home, FORCE_COLOR: '0' },
       })
       child.onData((data) => { output += data })
       let resolveCompletion!: (event: { exitCode: number }) => void
