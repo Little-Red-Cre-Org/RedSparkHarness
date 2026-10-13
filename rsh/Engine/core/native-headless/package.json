@@ -38,7 +38,8 @@
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions",
-        "attachments"
+        "attachments",
+        "requestContexts"
       ],
       "provides": [
         "application",
@@ -106,6 +107,7 @@
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^"
+    "@deepseek-ai/dsh-attachment": "workspace:^",
+    "@deepseek-ai/dsh-request-context-definition": "workspace:^"
   }
 }

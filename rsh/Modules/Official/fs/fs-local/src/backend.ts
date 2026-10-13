@@ -170,6 +170,10 @@ export class LocalFileSystemBackend extends FileSystemOperations {
     return isAbsolute(hostPath) ? resolve(hostPath) : undefined
   }
 
+  override hostPathFor(absolutePath: string): string | undefined {
+    return isAbsolute(absolutePath) ? resolve(absolutePath) : undefined
+  }
+
   override fileUrl(target: FsTarget): string {
     return pathToFileURL(this.processPath(target)).href
   }

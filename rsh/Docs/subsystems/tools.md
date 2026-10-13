@@ -403,6 +403,15 @@ Call `next()` for the default or return a decision to short-circuit. Pre-policy 
 
 Post-policy may replace either content or value, never both. Content replacement preserves the canonical value and existing metadata; value replacement is revalidated and recomputes content/metadata; a block removes the value and becomes an `isError` containing corrective feedback. Content replacement is presentation policy, not confidentiality policy: a listener that must hide the programmatic value blocks or replaces it. `tools/result` receives the frozen execution and result after normalization; observers cannot transform them, and observer failures are contained. Unknown and throwing tools both become structured errors (`ToolNotFoundError` maps to `UNKNOWN_TOOL`), so the call fails without ending the turn.
 
+## Native registration identity
+
+`NativeToolRegistration` is the asynchronous disposer returned by a NativeTools contribution. A `NativeToolExecutionSnapshot` exposes `includesRegistration()` so consumers can check whether that exact disposer was captured; a matching tool name alone does not establish registration identity. See the [NativeTools README](../../Engine/core/native-tools/README.md) for the snapshot API.
+
+```ts type-equiv
+/** Exact asynchronous disposer returned by one tool registration. */
+type NativeToolRegistration = () => Promise<void>
+```
+
 ## The enforced raw JSON Schema subset
 
 Schema declarations and validation are owned by [NativeTools](../../Engine/core/native-tools/README.md); the legacy tool exports forward them.

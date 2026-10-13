@@ -27,6 +27,8 @@ kind: "package-reference"
 
 可选的 `agentInstructions` Provider 在每个获准模型请求之前准备工作区指令。应用在分发前将返回的上下文记录为 `user/message`；持久化来源事实控制恢复协调，已接纳的文件系统结果控制嵌套目录发现。
 
+可选的 `requestContexts` 服务为精确活动 Session owner 准备模型可见消息。每个步骤先准备 agent 指令、时间/tmux 上下文与请求上下文，再执行同步准入检查；获准贡献通过同一 writer 追加为 `user/message`，位于 request header 和 context 之前。Headless 在提交 Provider 或启动模型前只持久化一次该步骤。Provider 可见性使用该 turn 的模型目录和 PTC 绑定实际捕获的工具注册。若 Provider 可见但没有精确活动 owner，执行会在 inbox 输入被消费前失败；拒绝或取消的准备不会消费输入，也不会提交上下文。
+
 可选的 `tmuxContext` Provider 会在每轮第一个步骤准备 agent 的 tmux 位置。准备后，应用会先检查取消状态，再通过唯一 Session writer 追加任何返回消息，然后构造模型请求。已提交的 tmux 消息会从已加载 Session 前缀中播种 Provider，并在每个已提交事件后更新，因此冷恢复后也会抑制未变化的位置。
 
 `./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用通过同一个 Agent execution owner 接纳一个根输入。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入与 `run_code` 提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。process-sandbox Provider 按该 Session 策略在 `read-only` 或 `workspace-write` 下约束代码，并拒绝 `danger-full-access`；策略限制 Session 时，builtin 和 PTC Consumer 会拒绝非 process Provider。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。

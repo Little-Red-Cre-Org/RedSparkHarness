@@ -12,100 +12,43 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-llm'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { NamedEntries, ScopedLayers, scopeChainOf, scopeOf } from '@deepseek-ai/dsh-scope'
 import type { ScopeKey, ScopeLayer } from '@deepseek-ai/dsh-scope'
 import z from '@deepseek-ai/schemastery'
 import type Schema from '@deepseek-ai/schemastery'
+import {
+  isSkillName,
+  normalizeProviderObservation,
+  toSummary,
+  validateCandidate,
+  validateDefinition,
+  validateRuntimeSkill,
+} from './shared.ts'
+import type {
+  SkillCandidate,
+  SkillCatalogSnapshot,
+  SkillDefinition,
+  SkillLookupOptions,
+  SkillProvider,
+  SkillProviderControl,
+  SkillRegistration,
+  SkillSummary,
+} from './types.ts'
 
-const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+export type * from './types.ts'
+export {
+  BUNDLED_SKILL_RANK,
+  escapeText,
+  isModelInvocable,
+  isSkillName,
+  isUserInvocable,
+  renderSkillContent,
+} from './shared.ts'
+
 const DEFAULT_COLLECT_CACHE_ENTRIES = 128
 const MAX_COLLECT_ATTEMPTS = 2
 const RUNTIME_PROVIDER = 'runtime'
 const RUNTIME_RANK = 250
-
-/** Standard precedence rank for packaged skill providers and local bundled roots. */
-export const BUNDLED_SKILL_RANK = 600
-
-/**
- * Return whether a string is a valid kebab-case skill name.
- * @param name - candidate skill name to validate.
- * @returns whether the name matches the public skill-name grammar.
- */
-export function isSkillName(name: string): boolean {
-  return SKILL_NAME.test(name)
-}
-
-/** Origin bucket for a skill contribution. The value is prompt-visible metadata, not precedence by itself. */
-export type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
-
-/** Optional provider-specific base used by loaded skill bodies to resolve relative resources. */
-export type SkillResourceBase =
-  | { readonly kind: 'directory'; readonly path: string }
-  | { readonly kind: 'url'; readonly url: string }
-  | { readonly kind: 'opaque'; readonly description: string }
-
-/** Invocation controls shared by skill discovery consumers. */
-export interface SkillInvocationPolicy {
-  /** Whether model-facing catalogs and loaders include this skill. */
-  readonly modelInvocable: boolean
-  /** Whether human-facing command catalogs and loaders include this skill. */
-  readonly userInvocable: boolean
-}
-
-/** Invocation-neutral skill metadata returned by `ctx.skills.list()`. */
-export interface SkillSummary {
-  /** Absolute instruction file path when supplied by the provider; absent for virtual skills. */
-  readonly path?: string
-  /** Kebab-case identifier used to address the skill. */
-  readonly name: string
-  /** Short routing description shown by discovery consumers. */
-  readonly description: string
-  /** Optional extra routing guidance. */
-  readonly whenToUse?: string
-  /** Resolved model and user invocation controls. */
-  readonly invocation: SkillInvocationPolicy
-  /** Discovery source that produced this winning skill. */
-  readonly source: SkillSource
-  /** Provider that owns this skill body. */
-  readonly provider: string
-  /** Provider-specific base for relative resources. */
-  readonly resourceBase?: SkillResourceBase
-}
-
-/** Provider catalog entry used by the registry to merge and later load skills. */
-export interface SkillCandidate extends SkillSummary {
-  /** Lower ranks win duplicate skill names before provider registration order is considered. */
-  readonly rank: number
-  /** Opaque provider-owned handle passed back to `provider.get()`. */
-  readonly locator: unknown
-  /** Parsed optional metadata object from provider-specific skill frontmatter. */
-  readonly metadata?: Readonly<Record<string, unknown>>
-}
-
-/** Complete parsed skill definition, including the body loaded by `ctx.skills.get()`. */
-export interface SkillDefinition extends SkillSummary {
-  /** Markdown instruction body after any provider-specific metadata removal. */
-  readonly content: string
-  /** Parsed optional metadata object from frontmatter. */
-  readonly metadata?: Readonly<Record<string, unknown>>
-}
-
-/** Runtime skill contribution accepted by `ctx.skills.register()`. */
-export type SkillRegistration = Omit<SkillDefinition, 'invocation' | 'provider'> & {
-  /** Invocation controls; omission permits both model and user surfaces. */
-  readonly invocation?: SkillInvocationPolicy
-  /** Provider label; omission uses the registry-owned runtime provider. */
-  readonly provider?: string
-}
-
-/** Caller context used for cwd-sensitive and abortable provider work. */
-export interface SkillLookupOptions {
-  /** Workspace selector for the current lookup. */
-  readonly cwd?: string | undefined
-  /** Abort discovery or loading work for the current caller. */
-  readonly signal?: AbortSignal | undefined
-}
 
 /**
  * Registry read options: provider lookup context plus the viewing scope.
@@ -116,162 +59,6 @@ export interface SkillLookupOptions {
 export interface SkillViewOptions extends SkillLookupOptions {
   /** Viewing scope (the calling agent); omitted reads the global layer alone. */
   readonly scope?: ScopeKey | undefined
-}
-
-/**
- * Return whether a skill may be advertised to and loaded by a model.
- * @param skill - skill metadata carrying resolved invocation controls.
- * @returns whether the policy permits model invocation.
- */
-export function isModelInvocable(skill: Pick<SkillSummary, 'invocation'>): boolean {
-  return skill.invocation.modelInvocable
-}
-
-/**
- * Return whether a skill may be advertised to and loaded by a human-facing command.
- * @param skill - skill metadata carrying resolved invocation controls.
- * @returns whether the policy permits user invocation.
- */
-export function isUserInvocable(skill: Pick<SkillSummary, 'invocation'>): boolean {
-  return skill.invocation.userInvocable
-}
-
-/**
- * Durable source for the context message a user-explicit skill invocation
- * injects: the user's own words ride a plain user message, and the rendered
- * skill body follows as injected `instructions`-form context carrying this
- * source, so transcript consumers present the injection from metadata
- * instead of re-parsing the model-facing text.
- */
-export interface SkillInvocationSource {
-  readonly kind: 'skill-invocation'
-  /** Invoked skill name, validated user-invocable at the injecting boundary. */
-  readonly name: string
-  /** Injected skill bodies are instructions for the model to follow. */
-  readonly form: 'instructions'
-}
-
-declare module '@deepseek-ai/dsh-llm/message' {
-  interface MessageSourceMap {
-    /** A user-explicit skill invocation injected by the host. */
-    'skill-invocation': SkillInvocationSource
-  }
-}
-
-/**
- * Render one loaded skill for the model. The output is shared verbatim by the
- * `skill` tool result and the user-explicit invocation injection, so the model
- * sees one canonical `<skill_content>` shape on both paths. The name rides an
- * escaped attribute; the body is embedded verbatim (skills are trusted local
- * content, and user-supplied invocation text stays outside this wrapper).
- * @param skill - name, provider, optional resource base, and body to render.
- * @returns the complete model-facing `<skill_content>` block.
- */
-export function renderSkillContent(skill: Pick<SkillDefinition, 'name' | 'provider' | 'resourceBase' | 'content'>): string {
-  const resourceHint = renderResourceHint(skill)
-  return [
-    `<skill_content name="${escapeAttr(skill.name)}">`,
-    '<skill_resources>',
-    ...resourceHint,
-    '</skill_resources>',
-    '',
-    '<skill_instructions>',
-    skill.content,
-    '</skill_instructions>',
-    '</skill_content>',
-  ].join('\n')
-}
-
-function renderResourceHint(skill: Pick<SkillDefinition, 'provider' | 'resourceBase'>): string[] {
-  const base = skill.resourceBase
-  if (base === undefined) {
-    return [
-      `Resources for this skill are managed by provider "${escapeText(skill.provider)}".`,
-      'Load referenced resources only as needed.',
-    ]
-  }
-  switch (base.kind) {
-    case 'directory':
-      return [
-        `Base directory for this skill: ${escapeText(base.path)}`,
-        'Resolve relative paths mentioned by this skill against the base directory before using them. Load referenced resources only as needed.',
-      ]
-    case 'url':
-      return [
-        `Base URL for this skill: ${escapeText(base.url)}`,
-        'Resolve relative URLs mentioned by this skill against the base URL before using them. Load referenced resources only as needed.',
-      ]
-    case 'opaque':
-      return [
-        `Resources for this skill: ${escapeText(base.description)}`,
-        'Load referenced resources only as needed.',
-      ]
-    /* v8 ignore start -- SkillResourceBase is a closed union; a future kind must fail compilation here. */
-    default:
-      return assertNever(base, 'SkillResourceBase.kind')
-    /* v8 ignore stop */
-  }
-}
-
-function escapeAttr(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
-}
-
-/**
- * Escape model-facing prose embedded inside skill markup so provider-supplied
- * text cannot open or close framing tags.
- * @param value - raw prose to embed.
- * @returns the escaped text.
- */
-export function escapeText(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-}
-
-/** One catalog observation plus whether discovery completed within a stable catalog revision. */
-export interface SkillCatalogSnapshot {
-  /** Sorted invocation-neutral summaries collected in this observation. */
-  readonly skills: SkillSummary[]
-  /** Whether every registered provider completed without a concurrent catalog revision. */
-  readonly complete: boolean
-}
-
-/** Provider candidates plus whether the current discovery is authoritative. */
-export interface SkillProviderObservation {
-  /** Candidates available from the current provider discovery. */
-  readonly candidates: readonly SkillCandidate[]
-  /** Whether discovery completed and these candidates may be cached. */
-  readonly complete: boolean
-}
-
-/** Provider interface for one source of skills, such as local directories or a remote registry. */
-export interface SkillProvider {
-  /** Unique provider name in the `ctx.skills` registry. */
-  readonly name: string
-  /**
-   * List available skill candidates for the current lookup context. Provider
-   * plugins register synchronously during `apply()`; remote initialization,
-   * authentication, and discovery are awaited inside this method. Implementations
-   * should settle promptly when `options.signal` aborts.
-   * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
-   * @returns provider candidates as a complete-array shorthand, or an explicit
-   *   observation when usable candidates came from incomplete discovery.
-   */
-  readonly list: (options: SkillLookupOptions) => Promise<readonly SkillCandidate[] | SkillProviderObservation>
-  /**
-   * Load a complete skill body for a previously listed candidate.
-   * @param candidate - the winning candidate originally returned by this provider.
-   * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
-   * @returns the full skill body, or `undefined` if it is no longer loadable.
-   */
-  readonly get: (candidate: SkillCandidate, options: SkillLookupOptions) => Promise<SkillDefinition | undefined>
-}
-
-/** Registration-scoped lifecycle and invalidation capability borrowed by one provider. */
-export interface SkillProviderControl {
-  /** Aborts if registration fails or when the exact provider registration is disposed. */
-  readonly signal: AbortSignal
-  /** Invalidate completed catalogs and notify consumers only while the exact registration remains active. */
-  readonly invalidate: () => void
 }
 
 /** Skill registry configuration. */
@@ -659,24 +446,6 @@ export class SkillRegistry extends Service {
   }
 }
 
-function normalizeProviderObservation(output: unknown, providerName: string): SkillProviderObservation {
-  if (Array.isArray(output)) {
-    return { candidates: output as readonly SkillCandidate[], complete: true }
-  }
-  if (output === null || typeof output !== 'object') {
-    throw invalidProviderObservation(providerName)
-  }
-  const observation = output as Partial<SkillProviderObservation>
-  if (!Array.isArray(observation.candidates) || typeof observation.complete !== 'boolean') {
-    throw invalidProviderObservation(providerName)
-  }
-  return observation as SkillProviderObservation
-}
-
-function invalidProviderObservation(providerName: string): TypeError {
-  return new TypeError(`skill provider "${providerName}" list() must return an array or { candidates, complete } observation`)
-}
-
 const RUNTIME_SKILL_PROVIDER: SkillProvider = {
   name: RUNTIME_PROVIDER,
   /* v8 ignore next -- Runtime skills are injected directly by the registry; this provider only owns `get()`. */
@@ -701,96 +470,6 @@ function runtimeCandidate(skill: SkillDefinition): SkillCandidate {
     locator: skill,
     ...skill.path !== undefined ? { path: skill.path } : {},
     ...skill.metadata !== undefined ? { metadata: skill.metadata } : {},
-  }
-}
-
-function validateCandidate(candidate: SkillCandidate, providerName: string): void {
-  if (typeof candidate.name !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned a non-string skill name`)
-  }
-  if (!SKILL_NAME.test(candidate.name)) {
-    throw new Error(`skill provider "${providerName}" returned invalid skill name "${candidate.name}"`)
-  }
-  if (typeof candidate.description !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned skill "${candidate.name}" with a non-string description`)
-  }
-  if (candidate.description.length === 0) {
-    throw new Error(`skill provider "${providerName}" returned skill "${candidate.name}" without a description`)
-  }
-  validateInvocation(candidate.invocation, `skill provider "${providerName}" returned skill "${candidate.name}"`)
-  if (candidate.whenToUse !== undefined && typeof candidate.whenToUse !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned skill "${candidate.name}" with a non-string whenToUse`)
-  }
-  if (typeof candidate.source !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned skill "${candidate.name}" with a non-string source`)
-  }
-  if (typeof candidate.rank !== 'number' || !Number.isFinite(candidate.rank)) {
-    throw new Error(`skill provider "${providerName}" returned skill "${candidate.name}" with an invalid rank`)
-  }
-  if (typeof candidate.provider !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned skill "${candidate.name}" with a non-string provider`)
-  }
-  if (candidate.provider !== providerName) {
-    throw new Error(`skill provider "${providerName}" returned skill "${candidate.name}" for provider "${candidate.provider}"`)
-  }
-  if (candidate.path !== undefined && typeof candidate.path !== 'string') {
-    throw new TypeError(`skill provider "${providerName}" returned skill "${candidate.name}" with a non-string path`)
-  }
-}
-
-function validateRuntimeSkill(skill: SkillRegistration): void {
-  if (!SKILL_NAME.test(skill.name)) throw new Error(`invalid skill name "${skill.name}"`)
-  if (skill.description.length === 0) throw new Error(`skill "${skill.name}" requires a description`)
-  validateInvocation(skill.invocation, `runtime skill "${skill.name}"`)
-}
-
-/** Validate a definition loaded from a provider-controlled parser or remote source. */
-function validateDefinition(skill: SkillDefinition): void {
-  const name = skill.name
-  const description = skill.description
-  const whenToUse = skill.whenToUse
-  const invocation = skill.invocation
-  const source = skill.source
-  const provider = skill.provider
-  const content = skill.content
-  const path = skill.path
-  if (typeof name !== 'string') throw new TypeError('loaded skill name must be a string')
-  if (!SKILL_NAME.test(name)) throw new Error(`loaded skill has invalid name "${name}"`)
-  if (typeof description !== 'string') throw new TypeError(`loaded skill "${name}" description must be a string`)
-  if (description.length === 0) throw new Error(`loaded skill "${name}" requires a description`)
-  validateInvocation(invocation, `loaded skill "${name}"`)
-  if (whenToUse !== undefined && typeof whenToUse !== 'string') throw new TypeError(`loaded skill "${name}" whenToUse must be a string`)
-  if (typeof source !== 'string') throw new TypeError(`loaded skill "${name}" source must be a string`)
-  if (typeof provider !== 'string') throw new TypeError(`loaded skill "${name}" provider must be a string`)
-  if (typeof content !== 'string') throw new TypeError(`loaded skill "${name}" content must be a string`)
-  if (path !== undefined && typeof path !== 'string') throw new TypeError(`loaded skill "${name}" path must be a string`)
-}
-
-function toSummary(skill: SkillDefinition | SkillCandidate): SkillSummary {
-  const { name, description, whenToUse, invocation, source, provider, resourceBase } = skill
-  return {
-    name,
-    ...skill.path === undefined ? {} : { path: skill.path },
-    description,
-    ...whenToUse !== undefined ? { whenToUse } : {},
-    invocation,
-    source,
-    provider,
-    ...resourceBase !== undefined ? { resourceBase } : {},
-  }
-}
-
-function validateInvocation(invocation: unknown, subject: string): void {
-  if (invocation === undefined) return
-  if (typeof invocation !== 'object' || invocation === null || Array.isArray(invocation)) {
-    throw new TypeError(`${subject} with a non-object invocation policy`)
-  }
-  const policy = invocation as Record<string, unknown>
-  if (typeof policy.modelInvocable !== 'boolean') {
-    throw new TypeError(`${subject} with a non-boolean invocation.modelInvocable`)
-  }
-  if (typeof policy.userInvocable !== 'boolean') {
-    throw new TypeError(`${subject} with a non-boolean invocation.userInvocable`)
   }
 }
 

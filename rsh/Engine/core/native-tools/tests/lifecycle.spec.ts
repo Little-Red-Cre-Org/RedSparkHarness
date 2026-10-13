@@ -27,6 +27,19 @@ function contribution(execute: NativeToolContribution['execute'], name = 'held')
   return { schema: { name, description: 'Lifecycle fixture.', parameters: { type: 'object', properties: {} } }, execute }
 }
 
+it('reports only exact registrations captured by a model request', async () => {
+  const scope = new NativeScope()
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const first = registry.register(contribution(async () => ({ content: [{ type: 'text', text: 'first' }], isError: false })))
+  const second = registry.register(contribution(async () => ({ content: [{ type: 'text', text: 'second' }], isError: false }), 'other'))
+  const snapshot = registry.captureModelSnapshot(['held'], scope)
+  expect(snapshot.includesRegistration(first)).toBe(true)
+  expect(snapshot.includesRegistration(second)).toBe(false)
+  await snapshot.dispose()
+  await first()
+  await second()
+})
 it('captures the output schema and detaches canonical values before rendering', async () => {
   const scope = new NativeScope()
   const agents = new NativeAgentRegistry({ emit() {} })

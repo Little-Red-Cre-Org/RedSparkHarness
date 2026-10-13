@@ -89,7 +89,8 @@
         "modelSelection",
         "modelDirectory",
         "userQuestions",
-        "attachments"
+        "attachments",
+        "requestContexts"
       ],
       "provides": [
         "application",

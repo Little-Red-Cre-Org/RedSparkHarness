@@ -403,6 +403,15 @@ type PostToolDecision =
 
 后置策略可以替换内容或值，但不能同时替换两者。替换内容会保留规范值和现有元数据；替换值会重新校验并重新计算内容/元数据；阻止会移除值，并转为包含纠正反馈的 `isError`。内容替换是展示策略，而非保密策略；需要隐藏程序化值的监听器必须阻止或替换该值。`tools/result` 在归一化后接收冻结的执行和结果；观察者无法对其进行变换，观察者的失败也会被隔离。未知工具和抛出异常的工具都会变为结构化错误（`ToolNotFoundError` 映射为 `UNKNOWN_TOOL`），调用失败但不终止当前轮次。
 
+## Native 注册身份
+
+`NativeToolRegistration` 是 NativeTools 贡献返回的异步释放函数。`NativeToolExecutionSnapshot` 提供 `includesRegistration()`，供消费方检查该精确释放函数是否在快照捕获时已登记；仅凭匹配的工具名无法确认注册身份。快照 API 见 [NativeTools README](../../Engine/core/native-tools/README.zh.md)。
+
+```ts type-equiv
+/** Exact asynchronous disposer returned by one tool registration. */
+type NativeToolRegistration = () => Promise<void>
+```
+
 ## 已强制执行的原始 JSON Schema 子集
 
 Schema 声明与校验由 [NativeTools](../../Engine/core/native-tools/README.zh.md) 拥有，旧工具出口转发同一实现。

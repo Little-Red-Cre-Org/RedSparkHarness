@@ -66,7 +66,7 @@ Load the plugin alongside the skill registry; it requires `ctx.skills`.
 
 | Field | Default | Meaning |
 |---|---|---|
-| `providerName` | `filesystem` | Unique provider name registered on `ctx.skills` |
+| `providerName` | `filesystem` | Unique provider name registered in the skill registry |
 | `includeDefaultRoots` | `true` | Include project and user roots around `customSkillDirs` |
 | `dshHome` | `$DSH_HOME` or `~/.dsh` | Harness config root; its `skills` subdirectory is scanned |
 | `agentsHome` | `$DSH_AGENTS_HOME` or `~/.agents` | Shared agent config root scanned for compatible skills |
@@ -75,6 +75,10 @@ Load the plugin alongside the skill registry; it requires `ctx.skills`.
 | `bundledSkillDir` | — | Bundled skill root scanned at rank 600 when configured |
 
 The remaining `watch*` fields tune Chokidar behavior — polling, stability window, interval, project cap, and symlink following. The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-skill-filesystem) is the exhaustive source for every field.
+
+### Native Host entry
+
+The package also publishes a named `./native` entry selected through its Native manifest; it requires the selected `fs` service and the `skills` registry. Native workspace roots are always scanned and read through that filesystem, with no Node fallback. A successful scan remains complete when `watch` is disabled even if the backend cannot map its paths to the host; with `watch` enabled, an unmappable root makes the snapshot incomplete while preserving discovered candidates. An explicitly configured `bundledSkillDir` is the only Native root read through Node, after each path is checked against its canonical bundle root.
 
 ### Change detection
 
@@ -96,13 +100,18 @@ This section explains how discovery and watching are organized; the observable b
 
 ### Design concept
 
-The provider is built on two separations. First, catalog versus body: discovery parses frontmatter into summaries, while every load re-reads the file, so body edits need no hash, revision, or cache invalidation. Second, discovery versus watching: `list()` scans roots and resolves the project root through `ctx.fs` when a filesystem service is present (falling back to abortable Node I/O), while a separate watch manager owns Chokidar handles, missing-root probes, and invalidation.
+The provider is built on two separations. First, catalog versus body: discovery parses frontmatter into summaries, while every load re-reads the file, so body edits need no hash, revision, or cache invalidation. Second, discovery versus watching: the Cordis adapter uses `ctx.fs` when present and otherwise falls back to abortable Node I/O; the Native entry requires `fs` and does not fall back for workspace roots. Both entries share root ordering, frontmatter parsing, and the watch manager.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry, provider, root resolution, frontmatter parsing, watch manager |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry and provider |
+| [`src/native.ts`](src/native.ts) | Native Host provider that reads workspace roots through the selected filesystem |
+| [`src/config.ts`](src/config.ts) | Shared configuration validation and root defaults |
+| [`src/roots.ts`](src/roots.ts) | Shared root ordering and source ranks |
+| [`src/frontmatter.ts`](src/frontmatter.ts) | Shared skill frontmatter parser |
+| [`src/watch.ts`](src/watch.ts) | Shared watcher lifecycle and invalidation |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. |
 
 ### Discovery flow

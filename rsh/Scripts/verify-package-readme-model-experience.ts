@@ -41,6 +41,7 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
   'rsh/Compatibility/DSH/bridge/compat-settings-definition': 'Cordis Settings declarations only; providers and consuming services own any model-facing effect.',
   'rsh/Core/util/http-routes': 'The route library admits and drains caller-owned HTTP work; listener and feature consumers own any model-facing projection.',
   'rsh/Engine/context/tmux-context-definition': 'The package only declares service types; its Provider and application own any model-facing effect.',
+  'rsh/Engine/context/request-context-definition': 'The package only declares request types; its Provider and consuming application own every model-facing effect.',
 }
 
 /**
@@ -65,6 +66,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Engine/core/native-jobs': { kind: 'none', reason: 'Native background-job state and final output stay owned by the registry until an application chooses a model-facing projection.' },
   'rsh/Modules/Official/interaction/native-approval': { kind: 'indirect', reason: 'The Provider delegates durable audit and tool-result rendering to its consuming native application.' },
   'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },
+  'rsh/Engine/context/request-context': { kind: 'indirect', reason: 'The Provider delegates model-visible messages and durable Session acceptance to its consuming Program.' },
   'rsh/Engine/core/native-prompt': { kind: 'indirect', reason: 'The registry delegates rendered prompt placement and Session logging to its consuming native application.' },
   'rsh/Modules/Official/sandbox/native-sandbox-policy': { kind: 'indirect', reason: 'The policy delegates model-visible denial text and durable results to filesystem tools and their application.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-local': { kind: 'indirect', reason: 'The bridge delegates every model-visible filesystem outcome to its native consumer.' },

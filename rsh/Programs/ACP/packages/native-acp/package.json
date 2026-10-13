@@ -54,7 +54,8 @@
         "workspaceRegistry",
         "attachments",
         "modelDirectory",
-        "commands"
+        "commands",
+        "requestContexts"
       ],
       "provides": [
         "application",

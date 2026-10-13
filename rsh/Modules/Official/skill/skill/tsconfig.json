@@ -21,6 +21,9 @@
       "path": "../../../../Engine/core/scope"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../../../Engine/llm/llm"
     },
     {

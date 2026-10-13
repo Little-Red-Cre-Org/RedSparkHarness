@@ -76,6 +76,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Engine/session/session-telemetry': 'Telemetry Service Definition and capture library; providers mount the backend.',
   'rsh/Engine/core/approval-definition': 'Portable approval contracts and audit types without a plugin entry.',
   'rsh/Engine/context/tmux-context-definition': 'Native service declarations shared by the Provider and application without a plugin entry.',
+  'rsh/Engine/context/request-context-definition': 'Native request-context service declarations shared by Providers and applications without a plugin entry.',
   'rsh/Engine/core/code-runtime-definition': 'Portable code-runtime contracts without a plugin entry.',
   'rsh/Engine/session/session-title-llm': 'Shared LLM title-provider registration and request policy.',
   'rsh/Engine/subagent/subagent-in-process-driver': 'Shared one-shot child-agent driver used by provider plugins.',

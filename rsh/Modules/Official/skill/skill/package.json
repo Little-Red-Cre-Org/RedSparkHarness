@@ -2,6 +2,16 @@
   "name": "@deepseek-ai/dsh-skill",
   "description": "Agent skill provider registry for the DeepSeek Harness",
   "version": "0.1.5-rc.2",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": ["skills"]
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -18,11 +28,26 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./shared": {
+      "types": "./lib/types/shared.d.ts",
+      "default": "./lib/shared.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -31,7 +56,11 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^"
   },

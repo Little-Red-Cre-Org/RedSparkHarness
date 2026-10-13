@@ -167,6 +167,7 @@
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
     "@deepseek-ai/dsh-pwsh-local": "workspace:^",
     "@deepseek-ai/dsh-pwsh-sandbox": "workspace:^",
+    "@deepseek-ai/dsh-request-context": "workspace:^",
     "@deepseek-ai/dsh-rsh": "workspace:^",
     "@deepseek-ai/dsh-schedule": "workspace:^",
     "@deepseek-ai/dsh-sdk-app": "workspace:^",

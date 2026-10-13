@@ -63,6 +63,18 @@ jobs:
           "python=$sdkPython" >> $env:GITHUB_OUTPUT
       - name: Native profile and pi-ai lifecycle regressions
         run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts
+      - name: Native request context and skill provider regressions
+        run: >-
+          pnpm exec vitest run
+          rsh/Engine/context/request-context/tests/registry.spec.ts
+          rsh/Modules/Official/skill/skill/tests/native.spec.ts
+          rsh/Modules/Official/skill/skill-filesystem/tests/native.spec.ts
+      - name: Native tool visibility regressions
+        run: >-
+          pnpm exec vitest run
+          rsh/Engine/core/native-tools/tests/lifecycle.spec.ts
+          rsh/Engine/core/native-headless/tests/native.spec.ts
+          -t 'reports only exact registrations captured by a model request|passes the current Session to builtin/PTC code runtime'
       - name: Native SDK and ACP workspace instructions regressions
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
@@ -72,6 +84,7 @@ jobs:
           && pnpm exec vitest run --config vitest.snapshot.config.ts
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
           snapshots/native-sdk/external-operation.snapshot.ts
+          snapshots/native-sdk/skills.snapshot.ts
       - name: SDK child bwrap mount regressions
         if: runner.os == 'Linux'
         run: >-
@@ -89,6 +102,7 @@ jobs:
           pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
           snapshots/native-sdk/external-operation.snapshot.ts
+          snapshots/native-sdk/skills.snapshot.ts
         env:
           DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions

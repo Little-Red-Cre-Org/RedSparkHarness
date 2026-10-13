@@ -2201,6 +2201,39 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
+  rsh/Engine/context/request-context:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-request-context-definition':
+        specifier: workspace:^
+        version: link:../request-context-definition
+
+  rsh/Engine/context/request-context-definition:
+    dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+
   rsh/Engine/context/session-reference:
     dependencies:
       '@deepseek-ai/dsh-brand':
@@ -2642,6 +2675,9 @@ importers:
       '@deepseek-ai/dsh-native-tools':
         specifier: workspace:^
         version: link:../native-tools
+      '@deepseek-ai/dsh-request-context-definition':
+        specifier: workspace:^
+        version: link:../../context/request-context-definition
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../session
@@ -8181,6 +8217,9 @@ importers:
 
   rsh/Modules/Official/skill/skill:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
@@ -8209,6 +8248,9 @@ importers:
 
   rsh/Modules/Official/skill/skill-filesystem:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -8225,6 +8267,9 @@ importers:
       '@deepseek-ai/dsh-fs':
         specifier: workspace:^
         version: link:../../fs/fs
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../fs/fs-local
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../../Core/util/home-paths
@@ -8234,6 +8279,15 @@ importers:
 
   rsh/Modules/Official/skill/tool-skill:
     dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
+      '@deepseek-ai/dsh-request-context-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/request-context-definition
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -8250,6 +8304,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-request-context':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/request-context
       '@deepseek-ai/dsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope
@@ -9771,6 +9828,9 @@ importers:
       '@deepseek-ai/dsh-pwsh-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/pwsh-sandbox
+      '@deepseek-ai/dsh-request-context':
+        specifier: workspace:^
+        version: link:../../Engine/context/request-context
       '@deepseek-ai/dsh-rsh':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bundle/rsh

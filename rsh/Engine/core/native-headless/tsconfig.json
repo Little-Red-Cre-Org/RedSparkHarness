@@ -75,6 +75,9 @@
       "path": "../../context/agent-instructions"
     },
     {
+      "path": "../../context/request-context-definition"
+    },
+    {
       "path": "../../../Modules/Official/attachment/attachment"
     }
   ]
