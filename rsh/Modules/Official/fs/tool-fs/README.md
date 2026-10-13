@@ -79,6 +79,8 @@ Failures are normalized as `Error: <message>` with a structured code preserved f
 
 The `./native` entry publishes the same file operations as NativeTools value tools. It requires selected `fs`, `fsObservationPolicy` and `tools` services; writes and edits always use that observation authority. Optional attachment storage enables `read_image`, which resolves the exact Session model through its selected native Model Provider before admitting image bytes. Scoped prompt sections are visible only to the consuming agent scope. Tool results, image references and presentation metadata pass through the Headless sole Session writer before observer acceptance and later model input.
 
+Native `write` and `edit` resolve the workspace root and file target before ordinary approval, supply their complete identities as `sessionContext`, and execute with that same resolved target. This allows the owning Session application to remember the exact frozen operation. Filesystem observation and confinement still apply. A sandbox escalation uses the existing one-call `requestApproval` path and supplies no reusable scope.
+
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 

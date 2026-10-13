@@ -1,0 +1,187 @@
+{
+  "base": "2e55ca187716ceb69bfc5f2fab1532d1f1ab80b8",
+  "runtime": {
+    "node": "24.14.1",
+    "pnpm": "11.28.5"
+  },
+  "fullOriginal": {
+    "passed": 53,
+    "failed": 8,
+    "skipped": 0,
+    "seconds": 1170.96,
+    "unit": {
+      "failedFiles": 45,
+      "failedTests": 122,
+      "passedTests": 22634
+    },
+    "failedGates": [
+      "client domain graph",
+      "test",
+      "duplication",
+      "test:snapshot",
+      "test:expected",
+      "client UI i18n",
+      "persistence catalog",
+      "module graph"
+    ]
+  },
+  "repaired": {
+    "persistenceCatalog": "passed; official generator changed only sessionGrant field and source references",
+    "docSync": {
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 434.33
+    },
+    "exportJsdoc": "passed",
+    "normalLint": "passed",
+    "owningRegression": {
+      "tests": 45,
+      "passed": 45,
+      "failed": 0
+    },
+    "browserReplay": {
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "unitComparison": {
+    "files": [
+      "rsh/Scripts/benchmark-npm-resolution.spec.ts",
+      "rsh/Scripts/build-exe-for-python-sdk.spec.ts",
+      "rsh/Scripts/change-scope.spec.ts",
+      "rsh/Scripts/client-build-environment.client.spec.ts",
+      "rsh/Scripts/oxlint-contract.spec.ts",
+      "rsh/Scripts/verify-application-entrypoints.spec.ts",
+      "rsh/Scripts/verify-native-dependencies.spec.ts",
+      "rsh/Scripts/verify-package-dependencies.spec.ts",
+      "rsh/Programs/Desktop/tests/macos-signature.spec.ts",
+      "rsh/Programs/Desktop/tests/main-startup.spec.ts",
+      "rsh/Programs/CLI/tests/native-profile-loader.spec.ts",
+      "rsh/Programs/CLI/tests/native-profile-template.spec.ts",
+      "rsh/Programs/CLI/tests/windows-shell.spec.ts",
+      "rsh/Core/subprocess/subprocess-local/tests/native-windows.spec.ts",
+      "rsh/Engine/compaction/compaction-basic/tests/compaction-basic.spec.ts",
+      "rsh/Engine/compaction/compaction-basic/tests/compaction-loop-repro.spec.ts",
+      "rsh/Engine/core/agent-loop/tests/config-session-id.spec.ts",
+      "rsh/Engine/core/agent-loop/tests/loop.spec.ts",
+      "rsh/Engine/core/agent-loop/tests/request-reconstruction.spec.ts",
+      "rsh/Engine/core/agent-loop/tests/system-prompt-admission.spec.ts",
+      "rsh/Engine/core/native-headless/tests/continuation-host.spec.ts",
+      "rsh/Engine/core/tools/tests/gen-tool-catalog.spec.ts",
+      "rsh/Engine/session/session-title-all-prompts-llm/tests/provider.spec.ts",
+      "rsh/Engine/session/session-title-llm/tests/llm.spec.ts",
+      "rsh/Engine/session/session-title-first-prompt-llm/tests/loader-composition.spec.ts",
+      "rsh/Engine/session/session-title-first-prompt-llm/tests/provider.spec.ts",
+      "rsh/Engine/subagent/subagent-in-process-driver/tests/subagent-in-process-driver.spec.ts",
+      "rsh/Tests/test-support/session-snapshot/tests/manifest.spec.ts",
+      "rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/subagent-dsh-sdk.spec.ts",
+      "rsh/Programs/ACP/packages/acp/tests/bridge.spec.ts",
+      "rsh/Programs/ACP/packages/acp/tests/model-control.spec.ts",
+      "rsh/Modules/Community/experimental/inspector/tests/port-selection.host.spec.ts",
+      "rsh/Modules/Community/experimental/webworker-runtime/tests/vfs-example-fixture.spec.ts",
+      "rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts",
+      "rsh/Programs/SDK/packages/client/tests/sdk-client.spec.ts",
+      "rsh/Programs/SDK/packages/native-server/tests/initialization.spec.ts",
+      "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
+      "rsh/Modules/Official/attachment/attachment-local/tests/request-image.spec.ts",
+      "rsh/Modules/Official/automation/task-scheduler/tests/native.spec.ts",
+      "rsh/Modules/Official/extensions/cordis-client-runner/tests/plugin.client.spec.ts",
+      "rsh/Modules/Official/mcp/mcp-client/tests/mcp-client.spec.ts",
+      "rsh/Modules/Official/mcp/mcp-client/tests/reconnect.spec.ts",
+      "rsh/Modules/Official/skill/archify/tests/profile-lifecycle.spec.ts",
+      "rsh/Modules/Official/terminal/terminal-bash/tests/local.spec.ts",
+      "rsh/Modules/Official/workspace/workspace/tests/workspace.spec.ts"
+    ],
+    "base": {
+      "tests": 937,
+      "failed": 100,
+      "failedFiles": 33
+    },
+    "proposal": {
+      "tests": 982,
+      "failed": 100,
+      "failedFiles": 33
+    },
+    "common": 99,
+    "proposalOnly": [
+      {
+        "file": "rsh/Modules/Official/attachment/attachment-local/tests/request-image.spec.ts",
+        "name": "local request-image cache reads a legacy-persisted image through the independent request store"
+      }
+    ],
+    "baseOnly": [
+      {
+        "file": "rsh/Scripts/benchmark-npm-resolution.spec.ts",
+        "name": "npm resolution benchmark runs npm against the local registry without requesting an archive"
+      }
+    ],
+    "isolatedProposal": {
+      "tests": 23,
+      "failed": 0,
+      "passed": 22,
+      "failedCases": []
+    },
+    "isolatedBase": {
+      "tests": 23,
+      "failed": 1,
+      "passed": 21,
+      "failedCases": [
+        "local request-image cache reads a legacy-persisted image through the independent request store"
+      ]
+    },
+    "conclusion": "The proposal-only image-cache rename EPERM was reproduced on main in isolation; proposal isolated run passed. Both isolated npm benchmark runs passed. No blanket baseline claim for all 122 full-run failures."
+  },
+  "snapshotComparison": {
+    "files": [
+      "rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts",
+      "snapshots/acp/acp.snapshot.ts",
+      "snapshots/desktop/native-session-core.snapshot.ts",
+      "snapshots/native-headless/workflow-native.snapshot.ts",
+      "snapshots/sdk/sdk.snapshot.ts",
+      "snapshots/native-sdk/text-turn.snapshot.ts",
+      "snapshots/session/headless.snapshot.ts",
+      "snapshots/web/native-session-core.snapshot.ts",
+      "snapshots/native-tui/commands-presets.snapshot.ts",
+      "snapshots/native-tui/native-tui.snapshot.ts",
+      "snapshots/native-tui/preset-controls.snapshot.ts",
+      "snapshots/native-tui/task-schedule.snapshot.ts"
+    ],
+    "baseTests": 143,
+    "baseFailed": 70,
+    "matchedFullFailureCases": 70,
+    "proposalFullFailedTests": 73,
+    "proposalFullHookFailure": "minimal-preset group replay failure; baseline minimal-preset also failed two cases",
+    "tuiDifferenceFiles": [
+      "snapshots/native-tui/commands-presets.snapshot.ts",
+      "snapshots/native-tui/native-tui.snapshot.ts",
+      "snapshots/native-tui/preset-controls.snapshot.ts"
+    ],
+    "tuiNarrowReplay": "all three passed on proposal; all three also passed on base",
+    "minimalPreset": "two failures on both base and proposal narrow replay"
+  },
+  "expectedComparison": {
+    "files": [
+      "rsh/Programs/CLI/tests/profiles/acp/tests/image-offload.expected.e2e.ts",
+      "rsh/Programs/CLI/tests/profiles/headless/tests/headless.expected.e2e.ts",
+      "rsh/Programs/CLI/tests/profiles/headless/tests/subagent-inheritance.expected.e2e.ts"
+    ],
+    "baseTests": 15,
+    "baseFailed": 4,
+    "matchedFullFailureCases": 4
+  },
+  "structuralComparison": {
+    "domainGraph": "same failures reproduced on main",
+    "duplication": {
+      "proposalClones": 90,
+      "baseClones": 90
+    },
+    "clientUiI18n": "failures reproduced on main",
+    "moduleGraph": "same three stale documents on main",
+    "persistenceCatalog": "main passed; this change repaired its introduced stale output"
+  },
+  "limitations": [
+    "Delegated candidate exclusion has a direct Registry check; no new complete delegated entry approval proof.",
+    "Real-provider calls were not used; the browser uses a local deterministic model."
+  ]
+}

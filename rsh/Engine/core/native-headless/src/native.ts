@@ -1,5 +1,5 @@
 /** Native headless Agent authority over the existing Session and filesystem interfaces. */
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
@@ -38,7 +38,7 @@ import type {} from '@deepseek-ai/dsh-tmux-context-definition'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type { NativeModelExecution, NativePreparedModelStep } from '@deepseek-ai/dsh-native-model-execution'
 import type { NativeResponsesRoute } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
-import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations, NativeToolApproval,
+import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations,
   NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
   NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
@@ -50,6 +50,7 @@ import {
   sessionApprovalPolicy,
   type NativeApprovalOutcome,
   type NativeApprovalServiceDefinition,
+  type NativeApprovalSessionGrant,
 } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
 import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
@@ -257,6 +258,28 @@ function toolArguments(raw: string, name: string): { path: string; content?: str
     return { path, content: value.content }
   }
   return { path }
+}
+
+function approvalParameters(value: JsonValue): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map(approvalParameters).join(',')}]`
+  const entries = Object.entries(value).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${approvalParameters(item)}`).join(',')}}`
+}
+
+function hasApprovalGrant(events: readonly SessionEvent[], id: SessionId, scopeKey: string): boolean {
+  for (const event of events) {
+    if (event.type !== 'native-approval/decided' || event.data.sessionGrant === undefined) continue
+    const grant = object(event.data.sessionGrant)
+    if (Object.keys(grant).some(key => key !== 'sessionId' && key !== 'scopeKey')
+      || typeof grant.sessionId !== 'string' || grant.sessionId.length === 0
+      || typeof grant.scopeKey !== 'string' || !/^[a-f0-9]{64}$/u.test(grant.scopeKey)
+      || event.data.policy !== 'ask' || event.data.outcome !== 'allowed-once') {
+      throw new Error('native-headless: invalid durable Session approval grant')
+    }
+    if (grant.sessionId === id && grant.scopeKey === scopeKey) return true
+  }
+  return false
 }
 
 /** Settlement policies observe the model's raw argument text when it is not valid JSON. */
@@ -558,11 +581,9 @@ export class NativeHeadlessApplication implements NativeApplication {
     return target
   }
 
-  private async execute(call: ToolCallBlock, root: FsTarget, actor: object, session: Session,
+  private async execute(call: ToolCallBlock, args: ReturnType<typeof toolArguments>, target: FsTarget, actor: object, session: Session,
     signal: AbortSignal, cwd: string, workspaceWriteRoot?: string): Promise<string> {
     if (call.name !== 'read_file' && call.name !== 'write_file') throw new Error(`unknown tool ${call.name}`)
-    const args = toolArguments(call.arguments, call.name)
-    const target = await this.target(args.path, root, signal, cwd)
     if (call.name === 'read_file') {
       const info = await this.fs.stat(target, signal)
       if (info === undefined) {
@@ -845,10 +866,11 @@ export class NativeHeadlessApplication implements NativeApplication {
         const approvalSignal = AbortSignal.any([signal, requested.signal,
           ...ownerApproval === undefined ? [] : [ownerApproval.lifetime]])
         const approvalId = NativeApprovalRequestId(randomUUID())
-        track(session.append('native-approval/asked', {
+        const asked = session.append('native-approval/asked', {
           id: approvalId, toolName: requested.toolName, callId: requested.callId,
           ...requested.reason === undefined ? {} : { reason: requested.reason },
-        }))
+        })
+        track(asked)
         await persist()
         await writer.flush()
         let decision: Awaited<ReturnType<NativeApprovalServiceDefinition['request']>>
@@ -865,9 +887,21 @@ export class NativeHeadlessApplication implements NativeApplication {
         } else {
           if (service === undefined) throw new Error('native-headless: no approval authority')
           const sessionPolicy = sessionApprovalPolicy(session)
+          let sessionGrant: { grant: NativeApprovalSessionGrant; previouslyGranted: boolean } | undefined
+          const scope = requested.sessionGrant
+          if (request.delegationContext === undefined && scope !== undefined
+            && scope.context.cwdKey.length > 0 && scope.context.targetKey.length > 0) {
+            const scopeKey = createHash('sha256').update(JSON.stringify([
+              requested.toolName, scope.context.cwdKey, scope.context.targetKey, approvalParameters(scope.parameters),
+            ])).digest('hex')
+            const durable = await owner.read(undefined, asked.seq + 1)
+            sessionGrant = { grant: { sessionId: session.id, scopeKey },
+              previouslyGranted: hasApprovalGrant(durable.events, session.id, scopeKey) }
+          }
           decision = await service.request({ id: approvalId, agent,
             ...(sessionPolicy === undefined ? {} : { sessionPolicy }), toolName: requested.toolName,
-            callId: requested.callId, ...requested.reason === undefined ? {} : { reason: requested.reason }, signal: approvalSignal })
+            callId: requested.callId, ...requested.reason === undefined ? {} : { reason: requested.reason },
+            ...sessionGrant === undefined ? {} : { sessionGrant }, signal: approvalSignal })
         }
         track(session.append('native-approval/decided', decision))
         await persist()
@@ -993,12 +1027,14 @@ export class NativeHeadlessApplication implements NativeApplication {
                 const block: ToolCallBlock = { type: 'tool-call', id: call.callId, name: call.name, arguments: JSON.stringify(call.arguments) }
                 try {
                   if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                    const args = toolArguments(block.arguments, block.name)
+                    const target = await this.target(args.path, capturedRoot, effectiveSignal, delegation.cwd)
                     if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
                       const outcome = await requestApproval({ agent, session, callId: call.callId, toolName: call.name,
                         reason: 'Writing a file changes the selected workspace.', signal: effectiveSignal })
                       if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
                     }
-                    const text = await this.execute(block, capturedRoot, agent, session, effectiveSignal,
+                    const text = await this.execute(block, args, target, agent, session, effectiveSignal,
                       delegation.cwd, config.workspaceWriteRoot)
                     result = { content: [{ type: 'text', text }], isError: false }
                   } else if (allowedBuiltins.has(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
@@ -1329,15 +1365,17 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (!toolNames.includes(call.name)) {
                 throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's tool authority`, 'TOOL_DENIED')
               }
-              const authorize = async (requested: NativeToolApproval): Promise<void> => {
-                const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal, ...requested })
-                if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
-              }
               if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                const args = toolArguments(call.arguments, call.name)
+                const target = await this.target(args.path, root, signal, config.cwd)
                 if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
-                  await authorize({ reason: 'Writing a file changes the selected workspace.' })
+                  const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal,
+                    sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
+                      context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
+                    reason: 'Writing a file changes the selected workspace.' })
+                  if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
                 }
-                content = [{ type: 'text', text: await this.execute(call, root, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
+                content = [{ type: 'text', text: await this.execute(call, args, target, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
               } else if (builtinToolNames.includes(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
                 const outcome = await this.executeCode(call, session, signal)
                 content = [{ type: 'text', text: outcome.text }]

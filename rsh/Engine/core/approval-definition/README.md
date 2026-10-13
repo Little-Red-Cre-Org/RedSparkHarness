@@ -45,6 +45,8 @@ The compatibility bridge implements this specialized type with the original live
 
 The root entry declares native request and answerer operations. The `/legacy` entry declares the compatibility request and outcome types, the generic Agent owner parameter, and helpers that fold or append policy events on the exact Cordis-free Session object. Cordis dispatch and model-context updates belong to `compat-user-approval`; native Session writes and tool-result projection belong to the selected native application.
 
+`NativeApprovalAnswererResult` adds `{ outcome: 'allowed-once', remember: 'session' }` for an admitted reusable scope. `NativeApprovalSessionGrant` carries its original `sessionId` and exact `scopeKey`; the consuming writer stores it as optional decision metadata. Answerers cannot define a new scope, and copied history does not transfer the original Session identity.
+
 Both entries import Session declarations through `dsh-session/native` and `dsh-session/types`, not the Cordis SessionStore entry. The package publishes no `./invariant` companion because its brands and policy helpers own no independent registry or state; compatibility audit-pair validation remains with its Provider.
 
 ## Further Exploration

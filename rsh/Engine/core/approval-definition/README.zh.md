@@ -47,6 +47,8 @@ type CordisApproval = ApprovalServiceDefinition<Agent>
 
 根入口声明原生请求和应答者操作。`/legacy` 入口声明兼容请求与结果类型、通用 Agent owner 参数，以及在同一个 Cordis-free Session 对象上读取或追加策略事件的辅助函数。Cordis 分派与模型上下文更新由 `compat-user-approval` 负责；原生 Session 写入与工具结果投影由所选原生应用负责。
 
+`NativeApprovalAnswererResult` 为已准入的可复用范围增加 `{ outcome: 'allowed-once', remember: 'session' }`。`NativeApprovalSessionGrant` 携带原始 `sessionId` 与精确 `scopeKey`，由消费方写入者作为可选决定元数据保存。回答者不能定义新范围，复制历史也不会转移原 Session 身份。
+
 两个入口都通过 `dsh-session/native` 和 `dsh-session/types` 导入 Session 声明，不经由带 Cordis 的 SessionStore 根入口。本包不发布 `./invariant` companion，因为它的品牌类型和策略辅助函数没有独立注册表或状态；兼容审计事件对的校验仍由其 Provider 负责。
 
 <a id="further-exploration"></a>
