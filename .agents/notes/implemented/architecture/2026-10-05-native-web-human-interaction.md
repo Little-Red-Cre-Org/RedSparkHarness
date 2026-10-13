@@ -14,6 +14,8 @@ The Web Program registers answerers on the selected approval and user-question P
 
 Question-answer JSON validation is shared with the existing broker. The browser holds transient presentation data, choices and submission state. It does not append Session events. Existing tool consumers persist approval decisions and question results through the sole writer; cold restore renders those facts.
 
+The existing `session/answer-human` request also accepts `{ kind: 'cancel-questions' }` for an exact pending question presentation. It rejects that Provider wait with the existing `UserQuestionError` code `ASK_CANCELLED`, removes only that presentation and leaves the borrowed turn signal and other waits alive. The tool Consumer records the error through the sole writer; the next model step receives the tool error and can continue the same turn. Authentication, admission, root ownership and stale-answer checks apply before cancellation, including duplicate or late requests.
+
 ## Alternatives considered
 
 Restoring pending input from durable history would accept obsolete requests. Polling status would not identify the exact Provider operation. A second Agent or Session registry would compete with the selected executor. The existing authenticated follow stream and control requests supply the required presentation and answers.

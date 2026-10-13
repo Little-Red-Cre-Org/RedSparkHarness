@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
-import { parseUserQuestionAnswer, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
+import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'
 
@@ -96,6 +96,10 @@ export class NativeWebHumanInteraction {
         || answer.outcome !== 'allowed-once' && answer.outcome !== 'rejected') throw new TypeError('native Web approval requires an allow or reject verdict')
       entry.finish(answer.outcome)
     } else {
+      if (answer.kind === 'cancel-questions' && Object.keys(answer).length === 1) {
+        entry.reject(new UserQuestionError('the user cancelled ask_user_question', 'ASK_CANCELLED'))
+        return
+      }
       if (Object.keys(answer).some(key => !['kind', 'answer'].includes(key)) || answer.kind !== 'questions') throw new TypeError('native Web question answer has invalid fields')
       entry.finish(entry.parseAnswer(answer.answer))
     }

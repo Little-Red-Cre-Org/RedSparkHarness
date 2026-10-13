@@ -20,7 +20,8 @@ export type NativeWebHumanPrompt =
   | { readonly kind: 'approval'; readonly id: NativeWebHumanId; readonly toolName: string; readonly reason?: string }
   | { readonly kind: 'questions'; readonly id: NativeWebHumanId; readonly questions: readonly z.infer<typeof question>[] }
 
-/** Closed answers passed to the existing approval or question Provider. */
+/** Closed answers; question cancellation rejects only the matching wait with ASK_CANCELLED. */
 export type NativeWebHumanAnswer =
   | { readonly kind: 'approval'; readonly outcome: 'allowed-once' | 'rejected' }
+  | { readonly kind: 'cancel-questions' }
   | { readonly kind: 'questions'; readonly answer: { readonly answers: { readonly id: string; readonly selected: string[]; readonly custom?: string }[] } }
