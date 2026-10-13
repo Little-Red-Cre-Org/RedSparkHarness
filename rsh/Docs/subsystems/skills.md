@@ -288,6 +288,23 @@ Before each later model step, the consumer applies exact tool visibility and dig
 
 The model-facing `skill({ name })` tool validates the kebab-case name, finds the summary in the invocation-neutral catalog, rejects it before loading unless `isModelInvocable` permits access, then rereads the complete definition for the calling agent cwd and rechecks the policy before returning content. It reports an unresolved skill as unknown or no longer available and returns a tool result containing `<skill_content name="...">`, `<skill_resources>`, and `<skill_instructions>`. `resourceBase` resolves explicitly referenced scripts, references, and assets only as needed; the loaded result does not enumerate a skill directory. Body-only edits therefore change later tool calls without producing catalog messages or rewriting earlier tool results.
 
+<a id="automatic-archify-invocation"></a>
+
+## Automatic Archify invocation
+
+The [`@deepseek-ai/dsh-archify` package](../../Modules/Official/skill/archify/README.md) exports this source from both its Cordis and Native entries. It identifies the message that carries Archify instructions selected from a direct-user diagram-delivery request.
+
+```ts type-equiv
+/** Durable source for one host-selected Archify instruction injection. */
+interface ArchifyAutoInvocationSource {
+  readonly kind: 'archify-auto-invocation'
+  /** The Skill body is injected as model instructions. */
+  readonly form: 'instructions'
+  /** The exact deterministic route that selected Archify. */
+  readonly reason: 'diagram-delivery-request'
+}
+```
+
 ## Browser Session catalog
 
 `SkillListRequest` addresses one Session by `sessionId`; `SkillListValue` returns the user-invocable entries with name, description, optional usage guidance, and model-invocation availability. `SessionSkillCatalog` reads the Session cwd and recorded preset without activating an Agent. A live Agent may supply its scoped registry, while a cold Session uses the preset's standing scope.

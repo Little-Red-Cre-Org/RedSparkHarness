@@ -164,12 +164,16 @@ describe('dsh-archify', () => {
       await ctx.plugin(AgentRegistry)
       await ctx.plugin(SkillRegistry)
       await ctx.plugin(ShellEnv)
-      await ctx.plugin(Archify)
+      await ctx.plugin(Archify, { maxUserTextChars: 32 })
       await ctx.plugin(ToolSkill)
-      const decision = await propose(ctx, testAgent(), [user('/archify 请输出 Godot 架构图。')])
+      const decision = await propose(ctx, testAgent(), [
+        user(`Generate a Godot architecture diagram ${'x'.repeat(40)}`),
+        user('/archify 请输出 Godot 架构图。'),
+      ])
       expect(decision).toMatchObject({
         kind: 'enter',
         messages: [
+          expect.objectContaining({ source: { kind: 'user' } }),
           expect.objectContaining({ source: { kind: 'user' } }),
           expect.objectContaining({ source: { kind: 'skill-invocation', name: 'archify', form: 'instructions' } }),
         ],

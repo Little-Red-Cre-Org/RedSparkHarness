@@ -18,10 +18,12 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param humanInteractions - install existing question, tool and approval Providers.
  * @param presetMode - select the legacy fixture registry or shipped scope-owned compositions.
  * @param taskScheduler - install the shipped persistent task-scheduler Provider and Consumer.
+ * @param archifySkill - install Native Skills, shell environment, and Archify for slash-routing coverage.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
-  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false) {
+  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false,
+  archifySkill = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -110,6 +112,13 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })
   if (presetMode === 'shipped') installations.push({ id: 'help-command-fixture', plugin: 'fixture-tui-help-command', scope: 'root' })
+  if (archifySkill) installations.push(
+    { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
+    { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
+    { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
+    { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
+    { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
+  )
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-tui-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations }))

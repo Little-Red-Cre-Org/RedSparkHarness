@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-15-automatic-archify-routing.md
-2026-09-15-automatic-archify-routing.md: cde806f9fd569c2bf0dc5df1cbf2a069cf15a625
-2026-09-15-automatic-archify-routing.zh.md: cbf8c78a126d099f575d41a8c1efe7cec951c23e
+2026-09-15-automatic-archify-routing.md: f94b4eb911e4ddabbf3d91960a327a785bf84fb1
+2026-09-15-automatic-archify-routing.zh.md: f20e0eaf742ad66a188662a5ee897df87aac0757

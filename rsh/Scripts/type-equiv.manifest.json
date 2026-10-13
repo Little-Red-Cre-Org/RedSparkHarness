@@ -1412,6 +1412,11 @@
       "source": "rsh/Modules/Official/skill/skill/src/index.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "ArchifyAutoInvocationSource",
+      "source": "rsh/Modules/Official/skill/archify/src/types.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/compaction.md",
       "symbol": "CompactionResult",
       "source": "rsh/Engine/compaction/compaction/src/types.ts"

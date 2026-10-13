@@ -13,6 +13,8 @@ import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/native'
+import type { SkillSummary } from '@deepseek-ai/dsh-skill/types'
+import { isUserInvocable } from '@deepseek-ai/dsh-skill/shared'
 
 /** Human command operations routed through the selected root Session owner. */
 export interface TerminalCommandOperations {
@@ -31,11 +33,18 @@ export interface TerminalCommandOperations {
   dispatch(id: SessionId, line: string, signal: AbortSignal): Promise<CommandExecution | undefined>
 }
 
+/** Exact-scope Native skill summaries used only after command lookup misses. */
+export interface TerminalSkillOperations {
+  /** @param id - selected Session. @param signal - lookup cancellation. @returns visible skill summaries. */
+  list(id: SessionId, signal: AbortSignal): Promise<readonly SkillSummary[]>
+}
+
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
   readonly presets?: TerminalPresetOperations | undefined
   readonly commands?: TerminalCommandOperations | undefined
+  readonly skills?: TerminalSkillOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -64,6 +73,8 @@ export class TerminalController implements TerminalInteraction {
   private readonly queue: UserMessage[] = []
   private readonly listeners = new Set<() => void>()
   private readonly commandDrains = new Set<Promise<void>>()
+  private readonly skillLookups = new Set<AbortController>()
+  private readonly skillDrains = new Set<Promise<void>>()
   private selectedId: SessionId
   private state: TerminalState = { events: [], chunks: [], busy: false, queued: 0 }
   private active: AbortController | undefined
@@ -90,6 +101,7 @@ export class TerminalController implements TerminalInteraction {
     this.lifetime = AbortSignal.any([ownerSignal, this.shutdown.signal])
     this.human = new TerminalHumanInteraction(config.maxPendingHumanRequests, terminalCopy(config.locale),
       (human) => {
+        if (human !== undefined) this.cancelSkillLookups(new Error(terminalCopy(config.locale).modelBusy))
         if (human !== undefined && this.maintenance) this.active?.abort(new Error(terminalCopy(config.locale).modelBusy))
         this.publish({ human })
       })
@@ -252,6 +264,39 @@ export class TerminalController implements TerminalInteraction {
     return this.trackCommandDrain(() => commands.dispatch(id, line, this.lifetime))
   }
 
+  /** Route an unavailable slash command as ordinary user input only when its skill is user-invocable.
+   * @param name - exact parsed slash command name.
+   * @param message - identified original slash input for the normal turn queue.
+   * @returns whether the input was queued, false for an unknown skill, or undefined after cancellation.
+   */
+  dispatchSkill(name: string, message: UserMessage): Promise<boolean | undefined> {
+    this.assertCommandAdmission()
+    if (this.state.human !== undefined) return Promise.resolve(undefined)
+    const skills = this.execution.skills
+    if (skills === undefined) return Promise.resolve(false)
+    const controller = new AbortController()
+    const signal = AbortSignal.any([controller.signal, this.lifetime])
+    const id = this.selectedId
+    this.skillLookups.add(controller)
+    const operation = (async (): Promise<boolean | undefined> => {
+      try {
+        const available = await skills.list(id, signal)
+        if (signal.aborted || this.closed || this.ownerSignal.aborted || this.state.human !== undefined
+          || this.selectedId !== id) return undefined
+        if (!available.some(skill => skill.name === name && isUserInvocable(skill))) return false
+        this.submit(message)
+        return true
+      } catch (error: unknown) {
+        if (signal.aborted) return undefined
+        throw error
+      } finally { this.skillLookups.delete(controller) }
+    })()
+    const drained = operation.then(() => undefined, () => undefined)
+    this.skillDrains.add(drained)
+    void drained.then(() => { this.skillDrains.delete(drained) })
+    return operation
+  }
+
   private assertCommandAdmission(): void {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
@@ -281,7 +326,7 @@ export class TerminalController implements TerminalInteraction {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
     if (this.draining !== undefined || this.cancelling !== undefined || this.commandDrains.size > 0
-      || this.queue.length !== 0 || this.state.human !== undefined) {
+      || this.skillDrains.size > 0 || this.queue.length !== 0 || this.state.human !== undefined) {
       throw new Error(copy.modelBusy)
     }
     const controller = new AbortController()
@@ -305,6 +350,7 @@ export class TerminalController implements TerminalInteraction {
   cancel(): void {
     this.queue.length = 0
     const reason = new Error(terminalCopy(this.config.locale).cancelled)
+    this.cancelSkillLookups(reason)
     if (this.cancelling === undefined) {
       const active = this.active
       const pending = this.human.cancel((cause) => { active?.abort(cause) })
@@ -325,6 +371,10 @@ export class TerminalController implements TerminalInteraction {
   }
 
   private hasHumanCancellation(): boolean { return this.cancelling !== undefined }
+
+  private cancelSkillLookups(reason: Error): void {
+    for (const lookup of this.skillLookups) lookup.abort(reason)
+  }
 
   /** Request ordinary exit; application completion follows asynchronous cleanup. */
   exit(): void { this.finish() }
@@ -374,7 +424,7 @@ export class TerminalController implements TerminalInteraction {
   }
 
   /** @returns completion after all currently admitted inputs settle. */
-  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling, ...this.commandDrains]) }
+  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling, ...this.commandDrains, ...this.skillDrains]) }
 
   /** Close input admission and await the selected executor before resource withdrawal.
    * @returns idempotent completion after accepted work drains.

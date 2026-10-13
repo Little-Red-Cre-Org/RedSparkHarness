@@ -203,6 +203,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/skill/skill', 'Cordis and Native skill registries share the public provider vocabulary and catalog helpers'],
   ['rsh/Modules/Official/skill/skill-filesystem', 'Cordis and Native filesystem providers share root priority, frontmatter parsing and watcher behavior'],
   ['rsh/Modules/Official/skill/tool-skill', 'Cordis and Native skill Consumers share catalog rendering and invocation validation'],
+  ['rsh/Modules/Official/skill/archify', 'Cordis and Native Archify Providers share one hidden Skill definition, managed shell environment, and automatic-request matcher'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],

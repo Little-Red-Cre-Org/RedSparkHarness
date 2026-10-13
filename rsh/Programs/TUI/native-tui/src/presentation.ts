@@ -63,6 +63,11 @@ export interface TerminalInteraction {
   commands(): Promise<readonly CommandDescriptor[]>
   /** @param line - complete human command input. @returns settled command result or undefined when unavailable. */
   dispatchCommand(line: string): Promise<CommandExecution | undefined>
+  /** @param name - parsed slash name.
+   * @param message - original identified input.
+   * @returns whether it was queued, unavailable, or cancelled.
+   */
+  dispatchSkill(name: string, message: UserMessage): Promise<boolean | undefined>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
@@ -205,9 +210,18 @@ export function TerminalView({ interaction, locale, model, background }: {
       return
     }
     if (text.startsWith('/')) {
-      void interaction.dispatchCommand(value).then((execution) => {
-        setNotice(execution?.result.text ?? (execution === undefined ? `${copy.unknownCommand}: ${text}` : copy.commandCompleted))
-      }, (error: unknown) => { setNotice(String(error)) })
+      void (async () => {
+        try {
+          const execution = await interaction.dispatchCommand(value)
+          if (execution !== undefined) { setNotice(execution.result.text ?? copy.commandCompleted); return }
+          const command = parseCommand(text)
+          const routed = command === undefined ? false : await interaction.dispatchSkill(command.name, createInput(text))
+          if (routed === undefined) return
+          if (routed) {
+            setScrollLines(0); setLast(text); setNotice('')
+          } else setNotice(`${copy.unknownCommand}: ${text}`)
+        } catch (error: unknown) { setNotice(String(error)) }
+      })()
       return
     }
     send(text)

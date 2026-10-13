@@ -7,6 +7,7 @@ import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { TerminalController, type TerminalExecution } from '../src/controller.ts'
 import { resolveNativeTuiConfig } from '../src/config.ts'
+import type { NativeAdmittedUserQuestionRequest } from '@deepseek-ai/dsh-user-questions/native'
 
 /** Exercise admission, cleanup barriers and restore without allocating a second Session writer.
  * @param workspace - existing fixture workspace for explicit configuration validation.
@@ -91,6 +92,65 @@ export async function controllerProof(workspace: string): Promise<void> {
         await controller.close()
         expect(() =>{  controller.submit(message) }).toThrow('Terminal is closed')
       } finally { released.resolve(undefined); await controller.close() }
+    }
+    {
+      const owner = new AbortController()
+      const releases = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+      const entered = [Promise.withResolvers<AbortSignal>(), Promise.withResolvers<AbortSignal>(), Promise.withResolvers<AbortSignal>()]
+      let call = 0
+      const controller = new TerminalController({
+        turn: async () => ({ exitCode: 0 }), open: async () => undefined, history: async () => [], sessions: async () => [],
+        skills: { list: async (_id, signal) => {
+          const index = call++
+          entered[index]!.resolve(signal)
+          await releases[index]!.promise
+          return [{ name: 'archify', description: 'Diagram authoring', invocation: { modelInvocable: false, userInvocable: true },
+            source: 'bundled', provider: 'archify' }]
+        } },
+      }, owner.signal, settings, SessionId('controller-skill-lookup'))
+      const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '/archify diagram' }] })
+      let human: Promise<unknown> | undefined
+      let handledHuman: Promise<void> | undefined
+      try {
+        await controller.initialize([], new AbortController().signal)
+        const cancelled = controller.dispatchSkill('archify', message)
+        expect((await entered[0]!.promise).aborted).toBe(false)
+        controller.cancel()
+        expect((await entered[0]!.promise).aborted).toBe(true)
+        releases[0]!.resolve(undefined)
+        await expect(cancelled).resolves.toBeUndefined()
+        expect(controller.snapshot().queued).toBe(0)
+
+        const humanInterrupted = controller.dispatchSkill('archify', message)
+        const humanSignal = new AbortController()
+        human = controller.human.questions({ questions: [{ id: 'skill-lookup', question: 'Continue?' }],
+          signal: humanSignal.signal } as NativeAdmittedUserQuestionRequest)
+        handledHuman = human.then(() => undefined, () => undefined)
+        const prompt = controller.snapshot().human
+        expect(prompt?.kind).toBe('question')
+        expect((await entered[1]!.promise).aborted).toBe(true)
+        if (prompt === undefined) throw new Error('controller omitted the pending human prompt')
+        controller.answerHuman('yes', prompt)
+        await human
+        releases[1]!.resolve(undefined)
+        await expect(humanInterrupted).resolves.toBeUndefined()
+        expect(controller.snapshot().queued).toBe(0)
+
+        const closed = controller.dispatchSkill('archify', message)
+        await entered[2]!.promise
+        let closeResolved = false
+        const closing = controller.close().then(() => { closeResolved = true })
+        await Promise.resolve()
+        expect(closeResolved).toBe(false)
+        releases[2]!.resolve(undefined)
+        await expect(closed).resolves.toBeUndefined()
+        await closing
+        expect(controller.snapshot().queued).toBe(0)
+      } finally {
+        for (const release of releases) release.resolve(undefined)
+        await controller.close()
+        await handledHuman
+      }
     }
     const launch = new AbortController()
     const controller = new TerminalController({
