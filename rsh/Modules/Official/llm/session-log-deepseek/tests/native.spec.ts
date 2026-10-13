@@ -2,11 +2,12 @@ import { expect, it } from 'vitest'
 import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { DeepSeekLlmApiExtensionProvider, DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
+import type { DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
+import type { NativeDeepSeekLlmApiExtensions } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
 import { plugin as NativeSessionLog } from '../src/native.ts'
-import type { DeepSeekSessionLogExtension } from '../src/types.ts'
 
-type Provider = DeepSeekLlmApiExtensionProvider<DeepSeekSessionLogExtension>
+declare const nativeRegistry: NativeDeepSeekLlmApiExtensions
+type Provider = Parameters<typeof nativeRegistry.register<'dsh_session_log'>>[2]
 
 async function nativeHarness(flushFailure?: Error) {
   const sessionId = SessionId('native-session-log')

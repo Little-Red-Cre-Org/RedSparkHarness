@@ -34,7 +34,7 @@ import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
 import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mode/src/native.ts'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
-import { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
@@ -335,6 +335,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
           id: 'fixture', name: 'Fixture', models: [{ id: 'chosen', name: 'Chosen', reasoning }],
         }] }) })
       context.provide('model', {
+        async prepareCall(provider: string, id: string): Promise<PreparedAdapterCall> {
+          const stream = this.stream.bind(this)
+          return {
+            model: { provider, id, name: id, reasoning, inputModalities: ['text', 'image'] },
+            supportsOutputTokenLimit: async (maxTokens: number) => maxTokens === 1234,
+            stream,
+          }
+        },
         async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
           requests.push(request)
           if (webhookMode === 'complete') {
