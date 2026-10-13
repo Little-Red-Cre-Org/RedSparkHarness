@@ -174,6 +174,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-deepseek-llm-api-extensions': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
+  '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-skill': ['lib/native.js'],
+  '@deepseek-ai/dsh-request-context': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs
   // them through its own CSS pipeline, so the sheets are published artifacts.

@@ -1553,12 +1553,27 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
   const args = ptc ? { code: 'return 6 * 7', description: 'Calculate six times seven.' } : { program: 'return 6 * 7' }
   const safe = await fixture([
     toolCallResponse('code-safe', 'run_code', args), textResponse('calculation complete'),
-  ], { ptc, codeRuntimeProvider })
+  ], { ptc, codeRuntimeProvider, ...ptc ? { allowedTools: ['run_code'] } : {} })
+  let removeBusiness: (() => void) | undefined
   try {
+    if (ptc) {
+      removeBusiness = safe.tools.registerValueTool({
+        schema: { name: 'headless_unallowed_business', description: 'Return an unallowed fixture value.',
+          parameters: { type: 'object', properties: {}, additionalProperties: false } },
+        output: { schema: { type: 'string' }, render: (_call, value) => {
+          if (typeof value !== 'string') throw new Error('fixture business tool output must be text')
+          return { content: [{ type: 'text', text: value }], isError: false }
+        } },
+        async execute() { return 'hidden' },
+      }, safe.scope)
+      expect(safe.tools.sdkSchemas(safe.scope).map(schema => schema.name)).toContain('headless_unallowed_business')
+    }
     await safe.host.run(safe.scope, { kind: 'code-runtime-session' }, invocation => safe.app.run(['calculate'], invocation.signal))
     expect(requests).toHaveLength(1)
+    if (ptc) expect(requests[0]?.bindings).toEqual([])
     expect(requests[0]?.session.header.cwd).toBe(safe.workspace)
   } finally {
+    removeBusiness?.()
     await safe.host.stop()
     await rm(safe.directory, { recursive: true, force: true })
   }

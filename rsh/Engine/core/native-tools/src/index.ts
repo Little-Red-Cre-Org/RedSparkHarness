@@ -18,12 +18,21 @@ export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
 export type NativeToolMode = 'native' | 'ptc' | 'both'
 
+/** Exact asynchronous disposer returned by one tool registration. */
+export type NativeToolRegistration = () => Promise<void>
+
 /** Captured Registry entries for one model catalog or program binding set. */
 export interface NativeToolExecutionSnapshot {
   /** Schemas captured from the exact visible registrations admitted to this operation. */
   readonly schemas: readonly ToolSchema[]
   /** Canonical input/output schemas captured for PTC bindings; absent for model-only snapshots. */
   readonly programSchemas?: readonly ToolSdkSchema[]
+  /**
+   * Return whether this exact registered contribution belongs to the captured catalog.
+   * @param registration - disposer returned by the contribution.
+   * @returns whether the registration identity was captured.
+   */
+  includesRegistration(registration: NativeToolRegistration): boolean
   /** Cancellation for this snapshot; callers combine it with their operation signal. */
   readonly signal: AbortSignal
   /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns exact admitted preparation. */
@@ -672,11 +681,11 @@ export class NativeToolRegistry {
    * @param scope - installation scope, defaulting to the Provider scope.
    * @returns an idempotent disposer that removes the registration, cancels calls and awaits their settlement.
    */
-  register(tool: NativeToolContribution, scope?: NativeScope): () => Promise<void> {
+  register(tool: NativeToolContribution, scope?: NativeScope): NativeToolRegistration {
     return this.install(tool, scope)
   }
 
-  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): () => Promise<void> {
+  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): NativeToolRegistration {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
     const schema = structuredClone(tool.schema)
     const parameters = schema.parameters
@@ -775,10 +784,12 @@ export class NativeToolRegistry {
     const undispatched = new Set<() => void>()
     let closed = false
     let disposal: Promise<void> | undefined
+    const registrationHandles = new Set([...registrations.values()].map(entry => entry.dispose))
     return {
       schemas,
       ...(programSchemas === undefined ? {} : { programSchemas }),
       signal: controller.signal,
+      includesRegistration: registration => registrationHandles.has(registration),
       prepare: async (call) => {
         if (closed) throw new Error('native-tools: model snapshot is closed')
         const entry = registrations.get(call.name)

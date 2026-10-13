@@ -2187,7 +2187,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/skill/skill/src/index.ts:278`](../Modules/Official/skill/skill/src/index.ts)
+来源：[`rsh/Modules/Official/skill/skill/src/index.ts:65`](../Modules/Official/skill/skill/src/index.ts)
 
 <a id="deepseek-aidsh-skill-filesystem"></a>
 
@@ -2197,7 +2197,7 @@ export interface Config {
 
 ```ts config-catalog
 /** Local filesystem skill provider configuration. */
-export interface Config {
+export interface Config extends SkillWatchConfigInput {
   /** Unique provider name. Defaults to `filesystem`. */
   providerName?: string
   /** Whether project and user roots are included around custom roots. */
@@ -2208,24 +2208,28 @@ export interface Config {
   agentsHome?: string
   /** Additional skill roots scanned after project roots and before user roots. */
   customSkillDirs?: string[]
-  /** Whether host-local skill roots are watched for catalog changes. */
-  watch?: boolean
-  /** Whether Chokidar uses polling instead of native filesystem events. */
-  watchUsePolling?: boolean
-  /** Milliseconds a changed skill entry must remain stable before it is observed. */
-  watchStabilityThresholdMs?: number
-  /** Milliseconds between Chokidar stability or polling probes. */
-  watchPollIntervalMs?: number
-  /** Maximum distinct project roots whose skill directories remain watched. */
-  watchMaxProjects?: number
-  /** Whether watched symbolic links follow their target files. */
-  watchFollowSymlinks?: boolean
   /** Bundled skill root; defaults to `$DSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
   bundledSkillDir?: string
 }
+
+/** Watch controls read from the provider configuration. */
+export interface SkillWatchConfigInput {
+  /** Whether filesystem watches are enabled. */
+  readonly watch?: boolean
+  /** Whether Chokidar uses polling instead of native filesystem events. */
+  readonly watchUsePolling?: boolean
+  /** Stability interval before changed skill entries are published. */
+  readonly watchStabilityThresholdMs?: number
+  /** Interval between stability and polling probes. */
+  readonly watchPollIntervalMs?: number
+  /** Maximum number of project roots retained by the manager. */
+  readonly watchMaxProjects?: number
+  /** Whether watched symbolic links follow their target files. */
+  readonly watchFollowSymlinks?: boolean
+}
 ```
 
-来源：[`rsh/Modules/Official/skill/skill-filesystem/src/index.ts:49`](../Modules/Official/skill/skill-filesystem/src/index.ts)
+来源：[`rsh/Modules/Official/skill/skill-filesystem/src/config.ts:14`](../Modules/Official/skill/skill-filesystem/src/config.ts)
 
 <a id="deepseek-aidsh-spill-local"></a>
 
@@ -3016,7 +3020,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/skill/tool-skill/src/index.ts:61`](../Modules/Official/skill/tool-skill/src/index.ts)
+来源：[`rsh/Modules/Official/skill/tool-skill/src/index.ts:42`](../Modules/Official/skill/tool-skill/src/index.ts)
 
 <a id="deepseek-aidsh-tool-str-replace-editor"></a>
 
@@ -3655,6 +3659,8 @@ export interface Config {
 - `@deepseek-ai/dsh-output-retention`（[`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts)）
 - `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))
 - `@deepseek-ai/dsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))
+- `@deepseek-ai/dsh-request-context`（[`rsh/Engine/context/request-context/src/index.ts`](../Engine/context/request-context/src/index.ts)）
+- `@deepseek-ai/dsh-request-context-definition`（[`rsh/Engine/context/request-context-definition/src/index.ts`](../Engine/context/request-context-definition/src/index.ts)）
 - `@deepseek-ai/dsh-sandbox-windows-acl`（[`rsh/Modules/Official/sandbox/sandbox-windows-acl/src/index.ts`](../Modules/Official/sandbox/sandbox-windows-acl/src/index.ts)）
 - `@deepseek-ai/dsh-scope`（[`rsh/Engine/core/scope/src/index.ts`](../Engine/core/scope/src/index.ts)）
 - `@deepseek-ai/dsh-sdk-child`（[`rsh/Modules/Official/subagent/sdk-child/src/index.ts`](../Modules/Official/subagent/sdk-child/src/index.ts)）

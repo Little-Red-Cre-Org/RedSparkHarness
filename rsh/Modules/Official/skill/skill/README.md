@@ -45,6 +45,8 @@ Load the plugin like any Cordis plugin. The only configuration limits how many c
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-skill) is the exhaustive source for every accepted field.
 
+Native Host profiles select this package's `./native` entry, which provides the scope-aware `skills` service. A Native provider registers with `registerProvider(scope, create)` and receives a registration-specific abort signal and `invalidate()` callback; `list`, `snapshot`, and `get` use the dynamic Agent scope supplied by their caller. Native provider disposers abort their signal and wait for that registration's `list` and `get` work to settle. `NativeSkillRegistry.dispose()` closes lookup admission and waits for admitted `list`, `snapshot`, and `get` calls and provider work to settle. The Cordis root entry remains available for Cordis compositions.
+
 ### What the registry gives you
 
 - **One merged catalog.** A consumer asks for the current catalog of a workspace and receives every winning skill summary from every provider, sorted by name — no provider-specific ordering or deduplication to do.
@@ -87,7 +89,8 @@ The registry is host+per-scope layered, the shape the tools registry established
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry, `SkillRegistry` service, candidate and definition validation, shared model-facing rendering |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry, `SkillRegistry` service, candidate and definition validation, shared model-facing rendering |
+| [`src/native.ts`](src/native.ts) | Native Host entry and scope-aware `NativeSkillRegistry` provider |
 | — | No runtime invariant companion is published; provider/runtime maps and revisioned caches mutate atomically inside the registry, which exposes no independent change event or snapshot for cross-checking them. |
 
 ### Catalog collection

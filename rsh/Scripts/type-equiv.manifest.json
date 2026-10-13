@@ -962,6 +962,11 @@
       "source": "rsh/Engine/core/native-tools/src/json-schema.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/tools.md",
+      "symbol": "NativeToolRegistration",
+      "source": "rsh/Engine/core/native-tools/src/index.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/user-questions.md",
       "symbol": "AskUserQuestionOption",
       "source": "rsh/Modules/Official/interaction/user-questions/src/protocol.ts"
@@ -1328,48 +1333,58 @@
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "NativeSkillLookupOptions",
+      "source": "rsh/Modules/Official/skill/skill/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "NativeSkills",
+      "source": "rsh/Modules/Official/skill/skill/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillSource",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillResourceBase",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillInvocationPolicy",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillSummary",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillCatalogSnapshot",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillCandidate",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillDefinition",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillRegistration",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillLookupOptions",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
@@ -1379,17 +1394,17 @@
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillProviderObservation",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillProvider",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillProviderControl",
-      "source": "rsh/Modules/Official/skill/skill/src/index.ts"
+      "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
@@ -2380,6 +2395,41 @@
       "doc": "rsh/Docs/subsystems/llm-streaming.md",
       "symbol": "NativeDeepSeekLlmApiExtensions",
       "source": "rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContextProviderId",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContextAcceptance",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestToolVisibility",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContextRequest",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "PreparedNativeRequestContext",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContextProvider",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContexts",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
     }
   ]
 }

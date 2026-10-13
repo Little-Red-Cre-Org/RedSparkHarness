@@ -12,7 +12,7 @@ Status: implemented
 
 显式 `dsh.profile.runtime: "native"` 标记选择带版本号的 JSON profile。安装项列出包、作用域、id 与完整配置值；有序 JSON patch 只替换既有安装项。CLI 在导入插件入口前校验所有选中包的原生元数据，拒绝非空 Cordis patch 层，并通过 `NativeHost.run()` 启动恰好一个应用。
 
-原生 headless 应用在原生文件系统与观察策略 Provider、既有 Session 事件格式及 JSONL 后端之上拥有最小单轮 agent。原生模型执行 Provider 接收选定的模型流，以共享 LLM 流算法组装每个步骤，并在调用方的 Session 中记录完整助手事件或部分 attempt。这一分工让模型流收束可供复用，同时应用仍负责构建请求、执行工具、关闭 turn 和管理存储生命周期。它将两个文件工具限定在配置的工作目录内，在下一次模型请求前记录模型可见输入与工具结果，并在退出前刷新及关闭存储。可选的原生 prompt、tool、sandbox-policy、approval、worker code-runtime 与 time-context Provider 扩展该应用，但不会替换其 Session 或 Agent 权威；可选 time-context Consumer 会在派生模型请求前追加 Provider 返回的快照消息。续接时异步读取持久历史，拒绝已改变的工作目录和系统提示词设置，并记录完整的续接请求头。Session 构造时向调用方报告新追加的 seed 标记，后续事件直接从 append 返回值收集，不同步扫描 Session 历史。失败或中止的轮次通过 Session 中断修复补齐未完成工具调用，再关闭步骤与轮次。
+原生 headless 应用在原生文件系统与观察策略 Provider、既有 Session 事件格式及 JSONL 后端之上拥有最小单轮 agent。原生模型执行 Provider 接收选定的模型流，以共享 LLM 流算法组装每个步骤，并在调用方的 Session 中记录完整助手事件或部分 attempt。这一分工让模型流收束可供复用，同时应用仍负责构建请求、执行工具、关闭 turn 和管理存储生命周期。它将两个文件工具限定在配置的工作目录内，在下一次模型请求前记录模型可见输入与工具结果，并在退出前刷新及关闭存储。可选的原生 prompt、tool、sandbox-policy、approval、worker code-runtime、time-context 与 request-context Provider 扩展该应用，但不会替换其 Session 或 Agent 权威；time-context Consumer 会在派生模型请求前追加快照消息，request-context Provider 则通过应用的精确 owner 接受路径准备消息。续接时异步读取持久历史，拒绝已改变的工作目录和系统提示词设置，并记录完整的续接请求头。Session 构造时向调用方报告新追加的 seed 标记，后续事件直接从 append 返回值收集，不同步扫描 Session 历史。失败或中止的轮次通过 Session 中断修复补齐未完成工具调用，再关闭步骤与轮次。
 
 ## Alternatives considered
 

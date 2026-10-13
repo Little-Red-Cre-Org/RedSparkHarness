@@ -2,6 +2,16 @@
   "name": "@deepseek-ai/dsh-tool-skill",
   "description": "Model-facing skill loading tool for the DeepSeek Harness",
   "version": "0.1.5-rc.2",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["skills", "tools", "requestContexts"],
+      "optional": [],
+      "provides": []
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -18,11 +28,16 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -33,13 +48,23 @@
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true }
+  },
   "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-request-context-definition": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-request-context": "workspace:^",
+    "@deepseek-ai/dsh-request-context-definition": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",

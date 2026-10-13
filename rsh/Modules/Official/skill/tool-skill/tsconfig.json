@@ -19,6 +19,18 @@
       "path": "../../../../Engine/core/scope"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/context/request-context-definition"
+    },
+    {
+      "path": "../../../../Engine/context/request-context"
+    },
+    {
       "path": "../../../../Engine/llm/llm"
     },
     {

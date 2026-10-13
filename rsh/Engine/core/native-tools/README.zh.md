@@ -25,6 +25,8 @@ kind: "package-reference"
 
 Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
 
+`captureModelSnapshot()` 与 `captureProgramSnapshot()` 将 schema 和执行权绑定到精确注册。`includesRegistration()` 按捕获时的 disposer identity 检查注册。消费方会对模型 schema 或 PTC bindings 所用的同一快照执行可见性检查与调用；同名替代注册不会被视为已捕获注册。空 program snapshot 表示明确的空 binding 集合；缺少 program snapshot 则表示该执行没有捕获 PTC 路径。
+
 Engine 外部操作调用会延迟 `acceptResult()`，直到完整工具结果事件持久化。broker 也记录已接受的 settlement 后，`readAcceptedImages()` 才通过捕获的 Native 附件服务解析该结果及其 settlement contexts 中的图片引用；它不接受调用方提供的引用，并返回已验证的存储字节。
 
 贡献可以声明正数 `timeoutMs` 作为主体预算；注册表只记录它。`aroundExecution(policy, scope?)` 在每个主体外层、结果处理之外安装策略。策略收到冻结的工具声明，并且必须恰好调用一次 `next(signal?)`。替换信号会与调用方信号合并，策略自身的结果即为最终结果。先注册的策略包在后注册的策略外层。`onSettlement(policy, scope?)` 安装同步策略，它看到每个已记录结果及其已解析参数的冻结副本，且只能返回用户消息。应用为其记录的每个结果调用一次 `settlementContexts()`，PTC dispatch 对嵌套调用也这样做。这两个钩子支撑原生超时与重复调用 guard。

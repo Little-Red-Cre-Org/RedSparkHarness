@@ -66,7 +66,7 @@ skill 可以是被扫描根目录顶层的目录 bundle `<name>/SKILL.md`，也�
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `providerName` | `filesystem` | 注册到 `ctx.skills` 的唯一提供方名称 |
+| `providerName` | `filesystem` | 在 skill 注册表中注册的唯一提供方名称 |
 | `includeDefaultRoots` | `true` | 在 `customSkillDirs` 周围包含项目根与用户根 |
 | `dshHome` | `$DSH_HOME` 或 `~/.dsh` | Harness 配置根目录；扫描其 `skills` 子目录 |
 | `agentsHome` | `$DSH_AGENTS_HOME` 或 `~/.agents` | 为兼容 skill 扫描的共享 agent 配置根目录 |
@@ -75,6 +75,10 @@ skill 可以是被扫描根目录顶层的目录 bundle `<name>/SKILL.md`，也�
 | `bundledSkillDir` | — | 配置后按 rank 600 扫描的随包提供的 skill 根目录 |
 
 其余 `watch*` 字段用于调节 Chokidar 行为——轮询、稳定窗口、间隔、项目上限与符号链接跟随。生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-skill-filesystem)完整列出了所有字段，是这些字段的真源。
+
+### Native Host 入口
+
+本包还发布通过 Native manifest 选择的具名 `./native` 入口；它需要所选 `fs` 服务与 `skills` 注册表。Native 工作区根始终通过该文件系统扫描和读取，不会回退到 Node。即使后端无法把路径映射到宿主机，关闭 `watch` 时成功扫描仍为完整；启用 `watch` 时，任何无法映射的根都会使快照不完整，同时保留已发现的候选项。显式配置的 `bundledSkillDir` 是 Native 唯一通过 Node 读取的根目录，读取前会将每个路径与其规范化 bundle 根目录进行校验。
 
 ### 变更检测
 
@@ -96,13 +100,18 @@ skill 可以是被扫描根目录顶层的目录 bundle `<name>/SKILL.md`，也�
 
 ### 设计理念
 
-该提供方采用两项职责分离。第一，目录与正文分离：发现阶段把 frontmatter 解析为摘要，而每次加载都重新读取文件，因此正文编辑无需 hash、修订号或缓存失效。第二，发现与监视分离：`list()` 在存在文件系统服务时通过 `ctx.fs` 扫描根目录并解析项目根（否则回退到可中止的 Node I/O），而独立的监视管理器负责 Chokidar 句柄、缺失根探测与失效。
+该提供方采用两项职责分离。第一，目录与正文分离：发现阶段把 frontmatter 解析为摘要，而每次加载都重新读取文件，因此正文编辑无需 hash、修订号或缓存失效。第二，发现与监视分离：Cordis 适配器在存在 `ctx.fs` 时使用它，否则回退到可中止的 Node I/O；Native 入口要求 `fs`，不会为工作区根目录回退。两个入口共享根目录优先级、frontmatter 解析与监视管理器。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口、提供方、根解析、frontmatter 解析、监视管理器 |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口与提供方 |
+| [`src/native.ts`](src/native.ts) | Native Host 提供方，通过所选文件系统读取工作区根目录 |
+| [`src/config.ts`](src/config.ts) | 共享配置校验与根目录默认值 |
+| [`src/roots.ts`](src/roots.ts) | 共享根目录优先级与来源 rank |
+| [`src/frontmatter.ts`](src/frontmatter.ts) | 共享 skill frontmatter 解析器 |
+| [`src/watch.ts`](src/watch.ts) | 共享监视生命周期与失效逻辑 |
 | — | 不发布运行时不变式伴生入口；本包没有独立事件序列或可变数据关系，相关约定在所属 seam 强制执行。 |
 
 ### 发现流程

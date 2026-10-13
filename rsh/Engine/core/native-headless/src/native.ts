@@ -40,7 +40,7 @@ import type { NativeModelExecution, NativePreparedModelStep } from '@deepseek-ai
 import type { NativeResponsesRoute } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations, NativeToolApproval,
   NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
-  NativeToolRegistry, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
+  NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
@@ -53,6 +53,7 @@ import {
 } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
 import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
+import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
 import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import type { NativeTmuxContext } from '@deepseek-ai/dsh-tmux-context-definition'
 import {
@@ -395,6 +396,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly executionScope: NativeScope = context.scope,
     private readonly agentInstructions?: NativeAgentInstructions,
     private readonly attachments?: AttachmentOperations,
+    private readonly requestContexts?: NativeRequestContexts,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -652,6 +654,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let seedResident = false
     let activeOwner: NativeProgramActiveSession | undefined
     let activePreparedStep: NativePreparedModelStep | undefined
+    const toolSnapshots: NativeToolExecutionSnapshot[] = []
     let turnOwnership: { release?: () => void } | undefined
     let acceptedPreset: string | null = null
     let closersToAppend: SessionEvent[] = []
@@ -744,13 +747,28 @@ export class NativeHeadlessApplication implements NativeApplication {
           .filter(schema => allowed(schema.name)
             && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
         : []
-      const modelSchemas = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name))
-      const modelTools = modelSchemas.map(schema => schema.name)
+      const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)
       const programToolNames = this.tools === undefined || this.tools.modelMode === 'native'
         || !modelTools.includes('run_code') ? []
         : this.tools.sdkSchemas(agent.scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name)
           .filter(name => allowed(name)
             && (request.delegationContext === undefined || request.delegationContext.programToolNames.includes(name)))
+      const modelSnapshot = modelTools.length === 0 ? undefined : this.tools?.captureModelSnapshot(modelTools, agent.scope)
+      if (modelSnapshot !== undefined) {
+        toolSnapshots.push(modelSnapshot)
+        if (modelSnapshot.schemas.length !== modelTools.length) {
+          throw new Error('native-headless: a model Registry tool is no longer registered')
+        }
+      }
+      const modelSchemas = modelSnapshot?.schemas ?? []
+      const programSnapshot = this.tools === undefined || this.tools.modelMode === 'native' || !modelTools.includes('run_code')
+        ? undefined : this.tools.captureProgramSnapshot(programToolNames, agent.scope)
+      if (programSnapshot !== undefined) {
+        toolSnapshots.push(programSnapshot)
+        if (programSnapshot.programSchemas?.length !== programToolNames.length) {
+          throw new Error('native-headless: a program binding is no longer registered')
+        }
+      }
       const builtinTools = builtinSchemas.map(schema => schema.name)
       const resolvedSandbox = this.sandboxPolicy?.resolve({ session })
       const toolNames = [...new Set([...builtinTools, ...modelTools])]
@@ -804,6 +822,9 @@ export class NativeHeadlessApplication implements NativeApplication {
       const rootEpoch = this.rootEpochs.get(id)
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
       activeOwner = await this.ensureActiveOwner(owner, agent, invocation, config, rootOrigin)
+      if (activeOwner === undefined && operation === undefined && this.requestContexts?.hasProviders(agent.scope) === true) {
+        throw new Error('native-headless: request-context providers require the exact active Session owner')
+      }
       const ownerApproval = executionPolicy?.permission.mode === 'require-approval'
         && operation === undefined && invocation === 'root' && activeOwner !== undefined
         ? request.issueOwnerApproval?.(activeOwner) : undefined
@@ -889,8 +910,10 @@ export class NativeHeadlessApplication implements NativeApplication {
         const pendingCalls = new Set<Promise<NativeExternalToolInvocation>>()
         const pendingImageReads = new Set<Promise<readonly StoredImageAttachment[]>>()
         const closing = new AbortController()
-        let modelSnapshot: NativeToolExecutionSnapshot | undefined
-        let programSnapshot: NativeToolExecutionSnapshot | undefined
+        let externalModelSnapshot: NativeToolExecutionSnapshot | undefined
+        let externalProgramSnapshot: NativeToolExecutionSnapshot | undefined
+        let externalModelSchemas: readonly ToolSchema[] = []
+        let externalProgramSchemas: readonly ToolSdkSchema[] = []
         let closed = false
         let disposal: Promise<void> | undefined
         const dispose = (): Promise<void> => {
@@ -911,23 +934,40 @@ export class NativeHeadlessApplication implements NativeApplication {
         try {
           if (registryNames.length > 0) {
             if (this.tools === undefined) throw new Error('native-headless: external Registry tools are unavailable')
-            modelSnapshot = this.tools.captureModelSnapshot(registryNames, agent.scope)
-            snapshots.push(modelSnapshot)
-            if (modelSnapshot.schemas.length !== registryNames.length) {
+            const capturedSchemas = modelSnapshot?.schemas.filter(schema => registryNames.includes(schema.name))
+            if (modelSnapshot !== undefined && capturedSchemas?.length === registryNames.length) {
+              externalModelSnapshot = modelSnapshot
+              externalModelSchemas = capturedSchemas
+            } else {
+              externalModelSnapshot = this.tools.captureModelSnapshot(registryNames, agent.scope)
+              snapshots.push(externalModelSnapshot)
+              externalModelSchemas = externalModelSnapshot.schemas
+            }
+            if (externalModelSchemas.length !== registryNames.length) {
               throw new Error('native-headless: an external Registry tool is no longer registered')
             }
           }
-          if (delegation.programToolNames.length > 0) {
+          if (delegation.programToolNames.length > 0 || registryNames.includes('run_code')
+            && this.tools !== undefined && this.tools.modelMode !== 'native') {
             if (this.tools === undefined || this.tools.modelMode === 'native') {
               throw new Error('native-headless: external program bindings are unavailable')
             }
-            programSnapshot = this.tools.captureProgramSnapshot(delegation.programToolNames, agent.scope)
-            snapshots.push(programSnapshot)
-            if (programSnapshot.programSchemas?.length !== delegation.programToolNames.length) {
+            const capturedSchemas = programSnapshot?.programSchemas?.filter(schema => delegation.programToolNames.includes(schema.name))
+            if (programSnapshot !== undefined
+              && programSnapshot.programSchemas?.length === delegation.programToolNames.length
+              && capturedSchemas?.length === delegation.programToolNames.length) {
+              externalProgramSnapshot = programSnapshot
+              externalProgramSchemas = capturedSchemas
+            } else {
+              externalProgramSnapshot = this.tools.captureProgramSnapshot(delegation.programToolNames, agent.scope)
+              snapshots.push(externalProgramSnapshot)
+              externalProgramSchemas = externalProgramSnapshot.programSchemas ?? []
+            }
+            if (externalProgramSchemas.length !== delegation.programToolNames.length) {
               throw new Error('native-headless: an external program binding is no longer registered')
             }
           }
-          const programSchemas = programSnapshot?.programSchemas ?? []
+          const programSchemas = externalProgramSchemas
           const promptSections = await this.promptSections?.render(agent.scope, {
             allowedTools: delegation.toolNames, programSchemas,
           }) ?? ''
@@ -939,7 +979,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           }
           const allowedBuiltins = new Set(delegation.builtinToolNames)
           return {
-            schemas: Object.freeze([...builtinSchemas, ...(modelSnapshot?.schemas ?? [])]),
+            schemas: Object.freeze([...builtinSchemas, ...externalModelSchemas]),
             programSchemas,
             promptText,
             execute: async (call: NativeExternalToolCall, toolSignal: AbortSignal) => {
@@ -965,11 +1005,14 @@ export class NativeHeadlessApplication implements NativeApplication {
                     result = { content: [{ type: 'text', text: outcome.text }], isError: outcome.error !== undefined,
                       ...outcome.error === undefined ? {} : { error: outcome.error } }
                   } else {
-                    if (modelSnapshot === undefined) throw new HarnessError(`unknown external tool ${call.name}`, 'TOOL_DENIED')
+                    if (externalModelSnapshot === undefined || !registryNames.includes(call.name)) {
+                      throw new HarnessError(`unknown external tool ${call.name}`, 'TOOL_DENIED')
+                    }
                     execution = {
                       agent, callId: call.callId, name: call.name, arguments: call.arguments, session,
                       signal: effectiveSignal,
-                      ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
+                      ...call.name === 'run_code' && externalProgramSnapshot !== undefined
+                        ? { programSnapshot: externalProgramSnapshot } : {},
                       delegationContext: delegation,
                       ...responsesGeneration === undefined ? {} : { responsesGeneration },
                       appendEvent: async (type, data, ...opts) => {
@@ -982,7 +1025,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                       },
                       ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
                     }
-                    const prepared = await modelSnapshot.execute(execution)
+                    const prepared = await externalModelSnapshot.execute(execution)
                     execution = prepared.call
                     result = prepared.result
                   }
@@ -1126,6 +1169,9 @@ export class NativeHeadlessApplication implements NativeApplication {
         const admit = async (step: number) => {
           if (activeOwner === undefined) {
             const prepared = await prepare()
+            if (this.requestContexts?.hasProviders(agent.scope) === true) {
+              throw new Error('native-headless: request-context providers require the exact active Session owner')
+            }
             return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), commitChecks: [], ...prepared }
           }
           const candidates = [...owner.messages('next-step'), ...step === 1 ? owner.messages('next-turn').slice(0, 1) : []]
@@ -1165,68 +1211,89 @@ export class NativeHeadlessApplication implements NativeApplication {
           const stepConfig = preparedStep.config
           const instructionContexts = await this.agentInstructions?.prepare(session, inputs, signal)
           signal.throwIfAborted()
-          if (activeOwner !== undefined) {
-            const admittedIds = new Set(inputs.map(input => input.id))
-            const rejected = new Set<MessageId>()
-            for (const check of commitChecks) {
-              const rejectedByCheck: unknown = check()
-              if (!Array.isArray(rejectedByCheck)) {
-                if (typeof rejectedByCheck === 'object' && rejectedByCheck !== null && 'then' in rejectedByCheck) {
-                  // Observe a rejected async check after refusing its result synchronously.
-                  void Promise.resolve(rejectedByCheck).then(undefined, () => undefined)
-                }
-                throw new Error('native-headless: admission commit check must return message ids synchronously')
-              }
-              for (const messageId of rejectedByCheck as MessageId[]) {
-                if (!admittedIds.has(messageId)) throw new Error('native-headless: admission commit check rejected an unadmitted message')
-                rejected.add(messageId)
-              }
-            }
-            if (rejected.size > 0) {
-              await owner.remove([...rejected], 'canceled', signal)
-              admissionInvalidated = true
-              exitCode = 0
-              break
-            }
-            owner.removePending(inputs.map(input => input.id), undefined)
-          }
-          track(session.append('step/start', { turn, step }))
-          if (step === 1) {
-            if (session.deriveMessages().every(message => message.role !== 'system')) {
-              track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
-            }
-          }
-          for (const input of inputs) {
-            track(session.append('user/message', input, { surfaceOp: 'append' }))
-          }
-          if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
-          for (const instructionContext of instructionContexts ?? []) {
-            track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
-          }
           const timeContext = this.timeContext?.prepare({ session, turn, step })
-          if (timeContext !== undefined) {
-            track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
-          }
           const tmuxContext = await this.tmuxContext?.prepare({ session, turn, step, signal })
           signal.throwIfAborted()
-          if (tmuxContext !== undefined) {
-            track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
+          const acceptStep = async (requestContextMessages: readonly UserMessage[]): Promise<'accepted' | 'rejected'> => {
+            if (activeOwner !== undefined) {
+              const admittedIds = new Set(inputs.map(input => input.id))
+              const rejected = new Set<MessageId>()
+              for (const check of commitChecks) {
+                const rejectedByCheck: unknown = check()
+                if (!Array.isArray(rejectedByCheck)) {
+                  if (typeof rejectedByCheck === 'object' && rejectedByCheck !== null && 'then' in rejectedByCheck) {
+                    // Observe a rejected async check after refusing its result synchronously.
+                    void Promise.resolve(rejectedByCheck).then(undefined, () => undefined)
+                  }
+                  throw new Error('native-headless: admission commit check must return message ids synchronously')
+                }
+                for (const messageId of rejectedByCheck as MessageId[]) {
+                  if (!admittedIds.has(messageId)) throw new Error('native-headless: admission commit check rejected an unadmitted message')
+                  rejected.add(messageId)
+                }
+              }
+              if (rejected.size > 0) {
+                await owner.remove([...rejected], 'canceled', signal)
+                admissionInvalidated = true
+                exitCode = 0
+                return 'rejected'
+              }
+              signal.throwIfAborted()
+              owner.removePending(inputs.map(input => input.id), undefined)
+            }
+            track(session.append('step/start', { turn, step }))
+            if (step === 1) {
+              if (session.deriveMessages().every(message => message.role !== 'system')) {
+                track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
+              }
+            }
+            for (const input of inputs) {
+              track(session.append('user/message', input, { surfaceOp: 'append' }))
+            }
+            if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
+            for (const instructionContext of instructionContexts ?? []) {
+              track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
+            }
+            if (timeContext !== undefined) track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
+            if (tmuxContext !== undefined) track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
+            for (const requestContextMessage of requestContextMessages) {
+              track(session.append('user/message', requestContextMessage, { surfaceOp: 'append' }))
+            }
+            const priorHeader = session.requestHeader()
+            if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
+              track(session.append('request/header', {
+                header: { config: { ...stepConfig }, ...schemas.length === 0 ? {} : { tools: schemas } },
+                reason: priorHeader === undefined ? 'initial' : 'resume',
+              }))
+            }
+            const priorContext = session.requestContext()
+            const contextWindow = preparedStep.modelInfo?.context?.contextWindow
+            if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model
+              || priorContext.contextWindow !== contextWindow) {
+              track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model,
+                ...contextWindow === undefined ? {} : { contextWindow } }))
+            }
+            await persist()
+            return 'accepted'
           }
-          const priorHeader = session.requestHeader()
-          if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
-            track(session.append('request/header', {
-              header: { config: { ...stepConfig }, ...schemas.length === 0 ? {} : { tools: schemas } },
-              reason: priorHeader === undefined ? 'initial' : 'resume',
-            }))
+          let acceptance: 'accepted' | 'rejected'
+          if (this.requestContexts !== undefined && activeOwner !== undefined) {
+            const durableEvents = await activeOwner.readEvents({ signal })
+            signal.throwIfAborted()
+            acceptance = await this.requestContexts.prepareAndAccept({
+              owner: activeOwner, scope: agent.scope, turn, step, inputs, durableEvents,
+              toolVisibility: { includes: registration => modelSnapshot?.includesRegistration(registration) === true
+                || programSnapshot?.includesRegistration(registration) === true }, signal,
+            }, acceptStep)
+          } else {
+            acceptance = await acceptStep([])
           }
-          const priorContext = session.requestContext()
-          const contextWindow = preparedStep.modelInfo?.context?.contextWindow
-          if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model
-            || priorContext.contextWindow !== contextWindow) {
-            track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model,
-              ...contextWindow === undefined ? {} : { contextWindow } }))
+          if (acceptance === 'rejected') {
+            if (!admissionInvalidated) reason = { kind: 'blocked' }
+            admissionInvalidated = true
+            exitCode = 0
+            break
           }
-          await persist()
           const options: GenerateOptions = {
             ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
           }
@@ -1281,6 +1348,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
                 execution = {
                   agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                  ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
                   ...(request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext }),
                   appendEvent: async (type, data, ...opts) => {
                     if (type !== 'tool/ptc-dispatch') signal.throwIfAborted()
@@ -1291,7 +1359,10 @@ export class NativeHeadlessApplication implements NativeApplication {
                   },
                   ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
                 }
-                const result = await this.tools.executeModelCall(execution)
+                if (modelSnapshot === undefined) throw new HarnessError(`native-headless: tool ${call.name} is outside the captured model catalog`, 'TOOL_DENIED')
+                const captured = await modelSnapshot.execute(execution)
+                execution = captured.call
+                const result = captured.result
                 content = [...result.content]
                 isError = result.isError
                 meta = result.meta
@@ -1360,6 +1431,9 @@ export class NativeHeadlessApplication implements NativeApplication {
       const failures: unknown[] = []
       try { releaseObservation?.() } catch (error: unknown) { failures.push(error) }
       try { await releaseExecution?.() } catch (error: unknown) { failures.push(error) }
+      for (const snapshot of toolSnapshots) {
+        try { await snapshot.dispose() } catch (error: unknown) { failures.push(error) }
+      }
       try {
         const current = this.continuationOwners.get(id)
         const rootEpoch = this.rootEpochs.get(id)
@@ -2506,6 +2580,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     authority?.defaultModelSelection,
     context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope,
     context.optional('agentInstructions'), authority?.attachments ?? context.optional('attachments'),
+    context.optional('requestContexts'),
   )
   context.own(() => application.dispose())
   return application
@@ -2515,7 +2590,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)

@@ -1000,6 +1000,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the process path for the same file, or undefined when this execution world cannot read that host file.',
       },
       {
+        signature: 'hostPathFor(absolutePath: string): string | undefined',
+        description: 'Map an absolute path in this filesystem\'s execution world to the corresponding harness-host path when the host can access the same file.',
+        parameters: [{ name: 'absolutePath', description: 'absolute path in this filesystem\'s execution world.' }],
+        returns: 'an absolute host path for the same file, or undefined when no mapping exists.',
+      },
+      {
         signature: 'abstract resolve(path: string, opts?: { cwd?: string; signal?: AbortSignal }): Promise<FsTarget>',
         description: 'Resolve a model/plugin-supplied path into a stable FsTarget. May perform I/O (a remote/sandboxed backend may need a round-trip to map a path to a stable identity), hence async even though the local backend only normalizes + realpaths.',
         parameters: [{ name: 'path', description: 'the path to resolve; relative paths resolve against `opts.cwd`.' }, { name: 'opts', description: 'optional cwd override and cancellation signal.' }],

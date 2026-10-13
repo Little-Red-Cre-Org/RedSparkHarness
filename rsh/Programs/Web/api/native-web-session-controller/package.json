@@ -64,7 +64,8 @@
         "accounts",
         "sessionTitles",
         "commands",
-        "pluginInventory"
+        "pluginInventory",
+        "requestContexts"
       ],
       "provides": [
         "nativeWebSession",

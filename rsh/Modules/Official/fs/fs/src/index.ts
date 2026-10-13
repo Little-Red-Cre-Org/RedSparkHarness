@@ -97,6 +97,13 @@ export abstract class FileSystem extends Service implements FileSystemOperations
    */
   processPathFromHostPath(hostPath: string): string | undefined { return FileSystemOperations.prototype.processPathFromHostPath(hostPath) }
   /**
+   * Map an absolute path in this filesystem's execution world to the
+   * corresponding harness-host path when the host can access the same file.
+   * @param absolutePath - absolute path in this filesystem's execution world.
+   * @returns an absolute host path for the same file, or undefined when no mapping exists.
+   */
+  hostPathFor(absolutePath: string): string | undefined { return FileSystemOperations.prototype.hostPathFor(absolutePath) }
+  /**
    * Resolve a model/plugin-supplied path into a stable {@link FsTarget}. May perform I/O (a
    * remote/sandboxed backend may need a round-trip to map a path to a stable identity), hence
    * async even though the local backend only normalizes + realpaths.
