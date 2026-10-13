@@ -1,6 +1,7 @@
 /** Tool presentation derived solely from accepted, durable Session facts. */
-import { NativeToolCard, type ToolCallBlock, type RunningToolCall } from '@deepseek-ai/dsh-client-ui-tool/tool-renderer'
+import { NativeToolCard, type ToolCallBlock, type RunningToolCall } from '@deepseek-ai/dsh-client-ui-tool/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type {} from '@deepseek-ai/dsh-native-tools/types'
 
 interface ToolCardRecord { readonly seq: number; readonly block: ToolCallBlock }
 
@@ -12,6 +13,8 @@ interface ToolCardRecord { readonly seq: number; readonly block: ToolCallBlock }
 export function toolCardRecords(events: readonly SessionEvent[]): readonly ToolCardRecord[] {
   const calls = new Map<string, { seq: number; call: RunningToolCall }>()
   const cards = new Map<string, ToolCardRecord>()
+  const children = new Map<string, ToolCallBlock[]>()
+  const subCalls = new Map<string, RunningToolCall>()
   for (const event of events) {
     if (event.type === 'tool/call') {
       const call: RunningToolCall = { callId: event.data.callId, name: event.data.name, argsRaw: event.data.arguments,
@@ -29,9 +32,40 @@ export function toolCardRecords(events: readonly SessionEvent[]): readonly ToolC
         ...event.data.error === undefined ? {} : { error: event.data.error },
         ...event.data.meta === undefined ? {} : { meta: event.data.meta }, subCalls: [],
       } })
+    } else if (event.type === 'tool/ptc-dispatch-start') {
+      const parentCallId = String(event.data.parentCallId)
+      const parent = calls.get(parentCallId)?.call ?? subCalls.get(parentCallId)
+      const call: RunningToolCall = {
+        callId: String(event.data.subCallId), parentCallId, name: event.data.name,
+        argsRaw: JSON.stringify(event.data.arguments), turn: parent?.turn ?? 0,
+        step: parent?.step ?? 0, time: event.time, subCalls: [],
+      }
+      subCalls.set(call.callId, call)
+      const siblings = children.get(parentCallId) ?? []
+      children.set(parentCallId, [...siblings, call])
+    } else if (event.type === 'tool/ptc-dispatch') {
+      const parentCallId = String(event.data.parentCallId)
+      const callId = String(event.data.subCallId)
+      const previous = subCalls.get(callId)
+      const settled: ToolCallBlock = {
+        kind: 'tool-result', seq: event.seq, time: event.time, callId, parentCallId,
+        call: { name: event.data.name, argsRaw: JSON.stringify(event.data.arguments) },
+        callTime: previous?.time ?? null, content: event.data.content, isError: event.data.isError,
+        subCalls: [],
+      }
+      subCalls.delete(callId)
+      const siblings = children.get(parentCallId) ?? []
+      const index = siblings.findIndex(child => child.callId === callId)
+      children.set(parentCallId, index === -1
+        ? [...siblings, settled]
+        : siblings.map((child, childIndex) => childIndex === index ? settled : child))
     }
   }
-  return [...cards.values()]
+  const project = (block: ToolCallBlock): ToolCallBlock => {
+    const nested = children.get(block.callId) ?? block.subCalls
+    return nested.length === 0 ? block : { ...block, subCalls: nested.map(project) }
+  }
+  return [...cards.values()].map(record => ({ ...record, block: project(record.block) }))
 }
 
 /**

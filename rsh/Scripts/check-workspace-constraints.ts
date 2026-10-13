@@ -175,7 +175,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // them through its own CSS pipeline, so the sheets are published artifacts.
   // The glob covers whichever sheets a package emits; sourcemaps stay
   // unpublished, as everywhere else in the repository.
-  '@deepseek-ai/dsh-client-ui-tool': ['lib/tool-renderer.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-tool': ['lib/native.js', 'lib/tool-renderer.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-approval': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-user-questions': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
   '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js', 'lib/native.js'],
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],

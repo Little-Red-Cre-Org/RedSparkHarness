@@ -10,7 +10,7 @@ const call = (callId = 'call-1') => event(1, 'tool/call', {
   turn: 1, step: 1, callId, name: 'read', arguments: '{"file_path":"tool-card.txt"}',
 })
 
-const result = (callId = 'call-1', over: Record<string, unknown> = {}) => event(2, 'tool/result', {
+const result = (callId = 'call-1', over: Record<string, unknown> = {}, seq = 2) => event(seq, 'tool/result', {
   turn: 1, step: 1,
   message: {
     id: 'message-1', role: 'user', source: { kind: 'tool', callId },
@@ -23,13 +23,26 @@ const result = (callId = 'call-1', over: Record<string, unknown> = {}) => event(
 
 describe('native Tool card projection', () => {
   it('pairs durable call and result facts under the call sequence', () => {
-    const record = toolCardRecords([event(0, 'assistant/message', {}), call(), result()])[0]!
+    const record = toolCardRecords([
+      event(0, 'assistant/message', {}), call(),
+      event(2, 'tool/ptc-dispatch-start', {
+        rootCallId: 'call-1', parentCallId: 'call-1', subCallId: 'call-1:ptc:1',
+        name: 'read', arguments: { path: 'child.txt' },
+      }),
+      event(3, 'tool/ptc-dispatch', {
+        rootCallId: 'call-1', parentCallId: 'call-1', subCallId: 'call-1:ptc:1',
+        name: 'read', arguments: { path: 'child.txt' }, isError: false, content: [{ type: 'text', text: 'child' }],
+      }),
+      result('call-1', {}, 4),
+    ])[0]!
     expect(record).toMatchObject({
       seq: 1,
       block: {
         kind: 'tool-result', callId: 'call-1', call: { name: 'read', argsRaw: '{"file_path":"tool-card.txt"}' },
         callTime: 1_700_000_000_001, content: [{ type: 'text', text: 'failed' }], isError: true,
         error: { name: 'Error', code: 'READ_FAILED' }, meta: { path: 'tool-card.txt' },
+        subCalls: [{ kind: 'tool-result', callId: 'call-1:ptc:1', call: { name: 'read', argsRaw: '{"path":"child.txt"}' },
+          callTime: 1_700_000_000_002, content: [{ type: 'text', text: 'child' }], isError: false }],
       },
     })
   })
