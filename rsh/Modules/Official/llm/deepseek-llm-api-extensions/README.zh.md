@@ -9,11 +9,12 @@ kind: "package-reference"
 
 ## 概述
 
-用于向 DeepSeek 官方 LLM（大语言模型）API 请求添加顶层字段的提供方特定注册表。`DeepSeekLlmApiExtensionRegistry` 注册 `ctx.deepseekLlmApiExtensions`；贡献插件分别认领一个经声明合并的字段，`dsh-llm-deepseek` 则在序列化基础请求后准备当前贡献。当插件必须添加经过验证的提供方特定字段且不能修改基础适配器时，请使用它。
+用于向 DeepSeek 官方 LLM（大语言模型）API 请求添加顶层字段的提供方特定注册表。Cordis 组合将 `DeepSeekLlmApiExtensionRegistry` 注册为 `ctx.deepseekLlmApiExtensions`；Native 组合则使用 `./native` 提供的显式作用域 `deepseekLlmApiExtensions` 服务。贡献插件各自认领一个声明合并字段，`dsh-llm-deepseek` 会在序列化基础请求后准备当前贡献。插件需要添加经过验证的提供方特定元数据且不能修改基础适配器时可使用它。
 
 ## 目录
 
 - [服务](#service)
+- [Native Host API](#native-host-api)
 - [模型体验](#model-experience)
 - [已知限制与暂缓事项](#known-limitations-and-deferred-work)
 - [开发备注](#dev-note)
@@ -31,10 +32,15 @@ kind: "package-reference"
 
 注册表拥有字段添加与生命周期，不拥有字段语义。`@deepseek-ai/dsh-session-log-deepseek` 拥有 `dsh_session_log`；`@deepseek-ai/dsh-plugin-package-inventory-deepseek` 拥有 `dsh_plugin_packages`。提供方无关的 LLM seam 与 `llm-pi-ai` 都不消费该注册表。
 
+<a id="native-host-api"></a>
+## Native Host API
+
+`./native` 包导出会在不使用 Cordis 的情况下提供同一个 `deepseekLlmApiExtensions` 服务。`register(scope, field, provider)` 将字段绑定到可见的 Native 作用域，并返回注册 disposer；`prepare(scope, request)` 会为每个字段选择最近的可见贡献方。`dsh-llm-deepseek` 将此服务声明为可选，因此未安装注册表的 Native 模型仍可运行，只是不带贡献字段。
+
 <a id="model-experience"></a>
 ## 模型体验
 
-通过 `@deepseek-ai/dsh-llm-deepseek` 间接生效；该包在模型的 `messages`、系统提示词与工具 schema 之外发送已注册字段。
+通过 `@deepseek-ai/dsh-llm-deepseek` 间接生效；该包在模型的 `messages`、系统提示词与工具 schema 之外发送已注册的 Cordis 或 Native 字段。
 
 #### KV Cache 影响
 

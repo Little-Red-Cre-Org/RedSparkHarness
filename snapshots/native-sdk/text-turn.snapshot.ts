@@ -181,7 +181,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
   const { plugin } = await import(fixtureUrl) as { plugin: { apiVersion: number; targets: string[];
     requires: string[]; optional: string[]; provides: string[] } }
   writeFileSync(join(fixturePackage, 'native.mjs'), `export { plugin } from ${JSON.stringify(fixtureUrl)}\n`)
-  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-descendants', type: 'module',
+  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-descendants', version: '0.0.0', type: 'module',
     exports: { './package.json': './package.json', './native': './native.mjs' },
     dsh: { native: { apiVersion: plugin.apiVersion, entry: './native', targets: plugin.targets,
       requires: plugin.requires, optional: plugin.optional, provides: plugin.provides } } }))

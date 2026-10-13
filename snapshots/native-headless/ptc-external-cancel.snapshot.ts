@@ -41,7 +41,7 @@ function normalizeEmbeddedRequestBodies(raw: string, cwd: string): string {
 function installFixturePackage(profileModules: string, packageName: string, source: string, provides: string[]): string {
   const directory = join(profileModules, packageName)
   mkdirSync(directory)
-  writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: packageName, type: 'module',
+  writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: packageName, version: '0.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides } },
   }))

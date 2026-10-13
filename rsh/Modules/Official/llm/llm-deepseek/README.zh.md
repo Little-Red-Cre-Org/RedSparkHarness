@@ -88,7 +88,7 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 
 ### 提供方专用请求字段
 
-存在 `ctx.deepseekLlmApiExtensions` 时，适配器会在 `fetch` 前根据确切序列化基础请求准备已注册顶层字段。准备或字段冲突在 HTTP 前失败；2xx 响应后，适配器会在消费 SSE（Server-Sent Events）前接受每项已捕获贡献。传输与非 2xx 失败不会接受它们。随产品交付的组合用它提供可选增量 `dsh_session_log` 字段和默认启用的活跃 `dsh_plugin_packages` 清单；两者都留在模型输入之外。
+存在 `ctx.deepseekLlmApiExtensions` 时，Cordis 适配器会在 `fetch` 前根据确切序列化基础请求准备已注册顶层字段。准备或字段冲突在 HTTP 前失败；2xx 响应后，它会在消费 SSE（Server-Sent Events）前接受每项已捕获贡献。传输与非 2xx 失败不会接受它们。随产品交付的 Cordis 组合用它提供可选增量 `dsh_session_log` 字段和默认启用的活跃 `dsh_plugin_packages` 清单；两者都留在模型输入之外。安装可选 `deepseekLlmApiExtensions` 服务时，Native Provider 使用相同字段。
 
 ### 失败与恢复
 
@@ -98,7 +98,7 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 
 ### 原生安装
 
-`./native` 入口使用相同的 DeepSeekAdapter、连接解析器与图像序列化，发布一个已选模型 Provider。原生凭据与启动环境为必需服务；附件与 Fs 为可选服务。连接配置在安装期间固定。Cordis 入口保留动态设置与扩展贡献；此原生入口不注册设置编辑器或请求扩展注册表。元数据查询与 HTTP 流在完成之前保留安装所有权；移除时取消接纳、关闭迭代器并报告清理失败。
+`./native` 入口使用相同的 DeepSeekAdapter、连接解析器与图像序列化，发布一个已选模型 Provider。Native 凭据与启动环境为必需服务；附件、Fs、`activeSessions` 与 `deepseekLlmApiExtensions` 为可选服务。连接配置在安装期间固定。请求 `sessionId` 匹配活动 Session 时，扩展准备使用该所有者 Agent 的作用域；否则使用模型安装作用域。没有可选扩展服务时，模型仍可运行但不带贡献字段。元数据查询与 HTTP 流在完成之前保留安装所有权；移除时取消接纳、关闭迭代器并报告清理失败。随附 profile 继续使用 Cordis 入口。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -159,7 +159,7 @@ Files 模式通过 `maxRequestFilesBytes` 与 `maxImagesPerRequest` 限制保留
 
 #### 模型看到什么
 
-所选 DeepSeek 模型会收到 harness 系统提示词、消息历史、工具 schema、停止序列与调用配置（`maxTokens`、`reasoningEffort`、`temperature`），不包含适配器撰写的提示词散文。提供方专用请求扩展字段留在模型输入之外。视觉模型通常接收 Files API 引用形式的用户与工具结果图片，其旁带附件句柄和请求预览尺寸。当前执行文件系统可以映射附件提供方的宿主对象时，它还会收到规范化对象路径；描述符会把该副本标记为只读，并警告规范化可能缩放或重新编码上传内容。Files 解析失败时，全部保留图片改用内联 data URL；超出预算的较旧图片则在占位文本中保留当前请求已解析的访问方式。此前 assistant 轮次的推理内容会原样传回，无论该轮次是否调用了工具。
+所选 DeepSeek 模型会收到 harness 系统提示词、消息历史、工具 schema、停止序列与调用配置（`maxTokens`、`reasoningEffort`、`temperature`），不包含适配器撰写的提示词散文。Cordis 与 Native 的提供方专用请求扩展字段都留在模型输入之外。视觉模型通常接收 Files API 引用形式的用户与工具结果图片，其旁带附件句柄和请求预览尺寸。当前执行文件系统可以映射附件提供方的宿主对象时，它还会收到规范化对象路径；描述符会把该副本标记为只读，并警告规范化可能缩放或重新编码上传内容。Files 解析失败时，全部保留图片改用内联 data URL；超出预算的较旧图片则在占位文本中保留当前请求已解析的访问方式。此前 assistant 轮次的推理内容会原样传回，无论该轮次是否调用了工具。
 
 #### Token 影响
 

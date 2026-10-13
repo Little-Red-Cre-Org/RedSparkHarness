@@ -67,6 +67,7 @@ jobs:
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
           rsh/Programs/CLI/tests/profiles/native-sdk/native-sdk-dsh-child.e2e.ts
+          rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts
           rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
           && pnpm exec vitest run --config vitest.snapshot.config.ts
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts

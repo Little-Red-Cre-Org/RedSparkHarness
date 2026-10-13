@@ -62,7 +62,7 @@ function installChildObserver(profileDirectory: string): void {
   const directory = join(profileDirectory, 'node_modules', '@fixture', 'acp-child-observer')
   mkdirSync(directory, { recursive: true })
   writeFileSync(join(directory, 'package.json'), JSON.stringify({
-    name: '@fixture/acp-child-observer', type: 'module',
+    name: '@fixture/acp-child-observer', version: '1.0.0', type: 'module',
     exports: { './package.json': './package.json', './native.js': './native.js' },
     dsh: { native: { apiVersion: 1, entry: './native.js', targets: ['host'], requires: ['childConnection'], optional: [], provides: [] } },
   }))

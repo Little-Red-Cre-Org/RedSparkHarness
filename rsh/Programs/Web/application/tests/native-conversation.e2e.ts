@@ -83,7 +83,7 @@ it('creates, submits and restores the built native conversation through the ship
   const fixtureModel = join(profile, 'node_modules/native-web-fixture-model')
   mkdirSync(fixtureModel)
   writeFileSync(join(fixtureModel, 'package.json'), JSON.stringify({
-    name: 'native-web-fixture-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    name: 'native-web-fixture-model', version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection', 'agentPresets', 'tools'], optional: [], provides: ['model', 'modelDirectory'] } },
   }))
   writeFileSync(join(fixtureModel, 'native.mjs'), `export const plugin = {

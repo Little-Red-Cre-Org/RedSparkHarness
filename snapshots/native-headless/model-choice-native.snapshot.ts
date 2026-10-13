@@ -106,7 +106,7 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
     }
     const fixture = join(profile, 'node_modules/native-selection-fixture')
     mkdirSync(fixture)
-    writeFileSync(join(fixture, 'package.json'), JSON.stringify({ name: 'native-selection-fixture', type: 'module',
+    writeFileSync(join(fixture, 'package.json'), JSON.stringify({ name: 'native-selection-fixture', version: '0.0.0', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['activeSessions', 'modelSelection'], optional: [], provides: [] } } }))
     copyFileSync(join(root, 'rsh/Engine/llm/native-model-selection/tests/fixtures/selection-policy.mjs'), join(fixture, 'native.mjs'))

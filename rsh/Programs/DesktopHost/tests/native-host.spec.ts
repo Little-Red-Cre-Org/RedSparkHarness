@@ -132,6 +132,7 @@ async function fixture(linked: readonly string[] = [], options: {
     await mkdir(source, { recursive: true })
     await writeFile(join(source, 'package.json'), JSON.stringify({
       name: row.name,
+      version: '1.0.0',
       type: 'module',
       exports: { './package.json': './package.json', './native': './native.js' },
       dsh: { native: { ...row.manifest, optional: [] } },

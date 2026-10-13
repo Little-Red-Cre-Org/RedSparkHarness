@@ -10,7 +10,7 @@
 
 ## 决策
 
-`dsh-llm`、`dsh-native-model-selection`、`dsh-llm-retry` 与 `dsh-token-meter` 留在 Engine LLM 组。`dsh-llm-deepseek`、`dsh-llm-pi-ai`、`dsh-deepseek-llm-api-extensions`、`dsh-plugin-package-inventory-deepseek` 与 `dsh-session-log-deepseek` 归入 `Modules/Official/llm`。包名、公共导出与运行时组合保持不变。两个提供方适配器已有 Cordis 与 Native 两种入口；三个请求贡献包仍只有 Cordis 入口，本次所有权迁移不会改变其入口支持情况。Session 包仍拥有事件映射根类型、持久化 API 与格式目录；提供方贡献会扩展事件映射，但不接管这些职责。
+`dsh-llm`、`dsh-native-model-selection`、`dsh-llm-retry` 与 `dsh-token-meter` 留在 Engine LLM 组。`dsh-llm-deepseek`、`dsh-llm-pi-ai`、`dsh-deepseek-llm-api-extensions`、`dsh-plugin-package-inventory-deepseek` 与 `dsh-session-log-deepseek` 归入 `Modules/Official/llm`。包名、既有 Cordis 导出与随附默认组合保持不变。提供方适配器与三个请求贡献包分别提供 Cordis 和 Native 入口；Native 消费者使用显式 Native 入口。Session 包仍拥有事件映射根类型、持久化 API 与格式目录；提供方贡献会扩展事件映射，但不接管这些职责。Native 来源与作用域所有权见 [DeepSeek Native 请求贡献决策](2026-10-13-native-deepseek-request-contributions.zh.md)。
 
 ## 考虑过的替代方案
 
@@ -22,4 +22,4 @@
 
 ## 影响
 
-新的官方提供方适配器及其专用请求贡献应位于 `rsh/Modules/Official/llm`。提供方无关的路由、模型选择、重试、token 计量与 Session 存储仍归各自 Engine 包组负责。三个仅有 Cordis 入口的贡献包仍需依照 P4 能力计划单独确定 Native 支持方案。工作区引用、生成的包映射与文档需要记录新的物理位置，消费者继续使用现有包名。
+新的官方提供方适配器及其专用请求贡献应位于 `rsh/Modules/Official/llm`。提供方无关的路由、模型选择、重试、token 计量与 Session 存储仍归各自 Engine 包组负责。三个请求贡献包提供 Native Host 入口；随附 profile 继续组合其 Cordis 入口。工作区引用、生成的包映射与文档需要记录新的物理位置，消费者继续使用现有包名。

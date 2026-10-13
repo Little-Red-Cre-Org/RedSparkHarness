@@ -7,7 +7,8 @@ import { isDeepStrictEqual } from 'node:util'
 import type { NativePresetFolderSummary } from '@deepseek-ai/dsh-agent-presets/native'
 import {
   NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry,
-  type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePlugin,
+  type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePackageInstallation,
+  type NativePackageProvenance, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
 import { launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
 import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
@@ -22,6 +23,7 @@ interface SelectedPackage {
   row: NativeProfileConfig['installations'][number]
   entry: NativeEntryManifest
   entryPath: string
+  package: NativePackageProvenance
 }
 
 /** Loaded native composition before activation; the caller owns start and stop. */
@@ -199,7 +201,16 @@ function selectNativePackage(row: NativeProfileConfig['installations'][number], 
     let manifestPath: string | undefined
     try {
       manifestPath = anchor.resolve(`${row.plugin}/package.json`)
-      const manifest = jsonFile(manifestPath) as { name?: string; dsh?: { native?: unknown }; exports?: Record<string, unknown> }
+      const manifest = jsonFile(manifestPath) as {
+        name?: string
+        version?: string
+        dsh?: { native?: unknown }
+        exports?: Record<string, unknown>
+      }
+      if (typeof manifest.name !== 'string' || manifest.name.length === 0
+        || typeof manifest.version !== 'string' || manifest.version.length === 0) {
+        throw new Error('package manifest must declare a name and version')
+      }
       if (roots !== undefined) {
         const packageDir = realpathSync(join(manifestPath, '..'))
         if (manifest.name !== row.plugin || !roots.some(root => contained(root, packageDir))) {
@@ -212,7 +223,7 @@ function selectNativePackage(row: NativeProfileConfig['installations'][number], 
       if (roots !== undefined && !contained(realpathSync(join(manifestPath, '..')), realpathSync(entryPath))) {
         throw new Error('native export escapes its installed package')
       }
-      return { row, entry, entryPath }
+      return { row, entry, entryPath, package: { name: manifest.name, version: manifest.version } }
     } catch (error) {
       if (manifestPath !== undefined) throw new Error(`native installation ${row.id}: invalid package ${row.plugin}`, { cause: error })
     }
@@ -361,14 +372,16 @@ export async function loadNativeProfile(options: {
   const previousState = options.previous === undefined ? undefined : loadedProfileStates.get(options.previous)
   const scopes = scopesOf(profile, options.previous)
   const requests = new Map<string, InstallationRequest>()
-  for (const { row, entry, entryPath } of selected) {
+  for (const { row, entry, entryPath, package: packageProvenance } of selected) {
     const imported = await import(pathToFileURL(entryPath).href) as Record<string, unknown>
     const plugin = validateNativePluginEntry(imported.plugin, entry)
     const scope = scopes.get(row.scope)
     if (scope === undefined) throw new Error(`native installation ${row.id} lost scope ${row.scope}`)
     const prior = options.previous?.requests.get(row.id)
-    const request = prior !== undefined && prior.plugin === plugin && prior.scope === scope && isDeepStrictEqual(prior.config, row.config)
-      ? prior : { plugin, scope, config: row.config }
+    const request = prior !== undefined && prior.plugin === plugin && prior.scope === scope
+      && prior.package?.name === packageProvenance.name && prior.package.version === packageProvenance.version
+      && isDeepStrictEqual(prior.config, row.config)
+      ? prior : { plugin, scope, config: row.config, package: packageProvenance }
     requests.set(row.id, request)
   }
   const planned = [...requests.values()]
@@ -428,7 +441,21 @@ export async function loadNativeProfile(options: {
       plugin: {
         apiVersion: 1, name: 'dsh-native-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
         resolve: () => (context) => {
-          context.provide('pluginInventory', { list: () => inventory.host?.diagnostics() ?? [] })
+          const providerScope = context.scope
+          context.provide('pluginInventory', {
+            list: () => inventory.host?.diagnostics() ?? [],
+            packages: (scope): readonly NativePackageInstallation[] => {
+              if (!providerScope.contains(scope)) throw new Error('native profile inventory cannot query an unrelated scope')
+              const ancestry = new Set<string>()
+              for (let current: NativeScope | undefined = scope; current !== undefined; current = current.parent) {
+                ancestry.add(current.id)
+              }
+              return (inventory.host?.diagnostics() ?? []).flatMap((diagnostic) => {
+                if (diagnostic.state !== 'ready' || diagnostic.package === undefined || !ancestry.has(diagnostic.scope)) return []
+                return [{ id: diagnostic.id, scope: diagnostic.scope, package: diagnostic.package }]
+              })
+            },
+          })
         },
       } satisfies NativePlugin,
       scope, config: undefined,
@@ -469,6 +496,7 @@ export async function replaceNativeProfile(host: NativeHost, candidate: LoadedNa
   const state = loadedProfileStates.get(candidate)
   if (state === undefined) throw new Error('native profile candidate was not loaded by this process')
   await host.replace(state.plan)
+  state.inventory.host = host
   const loaded: LoadedNativeProfile = { ...candidate, host }
   loadedProfileStates.set(loaded, state)
   return loaded

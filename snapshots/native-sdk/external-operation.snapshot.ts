@@ -216,7 +216,7 @@ it('projects external child facts through both SDKs and cold-restores the native
       '} }',
       '',
     ].join('\n'))
-    writeFileSync(join(externalPackage, 'package.json'), JSON.stringify({ name: 'native-sdk-external-operation-driver', type: 'module',
+    writeFileSync(join(externalPackage, 'package.json'), JSON.stringify({ name: 'native-sdk-external-operation-driver', version: '0.0.0', type: 'module',
       exports: { './package.json': './package.json', './native': './native.mjs' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [],
         provides: ['externalSubagentDriver'] } } }))

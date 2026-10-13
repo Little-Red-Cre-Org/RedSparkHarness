@@ -44,6 +44,7 @@
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-timeout": "workspace:^"
   },
   "dependencies": {
@@ -69,6 +70,7 @@
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-plugin-package-inventory-deepseek": "workspace:^",
+    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-log-deepseek": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
@@ -88,7 +90,9 @@
       ],
       "optional": [
         "attachments",
-        "fs"
+        "fs",
+        "activeSessions",
+        "deepseekLlmApiExtensions"
       ],
       "provides": [
         "model",

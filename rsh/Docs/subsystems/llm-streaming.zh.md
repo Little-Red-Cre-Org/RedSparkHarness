@@ -750,6 +750,33 @@ interface LlmCallConfigAdapterDefaults {
 
 [协议参考](../deepseek-llm-api-wire-extensions.zh.md)定义确切的请求标头、扩展事务、字段版本和接收方义务。随附组合会将 [`dsh_session_log`](../../Modules/Official/llm/session-log-deepseek/README.zh.md) 注册为无损增量权威日志后缀，并将 [`dsh_plugin_packages`](../../Modules/Official/llm/plugin-package-inventory-deepseek/README.zh.md) 注册为完整存活 Loader 包集合。这些字段仍位于模型消息之外，也不会进入 pi-ai 适配器路径。
 
+Native Host 配置通过独立的 `@deepseek-ai/dsh-deepseek-llm-api-extensions/native` 入口使用扩展；该入口提供显式作用域的 `deepseekLlmApiExtensions` 服务。`llm-deepseek` 会将此服务声明为可选，因此未安装 Native 贡献 Provider 时模型调用仍可运行。存在 `activeSessions` 时，匹配请求 `sessionId` 会选择该所有者的 Agent 作用域；否则 Provider 查找使用模型安装作用域。Native 入口是显式 Host 包子路径；随附 profile 继续组合 Cordis 入口。
+
+```ts type-equiv
+/** Scoped Native API for registering and preparing DeepSeek request fields. */
+interface NativeDeepSeekLlmApiExtensions {
+  /**
+   * Register one field in a visible Native scope.
+   * @param scope - exact installation scope that owns the contribution.
+   * @param field - declaration-merged request field.
+   * @param provider - request-time field preparation and optional acceptance behavior.
+   * @returns a disposer for the registration.
+   */
+  register<K extends keyof DeepSeekLlmApiExtensionMap>(
+    scope: NativeScope,
+    field: K,
+    provider: DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiExtensionMap[K]>,
+  ): () => void
+  /**
+   * Prepare fields visible from one exact request scope.
+   * @param scope - active Agent scope, or the model installation scope without an active owner.
+   * @param request - exact serialized request facts and cancellation signal.
+   * @returns detached fields and their one post-2xx acceptance transaction.
+   */
+  prepare(scope: NativeScope, request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
+}
+```
+
 ## 服务与提供方约定
 
 `PreparedAdapterCall.supportsOutputTokenLimit()` 会报告被捕获的 adapter 代际能否在指定推理强度下执行请求的确切输出上限。该路由报告不支持时，运行时会拒绝带上限的请求。

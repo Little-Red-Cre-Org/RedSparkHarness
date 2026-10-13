@@ -136,7 +136,7 @@ it('replays real workflow children and a committed structured report through dsh
     }
     const model = join(modules, 'workflow-fixture-model')
     mkdirSync(model)
-    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'workflow-fixture-model', type: 'module',
+    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'workflow-fixture-model', version: '0.0.0', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))

@@ -1692,7 +1692,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/llm/plugin-package-inventory-deepseek/src/index.ts:32`](../Modules/Official/llm/plugin-package-inventory-deepseek/src/index.ts)
+Source: [`rsh/Modules/Official/llm/plugin-package-inventory-deepseek/src/config.ts:5`](../Modules/Official/llm/plugin-package-inventory-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-pwsh-local"></a>
 
@@ -1898,7 +1898,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/index.ts:38`](../Modules/Official/llm/session-log-deepseek/src/index.ts)
+Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/config.ts:5`](../Modules/Official/llm/session-log-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-session-log-export"></a>
 

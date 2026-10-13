@@ -9,11 +9,12 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Incremental canonical session-log upload for official DeepSeek LLM API requests. This function plugin injects `ctx.sessions` and `ctx.deepseekLlmApiExtensions`, then owns the `dsh_session_log` request field and the durable `session-log-deepseek/delivery-accepted` event from which it derives the acceptance watermark. Enable it only when the official API should receive a Session-log suffix.
+Incremental canonical Session-log upload for official DeepSeek LLM API requests. The Cordis entry reads `ctx.sessions`; the Native Host entry reads an exact active Session owner. Both contribute `dsh_session_log` and record acceptance with `session-log-deepseek/delivery-accepted`. Enable the contribution only when the official API should receive a Session-log suffix.
 
 ## Table of Contents
 
 - [Configuration](#configuration)
+- [Native Host entry](#native-host-entry)
 - [Request field](#request-field)
 - [Acceptance and retry](#acceptance-and-retry)
 - [Model Experience](#model-experience)
@@ -30,6 +31,11 @@ Incremental canonical session-log upload for official DeepSeek LLM API requests.
 | `enabled` | `false` | Register the `dsh_session_log` contribution. Set it to `true` to opt into Session-log upload. |
 
 Shipped profiles mount the plugin so an overlay can enable it, but the default configuration registers no request field and appends no acceptance watermark.
+
+<a id="native-host-entry"></a>
+### Native Host entry
+
+The `./native` entry requires `deepseekLlmApiExtensions` and `activeSessions`. For a matching live `sessionId`, it reads that exact owner's durable events; after HTTP 2xx, acceptance appends the uploaded watermark through the same owner and flushes it. Requests without a matching active Session omit the field. The Native entry remains opt-in by default, and shipped profiles keep their Cordis composition.
 
 <a id="request-field"></a>
 ## Request field

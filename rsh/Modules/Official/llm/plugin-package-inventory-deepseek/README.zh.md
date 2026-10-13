@@ -9,11 +9,12 @@ kind: "package-reference"
 
 ## 概述
 
-用于 DeepSeek 官方 LLM API 请求的完整活跃 Loader 插件包清单。该函数插件注入 Loader、存活 Agent 注册表与 `ctx.deepseekLlmApiExtensions`，并拥有 `dsh_plugin_packages` 字段。当官方 API 需要活动包清单进行请求诊断时，请启用它。
+用于 DeepSeek 官方 LLM API 请求的完整包清单。Cordis 入口读取活跃 Loader 包；Native Host 入口读取 [`NativePluginInventory`](../../../../Core/runtime-diagnostics/native-runtime/README.zh.md#package-provenance) 中就绪且有包来源的安装。两者都通过 `deepseekLlmApiExtensions` 贡献 `dsh_plugin_packages`。
 
 ## 目录
 
 - [配置](#configuration)
+- [Native Host 入口](#native-host-entry)
 - [收集](#collection)
 - [模型体验](#model-experience)
 - [已知限制与暂缓事项](#known-limitations-and-deferred-work)
@@ -29,6 +30,11 @@ kind: "package-reference"
 | `enabled` | `true` | 注册 `dsh_plugin_packages` 贡献。将其设为 `false` 可省略包元数据。 |
 
 随附 profile 使用该默认值，因此只要准备成功，每个 DeepSeek 官方请求都会携带包清单。
+
+<a id="native-host-entry"></a>
+### Native Host 入口
+
+`./native` 入口要求 `deepseekLlmApiExtensions`、`pluginInventory` 与 `activeSessions`。请求的 `sessionId` 匹配活动 Session 时使用其所有者 Agent 的作用域；否则由此贡献插件从自身安装作用域读取。只有该作用域及其祖先中就绪且有包来源的安装会贡献其 manifest 的 `name` 与 `version`。这是显式 Native 能力；随附 profile 继续使用 Cordis 入口。
 
 <a id="collection"></a>
 ## 收集
@@ -60,9 +66,9 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **仅含 Loader 包来源**——以编程方式创建的子 fiber 与内存动态插件没有权威 NPM 名称／版本来源，因此不在该清单内。
+- **Cordis Loader 清单不含无来源 fiber**——以编程方式创建的子 fiber 与内存动态插件没有权威 NPM 名称／版本来源；Native 入口则读取有包来源的 Native 安装。
 - **省略松散模块**——没有具名且带版本所属 manifest 的相对文件是插件模块，不是插件包。
-- **原地替换包需要重启**——manifest 身份会在进程存活期内缓存。Loader 的启用、禁用、挂载、卸载与普通源码 HMR 仍会刷新存活配置项集合，但在同一进程中把已挂载包的 manifest 替换为另一版本并不是受支持的升级路径。
+- **Cordis 包替换需要重启**——Cordis 入口会在进程存活期内缓存 manifest 身份。Loader 的启用、禁用、挂载、卸载与普通源码 HMR 会刷新其活跃配置项集合，但在同一进程中把已挂载包的 manifest 替换为另一版本并不是受支持的升级路径。
 
 
 <a id="dev-note"></a>
@@ -75,4 +81,4 @@ kind: "package-reference"
 
 </details>
 
-**运行时不变式：** 不发布伴生入口。每次请求直接读取权威 Loader fiber 状态与 package manifest，插件不保留独立可变 inventory。
+**运行时不变式：** 不发布伴生入口。Cordis 请求读取权威 Loader fiber 状态与 package manifest；Native 请求读取 `NativePluginInventory`。两个入口都不保留独立可变 inventory。

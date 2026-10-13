@@ -744,6 +744,33 @@ interface LlmCallConfigAdapterDefaults {
 
 The [wire reference](../deepseek-llm-api-wire-extensions.md) defines the exact request headers, extension transaction, field versions, and receiver obligations. The shipped composition registers [`dsh_session_log`](../../Modules/Official/llm/session-log-deepseek/README.md) as a lossless incremental canonical-log suffix and [`dsh_plugin_packages`](../../Modules/Official/llm/plugin-package-inventory-deepseek/README.md) as the complete active Loader-backed package set. These fields remain outside model messages and are absent from the pi-ai adapter path.
 
+Native Host profiles use the separate `@deepseek-ai/dsh-deepseek-llm-api-extensions/native` entry, which provides the scope-explicit `deepseekLlmApiExtensions` service. `llm-deepseek` consumes that service optionally, so model calls still work when no Native contribution provider is installed. With `activeSessions` present, a matching request `sessionId` selects that owner's Agent scope; otherwise provider lookup uses the model installation scope. Native entries are explicit Host package subpaths; shipped profiles continue to assemble Cordis entries.
+
+```ts type-equiv
+/** Scoped Native API for registering and preparing DeepSeek request fields. */
+interface NativeDeepSeekLlmApiExtensions {
+  /**
+   * Register one field in a visible Native scope.
+   * @param scope - exact installation scope that owns the contribution.
+   * @param field - declaration-merged request field.
+   * @param provider - request-time field preparation and optional acceptance behavior.
+   * @returns a disposer for the registration.
+   */
+  register<K extends keyof DeepSeekLlmApiExtensionMap>(
+    scope: NativeScope,
+    field: K,
+    provider: DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiExtensionMap[K]>,
+  ): () => void
+  /**
+   * Prepare fields visible from one exact request scope.
+   * @param scope - active Agent scope, or the model installation scope without an active owner.
+   * @param request - exact serialized request facts and cancellation signal.
+   * @returns detached fields and their one post-2xx acceptance transaction.
+   */
+  prepare(scope: NativeScope, request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
+}
+```
+
 ## Service and provider contracts
 
 `PreparedAdapterCall.supportsOutputTokenLimit()` reports whether the captured adapter generation can enforce a requested exact output cap for a reasoning effort. The runtime rejects a capped request when that route reports false.

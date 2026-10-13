@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-06-official-model-integration-ownership.md
-2026-10-06-official-model-integration-ownership.md: 3f08800232dedd9c8bab907e58ff7d1ce2dd8a19
-2026-10-06-official-model-integration-ownership.zh.md: 85dab3ede4439284c406f77bab9d9db4b9b071ec
+2026-10-06-official-model-integration-ownership.md: 6424ec71776833043f0e2aa92a28bae1f58a5675
+2026-10-06-official-model-integration-ownership.zh.md: b3770bcc6605bf2eeb10c335a9848fa81d131383

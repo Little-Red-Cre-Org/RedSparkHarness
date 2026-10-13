@@ -2360,6 +2360,26 @@
       "doc": "rsh/Programs/Web/client/ui-conversation/README.md",
       "symbol": "ComposerChainProps",
       "source": "rsh/Programs/Web/client/ui-conversation/src/client/contract/slots.ts"
+    },
+    {
+      "doc": "rsh/Core/runtime-diagnostics/native-runtime/README.md",
+      "symbol": "NativePackageProvenance",
+      "source": "rsh/Core/runtime-diagnostics/native-runtime/src/host.ts"
+    },
+    {
+      "doc": "rsh/Core/runtime-diagnostics/native-runtime/README.md",
+      "symbol": "NativePackageInstallation",
+      "source": "rsh/Core/runtime-diagnostics/native-runtime/src/index.ts"
+    },
+    {
+      "doc": "rsh/Core/runtime-diagnostics/native-runtime/README.md",
+      "symbol": "NativePluginInventory",
+      "source": "rsh/Core/runtime-diagnostics/native-runtime/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/llm-streaming.md",
+      "symbol": "NativeDeepSeekLlmApiExtensions",
+      "source": "rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/native.ts"
     }
   ]
 }

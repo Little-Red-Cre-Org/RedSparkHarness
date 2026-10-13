@@ -45,7 +45,7 @@ it('adapts legacy file tools through the compatibility test profile and writes o
   const modelDir = join(modules, 'native-compat-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
-    name: 'native-compat-fixture-model', type: 'module',
+    name: 'native-compat-fixture-model', version: '1.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

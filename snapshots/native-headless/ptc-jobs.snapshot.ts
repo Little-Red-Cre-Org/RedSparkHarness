@@ -36,7 +36,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
   profileConfig.installations.push({ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' })
   writeFileSync(profilePath, JSON.stringify(profileConfig))
   writeFileSync(join(model, 'package.json'), JSON.stringify({
-    name: 'native-ptc-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    name: 'native-ptc-model', version: '0.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['agents', 'jobs', 'activeSessions'], optional: [], provides: ['model'] } },
   }))
   copyFileSync(join(root, 'rsh/Engine/core/native-headless/tests/fixtures/ptc-jobs-model.mjs'), join(model, 'native.mjs'))

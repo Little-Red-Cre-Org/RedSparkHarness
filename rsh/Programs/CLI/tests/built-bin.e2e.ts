@@ -228,6 +228,7 @@ function createNativeCliFixture(): { home: string; marker: string } {
   }))
   writeFileSync(join(packageDir, 'package.json'), JSON.stringify({
     name: 'native-smoke-app',
+    version: '0.0.0',
     type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: {
@@ -274,6 +275,7 @@ function installChildConnectionObserver(profileDirectory: string): void {
   mkdirSync(observerPackage, { recursive: true })
   writeFileSync(join(observerPackage, 'package.json'), JSON.stringify({
     name: '@fixture/child-connection-observer',
+    version: '0.0.0',
     type: 'module',
     exports: { './package.json': './package.json', './native.js': './native.js' },
     dsh: { native: {
@@ -372,7 +374,7 @@ function createNativeProfileReloadFixture(runFailure?: 'abort-reason' | 'after-a
   }))
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [] }))
   writeFileSync(join(providerDir, 'package.json'), JSON.stringify({
-    name: 'native-reload-provider', type: 'module',
+    name: 'native-reload-provider', version: '0.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['credentials'] } },
   }))
@@ -389,7 +391,7 @@ function createNativeProfileReloadFixture(runFailure?: 'abort-reason' | 'after-a
     '',
   ].join('\n'))
   writeFileSync(join(appDir, 'package.json'), JSON.stringify({
-    name: 'native-reload-app', type: 'module',
+    name: 'native-reload-app', version: '0.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['credentials'], optional: [], provides: ['application'] } },
   }))
@@ -438,7 +440,7 @@ function createNativeProfileReloadFixture(runFailure?: 'abort-reason' | 'after-a
     '',
   ].join('\n'))
   writeFileSync(join(preflightDir, 'package.json'), JSON.stringify({
-    name: 'native-reload-preflight', type: 'module',
+    name: 'native-reload-preflight', version: '0.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: [] } },
   }))
@@ -772,6 +774,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       mkdirSync(observerPackage, { recursive: true })
       writeFileSync(join(observerPackage, 'package.json'), JSON.stringify({
         name: '@fixture/subprocess-observer',
+        version: '0.0.0',
         type: 'module',
         exports: { './package.json': './package.json', './native.js': './native.js' },
         dsh: { native: {
