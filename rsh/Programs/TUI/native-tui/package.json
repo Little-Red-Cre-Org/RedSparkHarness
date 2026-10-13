@@ -50,6 +50,7 @@
     "@deepseek-ai/dsh-user-questions": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
+    "@deepseek-ai/dsh-skill": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^"
   },
   "devDependencies": {
@@ -84,6 +85,7 @@
         "tmuxContext",
         "agentPresets",
         "commands",
+        "skillInvocations",
         "workspaceRegistry",
         "agentInstructions",
         "modelSelection",

@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../../Engine/context/request-context-definition"
+    },
+    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {

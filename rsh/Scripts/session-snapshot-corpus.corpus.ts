@@ -54,6 +54,7 @@ const snapshotAdapters = [
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
   'snapshots/native-sdk/skills.snapshot.ts',
+  'snapshots/native-sdk/archify.snapshot.ts',
   'snapshots/native-sdk/goal-control.snapshot.ts',
   'snapshots/native-sdk/scheduled-root-origin.snapshot.ts',
   'snapshots/native-tui/native-tui.snapshot.ts',

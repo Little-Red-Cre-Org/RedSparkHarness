@@ -1,0 +1,8 @@
+version: 1
+scenario: archify
+profile: native-sdk
+composition: native-sdk-archify
+recording: authored
+header:
+  class: native-sdk-archify
+  pin: true

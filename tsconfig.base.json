@@ -638,6 +638,7 @@
       "@deepseek-ai/dsh-agent-instructions/native": ["./rsh/Engine/context/agent-instructions/src/native.ts"],
       "@deepseek-ai/dsh-agent-preset-standing/native": ["./rsh/Engine/preset/agent-preset-standing/src/native.ts"],
       "@deepseek-ai/dsh-api-session-controller/client-event-types": ["./rsh/Programs/Web/api/session-controller/src/client-event-types.ts"],
+      "@deepseek-ai/dsh-archify/native": ["./rsh/Modules/Official/skill/archify/src/native.ts"],
       "@deepseek-ai/dsh-authorization/native": ["./rsh/Modules/Official/credentials/authorization/src/native.ts"],
       "@deepseek-ai/dsh-bash-local/native": ["./rsh/Modules/Official/shell/bash-local/src/native.ts"],
       "@deepseek-ai/dsh-bash-sandbox/native": ["./rsh/Modules/Official/shell/bash-sandbox/src/native.ts"],

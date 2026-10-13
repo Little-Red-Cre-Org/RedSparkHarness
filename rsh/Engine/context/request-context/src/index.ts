@@ -4,6 +4,7 @@ import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type {
   NativeRequestContextAcceptance,
   NativeRequestContextProvider,
+  NativeRequestContextRegistration,
   NativeRequestContextRequest,
   NativeRequestContexts,
 } from '@deepseek-ai/dsh-request-context-definition'
@@ -36,7 +37,7 @@ export class NativeRequestContextRegistry implements NativeRequestContexts {
    * @param provider - stable provider identity and request order.
    * @returns idempotent removal and drain for this exact provider registration.
    */
-  register(scope: NativeScope, provider: NativeRequestContextProvider): () => Promise<void> {
+  register(scope: NativeScope, provider: NativeRequestContextProvider): NativeRequestContextRegistration {
     if (this.disposed) throw new Error('request-context: registry is disposed')
     if (!Number.isSafeInteger(provider.order)) throw new Error('request-context: provider order must be a safe integer')
     let remove = (): void => {}
@@ -45,7 +46,10 @@ export class NativeRequestContextRegistry implements NativeRequestContexts {
     }
     remove = this.providers.register(provider.id, entry, scope)
     this.entries.add(entry)
-    return () => this.close(entry)
+    return Object.assign(() => this.close(entry), {
+      isVisible: (requestScope: NativeScope) => !this.disposed
+        && !entry.closed && this.providers.visible(requestScope).get(provider.id) === entry,
+    })
   }
 
   /** @param scope - dynamic Agent scope to inspect. @returns whether any provider is visible. */

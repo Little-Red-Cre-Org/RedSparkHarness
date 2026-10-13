@@ -29,12 +29,13 @@ Use the Definition when a Native request-context Provider and its consuming Prog
 
 ### Entry point
 
-Import `NativeRequestContextProvider`, `NativeRequestContextRequest`, `PreparedNativeRequestContext`, and `NativeRequestContexts` from the package root. A Provider returns detached messages and a `commit()` action; it does not append to the Session. The Program checks final admission synchronously, appends through its existing writer, and flushes before the Provider state commits.
+Import `NativeRequestContextProvider`, `NativeRequestContextRequest`, `NativeRequestContextRegistration`, `PreparedNativeRequestContext`, and `NativeRequestContexts` from the package root. `register()` returns a callable `NativeRequestContextRegistration` whose `isVisible(scope)` checks whether that exact registration remains the nearest winner. A Provider returns detached messages and a `commit()` action; it does not append to the Session. The Program checks final admission synchronously, appends through its existing writer, and flushes before the Provider state commits.
 
 ```ts
 import type {
   NativeRequestContextProvider,
   NativeRequestContextRequest,
+  NativeRequestContextRegistration,
   NativeRequestContexts,
   PreparedNativeRequestContext,
 } from '@deepseek-ai/dsh-request-context-definition'

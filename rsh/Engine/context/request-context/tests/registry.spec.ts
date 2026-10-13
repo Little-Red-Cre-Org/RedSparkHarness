@@ -44,9 +44,12 @@ it('orders visible shadow winners and rejects a prepared result removed before d
   expect(() => NativeRequestContextProviderId('')).toThrow('provider id must be nonempty')
   expect(() => registry.register(root, provider('fractional-order', 1.5, 'invalid'))).toThrow('safe integer')
   const committed: string[] = []
-  registry.register(root, provider('skills', 20, 'root', () => committed.push('root')))
+  const removeRootSkills = registry.register(root, provider('skills', 20, 'root', () => committed.push('root')))
+  expect(removeRootSkills.isVisible(dynamic)).toBe(true)
   expect(registry.hasProviders(dynamic)).toBe(true)
   const removeChild = registry.register(middle, provider('skills', 10, 'child', () => committed.push('child')))
+  expect(removeRootSkills.isVisible(dynamic)).toBe(false)
+  expect(removeChild.isVisible(dynamic)).toBe(true)
   registry.register(root, provider('tail', 30, 'tail', () => committed.push('tail')))
   const accept = vi.fn(async (messages: readonly ReturnType<typeof createUserMessage>[]) => {
     expect(messages.map(message => message.content[0]?.type === 'text' ? message.content[0].text : '')).toEqual(['child', 'tail'])
@@ -78,7 +81,9 @@ it('orders visible shadow winners and rejects a prepared result removed before d
   expect(lateAccept).not.toHaveBeenCalled()
   expect(committed).toEqual(['child', 'tail'])
   await removeChild()
+  expect(removeRootSkills.isVisible(dynamic)).toBe(true)
   await registry.dispose()
+  expect(removeRootSkills.isVisible(dynamic)).toBe(false)
 
   const emptyRegistry = new NativeRequestContextRegistry(root)
   let releaseAcceptance = (): void => {}

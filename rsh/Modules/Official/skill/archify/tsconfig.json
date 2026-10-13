@@ -15,6 +15,15 @@
       "path": "../../../../Core/vendor/schemastery"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Engine/context/request-context-definition"
+    },
+    {
       "path": "../../../../Engine/core/agent"
     },
     {

@@ -78,6 +78,18 @@ interface NativeRequestContextProvider {
 }
 ```
 
+`register()` 返回绑定到单个精确 Provider 注册的可调用 disposer。其 `isVisible(scope)` 仅在同一注册仍是对应 id 最近的可见胜者时返回 true；在注册被替换、移除或注册表销毁后返回 false。
+
+```ts type-equiv
+/** Callable removal handle for one exact provider registration. */
+interface NativeRequestContextRegistration {
+  /** Remove this registration and drain its accepted preparations. @returns completion of removal. */
+  (): Promise<void>
+  /** @param scope - request scope to inspect. @returns whether this exact registration is the nearest winner. */
+  isVisible(scope: NativeScope): boolean
+}
+```
+
 ```ts type-equiv
 /** Native Host service for exact-owner, durable request-context contributions. */
 interface NativeRequestContexts {
@@ -91,9 +103,9 @@ interface NativeRequestContexts {
    * Register one provider in a Native scope; its disposer closes admission and drains accepted request preparations.
    * @param scope - registration scope within this Provider's realm.
    * @param provider - stable identity, order and detached preparation callback.
-   * @returns exact idempotent asynchronous removal and drain.
+   * @returns exact idempotent asynchronous removal and drain, with a check for this registration's current visibility.
    */
-  register(scope: NativeScope, provider: NativeRequestContextProvider): () => Promise<void>
+  register(scope: NativeScope, provider: NativeRequestContextProvider): NativeRequestContextRegistration
   /**
    * Prepare all visible providers and offer their messages to the Program's single durable acceptance callback.
    * @param request - exact active owner, one durable snapshot, final inputs and captured tool visibility.

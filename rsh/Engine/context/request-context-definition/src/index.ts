@@ -78,6 +78,14 @@ export interface NativeRequestContextProvider {
   prepare(request: NativeRequestContextRequest): Promise<PreparedNativeRequestContext>
 }
 
+/** Callable removal handle for one exact provider registration. */
+export interface NativeRequestContextRegistration {
+  /** Remove this registration and drain its accepted preparations. @returns completion of removal. */
+  (): Promise<void>
+  /** @param scope - request scope to inspect. @returns whether this exact registration is the nearest winner. */
+  isVisible(scope: NativeScope): boolean
+}
+
 /** Native Host service for exact-owner, durable request-context contributions. */
 export interface NativeRequestContexts {
   /**
@@ -90,9 +98,9 @@ export interface NativeRequestContexts {
    * Register one provider in a Native scope; its disposer closes admission and drains accepted request preparations.
    * @param scope - registration scope within this Provider's realm.
    * @param provider - stable identity, order and detached preparation callback.
-   * @returns exact idempotent asynchronous removal and drain.
+   * @returns exact idempotent asynchronous removal and drain, with a check for this registration's current visibility.
    */
-  register(scope: NativeScope, provider: NativeRequestContextProvider): () => Promise<void>
+  register(scope: NativeScope, provider: NativeRequestContextProvider): NativeRequestContextRegistration
   /**
    * Prepare all visible providers and offer their messages to the Program's single durable acceptance callback.
    * @param request - exact active owner, one durable snapshot, final inputs and captured tool visibility.

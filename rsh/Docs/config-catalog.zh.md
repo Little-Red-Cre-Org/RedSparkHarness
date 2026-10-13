@@ -272,7 +272,9 @@ export interface Config {
 export interface Config {
   /** Whether matching direct user requests load Archify automatically; manual `/archify` remains available. */
   autoInvoke?: boolean
-  /** Maximum direct-user characters scanned for one proposed step. */
+  /** Maximum direct-user characters observed for automatic routing.
+   * Over-budget text disables automatic routing; manual `/archify` remains available.
+   */
   maxUserTextChars?: number
   /** Case-insensitive action phrases; one must occur before automatic loading. */
   requestPhrases?: string[]
@@ -281,7 +283,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/skill/archify/src/index.ts:70`](../Modules/Official/skill/archify/src/index.ts)
+来源：[`rsh/Modules/Official/skill/archify/src/shared.ts:37`](../Modules/Official/skill/archify/src/shared.ts)
 
 <a id="deepseek-aidsh-attachment-local"></a>
 

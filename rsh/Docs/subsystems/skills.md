@@ -117,6 +117,35 @@ interface NativeSkills {
 }
 ```
 
+`dsh-tool-skill` supplies `skillInvocations` for manual Native Skill routing. The consumer accepts a lookup only when the caller supplies its exact selected `requestContexts` registry, the consumer installation scope contains the selected Agent scope, and the consumer's exact request-context registration remains the nearest visible winner before and after Skill resolution; an aborted lookup rejects.
+
+```ts type-equiv
+/** Lookup request from a Program that can route a manual invocation. */
+interface NativeSkillInvocationOptions {
+  /** Dynamic Agent scope whose winning Skill body is requested. */
+  readonly scope: NativeScope
+  /** Session working directory used by the Skill provider. */
+  readonly cwd?: string | undefined
+  /** Program and request cancellation. */
+  readonly signal: AbortSignal
+  /** Exact request-context registry captured by the selected Program. */
+  readonly requestContexts: NativeRequestContexts
+}
+```
+
+```ts type-equiv
+/** Native capability supplied by the installed manual Skill consumer. */
+interface NativeSkillInvocations {
+  /**
+   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
+   * @param name - exact Skill name from the slash command.
+   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
+   * @returns whether the live consumer and exact durable provider can consume this invocation.
+   */
+  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
+}
+```
+
 ## Local discovery priority
 
 The shipped local provider scans roots in rank order:
@@ -287,6 +316,23 @@ interface Config {
 Before each later model step, the consumer applies exact tool visibility and digests the exact rendered entries between the `<available_skills>` tags from a complete snapshot. It derives the comparison baseline from the same entries in the newest recognizable visible catalog message sourced by the plugin. A changed digest appends a durable full replacement through `agent.inject()`; deleting every skill appends an explicit empty replacement. Incomplete snapshots preserve the last-good model view. If compaction hides every historical catalog message, the next complete snapshot re-establishes the current catalog; an empty view with no prior catalog emits nothing. These catalog messages are session history, not World State.
 
 The model-facing `skill({ name })` tool validates the kebab-case name, finds the summary in the invocation-neutral catalog, rejects it before loading unless `isModelInvocable` permits access, then rereads the complete definition for the calling agent cwd and rechecks the policy before returning content. It reports an unresolved skill as unknown or no longer available and returns a tool result containing `<skill_content name="...">`, `<skill_resources>`, and `<skill_instructions>`. `resourceBase` resolves explicitly referenced scripts, references, and assets only as needed; the loaded result does not enumerate a skill directory. Body-only edits therefore change later tool calls without producing catalog messages or rewriting earlier tool results.
+
+<a id="automatic-archify-invocation"></a>
+
+## Automatic Archify invocation
+
+The [`@deepseek-ai/dsh-archify` package](../../Modules/Official/skill/archify/README.md) exports this source from both its Cordis and Native entries. It identifies the message that carries Archify instructions selected from a direct-user diagram-delivery request.
+
+```ts type-equiv
+/** Durable source for one host-selected Archify instruction injection. */
+interface ArchifyAutoInvocationSource {
+  readonly kind: 'archify-auto-invocation'
+  /** The Skill body is injected as model instructions. */
+  readonly form: 'instructions'
+  /** The exact deterministic route that selected Archify. */
+  readonly reason: 'diagram-delivery-request'
+}
+```
 
 ## Browser Session catalog
 

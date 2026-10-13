@@ -177,6 +177,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
   '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-skill': ['lib/native.js'],
+  '@deepseek-ai/dsh-archify': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-request-context': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs

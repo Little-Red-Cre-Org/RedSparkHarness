@@ -63,12 +63,15 @@ jobs:
           "python=$sdkPython" >> $env:GITHUB_OUTPUT
       - name: Native profile and pi-ai lifecycle regressions
         run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts
-      - name: Native request context and skill provider regressions
+      - name: Native request context, skill, Archify, and TUI regressions
         run: >-
           pnpm exec vitest run
           rsh/Engine/context/request-context/tests/registry.spec.ts
           rsh/Modules/Official/skill/skill/tests/native.spec.ts
           rsh/Modules/Official/skill/skill-filesystem/tests/native.spec.ts
+          rsh/Modules/Official/skill/archify/tests/archify.spec.ts
+          rsh/Programs/TUI/native-tui/tests/skill-routing.spec.ts
+          rsh/Programs/TUI/native-tui/tests/lifecycle.spec.ts
       - name: Native tool visibility regressions
         run: >-
           pnpm exec vitest run
@@ -85,6 +88,7 @@ jobs:
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
           snapshots/native-sdk/external-operation.snapshot.ts
           snapshots/native-sdk/skills.snapshot.ts
+          snapshots/native-sdk/archify.snapshot.ts
       - name: SDK child bwrap mount regressions
         if: runner.os == 'Linux'
         run: >-
@@ -103,6 +107,7 @@ jobs:
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
           snapshots/native-sdk/external-operation.snapshot.ts
           snapshots/native-sdk/skills.snapshot.ts
+          snapshots/native-sdk/archify.snapshot.ts
         env:
           DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions

@@ -1,5 +1,6 @@
 /** Native Host Definition and Provider for scoped skill discovery and loading. */
 import { NativeContributions, type NativeContext, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
 import {
   isSkillName,
   normalizeProviderObservation,
@@ -21,7 +22,7 @@ import type {
 import type {} from '@deepseek-ai/dsh-native-runtime'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { skills: NativeSkills }
+  interface NativeServices { skills: NativeSkills; skillInvocations: NativeSkillInvocations }
   interface NativeEvents {
     /**
      * Notify Native consumers that a scoped skill catalog may have changed.
@@ -36,6 +37,29 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 export interface NativeSkillLookupOptions extends SkillLookupOptions {
   /** Agent scope whose local and ancestor skills are visible. */
   readonly scope: NativeScope
+}
+
+/** Lookup request from a Program that can route a manual invocation. */
+export interface NativeSkillInvocationOptions {
+  /** Dynamic Agent scope whose winning Skill body is requested. */
+  readonly scope: NativeScope
+  /** Session working directory used by the Skill provider. */
+  readonly cwd?: string | undefined
+  /** Program and request cancellation. */
+  readonly signal: AbortSignal
+  /** Exact request-context registry captured by the selected Program. */
+  readonly requestContexts: NativeRequestContexts
+}
+
+/** Native capability supplied by the installed manual Skill consumer. */
+export interface NativeSkillInvocations {
+  /**
+   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
+   * @param name - exact Skill name from the slash command.
+   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
+   * @returns whether the live consumer and exact durable provider can consume this invocation.
+   */
+  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
 }
 
 /** Native skill catalog and provider registration service. */

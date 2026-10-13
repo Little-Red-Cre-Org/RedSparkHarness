@@ -18,10 +18,13 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param humanInteractions - install existing question, tool and approval Providers.
  * @param presetMode - select the legacy fixture registry or shipped scope-owned compositions.
  * @param taskScheduler - install the shipped persistent task-scheduler Provider and Consumer.
+ * @param archifySkill - install Native Skills, shell environment, and Archify for slash-routing coverage.
+ * @param manualSkillConsumer - install ToolSkill's durable manual-invocation Consumer with Archify.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
-  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false) {
+  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false,
+  archifySkill = false, manualSkillConsumer = true) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -110,6 +113,13 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })
   if (presetMode === 'shipped') installations.push({ id: 'help-command-fixture', plugin: 'fixture-tui-help-command', scope: 'root' })
+  if (archifySkill) installations.push(
+    { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
+    { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
+    { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
+    ...(manualSkillConsumer ? [{ id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' }] : []),
+    { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
+  )
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-tui-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations }))
@@ -121,8 +131,9 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
       const env = Object.fromEntries(Object.entries(process.env).filter(
         (entry): entry is [string, string] => entry[1] !== undefined && !/KEY|SECRET|TOKEN|PASSWORD/i.test(entry[0]),
       ))
+      // Ink suppresses interactive frames in CI, while this child is an actual PTY session.
       const child = spawn(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-tui', ...args], {
-        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, DSH_HOME: home, FORCE_COLOR: '0' },
+        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, CI: 'false', DSH_HOME: home, FORCE_COLOR: '0' },
       })
       child.onData((data) => { output += data })
       let resolveCompletion!: (event: { exitCode: number }) => void

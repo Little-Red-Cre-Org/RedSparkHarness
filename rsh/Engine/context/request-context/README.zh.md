@@ -51,7 +51,7 @@ Provider 提供 `requestContexts`；应用和其他 Provider 从 [`dsh-request-c
 
 可见 Provider 按 `order` 升序准备；相同时按 provider id 排序。每个 Provider 返回分离的消息和候选状态；注册表不会写入 Session。应用提供接受回调，负责同步执行最终检查、通过既有 writer 追加并 flush。只有返回 `accepted` 才会提交准备好的 Provider 状态；拒绝时不提交，准备、接受或 flush 失败都会拒绝该请求。
 
-请求携带来自模型或 PTC 执行快照的精确可见性。`includes()` 按捕获时的 registration disposer identity 匹配，因此同名 schema 不会让被替换的注册重新可见。
+请求携带来自模型或 PTC 执行快照的精确可见性。`includes()` 按捕获时的 registration disposer identity 匹配，因此同名 schema 不会让被替换的注册重新可见。每次 `register()` 都会返回针对该精确 Provider 的可调用 disposer；其 `isVisible(scope)` 仅在该注册仍是同 id 最近的可见 Provider 时返回 true，在被替换、移除或注册表销毁后返回 false。
 
 <a id="further-exploration"></a>
 
