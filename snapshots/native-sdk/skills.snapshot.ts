@@ -1,5 +1,5 @@
 /** Native SDK Skill catalog, tool loading, explicit invocation, and cold Session recovery. */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -112,16 +112,17 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
     throw new Error('native-sdk skills replay requires its committed Session JSONL')
   }
 
-  const home = mkdtempSync(join(tmpdir(), 'dsh-native-sdk-skills-'))
-  const workspace = join(home, 'work')
-  const sessions = join(home, 'sessions')
-  const profile = join(home, 'profiles', 'native-sdk')
-  const modelPatch = join(home, 'model.patch.json')
+  const acquiredHome = mkdtempSync(join(tmpdir(), 'dsh-native-sdk-skills-'))
   const modelRequests: Array<Record<string, unknown>> = []
   let server: ReturnType<typeof createServer> | undefined
   let primaryError: unknown
   let hasPrimaryError = false
   try {
+    const home = realpathSync.native(acquiredHome)
+    const workspace = join(home, 'work')
+    const sessions = join(home, 'sessions')
+    const profile = join(home, 'profiles', 'native-sdk')
+    const modelPatch = join(home, 'model.patch.json')
     const fixtureServer = createServer((request, response) => {
       let body = ''
       request.setEncoding('utf8')
@@ -295,7 +296,7 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
         })
       } catch (error) { cleanupFailures.push(error) }
     }
-    try { rmSync(home, { recursive: true, force: true }) }
+    try { rmSync(acquiredHome, { recursive: true, force: true }) }
     catch (error) { cleanupFailures.push(error) }
     if (cleanupFailures.length > 0) {
       throw new AggregateError(hasPrimaryError ? [primaryError, ...cleanupFailures] : cleanupFailures,
