@@ -1,9 +1,10 @@
 /** Real package-export loading from a profile, including pre-import refusal. */
 import { existsSync } from 'node:fs'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
+import { NativeScope, type NativePlugin, type NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import { loadNativeProfile, replaceNativeProfile } from '../src/native-profile-loader.ts'
 import { runNativeProfile } from '../src/native-profile-boot.ts'
 
@@ -25,7 +26,7 @@ async function packageEntry(profileDir: string, name: string, marker: string, va
   const dir = join(profileDir, 'node_modules', name)
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'package.json'), JSON.stringify({
-    name, type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    name, version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: valid ? './native' : './missing', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
   await writeFile(join(dir, 'native.mjs'), `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'loaded'); export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'], requires: [], provides: ['fs'], resolve: () => context => context.provide('fs', { read: () => 1 }) }\n`)
@@ -37,12 +38,24 @@ async function emptyNativePackage(
   const dir = join(profileDir, 'node_modules', name)
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'package.json'), JSON.stringify({
-    name, type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    name, version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires, optional: [], provides } },
   }))
   const registrations = provides.map(service => `context.provide(${JSON.stringify(service)}, {})`).join(';')
   await writeFile(join(dir, 'native.mjs'), `export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'],
     requires: ${JSON.stringify(requires)}, provides: ${JSON.stringify(provides)}, resolve: () => context => { ${registrations} } }\n`)
+}
+
+async function inventoryPackage(profileDir: string, packageName: string, pluginName: string): Promise<void> {
+  const dir = join(profileDir, 'node_modules', packageName)
+  await mkdir(dir, { recursive: true })
+  await writeFile(join(dir, 'package.json'), JSON.stringify({
+    name: packageName, version: '1.0.0', type: 'module',
+    exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: [] } },
+  }))
+  await writeFile(join(dir, 'native.mjs'), `export const plugin = { apiVersion: 1, name: ${JSON.stringify(pluginName)},
+    targets: ['host'], requires: [], provides: [], resolve: config => context => { if (config?.fail) throw new Error('replacement activation failed') } }\n`)
 }
 
 async function childPackages(profileDir: string, kind: 'sdk' | 'acp'): Promise<void> {
@@ -60,6 +73,7 @@ it('inherits the nearest visible pi-ai provider catalog into the opt-in SDK chil
     const unrelatedProviders = { route: { baseURL: 'https://unrelated.invalid/v1' } }
     await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, 'sdk')
+    await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
     await emptyNativePackage(profileDir, 'test-child-sandbox', [], ['sandbox'])
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
@@ -67,6 +81,7 @@ it('inherits the nearest visible pi-ai provider catalog into the opt-in SDK chil
         { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
         { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
         { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
+        { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
         { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
         { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
         { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'nested', config: { providerName: 'dsh-sdk' } },
@@ -95,6 +110,7 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
   try {
     await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, 'acp')
+    await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
     await emptyNativePackage(profileDir, 'test-child-sandbox', [], ['sandbox'])
     await emptyNativePackage(profileDir, 'test-remote-acp-launcher', [], ['acpChildRuntimeLauncher'])
@@ -103,7 +119,9 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
       scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }, { id: 'other' }],
       installations: [
         { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
         { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
+        { id: 'other-credentials', plugin: 'test-credentials', scope: 'other' },
         { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
         { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
         { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
@@ -169,9 +187,11 @@ it.each([
   try {
     await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, packageKind)
+    await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     const scopes = [{ id: 'root' }, { id: 'first', parent: 'root' }, { id: 'second', parent: 'root' }]
     const base = { formatVersion: 1, scopes, installations: [
       { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: { route: {} } } },
+      { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
     ] }
     await writeFile(profilePath, JSON.stringify(base))
     const initial = await loadNativeProfile(options)
@@ -358,7 +378,7 @@ it('runs one native application through the profile launcher and awaits disposal
   try {
     await mkdir(packageDir)
     await writeFile(join(packageDir, 'package.json'), JSON.stringify({
-      name: 'test-native-app', type: 'module',
+      name: 'test-native-app', version: '1.0.0', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['application'] } },
     }))
@@ -376,5 +396,107 @@ it('runs one native application through the profile launcher and awaits disposal
   } finally {
     process.exitCode = priorExitCode
     await rm(home, { recursive: true, force: true })
+  }
+})
+
+it('projects exact ready package provenance through dynamic scope ancestry and excludes failed replacements', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const profilePath = join(profileDir, 'rsh.profile.json')
+  let inventory: NativePluginInventory | undefined
+  const reader: NativePlugin = {
+    apiVersion: 1, name: 'test-inventory-reader', targets: ['host'], requires: ['pluginInventory'], provides: [],
+    resolve: () => (context) => { inventory = context.require('pluginInventory') },
+  }
+  let active: Awaited<ReturnType<typeof loadNativeProfile>> | undefined
+  try {
+    await inventoryPackage(profileDir, 'test-root-manifest', 'native-root-plugin')
+    await inventoryPackage(profileDir, 'test-first-manifest', 'native-first-plugin')
+    await inventoryPackage(profileDir, 'test-second-manifest', 'native-second-plugin')
+    const base = {
+      formatVersion: 1,
+      scopes: [{ id: 'root' }, { id: 'first', parent: 'root' }, { id: 'second', parent: 'root' }],
+      installations: [
+        { id: 'root-id', plugin: 'test-root-manifest', scope: 'root' },
+        { id: 'first-id', plugin: 'test-first-manifest', scope: 'first' },
+        { id: 'second-id', plugin: 'test-second-manifest', scope: 'second' },
+        { id: 'disabled-id', plugin: 'missing-disabled-package', scope: 'second', disabled: true },
+      ],
+    }
+    await writeFile(profilePath, JSON.stringify(base))
+    const initial = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      carrier: { plugin: reader, scope: 'root' } })
+    await initial.host.start()
+    active = initial
+    if (inventory === undefined) throw new Error('inventory reader did not activate')
+    const root = initial.requests.get('root-id')?.scope
+    const first = initial.requests.get('first-id')?.scope
+    const second = initial.requests.get('second-id')?.scope
+    if (root === undefined || first === undefined || second === undefined) throw new Error('missing fixture scope')
+    const dynamicFirst = new NativeScope(first)
+    const firstRows = inventory.packages(dynamicFirst)
+    expect(firstRows.map(row => [row.package.name, row.package.version])).toEqual([
+      ['test-root-manifest', '1.0.0'], ['test-first-manifest', '1.0.0'],
+    ])
+    const initialFirstId = firstRows.find(row => row.package.name === 'test-first-manifest')?.id
+    const initialRootId = firstRows.find(row => row.package.name === 'test-root-manifest')?.id
+    const initialSecondRows = inventory.packages(second)
+    const initialSecondId = initialSecondRows.find(row => row.package.name === 'test-second-manifest')?.id
+    if (initialFirstId === undefined || initialRootId === undefined || initialSecondId === undefined) {
+      throw new Error('missing fixture installation identity')
+    }
+    expect(firstRows.map(row => row.id)).toEqual([
+      initial.host.diagnostics().find(row => row.name === 'native-root-plugin')?.id,
+      initial.host.diagnostics().find(row => row.name === 'native-first-plugin')?.id,
+    ])
+    expect(inventory.packages(second).map(row => row.package.name)).toEqual([
+      'test-root-manifest', 'test-second-manifest',
+    ])
+    expect(firstRows.some(row => row.package.name === 'missing-disabled-package')).toBe(false)
+
+    const replacementDir = join(profileDir, 'node_modules', 'test-first-manifest')
+    const manifestPath = join(replacementDir, 'package.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { version: string }
+    manifest.version = '2.0.0'
+    await writeFile(manifestPath, JSON.stringify(manifest))
+    const updated = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      previous: active, carrier: { plugin: reader, scope: 'root' } })
+    active = await replaceNativeProfile(initial.host, updated)
+    const updatedFirstRows = inventory.packages(dynamicFirst)
+    expect(updatedFirstRows.map(row => [row.package.name, row.package.version])).toEqual([
+      ['test-root-manifest', '1.0.0'], ['test-first-manifest', '2.0.0'],
+    ])
+    expect(updatedFirstRows.find(row => row.package.name === 'test-root-manifest')?.id).toBe(initialRootId)
+    expect(updatedFirstRows.find(row => row.package.name === 'test-first-manifest')?.id).not.toBe(initialFirstId)
+    expect(inventory.packages(second).find(row => row.package.name === 'test-second-manifest')?.id).toBe(initialSecondId)
+
+    const firstPackage = JSON.parse(await readFile(manifestPath, 'utf8')) as { name: string; version: string }
+    await writeFile(manifestPath, JSON.stringify({ ...firstPackage, name: '' }))
+    await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      previous: active, carrier: { plugin: reader, scope: 'root' } }))
+      .rejects.toThrow('native installation first-id: invalid package test-first-manifest')
+    await writeFile(manifestPath, JSON.stringify(firstPackage))
+    const secondManifestPath = join(profileDir, 'node_modules', 'test-second-manifest', 'package.json')
+    const secondPackage = JSON.parse(await readFile(secondManifestPath, 'utf8')) as { name: string; version: string }
+    await writeFile(secondManifestPath, JSON.stringify({ ...secondPackage, version: '' }))
+    await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      previous: active, carrier: { plugin: reader, scope: 'root' } }))
+      .rejects.toThrow('native installation second-id: invalid package test-second-manifest')
+    await writeFile(secondManifestPath, JSON.stringify(secondPackage))
+
+    const failed = { ...base, installations: base.installations.map(row => row.id === 'first-id'
+      ? { ...row, config: { fail: true } } : row) }
+    await writeFile(profilePath, JSON.stringify(failed))
+    const candidate = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      previous: active, carrier: { plugin: reader, scope: 'root' } })
+    await expect(replaceNativeProfile(initial.host, candidate)).rejects.toThrow('replacement activation failed')
+    expect(inventory.list().some(row => row.state === 'planned')).toBe(false)
+    expect(inventory.packages(dynamicFirst)).toEqual([])
+  } finally {
+    const errors: unknown[] = []
+    try { await active?.host.stop() }
+    catch (error) { errors.push(error) }
+    try { await rm(home, { recursive: true, force: true }) }
+    catch (error) { errors.push(error) }
+    if (errors.length > 0) throw new AggregateError(errors, 'native inventory fixture cleanup failed')
   }
 })

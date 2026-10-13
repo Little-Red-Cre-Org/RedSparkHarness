@@ -11,33 +11,24 @@ import { dirname, isAbsolute, join, parse } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { FiberState } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { Entry, EntryTree } from '@deepseek-ai/cordis-plugin-loader'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-agent-presets'
-import type { DeepSeekPluginPackageIdentity, DeepSeekPluginPackageInventoryExtension } from './types.ts'
+import type { DeepSeekPluginPackageIdentity } from './types.ts'
 import type {} from './types.ts'
+import { Config } from './config.ts'
+import { createInventoryExtension } from './wire.ts'
 
 export type * from './types.ts'
+export { Config }
 
 /** Cordis plugin name. */
 export const name = 'plugin-package-inventory-deepseek'
 /** Services required to locate host/requesting-agent entries and contribute the field. */
 export const inject = ['agents', 'deepseekLlmApiExtensions', 'loader']
-
-/** Plugin-package request contribution configuration. */
-export interface Config {
-  /** Contribute `dsh_plugin_packages` to official DeepSeek requests. Defaults to `true`. */
-  enabled?: boolean
-}
-
-/** Validated plugin-package request contribution configuration. */
-export const Config: z<Config> = z.object({
-  enabled: z.boolean().default(true),
-})
 
 interface PackageManifest {
   readonly name?: unknown
@@ -143,11 +134,6 @@ function activeEntries(tree: EntryTree, rootBareBaseUrl?: string): ActiveEntry[]
     }))
 }
 
-/** Deterministic text order independent of the host's ICU data and locale. */
-function compareWireText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0
-}
-
 /** Collect the full active package set for one request. */
 async function collectActivePluginPackages(
   ctx: Context,
@@ -168,15 +154,13 @@ async function collectActivePluginPackages(
       if (presetTree !== undefined) entries.push(...activeEntries(presetTree, hostBaseUrl))
     }
   }
-  const unique = new Map<string, DeepSeekPluginPackageIdentity>()
+  const identities: DeepSeekPluginPackageIdentity[] = []
   for (const activeEntry of entries) {
     const identity = resolver.resolve(activeEntry)
     if (identity === undefined) continue
-    unique.set(`${identity.name}\u0000${identity.version}`, identity)
+    identities.push(identity)
   }
-  return [...unique.values()].sort((left, right) => (
-    compareWireText(left.name, right.name) || compareWireText(left.version, right.version)
-  ))
+  return identities
 }
 
 /**
@@ -190,10 +174,7 @@ export function apply(ctx: Context, config: Config): void {
   const resolver = new PackageIdentityResolver(hostBaseUrl)
   ctx.deepseekLlmApiExtensions.register('dsh_plugin_packages', {
     prepare: async (request) => {
-      const value: DeepSeekPluginPackageInventoryExtension = {
-        version: 1,
-        packages: await collectActivePluginPackages(ctx, resolver, hostBaseUrl, request.sessionId),
-      }
+      const value = createInventoryExtension(await collectActivePluginPackages(ctx, resolver, hostBaseUrl, request.sessionId))
       return { value }
     },
   })

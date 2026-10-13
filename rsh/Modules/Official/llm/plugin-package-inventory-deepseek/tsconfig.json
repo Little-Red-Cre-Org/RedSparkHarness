@@ -31,6 +31,12 @@
     },
     {
       "path": "../deepseek-llm-api-extensions"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
     }
   ]
 }

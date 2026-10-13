@@ -9,11 +9,12 @@ kind: "package-reference"
 
 ## 概述
 
-用于 DeepSeek 官方 LLM（大语言模型）API 请求的增量规范会话日志上传。该函数插件注入 `ctx.sessions` 与 `ctx.deepseekLlmApiExtensions`，并拥有 `dsh_session_log` 请求字段以及用于派生接受水位的持久 `session-log-deepseek/delivery-accepted` 事件。仅当官方 API 需要接收会话日志后缀时才启用它。
+用于 DeepSeek 官方 LLM（大语言模型）API 请求的增量规范 Session 日志上传。Cordis 入口读取 `ctx.sessions`；Native Host 入口读取确切活动 Session 所有者。两者都贡献 `dsh_session_log`，并通过 `session-log-deepseek/delivery-accepted` 记录接受状态。仅当官方 API 需要接收 Session 日志后缀时才启用此贡献。
 
 ## 目录
 
 - [配置](#configuration)
+- [Native Host 入口](#native-host-entry)
 - [请求字段](#request-field)
 - [接受与重试](#acceptance-and-retry)
 - [模型体验](#model-experience)
@@ -30,6 +31,11 @@ kind: "package-reference"
 | `enabled` | `false` | 注册 `dsh_session_log` 贡献。将其设为 `true` 可选择启用会话日志上传。 |
 
 随附 profile 会挂载该插件，让 overlay 可以启用它；默认配置不会注册请求字段，也不会追加接受水位。
+
+<a id="native-host-entry"></a>
+### Native Host 入口
+
+`./native` 入口要求 `deepseekLlmApiExtensions` 与 `activeSessions`。对于匹配的存活 `sessionId`，它读取该确切所有者的持久事件；HTTP 2xx 后，接受操作会通过同一所有者追加已上传水位并刷新。没有匹配活动 Session 的请求会省略该字段。Native 入口默认仍为选择加入，随附 profile 保持 Cordis 组合。
 
 <a id="request-field"></a>
 ## 请求字段

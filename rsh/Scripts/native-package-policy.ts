@@ -193,6 +193,9 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
   ['rsh/Modules/Official/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
   ['rsh/Modules/Official/llm/llm-deepseek', 'Cordis and native official Providers share real HTTP/SSE adapter and static configuration'],
+  ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', 'Cordis and native Providers share field ownership and post-response acceptance semantics'],
+  ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', 'Cordis Loader and native installation inventory share the package identity field projection'],
+  ['rsh/Modules/Official/llm/session-log-deepseek', 'Cordis and native Consumers share accepted-watermark folding and lossless Session event encoding'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
@@ -244,6 +247,12 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['@deepseek-ai/cordis']],
+  ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', [
+    '@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-agent',
+    '@deepseek-ai/dsh-agent-presets', '@deepseek-ai/dsh-session',
+  ]],
+  ['rsh/Modules/Official/llm/session-log-deepseek', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-invariants']],
   ['rsh/Modules/Official/webhook/webhook-github', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-http-routes-cordis']],
   ['rsh/Modules/Official/webhook/webhook', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-default-model', '@deepseek-ai/dsh-agent-presets', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-permission-presets', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-title', '@deepseek-ai/dsh-workspace']],
   ['rsh/Modules/Official/interaction/permission-presets', [

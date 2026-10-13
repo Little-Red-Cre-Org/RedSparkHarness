@@ -9,11 +9,12 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Complete active Loader-backed plugin package inventory for official DeepSeek LLM API requests. This function plugin injects the Loader, live Agent registry, and `ctx.deepseekLlmApiExtensions`, then owns the `dsh_plugin_packages` field. Enable it when the official API needs the active package list for request diagnostics.
+Complete package inventory for official DeepSeek LLM API requests. The Cordis entry reads active Loader packages; the Native Host entry reads ready package-backed installations from [`NativePluginInventory`](../../../../Core/runtime-diagnostics/native-runtime/README.md#package-provenance). Both contribute `dsh_plugin_packages` through `deepseekLlmApiExtensions`.
 
 ## Table of Contents
 
 - [Configuration](#configuration)
+- [Native Host entry](#native-host-entry)
 - [Collection](#collection)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
@@ -29,6 +30,11 @@ Complete active Loader-backed plugin package inventory for official DeepSeek LLM
 | `enabled` | `true` | Register the `dsh_plugin_packages` contribution. Set it to `false` to omit package metadata. |
 
 Shipped profiles use the default, so every official DeepSeek request carries the package inventory when preparation succeeds.
+
+<a id="native-host-entry"></a>
+### Native Host entry
+
+The `./native` entry requires `deepseekLlmApiExtensions`, `pluginInventory`, and `activeSessions`. A request whose `sessionId` matches an active Session uses that owner's Agent scope; otherwise this contributor reads from its own installation scope. Only ready package-backed installations visible from that scope and its ancestors contribute their manifest `name` and `version`. This entry is an explicit Native capability; shipped profiles continue to use the Cordis entry.
 
 <a id="collection"></a>
 ## Collection
@@ -60,9 +66,9 @@ None; package lifecycle changes do not alter the model-visible prefix.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Loader package provenance only** — programmatic child fibers and in-memory dynamic plugins do not have authoritative npm name/version provenance and remain outside this inventory.
+- **Cordis Loader inventory excludes unowned fibers** — programmatic child fibers and in-memory dynamic plugins have no authoritative npm name/version provenance; the Native entry instead reads package-backed Native installations.
 - **Loose modules are omitted** — a relative file without a named and versioned owning manifest is a plugin module, not a plugin package.
-- **In-place package replacement requires restart** — manifest identities are cached for the process lifetime. Loader enable, disable, mount, unmount, and ordinary source HMR still refresh the active entry set, but replacing a mounted package's manifest with another version in the same process is not a supported upgrade path.
+- **Cordis package replacement requires restart** — the Cordis entry caches manifest identities for the process lifetime. Loader enable, disable, mount, unmount, and ordinary source HMR refresh its active entry set, but replacing a mounted package's manifest with another version in the same process is not a supported upgrade path.
 
 
 <a id="dev-note"></a>
@@ -75,4 +81,4 @@ None.
 
 </details>
 
-**Runtime invariant:** No companion is published. Each request reads authoritative Loader fiber state and package manifests directly; the plugin retains no independently mutable inventory.
+**Runtime invariant:** No companion is published. Cordis requests read authoritative Loader fiber state and package manifests; Native requests read `NativePluginInventory`. Neither entry retains an independently mutable inventory.

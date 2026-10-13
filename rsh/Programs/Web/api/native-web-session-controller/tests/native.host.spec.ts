@@ -525,7 +525,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   }
   const inventory: NativePlugin = {
     apiVersion: 1, name: 'test-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
-    resolve: () => (context) => { context.provide('pluginInventory', { list: () => host.diagnostics() }) },
+    resolve: () => (context) => { context.provide('pluginInventory', { list: () => host.diagnostics(), packages: () => [] }) },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: inventory, scope, config: undefined },

@@ -83,6 +83,16 @@ export interface InstallationRequest {
   readonly plugin: NativePlugin
   readonly scope: NativeScope
   readonly config: unknown
+  /** Selected package manifest identity; absent for in-memory installations. */
+  readonly package?: NativePackageProvenance
+}
+
+/** Identity read from the selected npm package manifest. */
+export interface NativePackageProvenance {
+  /** Actual `package.json` name, independent of the Native plugin entry name. */
+  readonly name: string
+  /** Actual `package.json` version. */
+  readonly version: string
 }
 
 interface PlannedInstallation {
@@ -90,6 +100,7 @@ interface PlannedInstallation {
   request: InstallationRequest
   name: string
   scope: NativeScope
+  package?: NativePackageProvenance
   provides: readonly ServiceKey[]
   requires: readonly ServiceKey[]
   optional: readonly ServiceKey[]
@@ -105,6 +116,8 @@ export interface InstallationDiagnostic {
   readonly id: NativeInstallationId
   readonly name: string
   readonly scope: NativeScopeId
+  /** Selected manifest identity tied to this installation, when it came from a package. */
+  readonly package?: NativePackageProvenance
   readonly state: 'planned' | 'activating' | 'ready' | 'draining' | 'failed' | 'disposed'
   readonly dependencies: readonly { service: ServiceKey; provider: NativeInstallationId }[]
   readonly failure: 'activation' | 'cleanup' | undefined
@@ -145,7 +158,8 @@ export class InstallationPlan {
     })
     const entries = selected.map(({ plugin, scope, config, request }): PlannedInstallation & { plugin: NativePlugin; config: unknown } => ({
       id: brandString<NativeInstallationId>(globalThis.crypto.randomUUID()),
-      plugin, config, request, optional: [...plugin.optional ?? []], requires: [...plugin.requires],
+      plugin, config, request, ...request.package === undefined ? {} : { package: Object.freeze({ ...request.package }) },
+      optional: [...plugin.optional ?? []], requires: [...plugin.requires],
       name: plugin.name, scope, provides: [...plugin.provides], dependencies: new Map<ServiceKey, PlannedInstallation>(),
       activate: () => { throw new Error('native-runtime: unresolved activation') },
     }))
@@ -248,7 +262,8 @@ export class NativeHost {
       const current = this.diagnosticState.get(entry)
       if (current === undefined) throw new Error('native-runtime: missing installation diagnostic')
       return {
-        id: entry.id, name: entry.name, scope: entry.scope.id, ...current,
+        id: entry.id, name: entry.name, scope: entry.scope.id,
+        ...entry.package === undefined ? {} : { package: entry.package }, ...current,
         dependencies: [...entry.dependencies].map(([service, provider]) => ({ service, provider: provider.id })),
       }
     })

@@ -807,6 +807,7 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'vitest.e2e.config.ts',
     'rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts',
     'rsh/Programs/CLI/tests/built-bin.e2e.ts',
+    'rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts',
     'rsh/Programs/Web/host/directory-picker-native/tests/built-worker.e2e.ts',
     'rsh/Programs/SDK/packages/server/tests/built-scope-carrier.e2e.ts',
     'rsh/Modules/Official/fs/tool-present/tests/built-errors.e2e.ts',
