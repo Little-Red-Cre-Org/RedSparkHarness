@@ -18,6 +18,8 @@ The `dsh` TUI, Web, and headless source launches run `node --import tsx/esm`: ts
 
 `rsh/Scripts/tspath-loader.ts` and `rsh/Programs/CLI/src/tsconfig-paths-loader.ts` are deleted. With them went the loader's runtime rule of mapping a workspace import only for declared runtime dependencies — tsx applies the `paths` map unconditionally. Declaration completeness now rests on the static gates alone: `verify-cordis-config` for configured bare plugins, and workspace constraints for manifests. (That runtime rule found real bugs: `dsh-plan-mode` and `dsh-tool-jobs` imported `@deepseek-ai/dsh-llm` while declaring it only in devDependencies; since fixed.)
 
+Configured compatibility Settings adapter subpaths and the Engine `/compat-settings` entries they import resolve through exact source aliases in [tsconfig.base.json](../../../../tsconfig.base.json), outside the generated region. Package-root aliases do not cover these subpaths; mapping only the adapters leaves their Engine imports dependent on built exports. The alias generator retains its existing package-root and native-entry scope.
+
 The node-compat CI matrix (Node 22.19 and 26) gains `dsh-source-launch-smoke` (`rsh/Programs/CLI/tests/source-launch.compat.spec.ts`): a keyless piped-stdio launch of the exact production runtime vector asserting the non-zero-exit TTY refusal. Any future Node change to module hooks or TypeScript handling turns this gate red instead of breaking developers' `pnpm dsh`.
 
 ## Alternatives considered
