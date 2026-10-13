@@ -67,6 +67,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Modules/Official/sandbox/sandbox-windows-acl': 'Windows ACL sandbox library consumed by sandbox-local.',
   'rsh/Programs/SDK/packages/client': 'Client-process library; the spawned runtime owns plugin behavior.',
   'rsh/Engine/subagent/sdk-protocol': 'Wire-protocol library with type declarations and transport helpers only.',
+  'rsh/Modules/Official/subagent/acp-protocol': 'Versioned ACP policy-metadata library with validation helpers and no plugin entry.',
   'rsh/Engine/subagent/sdk-runtime': 'Shared SDK client and Session API implementation without a plugin entry.',
   'rsh/Engine/session/session-format': 'Pure Session format planning, codec dispatch, and lossless JSON library.',
   'rsh/Engine/session/session-format-catalog': 'Generated build-static Session format inventory with no plugin registration.',

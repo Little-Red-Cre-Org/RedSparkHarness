@@ -1,8 +1,13 @@
 /** Native model execution and Session recording for a single Agent step. */
 import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, normalizeLlmFailure,
-  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ReasoningEffortId, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { NativeResponsesGenerationCapture, NativeResponsesOperationCapture, NativeResponsesPreparedGeneration,
+  NativeResponsesRoute, NativeResponsesTransport } from './responses-transport.ts'
+export type { NativeResponsesGenerationCapture, NativeResponsesJsonValue, NativeResponsesRoute,
+  NativeResponsesOperationCapture, NativeResponsesPreparedGeneration, NativeResponsesTransport,
+  NativeResponsesTransportResponse } from './responses-transport.ts'
 
 /** Streaming model selected by a native profile. */
 export interface NativeModel {
@@ -101,7 +106,10 @@ export interface NativeModelStepResult {
 
 /** Canonical native stream assembly and assistant-event recording. */
 export class NativeModelExecution {
-  private readonly prepared = new WeakMap<NativePreparedModelStep, (options: GenerateOptions) => AsyncIterable<StreamChunk>>()
+  private readonly prepared = new WeakMap<NativePreparedModelStep, {
+    readonly dispatch: (options: GenerateOptions) => AsyncIterable<StreamChunk>
+    readonly nativeResponses?: NativeResponsesGenerationCapture
+  }>()
   private readonly recoveryPolicies: NativeModelRecoveryPolicy[] = []
   constructor(private readonly model: NativeModel) {}
 
@@ -140,13 +148,92 @@ export class NativeModelExecution {
       ...config.temperature === undefined ? {} : { temperature: config.temperature },
       ...config.stop === undefined ? {} : { stop: config.stop } }
     const resolved = info === undefined ? controls : resolveCallConfigWithModel(controls, info)
+    if (resolved.maxTokens !== undefined
+      && (captured === undefined || !await captured.supportsOutputTokenLimit(resolved.maxTokens, resolved.reasoningEffort))) {
+      throw new Error('native-model-execution: selected model generation cannot enforce maxTokens')
+    }
     const retryPolicy = this.retryPolicyFor(undefined, config.provider)
     signal?.throwIfAborted()
     const handle: NativePreparedModelStep = Object.freeze({ config: deepFreeze(structuredClone(resolved)),
       ...info === undefined ? {} : { modelInfo: deepFreeze(structuredClone(info)) },
       retryPolicy: deepFreeze(structuredClone(retryPolicy)) })
-    this.prepared.set(handle, captured === undefined ? this.model.stream.bind(this.model) : captured.stream.bind(captured))
+    this.prepared.set(handle, { dispatch: captured === undefined ? this.model.stream.bind(this.model) : captured.stream.bind(captured),
+      ...captured?.nativeResponses === undefined ? {} : { nativeResponses: captured.nativeResponses } })
     return handle
+  }
+
+  /** Capture Responses forwarding only from this executor's exact prepared model generation.
+   * @param handle - step handle returned by this executor.
+   * @param route - Engine-selected external model route.
+   * @param maxTokens - optional parent generation ceiling.
+   * @param signal - external operation cancellation.
+   * @param reasoningEffort - selected effort to validate against captured model metadata.
+   * @returns a captured transport owned until its external operation closes it.
+   */
+  async captureResponses(handle: NativePreparedModelStep, route: NativeResponsesRoute, maxTokens: number | undefined,
+    signal: AbortSignal, reasoningEffort?: ReasoningEffortId): Promise<NativeResponsesTransport> {
+    const prepared = this.prepared.get(handle)
+    if (prepared === undefined) throw new Error('native-model-execution: Responses capture requires this executor\'s prepared step')
+    if (route.provider !== handle.config.provider || route.model !== handle.config.model) {
+      throw new Error('native-model-execution: Responses route must match its prepared model generation')
+    }
+    if (handle.modelInfo !== undefined) {
+      resolveCallConfigWithModel({ provider: route.provider, model: route.model,
+        ...reasoningEffort === undefined ? {} : { reasoningEffort } }, handle.modelInfo)
+    }
+    const capture = prepared.nativeResponses
+    if (capture === undefined) throw new Error('native-model-execution: selected model generation has no captured Responses transport')
+    signal.throwIfAborted()
+    const transport = await capture.capture({ route, ...maxTokens === undefined ? {} : { maxTokens } }, signal)
+    try {
+      signal.throwIfAborted()
+      if (transport.route.provider !== route.provider || transport.route.model !== route.model) {
+        throw new Error('native-model-execution: captured Responses transport belongs to a different route')
+      }
+      if (maxTokens !== undefined && transport.outputTokenLimit !== 'supported') {
+        throw new Error('native-model-execution: captured Responses transport cannot enforce the parent maxTokens ceiling')
+      }
+      return transport
+    } catch (error: unknown) {
+      try { await transport.close() }
+      catch (cleanupError: unknown) {
+        throw new AggregateError([error, cleanupError], 'native-model-execution: rejected Responses capture failed to close')
+      }
+      throw error
+    }
+  }
+
+  /** Capture one external operation and retain its exact model generation for nested children.
+   * @param parent - exact prepared step selected by this executor.
+   * @param route - Engine-selected child route.
+   * @param maxTokens - optional child output-token ceiling.
+   * @param signal - parent and child operation cancellation.
+   * @param reasoningEffort - explicitly selected child reasoning effort.
+   * @returns an independent transport and a capability bound to the selected prepared generation.
+   */
+  async captureResponsesOperation(parent: NativePreparedModelStep, route: NativeResponsesRoute,
+    maxTokens: number | undefined, signal: AbortSignal, reasoningEffort?: ReasoningEffortId): Promise<NativeResponsesOperationCapture> {
+    if (!this.prepared.has(parent)) {
+      throw new Error('native-model-execution: Responses capture requires this executor\'s prepared step')
+    }
+    const handle = route.provider === parent.config.provider && route.model === parent.config.model
+      ? parent
+      : await this.prepareStep({ provider: route.provider, model: route.model,
+        ...reasoningEffort === undefined ? {} : { reasoningEffort },
+        ...maxTokens === undefined ? {} : { maxTokens } }, signal)
+    const transport = await this.captureResponses(handle, route, maxTokens, signal, reasoningEffort)
+    return { transport, generation: this.responsesGeneration(handle) }
+  }
+
+  private responsesGeneration(handle: NativePreparedModelStep): NativeResponsesPreparedGeneration {
+    if (!this.prepared.has(handle)) throw new Error('native-model-execution: Responses generation requires this executor\'s prepared step')
+    const route = Object.freeze({ provider: handle.config.provider, model: handle.config.model })
+    return Object.freeze({ route, capture: (request: {
+      readonly route: NativeResponsesRoute
+      readonly maxTokens?: number
+      readonly reasoningEffort?: ReasoningEffortId
+    }, signal: AbortSignal) => this.captureResponsesOperation(handle,
+      request.route, request.maxTokens, signal, request.reasoningEffort) })
   }
 
   /**
@@ -160,7 +247,8 @@ export class NativeModelExecution {
     const { session, turn, step, append, persist } = request
     let options = request.options
     const handle = request.prepared
-    const dispatch = handle === undefined ? this.model.stream.bind(this.model) : this.prepared.get(handle)
+    const prepared = handle === undefined ? undefined : this.prepared.get(handle)
+    const dispatch = handle === undefined ? this.model.stream.bind(this.model) : prepared?.dispatch
     if (dispatch === undefined) throw new Error('native-model-execution: step was prepared by a different executor')
     if (handle !== undefined && !callConfigEquals(handle.config, options)) {
       throw new Error('native-model-execution: dispatch controls differ from the prepared request')

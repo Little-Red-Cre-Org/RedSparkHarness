@@ -168,6 +168,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-goal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-command-goal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-codex-app-server': ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-subagent-claude-code': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
@@ -265,13 +266,19 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-acp-protocol': ['lib/shared-*.js'],
+  '@deepseek-ai/dsh-acp-child': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js'],
+  '@deepseek-ai/dsh-client-native-session': [
+    'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
+    'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/native-*.js',
+    'lib/shared-*.js', 'lib/workspaces-*.js',
+  ],
+  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
   '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/*.css'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
@@ -359,6 +366,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
 const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
   // tsdown emits the SDK client's public entries and shared chunks together.
   '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  // This package must publish its exact RedSpark research license with its native entries.
+  '@deepseek-ai/dsh-acp-child': [
+    'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+  ],
   '@deepseek-ai/dsh-session-log-export': [
     'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
   ],

@@ -1,12 +1,18 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
-import type { ChildConnectionDefinition, ChildConnectionHandle, SubprocessOutcome } from '@deepseek-ai/dsh-subprocess/native'
+import type {
+  ChildConnectionDefinition,
+  ChildConnectionHandle,
+  SubprocessEnvironmentMode,
+  SubprocessOutcome,
+} from '@deepseek-ai/dsh-subprocess/native'
 import { disposeChildConnection } from '@deepseek-ai/dsh-subprocess/native'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { CodexAppServerWire } from './wire.ts'
 import type { CodexWireFailureFacts, CodexWireResult } from './wire.ts'
 import { DEFAULT_DISPOSE_GRACE_MS, type CodexPermissionMode } from './types.ts'
+import type { NativeCodexToolBridge } from './native-tool-bridge.ts'
 
 interface CodexPackageManifest { readonly bin: { readonly codex: string } }
 
@@ -29,6 +35,8 @@ export type CodexRunStopReason = 'completed' | 'max-tokens' | 'aborted' | 'refus
  */
 export interface CodexProductResult {
   readonly output: CodexWireResult['output']
+  /** Native tool result when Codex completed through an accepted `concludesTurn` grant. */
+  readonly toolResult?: CodexWireResult['toolResult']
   readonly stopReason: CodexRunStopReason
   readonly diagnostic?: string
 }
@@ -47,7 +55,11 @@ export interface CodexProductRunSpec {
   readonly cwd: string
   readonly model?: string
   readonly reasoningEffort?: string
+  /** Core child environment policy: Compat uses `scrub-overlay`; isolated Native launches use `replace`. */
+  readonly envMode: SubprocessEnvironmentMode
   readonly permissionMode: CodexPermissionMode
+  /** Captured Native grants, settlements, and continuation-context owner. */
+  readonly toolBridge?: NativeCodexToolBridge
   readonly env?: Record<string, string>
   readonly disposeGraceMs?: number
   readonly onStderr?: (chunk: Buffer) => void
@@ -85,13 +97,16 @@ function safeError(value: unknown): Error {
  * @param wire - This run's app-server protocol adapter.
  * @param child - The Core-managed child connection to release.
  * @param graceMs - Grace period used by the managed-range termination tiers.
+ * @param toolBridge - optional Native bridge whose accepted executions must settle first.
  * @returns Resolves after protocol listeners and the child range are released.
  */
 export async function disposeCodexChild(
   wire: CodexAppServerWire,
   child: ChildConnectionHandle,
   graceMs = DEFAULT_DISPOSE_GRACE_MS,
+  toolBridge?: NativeCodexToolBridge,
 ): Promise<void> {
+  if (toolBridge !== undefined) await toolBridge.drainAccepted()
   wire.close()
   let outcome: SubprocessOutcome | undefined
   void child.done.then((value) => { outcome = value }, () => {})
@@ -144,13 +159,13 @@ export async function startCodexProductRun(
       graceMs,
       signal,
       env: spec.env,
-      envMode: 'scrub-overlay',
+      envMode: spec.envMode,
     })
   } catch (error: unknown) {
     throw new Error('codex-app-server: failed to start the official app-server', { cause: error })
   }
 
-  const wire = new CodexAppServerWire(child.stdout, child.stdin, spec.permissionMode, spec.model)
+  const wire = new CodexAppServerWire(child.stdout, child.stdin, spec.permissionMode, spec.model, spec.toolBridge)
   const stderr = (chunk: Buffer | string): void => {
     try {
       if (spec.onStderr !== undefined) spec.onStderr(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
@@ -178,7 +193,7 @@ export async function startCodexProductRun(
 
   const disposeProcess = async (): Promise<void> => {
     try {
-      await disposeCodexChild(wire, child, graceMs)
+      await disposeCodexChild(wire, child, graceMs, spec.toolBridge)
       await new Promise<void>((resolve) => { setImmediate(resolve) })
     } finally {
       child.stderr.off('data', stderr)

@@ -27,6 +27,7 @@
  */
 
 import { createAssistantMessageEventStream, createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'
+import { adjustMaxTokensForThinking } from '@earendil-works/pi-ai/api/simple-options'
 import type {
   Api,
   AssistantMessageEventStream,
@@ -63,6 +64,7 @@ import type {
   StreamChunk,
 } from '@deepseek-ai/dsh-llm/native'
 import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
@@ -70,11 +72,7 @@ import { toPiContext } from './context.ts'
 import { fetchCodexModels } from './discovery.ts'
 import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from './siwc.ts'
 import { createNativeCodexResponsesCapture } from './native-responses.ts'
-import type {
-  CodexAccountIdentity,
-  NativeResponsesGenerationCapture,
-  NativeResponsesTransport,
-} from './native-responses.ts'
+import type { CodexAccountIdentity } from './native-responses.ts'
 import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
 import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
 import { toStreamChunks } from './stream.ts'
@@ -89,6 +87,12 @@ interface PiAiSnapshot {
   refreshes: Map<string, Promise<void>>
   /** Identity captured atomically with this snapshot's account catalog. */
   codexIdentity: { value: CodexAccountIdentity | undefined; error?: unknown }
+}
+
+/** The public OpenAI route's auth result pinned to one prepared call. */
+interface PreparedOpenAiAuth {
+  apiKey: string | undefined
+  result: AuthResult | undefined
 }
 
 /** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
@@ -209,6 +213,79 @@ function resolveReasoningLevel(
   )
 }
 
+/** Whether pi-ai's selected protocol can keep a request's output limit from widening. */
+function supportsOutputTokenLimit(
+  model: Model<Api>,
+  profile: ResolvedPiAiProviderProfile,
+  maxTokens: number,
+  reasoning: ModelThinkingLevel | undefined,
+): boolean {
+  if (maxTokens < 1) return false
+  switch (model.api) {
+    case 'openai-codex-responses': return false
+    case 'openai-responses': {
+      const compat = model.compat
+      const supportsMaxOutputTokens = compat === undefined || !('supportsMaxOutputTokens' in compat)
+        || (compat.supportsMaxOutputTokens ?? true)
+      return supportsMaxOutputTokens && maxTokens >= 16
+    }
+    case 'azure-openai-responses': return maxTokens >= 16
+    case 'anthropic-messages': {
+      const compat = model.compat
+      const forceAdaptiveThinking = compat !== undefined && 'forceAdaptiveThinking' in compat
+        && (compat.forceAdaptiveThinking ?? false)
+      if (forceAdaptiveThinking || reasoning === undefined || reasoning === 'off') return true
+      return adjustMaxTokensForThinking(maxTokens, model.maxTokens, reasoning, profile.thinkingBudgets).maxTokens <= maxTokens
+    }
+    case 'bedrock-converse-stream':
+      if (reasoning === undefined || reasoning === 'off' || !isBedrockClaude(model) || supportsBedrockAdaptiveThinking(model)) return true
+      return adjustMaxTokensForThinking(maxTokens, model.maxTokens, reasoning, profile.thinkingBudgets).maxTokens <= maxTokens
+    case 'openai-completions':
+    case 'google-generative-ai':
+    case 'google-vertex':
+    case 'mistral-conversations':
+    case 'pi-messages': return true
+    default: return false
+  }
+}
+
+/** Match pi-ai 1.0.0's private Bedrock model routing predicates for max-token adjustment. */
+function isBedrockClaude(model: Model<Api>): boolean {
+  const id = model.id.toLowerCase()
+  const name = model.name.toLowerCase()
+  return id.includes('anthropic.claude') || id.includes('anthropic/claude')
+    || name.includes('anthropic.claude') || name.includes('anthropic/claude') || name.includes('claude')
+}
+
+/** Match pi-ai 1.0.0's private adaptive-thinking classifier used by Bedrock dispatch. */
+function supportsBedrockAdaptiveThinking(model: Model<Api>): boolean {
+  return [model.id, model.name].flatMap((value) => {
+    const lower = value.toLowerCase()
+    return [lower, lower.replace(/[\s_.:]+/g, '-')]
+  }).some(value => value.includes('opus-4-6') || value.includes('opus-4-7') || value.includes('opus-4-8')
+    || value.includes('opus-5') || value.includes('sonnet-4-6') || value.includes('sonnet-5') || value.includes('fable-5'))
+}
+
+/** Whether pi-ai omits max_output_tokens for its public OpenAI Responses route and effective auth. */
+function omitsOpenAiResponsesOutputLimit(
+  model: Model<Api>,
+  apiKey: string | undefined,
+  headers: Readonly<Record<string, string | null>> | undefined,
+): boolean {
+  const hasAuthHeader = Object.entries(headers ?? {}).some(([name, value]) =>
+    (name.toLowerCase() === 'authorization' || name.toLowerCase() === 'cf-aig-authorization')
+      && value !== null && value.trim().length > 0)
+  const effectiveApiKey = apiKey || (hasAuthHeader ? 'unused' : undefined)
+  return model.api === 'openai-responses' && model.provider === 'openai'
+    && model.baseUrl === OPENAI_RESPONSES_BASE_URL
+    && effectiveApiKey !== undefined && !effectiveApiKey.startsWith('sk-')
+}
+
+/** Whether an OpenAI Responses auth result can change the endpoint used for its output-cap decision. */
+function outputLimitDependsOnApiKey(model: Model<Api>): boolean {
+  return model.api === 'openai-responses' && model.provider === 'openai'
+}
+
 /**
  * Selectable reasoning efforts for one model, or nothing at all.
  *
@@ -243,7 +320,9 @@ function reasoningInfo(
 }
 
 /** Merge deployment headers while removing case-insensitive attribution collisions. */
-function requestHeaders(headers: Readonly<Record<string, string>> | undefined): Record<string, string> {
+function requestHeaders<T extends string | null>(
+  headers: Readonly<Record<string, T>> | undefined,
+): Record<string, T | string> {
   const attribution = attributionHeaders()
   const reserved = new Set(Object.keys(attribution).map(name => name.toLowerCase()))
   return {
@@ -386,7 +465,9 @@ export class PiAiAdapter extends LlmAdapter {
     this.snapshot = undefined
   }
 
-  /** Cancel catalog work, drain credential resolutions and Native transports, then report close failures. */
+  /** Cancel catalog work and drain credentials and transports.
+   * @returns a promise that settles all credential and transport work before reporting a transport close failure.
+   */
   dispose(): Promise<void> {
     if (this.disposeResult !== undefined) return this.disposeResult
     this.snapshot = undefined
@@ -410,12 +491,20 @@ export class PiAiAdapter extends LlmAdapter {
   /** Track pi-ai auth work so cancellation stops waiting while disposal drains shared refreshes. */
   private resolveProviderAuth(
     snapshot: PiAiSnapshot,
-    provider: string,
+    provider: string | Model<Api>,
     signal?: AbortSignal,
+    apiKey?: string,
   ): Promise<AuthResult | undefined> {
     this.lifetime.signal.throwIfAborted()
     signal?.throwIfAborted()
-    const work = snapshot.models.getAuth(provider)
+    const overrides = {
+      ...apiKey === undefined ? {} : { apiKey },
+    }
+    // Pi AI's string and Model overloads require this narrowing despite identical runtime dispatch.
+    // oxlint-disable-next-line sonarjs/no-all-duplicated-branches -- preserve the overload-specific argument type.
+    const work = typeof provider === 'string'
+      ? snapshot.models.getAuth(provider, overrides)
+      : snapshot.models.getAuth(provider, overrides)
     this.credentialResolutions.add(work)
     void work.then(
       () => { this.credentialResolutions.delete(work) },
@@ -638,14 +727,44 @@ export class PiAiAdapter extends LlmAdapter {
     provider: string,
     model: string,
     signal?: AbortSignal,
-  ): Promise<PreparedAdapterCall & { readonly nativeResponses?: NativeResponsesGenerationCapture }> {
+  ): Promise<PreparedAdapterCall> {
     const snapshot = this.current()
     return Promise.resolve().then(async () => {
       this.lifetime.signal.throwIfAborted()
       this.profileOf(snapshot, provider)
       await this.ensureCodexCatalog(snapshot, provider, signal)
       const modelInfo = this.modelInfo(snapshot, provider, model)
+      const selectedModel = this.modelOf(snapshot, provider, model)
       const profile = this.profileOf(snapshot, provider)
+      let apiKey: Promise<string | undefined> | undefined
+      let openAiAuth: Promise<PreparedOpenAiAuth> | undefined
+      const resolvePreparedApiKey = (): Promise<string | undefined> => {
+        signal?.throwIfAborted()
+        apiKey ??= this.config.resolveApiKey(provider, profile).then((resolved) => {
+          signal?.throwIfAborted()
+          return resolved
+        })
+        return apiKey
+      }
+      const resolvePreparedOpenAiAuth = (): Promise<PreparedOpenAiAuth> => {
+        signal?.throwIfAborted()
+        openAiAuth ??= resolvePreparedApiKey().then(async (resolvedApiKey) => {
+          const result = await this.resolveProviderAuth(snapshot, selectedModel, signal, resolvedApiKey)
+          return { apiKey: resolvedApiKey ?? result?.auth.apiKey, result }
+        })
+        return openAiAuth
+      }
+      const supportsLimit = async (maxTokens: number, effort?: ReasoningEffortIdType): Promise<boolean> => {
+        if (provider === CODEX_SUBSCRIPTION_ROUTE || !supportsOutputTokenLimit(selectedModel, profile, maxTokens,
+          resolveReasoningLevel(selectedModel, effort ?? profile.reasoning))) return false
+        if (!outputLimitDependsOnApiKey(selectedModel)) return true
+        const auth = await resolvePreparedOpenAiAuth()
+        const requestModel = auth.result?.auth.baseUrl
+          ? { ...selectedModel, baseUrl: auth.result.auth.baseUrl }
+          : selectedModel
+        const headers = requestHeaders({ ...auth.result?.auth.headers, ...profile.headers })
+        return !omitsOpenAiResponsesOutputLimit(requestModel, auth.apiKey, headers)
+      }
       const nativeResponses = provider === CODEX_SUBSCRIPTION_ROUTE
         ? createNativeCodexResponsesCapture({
           route: { provider, model },
@@ -683,7 +802,8 @@ export class PiAiAdapter extends LlmAdapter {
         : undefined
       return {
         model: modelInfo,
-        stream: options => this.streamWithSnapshot(options, snapshot),
+        supportsOutputTokenLimit: supportsLimit,
+        stream: options => this.streamWithSnapshot(options, snapshot, resolvePreparedApiKey, resolvePreparedOpenAiAuth),
         ...nativeResponses === undefined ? {} : { nativeResponses },
       }
     })
@@ -696,6 +816,8 @@ export class PiAiAdapter extends LlmAdapter {
   private async * streamWithSnapshot(
     options: GenerateOptions,
     snapshot: PiAiSnapshot,
+    resolvePreparedApiKey?: () => Promise<string | undefined>,
+    resolvePreparedOpenAiAuth?: () => Promise<PreparedOpenAiAuth>,
   ): AsyncIterable<StreamChunk> {
     if (options.stop !== undefined) {
       throw new LlmError('llm-pi-ai does not support GenerateOptions.stop', 'UNSUPPORTED_OPTION')
@@ -725,10 +847,45 @@ export class PiAiAdapter extends LlmAdapter {
       model,
       options.reasoningEffort ?? profile.reasoning,
     )
+    const resolvedProfileApiKey = options.provider === CODEX_SUBSCRIPTION_ROUTE
+      ? undefined
+      : await (resolvePreparedApiKey === undefined
+        ? this.config.resolveApiKey(options.provider, profile)
+        : resolvePreparedApiKey())
+    const openAiAuth = options.provider !== CODEX_SUBSCRIPTION_ROUTE && outputLimitDependsOnApiKey(model)
+      ? await (resolvePreparedOpenAiAuth === undefined
+        ? this.resolveProviderAuth(snapshot, model, options.signal, resolvedProfileApiKey).then(result => ({
+          apiKey: resolvedProfileApiKey ?? result?.auth.apiKey,
+          result,
+        }))
+        : resolvePreparedOpenAiAuth())
+      : undefined
     const apiKey = options.provider === CODEX_SUBSCRIPTION_ROUTE
       ? undefined
-      : await this.config.resolveApiKey(options.provider, profile)
-    const providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+      : openAiAuth?.apiKey ?? resolvedProfileApiKey
+    const requestModel = openAiAuth?.result?.auth.baseUrl
+      ? { ...model, baseUrl: openAiAuth.result.auth.baseUrl }
+      : model
+    let providerHeaders: Readonly<Record<string, string>> | undefined
+    if (outputLimitDependsOnApiKey(model)) {
+      providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    }
+    const requestHeadersForCall = requestHeaders({
+      ...openAiAuth?.result?.auth.headers,
+      ...profile.headers,
+      ...providerHeaders,
+    })
+    if (options.maxTokens !== undefined
+      && (!supportsOutputTokenLimit(requestModel, profile, options.maxTokens, reasoning)
+        || omitsOpenAiResponsesOutputLimit(requestModel, apiKey, requestHeadersForCall))) {
+      throw new LlmError(
+        `pi-ai route "${options.provider}" cannot enforce maxTokens ${options.maxTokens}`,
+        'UNSUPPORTED_OPTION',
+      )
+    }
+    if (!outputLimitDependsOnApiKey(model)) {
+      providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    }
     const onCodexUsage = options.provider === CODEX_SUBSCRIPTION_ROUTE ? this.config.onCodexUsage : undefined
     let codexIdentity: CodexUsageIdentity | undefined
     const streamModels = onCodexUsage === undefined
@@ -792,14 +949,19 @@ export class PiAiAdapter extends LlmAdapter {
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
           headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
         })
-        : snapshot.models.streamSimple(model, context, {
+        : snapshot.models.streamSimple(requestModel, context, {
           ...profileOptions(profile, reasoning, apiKey),
           ...options.temperature === undefined ? {} : { temperature: options.temperature },
           ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
           ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
+          ...openAiAuth?.result?.env === undefined ? {} : { env: openAiAuth.result.env },
           signal: watchdog.signal,
           // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
-          headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
+          headers: requestHeaders({
+            ...openAiAuth?.result?.auth.headers,
+            ...profile.headers,
+            ...providerHeaders,
+          }),
         })
       const iterator = toStreamChunks(
         events,

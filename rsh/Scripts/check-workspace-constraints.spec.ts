@@ -355,6 +355,7 @@ describe('package payload constraints', () => {
     ['@deepseek-ai/dsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
+    ['@deepseek-ai/dsh-subagent-claude-code', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-tool-session-query', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-session-query-sqlite', ['lib/core.js', 'lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-session-projection-cache', ['lib/native.js', 'lib/shared-*.js']],
@@ -378,6 +379,12 @@ describe('package payload constraints', () => {
   it('keeps the Native archive bundle beside the Client entry', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-session-log-export' })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('publishes the ACP child research license with its native entries', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-acp-child' })).toEqual([
+      'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 

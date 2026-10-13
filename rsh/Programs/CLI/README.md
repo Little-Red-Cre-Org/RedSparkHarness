@@ -27,7 +27,9 @@ The native-headless, native-headless-query, native-tui, and native-web session d
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
-The `native-sdk`, `native-sdk-dsh-child`, and `native-acp` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+The `native-sdk`, `native-sdk-dsh-child`, `native-acp`, and `native-acp-dsh-child` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+
+Native profiles may opt in to the `dsh-sdk` or `dsh-acp-child` external driver. The CLI supplies each driver's fixed same-version launcher and resolves its route catalog from the nearest visible pi-ai Provider; the ACP launcher accepts no caller-selected executable or arbitrary argv and its child profile cannot launch another child. These adapters remain explicit profile installations, and the shipped `native-sdk` and `native-acp` profiles do not select them.
 
 
 ## App arguments
@@ -83,6 +85,6 @@ The [CLI behavior reference](reference/README.md) owns exact layer precedence, f
 
 ## Development
 
-The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `DSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. Outside explicit built mode, an unbuilt checkout may skip these tests.
+The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `DSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. The shipped native-headless loader check also requires built native plugin entries. Run it after `pnpm run build`; an unbuilt checkout may skip these tests outside explicit built mode.
 
 Production runs require built package and frontend artifacts. From the repository root, run `pnpm run build` separately, then use `pnpm dsh <args...>` to run the TypeScript entry and forward every argument; the [source-execution reference](reference/README.md#source-execution) owns the module-resolution contract.

@@ -31,13 +31,14 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "tmuxContext",
         "sessionExecution",
         "activeSessions",
         "modelSelection",
         "agentPresets",
         "workspaceRegistry",
         "agentInstructions",
-        "tmuxContext"
+        "attachments"
       ],
       "provides": [
         "application",
@@ -73,8 +74,10 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-file-reference-local": "workspace:^",
+    "@deepseek-ai/dsh-native-subagent": "workspace:^",
     "@deepseek-ai/dsh-file-reference": "workspace:^",
     "@deepseek-ai/dsh-tool-fs": "workspace:^",
+    "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
     "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^",
@@ -102,6 +105,7 @@
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^"
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
+    "@deepseek-ai/dsh-attachment": "workspace:^"
   }
 }

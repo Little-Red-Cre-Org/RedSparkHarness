@@ -115,3 +115,70 @@ it('forwards image pricing until the selected adapter installation closes', asyn
     .toThrow('native-model-execution: adapter Provider removed')
   expect(calls).toEqual([['deepseek-official', 'vision']])
 })
+
+it('drains a prepared output-ceiling check when the selected adapter closes', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  class Adapter extends LlmAdapter {
+    override async prepareCall(provider: string, id: string) {
+      return { model: { provider, id, name: id },
+        supportsOutputTokenLimit: async () => {
+          entered.resolve(undefined)
+          await release.promise
+          return true
+        },
+        async *stream(): AsyncIterable<StreamChunk> {} }
+    }
+
+    async *stream(): AsyncIterable<StreamChunk> {}
+  }
+  const model = new NativeAdapterModel(new Adapter(), new AbortController().signal)
+  const prepared = await model.prepareCall('fixture', 'closed-capability')
+  let capabilitySettled = false
+  const capability = prepared.supportsOutputTokenLimit(64).then((supported) => {
+    capabilitySettled = true
+    return supported
+  }, (error: unknown) => {
+    capabilitySettled = true
+    throw error
+  })
+  await entered.promise
+  let closeSettled = false
+  const close = model.close().then(() => { closeSettled = true })
+  try {
+    await new Promise(resolve => setImmediate(resolve))
+    expect(capabilitySettled).toBe(false)
+    expect(closeSettled).toBe(false)
+  } finally {
+    release.resolve(undefined)
+  }
+  await expect(capability).rejects.toThrow('native-model-execution: adapter Provider removed')
+  await close
+  expect(closeSettled).toBe(true)
+  await expect(prepared.supportsOutputTokenLimit(64)).rejects.toThrow('native-model-execution: adapter Provider removed')
+})
+
+it('rejects a prepared output ceiling when the exact route would widen it', async () => {
+  let streamed = false
+  const adapter = new class extends LlmAdapter {
+    override prepareCall(provider: string, model: string) {
+      return Promise.resolve({ model: { provider, id: model, name: model },
+        supportsOutputTokenLimit: async (maxTokens: number) => maxTokens >= 16,
+        stream: () => this.stream() })
+    }
+
+    async * stream(): AsyncIterable<StreamChunk> {
+      streamed = true
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    }
+  }()
+  const model = new NativeAdapterModel(adapter, new AbortController().signal)
+  const execution = new NativeModelExecution(model)
+
+  await expect(execution.prepareStep({ provider: 'route', model: 'responses', maxTokens: 15 }))
+    .rejects.toThrow('selected model generation cannot enforce maxTokens')
+  const accepted = await execution.prepareStep({ provider: 'route', model: 'responses', maxTokens: 16 })
+  expect(accepted.config.maxTokens).toBe(16)
+  expect(streamed).toBe(false)
+  await model.close()
+})

@@ -32,6 +32,8 @@ NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的�
 
 `owners()` 返回包含精确现役可写所有者的独立数组。只读观察者先订阅再枚举，并按所有者身份去重，使晚于 Program 启动的 Provider 也能观察已有写入器而无需接管它。已释放的所有者及被替换的 Agent 对象不会出现在结果中。
 
+`NativeSessionExecutionPolicy` 定义必需的带版本 `execution/policy` payload，其中包含每轮步骤上限、可选的逐请求输出上限和权限要求。`NativeSessionOwnerApproval` 是独立的进程内 capability，绑定一个精确的存活 Agent 与 Session；持久化的 `session-owner` permission 记录的是要求，而不是 approval proof。`authorize()` 接收与 Headless 写入 `native-approval/asked` 的相同品牌审批 ID；Headless 使用该 ID 写入匹配的 `native-approval/decided` 事件。
+
 ./root-route 导出拥有共享 NativeRootRouteId 品牌，不导入执行服务。Host 和 Client 使用明确编译面：Client 面仅提供纯路由标识，活跃 Session 和根执行操作属于 Host。工作区身份来自与框架无关的 Engine workspace-definition 包。
 
 `NativeActiveSessionOwner.appendBatch` 通过 Program 唯一保留的 writer 接收关联事实。被拒绝的批次不会跟踪任何事件；已接收事件保持序号顺序，并由 `flush()` 通过既有持久化屏障写入。
@@ -48,7 +50,9 @@ Host 的 `rootExecution.cancel(owner)` 关闭确切附着的根 Agent epoch，�
 
 Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工作区／模型／提示词／预算及已有子任务执行操作调用 `register()`。每个 Agent 仅接纳一个活动贡献，包括释放等待期间。返回的释放函数关闭 turn 接纳、取消 turn 持有的委派并等待执行器结算。它不关闭 Program 的 writer，也不释放其 Agent。
 
-`configuration()` 与 `delegate()` 要求确切且可用的 Agent 和 Session 对象，以及该 Agent 的当前发起归属。配置是独立且不可变的快照。委派保留选定执行器的结果或错误。贡献释放等待 turn 持有的子操作退出；Agent 和 Provider 释放则取消并等待两种生命周期的操作；执行器仍负责关闭子任务 writer 和释放 Agent。所有者不能在子操作内部等待自身释放。
+所有者可提供 `captureExternalResponses`，从该 Session 选定的预备调用捕获 Responses transport。服务返回操作范围内的 transport 及其确切代际能力；嵌套调用可传入该能力，从同一预备 handle 捕获，而无需查询所有者当前步骤。External operation Engine 拥有并关闭每条返回的 transport，时机在产品释放和已接纳请求排空之后。所有者释放会取消待处理捕获并等待操作清理。
+
+`configuration()` 与 `delegate()` 要求确切且可用的 Agent 和 Session 对象，以及该 Agent 的当前发起归属。配置是独立且不可变的快照。委派保留选定执行器的结果或错误。贡献释放等待 turn 持有的子操作退出；Agent 和 Provider 释放则取消并等待两种生命周期的操作。Provider 释放会等待每个所有者释放完成，再报告收集到的清理失败。执行器仍负责关闭子任务 writer 和释放 Agent。所有者不能在子操作内部等待自身释放。
 
 [原生 turn 执行器](../native-headless/README.zh.md) 使用已解析配置注册每个活动 Session，并在关闭父 writer 前移除贡献。各 Program 保留分别解析的 Session 配置，不替换为全局路由。替换 Provider 实现相同 Definition，无需替换 Agent 注册表或 Session 存储。
 

@@ -18,7 +18,7 @@ import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-executio
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as meterPlugin, type NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativeToolDelegationContext, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as presetsPlugin, type NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence/native'
@@ -355,6 +355,89 @@ it('catalogs selected descendants through ordinary sessions and rejects foreign 
       } finally { damagedOpen.mockRestore() }
     }, signal)
   } finally { await state.close() }
+})
+
+
+it.each([
+  { label: 'false', selection: false, expectedBuiltinTools: false },
+  { label: 'true', selection: true, expectedBuiltinTools: true },
+  { label: 'omitted', selection: undefined, expectedBuiltinTools: true },
+])('keeps continuation builtin authority within its resolved selection ($label)', async ({ selection, expectedBuiltinTools }) => {
+  const state = await fixture([
+    toolCallResponse('open', 'open_child', {}), toolCallResponse('observe', 'observe_child', {}),
+    textResponse('Child turn completed.'), textResponse('Parent turn completed.'),
+  ])
+  const parentId = SessionId('builtin-selection-parent')
+  const childId = SessionId('builtin-selection-child')
+  const signal = new AbortController().signal
+  const input = (text: string) => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
+  const firstTurn = Promise.withResolvers<undefined>()
+  const inherited: NativeToolDelegationContext = Object.freeze({
+    depth: 0, maxDepth: 1, cwd: state.root, provider: 'mock', model: 'parent', maxSteps: 4,
+    toolNames: Object.freeze(['observe_child', 'open_child', 'read_file']),
+    builtinToolNames: Object.freeze(['read_file']), programToolNames: Object.freeze([]),
+  })
+  let runObservation: { builtinTools: boolean | undefined; toolNames: string[]; builtinToolNames: readonly string[] } | undefined
+  let maintenanceObservation: typeof runObservation
+  let maintenanceFailure: unknown
+  let removeOpen: (() => Promise<void>) | undefined
+  let removeObserve: (() => Promise<void>) | undefined
+  try {
+    removeOpen = state.tools.register({ schema: { name: 'open_child', description: 'Open a continuation.', parameters: {} },
+      async execute(call) {
+        const operations = state.execution.continuations!(call.agent, call.session)
+        const { builtinTools: parentBuiltinTools, ...childBaseConfig } = state.execution.configuration(call.agent, call.session)
+        expect(parentBuiltinTools).toBe(true)
+        const child = await operations.open({ id: childId, resume: false, maxDepth: 1,
+          config: { ...childBaseConfig, model: 'child', systemPrompt: 'Child.',
+            ...(selection === undefined ? {} : { builtinTools: selection }) }, delegationContext: inherited,
+          onEvent: (event) => { if (event.type === 'turn/end' && event.data.turn === 1) firstTurn.resolve(undefined) },
+        }, call.signal)
+        const releaseChild = child.retainChild()
+        try {
+          await child.enqueue(input('Inspect the selected tools.'), 'next-turn', call.signal)
+          await child.ready
+          await firstTurn.promise
+          const request = state.model.requests.find(candidate => candidate.model === 'child')
+          const toolNames = request?.tools?.map(schema => schema.name).sort() ?? []
+          try {
+            await operations.maintenance(childId, async (owner) => {
+              const config = state.execution.configuration(owner.agent, owner.session)
+              const authority = state.execution.delegationAuthority(owner.agent, owner.session)
+              maintenanceObservation = { builtinTools: config.builtinTools,
+                toolNames: [...(authority?.toolNames ?? [])].sort(),
+                builtinToolNames: [...(authority?.builtinToolNames ?? [])] }
+            }, call.signal)
+          } catch (error: unknown) { maintenanceFailure = error }
+          return { content: [{ type: 'text', text: JSON.stringify(toolNames) }], isError: false }
+        } finally { releaseChild(); await child.dispose() }
+      } })
+    removeObserve = state.tools.register({ schema: { name: 'observe_child', description: 'Observe the child owner.', parameters: {} },
+      async execute(call) {
+        const config = state.execution.configuration(call.agent, call.session)
+        const authority = state.execution.delegationAuthority(call.agent, call.session)
+        runObservation = { builtinTools: config.builtinTools,
+          toolNames: [...(authority?.toolNames ?? [])].sort(),
+          builtinToolNames: [...(authority?.builtinToolNames ?? [])] }
+        return { content: [], isError: false }
+      } })
+
+    await state.app.executeTurn({ id: parentId, resume: false, message: input('Open child.') }, signal)
+
+    const expectedBuiltinNames = expectedBuiltinTools ? ['read_file'] : []
+    const expectedToolNames = ['observe_child', 'open_child', ...(expectedBuiltinTools ? ['read_file'] : [])]
+    expect(runObservation).toEqual({ builtinTools: expectedBuiltinTools, toolNames: expectedToolNames,
+      builtinToolNames: expectedBuiltinNames })
+    expect(maintenanceFailure).toBeUndefined()
+    expect(maintenanceObservation).toEqual({ builtinTools: expectedBuiltinTools, toolNames: expectedToolNames,
+      builtinToolNames: expectedBuiltinNames })
+    expect(state.model.requests.find(request => request.model === 'child')?.tools?.map(schema => schema.name).sort())
+      .toEqual(expectedToolNames)
+  } finally {
+    if (removeOpen !== undefined) await removeOpen()
+    if (removeObserve !== undefined) await removeObserve()
+    await state.close()
+  }
 })
 
 

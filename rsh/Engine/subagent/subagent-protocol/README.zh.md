@@ -27,7 +27,7 @@ kind: "package-reference"
 <a id="ownership"></a>
 ## 所有权
 
-描述符记录子任务模式、选定提供者与标签。输出归并消费已接受的 Session 事件，保留真实最终或部分助手内容。它不创建 Session、写入器或执行。
+描述符记录子任务模式、选定提供者与标签。写入方发出 V4；读取方只接受明确支持的 V3 与 V4 字段，并拒绝未知版本或字段。V4 continuable 描述符可保存 Native 逻辑父级上下文，包括路由、工作区、递归与资源上限，以及直接工具、内建工具和程序工具授权。输出归并消费已接受的 Session 事件，保留真实最终或部分助手内容。它不创建 Session、写入器或执行。
 
 Provider 通过对本包根模块中的 `SubagentStopReasonMap` 做声明合并来扩展结束原因，`SubagentStopReason` 从该 map 派生。Cordis-backed `dsh-subagent` Service Definition 会重新导出这两个类型。
 

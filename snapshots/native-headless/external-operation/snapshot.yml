@@ -1,0 +1,10 @@
+version: 1
+scenario: external-operation
+profile: native-headless
+composition: native-external-operation
+recording: authored
+header:
+  class: native-external-operation
+  pin: true
+workspace:
+  final: true

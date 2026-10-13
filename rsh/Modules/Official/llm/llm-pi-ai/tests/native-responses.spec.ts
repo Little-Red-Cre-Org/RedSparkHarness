@@ -2,7 +2,7 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Credential } from '@earendil-works/pi-ai'
-import type { NativeResponsesJsonValue } from '../src/native-responses.ts'
+import type { NativeResponsesJsonValue } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
 import { attributionHeaders } from '@deepseek-ai/dsh-llm/native'
 import { PiAiAdapter } from '../src/adapter.ts'
 import { resolveProfiles } from '../src/config.ts'
@@ -212,11 +212,15 @@ describe('Native Codex Responses transport', () => {
       local: {
         api: 'openai-responses',
         baseURL: 'http://127.0.0.1:1/v1',
-        models: [{ id: 'local-model' }],
+        models: [{ id: 'local-model', compat: { supportsMaxOutputTokens: true } }],
       },
     })
     const adapter = adapterWith(auth, () => profiles)
     const prepared = await adapter.prepareCall('openai-codex', MODEL)
+    await expect(prepared.supportsOutputTokenLimit(64)).resolves.toBe(false)
+    const localPrepared = await adapter.prepareCall('local', 'local-model')
+    await expect(localPrepared.supportsOutputTokenLimit(15)).resolves.toBe(false)
+    await expect(localPrepared.supportsOutputTokenLimit(16)).resolves.toBe(true)
     const capture = prepared.nativeResponses
     expect(capture).toBeDefined()
     if (capture === undefined) throw new Error('Codex preparation omitted its Native Responses capture')
@@ -312,6 +316,90 @@ describe('Native Codex Responses transport', () => {
     await adapter.dispose()
     await server.close()
   })
+
+  it('dispatches a supported Responses output cap unchanged with the resolved API key', async () => {
+    const server = await localServer()
+    const events = [
+      { type: 'response.output_item.added', output_index: 0,
+        item: { type: 'message', id: 'msg', role: 'assistant', status: 'in_progress', content: [] } },
+      { type: 'response.content_part.added', output_index: 0, content_index: 0,
+        part: { type: 'output_text', text: '', annotations: [] } },
+      { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'ok' },
+      { type: 'response.output_item.done', output_index: 0,
+        item: { type: 'message', id: 'msg', role: 'assistant', status: 'completed',
+          content: [{ type: 'output_text', text: 'ok', annotations: [] }] } },
+      { type: 'response.completed', response: { id: 'resp', status: 'completed', output: [],
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
+    ]
+    server.responses = (_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/event-stream' })
+        .end(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''))
+    }
+    routeFetchThrough(server)
+    let keyResolutions = 0
+    const adapter = new PiAiAdapter({
+      profiles: () => resolveProfiles({ openai: {} }),
+      resolveApiKey: () => { keyResolutions++; return Promise.resolve('sk-fixture-api-key') },
+      auth: memoryAuth(),
+    })
+    try {
+      const prepared = await adapter.prepareCall('openai', 'gpt-4.1')
+      await expect(prepared.supportsOutputTokenLimit(32)).resolves.toBe(true)
+      for await (const _chunk of prepared.stream({
+        provider: 'openai', model: 'gpt-4.1', maxTokens: 32, messages: [],
+      })) { /* drain */ }
+
+      expect(keyResolutions).toBe(1)
+      expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(1)
+      const request = server.requests.find(candidate => candidate.path === '/responses')!
+      expect(JSON.parse(request.body) as Record<string, unknown>).toMatchObject({ max_output_tokens: 32 })
+      expect(request.headers.authorization).toBe('Bearer sk-fixture-api-key')
+    } finally {
+      await adapter.dispose()
+    }
+    await server.close()
+  })
+
+  it.each(['resolved', 'stored'] as const)(
+    'refuses a non-sk Responses credential from the $0 source before dispatch',
+    async (credentialSource) => {
+      const server = await localServer()
+      routeFetchThrough(server)
+      let apiKey = 'opaque-chatgpt-plan-access-token'
+      let keyResolutions = 0
+      const auth = memoryAuth(credentialSource === 'stored'
+        ? { openai: { type: 'api_key', key: apiKey } }
+        : {})
+      const adapter = new PiAiAdapter({
+        profiles: () => resolveProfiles({ openai: {} }),
+        resolveApiKey: () => {
+          keyResolutions++
+          return Promise.resolve(credentialSource === 'stored' ? undefined : apiKey)
+        },
+        auth,
+      })
+      try {
+        const prepared = await adapter.prepareCall('openai', 'gpt-4.1')
+        await expect(prepared.supportsOutputTokenLimit(32)).resolves.toBe(false)
+        if (credentialSource === 'stored') {
+          auth.stored.set('openai', { type: 'api_key', key: 'sk-fixture-key-after-capability-check' })
+        } else {
+          apiKey = 'sk-fixture-key-after-capability-check'
+        }
+        const stream = async (): Promise<void> => {
+          for await (const _chunk of prepared.stream({
+            provider: 'openai', model: 'gpt-4.1', maxTokens: 32, messages: [],
+          })) { /* drain */ }
+        }
+        await expect(stream()).rejects.toMatchObject({ code: 'UNSUPPORTED_OPTION' })
+
+        expect(keyResolutions).toBe(1)
+        expect(server.requests.filter(request => request.path === '/responses')).toHaveLength(0)
+      } finally {
+        await adapter.dispose()
+      }
+      await server.close()
+    })
 
   it('records native Responses quota headers and rate-limit events for the resolved account', async () => {
     const server = await localServer()

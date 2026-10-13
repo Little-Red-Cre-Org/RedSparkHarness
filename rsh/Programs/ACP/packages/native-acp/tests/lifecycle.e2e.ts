@@ -19,6 +19,7 @@ import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-ex
 import { plugin as modelSelectionPlugin } from '@deepseek-ai/dsh-native-model-selection/native'
 import { NativeApprovalRequestId } from '@deepseek-ai/dsh-native-approval'
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import { NATIVE_ACP_SUBAGENT_METADATA_KEY, readNativeAcpSubagentPermissionRequest } from '@deepseek-ai/dsh-acp-protocol'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
@@ -179,7 +180,11 @@ async function failedClose(home: string): Promise<void> {
       toolName: 'write_file', callId: ToolCallId('provider-fresh-call'), signal })).resolves.toMatchObject({ outcome: 'allowed-once' })
     expect(permissionRequests).toHaveLength(1)
     expect(permissionRequests[0]).toMatchObject({ sessionId: created.sessionId,
-      toolCall: { toolCallId: 'provider-fresh-call' } })
+      toolCall: { toolCallId: 'provider-fresh-call' },
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRequest: {
+        sessionId: String(freshId), requestId: 'provider-fresh-permission',
+        toolName: 'write_file', toolCallId: 'provider-fresh-call',
+      } } } })
     const lookalikeOwner = { ...freshOwner }
     expect(() => rootOperations.capture(lookalikeOwner)).toThrow('active root owner has no live Session route')
     expect(() => rootOperations.cancel(lookalikeOwner)).toThrow('active root owner has no live Session route')
@@ -309,9 +314,19 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   let instructionSessionId: string | undefined
   const http = await startHttpMcpFixture()
   try {
-    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
-      .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
-    const created = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
+    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {},
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } } }, signal))
+      .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } },
+        _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
+          version: 1, capabilities: { permissionRequestIdentity: true, maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] },
+        } } })
+    const acceptedPolicy = { version: 1, maxSteps: 2, permissionMode: 'parent-relay' } as const
+    const created = await transport.request('session/new', { cwd: home, mcpServers: [],
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: acceptedPolicy } }, signal) as {
+      sessionId: string
+      _meta?: Record<string, unknown>
+    }
+    expect(created._meta).toEqual({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: acceptedPolicy })
     expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
       availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
     const requestsBeforeCompact = requests.length
@@ -452,8 +467,35 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     const current = logs.find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === fresh.sessionId)
     if (current === undefined) throw new Error('durable fresh ACP Session missing')
     const events = [previous, current].flatMap(log => log.trim().split('\n').slice(1)
-      .map(line => JSON.parse(line) as { type: string; data: { reason?: { kind: string } } }))
+      .map(line => JSON.parse(line) as {
+        type: string
+        data: {
+          id?: string
+          callId?: string
+          reason?: { kind: string }
+          version?: number
+          maxSteps?: number
+          permission?: { mode: string; authority?: string }
+        }
+      }))
     expect(events.filter(event => event.type === 'turn/end')).toHaveLength(5)
+    expect(events.filter(event => event.type === 'execution/policy')).toMatchObject([{
+      data: { version: 1, maxSteps: 2, permission: { mode: 'require-approval', authority: 'session-owner' } },
+    }])
+    const askedEvents = events.filter(event => event.type === 'native-approval/asked')
+    const askedIds = askedEvents.map(event => event.data.id)
+    const decidedIds = events.filter(event => event.type === 'native-approval/decided').map(event => event.data.id)
+    const relayedPermissions = permissionRequests.map((request) => {
+      const metadata = readNativeAcpSubagentPermissionRequest(request._meta)
+      if (metadata === undefined) throw new Error('ACP permission request omitted native identity metadata')
+      return metadata
+    })
+    expect(decidedIds).toEqual(askedIds)
+    const askedRequests = askedEvents.map(event => ({ id: event.data.id, callId: event.data.callId }))
+    for (const request of relayedPermissions) {
+      expect(askedRequests).toContainEqual({ id: request.requestId, callId: request.toolCallId })
+    }
+    expect(relayedPermissions.map(request => request.sessionId)).toEqual(permissionRequests.map(request => request.sessionId))
     expect(events.filter(event => event.type === 'native-approval/decided').map(event => event.data))
       .toMatchObject([{ outcome: 'rejected' }, { outcome: 'cancelled' }, { outcome: 'unavailable' }, { outcome: 'cancelled' }])
     expect(events.filter(event => event.type === 'model/selection')).toHaveLength(1)

@@ -10,7 +10,7 @@ The [Windows coverage run](https://github.com/deepseek-harness/deepseek-harness/
 
 ## Decision
 
-The [ACP test](../../../../rsh/Engine/subagent/subagent-acp/tests/subagent-acp.spec.ts) awaits disposal under the execution lane’s test budget, then checks the actual child outcome. Failure cleanup awaits disposal and child completion before removing the private directory. A deferred exit observation proves that disposal cannot finish merely because termination was requested. The production EOF and termination grace periods remain unchanged.
+The [ACP test](../../../../rsh/Compatibility/DSH/subagent/subagent-acp/tests/subagent-acp.spec.ts) awaits disposal under the execution lane’s test budget, then checks the actual child outcome. Failure cleanup awaits disposal and child completion before removing the private directory. A deferred exit observation proves that disposal cannot finish merely because termination was requested. The production EOF and termination grace periods remain unchanged.
 
 The [Codex test](../../../../rsh/Compatibility/DSH/bridge/subagent-codex/tests/real-product.spec.ts) inherits the execution lane’s hook budget. Cleanup captures its contexts, HTTP fixtures, and temporary roots before its first asynchronous wait, so an overdue hook cannot drain resources registered by another test. It preserves context-disposal, server-closure, and directory-removal ordering, waits for every captured disposer, and attempts the remaining cleanup stages after a rejection. Collected errors identify each failing stage or path and retain their causes; cleanup reports them only after all captured resources have been attempted.
 

@@ -21,6 +21,9 @@
     },
     {
       "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../Modules/Official/attachment/attachment"
     }
   ]
 }

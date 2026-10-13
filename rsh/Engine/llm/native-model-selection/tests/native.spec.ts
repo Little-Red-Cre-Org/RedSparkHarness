@@ -14,6 +14,7 @@ it('uses prepared defaults instead of advisory defaults and changes them after a
       if (unavailable) throw unavailableError
       return { model: { provider, id, name: id, defaultMaxTokens: cap,
         reasoning: { efforts: [{ id: ReasoningEffortId(effort), name: effort }], defaultEffort: ReasoningEffortId(effort) } },
+      supportsOutputTokenLimit: async () => true,
       async *stream(options) { requests.push(options); yield { type: 'finish', reason: { kind: 'stop' } } } } },
     async *stream() { throw new Error('prepared dispatch is required') },
   })

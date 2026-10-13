@@ -103,7 +103,8 @@ export const plugin: NativePlugin = {
           if (description.trim().length === 0) {
             throw new ToolArgsError(['description: expected a non-empty string'])
           }
-          const schemas = tools.sdkSchemas(call.agent.scope).filter(schema => schema.name !== 'run_code')
+          const schemas = call.programSnapshot?.programSchemas
+            ?? tools.sdkSchemas(call.agent.scope).filter(schema => schema.name !== 'run_code')
           const dispatch = createNativePtcDispatch(tools, call, maxParallel)
           const bindings: CodeBindingNamespace[] = schemas.length === 0 ? [] : [{
             global: 'tools', errorClass: { name: 'ToolCallError', memberNameProperty: 'toolName' },
@@ -149,9 +150,10 @@ export const plugin: NativePlugin = {
       if (sdkPrompt && prompts !== undefined) {
         context.effect(prompts.register({
           name: 'tools:sdk', order: 0,
-          text(scope = context.scope) {
+          text(scope = context.scope, renderContext) {
             if (tools.modelMode === 'native') return ''
-            const schemas = tools.sdkSchemas(scope).filter(schema => schema.name !== 'run_code')
+            const schemas = [...(renderContext?.programSchemas
+              ?? tools.sdkSchemas(scope).filter(schema => schema.name !== 'run_code'))]
             return (tools.modelMode === 'ptc' ? 'Call tools only through `run_code`; business names below are program bindings.\n\n' : '')
               + '## Writing code for run_code\n\n'
               + (python ? '`run_code` takes two required strings: `code`, the body of an async Python function, '

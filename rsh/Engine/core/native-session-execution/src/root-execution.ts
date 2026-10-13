@@ -8,6 +8,7 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
 import type { NativeActiveSessionOwner } from './active-session.ts'
 import type { NativeSessionConfiguration, NativeSessionTurnResult } from './index.ts'
 import type { SessionDeletionId, SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeSessionOwnerApproval } from './execution-policy.ts'
 
 /** Route-authorized recoverable storage mutations; no Agent or writer is created. */
 export interface NativeRootSessionDeletionOperations {
@@ -57,6 +58,14 @@ export interface NativeRootSessionRequest {
 /** One root input projected through the Program's existing executor and complete root epoch. */
 export interface NativeRootExecutionRequest extends NativeRootSessionRequest {
   readonly message?: UserMessage
+  /**
+   * Issue process-local approval authority after this execution has attached its exact live Session owner. Cold restore
+   * cannot supply authority before attachment; the issuer must bind the callback's exact owner and recheck its parent
+   * route on every request. Durable policy remains a requirement, never proof.
+   * @param owner - attached root owner for this admitted turn.
+   * @returns current owner authority, or undefined when this route cannot authorize approvals.
+   */
+  readonly issueOwnerApproval?: (owner: NativeActiveSessionOwner) => NativeSessionOwnerApproval | undefined
   /** Observe events only after the sole writer accepts their append. */
   readonly onEvent?: (event: SessionEvent) => void
 }

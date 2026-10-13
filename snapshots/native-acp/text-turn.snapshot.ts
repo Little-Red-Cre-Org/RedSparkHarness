@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 import { execa } from 'execa'
+import { NATIVE_ACP_SUBAGENT_METADATA_KEY } from '@deepseek-ai/dsh-acp-protocol'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { requestImageHandleText } from '@deepseek-ai/dsh-llm/native'
@@ -70,6 +71,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
   })
   const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
   const output: Record<string, unknown>[] = []
+  const permissionRequests: Record<string, unknown>[] = []
   transport.onNotification((method, params) => {
     if (method === 'session/update') output.push(params.update as Record<string, unknown>)
   })
@@ -77,15 +79,22 @@ it('replays a native ACP turn with exact model input, output and durable Session
     expect(method).toBe('session/request_permission')
     expect(output.at(-1)).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-proof-call' })
     expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
+    permissionRequests.push(params)
     return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
   })
   transport.start()
   const signal = AbortSignal.timeout(20_000)
   try {
-    const initialized = await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal)
-    expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: true } } })
-    const created = await transport.request('session/new', { cwd: workspace, mcpServers: [] }, signal) as {
-      sessionId: string; configOptions: { id: string; currentValue: string }[] }
+    const policy = { version: 1, maxSteps: 2, maxTokens: 64, permissionMode: 'parent-relay' } as const
+    const policyMetadata = { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy }
+    const initialized = await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {},
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } } }, signal)
+    expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: true } },
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1,
+        capabilities: { maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] } } } })
+    const created = await transport.request('session/new', { cwd: workspace, mcpServers: [], _meta: policyMetadata }, signal) as {
+      sessionId: string; configOptions: { id: string; currentValue: string }[]; _meta?: Record<string, unknown> }
+    expect(created._meta).toEqual(policyMetadata)
     expect(created.configOptions[0]?.currentValue).toBe(JSON.stringify(['fixture', 'fixture-model']))
     await expect(transport.request('session/set_config_option', { sessionId: created.sessionId,
       configId: 'model', value: 'not-an-advertised-route' }, signal)).rejects.toThrow()
@@ -98,16 +107,20 @@ it('replays a native ACP turn with exact model input, output and durable Session
       prompt: [{ type: 'text', text: task }, { type: 'resource_link', name: 'notes "draft"', uri: 'file:///reference.md' },
         { type: 'image', mimeType: 'image/png', data: image }, { type: 'text', text: ' Review the linked file.' }] }, signal)
     expect(result).toMatchObject({ stopReason: 'end_turn' })
-    expect(output).toMatchObject([{ sessionUpdate: 'config_option_update' }, { sessionUpdate: 'config_option_update' },
+    expect(output).toMatchObject([{ sessionUpdate: 'available_commands_update' }, { sessionUpdate: 'config_option_update' },
+      { sessionUpdate: 'config_option_update' },
       { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
     const protocol = JSON.stringify(output.map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n'
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     const listed = await transport.request('session/list', { cwd: workspace }, signal) as { sessions: unknown[] }
     expect(listed.sessions).toHaveLength(1)
-    expect(await transport.request('session/resume', { sessionId: created.sessionId, cwd: workspace, mcpServers: [] }, signal))
-      .toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model-next']) },
-        { id: 'reasoning_effort', currentValue: 'high' }] })
-    expect(output).toHaveLength(4)
+    const resumed = await transport.request('session/resume', { sessionId: created.sessionId, cwd: workspace, mcpServers: [] }, signal) as {
+      configOptions: { id: string; currentValue: string }[]; _meta?: Record<string, unknown> }
+    expect(resumed).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model-next']) },
+      { id: 'reasoning_effort', currentValue: 'high' }], _meta: policyMetadata })
+    expect(output).toHaveLength(6)
+    expect(output.slice(4)).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
+      { sessionUpdate: 'available_commands_update' }])
     expect(requests).toHaveLength(1)
     const request = requests[0]
     if (request === undefined) throw new Error('native-acp snapshot: model request missing')
@@ -124,8 +137,9 @@ it('replays a native ACP turn with exact model input, output and durable Session
     expect(`sha256:${createHash('sha256').update(storedImage).digest('hex')}`).toBe(ref.attachmentId)
     const caption = requestImageHandleText(ref, ref, { readonlyPath: attachmentPath })
     const stableCaption = requestImageHandleText(ref, ref, { readonlyPath: '{{attachment}}' })
-    expect(request).toMatchObject({ model: 'fixture-model-next', reasoning_effort: 'high' })
+    expect(request).toMatchObject({ model: 'fixture-model-next', reasoning_effort: 'high', max_completion_tokens: policy.maxTokens })
     const serialized = JSON.stringify({ model: request.model, reasoning_effort: request.reasoning_effort,
+      max_completion_tokens: request.max_completion_tokens,
       messages: request.messages, tools: request.tools ?? [] }, null, 2)
     expect(serialized.split(JSON.stringify(caption))).toHaveLength(2)
     expect(request.messages).toMatchObject([{ role: 'developer' }, { role: 'user', content: [
@@ -167,13 +181,36 @@ it('replays a native ACP turn with exact model input, output and durable Session
       'workspace.expected/permission-proof.txt'), 'utf8'))
     expect(requests).toHaveLength(3)
     const permissionLog = readFileSync(join(sessions, String(physical)), 'utf8')
-    const decisions = parseSessionLog(permissionLog).filter(event => event.type === 'native-approval/decided')
-    expect(decisions).toMatchObject([{ data: { outcome: 'allowed-once' } }])
+    const permissionEvents = parseSessionLog(permissionLog)
+    const policyEvents = permissionEvents.filter(event => event.type === 'execution/policy')
+    expect(policyEvents).toHaveLength(1)
+    expect(policyEvents[0]).toMatchObject({ data: { version: 1, maxSteps: policy.maxSteps, maxTokens: policy.maxTokens,
+      permission: { mode: 'require-approval', authority: 'session-owner' } } })
+    const policyRows = permissionLog.trim().split('\n').slice(1).map(line => JSON.parse(line) as { type: string; ignorable?: boolean })
+      .filter(event => event.type === 'execution/policy')
+    expect(policyRows).toHaveLength(1)
+    expect(policyRows[0]?.ignorable).not.toBe(true)
+    const toolCalls = permissionEvents.filter(event => event.type === 'tool/call')
+    expect(toolCalls).toHaveLength(1)
+    const permissionToolCall = toolCalls[0]
+    if (permissionToolCall === undefined) throw new Error('native-acp snapshot: parent-approved tool call missing')
+    expect(permissionToolCall).toMatchObject({ data: { name: 'write_file' } })
+    expect(permissionRequests).toHaveLength(1)
+    const permissionRequest = permissionRequests[0]
+    if (permissionRequest === undefined) throw new Error('native-acp snapshot: parent permission request missing')
+    expect(permissionRequest.sessionId).toBe(created.sessionId)
+    expect(permissionRequest.toolCall).toMatchObject({ toolCallId: permissionToolCall.data.callId })
+    expect(permissionEvents.filter(event => event.type === 'tool/result')).toHaveLength(1)
+    const approvals = permissionEvents.filter(event => event.type === 'native-approval/decided')
+    expect(approvals).toHaveLength(1)
+    expect(approvals[0]).toMatchObject({ data: { outcome: 'allowed-once' } })
+    expect(requests.slice(1)).toMatchObject([{ max_completion_tokens: policy.maxTokens }, { max_completion_tokens: policy.maxTokens }])
     const expectations = {
       'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([permissionLog])[0] ?? permissionLog, context, { identityMode: 'preserve' }),
       'protocol.expected.json': JSON.stringify(output.slice(beforePermission).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
       'model-request.expected.json': JSON.stringify(requests.slice(1).map(request => ({ model: request.model,
-        messages: request.messages, tools: request.tools ?? [] })), null, 2).replaceAll(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n',
+        max_completion_tokens: request.max_completion_tokens, messages: request.messages, tools: request.tools ?? [] })), null, 2)
+        .replaceAll(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n',
     }
     for (const [name, expected] of Object.entries(expectations)) {
       if (process.env.DSH_SNAPSHOT === 'refresh') {

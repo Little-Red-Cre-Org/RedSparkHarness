@@ -7,10 +7,16 @@ import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type SessionUpdate, type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, resolveCallConfigWithModel } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { nativeSessionExecutionPolicy, type NativeSessionExecutionPolicy, type NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
+import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionRequestMetadata, nativeAcpSubagentPolicyMetadata,
+  nativeAcpSubagentServerMetadata, readNativeAcpSubagentClientCapabilities,
+  readNativeAcpSubagentPolicy,
+  type NativeAcpSubagentClientCapabilities, type NativeAcpSubagentPolicy,
+  type NativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
   NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
@@ -36,6 +42,14 @@ export interface Config {
   readonly systemPrompt: string
   /** Positive maximum model steps per turn. */
   readonly maxSteps: number
+  /** Optional profile maximum tokens per model request. */
+  readonly maxTokens?: number
+  /** Whether the Native builtin tool Provider is enabled for this process. */
+  readonly builtinTools?: boolean
+  /** Exact model-visible tool names admitted by this profile. */
+  readonly allowedTools?: readonly string[]
+  /** Parent-authorized filesystem root for builtin write_file calls. */
+  readonly workspaceWriteRoot?: string
   /** Maximum unsettled permission wire requests; defaults to 32. */
   readonly maxPendingPermissions?: number
   /** MCP tool timeout in milliseconds; defaults to 60000. */
@@ -44,6 +58,15 @@ export interface Config {
 
 type ResolvedConfig = Config & { readonly maxPendingPermissions: number; readonly mcpToolCallTimeoutMs: number }
 
+function resolveAllowedTools(value: unknown): readonly string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native ACP: allowedTools must be an array of unique nonempty names'
+  if (!Array.isArray(value)) throw new TypeError(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new TypeError(message)
+  return Object.freeze(names)
+}
+
 interface OwnedSession {
   readonly id: SessionId
   readonly executor: NativeHeadlessApplication
@@ -51,6 +74,7 @@ interface OwnedSession {
   readonly lifetime: AbortController
   readonly resources: ResourceOwner
   readonly scope: NativeScope
+  readonly policy?: NativeAcpSubagentPolicy
   controlTail: Promise<void>
   controls: number
   notifications: Promise<void>
@@ -67,13 +91,33 @@ function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('native ACP: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
+    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxTokens', 'builtinTools', 'allowedTools',
+      'workspaceWriteRoot', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) {
+      throw new Error(`native ACP: unknown configuration field ${key}`)
+    }
   }
   for (const key of ['provider', 'model', 'systemPrompt']) {
     if (typeof fields[key] !== 'string' || fields[key].length === 0) throw new TypeError(`native ACP: ${key} must be a nonempty string`)
   }
   if (typeof fields.maxSteps !== 'number' || !Number.isSafeInteger(fields.maxSteps) || fields.maxSteps <= 0) {
     throw new TypeError('native ACP: maxSteps must be a positive integer')
+  }
+  const maxTokens = fields.maxTokens
+  if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isSafeInteger(maxTokens) || maxTokens <= 0)) {
+    throw new TypeError('native ACP: maxTokens must be a positive integer')
+  }
+  const builtinTools = fields.builtinTools
+  if (builtinTools !== undefined && typeof builtinTools !== 'boolean') {
+    throw new TypeError('native ACP: builtinTools must be a boolean')
+  }
+  const allowedTools = resolveAllowedTools(fields.allowedTools)
+  const workspaceWriteRoot = fields.workspaceWriteRoot
+  if (workspaceWriteRoot !== undefined && (typeof workspaceWriteRoot !== 'string' || workspaceWriteRoot.length === 0
+    || !isAbsolute(workspaceWriteRoot))) {
+    throw new TypeError('native ACP: workspaceWriteRoot must be an absolute path')
+  }
+  if (allowedTools?.includes('write_file') && workspaceWriteRoot === undefined) {
+    throw new TypeError('native ACP: allowed write_file requires workspaceWriteRoot')
   }
   const maxPendingPermissions = fields.maxPendingPermissions === undefined ? 32 : fields.maxPendingPermissions
   if (typeof maxPendingPermissions !== 'number' || !Number.isSafeInteger(maxPendingPermissions) || maxPendingPermissions <= 0) {
@@ -85,7 +129,51 @@ function resolveConfig(input: unknown): ResolvedConfig {
     throw new TypeError('native ACP: mcpToolCallTimeoutMs must be a positive timer-sized integer')
   }
   return { provider: fields.provider as string, model: fields.model as string,
-    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps, maxPendingPermissions, mcpToolCallTimeoutMs }
+    systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps,
+    ...(maxTokens === undefined ? {} : { maxTokens }),
+    ...(builtinTools === undefined ? {} : { builtinTools }),
+    ...allowedTools === undefined ? {} : { allowedTools },
+    ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
+    maxPendingPermissions, mcpToolCallTimeoutMs }
+}
+
+function effectivePolicy(requested: NativeAcpSubagentPolicy | undefined, profile: ResolvedConfig,
+  relayAvailable: boolean): NativeAcpSubagentPolicy | undefined {
+  if (requested === undefined) return undefined
+  if (requested.permissionMode === 'parent-relay' && !relayAvailable) {
+    throw RequestError.invalidParams(undefined, 'native ACP parent permission relay is unavailable')
+  }
+  const maxSteps = Math.min(requested.maxSteps, profile.maxSteps)
+  const requestedTokens = requested.maxTokens
+  const maxTokens = requestedTokens === undefined ? profile.maxTokens
+    : profile.maxTokens === undefined ? requestedTokens : Math.min(requestedTokens, profile.maxTokens)
+  return { version: NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, maxSteps,
+    ...(maxTokens === undefined ? {} : { maxTokens }), permissionMode: requested.permissionMode }
+}
+
+function assertRestorablePolicy(policy: NativeAcpSubagentPolicy, profile: ResolvedConfig,
+  relayAvailable: boolean): void {
+  if (policy.maxSteps > profile.maxSteps
+    || policy.maxTokens === undefined && profile.maxTokens !== undefined
+    || policy.maxTokens !== undefined && profile.maxTokens !== undefined && policy.maxTokens > profile.maxTokens) {
+    throw RequestError.invalidParams(undefined, 'native ACP Session limits are no longer permitted by this profile')
+  }
+  if (policy.permissionMode === 'parent-relay' && !relayAvailable) {
+    throw RequestError.invalidParams(undefined, 'native ACP Session permission relay is no longer available')
+  }
+}
+
+function executionPolicy(policy: NativeAcpSubagentPolicy): NativeSessionExecutionPolicy {
+  return { version: 1, maxSteps: policy.maxSteps,
+    ...(policy.maxTokens === undefined ? {} : { maxTokens: policy.maxTokens }),
+    permission: policy.permissionMode === 'deny' ? { mode: 'deny' }
+      : { mode: 'require-approval', authority: 'session-owner' } }
+}
+
+function acpPolicy(policy: NativeSessionExecutionPolicy): NativeAcpSubagentPolicy {
+  return { version: NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, maxSteps: policy.maxSteps,
+    ...(policy.maxTokens === undefined ? {} : { maxTokens: policy.maxTokens }),
+    permissionMode: policy.permission.mode === 'deny' ? 'deny' : 'parent-relay' }
 }
 
 /** Standard protocol updates reconstructed solely from committed Session facts. */
@@ -132,6 +220,7 @@ export class NativeAcpApplication implements NativeApplication {
   private readonly activating = new Set<string>()
   private closing = false
   private connection: AgentConnection | undefined
+  private subagentClientCapabilities: NativeAcpSubagentClientCapabilities | undefined
   private readonly pending = new Set<Promise<unknown>>()
   private readonly permissions = new Map<SessionId, Promise<NativeApprovalOutcome>>()
 
@@ -285,6 +374,58 @@ export class NativeAcpApplication implements NativeApplication {
     return AbortSignal.any([signal, record.lifetime.signal, this.lifetime.signal])
   }
 
+  private ownerApproval(record: OwnedSession, owner: NativeActiveSessionOwner): NativeSessionOwnerApproval | undefined {
+    if (record.policy?.permissionMode !== 'parent-relay') return undefined
+    if (owner.invocation !== 'root' || owner.session.id !== record.id || !owner.writerAvailable
+      || owner.rootOperations === undefined || record.closing !== undefined
+      || this.sessions.get(String(record.id)) !== record
+      || !this.context.require('activeSessions').owners().some(candidate => candidate === owner)
+      || this.ownerRoute(owner) !== record) {
+      throw new Error('native ACP: current Session owner cannot authorize parent approval')
+    }
+    const lifetime = AbortSignal.any([record.lifetime.signal, owner.rootOperations.signal])
+    return {
+      agent: owner.agent,
+      session: owner.session,
+      lifetime,
+      authorize: (request) => {
+        request.signal.throwIfAborted()
+        lifetime.throwIfAborted()
+        if (record.closing !== undefined || this.sessions.get(String(record.id)) !== record
+          || !owner.writerAvailable
+          || !this.context.require('activeSessions').owners().some(candidate => candidate === owner)) {
+          return Promise.resolve('unavailable')
+        }
+        try {
+          if (this.ownerRoute(owner) !== record) return Promise.resolve('unavailable')
+        } catch { return Promise.resolve('unavailable') }
+        const pending = this.permission({ id: request.id, agent: owner.agent,
+          callId: request.callId, toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
+          policy: 'ask', signal: request.signal }) ?? Promise.resolve('unavailable')
+        return new Promise<NativeApprovalOutcome>((resolve, reject) => {
+          let settled = false
+          const complete = (outcome: NativeApprovalOutcome): void => {
+            if (settled) return
+            settled = true
+            request.signal.removeEventListener('abort', onAbort)
+            resolve(outcome)
+          }
+          const fail = (error: unknown): void => {
+            if (settled) return
+            settled = true
+            request.signal.removeEventListener('abort', onAbort)
+            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact owner or transport rejection reason.
+            reject(error)
+          }
+          const onAbort = (): void => { complete('cancelled') }
+          request.signal.addEventListener('abort', onAbort, { once: true })
+          if (request.signal.aborted) onAbort()
+          void pending.then(complete, fail)
+        })
+      },
+    }
+  }
+
   private permission(request: NativeApprovalAnswererRequest): Promise<NativeApprovalOutcome> | undefined {
     const callId = request.callId
     if (callId === undefined) return undefined
@@ -294,6 +435,7 @@ export class NativeAcpApplication implements NativeApplication {
       const owned = this.interactionRoute(record, request.agent)
       if (owned === undefined) continue
       const { interaction, rootOwner } = owned
+      if (record.policy?.permissionMode === 'deny') return Promise.resolve('rejected')
       if (this.permissions.has(record.id) || this.permissions.size >= this.config.maxPendingPermissions) return Promise.resolve('unavailable')
       const connection = this.connection
       if (connection === undefined) return Promise.resolve('unavailable')
@@ -306,6 +448,8 @@ export class NativeAcpApplication implements NativeApplication {
             { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' },
             { optionId: 'reject-once', name: 'Reject', kind: 'reject_once' },
           ],
+          _meta: nativeAcpSubagentPermissionRequestMetadata({ sessionId: String(interaction.session.id), requestId: String(request.id),
+            toolName: request.toolName, toolCallId: String(callId) }),
         }, { cancellationSignal: signal })
         signal.throwIfAborted()
         const current = this.interactionRoute(record, request.agent)
@@ -331,19 +475,25 @@ export class NativeAcpApplication implements NativeApplication {
   async run(args: readonly string[], signal: AbortSignal): Promise<number> {
     if (args.length > 0) throw new Error('native ACP: task arguments are unsupported')
     const app = agent({ name: 'redspark-harness-native-acp' })
-      .onRequest(methods.agent.initialize, ({ signal: requestSignal }) => this.track((async () => {
+      .onRequest(methods.agent.initialize, ({ params, signal: requestSignal }) => this.track((async () => {
         if (this.initialized || this.initializing) throw RequestError.invalidRequest(undefined, 'already initialized')
         this.initializing = true
         try {
+          const clientCapabilities = readNativeAcpSubagentClientCapabilities(params._meta)
           await this.context.require('model').resolveModel?.(this.config.provider, this.config.model, requestSignal)
           this.assertOpen()
+          this.subagentClientCapabilities = clientCapabilities
           this.initialized = true
           for (const waiter of [...this.rootExecutionWaiters]) waiter.wake()
         } finally { this.initializing = false }
+        const permissionModes: NativeAcpSubagentServerCapabilities['permissionModes'] =
+          this.parentRelayAvailable() ? ['deny', 'parent-relay'] : ['deny']
         return { protocolVersion: PROTOCOL_VERSION, agentInfo: { name: 'redspark-harness-native-acp', version: '0.0.1' },
           agentCapabilities: { promptCapabilities: { image: this.context.optional('attachments') !== undefined
             && this.context.optional('modelDirectory') !== undefined, audio: false, embeddedContext: false },
-          mcpCapabilities: { http: this.context.optional('tools') !== undefined }, sessionCapabilities: { close: {}, list: {}, resume: {} } }, authMethods: [] }
+          mcpCapabilities: { http: this.context.optional('tools') !== undefined }, sessionCapabilities: { close: {}, list: {}, resume: {} } },
+          authMethods: [], _meta: nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
+            maxSteps: true, maxTokens: true, permissionModes }) }
       })()))
       .onRequest(methods.agent.authenticate, () => ({}))
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
@@ -354,6 +504,7 @@ export class NativeAcpApplication implements NativeApplication {
         if (this.sessions.has(params.sessionId) || this.activating.has(params.sessionId)) throw RequestError.invalidParams(undefined, 'session is already active')
         this.activating.add(params.sessionId)
         const id = SessionId(params.sessionId)
+        let policy: NativeAcpSubagentPolicy | undefined
         try {
           const handle = await this.context.require('sessionPersistence').open(id, 'read', { signal: requestSignal })
           try {
@@ -361,16 +512,22 @@ export class NativeAcpApplication implements NativeApplication {
               throw RequestError.invalidParams(undefined, 'session is not resumable in this workspace')
             }
             const events = await handle.read(undefined, undefined, { signal: requestSignal })
+            const acceptedPolicy = nativeSessionExecutionPolicy(events.events)
+            if (acceptedPolicy !== undefined) {
+              policy = acpPolicy(acceptedPolicy)
+              assertRestorablePolicy(policy, this.config, this.parentRelayAvailable())
+            }
+            await this.assertOutputTokenLimit(policy?.maxTokens ?? this.config.maxTokens, requestSignal)
             for (const event of events.events) {
               for (const update of updates(event)) await this.notify({ sessionId: params.sessionId, update })
             }
           } finally { await handle.close() }
-          const record = this.createExecutor(params.sessionId, cwd)
+          const record = this.createExecutor(params.sessionId, cwd, policy)
           try {
             const configOptions = await this.activate(record, params.sessionId, servers, requestSignal)
             this.sessions.set(params.sessionId, record)
             await this.notifyAvailableCommands(record, params.sessionId)
-            return { configOptions }
+            return { configOptions, ...(policy === undefined ? {} : { _meta: nativeAcpSubagentPolicyMetadata(policy) }) }
           } catch (error: unknown) {
             if (this.ownedExecutors.has(record)) {
               try { await this.releaseSession(record); this.sessions.delete(params.sessionId) }
@@ -459,6 +616,27 @@ export class NativeAcpApplication implements NativeApplication {
     if (this.closing || this.lifetime.signal.aborted) throw RequestError.internalError(undefined, 'ACP connection is closing')
   }
 
+  private parentRelayAvailable(): boolean {
+    return this.subagentClientCapabilities?.permissionRelay === true && this.context.optional('approval') !== undefined
+  }
+
+  private async assertOutputTokenLimit(maxTokens: number | undefined, signal: AbortSignal): Promise<void> {
+    const model = this.context.require('model')
+    if (model.prepareCall === undefined) {
+      throw RequestError.invalidParams(undefined, 'native ACP cannot verify maxTokens for the selected model route')
+    }
+    const prepared = await model.prepareCall(this.config.provider, this.config.model, signal)
+    if (prepared.model.provider !== this.config.provider || prepared.model.id !== this.config.model) {
+      throw RequestError.internalError(undefined, 'native ACP model preparation returned a different route')
+    }
+    const resolved = resolveCallConfigWithModel({ provider: this.config.provider, model: this.config.model,
+      ...(maxTokens === undefined ? {} : { maxTokens }) }, prepared.model)
+    if (resolved.maxTokens !== undefined
+      && !await prepared.supportsOutputTokenLimit(resolved.maxTokens, resolved.reasoningEffort)) {
+      throw RequestError.invalidParams(undefined, 'native ACP selected model route cannot enforce maxTokens')
+    }
+  }
+
   private ready(): void {
     this.assertOpen()
     if (!this.initialized) throw RequestError.invalidRequest(undefined, 'initialize first')
@@ -483,17 +661,20 @@ export class NativeAcpApplication implements NativeApplication {
     }
   }
 
-  private createExecutor(id: string, cwd: string): OwnedSession {
-    const { maxPendingPermissions: _permissionCapacity, mcpToolCallTimeoutMs: _mcpTimeout, ...turn } = this.config
+  private createExecutor(id: string, cwd: string, policy?: NativeAcpSubagentPolicy): OwnedSession {
+    const { maxPendingPermissions: _permissionCapacity, mcpToolCallTimeoutMs: _mcpTimeout,
+      maxTokens: _profileTokens, ...turn } = this.config
     const resources = new ResourceOwner()
     const scope = new NativeScope(this.context.scope)
     const rootRoute = brandString<NativeRootRouteId>(`acp:${id}`)
     const execution = this.context.optional('sessionExecution')
     const authority = { active: this.context.require('activeSessions'), ...(execution === undefined ? {} : { execution }) }
+    const maxTokens = policy === undefined ? this.config.maxTokens : policy.maxTokens
     const record: OwnedSession = { id: SessionId(id), rootRoute,
-      executor: createNativeHeadlessApplication(this.context, { ...turn, cwd, rootRouteId: rootRoute }, scope, authority),
+      executor: createNativeHeadlessApplication(this.context, { ...turn, maxSteps: policy?.maxSteps ?? this.config.maxSteps,
+        ...(maxTokens === undefined ? {} : { maxTokens }), cwd, rootRouteId: rootRoute }, scope, authority),
       resources, scope, lifetime: resources.controller, controlTail: Promise.resolve(), controls: 0,
-      notifications: Promise.resolve() }
+      notifications: Promise.resolve(), ...(policy === undefined ? {} : { policy }) }
     this.rootRoutes.set(rootRoute, record)
     this.ownedExecutors.add(record)
     return record
@@ -567,8 +748,10 @@ export class NativeAcpApplication implements NativeApplication {
     let abort: (() => void) | undefined
     try {
       await Promise.race([previous, new Promise<never>((_resolve, reject) => {
-        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-        abort = () => { reject(signal.reason) }
+        abort = () => {
+          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
+          reject(signal.reason)
+        }
         signal.addEventListener('abort', abort, { once: true })
       })])
       signal.throwIfAborted()
@@ -576,20 +759,23 @@ export class NativeAcpApplication implements NativeApplication {
   }
 
   private async newSession(params: NewSessionRequest, signal: AbortSignal):
-  Promise<{ sessionId: string; configOptions: SessionConfigOption[] }> {
+  Promise<{ sessionId: string; configOptions: SessionConfigOption[]; _meta?: Record<string, unknown> }> {
     this.ready()
+    const policy = effectivePolicy(readNativeAcpSubagentPolicy(params._meta), this.config, this.parentRelayAvailable())
+    await this.assertOutputTokenLimit(policy?.maxTokens ?? this.config.maxTokens, signal)
     const cwd = this.workspace(params.cwd)
     const servers = this.resolveServers(params.mcpServers, cwd)
     const fs = this.context.require('fs')
     const info = await fs.stat(await fs.resolve('.', { cwd, signal }), signal)
     if (info?.type !== 'directory') throw RequestError.invalidParams(undefined, 'cwd must be a directory')
     const id = SessionId(randomUUID())
-    const record = this.createExecutor(id, cwd)
+    const record = this.createExecutor(id, cwd, policy)
     try {
       const configOptions = await this.activate(record, id, servers, signal, cwd)
+      if (policy !== undefined) await this.persistPolicy(record, policy, signal)
       this.sessions.set(id, record)
       await this.notifyAvailableCommands(record, id)
-      return { sessionId: id, configOptions }
+      return { sessionId: id, configOptions, ...(policy === undefined ? {} : { _meta: nativeAcpSubagentPolicyMetadata(policy) }) }
     } catch (error: unknown) {
       if (this.ownedExecutors.has(record)) {
         try { await this.releaseSession(record); this.sessions.delete(id) }
@@ -597,6 +783,20 @@ export class NativeAcpApplication implements NativeApplication {
       }
       throw error
     }
+  }
+
+  private async persistPolicy(record: OwnedSession, policy: NativeAcpSubagentPolicy, signal: AbortSignal): Promise<void> {
+    await this.rootExecution.maintenance({ route: record.rootRoute, id: record.id, resume: true }, async (owner, admitted) => {
+      if (owner.invocation !== 'root' || this.rootExecution.capture(owner).id !== record.rootRoute) {
+        throw new Error('native ACP: policy requires this Session root owner')
+      }
+      admitted.throwIfAborted()
+      if (nativeSessionExecutionPolicy(await owner.readEvents({ signal: admitted })) !== undefined) {
+        throw new Error('native ACP: Session execution policy is already recorded')
+      }
+      owner.appendBatch([{ type: 'execution/policy', data: executionPolicy(policy) }])
+      await owner.flush()
+    }, signal)
   }
 
   private async notify(notification: SessionNotification): Promise<void> {
@@ -705,7 +905,8 @@ export class NativeAcpApplication implements NativeApplication {
           signal.throwIfAborted()
           const result = await this.rootExecution.execute({ route: record.rootRoute,
             id: SessionId(params.sessionId), resume: true,
-            ...input, onEvent: (event) => {
+            ...input, ...(record.policy?.permissionMode === 'parent-relay'
+              ? { issueOwnerApproval: (owner: NativeActiveSessionOwner) => this.ownerApproval(record, owner) } : {}), onEvent: (event) => {
               for (const update of updates(event)) {
                 record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
                 void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.

@@ -10,7 +10,7 @@ English | [中文](2026-10-12-pi-ai-disposal-and-native-headless-cwd.zh.md)
 
 ## Decision
 
-The pi-ai adapter exposes `nativeResponses` on prepared Codex calls; the Engine/gateway consumer remains unconnected. Disposal aborts catalog refreshes, drains accepted credential resolutions and active Native Responses transport closes, and reports the first close failure after both work groups settle. The `native-headless`, `native-headless-query`, `native-tui`, and Web session-controller defaults now use the catalog-resolvable `deepseek/deepseek-flash`; the native ACP provider remains explicitly `deepseek-official`. The `native-headless` and query templates record `process.cwd()` as application `cwd`; TUI keeps its existing `cwd` behavior.
+The pi-ai adapter exposes `nativeResponses` on prepared Codex calls; the native model executor captures it from the exact prepared generation for external Responses operations. Disposal aborts catalog refreshes, drains accepted credential resolutions and active Native Responses transport closes, and reports the first close failure after both work groups settle. The `native-headless`, `native-headless-query`, `native-tui`, and Web session-controller defaults now use the catalog-resolvable `deepseek/deepseek-flash`; the native ACP provider remains explicitly `deepseek-official`. The `native-headless` and query templates record `process.cwd()` as application `cwd`; TUI keeps its existing `cwd` behavior.
 
 ## Alternatives considered
 

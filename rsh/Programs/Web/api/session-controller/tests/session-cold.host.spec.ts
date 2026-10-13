@@ -13,7 +13,7 @@ import { SessionHistoryController } from '@deepseek-ai/dsh-api-session-controlle
 import { subagentIdentityProjectionDefinition } from '@deepseek-ai/dsh-subagent/src/projection.ts'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm'
-import { snapshotSubagentDescriptor } from '@deepseek-ai/dsh-subagent'
+import { snapshotSubagentDescriptor, SUBAGENT_DESCRIPTOR_VERSION } from '@deepseek-ai/dsh-subagent'
 import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import type { Agent, Inbox } from '@deepseek-ai/dsh-agent'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
@@ -448,7 +448,7 @@ describe('subagent ownership fence', () => {
         type: 'subagent/descriptor',
         seq: SessionSeq(0),
         time: 1,
-        data: { version: 2, mode: 'continuable', provider: 'spawn', label: 'child' },
+        data: { version: SUBAGENT_DESCRIPTOR_VERSION, mode: 'continuable', provider: 'spawn', label: 'child' },
       },
     ] as SessionEvent[]
     providePersistence(ctx, {
@@ -540,7 +540,7 @@ describe('subagent ownership fence', () => {
         type: 'subagent/descriptor',
         seq: SessionSeq(0),
         time: 1,
-        data: { version: 2, mode: 'continuable', provider: 'spawn', label: 'ancestor' },
+        data: { version: SUBAGENT_DESCRIPTOR_VERSION, mode: 'continuable', provider: 'spawn', label: 'ancestor' },
       }],
       meta: { cwd: '/proj', parentSession: sid('session-source'), isSeeded: true },
       inheritedEventCount: SessionLogOffset(1),

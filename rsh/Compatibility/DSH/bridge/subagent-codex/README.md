@@ -128,7 +128,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Subagent subsystem](../../../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
 - [dsh-subagent seam](../../../../Engine/subagent/subagent/README.md) — the registry and start API this provider registers on.
 - [Official Codex app-server product](../../../../Modules/Official/subagent/codex-app-server/README.md) — protocol, native driver, process, and cleanup authority.
-- [Claude Code subagent provider](../../../../Engine/subagent/subagent-claude-code/README.md) — the sibling product backend over the official Agent SDK.
+- [Claude Code subagent provider](../../../../Modules/Official/subagent/subagent-claude-code/README.md) — the sibling product backend over the official Agent SDK.
 - [Claude Code and Codex backends](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
 - [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-codex) — every accepted config field and its source declaration.
 

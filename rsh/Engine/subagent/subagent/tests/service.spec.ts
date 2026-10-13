@@ -413,6 +413,18 @@ describe('subagent descriptors', () => {
       agentReasoningEffort: ReasoningEffortId('high'),
       persona: 'reviewer',
       toolFilter: { allow: ['read'], deny: ['bash'] },
+      delegationContext: {
+        depth: 0,
+        maxDepth: 2,
+        cwd: '/selected',
+        provider: 'deepseek',
+        model: 'chat',
+        maxSteps: 8,
+        maxTokens: 512,
+        toolNames: ['read', 'run_code'],
+        builtinToolNames: ['read'],
+        programToolNames: ['lookup'],
+      },
     }
     expect(snapshotSubagentDescriptor({
       mode: 'continuable',
@@ -423,8 +435,14 @@ describe('subagent descriptors', () => {
       agentReasoningEffort: complete.agentReasoningEffort,
       persona: complete.persona,
       toolFilter: complete.toolFilter,
+      delegationContext: complete.delegationContext,
     })).toEqual(complete)
     expect(foldSubagentDescriptor([event(complete)])).toEqual(complete)
+    const v3 = { ...complete, version: 3, delegationContext: undefined }
+    delete (v3 as { delegationContext?: unknown }).delegationContext
+    expect(foldSubagentDescriptor([event(v3)])).toEqual(v3)
+    expect(() => foldSubagentDescriptor([event({ ...v3, delegationContext: complete.delegationContext })]))
+      .toThrow('unknown field "delegationContext"')
     expect(foldSubagentDescriptor([
       event({
         version: SUBAGENT_DESCRIPTOR_VERSION,
@@ -561,6 +579,13 @@ describe('subagent descriptors', () => {
       label: 'l',
       toolFilter: { deny: [7] },
     }, 'toolFilter.deny must be an array of strings'],
+    ['inherited context exceeds recursion ceiling', {
+      version: SUBAGENT_DESCRIPTOR_VERSION,
+      mode: 'continuable',
+      provider: 'spawn',
+      label: 'l',
+      delegationContext: { depth: 2, maxDepth: 2 },
+    }, 'delegationContext depth exceeds maxDepth'],
   ])('rejects a malformed persisted descriptor: %s', (_case, data, detail) => {
     expect(() => foldSubagentDescriptor([event(data)])).toThrow(detail)
   })

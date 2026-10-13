@@ -25,6 +25,7 @@
       "native-sdk-dsh-child",
       "native-web",
       "native-acp",
+      "native-acp-dsh-child",
       "native-tui",
       "native-headless-query"
     ],
@@ -67,6 +68,7 @@
     "@deepseek-ai/dsh-sdk-runtime": "workspace:^",
     "@deepseek-ai/dsh-sdk-child": "workspace:^",
     "@deepseek-ai/dsh-native-acp": "workspace:^",
+    "@deepseek-ai/dsh-acp-child": "workspace:^",
     "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-credentials-local": "workspace:^",

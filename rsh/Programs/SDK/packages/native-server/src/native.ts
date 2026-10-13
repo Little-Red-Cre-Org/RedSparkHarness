@@ -344,7 +344,8 @@ export class NativeSdkApplication implements NativeApplication {
         ...maxTokens === undefined ? {} : { maxTokens },
         ...allowedTools === undefined ? {} : { allowedTools },
         ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
-      }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
+      }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions'),
+        attachments: this.context.require('attachments') })
       const deletions = this.executor.rootExecution.deletions
       if (deletions !== undefined) Object.defineProperty(this.rootExecution, 'deletions', { enumerable: true, value: deletions })
       Object.freeze(this.rootExecution)

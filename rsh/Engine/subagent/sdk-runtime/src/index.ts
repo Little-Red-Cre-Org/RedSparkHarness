@@ -18,6 +18,8 @@ export type {
   HarnessClientOptions,
   HarnessNotification,
   NotificationFilter,
+  NativeExternalOperationEvent,
+  NativeExternalOperationSessionEvent,
   RunResult,
   NativeDeepSeekHarnessOptions,
   RuntimeProcessOptions,

@@ -111,7 +111,7 @@ export interface Config {
 
 Depends on: [`AgentOptions`](subsystems/core.md) · [`SessionId`](subsystems/core.md)
 
-Source: [`rsh/Engine/core/agent-loop/src/index.ts:274`](../Engine/core/agent-loop/src/index.ts)
+Source: [`rsh/Engine/core/agent-loop/src/index.ts:279`](../Engine/core/agent-loop/src/index.ts)
 
 <a id="deepseek-aidsh-agent-presets"></a>
 
@@ -2409,7 +2409,7 @@ export interface Config {
 export type PermissionPolicy = 'allow' | 'reject'
 ```
 
-Source: [`rsh/Engine/subagent/subagent-acp/src/index.ts:27`](../Engine/subagent/subagent-acp/src/index.ts)
+Source: [`rsh/Compatibility/DSH/subagent/subagent-acp/src/index.ts:27`](../Compatibility/DSH/subagent/subagent-acp/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-claude-code"></a>
 
@@ -2444,7 +2444,7 @@ export interface Config {
 export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[number]
 ```
 
-Source: [`rsh/Engine/subagent/subagent-claude-code/src/index.ts:38`](../Engine/subagent/subagent-claude-code/src/index.ts)
+Source: [`rsh/Modules/Official/subagent/subagent-claude-code/src/index.ts:39`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-codex"></a>
 
@@ -3579,6 +3579,8 @@ Abstract service classes — a deployment loads a concrete implementation packag
 
 Imported as libraries by other packages; a `cordis.yml` cannot load them.
 
+- `@deepseek-ai/dsh-acp-child` ([`rsh/Modules/Official/subagent/acp-child/src/index.ts`](../Modules/Official/subagent/acp-child/src/index.ts))
+- `@deepseek-ai/dsh-acp-protocol` ([`rsh/Modules/Official/subagent/acp-protocol/src/index.ts`](../Modules/Official/subagent/acp-protocol/src/index.ts))
 - `@deepseek-ai/dsh-agent-loop-testkit` ([`rsh/Tests/test-support/agent-loop-testkit/src/index.ts`](../Tests/test-support/agent-loop-testkit/src/index.ts))
 - `@deepseek-ai/dsh-agent-preset-standing` ([`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts))
 - `@deepseek-ai/dsh-anonymous-user-id` ([`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts))

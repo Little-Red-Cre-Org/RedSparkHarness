@@ -18,7 +18,8 @@
 
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
@@ -307,7 +308,7 @@ export const plugin: NativePlugin = {
 
       if (commands !== undefined) {
         context.effect(commands.register({
-          definitionId: CommandDefinitionId('@deepseek-ai/dsh-plan-mode'),
+          definitionId: brandString<CommandDefinitionId>('@deepseek-ai/dsh-plan-mode'),
           name: PLAN_COMMAND_NAME,
           description: PLAN_COMMAND_DESCRIPTION,
           input: { hint: PLAN_COMMAND_HINT, attachments: true },

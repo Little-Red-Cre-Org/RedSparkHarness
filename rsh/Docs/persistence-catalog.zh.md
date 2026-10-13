@@ -386,6 +386,19 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源： [`rsh/Modules/Official/fs/tool-present/src/types.ts:15`](../Modules/Official/fs/tool-present/src/types.ts)
 
+### `execution/*`
+
+<a id="executionpolicy--log-only"></a>
+
+#### `execution/policy` — log-only
+
+```ts persistence-catalog
+/** Required execution authority; consumers must refuse to run when they cannot enforce it. */
+'execution/policy': NativeSessionExecutionPolicy
+```
+
+来源：[`rsh/Engine/core/native-session-execution/src/execution-policy.ts:66`](../Engine/core/native-session-execution/src/execution-policy.ts)
+
 ### `feedback/*`
 
 <a id="feedbackmessage-delete--log-only"></a>
@@ -822,7 +835,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-来源：[`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:40`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
+来源：[`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:42`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
 
 <a id="subagentexternal-end--log-only"></a>
 
@@ -837,7 +850,21 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[NativeExternalSubagentFinishedEvent](subsystems/subagent.zh.md)
 
-来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:172`](../Engine/subagent/native-subagent/src/external-driver.ts)
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:402`](../Engine/subagent/native-subagent/src/external-driver.ts)
+
+<a id="subagentexternal-operation--log-only"></a>
+
+#### `subagent/external-operation` — log-only
+
+```ts persistence-catalog
+/**
+ * Records complete model request and outcome JSON before the external product forwards or consumes it.
+ * Parent and invocation-root ids and captured epochs bind every attempt to the exact admitted owners.
+ */
+'subagent/external-operation': NativeExternalOperationEvent
+```
+
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:407`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentexternal-start--log-only"></a>
 
@@ -853,7 +880,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[NativeExternalSubagentStartedEvent](subsystems/subagent.zh.md)
 
-来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:168`](../Engine/subagent/native-subagent/src/external-driver.ts)
+来源：[`rsh/Engine/subagent/native-subagent/src/external-driver.ts:398`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
@@ -1014,7 +1041,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'tool/ptc-dispatch': PtcDispatchEventData
 ```
 
-来源：[`rsh/Engine/core/native-tools/src/types.ts:62`](../Engine/core/native-tools/src/types.ts)
+来源：[`rsh/Engine/core/native-tools/src/types.ts:80`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolptc-dispatch-start--log-only"></a>
 
@@ -1037,7 +1064,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'tool/ptc-dispatch-start': PtcDispatchStartEventData
 ```
 
-来源：[`rsh/Engine/core/native-tools/src/types.ts:46`](../Engine/core/native-tools/src/types.ts)
+来源：[`rsh/Engine/core/native-tools/src/types.ts:64`](../Engine/core/native-tools/src/types.ts)
 
 <a id="toolresult--surface"></a>
 

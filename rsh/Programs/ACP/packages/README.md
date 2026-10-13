@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The acp group provides compatibility and native carriers: servers that let programs and automation run persistent DeepSeek Harness agents over the standard Agent Client Protocol. A client can create, list, resume, and close sessions; attach standard MCP servers; select model options; send text and image prompts; receive semantic updates; answer permission prompts; and cancel work without a human in the loop. The matching client for spawning such a server from another harness lives in `subagent/subagent-acp`. This page maps the group; the package README owns the per-package contract.
+The acp group provides compatibility and native carriers: servers that let programs and automation run persistent DeepSeek Harness agents over the standard Agent Client Protocol. A client can create, list, resume, and close sessions; attach standard MCP servers; select model options; send text and image prompts; receive semantic updates; answer permission prompts; and cancel work without a human in the loop. The matching process client is a separate Compatibility package. This page maps the group; the package README owns the per-package contract.
 
 ## Table of Contents
 
@@ -32,7 +32,7 @@ The acp group provides compatibility and native carriers: servers that let progr
 <a id="related-documentation"></a>
 ## Related documentation
 
-- [dsh-subagent-acp](../../../Engine/subagent/subagent-acp/README.md) — the out-of-process ACP client that spawns and drives this server.
+- [dsh-subagent-acp](../../../Compatibility/DSH/subagent/subagent-acp/README.md) — the out-of-process ACP client that spawns and drives this server.
 - [ACP as an automation-only protocol](../../../../.agents/notes/implemented/simplification/2026-07-23-acp-automation-only-protocol.md) — the design record for the automation contract and its wire boundaries.
 - [Multiplex concurrent ACP sessions over one connection](../../../../.agents/notes/archived/feature/2026-06-14-acp-multi-session.md) — per-session isolation, ownership, and teardown decisions.
 

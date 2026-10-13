@@ -592,6 +592,7 @@ interface GenerateOptions {
   /** Tool schemas (adapters map to the provider's `tools` field). */
   tools?: ToolSchema[]
   temperature?: number
+  /** Requested output-token limit; the selected route may expose whether it can enforce it exactly. */
   maxTokens?: number
   /**
    * Stop sequences: generation halts as soon as the model produces any one of
@@ -745,7 +746,30 @@ The [wire reference](../deepseek-llm-api-wire-extensions.md) defines the exact r
 
 ## Service and provider contracts
 
+`PreparedAdapterCall.supportsOutputTokenLimit()` reports whether the captured adapter generation can enforce a requested exact output cap for a reasoning effort. The runtime rejects a capped request when that route reports false.
+
+```ts type-equiv
+/** One adapter-owned model-resolution generation bound to its eventual stream call. */
+interface PreparedAdapterCall {
+  /** Exact model metadata from the same adapter generation as {@link stream}. */
+  readonly model: LlmResolvedModelInfo
+  /**
+   * Whether this generation enforces this exact output limit under the resolved reasoning effort.
+   * @param maxTokens - requested positive output-token ceiling.
+   * @param reasoningEffort - effective effort for this model request, if selected.
+   * @returns true only when this route can apply that exact ceiling without widening it.
+   */
+  supportsOutputTokenLimit(maxTokens: number, reasoningEffort?: ReasoningEffortId): Promise<boolean>
+  /** Dispatch through that generation without re-reading dynamic connection facts. */
+  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
+}
+```
+
+Native external Responses execution may use the optional `nativeResponses` capability on that same prepared call. Nested captures retain the exact prepared generation instead of looking up a later adapter; provider support and capture ownership are documented in [native-model-execution](../../Engine/core/native-model-execution/README.md).
+
+
 `LlmAdapter` is the provider contract: subclass, implement `stream()`, and register one adapter instance with `ctx.llm.registerAdapter(providers, adapter)`. `GenerateOptions.provider` selects the registered adapter; `GenerateOptions.model` is passed to that adapter and need not be registered at lifecycle start. Duplicate provider routes fail atomically. Optional `providerRetryPolicy()` is captured per route with normal defaults, while `providerInfo()` and asynchronous `listModels()` feed `LlmRuntime.listProviders()` / `listModels()` with detached selector metadata. That catalog is advisory rather than a request whitelist: the adapter remains authoritative and may accept unlisted model ids. One asynchronous `resolveModel()` query returns exact model identity plus optional correctness-sensitive context capacity, an adapter-configured `defaultMaxTokens`, and ordered model-owned reasoning ids with an optional deployment default; absent fields mean unavailable metadata or provider-owned behavior, not invalid catalog membership. The resolver receives optional cancellation and must settle promptly after abort. `LlmRuntime.resolveModelInfo()` validates and detaches the aggregate. At the final adapter boundary, `resolveCallConfig()` materializes the output default only when `maxTokens` is absent and validates and materializes reasoning, so direct calls cannot bypass either configured behavior; direct dispatch captures one registration before awaiting that resolution. The agent loop instead uses `prepareCall()` to keep the same registration across model resolution, durable header logging, and dispatch, retain detached context metadata from that exact lookup, and report which config fields the adapter defaulted. Adapter lookup happens at the terminal continuation of the `llm/stream` waterfall, so a listener may short-circuit the call or route a mutable one-shot request before lookup. AgentLoop observes a request attempt once the outer waterfall returns a stream handle; that limited boundary does not prove a lazy terminal adapter was constructed or began provider I/O. The `block-start` / `block-end` `index` correlation and the assembler together mean an adapter only has to emit well-formed chunks — block reassembly is not each adapter's problem. [architecture.md](../architecture.md#turn-flow) shows where `ctx.llm.stream()` and the `llm/stream` waterfall sit in one turn.
+
 
 ```ts type-equiv
 /** One model call whose config and adapter registration were resolved together. */
@@ -830,10 +854,13 @@ declare abstract class LlmAdapter {
    * Bind exact model metadata and the eventual request dispatch to one adapter generation.
    * Dynamic adapters override this so settings changes between preparation and
    * dispatch cannot combine one generation's capabilities with another's endpoint.
+   * The returned capability must describe this exact route generation and
+   * reject output limits the transport cannot enforce without widening under
+   * the request's effective reasoning effort.
    * @param provider - registered provider route.
    * @param model - exact model id.
    * @param signal - cancellation for model resolution.
-   * @returns model metadata and a one-generation stream entry point.
+   * @returns model metadata, the generation's output-limit predicate, and its stream entry point.
    */
   async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;
   /**

@@ -113,7 +113,7 @@ export interface Config {
 
 依赖：[`AgentOptions`](subsystems/core.zh.md) · [`SessionId`](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/agent-loop/src/index.ts:274`](../Engine/core/agent-loop/src/index.ts)
+来源：[`rsh/Engine/core/agent-loop/src/index.ts:279`](../Engine/core/agent-loop/src/index.ts)
 
 <a id="deepseek-aidsh-agent-presets"></a>
 
@@ -2411,7 +2411,7 @@ export interface Config {
 export type PermissionPolicy = 'allow' | 'reject'
 ```
 
-来源：[`rsh/Engine/subagent/subagent-acp/src/index.ts:27`](../Engine/subagent/subagent-acp/src/index.ts)
+来源：[`rsh/Compatibility/DSH/subagent/subagent-acp/src/index.ts:27`](../Compatibility/DSH/subagent/subagent-acp/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-claude-code"></a>
 
@@ -2446,7 +2446,7 @@ export interface Config {
 export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[number]
 ```
 
-来源：[`rsh/Engine/subagent/subagent-claude-code/src/index.ts:38`](../Engine/subagent/subagent-claude-code/src/index.ts)
+来源：[`rsh/Modules/Official/subagent/subagent-claude-code/src/index.ts:39`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
 
 <a id="deepseek-aidsh-subagent-codex"></a>
 
@@ -3580,6 +3580,8 @@ export interface Config {
 
 由其他包作为库导入；`cordis.yml` 无法加载它们。
 
+- `@deepseek-ai/dsh-acp-child`（[`rsh/Modules/Official/subagent/acp-child/src/index.ts`](../Modules/Official/subagent/acp-child/src/index.ts)）
+- `@deepseek-ai/dsh-acp-protocol`（[`rsh/Modules/Official/subagent/acp-protocol/src/index.ts`](../Modules/Official/subagent/acp-protocol/src/index.ts)）
 - `@deepseek-ai/dsh-agent-loop-testkit`（[`rsh/Tests/test-support/agent-loop-testkit/src/index.ts`](../Tests/test-support/agent-loop-testkit/src/index.ts)）
 - `@deepseek-ai/dsh-agent-preset-standing`（[`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts)）
 - `@deepseek-ai/dsh-anonymous-user-id`（[`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts)）

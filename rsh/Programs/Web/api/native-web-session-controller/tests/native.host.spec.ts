@@ -459,7 +459,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignProgram: NativePlugin = {
     apiVersion: 1, name: 'foreign-program', targets: ['host'],
     requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
-    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'], provides: [],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'], provides: [],
     resolve: () => (context) => {
       persistence = context.require('sessionPersistence')
       foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',

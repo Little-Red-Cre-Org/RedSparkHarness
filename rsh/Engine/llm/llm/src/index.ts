@@ -30,6 +30,7 @@ import type { ResolvedRetryPolicy } from './retry-policy.ts'
 import { callConfigEquals } from './call-config.ts'
 import type { LlmCallConfig, LlmCallConfigAdapterDefaults } from './call-config.ts'
 import { LlmError } from './error.ts'
+import type { PreparedAdapterCall } from './adapter.ts'
 import { normalizeLlmFailure } from './adapter-failure.ts'
 import {
   contentHasFile, contentHasImage, fileHandleText, projectFilesToText, projectImagesForTextModel,
@@ -759,6 +760,7 @@ export class LlmRuntime extends TypertRemoteService {
     const adapterCall = await registration.adapter.prepareCall(config.provider, config.model, signal)
     const modelInfo = this.normalizeModelInfo(registration, config.model, adapterCall.model)
     const resolved = this.resolveCallWithInfo(config, modelInfo)
+    await assertOutputTokenLimit(adapterCall, resolved.config)
     const resolvedConfig = deepFreeze(structuredClone(resolved.config))
     const context = resolved.context === undefined
       ? undefined
@@ -869,6 +871,7 @@ export class LlmRuntime extends TypertRemoteService {
         const adapterCall = await adapter.prepareCall(options.provider, options.model, options.signal)
         modelInfo = this.normalizeModelInfo(registration, options.model, adapterCall.model)
         resolvedConfig = this.resolveCallWithInfo(options, modelInfo).config
+        await assertOutputTokenLimit(adapterCall, resolvedConfig)
         dispatch = options => adapterCall.stream(options)
       } else {
         modelInfo = prepared.modelInfo
@@ -962,6 +965,17 @@ export class LlmRuntime extends TypertRemoteService {
       'llm/stream',
       options,
       () => this.adapterStream(options, prepared),
+    )
+  }
+}
+
+/** Refuse a caller ceiling unless the captured route can enforce it exactly. */
+async function assertOutputTokenLimit(adapterCall: PreparedAdapterCall, config: LlmCallConfig): Promise<void> {
+  if (config.maxTokens !== undefined
+    && !await adapterCall.supportsOutputTokenLimit(config.maxTokens, config.reasoningEffort)) {
+    throw new LlmError(
+      `provider "${config.provider}" model "${config.model}" cannot enforce maxTokens ${config.maxTokens}`,
+      'UNSUPPORTED_OPTION',
     )
   }
 }

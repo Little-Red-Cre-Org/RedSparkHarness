@@ -95,7 +95,7 @@ function isHeadlessProfile(profile: string): boolean {
  * @param profile - shipped profile name.
  * @param platform - target platform for command providers and tools.
  * @returns the profile configuration installed on first use.
- * @remarks Native SDK, SDK-child and ACP profiles install workspace instructions through their selected filesystem Provider.
+ * @remarks Native SDK, SDK-child, ACP and ACP-child profiles install workspace instructions through their selected filesystem Provider.
  */
 export function shippedNativeProfileComposition(
   home: string,
@@ -103,6 +103,26 @@ export function shippedNativeProfileComposition(
   platform: NodeJS.Platform = process.platform,
 ): NativeProfileConfig {
   if (!isShippedNativeProfile(profile)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(profile)}`)
+  if (profile === 'native-acp-dsh-child') {
+    const parent = shippedNativeProfileComposition(home, 'native-acp', platform)
+    const recursiveInstallations = new Set([
+      'subagents', 'subagent-controls', 'subagent-directory', 'subagent-tool',
+      'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool',
+    ])
+    return {
+      ...parent,
+      installations: parent.installations.flatMap((row) => {
+        if (recursiveInstallations.has(row.id)) return []
+        if (row.id === 'app') return [{ ...row, config: { ...(row.config as Record<string, unknown>), builtinTools: false, allowedTools: [] } }]
+        if (row.id === 'fs') return [
+          { id: 'sandbox-policy', plugin: '@deepseek-ai/dsh-native-sandbox-policy', scope: ROOT,
+            config: { mode: 'workspace-write', workspaceRoot: process.cwd() } },
+          { ...row, plugin: '@deepseek-ai/dsh-fs-sandbox' },
+        ]
+        return [row]
+      }),
+    }
+  }
   if (profile === 'native-sdk' || profile === 'native-sdk-dsh-child' || profile === 'native-acp') return {
     formatVersion: 1,
     scopes: [{ id: ROOT }],
