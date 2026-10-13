@@ -37,7 +37,7 @@ Trajectory 标签页让你以按轮次组织的事件记录表和交互式时间
 
 ### Native Client
 
-`@deepseek-ai/dsh-client-ui-trajectory/native` 入口导出仅依赖 props 的记录表、时间线和轮次视图，以及 `NativeTrajectoryView`。它从 Native Session controller 已持有的 append-origin 用户、助手和工具结果事件构建记录表。Native 视图只显示收到的事件窗口，不加载更早页面或持久化图片数据。
+`@deepseek-ai/dsh-client-ui-trajectory/native` 入口导出仅依赖 props 的记录表、时间线和轮次视图，以及 `NativeTrajectoryView`。它投影 Native Session controller 已持有的持久化轮次与步骤生命周期记录、助手尝试、消息和 Tool 结果。没有消息的失败轮次仍保留独立行，助手耗时使用持久化步骤开始时间。Native 视图只显示收到的事件窗口，不加载更早页面或持久化图片数据。
 
 -----
 

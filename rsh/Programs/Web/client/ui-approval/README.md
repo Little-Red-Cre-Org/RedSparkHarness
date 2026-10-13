@@ -10,6 +10,8 @@ English | [中文](README.zh.md)
 
 Browser approval presentation over the Agent-scoped Remote Event waterfall. The plugin publishes each pending request through `ctx.uiSession`, takes over the Conversation composer, optionally renders correlated Tool detail, and returns the user's decision to the waiting Host request. Use it when a browser must collect approval for a waiting Host operation.
 
+The `./native` entry exports the same approval card presentation through props and Host answer callbacks, without loading the legacy plugin entry.
+
 ## Table of Contents
 
 - [Model Experience](#model-experience)
@@ -31,7 +33,7 @@ None; approval request and response rendering does not alter a model request.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **The panel exposes transient decisions only** — it supports allow-once and reject; persistent permission policy remains owned by Host-side approval packages.
+- **Approval cards expose transient decisions only** — allow-once and reject are supported; the Native Host answer does not include a session-scoped allow outcome, and persistent permission policy remains owned by Host-side approval packages.
 
 
 <a id="dev-note"></a>
@@ -44,4 +46,4 @@ None.
 
 </details>
 
-**Runtime invariant:** No companion is published. Registries own and observe the Remote listener and temporary Slot entry.
+**Runtime invariant:** No companion is published. Registries own and observe the Remote listener and temporary Slot entry; `./native` is a props-only view entry.

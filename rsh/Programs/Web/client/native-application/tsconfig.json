@@ -18,6 +18,9 @@
       "path": "../../../../Engine/core/session"
     },
     {
+      "path": "../../../../Engine/core/native-tools/tsconfig.client.json"
+    },
+    {
       "path": "../../../../Engine/llm/llm"
     },
     {
@@ -52,6 +55,12 @@
     },
     {
       "path": "../ui-tool"
+    },
+    {
+      "path": "../ui-approval"
+    },
+    {
+      "path": "../ui-user-questions"
     },
     {
       "path": "../ui-attachment"

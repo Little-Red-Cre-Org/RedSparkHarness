@@ -1,11 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Button, IconEditOutline16, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PendingQuestion, PlanReview, QuestionComposerProps } from './contract/slots.ts'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PlanReview, QuestionPresentation } from '../question-presentation.ts'
 import css from './PlanReviewPanel.module.css'
 
 /** The panel's own props: the question domain face, the narrowed review, and the locale seat. */
-export type PlanReviewPanelProps =
-  { pending: PendingQuestion; review: PlanReview } & Pick<QuestionComposerProps, 't'>
+export type PlanReviewPanelProps = {
+  pending: QuestionPresentation
+  review: PlanReview
+  t: TranslateNS<'question'>
+  disabled?: boolean | undefined
+  releaseBusyOnResolve?: boolean | undefined
+}
 
 /**
  * Optional-prop spread for a decision button's tooltip: `title` is optional on
@@ -24,7 +30,7 @@ function tooltip(description: string | undefined): { title?: string } {
  * @param props - the question domain face, the narrowed plan review, and `t`.
  * @returns The plan-review takeover for this request.
  */
-export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
+export function PlanReviewPanel({ pending, review, t, disabled = false, releaseBusyOnResolve = false }: PlanReviewPanelProps) {
   const markdownLabels = useMemo(() => ({
     code: { copyLabel: t('copy'), copiedLabel: t('copied') },
     footnotes: t('markdown.footnotes'),
@@ -36,7 +42,9 @@ export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
   const settle = (send: () => Promise<void>): void => {
     setBusy(true)
     setError(null)
-    void send().catch((cause: unknown) => {
+    void send().then(() => {
+      if (releaseBusyOnResolve) setBusy(false)
+    }, (cause: unknown) => {
       setBusy(false)
       setError(cause instanceof Error ? cause.message : String(cause))
     })
@@ -45,6 +53,7 @@ export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
     settle(() => pending.answer({ answers: [{ id: review.id, selected: [label] }] }))
   }
   const decline = review.decline
+  const cancel = pending.cancel
 
   return (
     <div className={css.frame} data-plan-review-key={pending.key}>
@@ -59,23 +68,23 @@ export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
         <div className={css.footer}>
           <div className={css.feedback} role="status">{error}</div>
           <div className={css.actions}>
-            <Button
+            {cancel === undefined ? null : <Button
               variant="ghost" className={css.discuss} icon={<IconEditOutline16 size={14} />}
-              disabled={busy} onClick={() => { settle(() => pending.cancel()) }}
+              disabled={busy || disabled} onClick={() => { settle(cancel) }}
             >
               {t('plan.discuss')}
-            </Button>
+            </Button>}
             {decline !== undefined && (
               <Button
                 variant="outline" {...tooltip(decline.description)}
-                disabled={busy} onClick={() => { decide(decline.label) }}
+                disabled={busy || disabled} onClick={() => { decide(decline.label) }}
               >
                 {t('plan.decline')}
               </Button>
             )}
             <Button
               variant="primary" {...tooltip(review.approve.description)}
-              disabled={busy} onClick={() => { decide(review.approve.label) }}
+              disabled={busy || disabled} onClick={() => { decide(review.approve.label) }}
             >
               {t('plan.approve')}
             </Button>

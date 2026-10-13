@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。Legacy 与 Native 视图共享 `ui-primitives` 中无 Cordis 的转录、composer、首次引导、Markdown、欢迎页与吉祥物展示；Native 页面继续使用自己的 Session 数据层，并依据 Session 记录呈现根级 Tool 结果与失败。嵌套分派仍可在原始历史中查看。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输/历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。Legacy 与 Native 视图共享 `ui-primitives` 中无 Cordis 的转录、composer、首次引导、Markdown、欢迎页与吉祥物展示；Native 页面继续使用自己的 Session 数据层，并依据 Session 记录呈现 Tool 结果、失败及嵌套调用。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输/历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 
@@ -28,7 +28,7 @@ kind: "package-reference"
 
 模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
-转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。持久化用户文本使用共享右对齐气泡；除 `native-time-context` 提供的上下文外，非用户上下文使用折叠来源行，Native 转录不显示该上下文。助手文本使用共享 Markdown renderer，临时助手文本使用其流式模式。Native 视图按轮次分组可见消息和根级 Tool 卡片，默认折叠助手推理，并为每条助手消息显示复制操作以及可用的 token 用量、耗时和事件时间。顶部读取所选 Session 列表标题，以静态 pill 标记当前对话视图，并保留现有详情操作。读者位于末尾时，视图会跟随新事件和实时文本；向上滚动后暂停跟随，直至读者回到末尾。现有 Native 根级 Tool 和图片 renderer 保持原样。传输和历史错误会显示；发送失败时保留草稿。
+转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。持久化用户文本使用共享右对齐气泡；除 `native-time-context` 提供的上下文外，非用户上下文使用折叠来源行，Native 转录不显示该上下文。助手文本使用共享 Markdown renderer，临时助手文本使用其流式模式。Native 视图按轮次分组可见消息和 Tool 调用卡片，包括嵌套调用，默认折叠助手推理，并为每条助手消息显示复制操作以及可用的 token 用量、耗时和事件时间。顶部读取所选 Session 列表标题，以静态 pill 标记当前对话视图，并保留现有详情操作。读者位于末尾时，视图会跟随新事件和实时文本；向上滚动后暂停跟随，直至读者回到末尾。Tool 卡片复用共享 Native Tool、审批和问题展示；图片仍由 Native 渲染。传输和历史错误会显示；发送失败时保留草稿。
 
 所选 Session 的对话标题栏提供 Trajectory 操作。它使用 controller 当前的事件历史打开共享记录表和时间线，其中包括持久化轮次与消息。它不增加 Host 操作，也不请求更早的历史页面。
 
@@ -52,7 +52,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 
 <a id="invariants"></a>
 
-待答工具审批提供允许一次与拒绝操作。问题卡保留标题、详情、选项、多选及自定义文本。提交失败保留待答请求；取消禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
+待答工具审批提供允许一次与拒绝操作。Host approval Provider 没有按 Session 允许的结果，因此 Native 不显示“始终允许”操作。问题卡保留标题、详情、选项、多选及自定义文本；plan-review 意图使用已有结构化答案。Host 没有仅取消单个问题的操作，因此普通问题卡不显示关闭操作，plan-review 卡不显示“讨论”操作。提交失败保留待答请求；取消整轮会禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
 
 图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
 
@@ -66,6 +66,8 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 ## 开发备注
 
 生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；共享展示归属见[聊天展示决策](../../../../../.agents/notes/implemented/architecture/2026-10-12-shared-chat-presentation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)；提供方编辑与订阅行见[原生 Models 决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.zh.md)；Agent 预设的详情与文件夹操作见[原生 Web Agent 预设管理决策](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.zh.md)。
+
+Native 审批与问题限制见 [Native human interaction 决策](../../../../../.agents/notes/implemented/feature/2026-10-12-native-human-interactions.zh.md)；事件投影与持久化轮次计时见 [Native Trajectory 决策](../../../../../.agents/notes/implemented/bug-fix/2026-10-12-native-trajectory-turns.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -91,6 +93,6 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
 - 随附 native-web 模板没有常驻预设组合、plan-mode Provider 或 permission-preset Provider；自定义 profile 可以添加。没有可选预设时模式选择器保持禁用；只有 Host 提供相应能力时才显示 Plan 和权限控件。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
-- 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
+- 其他模型片段呈现仍属于独立工作。
 - 侧边栏尚未提供 Workspace 排序或移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。
