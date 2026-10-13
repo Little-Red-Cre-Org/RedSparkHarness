@@ -166,7 +166,7 @@ Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:99`](../Engine/core/
 'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }
 ```
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:99`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Engine/core/approval-definition/src/index.ts:118`](../Engine/core/approval-definition/src/index.ts)
 
 ### `assistant/*`
 
@@ -555,7 +555,7 @@ Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../E
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:103`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Engine/core/approval-definition/src/index.ts:122`](../Engine/core/approval-definition/src/index.ts)
 
 <a id="native-approvaldecided--log-only"></a>
 
@@ -567,10 +567,11 @@ Source: [`rsh/Engine/core/approval-definition/src/index.ts:103`](../Engine/core/
   id: NativeApprovalRequestId
   policy: NativeApprovalPolicy
   outcome: NativeApprovalOutcome
+  sessionGrant?: NativeApprovalSessionGrant
 }
 ```
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:110`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Engine/core/approval-definition/src/index.ts:129`](../Engine/core/approval-definition/src/index.ts)
 
 ### `permission/*`
 

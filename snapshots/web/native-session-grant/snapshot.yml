@@ -1,0 +1,10 @@
+version: 1
+scenario: native-session-grant
+profile: web
+composition: native-web-session-grant
+recording: authored
+header:
+  class: native-web-session-grant
+  pin: true
+workspace:
+  final: true

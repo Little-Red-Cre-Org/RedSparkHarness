@@ -25,6 +25,8 @@ The `./native` entry requires `agents`, provides `approval`, and accepts an opti
 
 The service returns the supplied id, policy, and closed outcome but does not write a Session. A consuming application durably records `native-approval/asked` before calling the service and durably records the matching `native-approval/decided` before it executes the approved operation. Native headless supplies that application path for fixed writes and protected native tool contributions.
 
+For an application-admitted exact scope, an answerer may return `{ outcome: 'allowed-once', remember: 'session' }`. The service returns that admitted grant as decision metadata; it never invents the scope or writes storage. A previously matched durable grant returns `allowed-once` without another answerer call, after cancellation and `never` checks. A remembered answer without an admitted scope rejects.
+
 <a id="model-experience"></a>
 ## Model Experience
 
@@ -39,7 +41,7 @@ The consuming application owns the retained error or ordinary tool result after 
 <a id="known-limitations-and-deferred-work"></a>
 
 - The Provider has no built-in terminal answerer, browser projection, or external protocol transport.
-- Decisions are one-shot; it has no remembered grant, rule store, or revocation record.
+- The consuming application stores exact Session grants; this Provider owns no rule store or revocation record.
 - The Provider does not own Session persistence, tool schemas, or tool-result rendering.
 
 No invariant companion is published because a policy decision has no independent durable observation before its application writes the audit pair.

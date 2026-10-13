@@ -9,7 +9,7 @@ import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { NativeValueToolContribution, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import type { NativeValueToolContribution, NativeToolExecution, NativeToolApprovalContext } from '@deepseek-ai/dsh-native-tools'
 import {
   ESCALATION_TARGETS, approveEscalation, escalationHintMarker, sandboxDenialMarker, validateEscalationArgs,
   type SandboxExecutionPolicy, type SandboxMode,
@@ -116,12 +116,13 @@ function escalationSchema(fs: FileSystemOperations): Record<string, unknown> {
 async function mutationPolicy(
   context: NativeContext, fs: FileSystemOperations, call: NativeToolExecution, args: EscalationArgs,
   reason: string,
+  sessionContext: NativeToolApprovalContext,
 ): Promise<SandboxExecutionPolicy | undefined> {
   const standing = context.optional('sandboxPolicy')?.resolve({ session: call.session })
   if (args.sandbox_permissions === undefined || args.justification === undefined) {
     if (context.optional('approval') !== undefined) {
       if (call.authorize === undefined) throw new Error(`native-tools: tool ${call.name} requires an approval authority`)
-      await call.authorize({ reason }, call.signal)
+      await call.authorize({ reason, sessionContext }, call.signal)
     }
     return standing
   }
@@ -144,7 +145,8 @@ function actor(call: NativeToolExecution): { agent: { session: object } } {
   return { agent: { session: call.session } }
 }
 
-async function target(fs: FileSystemOperations, call: NativeToolExecution, path: string, allowOutside = false): Promise<FsTarget> {
+async function workspaceTarget(fs: FileSystemOperations, call: NativeToolExecution, path: string,
+  allowOutside = false): Promise<{ root: FsTarget; resolved: FsTarget }> {
   const cwd = call.session.header.cwd
   if (cwd === undefined || !isAbsolute(cwd)) throw new Error('tool-fs: Session has no absolute workspace')
   const root = await fs.resolve(cwd, { signal: call.signal })
@@ -152,7 +154,11 @@ async function target(fs: FileSystemOperations, call: NativeToolExecution, path:
   if (rootInfo?.type !== 'directory') throw new Error('tool-fs: Session workspace is not a directory')
   const resolved = await fs.resolve(path, { cwd, signal: call.signal })
   if (!allowOutside && !fs.contains(root, resolved)) throw new FsError(`path outside workspace: ${path}`, 'FS_SANDBOX_DENIED')
-  return resolved
+  return { root, resolved }
+}
+
+async function target(fs: FileSystemOperations, call: NativeToolExecution, path: string, allowOutside = false): Promise<FsTarget> {
+  return (await workspaceTarget(fs, call, path, allowOutside)).resolved
 }
 
 function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCaps): NativeValueToolContribution {
@@ -273,9 +279,9 @@ function writeTool(context: NativeContext, fs: FileSystemOperations): NativeValu
     async execute(call) {
       const fields = argumentsObject(call.arguments, ['file_path', 'content', 'sandbox_permissions', 'justification'])
       const input = parseWriteArgs({ file_path: requiredString(fields.file_path, 'file_path'), content: requiredString(fields.content, 'content') })
+      const { root, resolved } = await workspaceTarget(fs, call, input.filePath, fs.sandboxMode !== undefined)
       const sandboxPolicy = await mutationPolicy(context, fs, call, escalationArgs(fields),
-        'Writing a file changes the selected workspace.')
-      const resolved = await target(fs, call, input.filePath, fs.sandboxMode !== undefined)
+        'Writing a file changes the selected workspace.', { cwdKey: root.targetKey, targetKey: resolved.targetKey })
       let outcome
       try {
         const intent = await context.events.waterfall(context.scope, 'fs/write-intent', (): FsWriteIntent | undefined => undefined,
@@ -316,9 +322,9 @@ function editTool(context: NativeContext, fs: FileSystemOperations): NativeValue
         new_string: requiredString(fields.new_string, 'new_string'),
         ...fields.replace_all === undefined ? {} : { replace_all: fields.replace_all },
       })
+      const { root, resolved } = await workspaceTarget(fs, call, input.filePath, fs.sandboxMode !== undefined)
       const sandboxPolicy = await mutationPolicy(context, fs, call, escalationArgs(fields),
-        'Editing a file changes the selected workspace.')
-      const resolved = await target(fs, call, input.filePath, fs.sandboxMode !== undefined)
+        'Editing a file changes the selected workspace.', { cwdKey: root.targetKey, targetKey: resolved.targetKey })
       let outcome
       try {
         const intent = await context.events.waterfall(context.scope, 'fs/edit-intent', () => undefined, resolved, actor(call))

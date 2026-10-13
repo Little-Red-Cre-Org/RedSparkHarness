@@ -25,6 +25,8 @@ kind: "package-reference"
 
 Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
 
+操作所有者只有在身份对应实际生效 cwd 与执行所用精确解析目标时，才可向普通 `authorize` 传入 `sessionContext: { cwdKey, targetKey }`。注册表绑定冻结且已验证的参数，应用负责匹配与持久化。缺失或不完整的上下文不能宣告可记住的审批。`requestApproval` 始终丢弃可复用上下文，仅用于一次沙箱升级；委派调用不会获得可复用候选。
+
 `captureModelSnapshot()` 与 `captureProgramSnapshot()` 将 schema 和执行权绑定到精确注册。`includesRegistration()` 按捕获时的 disposer identity 检查注册。消费方会对模型 schema 或 PTC bindings 所用的同一快照执行可见性检查与调用；同名替代注册不会被视为已捕获注册。空 program snapshot 表示明确的空 binding 集合；缺少 program snapshot 则表示该执行没有捕获 PTC 路径。
 
 Engine 外部操作调用会延迟 `acceptResult()`，直到完整工具结果事件持久化。broker 也记录已接受的 settlement 后，`readAcceptedImages()` 才通过捕获的 Native 附件服务解析该结果及其 settlement contexts 中的图片引用；它不接受调用方提供的引用，并返回已验证的存储字节。

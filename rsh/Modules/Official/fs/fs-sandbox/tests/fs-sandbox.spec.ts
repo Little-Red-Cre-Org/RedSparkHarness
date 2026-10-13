@@ -154,16 +154,12 @@ describe('workspace-write containment', () => {
     expect(await readFile(path, 'utf8')).toBe('changed')
   })
 
-  it('mutates the freshly checked identity, not a stale outside targetKey (TOCTOU direction)', async () => {
-    // A target whose displayPath is inside the workspace but whose targetKey is
-    // a STALE outside path — as if an ancestor symlink pointed out at the tool's
-    // resolve() and was swapped in before the write. The fence re-resolves
-    // displayPath (now inside) AND delegates with that fresh target, so the byte
-    // lands inside and the stale outside path is never written.
+  it.each([{ content: 'inside' }])('rejects changed identity despite a writable fresh path ($content)', async ({ content }) => {
+    // Moving a previously outside alias inside must not substitute a different target for an admitted operation.
     const insidePath = join(workspace, 'landed.txt')
     const staleTarget: FsTarget = { displayPath: insidePath, targetKey: FsTargetKey(join(outside, 'escaped.txt')) }
-    await fs.writeText(staleTarget, 'inside')
-    expect(await readFile(insidePath, 'utf8')).toBe('inside')
+    await expect(fs.writeText(staleTarget, content)).rejects.toMatchObject({ code: 'FS_STALE_VERSION' })
+    expect(existsSync(insidePath)).toBe(false)
     expect(existsSync(join(outside, 'escaped.txt'))).toBe(false)
   })
 

@@ -168,7 +168,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }
 ```
 
-来源：[`rsh/Engine/core/approval-definition/src/index.ts:99`](../Engine/core/approval-definition/src/index.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:118`](../Engine/core/approval-definition/src/index.ts)
 
 ### `assistant/*`
 
@@ -557,7 +557,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[ToolCallId](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/approval-definition/src/index.ts:103`](../Engine/core/approval-definition/src/index.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:122`](../Engine/core/approval-definition/src/index.ts)
 
 <a id="native-approvaldecided--log-only"></a>
 
@@ -569,10 +569,11 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
   id: NativeApprovalRequestId
   policy: NativeApprovalPolicy
   outcome: NativeApprovalOutcome
+  sessionGrant?: NativeApprovalSessionGrant
 }
 ```
 
-来源：[`rsh/Engine/core/approval-definition/src/index.ts:110`](../Engine/core/approval-definition/src/index.ts)
+来源：[`rsh/Engine/core/approval-definition/src/index.ts:129`](../Engine/core/approval-definition/src/index.ts)
 
 ### `permission/*`
 

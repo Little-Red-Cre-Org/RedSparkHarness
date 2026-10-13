@@ -25,6 +25,8 @@ kind: "package-reference"
 
 服务会返回传入的 id、策略与封闭 outcome，但不写入 Session。消费应用先持久记录 `native-approval/asked`，再调用服务；获准操作执行前，还会持久记录匹配的 `native-approval/decided`。原生 headless 为固定写入和受保护的原生工具贡献提供该应用路径。
 
+对于应用准入的精确范围，回答者可以返回 `{ outcome: 'allowed-once', remember: 'session' }`。服务将该已准入授权作为决定元数据返回，不自行定义范围或写入存储。已经匹配的持久授权在取消与 `never` 检查之后返回 `allowed-once`，不再调用回答者。没有已准入范围时，请求记住的回答会被拒绝。
+
 <a id="model-experience"></a>
 ## 模型体验
 
@@ -39,7 +41,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 
 - Provider 没有内置终端应答者、浏览器投影或外部协议传输。
-- 决定是一次性的；没有已记住的授权、规则存储或撤销记录。
+- 消费方应用保存精确 Session 授权；此 Provider 不拥有规则存储或撤销记录。
 - Provider 不拥有 Session 持久化、工具 schema 或工具结果渲染。
 
 不发布 invariant companion，因为在应用写入审计对之前，策略决定没有独立的持久化观测。

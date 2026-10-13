@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalAnswererRequest, NativeApprovalAnswererResult } from '@deepseek-ai/dsh-approval-definition'
 import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'
@@ -64,12 +64,13 @@ export class NativeWebHumanInteraction {
 
   /** @param request - exact Provider-admitted approval.
    * @param feed - owning admitted turn's presentation stream.
-   * @returns one-shot verdict after presentation removal.
+   * @returns one-call verdict or a request to remember the Provider-admitted Session scope, after presentation removal.
    */
-  async approval(request: NativeApprovalAnswererRequest, feed: NativeSessionFeed): Promise<NativeApprovalOutcome> {
+  async approval(request: NativeApprovalAnswererRequest, feed: NativeSessionFeed): Promise<NativeApprovalAnswererResult> {
     return await this.ask(request.agent, { kind: 'approval', id: brandString<NativeWebHumanId>(randomUUID()),
-      toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason } },
-    request.signal, feed, value => value) as NativeApprovalOutcome
+      toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
+      ...request.sessionGrant === undefined ? {} : { canAllowSession: true } },
+    request.signal, feed, value => value) as NativeApprovalAnswererResult
   }
 
   /** @param request - exact root owner's questions and merged Provider cancellation.
@@ -93,8 +94,9 @@ export class NativeWebHumanInteraction {
     const answer = value as Record<string, unknown>
     if (entry.prompt.kind === 'approval') {
       if (Object.keys(answer).some(key => !['kind', 'outcome'].includes(key)) || answer.kind !== 'approval'
-        || answer.outcome !== 'allowed-once' && answer.outcome !== 'rejected') throw new TypeError('native Web approval requires an allow or reject verdict')
-      entry.finish(answer.outcome)
+        || answer.outcome !== 'allowed-once' && answer.outcome !== 'allowed-session' && answer.outcome !== 'rejected') throw new TypeError('native Web approval requires an allow or reject verdict')
+      if (answer.outcome === 'allowed-session' && entry.prompt.canAllowSession !== true) throw new TypeError('native Web approval has no reusable Session scope')
+      entry.finish(answer.outcome === 'allowed-session' ? { outcome: 'allowed-once', remember: 'session' } : answer.outcome)
     } else {
       if (answer.kind === 'cancel-questions' && Object.keys(answer).length === 1) {
         entry.reject(new UserQuestionError('the user cancelled ask_user_question', 'ASK_CANCELLED'))

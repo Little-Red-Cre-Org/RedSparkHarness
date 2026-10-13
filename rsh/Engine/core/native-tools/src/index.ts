@@ -79,6 +79,11 @@ export interface NativeToolApprovalRequest {
   readonly callId: ToolCallId
   readonly toolName: string
   readonly reason?: string
+  /** Frozen validated parameters and complete tool-owned context, only for ordinary root authorization. */
+  readonly sessionGrant?: {
+    readonly parameters: JsonValue
+    readonly context: NativeToolApprovalContext
+  }
   readonly signal: AbortSignal
 }
 
@@ -101,10 +106,20 @@ export interface NativeToolApprovalAuthority {
 /** Closed answer returned to a tool that handles its own approval outcome. */
 export type NativeToolApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
 
+/** Complete resolved facts supplied by an operation owner; no borrowed paths or reason text. */
+export interface NativeToolApprovalContext {
+  /** Stable filesystem target identity of the effective execution cwd. */
+  readonly cwdKey: string
+  /** Stable identity of the exact resolved target used for execution. */
+  readonly targetKey: string
+}
+
 /** Optional pre-execution approval requested by one tool contribution. */
 export interface NativeToolApproval {
   /** Human-readable explanation for the answerer and durable audit. */
   readonly reason?: string
+  /** Omit unless the tool can reuse the same resolved target and supply complete execution facts. */
+  readonly sessionContext?: NativeToolApprovalContext
 }
 
 /** Model-visible outcome to append once to the authoritative Session. */
@@ -939,16 +954,19 @@ export class NativeToolRegistry {
     const owners = [...policies, ...wrappers]
     const signal = AbortSignal.any([call.signal, entry.controller.signal, ...owners.map(policy => policy.controller.signal)])
     const authority = call.approvalAuthority
-    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal): NativeToolApprovalRequest => ({
+    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal, ordinary: boolean): NativeToolApprovalRequest => ({
       agent: call.agent, session: call.session, callId: call.callId, toolName: call.name,
       ...approval.reason === undefined ? {} : { reason: approval.reason },
+      ...!ordinary || call.delegationContext !== undefined || approval.sessionContext === undefined ? {} : {
+        sessionGrant: { parameters: argumentsValue as JsonValue, context: Object.freeze({ ...approval.sessionContext }) },
+      },
       signal: AbortSignal.any([signal, requestedSignal]),
     })
     const admitted: NativeToolExecution = {
       ...call, arguments: deepFreeze(argumentsValue), signal,
       ...authority === undefined ? {} : {
-        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal)),
-        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal)),
+        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal, true)),
+        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal, false)),
       },
     }
     const completion = Promise.withResolvers<void>()

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-web-human-interaction.md
-2026-10-05-native-web-human-interaction.md: d558899bb839160ceca68a15dffd7297972a0631
-2026-10-05-native-web-human-interaction.zh.md: c9eedcea7f25a0f2e2ffd4d295004bd631a4c8bb
+2026-10-05-native-web-human-interaction.md: 210fd1d96af056043a072d6409af86d66fdd4281
+2026-10-05-native-web-human-interaction.zh.md: 836dd4078a17a967b0be608b577b722f40bed122
