@@ -83,7 +83,7 @@ driver 将文本和图像提示块转换为 ACP，然后要求子进程声明并
 
 子进程只接收父级授权的 builtin 文件工具。只有当精确子进程权限请求匹配父级 approval identity、父级要求审批、父级 policy 为 `workspace-write` 且该 builtin 已获准时，才保留 `write_file`；否则子进程使用 `deny` 权限模式且不含写入工具。获准写入时，规范化后的 `workspaceWriteRoot` 必须等于父级 sandbox workspace root。launcher 只在该写入权限获准时派生 `workspace-write` child policy，否则派生 `read-only`，再将其交给共享的 `dsh-sandbox-local` ProcessSandbox。child 保留后端报告的 `full` 或 `partial` 强制执行级别。该级别描述文件操作强制执行，不代表完整的进程隔离。Windows ACL 后端报告 `partial`：Everyone 访问与 NTFS 硬链接别名仍是相关限制，且后端不限制读取、网络访问或进程可见性。若无可用后端或 runner 失败，启动会失败且不会重试为不受限运行。详见 [sandbox-local 策略与强制执行](../../sandbox/sandbox-local/README.zh.md) 和 [Windows ACL 限制](../../sandbox/sandbox-windows-acl/README.zh.md)。
 
-关闭过程会先关闭 ACP 与 child stdio 工作，并等待整个受管进程范围结算，然后 `dispose()` 才移除私有 DSH_HOME。本包不发布 `./invariant` 导出，因为它没有可比较的独立注册表或持久身份：Native Subagent 拥有准入与父 Session 写入，launcher runtime 拥有进程清理。
+关闭过程会先关闭 ACP 与 child stdio 工作，并等待整个受管进程范围结算，然后 `dispose()` 才移除私有 DSH_HOME。本包不发布 runtime invariant companion，因为它没有可独立比较的注册表或持久身份：Native Subagent 负责准入和父 Session 写入，launcher runtime 负责进程清理，因此本包不导出 `./invariant`。
 
 </details>
 
