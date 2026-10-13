@@ -61,13 +61,17 @@ export interface TerminalInteraction {
   selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState>
   /** @returns command names visible to the selected Agent. */
   commands(): Promise<readonly CommandDescriptor[]>
-  /** @param line - complete human command input. @returns settled command result or undefined when unavailable. */
-  dispatchCommand(line: string): Promise<CommandExecution | undefined>
-  /** @param name - parsed slash name.
+  /**
+   * Resolve a slash command first, then admit a matching user-invocable skill at its original queue position.
+   * @param line - complete human command input.
+   * @param name - parsed slash name, when the input has one.
    * @param message - original identified input.
-   * @returns whether it was queued, unavailable, or cancelled.
+   * @returns the registered command result, skill admission, unknown notice, or cancellation.
    */
-  dispatchSkill(name: string, message: UserMessage): Promise<boolean | undefined>
+  dispatchSlash(line: string, name: string | undefined, message: UserMessage): Promise<{
+    readonly kind: 'command'
+    readonly execution: CommandExecution
+  } | { readonly kind: 'skill' | 'unknown' } | undefined>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
@@ -212,12 +216,11 @@ export function TerminalView({ interaction, locale, model, background }: {
     if (text.startsWith('/')) {
       void (async () => {
         try {
-          const execution = await interaction.dispatchCommand(value)
-          if (execution !== undefined) { setNotice(execution.result.text ?? copy.commandCompleted); return }
           const command = parseCommand(text)
-          const routed = command === undefined ? false : await interaction.dispatchSkill(command.name, createInput(text))
+          const routed = await interaction.dispatchSlash(value, command?.name, createInput(text))
           if (routed === undefined) return
-          if (routed) {
+          if (routed.kind === 'command') { setNotice(routed.execution.result.text ?? copy.commandCompleted); return }
+          if (routed.kind === 'skill') {
             setScrollLines(0); setLast(text); setNotice('')
           } else setNotice(`${copy.unknownCommand}: ${text}`)
         } catch (error: unknown) { setNotice(String(error)) }

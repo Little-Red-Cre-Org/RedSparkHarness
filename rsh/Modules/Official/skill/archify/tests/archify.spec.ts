@@ -17,6 +17,17 @@ import * as ToolSkill from '@deepseek-ai/dsh-tool-skill'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { describe, expect, it } from 'vitest'
 import * as Archify from '@deepseek-ai/dsh-archify'
+import { ARCHIFY_SKILL_DIRECTORY_ENV } from '../src/shared.ts'
+import { NativeHost, NativeScope, resolveInstallation } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as nativeArchifyPlugin } from '@deepseek-ai/dsh-archify/native'
+import { plugin as nativeSkillRegistryPlugin } from '@deepseek-ai/dsh-skill/native'
+import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
+import { plugin as nativeShellEnvPlugin } from '@deepseek-ai/dsh-shell-env/native'
+import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
+import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import { plugin as nativeRequestContextPlugin } from '@deepseek-ai/dsh-request-context/native'
+import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
 
 const OFF = ReasoningEffortId('off')
 const HIGH = ReasoningEffortId('high')
@@ -98,6 +109,57 @@ function waitForIdle(ctx: Context, agent: Agent): Promise<void> {
 }
 
 describe('dsh-archify', () => {
+  it('withdraws its Native Skill, shell environment, and request context with the installation', async () => {
+    const scope = new NativeScope()
+    const requests = {
+      skills: { plugin: nativeSkillRegistryPlugin, scope, config: undefined },
+      shellEnv: { plugin: nativeShellEnvPlugin, scope, config: undefined },
+      requestContexts: { plugin: nativeRequestContextPlugin, scope, config: undefined },
+      archify: { plugin: nativeArchifyPlugin, scope, config: undefined },
+    }
+    let skills: NativeSkills | undefined
+    let shellEnv: ShellEnvironment<NativeToolExecution> | undefined
+    let requestContexts: NativeRequestContexts | undefined
+    const observer: NativePlugin = {
+      apiVersion: 1, name: 'archify-disposal-observer', targets: ['host'],
+      requires: ['skills', 'shellEnv', 'requestContexts'], provides: [],
+      resolve: () => (context) => {
+        skills = context.require('skills')
+        shellEnv = context.require('shellEnv')
+        requestContexts = context.require('requestContexts')
+      },
+    }
+    const host = new NativeHost(resolveInstallation([
+      ...Object.values(requests), { plugin: observer, scope, config: undefined },
+    ], 'host'))
+    try {
+      await host.start()
+      if (skills === undefined || shellEnv === undefined || requestContexts === undefined) {
+        throw new Error('Native Archify disposal observer was not activated')
+      }
+      expect(await skills.list({ scope, cwd: '/workspace' })).toEqual([expect.objectContaining({
+        name: 'archify', provider: 'archify', invocation: { modelInvocable: false, userInvocable: true },
+      })])
+      expect(shellEnv.list()).toContainEqual(expect.objectContaining({
+        key: ARCHIFY_SKILL_DIRECTORY_ENV, contributor: 'archify',
+      }))
+      expect(requestContexts.hasProviders(scope)).toBe(true)
+
+      await host.remove(requests.archify)
+
+      expect(host.signal.aborted).toBe(false)
+      expect(host.diagnostics().find(item => item.name === nativeArchifyPlugin.name)?.state).toBe('disposed')
+      expect(host.diagnostics().filter(item => item.name !== nativeArchifyPlugin.name).every(item => item.state === 'ready')).toBe(true)
+      expect(await skills.list({ scope, cwd: '/workspace' })).not.toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'archify', provider: 'archify' }),
+      ]))
+      expect(shellEnv.list()).not.toContainEqual(expect.objectContaining({
+        key: ARCHIFY_SKILL_DIRECTORY_ENV, contributor: 'archify',
+      }))
+      expect(requestContexts.hasProviders(scope)).toBe(false)
+    } finally { await host.stop() }
+  })
+
   it('provides one hidden, user-invocable upstream Skill body on demand', async () => {
     const ctx = await routingContext()
     try {

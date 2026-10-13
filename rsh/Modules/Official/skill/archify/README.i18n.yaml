@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Modules/Official/skill/archify/README.md
-README.md: f9bac2a035543b79cd2adf61d9e99d3e9a87929f
-README.zh.md: b46d816dbc6676eafec219ee921425fde91214ef
+README.md: 55e286a66274365ae4207a981f880826e1367b49
+README.zh.md: 9a2d76a6324c17e327907fda84e98db41d048640

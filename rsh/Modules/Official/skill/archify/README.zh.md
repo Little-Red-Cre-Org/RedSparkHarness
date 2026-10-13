@@ -9,9 +9,9 @@ kind: "package-reference"
 
 ## 概述
 
-agent（智能体）可以把明确的架构、工作流、时序、数据流与生命周期图需求转化为经过校验的 Archify 交付物，同时不在普通 skill 目录中暴露 Archify。本包把有上限的直接用户文本路由与固定版本的上游 Skill、CLI 结合起来，再沿用已有 shell、文件系统与 `present` 表面完成工作和交付。普通请求不会读取 Archify 指令，也不会增加模型上下文。Cordis profile 中，用户希望刻意加载同一套指令时使用 `/archify`。
+Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固定版本 Skill 和 CLI。自动加载要求动作词与图表词在配置的完整观察上限内同时命中；超限输入不会自动路由。Cordis profile 可用 `/archify` 手动加载。
 
-Cordis profile 从包根入口加载，并由该入口导出 `Config`。本包还通过 `./native` 导出无 Cordis 依赖的 Host 插件；两个入口使用相同配置字段与规范化逻辑、提供方、有上限的匹配器和资源指引。Native 插件需要 `skills`、`shellEnv` 与 `requestContexts`。
+包根入口仍是 Cordis 兼容入口并导出 `Config`；Native Host composition 必须显式安装 `./native`，导出入口本身不改变默认配置。两个入口共用路由与资源指引；Native 需要 `skills`、`shellEnv` 和 `requestContexts`。
 
 ## 目录
 

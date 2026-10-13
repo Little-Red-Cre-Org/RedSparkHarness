@@ -8,6 +8,7 @@ import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { TerminalController, type TerminalExecution } from '../src/controller.ts'
 import { resolveNativeTuiConfig } from '../src/config.ts'
 import type { NativeAdmittedUserQuestionRequest } from '@deepseek-ai/dsh-user-questions/native'
+import { CommandId } from '@deepseek-ai/dsh-commands/native'
 
 /** Exercise admission, cleanup barriers and restore without allocating a second Session writer.
  * @param workspace - existing fixture workspace for explicit configuration validation.
@@ -113,7 +114,7 @@ export async function controllerProof(workspace: string): Promise<void> {
       let handledHuman: Promise<void> | undefined
       try {
         await controller.initialize([], new AbortController().signal)
-        const cancelled = controller.dispatchSkill('archify', message)
+        const cancelled = controller.dispatchSlash('/archify diagram', 'archify', message)
         expect((await entered[0]!.promise).aborted).toBe(false)
         controller.cancel()
         expect((await entered[0]!.promise).aborted).toBe(true)
@@ -121,7 +122,7 @@ export async function controllerProof(workspace: string): Promise<void> {
         await expect(cancelled).resolves.toBeUndefined()
         expect(controller.snapshot().queued).toBe(0)
 
-        const humanInterrupted = controller.dispatchSkill('archify', message)
+        const humanInterrupted = controller.dispatchSlash('/archify diagram', 'archify', message)
         const humanSignal = new AbortController()
         human = controller.human.questions({ questions: [{ id: 'skill-lookup', question: 'Continue?' }],
           signal: humanSignal.signal } as NativeAdmittedUserQuestionRequest)
@@ -136,7 +137,7 @@ export async function controllerProof(workspace: string): Promise<void> {
         await expect(humanInterrupted).resolves.toBeUndefined()
         expect(controller.snapshot().queued).toBe(0)
 
-        const closed = controller.dispatchSkill('archify', message)
+        const closed = controller.dispatchSlash('/archify diagram', 'archify', message)
         await entered[2]!.promise
         let closeResolved = false
         const closing = controller.close().then(() => { closeResolved = true })
@@ -150,6 +151,108 @@ export async function controllerProof(workspace: string): Promise<void> {
         for (const release of releases) release.resolve(undefined)
         await controller.close()
         await handledHuman
+      }
+    }
+    {
+      const routeSettings = resolveNativeTuiConfig({ ...config, maxQueuedInputs: 3 })
+      const owner = new AbortController()
+      const commandReleases = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+      const commandEntered = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+      const skillReleases = [Promise.withResolvers<undefined>(), Promise.withResolvers<undefined>()]
+      const skillEntered = [Promise.withResolvers<AbortSignal>(), Promise.withResolvers<AbortSignal>()]
+      const afterMissingEntered = Promise.withResolvers<undefined>()
+      const afterMissingRelease = Promise.withResolvers<undefined>()
+      const activeTurnEntered = Promise.withResolvers<undefined>()
+      const activeTurnRelease = Promise.withResolvers<undefined>()
+      const turns: string[] = []
+      let commandCalls = 0
+      let skillCalls = 0
+      const input = (text: string) => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
+      const controller = new TerminalController({
+        open: async () => undefined, history: async () => [], sessions: async () => [],
+        commands: {
+          list: async () => [],
+          dispatch: async (_id, line) => {
+            if (line === '/pause') return { commandId: CommandId('pause'), result: { kind: 'success', text: 'Paused' } }
+            if (line === '/missing') return undefined
+            const index = commandCalls++
+            commandEntered[index]!.resolve(undefined)
+            await commandReleases[index]!.promise
+            return undefined
+          },
+        },
+        skills: { list: async (_id, signal) => {
+          const index = skillCalls++
+          if (index < skillEntered.length) {
+            skillEntered[index]!.resolve(signal)
+            await skillReleases[index]!.promise
+          }
+          return [{ name: 'archify', description: 'Diagram authoring', invocation: { modelInvocable: false, userInvocable: true },
+            source: 'bundled', provider: 'archify' }]
+        } },
+        turn: async (request) => {
+          const text = request.message.content.filter(block => block.type === 'text').map(block => block.text).join('')
+          turns.push(text)
+          if (text === 'after missing') {
+            afterMissingEntered.resolve(undefined)
+            await afterMissingRelease.promise
+          }
+          if (text === 'active') {
+            activeTurnEntered.resolve(undefined)
+            await activeTurnRelease.promise
+          }
+          return { exitCode: 0 }
+        },
+      }, owner.signal, routeSettings, SessionId('controller-skill-fifo'))
+      const launch = new AbortController()
+      try {
+        await controller.initialize([], launch.signal)
+        const first = controller.dispatchSlash('/archify first', 'archify', input('/archify first'))
+        await commandEntered[0]!.promise
+        controller.submit(input('between'))
+        const second = controller.dispatchSlash('/archify second', 'archify', input('/archify second'))
+        await commandEntered[1]!.promise
+        commandReleases[1]!.resolve(undefined)
+        await skillEntered[0]!.promise
+        skillReleases[0]!.resolve(undefined)
+        await expect(second).resolves.toEqual({ kind: 'skill' })
+        expect(turns).toEqual([])
+        commandReleases[0]!.resolve(undefined)
+        await skillEntered[1]!.promise
+        skillReleases[1]!.resolve(undefined)
+        await expect(first).resolves.toEqual({ kind: 'skill' })
+        await controller.settle()
+        expect(turns).toEqual(['/archify first', 'between', '/archify second'])
+        await expect(controller.dispatchSlash('/missing', 'missing', input('/missing'))).resolves.toEqual({ kind: 'unknown' })
+        controller.submit(input('after missing'))
+        let settled = false
+        const settling = controller.settle().then(() => { settled = true })
+        await afterMissingEntered.promise
+        await Promise.resolve()
+        expect(settled).toBe(false)
+        afterMissingRelease.resolve(undefined)
+        await settling
+        expect(turns).toEqual(['/archify first', 'between', '/archify second', 'after missing'])
+
+        controller.submit(input('active'))
+        await activeTurnEntered.promise
+        controller.submit(input('queued one'))
+        controller.submit(input('queued two'))
+        controller.submit(input('queued three'))
+        expect(controller.snapshot().queued).toBe(3)
+        await expect(controller.dispatchSlash('/pause', 'pause', input('/pause'))).resolves.toMatchObject({
+          kind: 'command', execution: { result: { kind: 'success', text: 'Paused' } },
+        })
+        expect(turns).toEqual(['/archify first', 'between', '/archify second', 'after missing', 'active'])
+        activeTurnRelease.resolve(undefined)
+        await controller.settle()
+        expect(turns.slice(5)).toEqual(['queued one', 'queued two', 'queued three'])
+      } finally {
+        for (const release of commandReleases) release.resolve(undefined)
+        for (const release of skillReleases) release.resolve(undefined)
+        afterMissingRelease.resolve(undefined)
+        activeTurnRelease.resolve(undefined)
+        await controller.close()
       }
     }
     const launch = new AbortController()

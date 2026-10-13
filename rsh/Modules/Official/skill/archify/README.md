@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Agents can turn explicit architecture, workflow, sequence, data-flow, and lifecycle diagram requests into validated Archify deliverables without exposing Archify in ordinary skill catalogs. The package combines a bounded direct-user-text route with the pinned upstream Skill and CLI, then uses existing shell, filesystem, and `present` surfaces for the work and delivery. Normal requests read no Archify instructions and add no model context. In Cordis profiles, use `/archify` when a person wants to load the same instructions deliberately.
+Archify routes clear direct-user requests for architecture and workflow diagrams to its hidden pinned Skill and CLI. Automatic loading requires action and diagram phrases within the configured observation budget; over-budget text disables auto-routing. Cordis users can load it manually with `/archify`.
 
-The Cordis profile entry is the package root and exposes `Config`. The package also exports a Cordis-free Host plugin at `./native`; both entries use the same configuration fields and normalization, provider, bounded matcher, and resource guidance. The Native plugin requires `skills`, `shellEnv`, and `requestContexts`.
+The package root remains the Cordis compatibility entry and exposes `Config`. Native Host compositions must install `./native` explicitly; exporting it does not change defaults. Both entries share routing and resource guidance, and Native requires `skills`, `shellEnv`, and `requestContexts`.
 
 ## Table of Contents
 
