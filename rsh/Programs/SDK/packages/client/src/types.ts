@@ -7,6 +7,8 @@ export type {
   HarnessNotification,
   NativeDeepSeekHarnessOptions,
   NotificationFilter,
+  NativeExternalOperationEvent,
+  NativeExternalOperationSessionEvent,
   RunResult,
   SdkApprovalOutcome,
   SdkApprovalHandler,

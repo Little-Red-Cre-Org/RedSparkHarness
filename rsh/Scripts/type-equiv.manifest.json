@@ -1562,6 +1562,11 @@
       "source": "rsh/Modules/Official/subagent/acp-child/src/runtime.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeExternalOperationSessionEvent",
+      "source": "rsh/Engine/subagent/sdk-runtime/src/types.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/web.md",
       "symbol": "WebSearchRequest",
       "source": "rsh/Modules/Official/web/web/src/types.ts"

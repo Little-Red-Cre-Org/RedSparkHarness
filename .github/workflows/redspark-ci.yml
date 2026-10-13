@@ -70,6 +70,7 @@ jobs:
           rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
           && pnpm exec vitest run --config vitest.snapshot.config.ts
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
+          snapshots/native-sdk/external-operation.snapshot.ts
       - name: SDK child bwrap mount regressions
         if: runner.os == 'Linux'
         run: >-
@@ -83,7 +84,10 @@ jobs:
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
           rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
       - name: Python SDK workspace instructions replay
-        run: pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1 snapshots/native-sdk/scheduled-root-origin.snapshot.ts
+        run: >-
+          pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1
+          snapshots/native-sdk/scheduled-root-origin.snapshot.ts
+          snapshots/native-sdk/external-operation.snapshot.ts
         env:
           DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions

@@ -137,4 +137,4 @@ Headless 为 external Responses capture 绑定当前已准入的模型步骤。�
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
 - 此组合导入 Cordis-free 的 Session 与持久化 `./native` 入口，且不创建 Cordis Context。相关包为 Cordis 兼容入口保留适配器，并将 Cordis 设为可选 peer dependency。
 
-其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务；需要 Workspace 路由的 Program 也会传入其 Workspace 注册表。
+其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务；需要 Workspace 路由的 Program 也会传入其 Workspace 注册表。若调用方的 Context 将 `attachments` 声明为必需服务，就显式传入该服务；否则工厂从 Context 读取可选服务。

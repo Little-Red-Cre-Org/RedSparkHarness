@@ -27,6 +27,9 @@
       "path": "../sdk-protocol"
     },
     {
+      "path": "../native-subagent"
+    },
+    {
       "path": "../../../Modules/Official/sandbox/sandbox"
     }
   ]

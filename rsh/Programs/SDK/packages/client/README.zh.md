@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 启动 Harness runtime 并驱动 Agent 轮次。`DeepSeekHarness` 可打开 Session、发送文本或图像提示词、推送通知流，并在 Agent 空闲后返回最后提交的 root 响应；`HarnessClient` 提供底层协议请求与订阅。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可通过 `dshBin` 指定。客户端跨多次运行持有子进程，并在 `close()` 或 `await using` 时回收；调用方可选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 启动 Harness runtime 并驱动 Agent 轮次。`DeepSeekHarness` 可打开 Session、发送文本或图像提示词、推送通知流，并在 Agent 空闲后返回最后提交的 root 响应；`HarnessClient` 提供底层协议请求与订阅。`RunResult.events` 保留根 Session 事件，包括 `subagent/external-operation` 的所有字段；导出的 `NativeExternalOperationEvent` 引用 canonical Engine union，`NativeExternalOperationSessionEvent` 增加对应的 Session envelope。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可通过 `dshBin` 指定。客户端跨多次运行持有子进程，并在 `close()` 或 `await using` 时回收；调用方可选择 profile 和启动设置。
 
 ## 目录
 
@@ -89,7 +89,7 @@ console.log(result.finalResponse)
 
 ### 自有活动流程
 
-一次运行会订阅会话树、把提示词排入队列，等待提示词的消息 id 出现在持久的 `agent/inbox/spliced` 回执中，然后持续收集通知，直到整个 agent 报告 `idle`。`finalResponse` 从收集到的事件中最后一条 `assistant/message` 派生。传输丢失、超时与协议违例会使本次运行被拒绝；模型结果仍可在事件流中观察，但不会归属于某一输入。
+一次运行会订阅会话树、把提示词排入队列，等待提示词的消息 id 出现在持久的 `agent/inbox/spliced` 回执中，然后持续收集通知，直到整个 agent 报告 `idle`。`finalResponse` 从收集到的事件中最后一条 `assistant/message` 派生。根 Session 的 `subagent/external-operation` 事件会在 `RunResult.events` 与匹配的 `session.event` 通知中保留 canonical discriminant 和 payload 字段。传输丢失、超时与协议违例会使本次运行被拒绝；模型结果仍可在事件流中观察，但不会归属于某一输入。
 
 ### 错误与关闭
 

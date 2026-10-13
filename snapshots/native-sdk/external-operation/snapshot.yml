@@ -1,0 +1,10 @@
+version: 1
+scenario: external-operation
+profile: native-sdk
+composition: native-sdk-external-operation
+recording: authored
+header:
+  class: native-sdk-external-operation
+  pin: true
+workspace:
+  final: true

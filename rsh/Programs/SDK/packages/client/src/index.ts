@@ -26,6 +26,8 @@ export type {
   HarnessClientOptions,
   HarnessNotification,
   NotificationFilter,
+  NativeExternalOperationEvent,
+  NativeExternalOperationSessionEvent,
   RunResult,
   SdkApprovalOutcome,
   SdkApprovalHandler,

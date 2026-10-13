@@ -130,6 +130,7 @@
     "snapshots/native-headless/web-tools-native.snapshot.ts",
     "snapshots/native-sdk/goal-control.snapshot.ts",
     "snapshots/native-sdk/scheduled-root-origin.snapshot.ts",
+    "snapshots/native-sdk/external-operation.snapshot.ts",
     "snapshots/native-acp/external-child.snapshot.ts",
     "rsh/Programs/Desktop/scripts/**/*.ts",
     "rsh/Programs/Desktop/tests/**/*.ts",

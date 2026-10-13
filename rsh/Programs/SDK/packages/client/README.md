@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-client` lets TypeScript programs launch a Harness runtime and drive Agent turns over stdio JSON-RPC. `DeepSeekHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent becomes idle; `HarnessClient` exposes protocol requests and subscriptions. The client resolves the same-version `@deepseek-ai/dsh` executable by default, or uses an explicit `dshBin`. It owns the child process across runs and reaps it on `close()` or `await using`, while callers choose the profile and launch settings.
+`dsh-sdk-client` lets TypeScript programs launch a Harness runtime and drive Agent turns over stdio JSON-RPC. `DeepSeekHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent becomes idle; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves root Session events, including all fields of `subagent/external-operation`; the exported `NativeExternalOperationEvent` is the canonical Engine union and `NativeExternalOperationSessionEvent` adds its Session envelope. The client resolves the same-version `@deepseek-ai/dsh` executable by default, or uses an explicit `dshBin`. It owns the child process across runs and reaps it on `close()` or `await using`, while callers choose the profile and launch settings.
 
 ## Table of Contents
 
@@ -90,7 +90,7 @@ The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `Har
 
 ### Owned activity flow
 
-A run subscribes to the session tree, queues the prompt, waits until the prompt's message id appears in a durable `agent/inbox/spliced` receipt, then collects notifications until the whole agent reports `idle`. `finalResponse` is derived from the last `assistant/message` in the collected events. Transport loss, timeout, and protocol violations reject the run; model outcomes remain observable in the event stream without being attributed to one input.
+A run subscribes to the session tree, queues the prompt, waits until the prompt's message id appears in a durable `agent/inbox/spliced` receipt, then collects notifications until the whole agent reports `idle`. `finalResponse` is derived from the last `assistant/message` in the collected events. Root `subagent/external-operation` events keep their canonical discriminant and payload fields in `RunResult.events` and matching `session.event` notifications. Transport loss, timeout, and protocol violations reject the run; model outcomes remain observable in the event stream without being attributed to one input.
 
 ### Errors and teardown
 
