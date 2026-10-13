@@ -1,0 +1,20 @@
+{
+  "proof": "local real Native fs-sandbox backend; deterministic rebind window; no HTTP or model call",
+  "oldHead": "fe2d4a7fc5c6162e85d2ed99cdc9828aa17c407f",
+  "policy": "workspace-write",
+  "setup": "workspace/alias -> workspace/first; victim.txt missing in first and second",
+  "mutationWindow": "capture first target, rebind alias to second, invoke writeText with the original FsTarget and createIfAbsent",
+  "beforeRepair": {
+    "changedResolvedTarget": true,
+    "originalTargetCreated": false,
+    "reboundTargetContent": "APPROVED FIRST TARGET",
+    "operation": "create"
+  },
+  "afterRepair": {
+    "changedResolvedTarget": true,
+    "errorCode": "FS_STALE_VERSION",
+    "originalTargetCreated": false,
+    "reboundTargetCreated": false
+  },
+  "scope": "Shared Native/Cordis fence retains fresh confinement, rejects changed identity and returns the original target."
+}

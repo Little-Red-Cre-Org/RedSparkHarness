@@ -10,7 +10,8 @@ import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/n
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as tools } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as approval } from '@deepseek-ai/dsh-native-approval/native'
-import { plugin as filesystem } from '@deepseek-ai/dsh-fs-local/native'
+import { plugin as filesystem } from '@deepseek-ai/dsh-fs-sandbox/native'
+import { plugin as sandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as fsPolicy } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as fileTools } from '@deepseek-ai/dsh-tool-fs/native'
 import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
@@ -86,6 +87,7 @@ async function fixture(directory: string, cwd: string) {
     ...[agents, execution, modelExecution, tools, approval, fsPolicy, fileTools, model, carrier, workspaceRegistry, storageHub, capture]
       .map(plugin => ({ plugin, scope, config: undefined })),
     { plugin: filesystem, scope, config: { cwd } },
+    { plugin: sandboxPolicy, scope, config: { mode: 'workspace-write', workspaceRoot: cwd } },
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
     { plugin: storageJson, scope, config: { root: join(directory, 'domains') } },
     { plugin: storageDomain, scope, config: { backend: 'json' } },
@@ -171,17 +173,23 @@ it.each([{ content: 'Approved exact content.' }])('remembers only the complete f
     await writeFile(join(first, 'target.txt'), 'First.')
     await writeFile(join(second, 'target.txt'), 'Second.')
     await symlink(first, alias, process.platform === 'win32' ? 'junction' : 'dir')
-    const aliased = () => toolCallResponse(randomUUID(), 'write', { file_path: 'alias/target.txt', content })
-    await run(state, id, [toolCallResponse('observe-first', 'read', { file_path: 'alias/target.txt' }), aliased()], 'session')
+    const aliased = (callId: string) => toolCallResponse(callId, 'write', { file_path: 'alias/target.txt', content })
+    await run(state, id, [toolCallResponse('observe-first', 'read', { file_path: 'alias/target.txt' }), aliased('alias-first')], 'session')
     await unlink(alias)
     await symlink(second, alias, process.platform === 'win32' ? 'junction' : 'dir')
-    await run(state, id, [toolCallResponse('observe-second', 'read', { file_path: 'alias/target.txt' }), aliased()], 'session', async () => {
+    await run(state, id, [toolCallResponse('observe-second', 'read', { file_path: 'alias/target.txt' }), aliased('alias-rebound')], 'session', async () => {
       await unlink(alias)
       await symlink(first, alias, process.platform === 'win32' ? 'junction' : 'dir')
       await writeFile(join(first, 'target.txt'), 'Unapproved destination.')
     })
     expect(await readFile(join(first, 'target.txt'), 'utf8')).toBe('Unapproved destination.')
-    expect(await readFile(join(second, 'target.txt'), 'utf8')).toBe(content)
+    expect(await readFile(join(second, 'target.txt'), 'utf8')).toBe('Second.')
+    await run(state, id, [toolCallResponse('missing-rebound', 'write', { file_path: 'alias/missing.txt', content })], 'session', async () => {
+      await unlink(alias)
+      await symlink(second, alias, process.platform === 'win32' ? 'junction' : 'dir')
+    })
+    await expect(readFile(join(first, 'missing.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(join(second, 'missing.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
 
     let effectiveCwd = first
     let mode: 'ordinary' | 'missing' | 'incomplete' | 'escalation' = 'ordinary'
@@ -234,15 +242,19 @@ it.each([{ content: 'Approved exact content.' }])('remembers only the complete f
     const raw = (await state.client.history(id)).events
     const scopeKeys: string[] = []
     for (const event of raw) {
-      if (event.type === 'tool/result') expect(event.data.error).toBeUndefined()
+      if (event.type === 'tool/result') {
+        const callId = event.data.message.source.kind === 'tool' ? event.data.message.source.callId : undefined
+        if (callId === 'alias-rebound' || callId === 'missing-rebound') expect(event.data.error?.code).toBe('FS_STALE_VERSION')
+        else expect(event.data.error).toBeUndefined()
+      }
       if (event.type === 'native-approval/decided' && event.data.sessionGrant !== undefined) {
         expect(event.data.sessionGrant.sessionId).toBe(id)
         expect(event.data.sessionGrant.scopeKey).toMatch(/^[a-f0-9]{64}$/u)
         scopeKeys.push(event.data.sessionGrant.scopeKey)
       }
     }
-    expect(scopeKeys).toHaveLength(8)
-    expect(new Set(scopeKeys).size).toBe(8)
+    expect(scopeKeys).toHaveLength(9)
+    expect(new Set(scopeKeys).size).toBe(9)
   } finally {
     await state.close()
     await cleanup(directory)

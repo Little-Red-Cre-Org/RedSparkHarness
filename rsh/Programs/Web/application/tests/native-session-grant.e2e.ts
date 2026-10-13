@@ -45,16 +45,18 @@ it.each([{ content: 'Approved exact operation.' }])('reuses a remembered scope t
   mkdirSync(workspace)
   const shipped = shippedNativeProfileComposition(home, 'native-web')
   const selected = new Set(['app', 'session-controller', 'agents', 'session-execution', 'tools', 'model-execution',
-    'agent-presets', 'fs', 'storage', 'credentials', 'settings', 'storage-hub', 'storage-json', 'storage-domain', 'workspace', 'approval', 'policy', 'file-tools'])
+    'agent-presets', 'fs', 'sandbox-policy', 'storage', 'credentials', 'settings', 'storage-hub', 'storage-json',
+    'storage-domain', 'workspace', 'approval', 'policy', 'file-tools'])
   const rows = shipped.installations.filter(row => selected.has(row.id)).map((row) => {
     const config = row.id === 'app' ? { ...row.config as object, port: 0 }
       : row.id === 'session-controller' ? { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
         maxSteps: 3, builtinTools: false, maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100,
         maxFollowBufferBytes: 1000000, maxFollowers: 4, maxPendingHumanRequests: 2 }
         : row.id === 'fs' ? { cwd: workspace }
-          : row.id === 'credentials' ? { path: join(home, 'credentials.json') }
-            : row.id === 'storage' ? { root: sessionRoot, compression: 'none' } : row.config
-    return { ...row, plugin: row.id === 'fs' ? '@deepseek-ai/dsh-fs-local' : row.plugin,
+          : row.id === 'sandbox-policy' ? { mode: 'workspace-write', workspaceRoot: workspace }
+            : row.id === 'credentials' ? { path: join(home, 'credentials.json') }
+              : row.id === 'storage' ? { root: sessionRoot, compression: 'none' } : row.config
+    return { ...row,
       ...config === undefined ? {} : { config } }
   })
   const clientRows = JSON.parse(readFileSync(join(profile, 'rsh.client.json'), 'utf8')) as { installations: { plugin: string }[] }
@@ -178,6 +180,7 @@ export const plugin = {
       await page.screenshot({ path: join(evidence, 'native-grant-completed.png'), fullPage: true })
       writeFileSync(join(evidence, 'browser-result.json'), JSON.stringify({ base: '2e55ca187716ceb69bfc5f2fab1532d1f1ab80b8',
         model: 'local deterministic mock; no credentials or paid calls',
+        filesystem: 'shipped fs-sandbox; workspace-write; identity-preserving confinement',
         approval: 'real authenticated session/answer-human Host RPC, allowed-session; existing UI buttons unchanged',
         modelRequests: messages.length, humanAnswers: 1, toolResults: results, actualFile: readFileSync(join(workspace, 'approved.txt'), 'utf8'),
         pageErrors, alerts: [] }, null, 2) + '\n')

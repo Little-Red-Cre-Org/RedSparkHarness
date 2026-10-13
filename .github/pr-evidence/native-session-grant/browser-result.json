@@ -1,6 +1,7 @@
 {
   "base": "2e55ca187716ceb69bfc5f2fab1532d1f1ab80b8",
   "model": "local deterministic mock; no credentials or paid calls",
+  "filesystem": "shipped fs-sandbox; workspace-write; identity-preserving confinement",
   "approval": "real authenticated session/answer-human Host RPC, allowed-session; existing UI buttons unchanged",
   "modelRequests": 3,
   "humanAnswers": 1,
@@ -18,7 +19,7 @@
   "pageErrors": [],
   "alerts": [],
   "libraryImages": {
-    "pending": "libfile_0b04bca20d5081918979d2a2fa184e43",
-    "completed": "libfile_9de7a155901c81918929b8edc494460c"
+    "pending": "libfile_d61297476d608191b412da9fb57141ae",
+    "completed": "libfile_d3263d5bb8008191b81e149fa878cd0d"
   }
 }

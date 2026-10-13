@@ -183,5 +183,165 @@
   "limitations": [
     "Delegated candidate exclusion has a direct Registry check; no new complete delegated entry approval proof.",
     "Real-provider calls were not used; the browser uses a local deterministic model."
-  ]
+  ],
+  "sandboxRepair": {
+    "originalHead": "fe2d4a7fc5c6162e85d2ed99cdc9828aa17c407f",
+    "policy": "shipped fs-sandbox with Native workspace-write; confinement retained",
+    "identity": "Fresh targetKey must equal the admitted targetKey; changed identity rejects with FS_STALE_VERSION; unchanged identity returns the original FsTarget.",
+    "full": {
+      "command": "pnpm run check:all",
+      "passed": 54,
+      "failed": 7,
+      "skipped": 0,
+      "seconds": 1210.22,
+      "rawLog": "output/playwright/grant-sandbox-full-checks.log (local raw log; not committed)",
+      "unit": {
+        "totalFiles": 1445,
+        "failedFiles": 47,
+        "passedFiles": 1388,
+        "skippedFiles": 10,
+        "totalTests": 22857,
+        "failedTests": 131,
+        "passedTests": 22625,
+        "expectedFailTests": 1,
+        "skippedTests": 100
+      },
+      "snapshot": {
+        "totalFiles": 42,
+        "failedFiles": 11,
+        "passedFiles": 31,
+        "totalTests": 177,
+        "failedTests": 72,
+        "passedTests": 95,
+        "skippedTests": 10
+      },
+      "expected": {
+        "totalFiles": 13,
+        "failedFiles": 3,
+        "passedFiles": 10,
+        "totalTests": 35,
+        "failedTests": 4,
+        "passedTests": 31
+      },
+      "failedGates": [
+        "client domain graph",
+        "test",
+        "duplication",
+        "test:snapshot",
+        "test:expected",
+        "client UI i18n",
+        "module graph"
+      ],
+      "passedRelevantGates": [
+        "build",
+        "build:web",
+        "doc-typecheck:contracts-ready",
+        "documentation build",
+        "translation pairing",
+        "export jsdoc",
+        "persistence catalog"
+      ]
+    },
+    "focused": {
+      "files": [
+        "rsh/Programs/Web/api/native-web-session-controller/tests/session-grant.host.spec.ts",
+        "rsh/Modules/Official/fs/fs-sandbox/tests/native.spec.ts",
+        "rsh/Modules/Official/fs/fs-sandbox/tests/fs-sandbox.spec.ts"
+      ],
+      "passed": 26,
+      "failed": 0
+    },
+    "browserRecord": {
+      "passed": 1,
+      "failed": 0,
+      "provider": "shipped fs-sandbox",
+      "model": "local deterministic mock; no credentials or paid calls"
+    },
+    "browserReplay": {
+      "passed": 1,
+      "failed": 0,
+      "provider": "shipped fs-sandbox"
+    },
+    "narrowUnitComparison": {
+      "base": "2e55ca187716ceb69bfc5f2fab1532d1f1ab80b8",
+      "scope": "Eleven selected unit files covering additional failure headers in the repair full run; proposal also runs the five owning files below. This is not a paired full-suite comparison.",
+      "files": [
+        "rsh/Engine/session/session-persistence-jsonl/tests/jsonl.spec.ts",
+        "rsh/Scripts/change-scope.spec.ts",
+        "rsh/Scripts/run-gates.spec.ts",
+        "rsh/Scripts/verify-native-dependencies.spec.ts",
+        "rsh/Engine/session/session-projection-cache/tests/cache.spec.ts",
+        "rsh/Engine/session/session-persistence-jsonl/tests/multi-edge-publication.spec.ts",
+        "rsh/Tests/test-support/session-snapshot/tests/harness.spec.ts",
+        "rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/subagent-dsh-sdk.spec.ts",
+        "rsh/Modules/Official/automation/task-scheduler/tests/engine.spec.ts",
+        "rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts",
+        "rsh/Programs/SDK/packages/client/tests/sdk-client.spec.ts"
+      ],
+      "owningFiles": [
+        "rsh/Programs/Web/api/native-web-session-controller/tests/session-grant.host.spec.ts",
+        "rsh/Modules/Official/fs/fs-sandbox/tests/native.spec.ts",
+        "rsh/Modules/Official/fs/fs-sandbox/tests/fs-sandbox.spec.ts",
+        "rsh/Engine/core/native-headless/tests/native.spec.ts",
+        "rsh/Modules/Official/interaction/native-approval/tests/native.spec.ts"
+      ],
+      "baseResult": {
+        "skipped": 9,
+        "total": 566,
+        "passed": 527,
+        "failed": 30
+      },
+      "proposalResult": {
+        "skipped": 9,
+        "total": 634,
+        "passed": 595,
+        "failed": 30
+      },
+      "commonFailedTests": 30,
+      "commonFailureCases": [
+        "dsh-subagent-dsh-sdk provider runs a child turn end to end with a parent-unique run id",
+        "dsh-subagent-dsh-sdk provider resolves relative launch files at load and forwards absolute paths",
+        "dsh-subagent-dsh-sdk provider initializes the child with the configured provider/model/maxTokens and the parent cwd",
+        "dsh-subagent-dsh-sdk provider preserves instance defaults around a partial request override",
+        "dsh-subagent-dsh-sdk provider isolates complete per-run route overrides on concurrent children",
+        "dsh-subagent-dsh-sdk provider scrubs ambient credentials but forwards explicit config env",
+        "dsh-subagent-dsh-sdk provider maps a max-tokens child turn end",
+        "dsh-subagent-dsh-sdk provider flattens a child turn error into stopReason error and keeps partial text",
+        "dsh-subagent-dsh-sdk provider keeps durable attempt text when a malformed final message prevents completion",
+        "dsh-subagent-dsh-sdk provider classifies a malformed child turn reason as a protocol failure",
+        "dsh-subagent-dsh-sdk provider keeps durable attempt text when the terminal message is an empty usage-only step",
+        "dsh-subagent-dsh-sdk provider reports a settled-without-turn child as an error",
+        "dsh-subagent-dsh-sdk provider maps a blocked child turn to the shared refusal stop reason",
+        "dsh-subagent-dsh-sdk provider aggregates safe initialize and shutdown facts when startup rollback fails",
+        "dsh-subagent-dsh-sdk provider preserves a disposed child cancellation without treating it as local cancellation",
+        "dsh-subagent-dsh-sdk provider keeps an ordinary child abort diagnostic-free",
+        "dsh-subagent-dsh-sdk provider uses a fixed fallback for an unknown child terminal reason",
+        "dsh-subagent-dsh-sdk provider aborting the required signal settles a hung child as aborted",
+        "dsh-subagent-dsh-sdk provider cancelling between handshake and publish rejects start after reap",
+        "dsh-subagent-dsh-sdk provider does not attribute streamed text when prompt acceptance is malformed",
+        "dsh-subagent-dsh-sdk provider preserves partial output while hiding a transport error stderr tail",
+        "dsh-subagent-dsh-sdk provider uses a fixed unknown category for an untyped SDK exception",
+        "dsh-subagent-dsh-sdk provider keeps child diagnostics isolated across concurrent runs",
+        "dsh-subagent-dsh-sdk provider dispose cancels a hung child locally and reaps it",
+        "dsh-subagent-dsh-sdk provider rejects an initialize failure with safe { FAKE_MALFORMED: '1' } facts",
+        "dsh-subagent-dsh-sdk provider rejects an initialize failure with safe { FAKE_INIT_ERROR: '1' } facts",
+        "dsh-subagent-dsh-sdk provider routes a post-publication child failure through onError and settles error",
+        "dsh-subagent-dsh-sdk provider routes provider-level onError through ctx.logger.warn",
+        "dsh-subagent-dsh-sdk provider wraps a shutdown rejection with safe facts after the runtime is reaped",
+        "dsh-subagent-dsh-sdk provider uses a validated config cwd override instead of the parent session cwd"
+      ],
+      "proposalOnlyFailureCases": [],
+      "baseOnlyFailureCases": [],
+      "owningPassed": 68,
+      "owningFailed": 0,
+      "conclusion": "All 30 failures in this selected comparison match; no proposal-only failure in the subset. The 68 owning tests pass. The full run remains 54/7/0 and its 131 unit failures are not all classified by this subset."
+    },
+    "backendProof": "sandbox-target-proof.json",
+    "lint": "Normal lint initially found two fixture indentation errors; after correction lint:contracts-ready passed. Normal pre-commit staged lint remains enabled.",
+    "limitations": [
+      "The before/after rebind proof is local Native backend-only, not an independent cloud reproduction.",
+      "The original snapshot/expected/structural baseline comparisons are retained separately; a new complete paired full suite was not run.",
+      "Old-head green CI does not validate the repair; required CI and independent review must use the appended repair head."
+    ]
+  }
 }

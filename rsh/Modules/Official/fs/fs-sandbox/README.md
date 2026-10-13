@@ -67,7 +67,7 @@ This section explains the design decisions behind the sandbox backend and points
 
 ### Design concept
 
-The fence is a policy check in trusted code over a model-controlled path — not a kernel boundary. The operations are the seam's own (open, rename); only the target path is untrusted, so canonicalize-then-contain is the complete answer to this surface. Kernel-grade isolation of untrusted code stays `ctx.shell`'s job.
+The fence checks policy over a model-controlled path in trusted code. It revalidates containment and resolved target identity before the local backend mutates the caller's target. Kernel-grade isolation of untrusted code stays `ctx.shell`'s job.
 
 ### Source map
 
@@ -80,7 +80,7 @@ The fence is a policy check in trusted code over a model-controlled path — not
 
 ### How a mutation is fenced
 
-Each mutation resolves the per-call policy (`danger-full-access` returns the caller's target untouched; `read-only` throws `FS_SANDBOX_DENIED`), then for `workspace-write` re-canonicalizes the target immediately and requires containment under one of the writable roots derived from the single `writableRoots` function — the same set the Seatbelt profile grants, so the fs fence and the bash runner cannot drift. The fresh target is the one mutated, so a symlink ancestor swapped since the tool resolved it is caught.
+Each mutation resolves the per-call policy (`danger-full-access` returns the caller's target untouched; `read-only` throws `FS_SANDBOX_DENIED`). In `workspace-write`, the shared check re-resolves the display path and requires containment under a `writableRoots` root. A different `targetKey` rejects with `FS_STALE_VERSION`; the caller must resolve and authorize the new target before retrying. An unchanged identity returns the original FsTarget for mutation. Both Native and Cordis entries retain the same confinement check and cannot redirect an approved operation to another in-workspace target.
 
 ### Threat model
 
