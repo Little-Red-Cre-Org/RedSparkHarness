@@ -1,5 +1,5 @@
 /** Native skill filesystem provider against the selected local filesystem. */
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { expect, it, vi } from 'vitest'
@@ -49,7 +49,7 @@ it('scans through the selected filesystem and uses its host mapping only for wat
     try {
       const rootTarget = await watched.filesystem.resolve(skillsRoot)
       const hostPath = watched.filesystem.hostPathFor(watched.filesystem.processPath(rootTarget))
-      expect(hostPath).toBe(skillsRoot)
+      expect(hostPath).toBe(await realpath(skillsRoot))
       expect(typeof hostPath === 'string' && isAbsolute(hostPath)).toBe(true)
 
       const before = await watched.skills.snapshot({ scope: watched.scope, cwd: skillsRoot })

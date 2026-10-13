@@ -1554,7 +1554,7 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
   const safe = await fixture([
     toolCallResponse('code-safe', 'run_code', args), textResponse('calculation complete'),
   ], { ptc, codeRuntimeProvider, ...ptc ? { allowedTools: ['run_code'] } : {} })
-  let removeBusiness: (() => void) | undefined
+  let removeBusiness: (() => Promise<void>) | undefined
   try {
     if (ptc) {
       removeBusiness = safe.tools.registerValueTool({
@@ -1573,7 +1573,7 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
     if (ptc) expect(requests[0]?.bindings).toEqual([])
     expect(requests[0]?.session.header.cwd).toBe(safe.workspace)
   } finally {
-    removeBusiness?.()
+    await removeBusiness?.()
     await safe.host.stop()
     await rm(safe.directory, { recursive: true, force: true })
   }

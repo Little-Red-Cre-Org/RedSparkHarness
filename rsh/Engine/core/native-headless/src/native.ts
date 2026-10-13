@@ -662,6 +662,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let settledAnswer: string | undefined
     let concludedByTool = false
     let admissionInvalidated = false
+    const isAdmissionInvalidated = (): boolean => admissionInvalidated
     let exitCode = 1
     let turnFailure: { error: unknown } | undefined
     let eventObserverFailed = false
@@ -1289,7 +1290,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             acceptance = await acceptStep([])
           }
           if (acceptance === 'rejected') {
-            if (!admissionInvalidated) reason = { kind: 'blocked' }
+            if (!isAdmissionInvalidated()) reason = { kind: 'blocked' }
             admissionInvalidated = true
             exitCode = 0
             break
@@ -1406,7 +1407,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             break
           }
         }
-        if (reason.kind === 'completed' && settledAnswer === undefined && !concludedByTool && !admissionInvalidated) {
+        if (reason.kind === 'completed' && settledAnswer === undefined && !concludedByTool && !isAdmissionInvalidated()) {
           reason = { kind: 'error', error: { code: 'STEP_LIMIT', message: 'native-headless: model step limit reached' } }
         }
       } catch (error: unknown) {

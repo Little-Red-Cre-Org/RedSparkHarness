@@ -286,7 +286,7 @@ export class NativeSkillRegistry implements NativeSkills {
         if (attempt < MAX_COLLECT_ATTEMPTS) continue
         return { ...result, complete: false }
       }
-      if (result.complete) {
+      if (result.complete && !this.closed) {
         this.cache.set(key, result.entries)
         if (this.cache.size > this.cacheEntries) {
           const oldest = this.cache.keys().next() as IteratorYieldResult<string>
@@ -416,6 +416,7 @@ export class NativeSkillRegistry implements NativeSkills {
   private invalidate(scope: NativeScope): void {
     this.revision += 1
     this.cache.clear()
+    if (this.closed) return
     void this.events.parallel(scope, 'skills/change').catch((error: unknown) => {
       console.warn(`skills/change listener rejected: ${errorMessage(error)}`)
     })

@@ -69,6 +69,12 @@ jobs:
           rsh/Engine/context/request-context/tests/registry.spec.ts
           rsh/Modules/Official/skill/skill/tests/native.spec.ts
           rsh/Modules/Official/skill/skill-filesystem/tests/native.spec.ts
+      - name: Native tool visibility regressions
+        run: >-
+          pnpm exec vitest run
+          rsh/Engine/core/native-tools/tests/lifecycle.spec.ts
+          rsh/Engine/core/native-headless/tests/native.spec.ts
+          -t 'reports only exact registrations captured by a model request|passes the current Session to builtin/PTC code runtime'
       - name: Native SDK and ACP workspace instructions regressions
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1

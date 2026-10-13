@@ -41,7 +41,7 @@ export class NativeRequestContextRegistry implements NativeRequestContexts {
     if (!Number.isSafeInteger(provider.order)) throw new Error('request-context: provider order must be a safe integer')
     let remove = (): void => {}
     const entry: ProviderEntry = {
-      provider, controller: new AbortController(), pending: new Set(), unregister: () => remove(), closed: false,
+      provider, controller: new AbortController(), pending: new Set(), unregister: () => { remove() }, closed: false,
     }
     remove = this.providers.register(provider.id, entry, scope)
     this.entries.add(entry)
@@ -84,7 +84,7 @@ export class NativeRequestContextRegistry implements NativeRequestContexts {
       if (failures.length > 1) throw new AggregateError(failures, 'request-context: provider preparation failed')
       request.signal.throwIfAborted()
       const visible = this.providers.visible(request.scope)
-      if (this.disposed || entries.some(entry => entry.closed || visible.get(entry.provider.id) !== entry)) {
+      if (this.isDisposed() || entries.some(entry => entry.closed || visible.get(entry.provider.id) !== entry)) {
         return 'rejected'
       }
       const prepared = outcomes.map((outcome) => {
@@ -120,6 +120,10 @@ export class NativeRequestContextRegistry implements NativeRequestContexts {
     entry.unregister()
     entry.controller.abort(new Error('request-context: provider registration is disposed'))
     return entry.disposal = Promise.allSettled([...entry.pending]).then(() => { this.entries.delete(entry) })
+  }
+
+  private isDisposed(): boolean {
+    return this.disposed
   }
 }
 
