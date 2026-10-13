@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-client` lets TypeScript programs launch a Harness runtime and drive Agent turns over stdio JSON-RPC. `DeepSeekHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent becomes idle; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves root Session events, including all fields of `subagent/external-operation`; the exported `NativeExternalOperationEvent` is the canonical Engine union and `NativeExternalOperationSessionEvent` adds its Session envelope. The client resolves the same-version `@deepseek-ai/dsh` executable by default, or uses an explicit `dshBin`. It owns the child process across runs and reaps it on `close()` or `await using`, while callers choose the profile and launch settings.
+`dsh-sdk-client` lets TypeScript callers drive Harness over stdio JSON-RPC. `DeepSeekHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent idles; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves all six root `subagent/external-operation` variants and their fields unchanged. `NativeExternalOperationEvent` is the canonical Engine union; `NativeExternalOperationSessionEvent` adds its Session envelope. Native Sessions reopen from durable history after a runtime restart. It resolves the same-version `@deepseek-ai/dsh` executable by default or accepts `dshBin`; it owns and reaps the child process across runs through `close()` or `await using`. Callers choose profile and launch settings.
 
 ## Table of Contents
 

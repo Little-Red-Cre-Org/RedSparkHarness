@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 启动 Harness runtime 并驱动 Agent 轮次。`DeepSeekHarness` 可打开 Session、发送文本或图像提示词、推送通知流，并在 Agent 空闲后返回最后提交的 root 响应；`HarnessClient` 提供底层协议请求与订阅。`RunResult.events` 保留根 Session 事件，包括 `subagent/external-operation` 的所有字段；导出的 `NativeExternalOperationEvent` 引用 canonical Engine union，`NativeExternalOperationSessionEvent` 增加对应的 Session envelope。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可通过 `dshBin` 指定。客户端跨多次运行持有子进程，并在 `close()` 或 `await using` 时回收；调用方可选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`DeepSeekHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
 
 ## 目录
 
