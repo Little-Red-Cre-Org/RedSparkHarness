@@ -80,8 +80,8 @@ async function waitForChildConnectionObservation(file: string): Promise<Record<s
   while (Date.now() < deadline) {
     if (existsSync(file)) {
       last = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
-      const connections = last.connections
-      if (Array.isArray(connections) && connections.some(connection => typeof connection === 'object'
+      const connections: unknown[] = Array.isArray(last.connections) ? last.connections : []
+      if (connections.some(connection => typeof connection === 'object'
         && connection !== null && 'settled' in connection && connection.settled === true)) return last
     }
     await new Promise(resolve => setTimeout(resolve, 20))
@@ -860,24 +860,27 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const ends = sessionEvents(events, 'subagent/external-end')
       expect(starts).toHaveLength(1)
       expect(ends).toHaveLength(1)
-      expect(starts[0]).toMatchObject({
+      const start = starts[0]
+      if (start === undefined) throw new Error('Native Claude Session omitted its external start event')
+      expect(start).toMatchObject({
         version: 0,
         provider: 'claude-code',
-        remoteId: expect.any(String),
-        parentSessionId: expect.any(String),
-        rootSessionId: expect.any(String),
       })
-      expect((starts[0]?.remoteId as string).length).toBeGreaterThan(0)
+      if (typeof start.remoteId !== 'string' || typeof start.parentSessionId !== 'string'
+        || typeof start.rootSessionId !== 'string') {
+        throw new Error('Native Claude Session omitted its external operation identifiers')
+      }
+      expect(start.remoteId.length).toBeGreaterThan(0)
       expect(ends[0]).toMatchObject({
-        id: starts[0]?.id,
+        id: start.id,
         provider: 'claude-code',
-        remoteId: starts[0]?.remoteId,
+        remoteId: start.remoteId,
         stopReason: 'completed',
       })
       expect(nativeHome).toBeDefined()
-      expect(existsSync(nativeHome!)).toBe(false)
+      expect(existsSync(nativeHome)).toBe(false)
       expect(findNativeClaudeHome(sandboxTempRoot, workspace)).toBeUndefined()
-      const backendTempRoot = dirname(nativeHome!)
+      const backendTempRoot = dirname(nativeHome)
       if (backendTempRoot !== sandboxTempRoot) expect(existsSync(backendTempRoot)).toBe(false)
       expect(cliPid).toBeDefined()
       expect(() => process.kill(cliPid!, 0)).toThrow()
@@ -894,7 +897,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(observed.spawns[0]).toMatchObject({
         cwd: workspace,
         home: nativeHome,
-        configDir: join(nativeHome!, '.claude'),
+        configDir: join(nativeHome, '.claude'),
         outcome: { exitCode: 0, signal: null },
         rangeEmpty: true,
       })
@@ -907,7 +910,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
           cliExitCode: result.code,
           selectedChildHome: nativeHome,
           selectedChildHomeObservedBeforeMessagesCompleted: true,
-          selectedChildHomeRemovedAfterRun: !existsSync(nativeHome!),
+          selectedChildHomeRemovedAfterRun: !existsSync(nativeHome),
           backendTempCapabilityRoot: backendTempRoot === sandboxTempRoot ? null : backendTempRoot,
           backendTempCapabilityRootRemoved: backendTempRoot === sandboxTempRoot ? null : !existsSync(backendTempRoot),
           managedSubprocess: observed.spawns[0],
@@ -1039,17 +1042,20 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const ends = sessionEvents(events, 'subagent/external-end')
       expect(starts).toHaveLength(1)
       expect(ends).toHaveLength(1)
-      expect(starts[0]).toMatchObject({
+      const start = starts[0]
+      if (start === undefined) throw new Error('Native ACP Session omitted its external start event')
+      expect(start).toMatchObject({
         version: 0,
         provider: providerName,
-        remoteId: expect.any(String),
-        parentSessionId: expect.any(String),
-        rootSessionId: expect.any(String),
       })
+      if (typeof start.remoteId !== 'string' || typeof start.parentSessionId !== 'string'
+        || typeof start.rootSessionId !== 'string') {
+        throw new Error('Native ACP Session omitted its external operation identifiers')
+      }
       expect(ends[0]).toMatchObject({
-        id: starts[0]?.id,
+        id: start.id,
         provider: providerName,
-        remoteId: starts[0]?.remoteId,
+        remoteId: start.remoteId,
         stopReason: 'completed',
       })
       const operationFacts = sessionEvents(events, 'subagent/external-operation')
