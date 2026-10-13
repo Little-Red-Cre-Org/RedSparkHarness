@@ -506,7 +506,7 @@ Connection 提供共享 channel interceptor 与当前 HTTP carrier 映射。WebS
 
 ## 后果
 
-Remote API 类型依赖生成的 `lib` 声明，构建与门禁编排必须在对 Host 和 Client 消费方进行编译或语义分析之前完成 Host 约定 pass；顺序错误会使干净环境中的命令依赖陈旧产物。
+Remote API 类型依赖生成的 `lib` 声明，构建与门禁编排必须在对 Host 和 Client 消费方进行编译或语义分析之前完成 Host 约定 pass；顺序错误会使干净环境中的命令依赖陈旧产物。根 Host 编译也会通过项目引用进入 workspace-files 的 Client 源码，其中 `remote.ts` 导入生成的 Remote 声明；`build:lib:host` 会在 Host 类型检查前生成该声明，随后的 workspace Host bundle 阶段再写出完整 Remote 产物。
 
 源码导航依赖 Remote package 同时发布 declaration map 和 map 指向的 `src`。package `files` 漏掉任一侧时类型仍可编译，但消费端跳转会停在生成 DTS，因此 workspace manifest 校验必须把两者作为同一发布约定。
 

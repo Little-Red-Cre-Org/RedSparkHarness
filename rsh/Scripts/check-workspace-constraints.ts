@@ -184,7 +184,11 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
   '@deepseek-ai/dsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
-  '@deepseek-ai/dsh-client-ui-sidebar-right': ['lib/native.js'],
+  '@deepseek-ai/dsh-client-ui-sidebar-right': [
+    'lib/native.js',
+    'lib/native-ui.module.css',
+    'lib/native-files.module.css',
+  ],
   '@deepseek-ai/dsh-client-ui-sidebar': ['lib/native.js', 'lib/client/SidebarRoot.module.css'],
   '@deepseek-ai/dsh-client-ui-session': ['lib/native.js'],
   '@deepseek-ai/dsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
@@ -319,6 +323,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-terminal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
+  '@deepseek-ai/dsh-native-tmux-context': ['lib/native.js', 'lib/shared-*.js'],
   // Legacy Cordis entries and native values share their pure implementations.
   '@deepseek-ai/dsh-session': ['lib/native.js', 'lib/event-validation.js'],
   '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],

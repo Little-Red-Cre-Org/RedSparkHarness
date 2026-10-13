@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. File reads may target paths outside the workspace; directory listing and instrumented filesystem observations remain workspace-scoped. The service exposes no mutation operation.
+Use this package to preview files in a Session filesystem from the web client. It reads UTF-8 text by page, bytes by bounded window or as complete files, resolves related paths from a file's directory, and reports metadata. File reads may target paths outside the workspace; directory listing and instrumented filesystem observations remain workspace-scoped. The service exposes no mutation operation.
+
+`./types` adds Workspace Files Remote error codes. `./native-types` exposes the response types from [`src/types.ts`](src/types.ts) without Cordis for Native package consumers. `./native-helpers` shares the bounded UTF-8 page cutter with Native Host consumers.
 
 ## Table of Contents
 
@@ -70,7 +72,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 ### Failures
 
-Each failure is one `RemoteError` code with typed details, declared in [`src/types.ts`](src/types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing only), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`). Callers branch on the code, never on message text.
+Each failure is one `RemoteError` code with typed details, declared in [`src/remote-types.ts`](src/remote-types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing only), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`). Callers branch on the code, never on message text.
 
 ### Client file resources
 
@@ -98,9 +100,11 @@ Reads through `ctx.fs` use the backend's read authority; the sandboxing backend 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `WorkspaceFiles`: the `workspaceFiles` service and Remote namespace, `Config`, the gates, the page cutter, `read`, `readBytes`, `readAll`, `readRelated`, `stat`, `list` |
+| [`src/index.ts`](src/index.ts) | `WorkspaceFiles`: the `workspaceFiles` service and Remote namespace, `Config`, the gates, `read`, `readBytes`, `readAll`, `readRelated`, `stat`, `list` |
 | [`src/changes.ts`](src/changes.ts) | `WorkspaceChangeFeed`: `fs/observed` subscription and one queue per open `changes` generation |
-| [`src/types.ts`](src/types.ts) | Wire types and the `RemoteErrorDetailsMap` codes, published as `./types` for Client packages |
+| [`src/types.ts`](src/types.ts) | Cordis-free workspace file wire types, published as `./native-types` |
+| [`src/native-helpers.ts`](src/native-helpers.ts) | Cordis-free bounded UTF-8 page cutter shared by Host controllers, published as `./native-helpers` |
+| [`src/remote-types.ts`](src/remote-types.ts) | Remote error details and the response type re-export, published as `./types` |
 | [`src/client/index.ts`](src/client/index.ts), [`provider.ts`](src/client/provider.ts), [`change-feed.ts`](src/client/change-feed.ts) | Browser plugin, file metadata, and per-Session change feed |
 | [`src/client/types.ts`](src/client/types.ts), [`remote.ts`](src/client/remote.ts) | Resource values, parameters, Client error codes, and generated Remote types |
 | — | No runtime invariant companion is published; every Host answer is derived from `ctx.fs` and the sandbox policy at call time. |

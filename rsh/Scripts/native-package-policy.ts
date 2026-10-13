@@ -28,6 +28,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/session/session-format-v1-to-v2',
   'rsh/Engine/session/session-format-v2-to-v3',
   'rsh/Engine/context/native-time-context',
+  'rsh/Engine/context/tmux-context-definition',
+  'rsh/Modules/Official/terminal/native-tmux-context',
   'rsh/Engine/workspace/workspace-definition',
   'rsh/Engine/core/native-agent',
   'rsh/Engine/core/native-session-execution',
@@ -105,6 +107,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Modules/Official/sandbox/sandbox-windows-acl', ['host']],
   ['rsh/Modules/Official/fs/native-file-reference-local', ['host']],
   ['rsh/Modules/Official/code-runtime/native-code-runtime', ['host']],
+  ['rsh/Engine/context/tmux-context-definition', ['host']],
+  ['rsh/Modules/Official/terminal/native-tmux-context', ['host']],
   ['rsh/Modules/Official/code-runtime/tool-code-runtime', ['host']],
   ['rsh/Modules/Official/code-runtime/code-runtime-process-sandbox', ['host']],
   ['rsh/Programs/Web/api/native-web-session-controller', ['host']],
@@ -315,6 +319,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/todo/tool-todo', ['./client-native']],
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
+  ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory']],
@@ -359,6 +364,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Compiler faces that load each additional Cordis-free source export. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Programs/Web/api/workspace-files/native-helpers', ['host']],
   ['rsh/Programs/Web/api/session-controller/client-event-types', ['client']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],

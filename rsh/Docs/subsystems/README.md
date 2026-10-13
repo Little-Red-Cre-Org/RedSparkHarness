@@ -24,6 +24,7 @@ One page per subsystem of the DeepSeek Harness: what it is, the data structures 
 | [feedback.md](feedback.md) | lifecycle-bound per-message feedback records, optimistic versions, sidecar persistence, and the Host Remote contract |
 | [session-title.md](session-title.md) | durable title snapshots, cited source-message seqs, and the asynchronous provider contract |
 | [session-reference.md](session-reference.md) | structured cross-session references: `SessionReferenceInput`/`Candidate`, prepared message contexts, the stable error taxonomy |
+| [tmux-context.md](tmux-context.md) | Native tmux-context preparation request and durable service consumed by Native Headless |
 | [system-prompt.md](system-prompt.md) | per-assembly context, tool-provider results, prompt sections, and cooperative assembly |
 | [tools.md](tools.md) | `ToolDefinition` full fields, the schema DSL, `ToolExecution`/`ToolResult`, tool-presentation UI types, and the guarded execution pipeline |
 | [user-questions.md](user-questions.md) | the UI-backed human question/answer seam: `AskUserQuestionRequest`, answer/options vocabulary, provider API, error taxonomy |

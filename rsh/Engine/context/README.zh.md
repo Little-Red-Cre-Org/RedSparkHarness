@@ -30,7 +30,9 @@ context 组提供不定义任何工具、为每次请求添加模型可见上下
 | [`file-reference-local/`](file-reference-local/README.zh.md) | `@file` 提及的 Cordis 本地工作区补全提供方 | — |
 | [`time-context/`](time-context/README.zh.md) | Cordis Agent pre-step Provider：每个步骤的当前时间、浏览器时区与经过时长 | `ctx.sessionProjections` |
 | [`native-time-context/`](native-time-context/README.zh.md) | 原生 Provider：向应用 Consumer 返回持久的当前时间、浏览器时区与经过时长消息 | `timeContext` |
-| [`tmux-context/`](tmux-context/README.zh.md) | agent 所在的 tmux 会话、窗口与窗格位置 | — |
+| [`tmux-context-definition/`](tmux-context-definition/README.zh.md) | 持久 tmux 上下文服务的 Cordis-free Native Definition | `tmuxContext` |
+| [`native-tmux-context/`](../../Modules/Official/terminal/native-tmux-context/README.zh.md) | 通过所选 shell 查询 agent 自身 tmux 会话、窗口与窗格的 Native Provider | `tmuxContext` |
+| [`tmux-context/`](tmux-context/README.zh.md) | 提供 agent 所在 tmux 会话、窗口与窗格位置的兼容 Agent pre-step Provider | — |
 
 -----
 

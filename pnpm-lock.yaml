@@ -2317,6 +2317,18 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
 
+  rsh/Engine/context/tmux-context-definition:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+
   rsh/Engine/core/agent:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -2575,6 +2587,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence':
         specifier: workspace:^
         version: link:../../session/session-persistence
+      '@deepseek-ai/dsh-tmux-context-definition':
+        specifier: workspace:^
+        version: link:../../context/tmux-context-definition
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../Core/util/values
@@ -8410,6 +8425,25 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/subagent/subagent-protocol
 
+  rsh/Modules/Official/terminal/native-tmux-context:
+    dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+    devDependencies:
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../../shell/shell
+      '@deepseek-ai/dsh-tmux-context-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/tmux-context-definition
+
   rsh/Modules/Official/terminal/terminal:
     dependencies:
       '@deepseek-ai/dsh-native-agent':
@@ -9261,6 +9295,9 @@ importers:
       '@deepseek-ai/dsh-native-time-context':
         specifier: workspace:^
         version: link:../../Engine/context/native-time-context
+      '@deepseek-ai/dsh-native-tmux-context':
+        specifier: workspace:^
+        version: link:../../Modules/Official/terminal/native-tmux-context
       '@deepseek-ai/dsh-native-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/native-tool-jobs
@@ -9291,12 +9328,12 @@ importers:
       '@deepseek-ai/dsh-sdk-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/sdk-child
-      '@deepseek-ai/dsh-sdk-client':
-        specifier: workspace:^
-        version: link:../SDK/packages/client
       '@deepseek-ai/dsh-sdk-protocol':
         specifier: workspace:^
         version: link:../../Engine/subagent/sdk-protocol
+      '@deepseek-ai/dsh-sdk-runtime':
+        specifier: workspace:^
+        version: link:../../Engine/subagent/sdk-runtime
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../Engine/session/session-persistence-jsonl
@@ -9889,9 +9926,6 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../../../Core/util/home-paths
-      '@deepseek-ai/dsh-sandbox':
-        specifier: workspace:^
-        version: link:../../../../Modules/Official/sandbox/sandbox
       '@deepseek-ai/dsh-sdk-runtime':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/sdk-runtime
@@ -9905,6 +9939,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-sandbox':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/sandbox/sandbox
       '@deepseek-ai/dsh-sdk-protocol':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/sdk-protocol
@@ -10585,6 +10622,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../workspace-files
       '@deepseek-ai/dsh-approval-definition':
         specifier: workspace:^
         version: link:../../../../Engine/core/approval-definition
@@ -10603,6 +10643,9 @@ importers:
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/credentials
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs
       '@deepseek-ai/dsh-host-directory-picker-native':
         specifier: workspace:^
         version: link:../../host/directory-picker-native
@@ -10682,6 +10725,9 @@ importers:
       '@deepseek-ai/dsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-native-sandbox-policy':
         specifier: workspace:^
         version: link:../../../../Modules/Official/sandbox/native-sandbox-policy
@@ -11455,6 +11501,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../../../Engine/preset/agent-presets
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../../api/workspace-files
       '@deepseek-ai/dsh-authorization':
         specifier: workspace:^
         version: link:../../../../Modules/Official/credentials/authorization
@@ -12763,6 +12812,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@deepseek-ai/dsh-api-workspace-files':
+        specifier: workspace:^
+        version: link:../../api/workspace-files
       '@deepseek-ai/dsh-util-workspace-path':
         specifier: workspace:^
         version: link:../../../../Core/util/workspace-path

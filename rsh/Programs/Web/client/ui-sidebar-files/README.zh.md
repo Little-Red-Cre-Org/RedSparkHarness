@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-右侧 Sidebar 的导航器 tab 类型：把会话的工作区根目录画成一棵树，逐层经线上列出，并把文件打开到 Sidebar 里。它是从引导页进入的页类型，不认领任何地址；它按地址打开文件，交给 `dsh-resource://file` 的查看器认领：`ui-sidebar-right` 里没有任何东西认识本包。
+Cordis 右侧 Sidebar 的导航器 tab 类型：把 Session 工作区根目录画成一棵树，逐层通过 Remote 列出，并按地址打开文件，交给 `dsh-resource://file` 查看器认领。列表与 tab 行为仍由本包持有；通过 props 提供数据的行组件经 `ui-primitives` 与 Native 会话详情共享。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 ## 注册了什么
 
 - **类型**：`ctx.sidebarRightTabs.register(...)`，kind 为 `files`，id 为 `@deepseek-ai/dsh-client-ui-sidebar-files`，档位 `builtin`，没有 patterns，另有一个打开该类型的引导页入口（order 10，标题与描述取自 `sidebarFiles` 命名空间，图标是共享的文件夹图标）。
-- **正文**：以该 id 为键的 `sidebar.right.pane.tab` slot：strip 下的一行标题行，然后是树。标题行与文档预览（`ui-sidebar-documentpreview`）的相同：根路径，目录部分灰色、最后一段正色，从不省略号截断（比行宽的路径保留末尾、淡出开头），右端是它唯一的控件、重新读取。这一行是复制而非共享，因为插件 bundle 只经平台模块共享运行时代码；待 artifact 与各 slot 的形态定下来后，可以在 `ui-primitives` 放一份供每个 pane 标题行使用。
+- **正文**：以该 id 为键的 `sidebar.right.pane.tab` slot：strip 下的一行标题行，然后是树。标题行与文档预览（`ui-sidebar-documentpreview`）的相同：根路径，目录部分灰色、最后一段正色，从不省略号截断（比行宽的路径保留末尾、淡出开头），右端是它唯一的控件、重新读取。`ui-primitives` 中的 `WorkspaceFileTreeRows` 为这个 Cordis 树和 Native 会话详情绘制目录与文件行；此正文仍持有 Remote 状态和打开资源的操作。
 - **标签页标题**：以该 id 为键的 `sidebar.right.pane.tab.title` slot：类型标签前的一枚 16px 共享 `FileTypeIcon` 文件夹图标。树本身的行不画这枚图标。
 
 `src/client/` 下七个源文件：`definition.tsx`（类型是什么）、`store.ts`（它保存什么）、`face.ts`（它如何列目录，含 Remote 绑定）、`FilesBody.tsx`（它画什么，含排序与失败行两个辅助函数）、`FilesTitle.tsx`（标签页标题）、`locales.ts`（它说什么）、`index.ts`（接线）。
@@ -57,7 +57,7 @@ kind: "package-reference"
 ## 已知限制与暂缓事项
 
 <a id="known-limitations-and-deferred-work"></a>
-- **只有列目录。**没有搜索、产物过滤、拖拽、重命名、右键菜单、当前文件高亮或文件系统监听；一层只会因重新读取而变化。
+- **Cordis 组合只列目录。**没有搜索、产物过滤、拖拽、重命名、右键菜单、当前文件高亮或文件系统监听；一层只会因重新读取而变化。Native 会话详情使用独立的可选 Native 工作区文件客户端和 follow 流。
 - **只有一个根。**树以会话工作目录为根；没有办法浏览到它之上，而 Host 本来也拒绝工作区根之外的路径。
 
 <a id="dev-note"></a>

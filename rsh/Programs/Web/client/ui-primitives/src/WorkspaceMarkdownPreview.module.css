@@ -1,4 +1,4 @@
-/* The owner supplies scrolling; Markdown uses prose whitespace inside its source-oriented container. */
+/* The owner supplies scrolling; Markdown uses prose whitespace in its source-oriented container. */
 .document {
   min-width: 0;
   padding: 10px 12px;

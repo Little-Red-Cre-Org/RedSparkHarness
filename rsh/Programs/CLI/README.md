@@ -27,7 +27,7 @@ The native-headless, native-headless-query, native-tui, and native-web session d
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
-The `native-sdk`, `native-sdk-dsh-child`, and `native-acp` compositions install workspace instructions through each process's selected filesystem Provider. The opt-in `dsh-sdk` child launcher resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+The `native-sdk`, `native-sdk-dsh-child`, and `native-acp` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
 
 
 ## App arguments
@@ -55,6 +55,8 @@ Selecting a shipped `native-*` profile creates its native profile files on first
 The shipped `native-web` profile installs the `standard` and `minimal` agent modes, the plan-mode Provider, and the standing permission presets `workspace-write` and `danger-full-access` for its Native Session API.
 
 The ordinary `native-headless` template also records the invoking directory as the application's workspace root on first initialization. Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, that profile records the invoking directory as the application's workspace root. It stores its index at `$DSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
+
+Both shipped headless templates include a disabled `tmux-context` installation. Enable it with a profile overlay and compose a `shell` Provider to add the current pane location as durable model context; the [Native tmux-context README](../../Modules/Official/terminal/native-tmux-context/README.md) documents its requirements and message.
 
 A native profile instead declares `dsh.profile.runtime: "native"` and `config: "rsh.profile.json"` in its package manifest. Its versioned JSON file lists scope identities and plugin installations, each with an id, package name, scope and complete config. Native `--patch` files are versioned JSON overlays that replace an existing installation's config or `disabled` value in argument order. The launcher validates every selected package's `dsh.native` metadata before importing entries, refuses nonempty Cordis patch layers, and starts one selected native application. See [native headless](../../Engine/core/native-headless/README.md) for the available one-shot application.
 

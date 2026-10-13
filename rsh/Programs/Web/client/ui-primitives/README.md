@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build shared controls, sidebars, chat views, onboarding, and agent-output cards in the Web client. It includes workspace and Session rows, directory browsing, `SidebarPathBar`, chat and composer layouts, icons, overlays, Settings forms, and safe Markdown, code, terminal, file, diff, search, web, and JSON rendering. Components use React and `--dsw-*` tokens, accept localized labels and data callbacks, and do not import Cordis.
+Use `dsh-client-ui-primitives` to build shared controls, sidebars, chat views, onboarding, and agent-output cards in the Web client. It includes workspace and Session rows, directory browsing, `SidebarPathBar`, Session file-tree rows and Markdown, code, HTML, and image previews, chat and composer layouts, icons, overlays, Settings forms, and safe Markdown, code, terminal, file, diff, search, web, and JSON rendering. Components use React and `--dsw-*` tokens, accept localized labels and data callbacks, and do not import Cordis.
 
 ## Table of Contents
 
@@ -48,6 +48,9 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
 | `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
 | `SidebarPathBar` | Responsive path header shared by file panes and Session details; callers supply the path and trailing controls. |
+| `WorkspaceFileTreeRows` | Props-only directory and file rows shared by the legacy file-tree tab and Native Session details. The owner supplies listing state, labels, and open/toggle callbacks. |
+| `WorkspaceCodePreview`, `WorkspaceMarkdownPreview`, `WorkspaceHtmlPreview`, `WorkspaceImagePreview` | Cordis-free presentations shared by legacy document viewers and Native workspace previews; owners supply file contents, labels, and HTML related-file reads. |
+| `LoadingIndicator` | Localized loading status shared by file and document previews. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
 | `ChatTranscript`, `ChatTurnGroup`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatReasoningDisclosure`, `ChatContextMessage`, `ChatTurnActivity` | Shared turn grouping, transcript rhythm, message frames, collapsed reasoning and context rows, and running-turn label for legacy and Native chat views. |
 | `ChatMessageActionRow`, `ChatMessageCopyAction`, `ChatMessageActionMeta` | Shared message copy control and muted metadata row. |
@@ -90,7 +93,7 @@ The Models settings editors and onboarding views receive localized copy, schema 
 
 ### Localizing copy
 
-The components cannot read the application locale, so every piece of user-facing copy arrives through required label props or a translation callback. `DirectoryBrowser` takes its translation callback with the directory-browser key set; `ModelOnboardingView` takes the model-editor and onboarding key set; `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's copy interface.
+The components cannot read the application locale, so every piece of user-facing copy arrives through required label props or a translation callback. `DirectoryBrowser` takes its translation callback with the directory-browser key set; `ModelOnboardingView` takes the model-editor and onboarding key set; `WorkspaceFileTreeRows` and the workspace previews take complete localized labels; `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's copy interface.
 
 -----
 
@@ -114,6 +117,9 @@ The package owns Cordis-free React components styled through `--dsw-*` tokens. F
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
 | [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
 | [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | Token-styled path row shared by file panes and Session details |
+| [`src/WorkspaceFileTreeRows.tsx`](src/WorkspaceFileTreeRows.tsx) | Props-only tree rows and directory-first natural ordering |
+| [`src/WorkspaceFilePreview.tsx`](src/WorkspaceFilePreview.tsx) | Shared Cordis-free code, Markdown, HTML, and image rendering |
+| [`src/workspace-html.ts`](src/workspace-html.ts) / [`src/workspace-code-languages.ts`](src/workspace-code-languages.ts) | Bounded static HTML assets and shared code suffix mapping |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
 | [`src/OnboardingSurface.tsx`](src/OnboardingSurface.tsx), [`src/OnboardingModal.tsx`](src/OnboardingModal.tsx) | Blocking first-run stage and modal chrome |
 | [`src/WelcomeNoticeView.tsx`](src/WelcomeNoticeView.tsx), [`src/ModelOnboardingView.tsx`](src/ModelOnboardingView.tsx) | Shared first-run welcome copy and provider setup form |

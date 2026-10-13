@@ -1,5 +1,5 @@
 /** Cordis-free question cards for Native Client consumers. */
-import { createElement, useMemo, useState } from 'react'
+import { createElement, useMemo, useState, type ReactElement } from 'react'
 import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { QuestionFlow } from './QuestionFlow.tsx'
@@ -28,7 +28,8 @@ export interface NativeQuestionComposerProps {
  * @param props - pending question batch, locale and Host answer callback.
  * @returns generic question flow or supported plan-review card.
  */
-export function NativeQuestionComposer({ requestKey, questions, locale, disabled, onAnswer }: NativeQuestionComposerProps) {
+export function NativeQuestionComposer(props: NativeQuestionComposerProps): ReactElement {
+  const { requestKey, questions, locale, disabled, onAnswer } = props
   const dictionary: Record<string, string> = locale === 'zh'
     ? { ...commonZh, ...zh }
     : { ...commonEn, ...en }

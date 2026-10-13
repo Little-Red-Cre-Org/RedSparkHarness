@@ -1,0 +1,36 @@
+{
+  "name": "@deepseek-ai/dsh-native-tmux-context",
+  "description": "Native tmux location provider for durable headless model context",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Modules/Official/terminal/native-tmux-context"
+  },
+  "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": ["shell"], "provides": ["tmuxContext"] } },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-shell": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-shell": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^"
+  }
+}

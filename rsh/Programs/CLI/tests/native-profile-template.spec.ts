@@ -218,7 +218,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
   const profile = shippedNativeProfileComposition('C:/rsh-native-tui', 'native-tui', 'win32')
   expect(profile.installations.find(row => row.id === 'app')).toMatchObject({
     plugin: '@deepseek-ai/dsh-native-tui',
-    config: { provider: 'deepseek', model: 'deepseek-flash', maxSteps: 8 },
+    config: { provider: 'deepseek', model: 'deepseek-flash', maxSteps: 8, maxStreamChunks: 500 },
   })
   expect(profile.installations.some(row => /cordis/.test(row.plugin))).toBe(false)
   expect(profile.installations.find(row => row.id === 'task-scheduler')).toMatchObject({
@@ -382,6 +382,17 @@ it('keeps exact query default and selects one SQLite provider only in the explic
     '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-session-projection-cache',
     '@deepseek-ai/dsh-session-query-sqlite', '@deepseek-ai/dsh-tool-session-query',
   ]) expect(installed.resolve(`${packageName}/package.json`)).toBeTruthy()
+})
+
+it('keeps Native tmux context opt-in in the two shipped headless profiles', () => {
+  for (const profileName of ['native-headless', 'native-headless-query'] as const) {
+    expect(shippedNativeProfileComposition('C:/rsh-native-tmux', profileName, 'linux').installations.find(row => row.id === 'tmux-context'))
+      .toEqual({ id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: 'root', disabled: true })
+  }
+  for (const profileName of ['native-sdk', 'native-web', 'native-acp', 'native-tui'] as const) {
+    expect(shippedNativeProfileComposition('C:/rsh-native-tmux', profileName, 'linux').installations.some(row => row.id === 'tmux-context'))
+      .toBe(false)
+  }
 })
 
 it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset roster in %s', (profileName) => {

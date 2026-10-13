@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-12-native-jobs-workflow-packed-acceptance.md
-2026-10-12-native-jobs-workflow-packed-acceptance.md: f9e82085c1ff9bd43e24120ab73eb06670f13bd2
-2026-10-12-native-jobs-workflow-packed-acceptance.zh.md: 5e8878c9c4c8558c297291eac2ac7d256331586a
+2026-10-12-native-jobs-workflow-packed-acceptance.md: 91455198dde912db10c44269ecf0ab36dc358bc1
+2026-10-12-native-jobs-workflow-packed-acceptance.zh.md: 5e7495ac819a2310e8a9a4a6857cece879a00fb3

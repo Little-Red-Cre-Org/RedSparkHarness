@@ -1,17 +1,62 @@
 /** Program-owned launcher for one fixed Native SDK child. */
 
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdtemp, lstat, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
 import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
 import type { SandboxEnforcement, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
-import type { NativeSdkChildRuntime, NativeSdkChildRuntimeLauncher,
-  NativeSdkChildRuntimeRequest } from '@deepseek-ai/dsh-sdk-runtime/native'
-import { resolveDshLaunch } from './launch.ts'
+import type {
+  NativeSdkChildRuntime, NativeSdkChildRuntimeLauncher, NativeSdkChildRuntimeRequest,
+  RuntimeProcessOptions,
+} from '@deepseek-ai/dsh-sdk-runtime'
 
 export const NATIVE_SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
+
+interface CliManifest {
+  readonly bin?: unknown
+}
+
+function resolveNativeSdkChildRuntime(request: NativeSdkChildRuntimeRequest, home: string, overlay: string): RuntimeProcessOptions {
+  const packageManifestPath = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh/package.json'))
+  const packageRoot = dirname(packageManifestPath)
+  const manifest = JSON.parse(readFileSync(packageManifestPath, 'utf8')) as CliManifest
+  const bin = typeof manifest.bin === 'object' && manifest.bin !== null
+    ? (manifest.bin as Record<string, unknown>).dsh : manifest.bin
+  if (typeof bin !== 'string' || bin === '') throw new Error('dsh: CLI package declares no dsh executable')
+  const builtBin = resolve(packageRoot, bin)
+  let nodeArgs: string[]
+  let sourceEnvironment: NodeJS.ProcessEnv = {}
+  if (existsSync(builtBin)) {
+    nodeArgs = [builtBin]
+  } else if (import.meta.url.endsWith('.ts')) {
+    const sourceBin = resolve(packageRoot, 'src/bin.ts')
+    const sourceTsconfig = resolve(packageRoot, 'tsconfig.json')
+    if (!existsSync(sourceBin) || !existsSync(sourceTsconfig)) {
+      throw new Error(`dsh: source SDK child launch is missing ${sourceBin} or ${sourceTsconfig}`)
+    }
+    nodeArgs = ['--import', import.meta.resolve('tsx/esm'), sourceBin]
+    sourceEnvironment = { TSX_TSCONFIG_PATH: sourceTsconfig }
+  } else {
+    throw new Error(`dsh: built SDK child launch is missing ${builtBin}`)
+  }
+  const environment = { ...scrubbedParentEnv(), ...request.environment }
+  const hasSystemRoot = Object.keys(environment).some(name => name.toUpperCase() === 'SYSTEMROOT')
+  if (process.platform === 'win32' && !hasSystemRoot && process.env.SystemRoot !== undefined) {
+    environment.SystemRoot = process.env.SystemRoot
+  }
+  return {
+    command: process.execPath,
+    args: [...nodeArgs, '--profile', 'native-sdk', '--patch', overlay],
+    cwd: resolve(process.cwd(), request.cwd),
+    environment: () => ({ ...environment, ...sourceEnvironment, DSH_HOME: resolve(home) }),
+    description: 'dsh profile "native-sdk"',
+    initializeTimeoutMs: 30_000,
+  }
+}
 
 function inheritsParentWorkspaceWrite(request: NativeSdkChildRuntimeRequest): boolean {
   return request.parentPolicy.mode === 'workspace-write' && request.builtinTools.includes('write_file')
@@ -43,11 +88,11 @@ function containsPath(root: string, path: string): boolean {
 async function removePrivateHome(path: string, root: string): Promise<void> {
   const entry = await lstat(path)
   if (!entry.isDirectory() || entry.isSymbolicLink()) {
-    throw new Error('dsh-sdk-client: private child home was replaced before cleanup')
+    throw new Error('dsh: private child home was replaced before cleanup')
   }
   const [actualRoot, actualHome] = await Promise.all([realpath(root), realpath(path)])
   if (!containsPath(actualRoot, actualHome) || resolve(path) !== actualHome) {
-    throw new Error('dsh-sdk-client: private child home moved before cleanup')
+    throw new Error('dsh: private child home moved before cleanup')
   }
   await rm(path, { recursive: true, force: false })
 }
@@ -62,7 +107,7 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input)
       || Object.keys(input).length > 0)) {
-      throw new Error('dsh-sdk-client native launcher accepts no configuration')
+      throw new Error('dsh native SDK child launcher accepts no configuration')
     }
     return (context) => {
       const baseConnection = context.require('childConnection')
@@ -75,7 +120,7 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
           if (process.platform === 'win32' && inheritedPolicy !== undefined) {
             const authorizedTempRoot = sandbox.prepareWritableTempRoot?.(inheritedPolicy)
             if (authorizedTempRoot === undefined) {
-              throw new Error('dsh-sdk-client: Windows sandbox did not expose the parent Session temp capability')
+              throw new Error('dsh: Windows sandbox did not expose the parent Session temp capability')
             }
             privateRoot = await realpath(authorizedTempRoot)
           }
@@ -83,7 +128,7 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
           try {
             const home = await realpath(createdHome)
             if (resolve(home) !== resolve(createdHome) || !containsPath(privateRoot, home)) {
-              throw new Error('dsh-sdk-client: private child home changed during creation')
+              throw new Error('dsh: private child home changed during creation')
             }
             signal.throwIfAborted()
             const overlay = join(home, 'provider.json')
@@ -92,13 +137,7 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
               installations: [{ id: 'pi-ai', config: { providers: { [request.provider]: request.providerProfile } } }],
             }), { encoding: 'utf8', flag: 'wx' })
             const policy = inheritedPolicy ?? policyFor(request, home)
-            const resolvedRuntime = resolveDshLaunch({
-              profile: 'native-sdk',
-              processCwd: request.cwd,
-              dshHome: home,
-              patches: [overlay],
-              env: { ...scrubbedParentEnv(), ...request.environment },
-            })
+            const resolvedRuntime = resolveNativeSdkChildRuntime(request, home, overlay)
             const runtime = request.parentApprovalRelay
               ? {
                 ...resolvedRuntime,
@@ -124,11 +163,11 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
               connect(spec) {
                 signal.throwIfAborted()
                 if (spec.cwd !== runtime.cwd && resolve(spec.cwd) !== resolve(runtime.cwd ?? request.cwd)) {
-                  throw new Error('dsh-sdk-client: child launcher received a different process cwd')
+                  throw new Error('dsh: child launcher received a different process cwd')
                 }
                 const expected = [runtime.command, ...runtime.args]
                 if (spec.argv.length !== expected.length || spec.argv.some((arg, index) => arg !== expected[index])) {
-                  throw new Error('dsh-sdk-client: child launcher received a different executable or argv')
+                  throw new Error('dsh: child launcher received a different executable or argv')
                 }
                 return baseConnection.connect({ ...spec, argv })
               },
@@ -144,7 +183,7 @@ export const nativeSdkChildRuntimeLauncher: NativePlugin = {
             }
           } catch (error) {
             try { await removePrivateHome(createdHome, privateRoot) } catch (cleanupError) {
-              throw new AggregateError([error, cleanupError], 'dsh-sdk-client: child launch and private-home cleanup failed')
+              throw new AggregateError([error, cleanupError], 'dsh: child launch and private-home cleanup failed')
             }
             throw error
           }

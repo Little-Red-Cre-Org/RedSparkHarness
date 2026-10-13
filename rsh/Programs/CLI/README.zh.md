@@ -27,7 +27,7 @@
 
 native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
-`native-sdk`、`native-sdk-dsh-child` 与 `native-acp` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。显式选择的 `dsh-sdk` 子启动器会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
+`native-sdk`、`native-sdk-dsh-child` 与 `native-acp` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。`native-sdk-dsh-child` profile 使用 CLI 私有的固定 launcher 启动同版本 `native-sdk` profile；显式选择的 `dsh-sdk` child 会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
 
 
 ## 应用参数
@@ -55,6 +55,8 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 随附的 `native-web` profile 会为 Native Session API 安装 `standard` 和 `minimal` agent mode、plan-mode Provider，以及 `workspace-write` 和 `danger-full-access` 常驻权限 preset。
 
 普通 `native-headless` 模板也会在首次初始化时把启动目录记录为应用工作区根目录。显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。该 profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
+
+随附的两个 headless 模板都含有禁用的 `tmux-context` 安装项。通过 profile overlay 启用它，并组合一个 `shell` Provider，即可将当前 pane 位置作为持久模型上下文；[Native tmux 上下文 README](../../Modules/Official/terminal/native-tmux-context/README.zh.md) 说明所需条件与消息格式。
 
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。启动器在导入入口前校验所有选中包的 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。
 

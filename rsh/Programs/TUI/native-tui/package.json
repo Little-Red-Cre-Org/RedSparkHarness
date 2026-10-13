@@ -81,6 +81,7 @@
         "approval",
         "codeRuntime",
         "timeContext",
+        "tmuxContext",
         "agentPresets",
         "commands",
         "workspaceRegistry",

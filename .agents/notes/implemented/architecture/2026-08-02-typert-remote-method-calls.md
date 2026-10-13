@@ -506,7 +506,7 @@ The package topology is `api/remotes → api/gateway → client/connection → h
 
 ## Consequences
 
-Remote API types depend on generated `lib` declarations. Build and gate orchestration must finish the Host contract pass before compiling or semantically analyzing Host and Client consumers; an incorrect order makes a clean command depend on stale artifacts.
+Remote API types depend on generated `lib` declarations. Build and gate orchestration must finish the Host contract pass before compiling or semantically analyzing Host and Client consumers; an incorrect order makes a clean command depend on stale artifacts. Root Host compilation also reaches the workspace-files Client sources through its project references, where `remote.ts` imports the generated Remote declaration; `build:lib:host` generates it before Host typechecking, and the subsequent workspace Host bundle writes the complete Remote artifacts again.
 
 Source navigation requires a Remote package to publish both its declaration map and the `src` file referenced by the map. If package `files` omits either side, types still compile but consumer navigation stops at the generated DTS. The workspace manifest check must therefore treat both as one publication contract.
 

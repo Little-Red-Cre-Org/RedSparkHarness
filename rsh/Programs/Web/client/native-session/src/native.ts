@@ -8,6 +8,14 @@ import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/types'
+import type {
+  WorkspaceDirectoryListing,
+  WorkspaceFileBytes,
+  WorkspaceFileRange,
+  WorkspaceFileStat,
+  WorkspaceFileText,
+  WorkspaceFileWatchFrame,
+} from '@deepseek-ai/dsh-api-workspace-files/native-types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
@@ -53,6 +61,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
     clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
     /** Native directory chooser and browser selected by the browser composition. */
     clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
+    /** Session-root-scoped Native file listing, preview and observation client. */
+    clientNativeWorkspaceFiles: NativeWorkspaceFilesClient
   }
 }
 
@@ -82,6 +92,47 @@ export interface NativeScheduleClient {
    * @returns baseline, upsert, and remove frames from the Host.
    */
   follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
+}
+
+/** Read-only file tree and preview operations scoped to one Session workspace. */
+export interface NativeWorkspaceFilesClient {
+  /** @param sessionId - Session whose workspace root owns the path.
+   * @param path - workspace-relative directory path; `.` names the root.
+   * @param signal - caller cancellation.
+   * @returns bounded direct children and whether the Host cut the listing.
+   */
+  list(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceDirectoryListing>
+  /** @param sessionId - Session whose workspace root owns the path.
+   * @param path - workspace-relative file path.
+   * @param signal - caller cancellation.
+   * @returns file identity, version and byte size when known.
+   */
+  stat(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceFileStat>
+  /** @param sessionId - Session whose workspace root is observed.
+   * @param signal - required follow cancellation.
+   * @returns readiness and instrumented filesystem observations within that root.
+   */
+  follow(sessionId: SessionId, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame>
+  /** @param sessionId - Session whose workspace root owns the path.
+   * @param path - workspace-relative UTF-8 text file path.
+   * @param range - 1-based line offset and page limit.
+   * @param signal - caller cancellation.
+   * @returns one line page with freshness and end-of-file metadata.
+   */
+  read(sessionId: SessionId, path: string, range: WorkspaceFileRange, signal?: AbortSignal): Promise<WorkspaceFileText>
+  /** @param sessionId - Session whose workspace root owns the path.
+   * @param path - workspace-relative regular file path.
+   * @param signal - caller cancellation.
+   * @returns complete base64 bytes under the Host file-size cap.
+   */
+  readAll(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceFileBytes>
+  /** @param sessionId - Session whose workspace root owns both paths.
+   * @param path - workspace-relative base file path.
+   * @param relativePath - related file path from the base file's directory.
+   * @param signal - caller cancellation.
+   * @returns complete base64 bytes under the Host file-size cap.
+   */
+  readRelated(sessionId: SessionId, path: string, relativePath: string, signal?: AbortSignal): Promise<WorkspaceFileBytes>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -644,11 +695,12 @@ export interface NativeSessionClient {
    * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
    * @param onFollowError - background follow failure after turn settlement, when present.
+   * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void): Promise<{
+    onFollowError?: (error: unknown) => void, lastSeq?: number): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -884,6 +936,32 @@ const nativeCommandCatalogSchema = z.strictObject({ commands: z.array(z.strictOb
   definitionId: z.string().optional(), name: z.string().min(1), description: z.string().min(1),
   input: z.strictObject({ hint: z.string(), attachments: z.boolean().optional() }).optional(),
 })) }) as unknown as z.ZodType<{ readonly commands: readonly CommandDescriptor[] }>
+const workspaceFileStatSchema = z.strictObject({
+  absolutePath: z.string().min(1), version: z.string().min(1),
+  bytes: z.number().int().refine(Number.isSafeInteger).nonnegative().optional(),
+})
+const workspaceDirectoryListingSchema = z.strictObject({
+  path: z.string(),
+  entries: z.array(z.strictObject({
+    name: z.string(), type: z.enum(['file', 'directory', 'other']),
+    size: z.number().int().refine(Number.isSafeInteger).nonnegative().optional(),
+  })),
+  truncated: z.boolean(),
+})
+const workspaceFileTextSchema = workspaceFileStatSchema.extend({
+  offset: z.number().int().refine(Number.isSafeInteger).positive(), text: z.string(),
+  lines: z.number().int().refine(Number.isSafeInteger).nonnegative(), eof: z.boolean(),
+}) as z.ZodType<WorkspaceFileText>
+const workspaceFileBytesSchema = workspaceFileStatSchema.extend({
+  offset: z.literal(0), data: z.string(), eof: z.literal(true),
+}) as z.ZodType<WorkspaceFileBytes>
+const workspaceFileWatchFrameSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('ready') }),
+  z.strictObject({ kind: z.literal('change'), change: z.union([
+    z.strictObject({ absolutePath: z.string().min(1), version: z.string().min(1) }),
+    z.strictObject({ absolutePath: z.string().min(1), absent: z.literal(true) }),
+  ]) }),
+]) as z.ZodType<WorkspaceFileWatchFrame>
 
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
@@ -950,6 +1028,12 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
   if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
   if (endpoint === 'session/commands') return nativeCommandCatalogSchema.parse(value)
+  if (endpoint === 'session/files/list') return workspaceDirectoryListingSchema.parse(value)
+  if (endpoint === 'session/files/stat') return workspaceFileStatSchema.parse(value)
+  if (endpoint === 'session/files/read') return workspaceFileTextSchema.parse(value)
+  if (endpoint === 'session/files/read-all' || endpoint === 'session/files/read-related') {
+    return workspaceFileBytesSchema.parse(value)
+  }
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(listItem)
@@ -1051,6 +1135,12 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
+  if (data.type === 'baseline' && typeof data.sessionId === 'string' && data.sessionId.length > 0
+    && typeof data.fromSeq === 'number' && Number.isSafeInteger(data.fromSeq) && data.fromSeq >= -1
+    && typeof data.throughSeq === 'number' && Number.isSafeInteger(data.throughSeq) && data.throughSeq >= data.fromSeq
+    && Object.keys(data).length === 4) {
+    return { type: 'baseline', sessionId: data.sessionId as SessionId, fromSeq: data.fromSeq, throughSeq: data.throughSeq }
+  }
   if (data.type === 'submission-update' && (data.status === 'accepted' || data.status === 'rejected' || data.status === 'settled')
     && typeof data.requestId === 'string' && data.requestId.length > 0 && Object.keys(data).length === 3) {
     return { type: 'submission-update', status: data.status, requestId: brandSubmissionRequestId(data.requestId) }
@@ -1106,15 +1196,19 @@ export function createNativeSessionClient(
   }
   async function prompt(
     sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void,
+    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void, lastSeq = -1,
   ) {
     const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     accepted.throwIfAborted()
+    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
+      throw new TypeError('native Session Client: invalid follow cursor')
+    }
     const responseOperation = rpc.response
     if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
     const following = new AbortController()
     // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
     const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined,
+      ...observe === undefined ? {} : { lastSeq },
       ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
@@ -1143,17 +1237,30 @@ export function createNativeSessionClient(
               throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
             }
             let terminal = false
+            let baseline: Extract<NativeSessionFollowFrame, { type: 'baseline' }> | undefined
             const events = response.body.pipeThrough(new TextDecoderStream())
               .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
             let nextSeq: number | undefined
             for await (const { data } of events) {
               const frame = followFrame(JSON.parse(data))
               if (terminal) throw new Error('native Session follow: output after settlement')
+              if (baseline === undefined) {
+                if (frame.type !== 'baseline' || frame.sessionId !== sessionId || frame.fromSeq !== lastSeq) {
+                  throw new Error('native Session follow: first frame does not match the admitted Session cursor')
+                }
+                baseline = frame
+                nextSeq = frame.fromSeq + 1
+              } else if (frame.type === 'baseline') throw new Error('native Session follow: duplicate baseline')
               if (frame.type === 'event') {
-                if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
+                if (nextSeq === undefined || frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
                 nextSeq = frame.event.seq + 1
               }
-              if (frame.type === 'settled') terminal = true
+              if (frame.type === 'settled') {
+                if (nextSeq === undefined || nextSeq - 1 < baseline.throughSeq) {
+                  throw new Error('native Session follow: settled before baseline history completed')
+                }
+                terminal = true
+              }
               observe(frame)
             }
             if (!terminal) throw new Error('native Session follow: EOF before settlement')
@@ -1350,8 +1457,8 @@ export function createNativeSessionClient(
         'session/submissions', { sessionId }, signal,
       )).submissions
     },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError) {
-      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError)
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq)
       pendingPrompts.add(pending)
       const settled = (): void => { pendingPrompts.delete(pending) }
       void pending.then(settled, settled)
@@ -1392,10 +1499,46 @@ function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSess
   }
 }
 
+function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeWorkspaceFilesClient {
+  async function call<T>(endpoint: string, payload: object, signal?: AbortSignal): Promise<T> {
+    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+    const result = await rpc.call('/api', endpoint, payload, accepted)
+    if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+    return decodeReply(endpoint, result.value) as T
+  }
+  return {
+    list: (sessionId, path, signal) => call('session/files/list', { sessionId, path }, signal),
+    stat: (sessionId, path, signal) => call('session/files/stat', { sessionId, path }, signal),
+    read: (sessionId, path, range, signal) => call('session/files/read', { sessionId, path, range }, signal),
+    readAll: (sessionId, path, signal) => call('session/files/read-all', { sessionId, path }, signal),
+    readRelated: (sessionId, path, relativePath, signal) =>
+      call('session/files/read-related', { sessionId, path, relativePath }, signal),
+    async *follow(sessionId, signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native Workspace Files Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'native-session/files-follow', { sessionId }, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native Workspace Files follow: invalid response HTTP ${response.status}`)
+        }
+        const frames = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of frames) yield workspaceFileWatchFrameSchema.parse(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native Workspace Files follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker'],
+  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker',
+    'clientNativeWorkspaceFiles'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
@@ -1403,11 +1546,13 @@ export const plugin: NativePlugin = {
       const rpc = context.require('clientConnection').rpc
       const client = createNativeSessionClient(rpc, config, context.signal)
       const schedules = createNativeScheduleClient(rpc, config, context.signal)
+      const workspaceFiles = createNativeWorkspaceFilesClient(rpc, config, context.signal)
       const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
       context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
       context.provide('clientNativeSchedule', schedules)
+      context.provide('clientNativeWorkspaceFiles', workspaceFiles)
       context.provide('clientNativeWorkspace', clients.workspace)
       context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }

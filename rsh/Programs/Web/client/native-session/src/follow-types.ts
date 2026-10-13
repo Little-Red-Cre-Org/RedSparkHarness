@@ -1,6 +1,6 @@
 /** Wire presentation facts shared by the Host producer and browser Consumer. */
 import type { NativeWebHumanPrompt, NativeWebHumanId } from './human.ts'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 
 /** Stable identity shared by a queued request and its durable inbox message. */
@@ -36,6 +36,7 @@ export interface NativeSubmissionUpdate {
 
 /** Presentation facts from one exact admitted turn; only events are durable. */
 export type NativeSessionFollowFrame =
+  | { readonly type: 'baseline'; readonly sessionId: SessionId; readonly fromSeq: number; readonly throughSeq: number }
   | { readonly type: 'event'; readonly event: SessionEvent }
   | { readonly type: 'text-start' }
   | { readonly type: 'text'; readonly text: string }

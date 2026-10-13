@@ -2,13 +2,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeWorkspaceFilesClient } from '@deepseek-ai/dsh-client-native-session/native'
 import { Button, Pill, SidebarPathBar } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativeConversationSnapshot } from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-locale/native'
 import type { LayoutInfo } from '@deepseek-ai/dsh-client-ui-layout/native'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
+import { NativeFilesPanel } from './native-files.tsx'
 import css from './native-ui.module.css'
 
 type NativeRightbarKey =
@@ -17,6 +18,10 @@ type NativeRightbarKey =
   | 'parentSession' | 'agentPreset' | 'turns' | 'userMessages' | 'assistantMessages' | 'toolCalls'
   | 'inputTokens' | 'outputTokens' | 'latestModel' | 'provider' | 'model' | 'reasoningEffort'
   | 'requestContext' | 'contextWindow' | 'activityScope' | 'loadingHistory' | 'historyUnavailable' | 'noHistory' | 'noSession' | 'close'
+  | 'files' | 'filePreview' | 'filesLoading' | 'filesEmpty' | 'filesTruncated' | 'filesOther' | 'filesUnavailable'
+  | 'fileFollowUnavailable' | 'noWorkspace' | 'chooseFile' | 'fileLoading' | 'fileUnavailable' | 'fileUnsupported'
+  | 'reloadFiles' | 'reloadPreview' | 'loadMore' | 'fileCopy' | 'fileCopied' | 'fileFootnotes' | 'htmlPreview'
+  | 'pdfPreview' | 'imagePreview'
 type NativeRightbarTranslate = TranslateNS<'nativeSidebarRight'>
 type HistoryState =
   | { readonly sessionId: SessionId; readonly kind: 'loading' }
@@ -39,6 +44,14 @@ const zh = {
   contextWindow: '上下文窗口', activityScope: '统计范围仅限 Host 返回的历史记录。',
   loadingHistory: '正在读取会话历史…', historyUnavailable: '会话历史暂不可用。',
   noHistory: '此会话还没有可统计的活动。', noSession: '请先选择会话。', close: '关闭详情',
+  files: '文件', filePreview: '文件预览', filesLoading: '正在读取…', filesEmpty: '此目录为空。',
+  filesTruncated: '部分条目未显示。', filesOther: '此条目无法预览。', filesUnavailable: '无法读取此文件。',
+  fileFollowUnavailable: '实时文件更新暂不可用。', noWorkspace: '此会话没有工作目录。',
+  chooseFile: '请在“文件”中选择一个文件进行预览。', fileLoading: '正在读取文件…',
+  fileUnavailable: '无法读取或预览此文件。', fileUnsupported: '不支持此图片格式。',
+  reloadFiles: '重新读取文件', reloadPreview: '重新读取预览', loadMore: '加载更多',
+  fileCopy: '复制', fileCopied: '已复制', fileFootnotes: '脚注', htmlPreview: 'HTML 文档预览',
+  pdfPreview: 'PDF 文档预览', imagePreview: '图片预览：{name}',
 } as const satisfies Record<NativeRightbarKey, string>
 const en = {
   details: 'Session details', overview: 'Overview', activity: 'Activity', sections: 'Session detail sections', session: 'Session',
@@ -50,6 +63,14 @@ const en = {
   contextWindow: 'Context window', activityScope: 'Counts reflect only the history returned by the Host.',
   loadingHistory: 'Loading Session history…', historyUnavailable: 'Session history is unavailable.',
   noHistory: 'This Session has no activity to summarize yet.', noSession: 'Select a Session first.', close: 'Close details',
+  files: 'Files', filePreview: 'Preview', filesLoading: 'Loading…', filesEmpty: 'This directory is empty.',
+  filesTruncated: 'Some entries are hidden.', filesOther: 'This entry cannot be previewed.', filesUnavailable: 'This file could not be read.',
+  fileFollowUnavailable: 'Live file updates are unavailable.', noWorkspace: 'This Session has no workspace.',
+  chooseFile: 'Select a file from Files to preview it.', fileLoading: 'Loading file…',
+  fileUnavailable: 'This file could not be read or previewed.', fileUnsupported: 'This image format is not supported.',
+  reloadFiles: 'Reload files', reloadPreview: 'Reload preview', loadMore: 'Load more',
+  fileCopy: 'Copy', fileCopied: 'Copied', fileFootnotes: 'Footnotes', htmlPreview: 'HTML document preview',
+  pdfPreview: 'PDF document preview', imagePreview: 'Image preview: {name}',
 } satisfies Record<NativeRightbarKey, string>
 
 interface HistorySummary {
@@ -177,16 +198,17 @@ function Activity({ history, snapshot, t }: {
   )
 }
 
-function SessionDetails({ useConversation, useLayoutInfo, readHistory, close, t }: {
+function SessionDetails({ useConversation, useLayoutInfo, readHistory, workspaceFiles, close, t }: {
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useLayoutInfo: SnapshotSelectorHook<LayoutInfo>
   readHistory: NativeSessionClient['history']
+  workspaceFiles: NativeWorkspaceFilesClient | undefined
   close: () => void
   t: NativeRightbarTranslate
 }) {
   const snapshot = useConversation(value => value)
   const visible = useLayoutInfo(value => value.rightbarShown)
-  const [section, setSection] = useState<'overview' | 'activity'>('overview')
+  const [section, setSection] = useState<'overview' | 'activity' | 'files' | 'preview'>('overview')
   const [history, setHistory] = useState<HistoryState>()
   const sessionId = snapshot.selected
 
@@ -212,9 +234,22 @@ function SessionDetails({ useConversation, useLayoutInfo, readHistory, close, t 
       <div className={css.sections} role="group" aria-label={t('sections')}>
         <Pill active={section === 'overview'} aria-pressed={section === 'overview'} onClick={() => { setSection('overview') }}>{t('overview')}</Pill>
         <Pill active={section === 'activity'} aria-pressed={section === 'activity'} onClick={() => { setSection('activity') }}>{t('activity')}</Pill>
+        {workspaceFiles === undefined ? null : <>
+          <Pill active={section === 'files'} aria-pressed={section === 'files'} onClick={() => { setSection('files') }}>{t('files')}</Pill>
+          <Pill active={section === 'preview'} aria-pressed={section === 'preview'} onClick={() => { setSection('preview') }}>{t('filePreview')}</Pill>
+        </>}
       </div>
       <div className={css.content}>
-        {section === 'overview' ? <Overview snapshot={snapshot} t={t} /> : <Activity history={history} snapshot={snapshot} t={t} />}
+        {section === 'overview' ? <Overview snapshot={snapshot} t={t} /> : null}
+        {section === 'activity' ? <Activity history={history} snapshot={snapshot} t={t} /> : null}
+        {workspaceFiles === undefined ? null : <NativeFilesPanel
+          sessionId={sessionId}
+          workspaceRoot={snapshot.header?.cwd}
+          section={section}
+          service={workspaceFiles}
+          onOpenPreview={() => { setSection('preview') }}
+          t={t}
+        />}
       </div>
     </aside>
   )
@@ -236,24 +271,27 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-client-ui-sidebar-right',
   targets: ['client'],
   requires: ['clientSlots', 'clientNativeLayout', 'clientNativeConversation', 'clientNativeSession', 'clientLocale'],
+  optional: ['clientNativeWorkspaceFiles'],
   provides: [],
   resolve: () => (context) => {
     const slots = context.require('clientSlots')
     const layout = context.require('clientNativeLayout')
     const controller = context.require('clientNativeConversation')
     const session = context.require('clientNativeSession')
+    const workspaceFiles = context.optional('clientNativeWorkspaceFiles')
     const readHistory: NativeSessionClient['history'] = (sessionId, signal) => session.history(sessionId, signal)
     const locale = context.require('clientLocale')
     context.own(locale.register('nativeSidebarRight', { en, zh }))
     context.own(slots.inject('rightbar', () => slots.register({ name: 'rightbar', locale: 'nativeSidebarRight',
       inject: () => ({
-        hooks: { conversation: controller, layoutInfo: layout.layoutInfo }, readHistory,
+        hooks: { conversation: controller, layoutInfo: layout.layoutInfo }, readHistory, workspaceFiles,
         close: () => { layout.closeRightbar() },
       }) },
     ({ useConversation, useLayoutInfo, readHistory: loadHistory, close, t }: {
       useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
       useLayoutInfo: SnapshotSelectorHook<LayoutInfo>
       readHistory: NativeSessionClient['history']
+      workspaceFiles: NativeWorkspaceFilesClient | undefined
       close: () => void
       t: NativeRightbarTranslate
     }) => (
@@ -261,6 +299,7 @@ export const plugin: NativePlugin = {
         useConversation={useConversation}
         useLayoutInfo={useLayoutInfo}
         readHistory={loadHistory}
+        workspaceFiles={workspaceFiles}
         close={close}
         t={t}
       />

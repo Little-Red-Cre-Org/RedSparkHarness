@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-使用 `dsh-client-ui-primitives` 为 Web 客户端构建共享控件、侧边栏、聊天视图、首次引导和 agent 输出卡片。它提供 Workspace 与 Session 行、目录浏览、`SidebarPathBar`、聊天与 composer 布局、图标、浮层、Settings 表单，以及安全的 Markdown、代码、终端、文件、差异、搜索、网页和 JSON 渲染。组件使用 React 与 `--dsw-*` token，接收本地化文案和数据回调，不 import Cordis。
+使用 `dsh-client-ui-primitives` 为 Web 客户端构建共享控件、侧边栏、聊天视图、首次引导和 agent 输出卡片。它提供 Workspace 与 Session 行、目录浏览、`SidebarPathBar`、Session 文件树行和 Markdown、代码、HTML、图片预览、聊天与 composer 布局、图标、浮层、Settings 表单，以及安全的 Markdown、代码、终端、文件、差异、搜索、网页和 JSON 渲染。组件使用 React 与 `--dsw-*` token，接收本地化文案和数据回调，不 import Cordis。
 
 ## 目录
 
@@ -48,6 +48,9 @@ kind: "package-library"
 | `WorkspaceSectionHeader`、`WorkspaceSectionEmpty` | 通过 props 提供数据的 Workspace 分区标题和本地化空状态，由侧边栏组合共享。 |
 | `DirectoryBrowser` | 由回调驱动的 Miller 分栏目录选择器，支持路径导航、创建文件夹、显示隐藏条目，并由 owner 提供本地化文案。 |
 | `SidebarPathBar` | 文件面板与会话详情共用的自适应路径栏；调用方传入路径和尾部控件。 |
+| `WorkspaceFileTreeRows` | 通过 props 提供数据的目录与文件行，由 legacy 文件树 tab 和 Native 会话详情共享。列表状态、文案及打开/展开回调由 owner 提供。 |
+| `WorkspaceCodePreview`、`WorkspaceMarkdownPreview`、`WorkspaceHtmlPreview`、`WorkspaceImagePreview` | legacy 文档查看器与 Native 工作区预览共享的零 Cordis 展示组件；owner 提供文件内容、本地化文案和 HTML 关联文件读取器。 |
+| `LoadingIndicator` | 文件与文档预览共用的本地化加载状态。 |
 | `ConnectionIndicator` | 行内连接恢复控件，覆盖断线、重试与已恢复三种状态。 |
 | `ChatTranscript`、`ChatTurnGroup`、`ChatUserMessage`、`ChatAssistantMessage`、`ChatReasoningDisclosure`、`ChatContextMessage`、`ChatTurnActivity` | legacy 与 Native 聊天视图共享的轮次分组、转录节奏、消息外框、折叠推理与上下文行，以及运行中轮次标签。 |
 | `ChatMessageActionRow`、`ChatMessageCopyAction`、`ChatMessageActionMeta` | 共享消息复制操作与弱化的元信息行。 |
@@ -90,7 +93,7 @@ Models 设置编辑器和首次引导视图通过 props 接收本地化文案、
 
 ### 本地化文案
 
-这些组件无法读取应用 locale，因此每段面向用户的文案都必须通过 label prop 或翻译回调提供。`DirectoryBrowser` 的翻译回调使用目录浏览器的键集合；`ModelOnboardingView` 使用模型编辑器和引导键集合；`HoverCard`、`TerminalBlock`、`JsonTree`、`CodeBlock`、`MarkdownText`、`JsonBlock`、`ConnectionIndicator`、`Modal`、`SettingsPanel`、`DiffBlock`、`ReadBlock`、`SearchBlock` 与 `WebBlock` 接收完整的本地化 label。本包不拥有语言回退；遗漏会导致类型检查失败，各功能会把带类型的 `t` 席位映射到 primitive 的文案接口。
+这些组件无法读取应用 locale，因此每段面向用户的文案都必须通过 label prop 或翻译回调提供。`DirectoryBrowser` 的翻译回调使用目录浏览器的键集合；`ModelOnboardingView` 使用模型编辑器和引导键集合；`WorkspaceFileTreeRows` 和工作区预览接收完整的本地化文案；`HoverCard`、`TerminalBlock`、`JsonTree`、`CodeBlock`、`MarkdownText`、`JsonBlock`、`ConnectionIndicator`、`Modal`、`SettingsPanel`、`DiffBlock`、`ReadBlock`、`SearchBlock` 与 `WebBlock` 接收完整的本地化 label。本包不拥有语言回退；遗漏会导致类型检查失败，各功能会把带类型的 `t` 席位映射到 primitive 的文案接口。
 
 -----
 
@@ -114,6 +117,9 @@ Models 设置编辑器和首次引导视图通过 props 接收本地化文案、
 | [`src/icons/`](src/icons/) | `ic_ds_*` 字形组件与品牌标记 |
 | [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | 供 browse 与 Native Workspace 流程共享的目录导航对话框 |
 | [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | 文件面板与会话详情共用的 token 路径栏 |
+| [`src/WorkspaceFileTreeRows.tsx`](src/WorkspaceFileTreeRows.tsx) | 通过 props 提供数据的树行与目录优先自然排序 |
+| [`src/WorkspaceFilePreview.tsx`](src/WorkspaceFilePreview.tsx) | 共享的零 Cordis 代码、Markdown、HTML 与图片渲染 |
+| [`src/workspace-html.ts`](src/workspace-html.ts) / [`src/workspace-code-languages.ts`](src/workspace-code-languages.ts) | 有界静态 HTML 资源与共用代码后缀映射 |
 | [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free Settings 导航与对话框 |
 | [`src/OnboardingSurface.tsx`](src/OnboardingSurface.tsx)、[`src/OnboardingModal.tsx`](src/OnboardingModal.tsx) | 阻塞式首次引导舞台与模态框外框 |
 | [`src/WelcomeNoticeView.tsx`](src/WelcomeNoticeView.tsx)、[`src/ModelOnboardingView.tsx`](src/ModelOnboardingView.tsx) | 共享首次运行欢迎文案与提供方配置表单 |

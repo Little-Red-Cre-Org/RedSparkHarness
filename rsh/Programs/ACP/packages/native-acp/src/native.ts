@@ -752,7 +752,7 @@ export class NativeAcpApplication implements NativeApplication {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
     'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands'],
   provides: ['application', 'rootExecution'],
   resolve(input) {

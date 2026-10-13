@@ -32,6 +32,7 @@
 .sections {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   padding: 10px 16px;
