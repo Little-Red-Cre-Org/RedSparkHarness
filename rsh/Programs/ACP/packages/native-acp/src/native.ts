@@ -12,7 +12,7 @@ import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-a
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { nativeSessionExecutionPolicy, type NativeSessionExecutionPolicy, type NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
-import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPolicyMetadata,
+import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionRequestMetadata, nativeAcpSubagentPolicyMetadata,
   nativeAcpSubagentServerMetadata, readNativeAcpSubagentClientCapabilities,
   readNativeAcpSubagentPolicy,
   type NativeAcpSubagentClientCapabilities, type NativeAcpSubagentPolicy,
@@ -21,7 +21,6 @@ import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRo
   NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
-import { NativeApprovalRequestId } from '@deepseek-ai/dsh-native-approval'
 import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
 import { AcpMcpConfigError, resolveAcpMcpConfigs } from '@deepseek-ai/dsh-mcp-client/acp-config'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
@@ -45,6 +44,12 @@ export interface Config {
   readonly maxSteps: number
   /** Optional profile maximum tokens per model request. */
   readonly maxTokens?: number
+  /** Whether the Native builtin tool Provider is enabled for this process. */
+  readonly builtinTools?: boolean
+  /** Exact model-visible tool names admitted by this profile. */
+  readonly allowedTools?: readonly string[]
+  /** Parent-authorized filesystem root for builtin write_file calls. */
+  readonly workspaceWriteRoot?: string
   /** Maximum unsettled permission wire requests; defaults to 32. */
   readonly maxPendingPermissions?: number
   /** MCP tool timeout in milliseconds; defaults to 60000. */
@@ -52,6 +57,15 @@ export interface Config {
 }
 
 type ResolvedConfig = Config & { readonly maxPendingPermissions: number; readonly mcpToolCallTimeoutMs: number }
+
+function resolveAllowedTools(value: unknown): readonly string[] | undefined {
+  if (value === undefined) return undefined
+  const message = 'native ACP: allowedTools must be an array of unique nonempty names'
+  if (!Array.isArray(value)) throw new TypeError(message)
+  const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+  if (names.length !== value.length || new Set(names).size !== names.length) throw new TypeError(message)
+  return Object.freeze(names)
+}
 
 interface OwnedSession {
   readonly id: SessionId
@@ -77,7 +91,10 @@ function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('native ACP: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxTokens', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) throw new Error(`native ACP: unknown configuration field ${key}`)
+    if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxTokens', 'builtinTools', 'allowedTools',
+      'workspaceWriteRoot', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) {
+      throw new Error(`native ACP: unknown configuration field ${key}`)
+    }
   }
   for (const key of ['provider', 'model', 'systemPrompt']) {
     if (typeof fields[key] !== 'string' || fields[key].length === 0) throw new TypeError(`native ACP: ${key} must be a nonempty string`)
@@ -88,6 +105,19 @@ function resolveConfig(input: unknown): ResolvedConfig {
   const maxTokens = fields.maxTokens
   if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isSafeInteger(maxTokens) || maxTokens <= 0)) {
     throw new TypeError('native ACP: maxTokens must be a positive integer')
+  }
+  const builtinTools = fields.builtinTools
+  if (builtinTools !== undefined && typeof builtinTools !== 'boolean') {
+    throw new TypeError('native ACP: builtinTools must be a boolean')
+  }
+  const allowedTools = resolveAllowedTools(fields.allowedTools)
+  const workspaceWriteRoot = fields.workspaceWriteRoot
+  if (workspaceWriteRoot !== undefined && (typeof workspaceWriteRoot !== 'string' || workspaceWriteRoot.length === 0
+    || !isAbsolute(workspaceWriteRoot))) {
+    throw new TypeError('native ACP: workspaceWriteRoot must be an absolute path')
+  }
+  if (allowedTools?.includes('write_file') && workspaceWriteRoot === undefined) {
+    throw new TypeError('native ACP: allowed write_file requires workspaceWriteRoot')
   }
   const maxPendingPermissions = fields.maxPendingPermissions === undefined ? 32 : fields.maxPendingPermissions
   if (typeof maxPendingPermissions !== 'number' || !Number.isSafeInteger(maxPendingPermissions) || maxPendingPermissions <= 0) {
@@ -100,7 +130,11 @@ function resolveConfig(input: unknown): ResolvedConfig {
   }
   return { provider: fields.provider as string, model: fields.model as string,
     systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps,
-    ...(maxTokens === undefined ? {} : { maxTokens }), maxPendingPermissions, mcpToolCallTimeoutMs }
+    ...(maxTokens === undefined ? {} : { maxTokens }),
+    ...(builtinTools === undefined ? {} : { builtinTools }),
+    ...allowedTools === undefined ? {} : { allowedTools },
+    ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
+    maxPendingPermissions, mcpToolCallTimeoutMs }
 }
 
 function effectivePolicy(requested: NativeAcpSubagentPolicy | undefined, profile: ResolvedConfig,
@@ -365,7 +399,7 @@ export class NativeAcpApplication implements NativeApplication {
         try {
           if (this.ownerRoute(owner) !== record) return Promise.resolve('unavailable')
         } catch { return Promise.resolve('unavailable') }
-        const pending = this.permission({ id: NativeApprovalRequestId(randomUUID()), agent: owner.agent,
+        const pending = this.permission({ id: request.id, agent: owner.agent,
           callId: request.callId, toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
           policy: 'ask', signal: request.signal }) ?? Promise.resolve('unavailable')
         return new Promise<NativeApprovalOutcome>((resolve, reject) => {
@@ -380,7 +414,7 @@ export class NativeAcpApplication implements NativeApplication {
             if (settled) return
             settled = true
             request.signal.removeEventListener('abort', onAbort)
-            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- preserve the exact owner or transport rejection reason.
+            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact owner or transport rejection reason.
             reject(error)
           }
           const onAbort = (): void => { complete('cancelled') }
@@ -414,6 +448,8 @@ export class NativeAcpApplication implements NativeApplication {
             { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' },
             { optionId: 'reject-once', name: 'Reject', kind: 'reject_once' },
           ],
+          _meta: nativeAcpSubagentPermissionRequestMetadata({ sessionId: String(interaction.session.id), requestId: String(request.id),
+            toolName: request.toolName, toolCallId: String(callId) }),
         }, { cancellationSignal: signal })
         signal.throwIfAborted()
         const current = this.interactionRoute(record, request.agent)
@@ -456,7 +492,8 @@ export class NativeAcpApplication implements NativeApplication {
           agentCapabilities: { promptCapabilities: { image: this.context.optional('attachments') !== undefined
             && this.context.optional('modelDirectory') !== undefined, audio: false, embeddedContext: false },
           mcpCapabilities: { http: this.context.optional('tools') !== undefined }, sessionCapabilities: { close: {}, list: {}, resume: {} } },
-          authMethods: [], _meta: nativeAcpSubagentServerMetadata({ maxSteps: true, maxTokens: true, permissionModes }) }
+          authMethods: [], _meta: nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
+            maxSteps: true, maxTokens: true, permissionModes }) }
       })()))
       .onRequest(methods.agent.authenticate, () => ({}))
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
@@ -711,8 +748,10 @@ export class NativeAcpApplication implements NativeApplication {
     let abort: (() => void) | undefined
     try {
       await Promise.race([previous, new Promise<never>((_resolve, reject) => {
-        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-        abort = () => { reject(signal.reason) }
+        abort = () => {
+          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
+          reject(signal.reason)
+        }
         signal.addEventListener('abort', abort, { once: true })
       })])
       signal.throwIfAborted()

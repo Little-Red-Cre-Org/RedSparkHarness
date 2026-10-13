@@ -809,13 +809,13 @@ it('enforces restored output ceilings after selection and issues approval only f
 
     selectedMaxTokens = 1024
     let issuedOwner: NativeActiveSessionOwner | undefined
-    const authorizedCalls: { callId: string; toolName: string; reason?: string }[] = []
+    const authorizedCalls: { id: string; callId: string; toolName: string; reason?: string }[] = []
     const issueOwnerApproval = (owner: NativeActiveSessionOwner): NativeSessionOwnerApproval => {
       issuedOwner = owner
       const lifetime = owner.rootOperations?.signal
       if (lifetime === undefined) throw new Error('root owner has no live approval lifetime')
       return { agent: owner.agent, session: owner.session, lifetime, async authorize(request) {
-        authorizedCalls.push({ callId: request.callId, toolName: request.toolName,
+        authorizedCalls.push({ id: request.id, callId: request.callId, toolName: request.toolName,
           ...request.reason === undefined ? {} : { reason: request.reason } })
         return 'allowed-once'
       } }
@@ -831,7 +831,8 @@ it('enforces restored output ceilings after selection and issues approval only f
       issueOwnerApproval }, signal)
     expect(restored.adapter.requests).toHaveLength(2)
     expect(restored.adapter.requests.map(request => request.maxTokens)).toEqual([32, 32])
-    expect(authorizedCalls).toEqual([{
+    expect(authorizedCalls).toMatchObject([{
+      id: expect.any(String),
       callId: 'policy-write', toolName: 'write_file', reason: 'Writing a file changes the selected workspace.',
     }])
     expect(await readFile(join(restored.workspace, 'policy-created.txt'), 'utf8')).toBe('authorized by owner')
@@ -858,10 +859,10 @@ it('enforces restored output ceilings after selection and issues approval only f
       try {
         const events = (await reader.read()).events
         expect(events.filter(event => event.type === 'native-approval/asked')).toMatchObject([{
-          data: { toolName: 'write_file', callId: 'policy-write', reason: 'Writing a file changes the selected workspace.' },
+          data: { id: authorizedCalls[0]?.id, toolName: 'write_file', callId: 'policy-write', reason: 'Writing a file changes the selected workspace.' },
         }])
         expect(events.filter(event => event.type === 'native-approval/decided')).toMatchObject([{
-          data: { policy: 'ask', outcome: 'allowed-once' },
+          data: { id: authorizedCalls[0]?.id, policy: 'ask', outcome: 'allowed-once' },
         }])
       } finally { await reader.close() }
     } finally { await storage.close() }

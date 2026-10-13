@@ -4,7 +4,7 @@ English | [中文](subagent.zh.md)
 
 The subagent seam lets an agent delegate work to a child agent. Like [bash](shell.md), it is **one optional capability**, not part of the agent loop, so its types live here rather than in [core.md](core.md). It differs from the other capability seams because **multiple provider implementations coexist** in one context, registered by name (`ctx.subagents`), while bash allows only one executor. Its registry follows the [LLM adapter registry](llm-streaming.md), not the single-service bash executor.
 
-Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process`, `dsh-subagent-fork-in-process`, and `dsh-subagent-acp`); the Claude Code product adapter is an [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.md) with a bounded Native driver and a retained Cordis compatibility entry. The legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-dsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
+Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process` and `dsh-subagent-fork-in-process`); the Cordis ACP subprocess provider is a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-acp). The Claude Code product adapter is an [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.md) with a bounded Native driver and a retained Cordis compatibility entry. The legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-dsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
 
 The Official Native Codex module [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) uses the Engine-captured Responses transport for its one-shot product path and rejects before child startup when the selected generation lacks that transport or cannot enforce the parent `maxTokens` ceiling. The SIWC Provider can supply the capture capability when this route is explicitly composed; shipped Native profiles still omit the Codex external driver. The explicitly installed legacy Cordis route remains [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md).
 
@@ -144,12 +144,81 @@ interface NativeAcpSubagentClientCapabilities {
 ```ts type-equiv
 /** Capabilities a Native ACP server advertises during initialize. */
 interface NativeAcpSubagentServerCapabilities {
+  /** Whether permission requests carry exact Native Session, approval, tool and call identities. */
+  readonly permissionRequestIdentity: true
   /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
   readonly maxSteps: true
   /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
   readonly maxTokens: true
   /** Permission modes implemented by this server. */
   readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
+}
+```
+
+## Native ACP child runtime
+
+The Official [ACP child adapter](../../Modules/Official/subagent/acp-child/README.md) consumes the Native external-subagent driver API. Its package declares the `NativeAcpChildRuntime*` Service Definition, and the CLI provides the fixed child launcher. This ACP route is opaque: it does not consume `request.model` or `responses`, or publish the six `subagent/external-operation` broker facts. The package README owns its route negotiation, permission relay, file policy, and process cleanup.
+
+```ts type-equiv
+/** Exact selected child route and policy passed to the fixed CLI launcher. */
+interface NativeAcpChildRuntimeRequest {
+  /** Exact live parent Session whose authority bounds the child. */
+  readonly parentSessionId: SessionId
+  /** Workspace selected by the parent Session. */
+  readonly cwd: string
+  /** Selected child provider route. */
+  readonly provider: string
+  /** Selected child model id. */
+  readonly model: string
+  /** Selected child reasoning effort, when one is configured. */
+  readonly reasoningEffort?: ReasoningEffortId
+  /** Non-secret provider configuration needed to reproduce the selected route. */
+  readonly providerProfile: Readonly<Record<string, unknown>>
+  /** Only the selected route credential, under its configured environment name. */
+  readonly environment: Readonly<Record<string, string>>
+  /** Fixed child-profile instruction; the parent conversation prompt is never copied here. */
+  readonly systemPrompt: string
+  /** Accepted maximum model steps per child turn. */
+  readonly maxSteps: number
+  /** Optional accepted output-token ceiling per model request. */
+  readonly maxTokens?: number
+  /** Permission mode negotiated with the child Native ACP server. */
+  readonly permissionMode: 'deny' | 'parent-relay'
+  /** Native builtin tools admitted by the exact parent authority. */
+  readonly builtinTools: readonly ('read_file' | 'write_file')[]
+  /** Complete allowed-tool list for the fixed child profile. */
+  readonly allowedTools: readonly string[]
+  /** Exact workspace root for Native file writes, only when parent write authority permits them. */
+  readonly workspaceWriteRoot?: string
+  /** Exact parent execution policy; launchers may enforce a stricter policy. */
+  readonly parentPolicy: SandboxExecutionPolicy
+}
+```
+
+```ts type-equiv
+/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
+interface NativeAcpChildRuntime {
+  /** Whole-range-owned child and ACP stdio streams. */
+  readonly child: ChildConnectionHandle
+  /** File-effect enforcement reported by the selected sandbox backend. */
+  readonly enforcement: SandboxEnforcement
+  /** Close stdin and settle the complete managed process range. */
+  shutdown(): Promise<void>
+  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
+  dispose(): Promise<void>
+}
+```
+
+```ts type-equiv
+/** CLI-owned launcher for the fixed, same-version Native ACP profile. */
+interface NativeAcpChildRuntimeLauncher {
+  /**
+   * Start one exact ACP profile under a policy derived from the parent Session.
+   * @param request - selected route, limits, tools, credential and owner policy.
+   * @param signal - cancellation for startup and process lifetime.
+   * @returns a managed process; its private home is removed only after caller teardown.
+   */
+  launch(request: NativeAcpChildRuntimeRequest, signal: AbortSignal): Promise<NativeAcpChildRuntime>
 }
 ```
 

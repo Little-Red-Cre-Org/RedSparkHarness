@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { loadNativeProfile, readNativeProfile } from '../src/native-profile-loader.ts'
+import { loadNativeProfile, replaceNativeProfile } from '../src/native-profile-loader.ts'
 import { runNativeProfile } from '../src/native-profile-boot.ts'
 
 async function fixture() {
@@ -40,27 +40,190 @@ async function emptyNativePackage(
     name, type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires, optional: [], provides } },
   }))
+  const registrations = provides.map(service => `context.provide(${JSON.stringify(service)}, {})`).join(';')
   await writeFile(join(dir, 'native.mjs'), `export const plugin = { apiVersion: 1, name: ${JSON.stringify(name)}, targets: ['host'],
-    requires: ${JSON.stringify(requires)}, provides: ${JSON.stringify(provides)}, resolve: () => () => {} }\n`)
+    requires: ${JSON.stringify(requires)}, provides: ${JSON.stringify(provides)}, resolve: () => context => { ${registrations} } }\n`)
 }
 
-it('inherits the selected pi-ai provider catalog into the opt-in SDK child profile', async () => {
-  const { home, profileDir } = await fixture()
+async function childPackages(profileDir: string, kind: 'sdk' | 'acp'): Promise<void> {
+  await emptyNativePackage(profileDir, kind === 'sdk' ? '@deepseek-ai/dsh-sdk-child' : '@deepseek-ai/dsh-acp-child',
+    [kind === 'sdk' ? 'sdkChildRuntimeLauncher' : 'acpChildRuntimeLauncher'], ['externalSubagentDriver'])
+  await emptyNativePackage(profileDir, '@deepseek-ai/dsh-subprocess-local', [], ['childConnection'])
+  await emptyNativePackage(profileDir, '@deepseek-ai/dsh-sandbox-local', [], ['sandbox'])
+}
+
+it('inherits the nearest visible pi-ai provider catalog into the opt-in SDK child profile', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
   try {
-    const selectedProviders = {
-      'deepseek-official': { apiKeyEnv: 'DEEPSEEK_API_KEY', models: [{ id: 'current-route' }] },
-      'operator-catalog-route': { apiKeyEnv: 'OPERATOR_ROUTE_KEY', baseURL: 'https://provider.invalid/v1' },
-    }
+    const rootProviders = { route: { baseURL: 'https://root.invalid/v1' } }
+    const nestedProviders = { route: { baseURL: 'https://nested.invalid/v1' } }
+    const unrelatedProviders = { route: { baseURL: 'https://unrelated.invalid/v1' } }
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await childPackages(profileDir, 'sdk')
+    await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
+    await emptyNativePackage(profileDir, 'test-child-sandbox', [], ['sandbox'])
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
-      formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-        { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: selectedProviders } },
-        { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'root', config: { providerName: 'dsh-sdk' } },
+      formatVersion: 1, scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }, { id: 'other' }], installations: [
+        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
+        { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
+        { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
+        { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
+        { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'nested', config: { providerName: 'dsh-sdk' } },
       ],
     }))
-    const profile = readNativeProfile({ profile: 'probe', patchFiles: [], home, profileDir })
-    expect(profile.installations.find(row => row.id === 'dsh-sdk-child')?.config)
-      .toEqual({ providerName: 'dsh-sdk', providers: selectedProviders })
+    const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
+    expect(loaded.profile.installations.find(row => row.id === 'dsh-sdk-child')?.config)
+      .toEqual({ providerName: 'dsh-sdk', providers: nestedProviders })
+    const diagnostics = loaded.host.diagnostics()
+    const launcher = diagnostics.find(row => row.name === '@deepseek-ai/dsh-sdk-child-runtime-launcher')
+    const child = diagnostics.find(row => row.name === '@deepseek-ai/dsh-sdk-child')
+    const names = new Map(diagnostics.map(row => [row.id, row.name]))
+    expect(launcher?.scope).toBe(child?.scope)
+    expect(launcher?.dependencies.map(item => [item.service, names.get(item.provider)])).toEqual([
+      ['childConnection', 'test-child-connection'], ['sandbox', 'test-child-sandbox'],
+    ])
+    expect(loaded.profile.installations.some(row => row.id.startsWith('native-child-runtime/'))).toBe(false)
   } finally { await rm(home, { recursive: true, force: true }) }
+})
+
+it('uses the nearest visible model Provider catalog and process Providers for ACP children', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const rootProviders = { route: { baseURL: 'https://root.invalid/v1' } }
+  const nestedProviders = { route: { baseURL: 'https://nested.invalid/v1' } }
+  const unrelatedProviders = { route: { baseURL: 'https://unrelated.invalid/v1' } }
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await childPackages(profileDir, 'acp')
+    await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
+    await emptyNativePackage(profileDir, 'test-child-sandbox', [], ['sandbox'])
+    await emptyNativePackage(profileDir, 'test-remote-acp-launcher', [], ['acpChildRuntimeLauncher'])
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1,
+      scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }, { id: 'other' }],
+      installations: [
+        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
+        { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
+        { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
+        { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
+        { id: 'remote-acp-launcher', plugin: 'test-remote-acp-launcher', scope: 'other' },
+        { id: 'disabled-child-connection', plugin: '@deepseek-ai/dsh-subprocess-local', scope: 'other', disabled: true },
+        { id: 'disabled-child-sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: 'other', disabled: true },
+        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
+        { id: 'acp-child-other', plugin: '@deepseek-ai/dsh-acp-child', scope: 'other', config: { providerName: 'dsh-acp-child' } },
+      ],
+    }))
+    const desktopCarrier = { apiVersion: 1, name: 'test-desktop-carrier', targets: ['host'] as const,
+      requires: [] as const, provides: [] as const, resolve: () => () => {} }
+    const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home,
+      carrier: { plugin: desktopCarrier, scope: 'root' } })
+
+    expect(loaded.profile.installations.find(row => row.id === 'acp-child')?.config)
+      .toEqual({ providerName: 'dsh-acp-child', providers: nestedProviders })
+    expect(loaded.profile.installations.find(row => row.id === 'acp-child-other')?.config)
+      .toEqual({ providerName: 'dsh-acp-child', providers: unrelatedProviders })
+    const diagnostics = loaded.host.diagnostics()
+    const launchers = diagnostics.filter(row => row.name === '@deepseek-ai/dsh-acp-child-runtime-launcher')
+    const children = diagnostics.filter(row => row.name === '@deepseek-ai/dsh-acp-child')
+    const remoteLauncher = diagnostics.find(row => row.name === 'test-remote-acp-launcher')
+    expect(launchers.map(row => row.scope)).toEqual([children[0]?.scope])
+    expect(remoteLauncher?.scope).toBe(children[1]?.scope)
+    const names = new Map(diagnostics.map(row => [row.id, row.name]))
+    expect(launchers.map(row => row.dependencies.map(item => [item.service, names.get(item.provider)]))).toEqual([
+      [['childConnection', 'test-child-connection'], ['sandbox', 'test-child-sandbox']],
+    ])
+    const launcher = launchers[0]
+    expect(launcher?.dependencies.map(item => [item.service, names.get(item.provider)])).toEqual([
+      ['childConnection', 'test-child-connection'], ['sandbox', 'test-child-sandbox'],
+    ])
+    expect(loaded.profile.installations.some(row => row.id.startsWith('native-child-runtime/'))).toBe(false)
+    expect(diagnostics.some(row => row.name === 'test-desktop-carrier')).toBe(true)
+
+    await emptyNativePackage(profileDir, 'test-model-provider', [], ['model'])
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1,
+      scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }],
+      installations: [
+        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'nested-model', plugin: 'test-model-provider', scope: 'nested' },
+        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
+      ],
+    }))
+    await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home }))
+      .rejects.toThrow('cannot inherit route config from model Provider test-model-provider')
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
+
+it.each([
+  { kind: 'SDK', packageKind: 'sdk' as const, package: '@deepseek-ai/dsh-sdk-child', name: '@deepseek-ai/dsh-sdk-child-runtime-launcher', providerName: 'dsh-sdk' },
+  { kind: 'ACP', packageKind: 'acp' as const, package: '@deepseek-ai/dsh-acp-child', name: '@deepseek-ai/dsh-acp-child-runtime-launcher', providerName: 'dsh-acp-child' },
+])('rebuilds scoped $kind child runtime contributions for every profile candidate', async ({ packageKind, package: childPackage, name: launcherName, providerName }) => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const profilePath = join(profileDir, 'rsh.profile.json')
+  const desktopCarrier = { apiVersion: 1, name: 'test-desktop-carrier', targets: ['host'] as const,
+    requires: [] as const, provides: [] as const, resolve: () => () => {} }
+  const options = { profile: 'probe', patchFiles: [], target: 'host' as const, installAnchor, home,
+    carrier: { plugin: desktopCarrier, scope: 'root' } }
+  let active: Awaited<ReturnType<typeof loadNativeProfile>> | undefined
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await childPackages(profileDir, packageKind)
+    const scopes = [{ id: 'root' }, { id: 'first', parent: 'root' }, { id: 'second', parent: 'root' }]
+    const base = { formatVersion: 1, scopes, installations: [
+      { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: { route: {} } } },
+    ] }
+    await writeFile(profilePath, JSON.stringify(base))
+    const initial = await loadNativeProfile(options)
+    await initial.host.start()
+    active = initial
+    expect(active.host.diagnostics().some(row => row.name === launcherName)).toBe(false)
+
+    const withChild = { ...base, installations: [...base.installations,
+      { id: 'child', plugin: childPackage, scope: 'first', config: { providerName } }] }
+    await writeFile(profilePath, JSON.stringify(withChild))
+    const added = await loadNativeProfile({ ...options, previous: active })
+    active = await replaceNativeProfile(initial.host, added)
+    const addedDiagnostics = active.host.diagnostics().filter(row => row.state === 'ready')
+    const addedLauncher = addedDiagnostics.find(row => row.name === launcherName)
+    const addedChild = addedDiagnostics.find(row => row.name === childPackage)
+    expect(addedLauncher?.scope).toBe(addedChild?.scope)
+    const addedNames = new Map(addedDiagnostics.map(row => [row.id, row.name]))
+    expect(addedLauncher?.dependencies.map(item => addedNames.get(item.provider)))
+      .toEqual(['@deepseek-ai/dsh-subprocess-local', '@deepseek-ai/dsh-sandbox-local'])
+    expect(added.profile.installations.filter(row => row.id.startsWith('native-child-runtime/')).map(row => row.id))
+      .toEqual(['native-child-runtime/first/subprocess', 'native-child-runtime/first/sandbox'])
+    expect(added.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
+
+    const moved = { ...withChild, installations: withChild.installations.map(row => row.id === 'child' ? { ...row, scope: 'second' } : row) }
+    await writeFile(profilePath, JSON.stringify(moved))
+    const relocated = await loadNativeProfile({ ...options, previous: active })
+    active = await replaceNativeProfile(initial.host, relocated)
+    const relocatedDiagnostics = active.host.diagnostics().filter(row => row.state === 'ready')
+    const relocatedLauncher = relocatedDiagnostics.find(row => row.name === launcherName)
+    const relocatedChild = relocatedDiagnostics.find(row => row.name === childPackage)
+    expect(relocatedLauncher?.scope).toBe(relocatedChild?.scope)
+    const relocatedNames = new Map(relocatedDiagnostics.map(row => [row.id, row.name]))
+    expect(relocatedLauncher?.dependencies.map(item => relocatedNames.get(item.provider)))
+      .toEqual(['@deepseek-ai/dsh-subprocess-local', '@deepseek-ai/dsh-sandbox-local'])
+    expect(relocated.profile.installations.filter(row => row.id.startsWith('native-child-runtime/')).map(row => row.id))
+      .toEqual(['native-child-runtime/second/subprocess', 'native-child-runtime/second/sandbox'])
+    expect(relocated.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
+
+    await writeFile(profilePath, JSON.stringify(base))
+    const removed = await loadNativeProfile({ ...options, previous: active })
+    active = await replaceNativeProfile(initial.host, removed)
+    const retired = active.host.diagnostics().filter(row => row.name === launcherName
+      || row.name === '@deepseek-ai/dsh-subprocess-local' || row.name === '@deepseek-ai/dsh-sandbox-local')
+    expect(retired).toHaveLength(6)
+    expect(retired.every(row => row.state === 'disposed')).toBe(true)
+    expect(removed.host.diagnostics().some(row => row.name === launcherName
+      || row.name === '@deepseek-ai/dsh-subprocess-local' || row.name === '@deepseek-ai/dsh-sandbox-local')).toBe(false)
+    expect(active.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
+  } finally {
+    await active?.host.stop()
+    await rm(home, { recursive: true, force: true })
+  }
 })
 
 it('loads a named package export through a native profile and owns its lifecycle', async () => {

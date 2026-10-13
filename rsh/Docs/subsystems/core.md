@@ -377,6 +377,8 @@ interface NativeSessionExecutionPolicy {
 ```ts type-equiv
 /** One requested approval scoped to a live Session-owner capability. */
 interface NativeSessionOwnerApprovalRequest {
+  /** Exact identity already durably recorded by `native-approval/asked`. */
+  readonly id: NativeApprovalRequestId
   /** Exact model tool call awaiting approval. */
   readonly callId: ToolCallId
   /** Tool whose execution is blocked pending the owner decision. */

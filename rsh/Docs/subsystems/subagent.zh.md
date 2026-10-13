@@ -4,7 +4,7 @@
 
 subagent seam 让一个 agent（智能体）将工作委派给子 agent。与 [bash](shell.zh.md) 一样，它是**一项可选能力**，不属于 agent loop（智能体循环），因此其类型定义在此而非 [core.md](core.zh.md) 中。它不同于其他能力 seam，因为**同一上下文中可共存多个提供方实现**，并按名称注册（`ctx.subagents`），而 bash 只允许一个执行器。该注册表遵循 [LLM（大语言模型）适配器注册表](llm-streaming.zh.md)，而非单服务的 bash 执行器。
 
-Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Engine Service Provider 有三个同级包：`dsh-subagent-spawn-in-process`、`dsh-subagent-fork-in-process` 和 `dsh-subagent-acp`；Claude Code 产品适配器是一个 [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.zh.md)，提供受限的 Native driver 并保留 Cordis compatibility 入口。旧版 DSH SDK 提供方保留为独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-dsh-sdk)，以免 Engine 依赖 Program 客户端。面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
+Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Engine Service Provider 有两个同级包：`dsh-subagent-spawn-in-process` 和 `dsh-subagent-fork-in-process`；Cordis ACP 进程外提供方是独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-acp)。Claude Code 产品适配器是一个 [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.zh.md)，提供受限的 Native driver 并保留 Cordis compatibility 入口。旧版 DSH SDK 提供方保留为独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-dsh-sdk)，以免 Engine 依赖 Program 客户端。面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
 
 Official Native Codex 模块 [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.zh.md) 的一次性产品路径使用 Engine 捕获的 Responses transport；所选代际缺少该传输或无法执行父级 `maxTokens` 上限时，会在 child 启动前拒绝。显式组合该路由时，SIWC Provider 可提供捕获能力；已交付的 Native profiles 仍未启用 Codex 外部驱动。显式安装的旧版 Cordis 路径仍是 [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)。
 
@@ -144,12 +144,81 @@ interface NativeAcpSubagentClientCapabilities {
 ```ts type-equiv
 /** Capabilities a Native ACP server advertises during initialize. */
 interface NativeAcpSubagentServerCapabilities {
+  /** Whether permission requests carry exact Native Session, approval, tool and call identities. */
+  readonly permissionRequestIdentity: true
   /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
   readonly maxSteps: true
   /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
   readonly maxTokens: true
   /** Permission modes implemented by this server. */
   readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
+}
+```
+
+## Native ACP 子进程运行时
+
+Official [ACP child 适配器](../../Modules/Official/subagent/acp-child/README.zh.md)使用 Native 外部子 agent driver API。该包声明 `NativeAcpChildRuntime*` Service Definition，CLI 则提供固定子进程 launcher。此 ACP 路由是不透明的：它不使用 `request.model` 或 `responses`，也不发布六类 `subagent/external-operation` broker 事实。该包 README 说明路由协商、权限中继、文件 policy 与进程清理。
+
+```ts type-equiv
+/** Exact selected child route and policy passed to the fixed CLI launcher. */
+interface NativeAcpChildRuntimeRequest {
+  /** Exact live parent Session whose authority bounds the child. */
+  readonly parentSessionId: SessionId
+  /** Workspace selected by the parent Session. */
+  readonly cwd: string
+  /** Selected child provider route. */
+  readonly provider: string
+  /** Selected child model id. */
+  readonly model: string
+  /** Selected child reasoning effort, when one is configured. */
+  readonly reasoningEffort?: ReasoningEffortId
+  /** Non-secret provider configuration needed to reproduce the selected route. */
+  readonly providerProfile: Readonly<Record<string, unknown>>
+  /** Only the selected route credential, under its configured environment name. */
+  readonly environment: Readonly<Record<string, string>>
+  /** Fixed child-profile instruction; the parent conversation prompt is never copied here. */
+  readonly systemPrompt: string
+  /** Accepted maximum model steps per child turn. */
+  readonly maxSteps: number
+  /** Optional accepted output-token ceiling per model request. */
+  readonly maxTokens?: number
+  /** Permission mode negotiated with the child Native ACP server. */
+  readonly permissionMode: 'deny' | 'parent-relay'
+  /** Native builtin tools admitted by the exact parent authority. */
+  readonly builtinTools: readonly ('read_file' | 'write_file')[]
+  /** Complete allowed-tool list for the fixed child profile. */
+  readonly allowedTools: readonly string[]
+  /** Exact workspace root for Native file writes, only when parent write authority permits them. */
+  readonly workspaceWriteRoot?: string
+  /** Exact parent execution policy; launchers may enforce a stricter policy. */
+  readonly parentPolicy: SandboxExecutionPolicy
+}
+```
+
+```ts type-equiv
+/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
+interface NativeAcpChildRuntime {
+  /** Whole-range-owned child and ACP stdio streams. */
+  readonly child: ChildConnectionHandle
+  /** File-effect enforcement reported by the selected sandbox backend. */
+  readonly enforcement: SandboxEnforcement
+  /** Close stdin and settle the complete managed process range. */
+  shutdown(): Promise<void>
+  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
+  dispose(): Promise<void>
+}
+```
+
+```ts type-equiv
+/** CLI-owned launcher for the fixed, same-version Native ACP profile. */
+interface NativeAcpChildRuntimeLauncher {
+  /**
+   * Start one exact ACP profile under a policy derived from the parent Session.
+   * @param request - selected route, limits, tools, credential and owner policy.
+   * @param signal - cancellation for startup and process lifetime.
+   * @returns a managed process; its private home is removed only after caller teardown.
+   */
+  launch(request: NativeAcpChildRuntimeRequest, signal: AbortSignal): Promise<NativeAcpChildRuntime>
 }
 ```
 

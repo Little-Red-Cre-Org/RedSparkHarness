@@ -395,7 +395,7 @@ Source: [`rsh/Modules/Official/fs/tool-present/src/types.ts:15`](../Modules/Offi
 'execution/policy': NativeSessionExecutionPolicy
 ```
 
-Source: [`rsh/Engine/core/native-session-execution/src/execution-policy.ts:64`](../Engine/core/native-session-execution/src/execution-policy.ts)
+Source: [`rsh/Engine/core/native-session-execution/src/execution-policy.ts:66`](../Engine/core/native-session-execution/src/execution-policy.ts)
 
 ### `feedback/*`
 

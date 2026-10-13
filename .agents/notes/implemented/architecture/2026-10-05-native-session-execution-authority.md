@@ -20,7 +20,7 @@ Workspace error declarations use the canonical `@deepseek-ai/dsh-typert-protocol
 
 ## Consequences
 
-Model-visible inbox claims and selected input use existing Session events and are persisted before dispatch. Construction callbacks expose seed markers to the same writer. Stream observers receive the existing model dispatch; observer failure preserves its recorded partial attempt. None of these operations adds a model loop, permission authority or auxiliary writer.
+Model-visible inbox claims and selected input use existing Session events and are persisted before dispatch. Construction callbacks expose seed markers to the same writer. Stream observers receive the existing model dispatch; observer failure preserves its recorded partial attempt. None of these operations adds a model loop, permission authority or auxiliary writer. Headless passes the persisted approval ID to `NativeSessionOwnerApproval.authorize()` and records the result under that same ID; ACP permission metadata identifies the actual interaction Session while the outer ACP request retains its routed Session ID.
 
 Shutdown cancels admission, drains accepted operations and attempts every execution and retained epoch close. Independent failures aggregate after Agent identities and preset resources release. Lock acquisition and mutation retain their original error when release also fails, reporting both causes. Native and compatibility persistence Consumers use the same deletion operations, while the Client declaration leaf contains only receipt identities and operation types.
 

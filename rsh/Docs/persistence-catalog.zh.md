@@ -397,7 +397,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'execution/policy': NativeSessionExecutionPolicy
 ```
 
-来源：[`rsh/Engine/core/native-session-execution/src/execution-policy.ts:64`](../Engine/core/native-session-execution/src/execution-policy.ts)
+来源：[`rsh/Engine/core/native-session-execution/src/execution-policy.ts:66`](../Engine/core/native-session-execution/src/execution-policy.ts)
 
 ### `feedback/*`
 

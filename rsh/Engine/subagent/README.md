@@ -28,7 +28,6 @@ The subagent package family lets an agent delegate a task to a child, continue t
 | [`subagent-in-process-driver/`](subagent-in-process-driver/README.md) | Provides the shared in-process run driver | — |
 | [`subagent-spawn-in-process/`](subagent-spawn-in-process/README.md) | Runs a fresh in-process child | registers on `ctx.subagents` |
 | [`subagent-fork-in-process/`](subagent-fork-in-process/README.md) | Runs an in-process child seeded from the parent's completed history | registers on `ctx.subagents` |
-| [`subagent-acp/`](subagent-acp/README.md) | Runs an out-of-process child over the Agent Client Protocol | registers on `ctx.subagents` |
 | [`codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) | Provides the official app-server product driver for Native external subagents | `externalSubagentDriver` |
 | [`subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md) | Runs a real Codex child through the official app-server protocol in compatibility profiles | registers on `ctx.subagents` |
 | [`tool-subagent/`](tool-subagent/README.md) | Exposes delegation to the model | registers on `ctx.tools` |

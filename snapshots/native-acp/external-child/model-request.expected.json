@@ -1,0 +1,284 @@
+[
+  {
+    "model": "native-acp-parent-fixture",
+    "field": "max_completion_tokens",
+    "value": 64,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful coding assistant.\n\nUse workflow only when the user explicitly requests a workflow or large multi-agent orchestration. For one or two delegations, prefer subagent calls.\n\nUse the ralph tool ONLY when the direct human explicitly asks for a Ralph loop or fresh-agent iterative execution. Each Ralph round starts a fresh child with no conversation seed and uses the shared workspace as durable memory. Completion and blockers are worker reports, not independent evaluation. Use same-session goal tools for ordinary long-running objectives, and plain subagents or workflows for bounded delegation and fan-out."
+      },
+      {
+        "role": "user",
+        "content": "Delegate one approved file write to the Native ACP child and report completion."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "native-acp-child-fixture",
+    "field": "max_completion_tokens",
+    "value": 48,
+    "messages": [
+      {
+        "role": "system",
+        "content": "Complete the delegated task using only the tools authorized for this child."
+      },
+      {
+        "role": "user",
+        "content": "Write approved.txt with the exact workspace oracle contents, then report completion."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "native-acp-child-fixture",
+    "field": "max_completion_tokens",
+    "value": 48,
+    "messages": [
+      {
+        "role": "system",
+        "content": "Complete the delegated task using only the tools authorized for this child."
+      },
+      {
+        "role": "user",
+        "content": "Write approved.txt with the exact workspace oracle contents, then report completion."
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "child-approved-write",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"approved.txt\",\"content\":\"Approved by the parent Native Session.\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "create: approved.txt",
+        "tool_call_id": "child-approved-write"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  },
+  {
+    "model": "native-acp-parent-fixture",
+    "field": "max_completion_tokens",
+    "value": 64,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful coding assistant.\n\nUse workflow only when the user explicitly requests a workflow or large multi-agent orchestration. For one or two delegations, prefer subagent calls.\n\nUse the ralph tool ONLY when the direct human explicitly asks for a Ralph loop or fresh-agent iterative execution. Each Ralph round starts a fresh child with no conversation seed and uses the shared workspace as durable memory. Completion and blockers are worker reports, not independent evaluation. Use same-session goal tools for ordinary long-running objectives, and plain subagents or workflows for bounded delegation and fan-out."
+      },
+      {
+        "role": "user",
+        "content": "Delegate one approved file write to the Native ACP child and report completion."
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "parent-delegate-call",
+            "type": "function",
+            "function": {
+              "name": "subagent",
+              "arguments": "{\"description\":\"Write the approved snapshot file\",\"prompt\":\"Write approved.txt with the exact workspace oracle contents, then report completion.\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "The approved file was written.",
+        "tool_call_id": "parent-delegate-call"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Create or replace a UTF-8 file within the selected workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent",
+          "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+]

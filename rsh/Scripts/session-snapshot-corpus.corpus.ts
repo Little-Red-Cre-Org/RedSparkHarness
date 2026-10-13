@@ -31,6 +31,7 @@ const snapshotAdapters = [
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
   'snapshots/desktop/native-session-core.snapshot.ts',
+  'snapshots/native-acp/external-child.snapshot.ts',
   'snapshots/native-acp/text-turn.snapshot.ts',
   'snapshots/native-headless/goal-continuation.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',

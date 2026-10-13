@@ -8,7 +8,9 @@ import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-sess
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import { NATIVE_ACP_SUBAGENT_METADATA_KEY, nativeAcpSubagentPolicyMetadata, nativeAcpSubagentServerMetadata,
-  readNativeAcpSubagentClientCapabilities, readNativeAcpSubagentPolicy } from '@deepseek-ai/dsh-acp-protocol'
+  nativeAcpSubagentPermissionRequestMetadata, readNativeAcpSubagentClientCapabilities,
+  readNativeAcpSubagentPermissionRequest, readNativeAcpSubagentPolicy,
+  readNativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import { NativeAcpApplication, plugin as nativeAcpPlugin } from '../src/native.ts'
 
 const inactiveSessions: NativeActiveSessionOperations = {
@@ -33,11 +35,30 @@ it('reads versioned ACP capabilities and session policy metadata without claimin
     version: 1, maxSteps: 4, permissionMode: 'deny',
   } })).toEqual({ version: 1, maxSteps: 4, permissionMode: 'deny' })
   expect(readNativeAcpSubagentPolicy({})).toBeUndefined()
-  expect(nativeAcpSubagentServerMetadata({ maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] }))
+  expect(nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
+    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] }))
     .toEqual({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-      version: 1, capabilities: { maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] },
+      version: 1, capabilities: { permissionRequestIdentity: true, maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] },
     } })
+  const serverMeta = nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
+    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] })
+  expect(readNativeAcpSubagentServerCapabilities(serverMeta)).toEqual({ permissionRequestIdentity: true,
+    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] })
+  expect(readNativeAcpSubagentServerCapabilities(undefined)).toBeUndefined()
+  expect(() => readNativeAcpSubagentServerCapabilities({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
+    version: 1, capabilities: { permissionRequestIdentity: false, maxSteps: true, maxTokens: true, permissionModes: ['parent-relay'] },
+  } })).toThrow('capabilities.permissionRequestIdentity must be true')
   expect(nativeAcpSubagentPolicyMetadata(policy)).toEqual({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy })
+  const permissionRequest = { sessionId: 'child-session', requestId: 'parent-request', toolName: 'write_file', toolCallId: 'child-call' }
+  const permissionMetadata = nativeAcpSubagentPermissionRequestMetadata(permissionRequest)
+  expect(readNativeAcpSubagentPermissionRequest(permissionMetadata)).toEqual(permissionRequest)
+  expect(readNativeAcpSubagentPermissionRequest(undefined)).toBeUndefined()
+  expect(() => readNativeAcpSubagentPermissionRequest({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
+    version: 1, permissionRequest: { ...permissionRequest, toolName: '' },
+  } })).toThrow('toolName must be a nonempty trimmed string')
+  expect(() => readNativeAcpSubagentPermissionRequest({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
+    version: 1, permissionRequest: { ...permissionRequest, extra: true },
+  } })).toThrow('permissionRequest.extra is unsupported')
 })
 
 it('rejects unsupported ACP metadata versions, fields, permissions, and ceilings', () => {

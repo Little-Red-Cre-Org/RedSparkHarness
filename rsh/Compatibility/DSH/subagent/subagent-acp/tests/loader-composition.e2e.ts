@@ -22,7 +22,7 @@ const configPath = fileURLToPath(new URL(
   import.meta.url,
 ))
 const mockServer = fileURLToPath(new URL('./mock-acp-server.ts', import.meta.url))
-const repoTsconfig = fileURLToPath(new URL('../../../../../tsconfig.json', import.meta.url))
+const repoTsconfig = fileURLToPath(new URL('../../../../../../tsconfig.json', import.meta.url))
 
 async function jsonlFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true })

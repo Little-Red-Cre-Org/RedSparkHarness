@@ -4,7 +4,6 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { NativeApplication, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
 import { loadNativeProfile, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
 import { createProcessShutdown } from './process-shutdown.ts'
@@ -54,9 +53,7 @@ export async function runNativeProfile(options: {
   const home = options.home ?? resolveDshHome()
   const onApplication = (selected: NativeApplication): void => { application = selected }
   let carrier: { readonly plugin: NativePlugin; readonly scope: string } | undefined
-  if (options.profile === 'native-sdk-dsh-child') {
-    carrier = { plugin: nativeSdkChildRuntimeLauncher, scope: 'root' }
-  } else if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
+  if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
     const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
     carrier = { plugin, scope: 'root' }
   }

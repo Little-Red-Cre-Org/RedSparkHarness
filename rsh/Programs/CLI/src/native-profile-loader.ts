@@ -12,6 +12,8 @@ import {
 import { launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
 import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
+import { nativeAcpChildRuntimeLauncher } from './native-acp-child-runtime-launcher.ts'
 import {
   applyNativeProfilePatches, parseNativeProfileConfig, profileDirectoryRuntime, profileRuntime, type NativeProfileConfig,
 } from './native-profile-config.ts'
@@ -40,6 +42,11 @@ interface LoadedProfileState {
 }
 
 const loadedProfileStates = new WeakMap<LoadedNativeProfile, LoadedProfileState>()
+
+const nativeChildLaunchers = [
+  { package: '@deepseek-ai/dsh-sdk-child', service: 'sdkChildRuntimeLauncher', plugin: nativeSdkChildRuntimeLauncher },
+  { package: '@deepseek-ai/dsh-acp-child', service: 'acpChildRuntimeLauncher', plugin: nativeAcpChildRuntimeLauncher },
+] as const
 
 function jsonFile(path: string): unknown {
   try { return JSON.parse(readFileSync(path, 'utf8')) as unknown }
@@ -77,21 +84,140 @@ function scopesOf(profile: NativeProfileConfig, previous?: LoadedNativeProfile):
   return scopes
 }
 
-function sdkChildProviderRoutes(profile: NativeProfileConfig): NativeProfileConfig {
-  const childIndex = profile.installations.findIndex(row => row.plugin === '@deepseek-ai/dsh-sdk-child')
-  if (childIndex === -1) return profile
-  const providerRow = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-llm-pi-ai')
-  const providerConfig = typeof providerRow?.config === 'object' && providerRow.config !== null && !Array.isArray(providerRow.config)
-    ? providerRow.config as Record<string, unknown> : undefined
-  const providers = typeof providerConfig?.providers === 'object' && providerConfig.providers !== null && !Array.isArray(providerConfig.providers)
-    ? providerConfig.providers : {}
-  const child = profile.installations[childIndex]
-  if (child === undefined) throw new Error('native profile lost the SDK child installation')
-  const childConfig = typeof child.config === 'object' && child.config !== null && !Array.isArray(child.config)
-    ? child.config as Record<string, unknown> : {}
+function scopeAncestry(profile: NativeProfileConfig, scopeId: string): string[] {
+  const declarations = new Map(profile.scopes.map(scope => [scope.id, scope]))
+  const ancestry: string[] = []
+  let current: string | undefined = scopeId
+  while (current !== undefined) {
+    const scope = declarations.get(current)
+    if (scope === undefined) throw new Error(`native profile lost scope ${current}`)
+    ancestry.push(scope.id)
+    current = scope.parent
+  }
+  return ancestry
+}
+
+function childProviderRoutes(profile: NativeProfileConfig, selected: SelectedPackage[]): NativeProfileConfig {
   const installations = [...profile.installations]
-  installations[childIndex] = { ...child, config: { ...childConfig, providers } }
+  for (let index = 0; index < installations.length; index += 1) {
+    const child = installations[index]
+    if ((child?.plugin !== '@deepseek-ai/dsh-sdk-child' && child?.plugin !== '@deepseek-ai/dsh-acp-child')
+      || child.disabled === true) continue
+    const config = typeof child.config === 'object' && child.config !== null && !Array.isArray(child.config)
+      ? child.config as Record<string, unknown> : {}
+    if (child.plugin === '@deepseek-ai/dsh-acp-child'
+      && (typeof config.providerName !== 'string' || config.providerName === '')) {
+      throw new Error(`native profile installation ${child.id} must select an acp-child providerName`)
+    }
+    const modelProvider = nearestSelectedProvider(selected, scopeAncestry(profile, child.scope), 'model')
+    if (modelProvider === undefined) throw new Error(`native profile installation ${child.id} has no visible model Provider`)
+    if (modelProvider.row.plugin !== '@deepseek-ai/dsh-llm-pi-ai') {
+      throw new Error(`native profile installation ${child.id} cannot inherit route config from model Provider ${modelProvider.row.plugin}`)
+    }
+    const providerConfig = typeof modelProvider.row.config === 'object' && modelProvider.row.config !== null && !Array.isArray(modelProvider.row.config)
+      ? modelProvider.row.config as Record<string, unknown> : undefined
+    const providers = typeof providerConfig?.providers === 'object' && providerConfig.providers !== null && !Array.isArray(providerConfig.providers)
+      ? providerConfig.providers : undefined
+    if (providers === undefined || Object.keys(providers).length === 0) {
+      throw new Error(`native profile installation ${child.id} has no route catalog in its nearest pi-ai Provider`)
+    }
+    const updated = { ...child, config: { ...config, providers } }
+    installations[index] = updated
+    const selectedChild = selected.find(item => item.row.id === child.id)
+    if (selectedChild !== undefined) selectedChild.row = updated
+  }
   return { ...profile, installations }
+}
+
+function childRuntimeProviders(profile: NativeProfileConfig, selected: SelectedPackage[],
+  target: 'host' | 'client', anchors: readonly ReturnType<typeof createRequire>[], roots: readonly string[] | undefined): NativeProfileConfig {
+  const childScopes = new Set(profile.installations.flatMap((row) => {
+    if (row.disabled === true) return []
+    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
+    if (child === undefined || nearestSelectedProvider(selected, scopeAncestry(profile, row.scope), child.service) !== undefined) return []
+    return [row.scope]
+  }))
+  if (childScopes.size === 0) return profile
+  const additions = [
+    { service: 'childConnection', id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local' },
+    { service: 'sandbox', id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local' },
+  ] as const
+  const installations = [...profile.installations]
+  for (const scope of childScopes) {
+    const ancestry = scopeAncestry(profile, scope)
+    for (const { service, id, plugin } of additions) {
+      if (nearestSelectedProvider(selected, ancestry, service) !== undefined) continue
+      const disabledProvider = disabledNativeProvider(installations, ancestry, service, anchors)
+      if (disabledProvider !== undefined) {
+        throw new Error(`native profile disables ${disabledProvider.plugin} in the child scope ancestry but no ${service} Provider is available`)
+      }
+      const installationId = `native-child-runtime/${scope}/${id}`
+      if (installations.some(row => row.id === installationId)) {
+        throw new Error(`native profile installation id ${installationId} is reserved for child runtime support`)
+      }
+      const row = { id: installationId, plugin, scope }
+      const selectedPackage = selectNativePackage(row, target, anchors, roots)
+      if (!selectedPackage.entry.provides.includes(service)) {
+        throw new Error(`native child runtime package ${plugin} does not provide ${service}`)
+      }
+      installations.push(row)
+      selected.push(selectedPackage)
+    }
+  }
+  return { ...profile, installations }
+}
+
+function nearestSelectedProvider(
+  selected: readonly SelectedPackage[], ancestry: readonly string[], service: string,
+): SelectedPackage | undefined {
+  return ancestry.map(scope => selected.find(item => item.row.scope === scope && item.entry.provides.includes(service)))
+    .find(item => item !== undefined)
+}
+
+function disabledNativeProvider(installations: NativeProfileConfig['installations'], ancestry: readonly string[], service: string,
+  anchors: readonly ReturnType<typeof createRequire>[]): NativeProfileConfig['installations'][number] | undefined {
+  for (const scope of ancestry) {
+    for (const row of installations) {
+      if (row.scope !== scope || row.disabled !== true) continue
+      for (const anchor of anchors) {
+        let manifestPath: string
+        try { manifestPath = anchor.resolve(`${row.plugin}/package.json`) }
+        catch { continue }
+        const manifest = jsonFile(manifestPath) as { dsh?: { native?: unknown }; exports?: Record<string, unknown> }
+        if (manifest.dsh?.native === undefined) continue
+        const entry = parseNativeEntryManifest(manifest.dsh.native, new Set(Object.keys(manifest.exports ?? {})))
+        if (entry.provides.includes(service)) return row
+      }
+    }
+  }
+  return undefined
+}
+
+function selectNativePackage(row: NativeProfileConfig['installations'][number], target: 'host' | 'client',
+  anchors: readonly ReturnType<typeof createRequire>[], roots: readonly string[] | undefined): SelectedPackage {
+  for (const anchor of anchors) {
+    let manifestPath: string | undefined
+    try {
+      manifestPath = anchor.resolve(`${row.plugin}/package.json`)
+      const manifest = jsonFile(manifestPath) as { name?: string; dsh?: { native?: unknown }; exports?: Record<string, unknown> }
+      if (roots !== undefined) {
+        const packageDir = realpathSync(join(manifestPath, '..'))
+        if (manifest.name !== row.plugin || !roots.some(root => contained(root, packageDir))) {
+          throw new Error('package identity differs or package is outside the installed profile/runtime')
+        }
+      }
+      const entry = parseNativeEntryManifest(manifest.dsh?.native, new Set(Object.keys(manifest.exports ?? {})))
+      if (!entry.targets.includes(target)) throw new Error(`${row.plugin} does not support ${target}`)
+      const entryPath = anchor.resolve(`${row.plugin}${entry.entry.slice(1)}`)
+      if (roots !== undefined && !contained(realpathSync(join(manifestPath, '..')), realpathSync(entryPath))) {
+        throw new Error('native export escapes its installed package')
+      }
+      return { row, entry, entryPath }
+    } catch (error) {
+      if (manifestPath !== undefined) throw new Error(`native installation ${row.id}: invalid package ${row.plugin}`, { cause: error })
+    }
+  }
+  throw new Error(`native installation ${row.id}: package ${row.plugin} is not installed`)
 }
 
 async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: string,
@@ -191,7 +317,7 @@ export function readNativeProfile(options: {
   if (options.profileDir === undefined) refuseLegacyPatch(join(home, 'cordis.patch.yml'))
   refuseLegacyPatch(join(profileDir, 'desktop.cordis.yml'))
   const base = parseNativeProfileConfig(jsonFile(join(profileDir, 'rsh.profile.json')))
-  return sdkChildProviderRoutes(applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file)))))
+  return applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file))))
 }
 
 /**
@@ -228,36 +354,10 @@ export async function loadNativeProfile(options: {
   const roots = options.containedRoots?.map(root => realpathSync(root))
   for (const row of profile.installations) {
     if (row.disabled === true) continue
-    let manifestPath: string | undefined
-    let entryPath: string | undefined
-    for (const anchor of anchors) {
-      try {
-        manifestPath = anchor.resolve(`${row.plugin}/package.json`)
-        const manifest = jsonFile(manifestPath) as { name?: string; dsh?: { native?: unknown }; exports?: Record<string, unknown> }
-        if (roots !== undefined) {
-          const packageDir = realpathSync(join(manifestPath, '..'))
-          if (manifest.name !== row.plugin || !roots.some(root => contained(root, packageDir))) {
-            throw new Error('package identity differs or package is outside the installed profile/runtime')
-          }
-        }
-        const entry = parseNativeEntryManifest(manifest.dsh?.native, new Set(Object.keys(manifest.exports ?? {})))
-        if (!entry.targets.includes(options.target)) {
-          throw new Error(`${row.plugin} does not support ${options.target}`)
-        }
-        entryPath = anchor.resolve(`${row.plugin}${entry.entry.slice(1)}`)
-        if (roots !== undefined && !contained(realpathSync(join(manifestPath, '..')), realpathSync(entryPath))) {
-          throw new Error('native export escapes its installed package')
-        }
-        selected.push({ row, entry, entryPath })
-        break
-      } catch (error) {
-        if (manifestPath !== undefined) throw new Error(`native installation ${row.id}: invalid package ${row.plugin}`, { cause: error })
-      }
-    }
-    if (entryPath === undefined) {
-      throw new Error(`native installation ${row.id}: package ${row.plugin} is not installed`)
-    }
+    selected.push(selectNativePackage(row, options.target, anchors, roots))
   }
+  profile = childProviderRoutes(profile, selected)
+  profile = childRuntimeProviders(profile, selected, options.target, anchors, roots)
   const previousState = options.previous === undefined ? undefined : loadedProfileStates.get(options.previous)
   const scopes = scopesOf(profile, options.previous)
   const requests = new Map<string, InstallationRequest>()
@@ -280,6 +380,30 @@ export async function loadNativeProfile(options: {
     const request = prior !== undefined && prior.plugin === options.carrier.plugin && prior.scope === scope
       ? prior : { plugin: options.carrier.plugin, scope, config: undefined }
     auxiliaryRequests.set('carrier', request)
+    planned.push(request)
+  }
+  const childLaunches = new Map<string, { readonly scopeId: string; readonly service: string; readonly plugin: NativePlugin }>()
+  for (const row of profile.installations) {
+    if (row.disabled === true) continue
+    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
+    if (child !== undefined) childLaunches.set(`${child.service}:${row.scope}`, {
+      scopeId: row.scope, service: child.service, plugin: child.plugin,
+    })
+  }
+  for (const [key, child] of childLaunches) {
+    const ancestry = scopeAncestry(profile, child.scopeId)
+    if (nearestSelectedProvider(selected, ancestry, child.service) !== undefined) continue
+    const disabledProvider = disabledNativeProvider(profile.installations, ancestry, child.service, anchors)
+    if (disabledProvider !== undefined) {
+      throw new Error(`native profile disables ${disabledProvider.plugin} in the child scope ancestry but no ${child.service} Provider is available`)
+    }
+    const scope = scopes.get(child.scopeId)
+    if (scope === undefined) throw new Error(`native profile lost child scope ${child.scopeId}`)
+    const auxiliaryKey = `native-child-runtime-launcher:${key}`
+    const prior = previousState?.auxiliaryRequests.get(auxiliaryKey)
+    const request = prior !== undefined && prior.plugin === child.plugin && prior.scope === scope
+      ? prior : { plugin: child.plugin, scope, config: undefined }
+    auxiliaryRequests.set(auxiliaryKey, request)
     planned.push(request)
   }
   if (environment !== undefined) for (const row of profile.scopes) {

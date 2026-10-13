@@ -15,6 +15,15 @@ export interface NativeAcpSubagentPolicy {
   readonly permissionMode: NativeAcpSubagentPermissionMode
 }
 
+/** Exact native operation identity attached to one ACP permission request. */
+export interface NativeAcpSubagentPermissionRequest {
+  /** Native Session that owns the operation; it may differ from the ACP recipient Session. */
+  readonly sessionId: string
+  readonly requestId: string
+  readonly toolName: string
+  readonly toolCallId: string
+}
+
 /** Capabilities a Native ACP client advertises during initialize. */
 export interface NativeAcpSubagentClientCapabilities {
   /** Whether the client can relay permission requests to its owning Session. */
@@ -23,6 +32,8 @@ export interface NativeAcpSubagentClientCapabilities {
 
 /** Capabilities a Native ACP server advertises during initialize. */
 export interface NativeAcpSubagentServerCapabilities {
+  /** Whether permission requests carry exact Native Session, approval, tool and call identities. */
+  readonly permissionRequestIdentity: true
   /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
   readonly maxSteps: true
   /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
@@ -104,10 +115,87 @@ export function nativeAcpSubagentServerMetadata(capabilities: NativeAcpSubagentS
   return { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, capabilities } }
 }
 
+/** Read server capabilities returned by the initialize response.
+ * @param meta - untrusted response metadata from the ACP server.
+ * @returns advertised capabilities, or undefined when this extension is absent.
+ */
+export function readNativeAcpSubagentServerCapabilities(meta: unknown): NativeAcpSubagentServerCapabilities | undefined {
+  const value = extension(meta, 'initialize response')
+  if (value === undefined) return undefined
+  exactKeys(value, ['version', 'capabilities'], [], 'initialize response native-subagent metadata')
+  version(value, 'initialize response native-subagent metadata')
+  const capabilities = record(value.capabilities, 'initialize response native-subagent metadata.capabilities')
+  exactKeys(capabilities, ['permissionRequestIdentity', 'maxSteps', 'maxTokens', 'permissionModes'], [],
+    'initialize response native-subagent metadata.capabilities')
+  for (const field of ['permissionRequestIdentity', 'maxSteps', 'maxTokens'] as const) {
+    if (capabilities[field] !== true) {
+      throw new TypeError(`initialize response native-subagent metadata.capabilities.${field} must be true`)
+    }
+  }
+  if (!Array.isArray(capabilities.permissionModes)) {
+    throw new TypeError('initialize response native-subagent metadata.capabilities.permissionModes is invalid')
+  }
+  const permissionModes: NativeAcpSubagentPermissionMode[] = []
+  for (const mode of capabilities.permissionModes) {
+    if (mode !== 'deny' && mode !== 'parent-relay' || permissionModes.includes(mode)) {
+      throw new TypeError('initialize response native-subagent metadata.capabilities.permissionModes is invalid')
+    }
+    permissionModes.push(mode)
+  }
+  return {
+    permissionRequestIdentity: true,
+    maxSteps: true,
+    maxTokens: true,
+    permissionModes,
+  }
+}
+
 /** Return the accepted effective policy in session/new or session/resume metadata.
  * @param policy - limits and permission mode accepted for this Session.
  * @returns the ACP metadata extension containing that effective policy.
  */
 export function nativeAcpSubagentPolicyMetadata(policy: NativeAcpSubagentPolicy): Record<string, unknown> {
   return { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy }
+}
+
+/** Return metadata correlating one ACP permission RPC with its native tool request.
+ * @param request - exact Session, approval request, tool name, and tool-call identity.
+ * @returns the versioned ACP metadata extension.
+ */
+export function nativeAcpSubagentPermissionRequestMetadata(
+  request: NativeAcpSubagentPermissionRequest,
+): Record<string, unknown> {
+  return { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
+    version: NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION,
+    permissionRequest: request,
+  } }
+}
+
+/** Read the exact native request associated with ACP permission metadata.
+ * @param meta - untrusted metadata from `session/request_permission`.
+ * @returns the correlated request, or undefined when no extension is present.
+ */
+export function readNativeAcpSubagentPermissionRequest(
+  meta: unknown,
+): NativeAcpSubagentPermissionRequest | undefined {
+  const value = extension(meta, 'session/request_permission')
+  if (value === undefined) return undefined
+  exactKeys(value, ['version', 'permissionRequest'], [], 'session/request_permission native-subagent metadata')
+  version(value, 'session/request_permission native-subagent metadata')
+  const request = record(value.permissionRequest, 'session/request_permission native-subagent metadata.permissionRequest')
+  exactKeys(request, ['sessionId', 'requestId', 'toolName', 'toolCallId'], [],
+    'session/request_permission native-subagent metadata.permissionRequest')
+  const requiredString = (field: keyof NativeAcpSubagentPermissionRequest): string => {
+    const value = request[field]
+    if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) {
+      throw new TypeError(`session/request_permission native-subagent metadata.permissionRequest.${field} must be a nonempty trimmed string`)
+    }
+    return value
+  }
+  return {
+    sessionId: requiredString('sessionId'),
+    requestId: requiredString('requestId'),
+    toolName: requiredString('toolName'),
+    toolCallId: requiredString('toolCallId'),
+  }
 }

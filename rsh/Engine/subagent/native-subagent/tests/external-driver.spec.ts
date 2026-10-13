@@ -253,6 +253,55 @@ const drainCases = [
   { name: 'terminal persistence failure', cleanupFails: false, terminalFlushFails: true },
 ] as const
 
+it.each([
+  { approvalRelay: true, expected: true },
+  { approvalRelay: false, expected: false },
+])('offers parent approval to a declared external relay capability ($approvalRelay)', async ({ approvalRelay, expected }) => {
+  const parent = owner('external-parent-approval-capability', 'root')
+  const authority: NativeSessionDelegationAuthority = Object.freeze({
+    toolNames: Object.freeze(['write_file']), programToolNames: Object.freeze([]),
+    builtinToolNames: Object.freeze(['write_file']), approvalRequired: true,
+    sandboxPolicy: { mode: 'workspace-write' as const, workspaceRoot: '/selected', sessionId: parent.session.id },
+  })
+  const result = Promise.withResolvers<{ readonly output: readonly []; stopReason: 'completed' }>()
+  const published = Promise.withResolvers<NativeExternalSubagentRequest>()
+  const approvalRequests: string[] = []
+  const driver: NativeExternalSubagentDriver = {
+    name: remoteProvider,
+    routeFields: [],
+    capabilities: { persona: false, toolFilter: false, outputSchema: false, approvalRelay },
+    start: async (request) => {
+      published.resolve(request)
+      return { remoteId: 'remote-approval-capability', result: result.promise, dispose: async () => {} }
+    },
+  }
+  const state = fixture(driver, [parent], [], authority)
+  try {
+    await state.host.start()
+    const resolved = state.operations.resolve({ ...requestFor(parent),
+      options: { maxDepth: 2 },
+      approvalRequester: async (request) => { approvalRequests.push(request.requestId); return 'allowed-once' },
+    })
+    const running = state.operations.run(resolved, new AbortController().signal)
+    const request = await published.promise
+    expect(request.approval !== undefined).toBe(expected)
+    if (expected) {
+      const approval = request.approval
+      if (approval === undefined) throw new Error('declared relay capability did not receive parent approval')
+      await expect(approval.request({ operationId: request.id, requestId: 'approval-request-1', toolName: 'write_file',
+        callId: 'write-call-1', signal: new AbortController().signal })).resolves.toBe('allowed-once')
+      expect(approvalRequests).toEqual(['approval-request-1'])
+    } else {
+      expect(request.authority.builtinToolNames).toEqual([])
+    }
+    result.resolve({ output: [], stopReason: 'completed' })
+    await expect(running).resolves.toMatchObject({ stopReason: 'completed' })
+  } finally {
+    result.resolve({ output: [], stopReason: 'completed' })
+    await state.host.stop()
+  }
+})
+
 it.each(drainCases)('drains a ready child and preserves $name through owner and Provider release', async ({ cleanupFails, terminalFlushFails }) => {
   const order: string[] = []
   const parent = owner('external-parent', 'root', undefined, type => order.push(`append:${type}`),

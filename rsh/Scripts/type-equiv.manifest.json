@@ -1547,6 +1547,21 @@
       "source": "rsh/Modules/Official/subagent/acp-protocol/src/protocol.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpChildRuntimeRequest",
+      "source": "rsh/Modules/Official/subagent/acp-child/src/runtime.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpChildRuntime",
+      "source": "rsh/Modules/Official/subagent/acp-child/src/runtime.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/subagent.md",
+      "symbol": "NativeAcpChildRuntimeLauncher",
+      "source": "rsh/Modules/Official/subagent/acp-child/src/runtime.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/web.md",
       "symbol": "WebSearchRequest",
       "source": "rsh/Modules/Official/web/web/src/types.ts"

@@ -74,6 +74,21 @@ async function waitForFile(file: string): Promise<void> {
   }
 }
 
+async function waitForChildConnectionObservation(file: string): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + SPAWN_TIMEOUT_MS
+  let last: Record<string, unknown> | undefined
+  while (Date.now() < deadline) {
+    if (existsSync(file)) {
+      last = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
+      const connections = last.connections
+      if (Array.isArray(connections) && connections.some(connection => typeof connection === 'object'
+        && connection !== null && 'settled' in connection && connection.settled === true)) return last
+    }
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+  throw new Error('native child connection did not settle: ' + JSON.stringify(last))
+}
+
 function findNativeClaudeHome(tempRoot: string, workspace: string): string | undefined {
   const parents = [tempRoot, ...readdirSync(tempRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
@@ -252,6 +267,65 @@ function sessionEvents(events: readonly unknown[], type: string): Record<string,
   return events.flatMap(event => typeof event === 'object' && event !== null && 'type' in event
     && event.type === type && 'data' in event && typeof event.data === 'object' && event.data !== null
     ? [event.data as Record<string, unknown>] : [])
+}
+
+function installChildConnectionObserver(profileDirectory: string): void {
+  const observerPackage = join(profileDirectory, 'node_modules', '@fixture', 'child-connection-observer')
+  mkdirSync(observerPackage, { recursive: true })
+  writeFileSync(join(observerPackage, 'package.json'), JSON.stringify({
+    name: '@fixture/child-connection-observer',
+    type: 'module',
+    exports: { './package.json': './package.json', './native.js': './native.js' },
+    dsh: { native: {
+      apiVersion: 1, entry: './native.js', targets: ['host'], requires: ['childConnection'], optional: [], provides: [],
+    } },
+  }))
+  writeFileSync(join(observerPackage, 'native.js'), [
+    "import { existsSync, writeFileSync } from 'node:fs'",
+    'export const plugin = {',
+    "  apiVersion: 1, name: 'test-child-connection-observer', targets: ['host'], requires: ['childConnection'], optional: [], provides: [],",
+    '  resolve(config) {',
+    '    return context => {',
+    "      const childConnection = context.require('childConnection')",
+    '      const originalConnect = childConnection.connect',
+    '      const connections = []',
+    '      const write = () => writeFileSync(config.observationPath, JSON.stringify({ connections }))',
+    '      childConnection.connect = function (spec) {',
+    '        const handle = originalConnect.call(childConnection, spec)',
+    "        if (!spec.argv.includes('--profile') || !spec.argv.includes('native-acp-dsh-child')) return handle",
+    '        const home = spec.env?.DSH_HOME ?? null',
+    '        const record = { argv: spec.argv, cwd: spec.cwd, home, homeExistedAtConnect: home !== null && existsSync(home),',
+    '          nodeOptions: spec.env?.NODE_OPTIONS ?? null, stdin: "", stdout: "", stderr: "", outcome: null, rangeEmpty: null }',
+    '        connections.push(record)',
+    '        const persist = () => write()',
+    '        const originalWrite = handle.stdin.write.bind(handle.stdin)',
+    '        handle.stdin.write = function (chunk, ...args) {',
+    '          record.stdin += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8")',
+    '          return originalWrite(chunk, ...args)',
+    '        }',
+    '        handle.stdout.on("data", chunk => { record.stdout += chunk.toString("utf8"); persist() })',
+    '        handle.stderr.on("data", chunk => { record.stderr += chunk.toString("utf8"); persist() })',
+    '        void handle.done.then(async outcome => {',
+    '          record.outcome = outcome',
+    '          try { record.rangeEmpty = await handle.waitForExit() }',
+    '          catch (error) { record.rangeEmpty = String(error) }',
+    '          record.settled = true',
+    '          persist()',
+    '        }, async error => {',
+    '          record.outcome = String(error)',
+    '          try { record.rangeEmpty = await handle.waitForExit() }',
+    '          catch (rangeError) { record.rangeEmpty = String(rangeError) }',
+    '          record.settled = true',
+    '          persist()',
+    '        })',
+    '        return handle',
+    '      }',
+    '      context.own(() => { childConnection.connect = originalConnect })',
+    '    }',
+    '  },',
+    '}',
+    '',
+  ].join('\n'))
 }
 
 /** A live native profile whose app can prove candidate rejection, turnover, and run failures. */
@@ -844,6 +918,162 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       await profileRun?.catch(() => undefined)
       await parentServer.close()
       await messages.close()
+      rmSync(home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS * 2)
+
+  it('runs an ACP child through the fixed shipped Native profile and parent Session without Cordis', async () => {
+    const apiKey = 'built-native-acp-loopback-key'
+    const providerName = 'dsh-acp-child'
+    const parentModel = 'native-acp-parent-fixture'
+    const childModel = 'native-acp-child-fixture'
+    const childTask = 'NATIVE_ACP_PROFILE_CHILD_TASK_20261013'
+    const server = await startMockLlmServer({
+      sequence: ['tool_call_success', 'success', 'success'],
+      apiKey,
+      toolName: 'subagent',
+      toolArguments: JSON.stringify({ description: 'Return the fixture result', prompt: childTask }),
+      successText: 'Native ACP fixture completed.',
+    })
+    const home = mkdtempSync(join(tmpdir(), 'dsh-native-acp-session-'))
+    const workspace = join(home, 'workspace')
+    const sandboxTempRoot = join(home, 'sandbox-temp')
+    mkdirSync(workspace)
+    mkdirSync(sandboxTempRoot)
+    const profilePath = join(home, 'profiles', 'native-headless', 'rsh.profile.json')
+    const observationPath = join(home, 'native-acp-child-observation.json')
+    const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
+    let profileRun: Promise<{ stdout: string; code: number; stderr: string }> | undefined
+    let profileResult: { stdout: string; code: number; stderr: string } | undefined
+    let cliPid: number | undefined
+    try {
+      ensureShippedNativeProfile('native-headless', home)
+      const profile = JSON.parse(readFileSync(profilePath, 'utf8')) as {
+        installations: Array<{ id: string; plugin: string; scope: string; config?: Record<string, unknown> }>
+      }
+      const app = profile.installations.find(row => row.id === 'app')
+      const subagents = profile.installations.find(row => row.id === 'subagents')
+      const modelProvider = profile.installations.find(row => row.id === 'pi-ai')
+      const workflowWorker = profile.installations.find(row => row.id === 'workflow-worker')
+      const ralphTool = profile.installations.find(row => row.id === 'ralph-tool')
+      const sandboxPolicy = profile.installations.find(row => row.id === 'sandbox-policy')
+      if (app === undefined || subagents === undefined || modelProvider === undefined
+        || workflowWorker === undefined || ralphTool === undefined || sandboxPolicy === undefined) {
+        throw new Error('shipped Native headless profile omitted its app, model or child Provider')
+      }
+      app.config = { ...app.config, cwd: workspace, provider: 'deepseek', model: parentModel, maxSteps: 4, maxTokens: 64 }
+      sandboxPolicy.config = { ...sandboxPolicy.config, workspaceRoot: workspace }
+      subagents.config = { providerName }
+      workflowWorker.config = { ...workflowWorker.config, subagentProvider: providerName }
+      ralphTool.config = { ...ralphTool.config, subagentProvider: providerName }
+      modelProvider.config = { providers: { deepseek: {
+        apiKeyEnv: 'DEEPSEEK_API_KEY', api: 'openai-completions', baseURL: server.baseURL,
+        models: [{ id: parentModel }, { id: childModel }],
+      } } }
+      profile.installations.push(
+        { id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: 'root',
+          config: { toolName: 'subagent', maxDepth: 2, maxSteps: 2, maxTokens: 48,
+            provider: 'deepseek', model: childModel, toolFilter: { allow: ['read_file'] } } },
+        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'root',
+          config: { providerName, providers: {} } },
+        { id: 'child-connection-observer', plugin: '@fixture/child-connection-observer', scope: 'root',
+          config: { observationPath } },
+      )
+      installChildConnectionObserver(dirname(profilePath))
+      writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
+
+      profileRun = runBuiltBin(['--profile', 'native-headless', 'complete', 'the', 'requested', 'work'], {
+        DSH_HOME: home,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: apiKey,
+        TMP: sandboxTempRoot,
+        TEMP: sandboxTempRoot,
+        TMPDIR: sandboxTempRoot,
+        NODE_OPTIONS: '--import=' + noCordisHook,
+      }, workspace, SPAWN_TIMEOUT_MS, (pid) => { cliPid = pid })
+      const result = profileResult = await profileRun
+      expect(result.code, result.stderr).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(result.stdout).toBe('Native ACP fixture completed.')
+      expect(cliPid).toBeDefined()
+      expect(() => process.kill(cliPid!, 0)).toThrow()
+
+      const observation = await waitForChildConnectionObservation(observationPath)
+      const connections = observation.connections as Record<string, unknown>[]
+      expect(connections).toHaveLength(1)
+      const connection = connections[0]
+      if (connection === undefined) throw new Error('fixed Native ACP child connection was not observed')
+      expect(connection.argv).toEqual(expect.arrayContaining(['--profile', 'native-acp-dsh-child', '--patch']))
+      expect(connection.cwd).toBe(workspace)
+      expect(connection.homeExistedAtConnect).toBe(true)
+      expect(connection.nodeOptions).toContain(noCordisHook)
+      expect(connection.outcome).toEqual({ exitCode: 0, signal: null })
+      expect(connection.rangeEmpty).toBe(true)
+      expect(connection.settled).toBe(true)
+      expect(connection.stderr).not.toContain('native CLI imported Cordis')
+      expect(typeof connection.home).toBe('string')
+      const childHome = connection.home as string
+      expect(childHome.split(/[\\/]/u).at(-1)).toMatch(/^dsh-acp-child-/u)
+      expect(existsSync(childHome)).toBe(false)
+
+      const wireRequests = String(connection.stdin).split(/\r?\n/u).filter(Boolean)
+        .map(line => JSON.parse(line) as Record<string, unknown>)
+      const newSession = wireRequests.find(request => request.method === 'session/new')
+      if (newSession === undefined || typeof newSession.params !== 'object' || newSession.params === null) {
+        throw new Error('fixed Native ACP child did not send session/new')
+      }
+      const sessionParams = newSession.params as Record<string, unknown>
+      const metadata = sessionParams._meta as Record<string, unknown>
+      expect(metadata['com.deepseek.ai/dsh-native-subagent']).toEqual({
+        version: 1, maxSteps: 2, maxTokens: 48, permissionMode: 'deny',
+      })
+      expect(sessionParams.cwd).toBe(workspace)
+
+      expect(server.requests).toHaveLength(3)
+      const requestModels = server.requests.map(request => (request.body as Record<string, unknown>).model)
+      expect(requestModels).toEqual([parentModel, childModel, parentModel])
+      expect(server.requests[1]?.body).toMatchObject({ model: childModel, max_tokens: 48 })
+
+      const events = persistedEvents(join(home, 'sessions'))
+      const starts = sessionEvents(events, 'subagent/external-start')
+      const ends = sessionEvents(events, 'subagent/external-end')
+      expect(starts).toHaveLength(1)
+      expect(ends).toHaveLength(1)
+      expect(starts[0]).toMatchObject({
+        version: 0,
+        provider: providerName,
+        remoteId: expect.any(String),
+        parentSessionId: expect.any(String),
+        rootSessionId: expect.any(String),
+      })
+      expect(ends[0]).toMatchObject({
+        id: starts[0]?.id,
+        provider: providerName,
+        remoteId: starts[0]?.remoteId,
+        stopReason: 'completed',
+      })
+      const operationFacts = sessionEvents(events, 'subagent/external-operation')
+        .filter(event => event.id === starts[0]?.id
+          && ['model-request', 'model-response', 'model-failure', 'tool-call', 'tool-result', 'tool-settlement']
+            .includes(String(event.kind)))
+      expect(operationFacts).toHaveLength(0)
+    } finally {
+      await profileRun?.catch(() => undefined)
+      const evidencePath = process.env.DSH_NATIVE_PROFILE_OBSERVATION_PATH
+      if (evidencePath !== undefined) {
+        const sessionsPath = join(home, 'sessions')
+        writeFileSync(evidencePath, `${JSON.stringify({
+          formatVersion: 1,
+          cliPid: cliPid ?? null,
+          profileResult: profileResult ?? null,
+          childObservation: existsSync(observationPath)
+            ? JSON.parse(readFileSync(observationPath, 'utf8')) as unknown
+            : null,
+          parentSessionEvents: existsSync(sessionsPath) ? persistedEvents(sessionsPath) : [],
+          modelRequests: server.requests.map(request => request.body),
+        }, null, 2)}\n`)
+      }
+      await server.close()
       rmSync(home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS * 2)

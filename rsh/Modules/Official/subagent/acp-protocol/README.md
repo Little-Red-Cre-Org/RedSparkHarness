@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this library to read and emit versioned Native ACP subagent metadata for execution limits and permission modes. It validates namespaced initialize and session/new metadata values; the consuming Program converts accepted ACP policy into the Engine's durable `execution/policy` event and owns transport, execution, and enforcement.
+Use this library to read and emit versioned Native ACP subagent metadata for execution limits, permission modes, and Native request identity. It validates namespaced initialize, session/new, and permission-request metadata; consuming Programs convert accepted policy to the Engine's durable `execution/policy` event and own transport, execution, and enforcement.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Use this library to read and emit versioned Native ACP subagent metadata for exe
 
 ### When to use it
 
-Use it in an ACP peer that reads or emits versioned subagent policy metadata; it provides no ACP transport or child execution.
+Use it in an ACP peer that reads or emits versioned subagent policy or permission-request identity metadata; it provides no ACP transport or child execution.
 
 ### Entry point
 
@@ -43,6 +43,16 @@ const policy = readNativeAcpSubagentPolicy({
 })
 ```
 
+### Permission request identity
+
+The `initialize` response advertises `capabilities.permissionRequestIdentity: true` in the `com.deepseek.ai/dsh-native-subagent` metadata. `readNativeAcpSubagentServerCapabilities(response._meta)` returns `undefined` when that extension is absent and throws `TypeError` for an unsupported version, extra keys, or invalid required capabilities.
+
+Each `session/request_permission` request may carry version `1` metadata with `permissionRequest: { sessionId, requestId, toolName, toolCallId }`; all four fields are nonempty, trimmed strings.
+
+`requestId` identifies the Native approval request persisted in `native-approval/asked` and `native-approval/decided`. `sessionId` identifies the actual Native interaction Session and may differ from outer ACP `params.sessionId`, which names the ACP recipient used for routing.
+
+Use `readNativeAcpSubagentPermissionRequest(params._meta)` to read the metadata; it returns `undefined` when absent and throws `TypeError` for malformed or unsupported versions, missing or invalid fields, or extra keys. The fields correlate an RPC with a durable request and grant no permission; see the [Native ACP server](../../../../Programs/ACP/packages/native-acp/README.md) for enforcement.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -51,7 +61,7 @@ const policy = readNativeAcpSubagentPolicy({
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The versioned extension carries `maxSteps`, optional `maxTokens`, and a permission mode (`deny` or `parent-relay`); both limits must be positive safe integers. Readers reject unsupported versions and additional extension keys, while the metadata helpers preserve the namespaced ACP envelope.
+The versioned session policy carries positive-safe-integer `maxSteps`, optional positive-safe-integer `maxTokens`, and `permissionMode` (`deny` or `parent-relay`). Initialize capabilities advertise implemented server behavior, and permission requests carry exact Native operation identities. Readers reject unsupported versions and extra keys while metadata helpers preserve the namespaced ACP envelope.
 
 | Source | Responsibility |
 |---|---|

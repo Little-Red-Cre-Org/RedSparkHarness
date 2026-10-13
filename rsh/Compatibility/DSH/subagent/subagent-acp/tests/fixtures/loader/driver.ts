@@ -3,7 +3,7 @@
 
 import { resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
 import { runFixtureTurn } from '@deepseek-ai/dsh-loader-smoke'
-import { bootProductionProfile } from '../../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
+import { bootProductionProfile } from '../../../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
 
 const configPath = process.argv[2]
 if (configPath === undefined) throw new Error('acp-subagent cwd driver requires a config path')

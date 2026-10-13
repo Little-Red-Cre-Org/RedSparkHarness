@@ -1023,7 +1023,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       }
       const builtinWriteGrant = parentAuthority.builtinToolNames.includes('write_file')
       const approvalRequester = admission.approvalRequester
-      const canRelayApproval = driver.name === 'dsh-sdk' && driver.capabilities.approvalRelay
+      const canRelayApproval = driver.capabilities.approvalRelay === true
         && approvalRequester !== undefined && parentAuthority.approvalRequired && builtinWriteGrant
         && parentAuthority.sandboxPolicy?.mode === 'workspace-write'
       const childAuthority = Object.freeze({ ...parentAuthority,

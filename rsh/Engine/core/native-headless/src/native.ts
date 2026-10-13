@@ -833,7 +833,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         } else if (executionPolicy?.permission.mode === 'require-approval') {
           if (ownerApproval === undefined) throw new Error('native-headless: Session owner approval capability was revoked')
           decision = { id: approvalId, policy: 'ask', outcome: await ownerApproval.authorize({
-            callId: requested.callId, toolName: requested.toolName,
+            id: approvalId, callId: requested.callId, toolName: requested.toolName,
             ...requested.reason === undefined ? {} : { reason: requested.reason }, signal: approvalSignal,
           }) }
         } else if (invocation === 'delegated') {

@@ -27,7 +27,9 @@ The native-headless, native-headless-query, native-tui, and native-web session d
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
-The `native-sdk`, `native-sdk-dsh-child`, and `native-acp` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+The `native-sdk`, `native-sdk-dsh-child`, `native-acp`, and `native-acp-dsh-child` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+
+Native profiles may opt in to the `dsh-sdk` or `dsh-acp-child` external driver. The CLI supplies each driver's fixed same-version launcher and resolves its route catalog from the nearest visible pi-ai Provider; the ACP launcher accepts no caller-selected executable or arbitrary argv and its child profile cannot launch another child. These adapters remain explicit profile installations, and the shipped `native-sdk` and `native-acp` profiles do not select them.
 
 
 ## App arguments

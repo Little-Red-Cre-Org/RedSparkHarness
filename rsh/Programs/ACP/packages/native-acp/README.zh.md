@@ -38,6 +38,10 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消会结算本地 approval 决定与 Session 审计，不等待忽略取消的对端；对应 wire 请求仍由连接持有，直到对端答复或 EOF 关闭连接。迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
 
+在 `initialize` 时，server 会声明 `capabilities.permissionRequestIdentity: true`。只有客户端声明 `permissionRelay: true` 且组合安装了 approval Provider 时，server 才会公布 `parent-relay`；否则只公布 `deny`，并拒绝要求不可用 parent relay 的 `session/new` 或 `session/resume` 请求。
+
+每个 `session/request_permission` 请求都会在 `_meta['com.deepseek.ai/dsh-native-subagent'].permissionRequest` 携带版本 `1` 的 metadata，字段包括 `sessionId`、`requestId`、`toolName` 和 `toolCallId`。`requestId` 是持久写入 asked/decided event 的 Native 审批 ID。metadata 的 `sessionId` 标识实际交互的 Native Session；外层 ACP `params.sessionId` 标识路由接收 Session，Provider 创建的 root 可能使两者不同。两个身份需分别使用；metadata 只用于关联请求，执行仍由存活 owner、取消检查和对端选择的 `allow-once` 控制。字段校验与读取方式见 [Native ACP metadata protocol](../../../../Modules/Official/subagent/acp-protocol/README.zh.md)。
+
 <a id="dev-note"></a>
 
 安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会停止工具准入，并协作排空执行器与连接。MCP 撤销随取消开始。关闭失败会保留已关闭的 Session 记录，拒绝恢复、提示和配置修改；仅清理成功才移除该记录。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。

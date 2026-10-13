@@ -32,7 +32,7 @@ NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的�
 
 `owners()` 返回包含精确现役可写所有者的独立数组。只读观察者先订阅再枚举，并按所有者身份去重，使晚于 Program 启动的 Provider 也能观察已有写入器而无需接管它。已释放的所有者及被替换的 Agent 对象不会出现在结果中。
 
-`NativeSessionExecutionPolicy` 定义必需的带版本 `execution/policy` payload，其中包含每轮步骤上限、可选的逐请求输出上限和权限要求。`NativeSessionOwnerApproval` 是独立的进程内 capability，绑定一个精确的存活 Agent 与 Session；持久化的 `session-owner` permission 记录的是要求，而不是 approval proof。
+`NativeSessionExecutionPolicy` 定义必需的带版本 `execution/policy` payload，其中包含每轮步骤上限、可选的逐请求输出上限和权限要求。`NativeSessionOwnerApproval` 是独立的进程内 capability，绑定一个精确的存活 Agent 与 Session；持久化的 `session-owner` permission 记录的是要求，而不是 approval proof。`authorize()` 接收与 Headless 写入 `native-approval/asked` 的相同品牌审批 ID；Headless 使用该 ID 写入匹配的 `native-approval/decided` 事件。
 
 ./root-route 导出拥有共享 NativeRootRouteId 品牌，不导入执行服务。Host 和 Client 使用明确编译面：Client 面仅提供纯路由标识，活跃 Session 和根执行操作属于 Host。工作区身份来自与框架无关的 Engine workspace-definition 包。
 

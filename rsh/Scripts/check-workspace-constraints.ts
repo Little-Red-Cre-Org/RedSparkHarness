@@ -267,6 +267,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-acp-protocol': ['lib/shared-*.js'],
+  '@deepseek-ai/dsh-acp-child': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
@@ -365,6 +366,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
 const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
   // tsdown emits the SDK client's public entries and shared chunks together.
   '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  // This package must publish its exact RedSpark research license with its native entries.
+  '@deepseek-ai/dsh-acp-child': [
+    'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+  ],
   '@deepseek-ai/dsh-session-log-export': [
     'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
   ],

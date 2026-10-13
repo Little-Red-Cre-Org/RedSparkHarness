@@ -186,6 +186,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Modules/Official/subagent/acp-protocol': { kind: 'none', reason: 'Versioned ACP control metadata does not construct model requests.' },
   'rsh/Engine/subagent/sdk-runtime': { kind: 'indirect', reason: 'The SDK runtime transports typed requests; the selected server owns request assembly and Session logging.' },
   'rsh/Modules/Official/subagent/sdk-child': { kind: 'indirect', reason: 'The adapter delegates model request assembly and Session logging to the selected Native SDK server.' },
+  'rsh/Modules/Official/subagent/acp-child': { kind: 'indirect', reason: 'The adapter delegates child execution to the Native ACP server and returns its opaque result through the parent Subagent route.' },
   'rsh/Engine/session/session-projection': { kind: 'none', reason: 'The projection registry serves client-facing read models of already-logged session state and registers nothing model-facing.' },
   'rsh/Engine/session/session-projection-cache': { kind: 'none', reason: 'The persisted cache accelerates host-side cold reads of projection state and registers nothing model-facing.' },
   'rsh/Engine/session/session-stats': { kind: 'none', reason: 'The sessionStats unit folds already-logged step boundaries into a client-facing read model and registers nothing model-facing.' },

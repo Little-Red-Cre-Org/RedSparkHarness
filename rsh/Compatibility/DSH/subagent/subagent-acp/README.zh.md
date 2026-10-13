@@ -44,7 +44,7 @@ kind: "package-reference"
 | `disposeEofGraceMs` | `6000` | stdin EOF 之后、平台终止之前的宽限 |
 | `disposeGraceMs` | `3000` | 失败后观察结构化进程事实的时限；在 POSIX 上也是 SIGTERM 到 SIGKILL 的宽限 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-acp)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-acp)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 DeepSeek Harness 子进程使用产品启动器和一个显式的绝对路径 `DSH_HOME`。隔离的 home 可防止嵌套运行时发现启动者个人的 profile 或凭据；通用 ACP 提供方不会把这一要求强加给非 DSH agent。
 
@@ -110,11 +110,11 @@ spawn、初始化或新建会话失败会在发布前拒绝，通常先证明 ma
 
 当包级约定不够用时阅读以下页面。它们从本后端逐步进入它接入的 seam 与它驱动的协议。
 
-- [Subagent 子系统](../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
-- [dsh-subagent seam](../subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
-- [Agent Client Protocol 自动化服务器](../../../Programs/ACP/packages/acp/README.zh.md)——本提供方作为客户端驱动的仅自动化服务器。
-- [dsh-subprocess seam](../../../Core/subprocess/subprocess/README.zh.md)——每次运行背后的进程 spawn 与清理机制。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-acp)——每个受支持配置字段及其源声明。
+- [Subagent 子系统](../../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
+- [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
+- [Agent Client Protocol 自动化服务器](../../../../Programs/ACP/packages/acp/README.zh.md)——本提供方作为客户端驱动的仅自动化服务器。
+- [dsh-subprocess seam](../../../../Core/subprocess/subprocess/README.zh.md)——每次运行背后的进程 spawn 与清理机制。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-acp)——每个受支持配置字段及其源声明。
 
 -----
 

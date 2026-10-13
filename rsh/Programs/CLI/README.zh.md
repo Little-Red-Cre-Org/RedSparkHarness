@@ -27,7 +27,9 @@
 
 native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
-`native-sdk`、`native-sdk-dsh-child` 与 `native-acp` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。`native-sdk-dsh-child` profile 使用 CLI 私有的固定 launcher 启动同版本 `native-sdk` profile；显式选择的 `dsh-sdk` child 会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
+`native-sdk`、`native-sdk-dsh-child`、`native-acp` 与 `native-acp-dsh-child` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。`native-sdk-dsh-child` profile 使用 CLI 私有的固定 launcher 启动同版本 `native-sdk` profile；显式选择的 `dsh-sdk` child 会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
+
+Native profile 可选择启用 `dsh-sdk` 或 `dsh-acp-child` 外部驱动。CLI 为各驱动提供同版本固定 launcher，并从最近可见的 pi-ai Provider 解析路由目录；ACP launcher 不接受调用方选择的可执行文件或任意 argv，子 profile 也不能再启动 child。这些适配器仍需在 profile 中显式安装，随附的 `native-sdk` 与 `native-acp` profile 不会选择它们。
 
 
 ## 应用参数

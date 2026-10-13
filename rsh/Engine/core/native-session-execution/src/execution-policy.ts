@@ -3,7 +3,7 @@ import type { SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/nat
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalRequestId, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
 
 /** Permission handling required by one accepted Session execution policy. */
 export type NativeSessionExecutionPermission =
@@ -24,6 +24,8 @@ export interface NativeSessionExecutionPolicy {
 
 /** One requested approval scoped to a live Session-owner capability. */
 export interface NativeSessionOwnerApprovalRequest {
+  /** Exact identity already durably recorded by `native-approval/asked`. */
+  readonly id: NativeApprovalRequestId
   /** Exact model tool call awaiting approval. */
   readonly callId: ToolCallId
   /** Tool whose execution is blocked pending the owner decision. */

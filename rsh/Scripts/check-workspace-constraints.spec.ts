@@ -382,6 +382,12 @@ describe('package payload constraints', () => {
     ])
   })
 
+  it('publishes the ACP child research license with its native entries', () => {
+    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-acp-child' })).toEqual([
+      'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+    ])
+  })
+
   it('includes the Native projection bundle and emitted type runtime', () => {
     expect(expectedDshPackageFiles({
       name: '@deepseek-ai/dsh-session-projection',

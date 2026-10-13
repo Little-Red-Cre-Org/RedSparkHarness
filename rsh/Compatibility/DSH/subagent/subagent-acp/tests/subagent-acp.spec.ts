@@ -516,7 +516,7 @@ describe('cwd resolution', () => {
     // The child process AND its announced ACP session cwd must both get the
     // ABSOLUTE form — DSH's own ACP server rejects a relative session cwd, and
     // deferring resolution to spawn would hide the launch-dir dependency.
-    const relative = 'rsh/Engine/subagent/subagent-acp'
+    const relative = 'rsh/Compatibility/DSH/subagent/subagent-acp'
     const absolute = resolve(relative)
     const ctx = new Context()
     await ctx.plugin(SessionProjectionRegistry)
