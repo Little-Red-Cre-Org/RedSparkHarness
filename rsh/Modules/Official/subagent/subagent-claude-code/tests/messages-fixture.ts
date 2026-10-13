@@ -185,7 +185,7 @@ export async function startMessagesFixture(
       requestStartedResolve()
       if (behavior.kind === 'complete') {
         if (behavior.beforeComplete === undefined) complete(response, body, behavior.text)
-        else void behavior.beforeComplete.then(() => complete(response, body, behavior.text))
+        else void behavior.beforeComplete.then(() => { complete(response, body, behavior.text) })
       } else if (behavior.kind === 'tool-use' && requests.length === 1) {
         toolUse(response, body, behavior.toolName, behavior.input)
       } else if (

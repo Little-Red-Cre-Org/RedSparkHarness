@@ -595,15 +595,18 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
         output: [{ type: 'text', text: 'The outside read was denied.' }],
         stopReason: 'completed',
       })
-      await vi.waitFor(() => expect(fixture.requests).toHaveLength(2))
+      await vi.waitFor(() => { expect(fixture.requests).toHaveLength(2) })
       expect(fixture.requests[0]?.body.model).toBe('claude-native-fixture-model')
       const secondMessages = fixture.requests[1]?.body.messages
       expect(Array.isArray(secondMessages)).toBe(true)
-      const toolResults = (secondMessages as Array<{ content?: unknown }>).flatMap(message =>
-        Array.isArray(message.content) ? message.content : [])
+      const toolResults = (secondMessages as Array<{ content?: unknown }>).flatMap((message) => {
+        const content: unknown = message.content
+        return Array.isArray(content) ? content as unknown[] : []
+      })
         .filter((block): block is { type: string; tool_use_id: string; content: string } =>
           typeof block === 'object'
           && block !== null
+          && !Array.isArray(block)
           && 'type' in block
           && block.type === 'tool_result'
           && 'tool_use_id' in block
@@ -626,7 +629,7 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
     } finally {
       controller.abort(new Error('finish Native read-scope fixture'))
       await run.dispose()
-      await Promise.all(owned.map(dispose => dispose()))
+      await Promise.all(owned.map(dispose => Promise.resolve(dispose())))
     }
     expect(configDir).toBeDefined()
     expect(existsSync(configDir!)).toBe(false)
@@ -701,7 +704,7 @@ describe('real Claude Agent SDK 0.3.263 and its distributed Claude Code 2.1.263 
     await expect(run.result).resolves.toEqual({ output: [], stopReason: 'aborted' })
     expect(caller.signal.aborted).toBe(false)
     await disposal
-    await Promise.all(owned.map(dispose => dispose()))
+    await Promise.all(owned.map(dispose => Promise.resolve(dispose())))
     await expectQuiescent(runtime.handles)
     const privateHome = runtime.spawnSpecs[0]?.env?.HOME
     expect(privateHome).toBeDefined()

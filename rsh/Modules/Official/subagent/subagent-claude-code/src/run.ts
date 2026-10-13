@@ -68,7 +68,7 @@ export async function startClaudeCodeRun(
     textTask(request.prompt),
     {
       ...productSpec,
-      ...onError === undefined ? {} : { onError: (error: Error) => onError(error, 'error') },
+      ...onError === undefined ? {} : { onError: (error: Error) => { onError(error, 'error') } },
     },
     request.signal,
   )
@@ -78,8 +78,8 @@ export async function startClaudeCodeRun(
       output: [{ type: 'text', text: await product.result }],
       stopReason: 'completed',
     }),
-    collectOutput: product.collectOutput,
-    collectDiagnostic: product.collectDiagnostic,
+    collectOutput: () => product.collectOutput(),
+    collectDiagnostic: () => product.collectDiagnostic(),
     cancelled: () => locallyCancelled || request.signal.aborted,
     ...onError === undefined ? {} : { onError },
     signal: request.signal,
@@ -94,7 +94,7 @@ export async function startClaudeCodeRun(
       locallyCancelled = true
       product.abort()
     },
-    teardown: product.dispose,
+    teardown: () => product.dispose(),
   })
 }
 

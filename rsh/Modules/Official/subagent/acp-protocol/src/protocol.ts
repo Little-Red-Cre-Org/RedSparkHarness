@@ -136,7 +136,8 @@ export function readNativeAcpSubagentServerCapabilities(meta: unknown): NativeAc
     throw new TypeError('initialize response native-subagent metadata.capabilities.permissionModes is invalid')
   }
   const permissionModes: NativeAcpSubagentPermissionMode[] = []
-  for (const mode of capabilities.permissionModes) {
+  const rawPermissionModes = capabilities.permissionModes as unknown[]
+  for (const mode of rawPermissionModes) {
     if (mode !== 'deny' && mode !== 'parent-relay' || permissionModes.includes(mode)) {
       throw new TypeError('initialize response native-subagent metadata.capabilities.permissionModes is invalid')
     }

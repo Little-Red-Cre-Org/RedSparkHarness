@@ -144,7 +144,10 @@ async function waitUntilReady(ready: Promise<string>, signal: AbortSignal): Prom
   signal.throwIfAborted()
   let onAbort: (() => void) | undefined
   const aborted = new Promise<never>((_resolve, reject) => {
-    onAbort = () => reject(signal.reason)
+    onAbort = () => {
+      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact AbortSignal reason.
+      reject(signal.reason)
+    }
     signal.addEventListener('abort', onAbort, { once: true })
   })
   try {
@@ -190,7 +193,7 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
     async start(request, signal): Promise<NativeExternalSubagentRun> {
       if (closed) throw new Error('subagent-claude-code Native Provider is closing')
       const completion = Promise.withResolvers<void>()
-      const owner: StartOwner = { settled: completion.promise, finish: () => completion.resolve() }
+      const owner: StartOwner = { settled: completion.promise, finish: () => { completion.resolve() } }
       starting.add(owner)
       const childSignal = AbortSignal.any([signal, context.signal, lifetime.signal])
       let home: ReturnType<typeof privateHome> | undefined
@@ -269,7 +272,7 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
         }
         const startedProduct = await startClaudeCodeProductRun(prompt, spec, childSignal)
         product = startedProduct
-        owner.close = startedProduct.dispose
+        owner.close = () => startedProduct.dispose()
         const remoteId = await waitUntilReady(startedProduct.ready, childSignal)
         childSignal.throwIfAborted()
         let disposal: Promise<void> | undefined

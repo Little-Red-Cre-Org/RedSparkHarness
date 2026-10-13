@@ -831,8 +831,8 @@ it('enforces restored output ceilings after selection and issues approval only f
       issueOwnerApproval }, signal)
     expect(restored.adapter.requests).toHaveLength(2)
     expect(restored.adapter.requests.map(request => request.maxTokens)).toEqual([32, 32])
+    expect(authorizedCalls[0]?.id).toBeTypeOf('string')
     expect(authorizedCalls).toMatchObject([{
-      id: expect.any(String),
       callId: 'policy-write', toolName: 'write_file', reason: 'Writing a file changes the selected workspace.',
     }])
     expect(await readFile(join(restored.workspace, 'policy-created.txt'), 'utf8')).toBe('authorized by owner')

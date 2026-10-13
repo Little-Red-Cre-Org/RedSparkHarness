@@ -358,6 +358,7 @@ export function claudeQueryOptions(
       hooks: nativeExecution.allowRead ? {
         PreToolUse: [{
           matcher: 'Read',
+          // oxlint-disable-next-line typescript/require-await -- Keep hook failures as promise rejections at the Claude SDK boundary.
           hooks: [async (input) => {
             const allowed = withinWorkspace(input)
             return {

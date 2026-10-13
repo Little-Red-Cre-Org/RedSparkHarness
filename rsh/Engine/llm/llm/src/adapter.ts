@@ -100,7 +100,7 @@ export abstract class LlmAdapter {
   async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
     return {
       model: await this.resolveModel(provider, model, signal),
-      supportsOutputTokenLimit: async () => false,
+      supportsOutputTokenLimit: () => Promise.resolve(false),
       stream: options => this.stream(options),
     }
   }

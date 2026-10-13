@@ -441,7 +441,7 @@ export class DeepSeekAdapter extends LlmAdapter {
     const connection = this.config.options()
     return Promise.resolve({
       model: this.modelInfoFor(connection, provider, model),
-      supportsOutputTokenLimit: async () => true,
+      supportsOutputTokenLimit: () => Promise.resolve(true),
       stream: options => this.streamWithConnection(options, connection),
     })
   }
