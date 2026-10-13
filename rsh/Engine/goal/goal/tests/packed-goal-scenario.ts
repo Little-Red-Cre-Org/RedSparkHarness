@@ -59,7 +59,7 @@ export function verifyPackedGoalScenarios(consumer: PackedGoalConsumer): void {
         config: { root: sessions, compression: 'none' } },
       { id: 'model', plugin: 'packed-goal-model', scope: 'root' },
     ] }))
-    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'packed-goal-model', type: 'module',
+    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'packed-goal-model', version: '0.0.0', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } } }))
     writeFileSync(join(model, 'native.mjs'), `

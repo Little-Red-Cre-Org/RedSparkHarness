@@ -72,7 +72,7 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
     const model = join(project, 'node_modules', 'desktop-fixture-model')
     mkdirSync(model, { recursive: true })
     writeFileSync(join(model, 'package.json'), JSON.stringify({
-      name: 'desktop-fixture-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+      name: 'desktop-fixture-model', version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))
     writeFileSync(join(model, 'native.mjs'), `import { writeFileSync } from 'node:fs';

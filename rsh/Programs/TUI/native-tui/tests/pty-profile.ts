@@ -32,7 +32,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   const model = join(profile, 'node_modules/fixture-tui-model')
   const modelProvides = ['model', ...modelControls ? ['modelDirectory'] : [], ...presetMode === 'legacy' ? ['agentPresets'] : []]
   mkdirSync(model, { recursive: true })
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', version: '1.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: modelProvides } } }))
   writeFileSync(join(model, 'native.mjs'), `import { writeFile, access } from 'node:fs/promises';
@@ -87,7 +87,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   if (presetMode === 'shipped') {
     const collision = join(profile, 'node_modules/fixture-tui-help-command')
     mkdirSync(collision, { recursive: true })
-    writeFileSync(join(collision, 'package.json'), JSON.stringify({ name: 'fixture-tui-help-command', type: 'module',
+    writeFileSync(join(collision, 'package.json'), JSON.stringify({ name: 'fixture-tui-help-command', version: '1.0.0', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['commands'], optional: [], provides: [] } } }))
     writeFileSync(join(collision, 'native.mjs'), `import { writeFile } from 'node:fs/promises';

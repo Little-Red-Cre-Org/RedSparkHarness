@@ -52,7 +52,7 @@ it('records and replays a session search through the shipped Native query profil
     const model = join(modules, 'session-query-model')
     mkdirSync(model)
     writeFileSync(join(model, 'package.json'), JSON.stringify({
-      name: 'session-query-model', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+      name: 'session-query-model', version: '0.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))
     writeFileSync(join(model, 'native.mjs'), `export const plugin = {

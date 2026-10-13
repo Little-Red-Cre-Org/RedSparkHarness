@@ -100,7 +100,7 @@ export PATH="$fixture_dir:$PATH"
   const modelDir = join(modules, 'native-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
-    name: 'native-fixture-model', type: 'module',
+    name: 'native-fixture-model', version: '0.0.0', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

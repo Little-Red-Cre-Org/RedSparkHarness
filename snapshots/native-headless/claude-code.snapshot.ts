@@ -40,6 +40,7 @@ function installFixturePackage(profileModules: string, packageName: string, sour
   mkdirSync(directory)
   writeFileSync(join(directory, 'package.json'), JSON.stringify({
     name: packageName,
+    version: '0.0.0',
     type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
