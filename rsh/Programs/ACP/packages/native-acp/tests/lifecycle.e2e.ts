@@ -310,19 +310,19 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   }
   bindTransport(transport)
   transport.start()
-  const signal = AbortSignal.timeout(20_000)
+  const requestSignal = (): AbortSignal => AbortSignal.timeout(20_000)
   let instructionSessionId: string | undefined
   const http = await startHttpMcpFixture()
   try {
     expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {},
-      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } } }, signal))
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } } }, requestSignal()))
       .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } },
         _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
           version: 1, capabilities: { permissionRequestIdentity: true, maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] },
         } } })
     const acceptedPolicy = { version: 1, maxSteps: 2, permissionMode: 'parent-relay' } as const
     const created = await transport.request('session/new', { cwd: home, mcpServers: [],
-      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: acceptedPolicy } }, signal) as {
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: acceptedPolicy } }, requestSignal()) as {
       sessionId: string
       _meta?: Record<string, unknown>
     }
@@ -331,17 +331,17 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
     const requestsBeforeCompact = requests.length
     expect(await transport.request('session/prompt', { sessionId: created.sessionId,
-      prompt: [{ type: 'text', text: '/compact' }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+      prompt: [{ type: 'text', text: '/compact' }] }, requestSignal())).toMatchObject({ stopReason: 'end_turn' })
     expect(requests).toHaveLength(requestsBeforeCompact)
     expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'agent_message_chunk',
       content: { type: 'text', text: 'No compactable history yet.' } })
     await expect(transport.request('session/prompt', { sessionId: created.sessionId,
-      prompt: [{ type: 'image', mimeType: 'image/png', data: 'not-base64' }] }, signal)).rejects.toThrow()
+      prompt: [{ type: 'image', mimeType: 'image/png', data: 'not-base64' }] }, requestSignal())).rejects.toThrow()
     expect(requests).toHaveLength(0)
     const image = (await readFile(join(root, 'snapshots/native-sdk/text-turn/image.png'))).toString('base64')
     const params = { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'wait until cancelled' },
       { type: 'image', mimeType: 'image/png', data: image }] }
-    const prompt = transport.request('session/prompt', params, signal)
+    const prompt = transport.request('session/prompt', params, requestSignal())
     void prompt.catch(() => {}) // The later assertion owns failures; teardown must not create an unhandled rejection.
     await entered.promise
     const sent = requests[0] as { messages: readonly { role: string; content: readonly Record<string, unknown>[] }[] }
@@ -349,9 +349,9 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     expect(user?.content[0]).toEqual({ type: 'text', text: 'wait until cancelled' })
     const imagePart = user?.content.find(part => part.type === 'image_url')
     expect(imagePart?.image_url).toHaveProperty('url', expect.stringMatching(/^data:image\/png;base64,/))
-    await expect(transport.request('session/prompt', params, signal)).rejects.toThrow('session prompt is already running')
+    await expect(transport.request('session/prompt', params, requestSignal())).rejects.toThrow('session prompt is already running')
     const configured = transport.request('session/set_config_option', { sessionId: created.sessionId,
-      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal)
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, requestSignal())
     void configured.catch(() => {}) // Its assertion owns the protocol result after prompt drain.
     transport.notify('session/cancel', { sessionId: created.sessionId })
     await transport.flush()
@@ -359,20 +359,20 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     expect(await configured).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model']) }] })
     toolTurn = true
     const permissionParams = { sessionId: created.sessionId, prompt: [{ type: 'text', text: 'ask before writing permission.txt' }] }
-    expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(await transport.request('session/prompt', permissionParams, requestSignal())).toMatchObject({ stopReason: 'end_turn' })
     await expect(readFile(join(home, 'permission.txt'))).rejects.toHaveProperty('code', 'ENOENT')
     holdPermission = true
-    const cancelledPermission = transport.request('session/prompt', permissionParams, signal)
+    const cancelledPermission = transport.request('session/prompt', permissionParams, requestSignal())
     void cancelledPermission.catch(() => {}) // Its assertion owns the cancelled prompt response.
     await permissionEntered.promise
     transport.notify('session/cancel', { sessionId: created.sessionId })
     await transport.flush()
     expect(await cancelledPermission).toMatchObject({ stopReason: 'cancelled' })
-    await transport.request('session/close', { sessionId: created.sessionId }, signal)
-    await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, signal)
+    await transport.request('session/close', { sessionId: created.sessionId }, requestSignal())
+    await transport.request('session/resume', { sessionId: created.sessionId, cwd: home, mcpServers: [] }, requestSignal())
     expect(sessionUpdates.at(-1)).toMatchObject({ sessionUpdate: 'available_commands_update',
       availableCommands: expect.arrayContaining([{ name: 'compact', description: 'Compact older conversation history' }]) as unknown })
-    expect(await transport.request('session/prompt', permissionParams, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(await transport.request('session/prompt', permissionParams, requestSignal())).toMatchObject({ stopReason: 'end_turn' })
     expect(permissionRequests).toHaveLength(2)
     permissionRelease.resolve(undefined)
     await permissionSettled.promise
@@ -380,14 +380,17 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     const stdioServers = [{ name: 'fixture', command: process.execPath,
       args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')], env: [] }]
     await expect(transport.request('session/new', { cwd: home, mcpServers: [{ ...stdioServers[0],
-      command: join(home, 'missing-mcp-server') }] }, signal)).rejects.toThrow()
-    expect(await transport.request('session/list', {}, signal)).toMatchObject({ sessions: [{ sessionId: created.sessionId }] })
-    const stdioSession = await transport.request('session/new', { cwd: home, mcpServers: stdioServers }, signal) as { sessionId: string }
+      command: join(home, 'missing-mcp-server') }] }, requestSignal())).rejects.toMatchObject({
+      name: 'JsonRpcResponseError', code: -32603, message: 'Internal error',
+      data: { details: 'mcp-client(fixture): initial connection or tool synchronization failed' },
+    })
+    expect(await transport.request('session/list', {}, requestSignal())).toMatchObject({ sessions: [{ sessionId: created.sessionId }] })
+    const stdioSession = await transport.request('session/new', { cwd: home, mcpServers: stdioServers }, requestSignal()) as { sessionId: string }
     const httpSession = await transport.request('session/new', { cwd: home, mcpServers: [{ type: 'http', name: 'fixture',
-      url: http.url, headers: [{ name: 'Authorization', value: 'Bearer native-acp-test' }] }] }, signal) as { sessionId: string }
+      url: http.url, headers: [{ name: 'Authorization', value: 'Bearer native-acp-test' }] }] }, requestSignal()) as { sessionId: string }
     const mcpPrompt = async (sessionId: string, expected: string, absent: string): Promise<void> => {
       const before = requests.length
-      expect(await transport.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'use selected MCP tool' }] }, signal))
+      expect(await transport.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'use selected MCP tool' }] }, requestSignal()))
         .toMatchObject({ stopReason: 'end_turn' })
       const request = requests[before] as { tools: readonly { function: { name: string } }[] }
       const names = request.tools.map(tool => tool.function.name)
@@ -398,33 +401,33 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     }
     mcpCall = { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
     await mcpPrompt(stdioSession.sessionId, 'mcp__fixture__add', 'mcp__fixture__ping')
-    await transport.request('session/close', { sessionId: stdioSession.sessionId }, signal)
+    await transport.request('session/close', { sessionId: stdioSession.sessionId }, requestSignal())
     mcpCall = { name: 'mcp__fixture__ping', arguments: '{}' }
     await mcpPrompt(httpSession.sessionId, 'mcp__fixture__ping', 'mcp__fixture__add')
     expect(http.authorization).toContain('Bearer native-acp-test')
-    await transport.request('session/resume', { sessionId: stdioSession.sessionId, cwd: home, mcpServers: stdioServers }, signal)
+    await transport.request('session/resume', { sessionId: stdioSession.sessionId, cwd: home, mcpServers: stdioServers }, requestSignal())
     mcpCall = { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
     await mcpPrompt(stdioSession.sessionId, 'mcp__fixture__add', 'mcp__fixture__ping')
-    await transport.request('session/close', { sessionId: stdioSession.sessionId }, signal)
-    await transport.request('session/close', { sessionId: httpSession.sessionId }, signal)
+    await transport.request('session/close', { sessionId: stdioSession.sessionId }, requestSignal())
+    await transport.request('session/close', { sessionId: httpSession.sessionId }, requestSignal())
     mcpCall = undefined
-    const instructionsSession = await transport.request('session/new', { cwd: instructionWorkspace, mcpServers: [] }, signal) as { sessionId: string }
+    const instructionsSession = await transport.request('session/new', { cwd: instructionWorkspace, mcpServers: [] }, requestSignal()) as { sessionId: string }
     instructionSessionId = instructionsSession.sessionId
     const firstInstructionRequest = requests.length
     expect(await transport.request('session/prompt', { sessionId: instructionsSession.sessionId,
-      prompt: [{ type: 'text', text: instructionPrompt }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+      prompt: [{ type: 'text', text: instructionPrompt }] }, requestSignal())).toMatchObject({ stopReason: 'end_turn' })
     expect(requests).toHaveLength(firstInstructionRequest + 1)
     expect(modelRequestText(requests[firstInstructionRequest])).toContain(workspaceInstruction)
     expect(modelRequestText(requests[firstInstructionRequest])).toContain(globalInstruction)
-    await transport.request('session/close', { sessionId: instructionsSession.sessionId }, signal)
+    await transport.request('session/close', { sessionId: instructionsSession.sessionId }, requestSignal())
     permissionEntered = Promise.withResolvers<undefined>()
     permissionRelease = Promise.withResolvers<undefined>()
     permissionSettled = Promise.withResolvers<undefined>()
-    const fresh = await transport.request('session/new', { cwd: home, mcpServers: [] }, signal) as { sessionId: string }
-    const pending = transport.request('session/prompt', { ...permissionParams, sessionId: fresh.sessionId }, signal).catch((error: unknown) => error)
+    const fresh = await transport.request('session/new', { cwd: home, mcpServers: [] }, requestSignal()) as { sessionId: string }
+    const pending = transport.request('session/prompt', { ...permissionParams, sessionId: fresh.sessionId }, requestSignal()).catch((error: unknown) => error)
     await permissionEntered.promise
     const closingSelection = transport.request('session/set_config_option', { sessionId: fresh.sessionId,
-      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, signal).catch((error: unknown) => error)
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model']) }, requestSignal()).catch((error: unknown) => error)
     child.stdin.end()
     const exit = await child
     expect(exit.timedOut).toBe(false)
@@ -441,17 +444,17 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     transport = new JsonRpcLineTransport(child.stdout, child.stdin)
     bindTransport(transport)
     transport.start()
-    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, signal))
+    expect(await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {} }, requestSignal()))
       .toMatchObject({ agentCapabilities: { promptCapabilities: { image: true, audio: false, embeddedContext: false } } })
-    await transport.request('session/resume', { sessionId: instructionSessionId, cwd: instructionWorkspace, mcpServers: [] }, signal)
+    await transport.request('session/resume', { sessionId: instructionSessionId, cwd: instructionWorkspace, mcpServers: [] }, requestSignal())
     const beforeColdPrompt = requests.length
     expect(await transport.request('session/prompt', { sessionId: instructionSessionId,
-      prompt: [{ type: 'text', text: resumedInstructionPrompt }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+      prompt: [{ type: 'text', text: resumedInstructionPrompt }] }, requestSignal())).toMatchObject({ stopReason: 'end_turn' })
     expect(requests).toHaveLength(beforeColdPrompt + 1)
     expect(modelRequestText(requests[beforeColdPrompt])).toContain(workspaceInstruction)
     expect(modelRequestText(requests[beforeColdPrompt])).toContain(globalInstruction)
     expect(modelRequestText(requests[beforeColdPrompt])).toContain(resumedInstructionPrompt)
-    await transport.request('session/close', { sessionId: instructionSessionId }, signal)
+    await transport.request('session/close', { sessionId: instructionSessionId }, requestSignal())
     child.stdin.end()
     const coldExit = await child
     expect(coldExit.timedOut).toBe(false)
