@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固定版本 Skill 和 CLI。自动加载要求动作词与图表词在配置的完整观察上限内同时命中；超限输入不会自动路由。Cordis profile 可用 `/archify` 手动加载。
+Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固定版本 Skill 和 CLI。自动加载要求动作词与图表词在配置的完整观察上限内同时命中；超限输入不会自动路由。Cordis 用户和安装了手动 Skill Consumer 的 Native TUI profile 也可通过 `/archify` 调用。
 
 包根入口仍是 Cordis 兼容入口并导出 `Config`；Native Host composition 必须显式安装 `./native`，导出入口本身不改变默认配置。两个入口共用路由与资源指引；Native 需要 `skills`、`shellEnv` 和 `requestContexts`。
 
@@ -57,7 +57,7 @@ Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固
 
 加载后的指令列出已安装的 JSON schema 与示例，并要求在创作前通过 shell 定位资源。`DSH_ARCHIFY_SKILL_DIR` 属于 shell 环境，而非 `run_code` 的 `process.env`。独立可执行的 Bash 与 PowerShell 示例读取包内资源并运行 CLI，同时将候选文件和输出路径保留在用户工作区。委派图表任务时必须携带相同的资源指引。PATH 中没有命令并不代表内置 CLI 不可用。
 
-匹配请求会贡献一条 `archify-auto-invocation` 指令消息，并在该步骤让上游正文对模型可见。两个入口的消息来源使用相同公开类型；详见 [Skills 子系统参考](../../../../Docs/subsystems/skills.zh.md#automatic-archify-invocation)。隐藏 Skill 因为禁止模型调用而不会出现在 `dsh-tool-skill` 目录中，但 Cordis `/archify` 路由仍可由用户调用。本包不会自行运行 CLI：加载后的指令要求 agent 创建候选文件、校验它、交付 JSON 与 HTML，并对已接受产物调用 `present`。
+匹配请求会贡献一条 `archify-auto-invocation` 指令消息，并在该步骤让上游正文对模型可见。两个入口的消息来源使用相同公开类型；详见 [Skills 子系统参考](../../../../Docs/subsystems/skills.zh.md#automatic-archify-invocation)。隐藏 Skill 因为禁止模型调用而不会出现在 `dsh-tool-skill` 目录中，Cordis `/archify` 仍允许用户调用。Native TUI composition 也可路由 `/archify`，前提是安装 Archify `./native` 入口和 Native `dsh-tool-skill` consumer；仅导出入口不会改变默认配置。本包不会自行运行 CLI：加载后的指令要求 agent 创建候选文件、校验它、交付 JSON 与 HTML，并对已接受产物调用 `present`。
 
 -----
 
@@ -98,11 +98,9 @@ Cordis 入口注册在 `agent/pre-step`。它最多完整观察已领取的直�
 
 ### 条件性 Archify 指令
 
-以下 Session 日志与请求前缀描述针对 Cordis 入口。Native 入口会在请求准备期间通过 `requestContexts` 提供相同的有界匹配与消息来源。
-
 #### 模型看到什么
 
-只有完整且未超限的匹配直接用户请求会把渲染后的上游 `<skill_content name="archify">` 块作为 `archify-auto-invocation` Session 消息加入上下文。隐藏 provider 不会添加通用目录条目或工具 schema。
+以下 Session 日志与请求前缀说明针对 Cordis 入口；Native 入口会在请求准备期间通过 `requestContexts` 提供相同的有界匹配与消息来源。只有完整且未超限的匹配直接用户请求会把渲染后的上游 `<skill_content name="archify">` 块作为 `archify-auto-invocation` Session 消息加入上下文。隐藏 provider 不会添加通用目录条目或工具 schema。
 
 #### Token 影响
 

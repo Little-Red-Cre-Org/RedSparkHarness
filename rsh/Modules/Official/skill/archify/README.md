@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Archify routes clear direct-user requests for architecture and workflow diagrams to its hidden pinned Skill and CLI. Automatic loading requires action and diagram phrases within the configured observation budget; over-budget text disables auto-routing. Cordis users can load it manually with `/archify`.
+Archify routes clear direct-user requests for architecture and workflow diagrams to its hidden pinned Skill and CLI. Automatic loading requires action and diagram phrases within the configured observation budget; over-budget text disables auto-routing. Cordis users and Native TUI profiles with the manual Skill consumer can invoke it with `/archify`.
 
 The package root remains the Cordis compatibility entry and exposes `Config`. Native Host compositions must install `./native` explicitly; exporting it does not change defaults. Both entries share routing and resource guidance, and Native requires `skills`, `shellEnv`, and `requestContexts`.
 
@@ -57,7 +57,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 Loaded instructions enumerate the installed JSON schemas and examples and require shell-based resource discovery before authoring. `DSH_ARCHIFY_SKILL_DIR` belongs to the shell environment, not `run_code`'s `process.env`. Self-contained Bash and PowerShell examples read package resources and execute the CLI while keeping candidate and output paths in the user workspace. Delegated diagram tasks must carry the same resource guidance. A missing PATH command does not mean the bundled CLI is unavailable.
 
-A matching request contributes one `archify-auto-invocation` instruction message and makes the upstream body model-visible for that step. The message source has the same public type in both entries; see the [Skills subsystem reference](../../../../Docs/subsystems/skills.md#automatic-archify-invocation). The hidden Skill stays out of `dsh-tool-skill` catalogs because it is model-disabled, while the Cordis `/archify` route remains user-invocable. The package does not run the CLI itself: the loaded instructions require the agent to create a candidate, validate it, deliver JSON and HTML, and call `present` for accepted artifacts.
+A matching request contributes one `archify-auto-invocation` instruction message and makes the upstream body model-visible for that step. The message source has the same public type in both entries; see the [Skills subsystem reference](../../../../Docs/subsystems/skills.md#automatic-archify-invocation). The hidden Skill stays out of `dsh-tool-skill` catalogs because it is model-disabled, while Cordis `/archify` remains user-invocable. A Native TUI composition can also route `/archify` when it installs the Archify `./native` entry and the Native `dsh-tool-skill` consumer; exporting either entry does not change defaults. The package does not run the CLI itself: the loaded instructions require the agent to create a candidate, validate it, deliver JSON and HTML, and call `present` for accepted artifacts.
 
 -----
 
@@ -98,11 +98,9 @@ The `./native` entry is a Host plugin that installs the same provider and shell 
 
 ### Conditional Archify instructions
 
-The Session-log and request-prefix details below describe the Cordis entry. The Native entry supplies the same bounded match and message source through `requestContexts` during request preparation.
-
 #### What the model sees
 
-Only a complete, in-budget matching direct user request adds the rendered upstream `<skill_content name="archify">` block as an `archify-auto-invocation` Session message. The hidden provider adds no generic catalog entry or tool schema.
+The Session-log and request-prefix details below describe the Cordis entry; the Native entry supplies the same bounded match and message source through `requestContexts` during request preparation. Only a complete, in-budget matching direct user request adds the rendered upstream `<skill_content name="archify">` block as an `archify-auto-invocation` Session message. The hidden provider adds no generic catalog entry or tool schema.
 
 #### Token effect
 

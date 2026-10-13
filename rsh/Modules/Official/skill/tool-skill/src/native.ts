@@ -6,7 +6,7 @@ import type { ToolSchema, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
 import type { NativeToolRegistration, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type { NativeRequestContextProvider, NativeRequestContextRequest } from '@deepseek-ai/dsh-request-context-definition'
-import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
+import type { NativeSkillInvocationOptions, NativeSkillInvocations, NativeSkills } from '@deepseek-ai/dsh-skill/native'
 import { NativeRequestContextProviderId } from '@deepseek-ai/dsh-request-context-definition'
 import {
   escapeText,
@@ -72,7 +72,7 @@ export const plugin: NativePlugin = {
   name: '@deepseek-ai/dsh-tool-skill',
   targets: ['host'],
   requires: ['skills', 'tools', 'requestContexts'],
-  provides: [],
+  provides: ['skillInvocations'],
   resolve(input) {
     const config = resolveConfig(input)
     return (context: NativeContext) => { install(context, config) }
@@ -110,7 +110,20 @@ function install(context: NativeContext, config: ResolvedConfig): void {
     order: PROVIDER_ORDER,
     prepare: request => prepareSkillContext(request, skills, toolRegistration, config),
   }
-  context.effect(requestContexts.register(context.scope, provider))
+  const registration = requestContexts.register(context.scope, provider)
+  context.effect(registration)
+  const invocations: NativeSkillInvocations = {
+    canInvoke: async (name, options) => {
+      const signal = AbortSignal.any([context.signal, options.signal])
+      signal.throwIfAborted()
+      if (requestContexts !== options.requestContexts || !context.scope.contains(options.scope)
+        || !registration.isVisible(options.scope)) return false
+      const skill = await resolveUserInvocableSkill(skills, name, { ...options, signal })
+      signal.throwIfAborted()
+      return registration.isVisible(options.scope) && skill !== undefined
+    },
+  }
+  context.provide('skillInvocations', invocations)
 }
 
 async function prepareSkillContext(
@@ -139,17 +152,26 @@ async function prepareSkillContext(
 
   for (const name of invokedSkillNames(request.inputs)) {
     request.signal.throwIfAborted()
-    const skill = await skills.get(name, {
-      scope: request.scope,
-      cwd: request.owner.session.header.cwd,
-      signal: request.signal,
+    const skill = await resolveUserInvocableSkill(skills, name, {
+      scope: request.scope, cwd: request.owner.session.header.cwd, signal: request.signal,
     })
     request.signal.throwIfAborted()
-    if (skill === undefined || !isUserInvocable(skill)) continue
+    if (skill === undefined) continue
     const source: SkillInvocationSource = { kind: 'skill-invocation', name, form: 'instructions' }
     messages.push(createUserMessage({ content: [{ type: 'text', text: renderSkillContent(skill) }], source }))
   }
   return { messages, commit() {} }
+}
+
+async function resolveUserInvocableSkill(
+  skills: NativeSkills,
+  name: string,
+  options: Pick<NativeSkillInvocationOptions, 'scope' | 'cwd' | 'signal'>,
+): Promise<SkillDefinition | undefined> {
+  options.signal.throwIfAborted()
+  const skill = await skills.get(name, options)
+  options.signal.throwIfAborted()
+  return skill !== undefined && isUserInvocable(skill) ? skill : undefined
 }
 
 function catalogEntries(skills: readonly SkillSummary[], maxLength: number): SkillCatalogSource['entries'] {

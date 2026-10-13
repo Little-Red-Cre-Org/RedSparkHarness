@@ -12,7 +12,7 @@
 
 `native-tui` profile 安装共享 `commands` Provider、Goal 命令、`agent-presets` Registry 和两个常驻装配。`standard` 与 `minimal` 使用不同的子 scope；Goal 工具只安装在 `standard`，Todo 工具安装在两者中。profile 模板保持显式，不改变其他 Program 的 preset 默认值。
 
-终端保留本地控制名称。`/help` 会列出当前 scope 可见的扩展命令并过滤本地保留名称；无效命令参数，以及既不匹配命令也不匹配 Skill 的斜杠输入，仍在本地处理。已安装命令分发未匹配后，终端会在准确选定的根 Session Agent scope 和 Session cwd 中查询 Native Skill；只有同名 Skill 允许用户调用时，原斜杠文本才会排队。取消、人机请求、owner 变更或关闭先发生时，未完成查询不会排队输入。其他命令通过准确选中的根 Session owner 和既有原生执行器分发。因此 `/goal pause` 可以中断活动 Goal 模型请求，不会排在它之后。共享命令 Provider 在 Session 中记录命令执行事实；终端不新增 writer。
+终端保留本地控制名称。`/help` 会列出当前 scope 可见的扩展命令并过滤本地保留名称；无效命令参数，以及既不匹配命令也不匹配 Skill 的斜杠输入，仍在本地处理。已安装命令分发未匹配后，终端会调用可选 `skillInvocations`，并传入准确选定的根 Session Agent scope、可选 Session cwd 和所选 Program 的精确 `requestContexts` 注册表。已安装的手动 consumer 使用共用 Skill resolver；只有其安装 scope 包含所选 scope，且其精确 request-context 注册在加载前后仍为最近的可见胜者，才会接受查询。只有 Skill 允许用户调用时，原斜杠文本才会排队。取消、人机请求、owner 变更或关闭先发生时，未完成查询不会排队输入。其他命令通过准确选中的根 Session owner 和既有原生执行器分发。因此 `/goal pause` 可以中断活动 Goal 模型请求，不会排在它之后。共享命令 Provider 在 Session 中记录命令执行事实；终端不新增 writer。
 
 ## 考虑过的替代方案
 

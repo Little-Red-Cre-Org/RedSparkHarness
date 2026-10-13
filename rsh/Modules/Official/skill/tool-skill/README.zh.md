@@ -47,7 +47,7 @@ agent 可以在会话期间发现并加载 skill。在首次请求前，如果�
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-skill)是每个受支持字段的穷尽式真源。
 
-Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-context 提供方一起选择本包的 `./native` 入口。Native 消费方先检查本轮实际捕获的精确 `skill` 工具注册，再通过共享 request-context 写入器接收目录和 `/name` 指令消息，从而将两者持久写入 Session 输入。
+Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-context 提供方一起选择本包的 `./native` 入口。Native 消费方提供 `skillInvocations` 供手动 Skill 路由使用：调用方必须传入同一个 `requestContexts` 注册表、该 consumer 的安装 scope 必须包含所选 Agent scope，并且精确的 request-context 注册必须在加载前后仍是最近的可见胜者，才会接受允许用户调用的 Skill。匹配的指令通过共享 request-context 服务准备；目录发布仍会检查本轮捕获的精确 `skill` 工具注册。
 
 ### 模型得到什么
 

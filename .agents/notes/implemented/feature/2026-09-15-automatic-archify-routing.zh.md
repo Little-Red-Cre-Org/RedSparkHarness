@@ -40,4 +40,4 @@ Cordis 兼容测试覆盖隐藏 provider 发现、未匹配与非用户绕过、
 
 ## 后果
 
-Cordis 标准 base profile 都获得同一低开销能力，包括 Desktop 通过 base bundle 运行时闭包获得该能力。Native Host composition 可以显式安装导出的 `./native` 入口；导出本身不会改变随附 Native 默认配置。普通请求只执行有上限的内存文本检查；它们既不读取上游 Skill，也不会获得 Archify 目录项或指令。Cordis 用户始终能使用 `/archify` 选择精确行为，部署也能通过后续 profile patch 禁用自动选择或替换短语列表。上游校验之后的视觉质量仍由人工检查，升级仍是显式依赖变更，并执行同一套路由、loader 和产物验收。
+Cordis 标准 base profile 都获得同一低开销能力，包括 Desktop 通过 base bundle 运行时闭包获得该能力。Native Host composition 可以显式安装导出的 `./native` 入口；导出本身不会改变随附 Native 默认配置。显式装配的 Native TUI 也可路由 `/archify`，前提是 composition 安装 Archify 和带有 request-context 注册的 Native `dsh-tool-skill` consumer。普通请求只执行有上限的内存文本检查；它们既不读取上游 Skill，也不会获得 Archify 目录项或指令。Cordis 或 Native TUI 用户都能使用 `/archify` 选择精确行为；部署也能通过后续 profile patch 禁用自动选择或替换短语列表。上游校验之后的视觉质量仍由人工检查，升级仍是显式依赖变更，并执行同一套路由、loader 和产物验收。

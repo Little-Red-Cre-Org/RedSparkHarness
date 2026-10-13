@@ -205,7 +205,7 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
     expect(manualRequest).toContain('<skill_content name="archify">')
     expect(manualRequest.split('<skill_content name="archify">')).toHaveLength(3)
     const privateDirectory = archifyShellEnvValues()[ARCHIFY_SKILL_DIRECTORY_ENV]
-    expect(JSON.stringify(modelRequests)).not.toContain(privateDirectory)
+    expect(JSON.stringify(modelRequests)).not.toContain(JSON.stringify(privateDirectory).slice(1, -1))
 
     const backend = new JsonlSessionBackend({ root: sessions, compression: 'none' })
     let raw: string
@@ -223,7 +223,7 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
         expect(eventProjection(durableEvents)).toEqual(eventProjection([...first.events, seedBoundary, ...recovery.events]))
         expect(countKind(durableEvents, 'archify-auto-invocation')).toBe(1)
         expect(countKind(durableEvents, 'skill-invocation')).toBe(1)
-        expect(JSON.stringify(durableEvents)).not.toContain(privateDirectory)
+        expect(JSON.stringify(durableEvents)).not.toContain(JSON.stringify(privateDirectory).slice(1, -1))
       } finally { await reader.close() }
       const sessionFiles = readdirSync(sessions, { recursive: true }).map(String).filter(name => name.endsWith('session.v3.jsonl'))
       if (sessionFiles.length !== 1) throw new Error('native-sdk Archify writer omitted its Session JSONL')

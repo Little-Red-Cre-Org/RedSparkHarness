@@ -51,7 +51,7 @@ The Provider publishes `requestContexts`; applications and other Providers obtai
 
 Visible Providers prepare concurrently in ascending `order`, then provider id order. Each returns detached messages and candidate state; the registry does not write the Session. The application supplies an acceptance callback that performs its final synchronous checks, appends through its existing writer, and flushes. Only an `accepted` result commits prepared Provider state. A rejected result leaves that state uncommitted; preparation, acceptance, and flush failures reject the request.
 
-The request includes exact visibility from the model or PTC execution snapshots. `includes()` matches the captured registration disposer identity, so a schema with the same name does not make a replaced registration visible.
+The request includes exact visibility from the model or PTC execution snapshots. `includes()` matches the captured registration disposer identity, so a schema with the same name does not make a replaced registration visible. Each `register()` call returns a callable disposer for that exact provider; its `isVisible(scope)` check is true only while the registration is the nearest visible provider with the same id, and false after replacement, removal, or registry disposal.
 
 <a id="further-exploration"></a>
 

@@ -9,7 +9,7 @@
       "targets": ["host"],
       "requires": ["skills", "tools", "requestContexts"],
       "optional": [],
-      "provides": []
+      "provides": ["skillInvocations"]
     }
   },
   "publishConfig": {

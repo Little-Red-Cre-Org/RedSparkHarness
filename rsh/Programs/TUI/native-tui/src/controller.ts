@@ -13,8 +13,6 @@ import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/native'
-import type { SkillSummary } from '@deepseek-ai/dsh-skill/types'
-import { isUserInvocable } from '@deepseek-ai/dsh-skill/shared'
 
 /** Human command operations routed through the selected root Session owner. */
 export interface TerminalCommandOperations {
@@ -33,10 +31,16 @@ export interface TerminalCommandOperations {
   dispatch(id: SessionId, line: string, signal: AbortSignal): Promise<CommandExecution | undefined>
 }
 
-/** Exact-scope Native skill summaries used only after command lookup misses. */
-export interface TerminalSkillOperations {
-  /** @param id - selected Session. @param signal - lookup cancellation. @returns visible skill summaries. */
-  list(id: SessionId, signal: AbortSignal): Promise<readonly SkillSummary[]>
+/** Installed Native manual-skill Consumer used only after command lookup misses. */
+export interface TerminalSkillInvocationOperations {
+  /**
+   * Check manual invocation availability.
+   * @param name - slash command Skill.
+   * @param id - selected Session.
+   * @param signal - lookup cancellation.
+   * @returns current manual-consumer availability.
+   */
+  canInvoke(name: string, id: SessionId, signal: AbortSignal): Promise<boolean>
 }
 
 /** Internal operations backed by one selected native executor and persistence authority. */
@@ -44,7 +48,7 @@ export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
   readonly presets?: TerminalPresetOperations | undefined
   readonly commands?: TerminalCommandOperations | undefined
-  readonly skills?: TerminalSkillOperations | undefined
+  readonly skillInvocations?: TerminalSkillInvocationOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -301,15 +305,15 @@ export class TerminalController implements TerminalInteraction {
         if (!this.isSkillLookupCurrent(undefined, lookupEpoch)) return undefined
         if (route === undefined) throw new Error(terminalCopy(this.config.locale).queueFull)
         if (name === undefined) return { kind: 'unknown' }
-        const skills = this.execution.skills
-        if (skills === undefined) return { kind: 'unknown' }
+        const invocations = this.execution.skillInvocations
+        if (invocations === undefined) return { kind: 'unknown' }
         const controller = new AbortController()
         const signal = AbortSignal.any([controller.signal, this.lifetime])
         this.skillLookups.add(controller)
         try {
-          const available = await skills.list(id, signal)
+          const available = await invocations.canInvoke(name, id, signal)
           if (!this.isSkillLookupCurrent(id, lookupEpoch, signal)) return undefined
-          if (!available.some(skill => skill.name === name && isUserInvocable(skill))) return { kind: 'unknown' }
+          if (!available) return { kind: 'unknown' }
           if (!this.resolveSkillRoute(route, message)) return undefined
           admitted = true
           return { kind: 'skill' }

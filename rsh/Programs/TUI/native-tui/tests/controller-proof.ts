@@ -101,12 +101,11 @@ export async function controllerProof(workspace: string): Promise<void> {
       let call = 0
       const controller = new TerminalController({
         turn: async () => ({ exitCode: 0 }), open: async () => undefined, history: async () => [], sessions: async () => [],
-        skills: { list: async (_id, signal) => {
+        skillInvocations: { canInvoke: async (_name, _id, signal) => {
           const index = call++
           entered[index]!.resolve(signal)
           await releases[index]!.promise
-          return [{ name: 'archify', description: 'Diagram authoring', invocation: { modelInvocable: false, userInvocable: true },
-            source: 'bundled', provider: 'archify' }]
+          return true
         } },
       }, owner.signal, settings, SessionId('controller-skill-lookup'))
       const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '/archify diagram' }] })
@@ -181,17 +180,18 @@ export async function controllerProof(workspace: string): Promise<void> {
             return undefined
           },
         },
-        skills: { list: async (_id, signal) => {
+        skillInvocations: { canInvoke: async (name, _id, signal) => {
           const index = skillCalls++
           if (index < skillEntered.length) {
             skillEntered[index]!.resolve(signal)
             await skillReleases[index]!.promise
           }
-          return [{ name: 'archify', description: 'Diagram authoring', invocation: { modelInvocable: false, userInvocable: true },
-            source: 'bundled', provider: 'archify' }]
+          return name === 'archify'
         } },
         turn: async (request) => {
-          const text = request.message.content.filter(block => block.type === 'text').map(block => block.text).join('')
+          const message = request.message
+          if (message === undefined) throw new Error('native-tui controller proof received no turn message')
+          const text = message.content.filter(block => block.type === 'text').map(block => block.text).join('')
           turns.push(text)
           if (text === 'after missing') {
             afterMissingEntered.resolve(undefined)

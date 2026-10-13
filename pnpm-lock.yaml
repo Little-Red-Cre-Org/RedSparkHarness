@@ -8196,6 +8196,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
       '@deepseek-ai/dsh-request-context':
         specifier: workspace:^
         version: link:../../../../Engine/context/request-context
@@ -8232,6 +8235,9 @@ importers:
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-request-context-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/request-context-definition
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values

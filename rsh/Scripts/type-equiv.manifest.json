@@ -1343,6 +1343,16 @@
     },
     {
       "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "NativeSkillInvocationOptions",
+      "source": "rsh/Modules/Official/skill/skill/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
+      "symbol": "NativeSkillInvocations",
+      "source": "rsh/Modules/Official/skill/skill/src/native.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/skills.md",
       "symbol": "SkillSource",
       "source": "rsh/Modules/Official/skill/skill/src/types.ts"
     },
@@ -2429,6 +2439,11 @@
     {
       "doc": "rsh/Docs/subsystems/request-context.md",
       "symbol": "NativeRequestContextProvider",
+      "source": "rsh/Engine/context/request-context-definition/src/index.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/request-context.md",
+      "symbol": "NativeRequestContextRegistration",
       "source": "rsh/Engine/context/request-context-definition/src/index.ts"
     },
     {

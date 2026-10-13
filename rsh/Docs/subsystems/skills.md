@@ -117,6 +117,35 @@ interface NativeSkills {
 }
 ```
 
+`dsh-tool-skill` supplies `skillInvocations` for manual Native Skill routing. The consumer accepts a lookup only when the caller supplies its exact selected `requestContexts` registry, the consumer installation scope contains the selected Agent scope, and the consumer's exact request-context registration remains the nearest visible winner before and after Skill resolution; an aborted lookup rejects.
+
+```ts type-equiv
+/** Lookup request from a Program that can route a manual invocation. */
+interface NativeSkillInvocationOptions {
+  /** Dynamic Agent scope whose winning Skill body is requested. */
+  readonly scope: NativeScope
+  /** Session working directory used by the Skill provider. */
+  readonly cwd?: string | undefined
+  /** Program and request cancellation. */
+  readonly signal: AbortSignal
+  /** Exact request-context registry captured by the selected Program. */
+  readonly requestContexts: NativeRequestContexts
+}
+```
+
+```ts type-equiv
+/** Native capability supplied by the installed manual Skill consumer. */
+interface NativeSkillInvocations {
+  /**
+   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
+   * @param name - exact Skill name from the slash command.
+   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
+   * @returns whether the live consumer and exact durable provider can consume this invocation.
+   */
+  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
+}
+```
+
 ## Local discovery priority
 
 The shipped local provider scans roots in rank order:

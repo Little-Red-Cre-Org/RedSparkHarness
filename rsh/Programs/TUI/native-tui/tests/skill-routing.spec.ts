@@ -51,8 +51,19 @@ it('routes a known Native Skill after real command lookup and preserves unknown-
         expect(messages.filter(event => event.data.source.kind === 'archify-auto-invocation')).toHaveLength(0)
         expect(messages.filter(event => event.data.source.kind === 'user'
           && JSON.stringify(event.data.content).includes('/archify Create and deliver a workflow diagram'))).toHaveLength(1)
-        expect(JSON.stringify(events)).not.toContain(archifyShellEnvValues()[ARCHIFY_SKILL_DIRECTORY_ENV])
+        expect(JSON.stringify(events)).not.toContain(JSON.stringify(archifyShellEnvValues()[ARCHIFY_SKILL_DIRECTORY_ENV]).slice(1, -1))
       } finally { await reader.close() }
     } finally { await backend.close() }
   } finally { await fixture.cleanup() }
+
+  const withoutManualConsumer = terminalFixture(false, script, false, false, false, undefined, false, true, false)
+  try {
+    const terminal = withoutManualConsumer.launch()
+    await terminal.waitFor('Ready')
+    await terminal.submit('/archify Create and deliver a workflow diagram')
+    await terminal.waitFor('Unavailable command: /archify Create and deliver a workflow diagram')
+    expect(existsSync(join(withoutManualConsumer.home, 'started'))).toBe(false)
+    await terminal.submit('/exit')
+    expect((await terminal.done).exitCode, terminal.output()).toBe(0)
+  } finally { await withoutManualConsumer.cleanup() }
 }, 45_000)

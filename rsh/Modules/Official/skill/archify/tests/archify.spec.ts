@@ -20,14 +20,18 @@ import * as Archify from '@deepseek-ai/dsh-archify'
 import { ARCHIFY_SKILL_DIRECTORY_ENV } from '../src/shared.ts'
 import { NativeHost, NativeScope, resolveInstallation } from '@deepseek-ai/dsh-native-runtime'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { plugin as nativeAgentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as nativeToolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as nativeArchifyPlugin } from '@deepseek-ai/dsh-archify/native'
 import { plugin as nativeSkillRegistryPlugin } from '@deepseek-ai/dsh-skill/native'
-import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
+import type { NativeSkillInvocations, NativeSkills } from '@deepseek-ai/dsh-skill/native'
+import { plugin as nativeToolSkillPlugin } from '@deepseek-ai/dsh-tool-skill/native'
 import { plugin as nativeShellEnvPlugin } from '@deepseek-ai/dsh-shell-env/native'
 import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
 import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
 import { plugin as nativeRequestContextPlugin } from '@deepseek-ai/dsh-request-context/native'
-import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
+import { NativeRequestContextRegistry } from '@deepseek-ai/dsh-request-context'
+import { NativeRequestContextProviderId, type NativeRequestContextProvider, type NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
 
 const OFF = ReasoningEffortId('off')
 const HIGH = ReasoningEffortId('high')
@@ -158,6 +162,63 @@ describe('dsh-archify', () => {
       }))
       expect(requestContexts.hasProviders(scope)).toBe(false)
     } finally { await host.stop() }
+
+    const consumerScope = new NativeScope()
+    const consumerRequests = {
+      skills: { plugin: nativeSkillRegistryPlugin, scope: consumerScope, config: undefined },
+      agents: { plugin: nativeAgentPlugin, scope: consumerScope, config: undefined },
+      tools: { plugin: nativeToolsPlugin, scope: consumerScope, config: undefined },
+      shellEnv: { plugin: nativeShellEnvPlugin, scope: consumerScope, config: undefined },
+      requestContexts: { plugin: nativeRequestContextPlugin, scope: consumerScope, config: undefined },
+      toolSkill: { plugin: nativeToolSkillPlugin, scope: consumerScope, config: undefined },
+      archify: { plugin: nativeArchifyPlugin, scope: consumerScope, config: undefined },
+    }
+    let skillInvocations: NativeSkillInvocations | undefined
+    let consumerContexts: NativeRequestContexts | undefined
+    const consumerObserver: NativePlugin = {
+      apiVersion: 1, name: 'skill-invocation-disposal-observer', targets: ['host'],
+      requires: ['requestContexts'], optional: ['skillInvocations'], provides: [],
+      resolve: () => (context) => {
+        consumerContexts = context.require('requestContexts')
+        skillInvocations = context.optional('skillInvocations')
+      },
+    }
+    const consumerHost = new NativeHost(resolveInstallation([
+      ...Object.values(consumerRequests), { plugin: consumerObserver, scope: consumerScope, config: undefined },
+    ], 'host'))
+    try {
+      await consumerHost.start()
+      if (skillInvocations === undefined || consumerContexts === undefined) {
+        throw new Error('Native ToolSkill disposal observer was not activated')
+      }
+      await expect(skillInvocations.canInvoke('archify', {
+        scope: consumerScope, cwd: '/workspace', signal: new AbortController().signal, requestContexts: consumerContexts,
+      })).resolves.toBe(true)
+      const foreignContexts = new NativeRequestContextRegistry(consumerScope)
+      try {
+        await expect(skillInvocations.canInvoke('archify', {
+          scope: consumerScope, cwd: '/workspace', signal: new AbortController().signal, requestContexts: foreignContexts,
+        })).resolves.toBe(false)
+      } finally { await foreignContexts.dispose() }
+      const child = new NativeScope(consumerScope)
+      const shadowProvider: NativeRequestContextProvider = {
+        id: NativeRequestContextProviderId('dsh-tool-skill'), order: 100,
+        prepare: async () => ({ messages: [], commit() {} }),
+      }
+      const removeShadow = consumerContexts.register(child, shadowProvider)
+      try {
+        await expect(skillInvocations.canInvoke('archify', {
+          scope: child, cwd: '/workspace', signal: new AbortController().signal, requestContexts: consumerContexts,
+        })).resolves.toBe(false)
+      } finally { await removeShadow() }
+      expect(consumerContexts.hasProviders(consumerScope)).toBe(true)
+      await consumerHost.remove(consumerRequests.toolSkill)
+      expect(consumerHost.diagnostics().find(item => item.name === nativeToolSkillPlugin.name)?.state).toBe('disposed')
+      await expect(skillInvocations.canInvoke('archify', {
+        scope: consumerScope, cwd: '/workspace', signal: new AbortController().signal, requestContexts: consumerContexts,
+      })).rejects.toThrow()
+      expect(consumerContexts.hasProviders(consumerScope)).toBe(true)
+    } finally { await consumerHost.stop() }
   })
 
   it('provides one hidden, user-invocable upstream Skill body on demand', async () => {

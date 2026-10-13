@@ -117,6 +117,35 @@ interface NativeSkills {
 }
 ```
 
+`dsh-tool-skill` 提供 `skillInvocations`，供 Native 手动 Skill 路由使用。仅当调用方传入选定 Program 的精确 `requestContexts` 注册表、消费方安装 scope 包含所选 Agent scope，且消费方的精确 request-context 注册在 Skill 解析前后仍是最近的可见胜者时，能力才会接受该查询；请求取消时查询会拒绝。
+
+```ts type-equiv
+/** Lookup request from a Program that can route a manual invocation. */
+interface NativeSkillInvocationOptions {
+  /** Dynamic Agent scope whose winning Skill body is requested. */
+  readonly scope: NativeScope
+  /** Session working directory used by the Skill provider. */
+  readonly cwd?: string | undefined
+  /** Program and request cancellation. */
+  readonly signal: AbortSignal
+  /** Exact request-context registry captured by the selected Program. */
+  readonly requestContexts: NativeRequestContexts
+}
+```
+
+```ts type-equiv
+/** Native capability supplied by the installed manual Skill consumer. */
+interface NativeSkillInvocations {
+  /**
+   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
+   * @param name - exact Skill name from the slash command.
+   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
+   * @returns whether the live consumer and exact durable provider can consume this invocation.
+   */
+  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
+}
+```
+
 ## 本地发现优先级
 
 随附的本地提供方按 rank 顺序扫描各根目录：

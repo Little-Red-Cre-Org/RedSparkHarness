@@ -85,7 +85,7 @@
         "tmuxContext",
         "agentPresets",
         "commands",
-        "skills",
+        "skillInvocations",
         "workspaceRegistry",
         "agentInstructions",
         "modelSelection",

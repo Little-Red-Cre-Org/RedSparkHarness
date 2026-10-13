@@ -19,11 +19,12 @@ const root = fileURLToPath(new URL('../../../../../', import.meta.url))
  * @param presetMode - select the legacy fixture registry or shipped scope-owned compositions.
  * @param taskScheduler - install the shipped persistent task-scheduler Provider and Consumer.
  * @param archifySkill - install Native Skills, shell environment, and Archify for slash-routing coverage.
+ * @param manualSkillConsumer - install ToolSkill's durable manual-invocation Consumer with Archify.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
   modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false,
-  archifySkill = false) {
+  archifySkill = false, manualSkillConsumer = true) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -116,7 +117,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
     { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
     { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-    { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
+    ...(manualSkillConsumer ? [{ id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' }] : []),
     { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
   )
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-tui-fixture', private: true,

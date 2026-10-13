@@ -29,12 +29,13 @@ kind: "package-library"
 
 ### 入口
 
-从包根导入 `NativeRequestContextProvider`、`NativeRequestContextRequest`、`PreparedNativeRequestContext` 和 `NativeRequestContexts`。Provider 返回分离的消息与 `commit()` 操作，但不追加 Session。Program 同步检查最终准入，通过既有 writer 追加，并在 Provider 状态提交前完成 flush。
+从包根导入 `NativeRequestContextProvider`、`NativeRequestContextRequest`、`NativeRequestContextRegistration`、`PreparedNativeRequestContext` 和 `NativeRequestContexts`。`register()` 返回可调用的 `NativeRequestContextRegistration`；其 `isVisible(scope)` 会检查该精确注册是否仍为最近胜者。Provider 返回分离的消息与 `commit()` 操作，但不追加 Session。Program 同步检查最终准入，通过既有 writer 追加，并在 Provider 状态提交前完成 flush。
 
 ```ts
 import type {
   NativeRequestContextProvider,
   NativeRequestContextRequest,
+  NativeRequestContextRegistration,
   NativeRequestContexts,
   PreparedNativeRequestContext,
 } from '@deepseek-ai/dsh-request-context-definition'
