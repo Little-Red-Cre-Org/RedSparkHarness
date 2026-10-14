@@ -53,10 +53,6 @@ export const plugin: NativePlugin = {
           void context.events.parallel(context.scope, 'credentials/reference-updated', ref)
             .catch((error: unknown) => { console.warn('credentials-local: reference listener failed', error) })
         },
-        recordUpdated: (key) => {
-          void context.events.parallel(context.scope, 'credentials/record-updated', key)
-            .catch((error: unknown) => { console.warn('credentials-local: record listener failed', error) })
-        },
       }, config)
       context.own(() => backend.dispose())
       await backend.start()

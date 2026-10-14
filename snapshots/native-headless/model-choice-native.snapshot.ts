@@ -22,12 +22,23 @@ interface ModelChoicePatch {
   readonly secondMaxTokens: number
   readonly systemPrompt?: string
   readonly disableSelectionFixture?: boolean
+  readonly exerciseCredentialNotifications?: boolean
 }
 
 interface ModelChoiceRequest {
   model: string
-  max_tokens: number
+  max_tokens?: number
   messages: { role: string; content: unknown }[]
+}
+
+interface CapturedCredentialHeaders {
+  readonly authorization?: string
+  readonly token?: string
+}
+
+interface ModelChoiceProfile {
+  readonly scopes: { id: string; parent?: string }[]
+  readonly installations: { id: string; plugin: string; scope: string; disabled?: boolean; config?: Record<string, unknown> }[]
 }
 
 interface ModelChoiceRunner {
@@ -35,8 +46,9 @@ interface ModelChoiceRunner {
   readonly workspace: string
   readonly sessions: string
   readonly requests: ModelChoiceRequest[]
+  readonly credentialHeaders: CapturedCredentialHeaders[]
   writePatch(path: string, patch: ModelChoicePatch): void
-  invoke(patch: string, args: readonly string[]): Promise<{ exitCode?: number | null; stderr: string }>
+  invoke(patch: string, args: readonly string[]): Promise<{ exitCode?: number | null; stderr: string; stdout: string }>
 }
 
 function modelReplies(recorded: ReturnType<typeof parseSessionLog> | undefined, seeded: ContentBlock[][],
@@ -51,6 +63,7 @@ function modelReplies(recorded: ReturnType<typeof parseSessionLog> | undefined, 
 async function withModelChoiceRunner(replies: ContentBlock[][],
   run: (runner: ModelChoiceRunner) => Promise<void>): Promise<void> {
   const requests: ModelChoiceRequest[] = []
+  const credentialHeaders: CapturedCredentialHeaders[] = []
   const server = createServer((request, response) => {
     const chunks: Buffer[] = []
     request.on('data', (chunk: Buffer) => { chunks.push(chunk) })
@@ -58,6 +71,10 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
       const bytes = Buffer.concat(chunks)
       const body = request.headers['content-encoding'] === 'zstd' ? zstdDecompressSync(bytes) : bytes
       requests.push(JSON.parse(body.toString('utf8')) as ModelChoiceRequest)
+      credentialHeaders.push({
+        ...(typeof request.headers.authorization === 'string' ? { authorization: request.headers.authorization } : {}),
+        ...(typeof request.headers['x-dsh-auth-token'] === 'string' ? { token: request.headers['x-dsh-auth-token'] } : {}),
+      })
       const blocks = replies[requests.length - 1]
       if (blocks === undefined) { response.writeHead(500); response.end('script exhausted'); return }
       const tools = blocks.filter(block => block.type === 'tool-call')
@@ -96,6 +113,8 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
       ['native-session-execution', 'rsh/Engine/core/native-session-execution'],
       ['native-model-selection', 'rsh/Engine/llm/native-model-selection'], ['launch-environment', 'rsh/Core/util/launch-environment'],
       ['credentials-local', 'rsh/Modules/Official/credentials/credentials-local'],
+      ['authorization', 'rsh/Modules/Official/credentials/authorization'],
+      ['deepseek-account', 'rsh/Modules/Official/credentials/deepseek-account'],
       ['session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
       ['fs-local', 'rsh/Modules/Official/fs/fs-local'], ['fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
       ['llm-pi-ai', 'rsh/Modules/Official/llm/llm-pi-ai'],
@@ -110,27 +129,61 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['activeSessions', 'modelSelection'], optional: [], provides: [] } } }))
     copyFileSync(join(root, 'rsh/Engine/llm/native-model-selection/tests/fixtures/selection-policy.mjs'), join(fixture, 'native.mjs'))
+    const credentialFixture = join(profile, 'node_modules/native-credential-notification-fixture')
+    mkdirSync(credentialFixture)
+    writeFileSync(join(credentialFixture, 'package.json'), JSON.stringify({ name: 'native-credential-notification-fixture',
+      version: '0.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+      dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'],
+        requires: ['activeSessions', 'modelSelection', 'credentials', 'authorization', 'deepseekAccount', 'modelSettings', 'modelDirectory'],
+        optional: [], provides: [] } } }))
+    copyFileSync(join(root, 'snapshots/native-headless/credential-notification-native/credential-fixture.mjs'),
+      join(credentialFixture, 'native.mjs'))
     const runner: ModelChoiceRunner = {
       home: selectedHome, workspace, sessions, requests,
+      credentialHeaders,
       writePatch(path, patch) {
+        if (patch.exerciseCredentialNotifications === true) {
+          const profilePath = join(profile, 'rsh.profile.json')
+          const nativeProfile = JSON.parse(readFileSync(profilePath, 'utf8')) as ModelChoiceProfile
+          nativeProfile.scopes.push({ id: 'consumer', parent: 'root' })
+          const childInstallations = new Set(['app', 'agents', 'execution', 'model-execution', 'selection', 'selection-fixture', 'model'])
+          for (const installation of nativeProfile.installations) {
+            if (childInstallations.has(installation.id)) installation.scope = 'consumer'
+          }
+          nativeProfile.installations.push(
+            { id: 'authorization', plugin: '@deepseek-ai/dsh-authorization', scope: 'consumer' },
+            { id: 'deepseek-account', plugin: '@deepseek-ai/dsh-deepseek-account', scope: 'consumer',
+              config: { inferenceOrigin: 'http://127.0.0.1:' + address.port } },
+            { id: 'credential-notification-fixture', plugin: 'native-credential-notification-fixture', scope: 'consumer',
+              config: { accountDestination: 'http://127.0.0.1:' + address.port + '/anthropic' } },
+          )
+          writeFileSync(profilePath, JSON.stringify(nativeProfile))
+        }
         writeFileSync(path, JSON.stringify({ formatVersion: 1, installations: [
           { id: 'app', config: { cwd: workspace, provider: 'selection-fixture', model: patch.defaultModel,
             systemPrompt: patch.systemPrompt ?? 'Read fixture.txt, then continue with the selected model.', maxSteps: 3 } },
           { id: 'fs', config: { cwd: workspace } }, { id: 'storage', config: { root: sessions, compression: 'none' } },
           { id: 'credentials', config: { dshHome: selectedHome, watch: false } },
-          { id: 'model', config: { providers: { 'selection-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
-            apiKeyEnv: 'MODEL_CHOICE_KEY', api: 'openai-completions', compat: { maxTokensField: 'max_tokens' }, models: [
-              { id: 'first', name: 'First', input: ['text'], contextWindow: 32768, maxTokens: patch.firstMaxTokens },
-              { id: 'second', name: 'Second', input: ['text'], contextWindow: 32768, maxTokens: patch.secondMaxTokens },
-            ] } } } },
+          { id: 'model', config: { providers: {
+            'selection-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
+              apiKeyEnv: 'MODEL_CHOICE_KEY', api: 'openai-completions', compat: { maxTokensField: 'max_tokens' }, models: [
+                { id: 'first', name: 'First', input: ['text'], contextWindow: 32768, maxTokens: patch.firstMaxTokens },
+                { id: 'second', name: 'Second', input: ['text'], contextWindow: 32768, maxTokens: patch.secondMaxTokens },
+              ] },
+            ...patch.exerciseCredentialNotifications === true ? { 'deepseek-account': {
+              baseURL: 'http://127.0.0.1:' + address.port + '/v1', api: 'openai-completions',
+              models: [{ id: 'deepseek-flash', name: 'Fixture DeepSeek account model', input: ['text'], contextWindow: 32768, maxTokens: patch.secondMaxTokens }],
+            } } : {},
+          } } },
           ...patch.disableSelectionFixture === true ? [{ id: 'selection-fixture', disabled: true }] : [],
         ] }))
       },
       async invoke(patch, args) {
-        return await execa(process.execPath, [
+        const result = await execa(process.execPath, [
           '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
           join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-model-choice', '--patch', patch, ...args,
         ], { env: { ...process.env, DSH_HOME: selectedHome, MODEL_CHOICE_KEY: 'model-choice-key' }, reject: false, timeout: 30_000 })
+        return { ...result.exitCode === undefined ? {} : { exitCode: result.exitCode }, stderr: result.stderr, stdout: result.stdout }
       },
     }
     await run(runner)
@@ -196,6 +249,57 @@ it('records a selected model and its prepared controls through dsh and cold-repl
     try {
       const id = (await cold.list())[0]?.header.id
       if (id === undefined) throw new Error('model-choice-native: missing cold Session')
+      const reader = await cold.open(id, 'read')
+      try { expect((await reader.read()).events).toEqual(events) }
+      finally { await reader.close() }
+    } finally { await cold.close() }
+    expect(readFileSync(physical, 'utf8')).toBe(raw)
+    assertModelChoiceSnapshot(scene, raw, runner.workspace)
+  })
+})
+
+it('delivers parent credential commits to child authorization and model consumers through dsh', async () => {
+  const scene = join(root, 'snapshots/native-headless/credential-notification-native')
+  const expected = join(scene, 'session.v3.jsonl')
+  const recorded = existsSync(expected) ? parseSessionLog(readFileSync(expected, 'utf8')) : undefined
+  const input = recorded?.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
+  const task = input?.type === 'user/message' && input.data.content[0]?.type === 'text'
+    ? input.data.content[0].text : 'Read fixture.txt, then continue with the selected model.'
+  const replies = modelReplies(recorded, [
+    [{ type: 'tool-call', id: ToolCallId('credential-notice-read-1'), name: 'read_file', arguments: '{"path":"fixture.txt"}' }],
+    [{ type: 'text', text: 'The account route used the committed fixture credential.' }],
+  ], 'credential-notification-native')
+  await withModelChoiceRunner(replies, async runner => {
+    const patch = join(runner.home, 'credential-notification-patch.json')
+    runner.writePatch(patch, { defaultModel: 'first', firstMaxTokens: 64, secondMaxTokens: 128,
+      exerciseCredentialNotifications: true, disableSelectionFixture: true })
+    const result = await runner.invoke(patch, [task])
+    expect(result.exitCode, result.stderr).toBe(0)
+    expect(result.stdout).toContain('credential-notification: authorization=authorized')
+    expect(result.stdout).toContain('credential-notification: account-route=ready')
+    expect(runner.requests.map(request => request.model)).toEqual(['first', 'deepseek-flash'])
+    expect(runner.credentialHeaders[1]).toEqual({
+      authorization: 'Bearer credential-notification-fixture-token', token: 'credential-notification-fixture-token',
+    })
+    const physicalName = readdirSync(runner.sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))
+    if (physicalName === undefined) throw new Error('credential-notification-native: missing durable Session')
+    const physical = join(runner.sessions, String(physicalName))
+    const raw = readFileSync(physical, 'utf8')
+    const events = parseSessionLog(raw)
+    expect(events.filter(event => (event.type as string) === 'model/selection')).toMatchObject([
+      { data: { provider: 'deepseek-account', model: 'deepseek-flash' } },
+    ])
+    expect(events.filter(event => event.type === 'request/header').map(event => [
+      event.data.header.config.provider, event.data.header.config.model,
+    ])).toEqual([['selection-fixture', 'first'], ['deepseek-account', 'deepseek-flash']])
+    expect(events.filter(event => event.type === 'assistant/message').at(-1)?.data.message.source)
+      .toEqual({ kind: 'model', provider: 'deepseek-account', model: 'deepseek-flash' })
+    expect(raw).not.toContain('credential-notification-fixture-token')
+    expect(events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    const cold = new JsonlSessionBackend({ root: runner.sessions, compression: 'none' })
+    try {
+      const id = (await cold.list())[0]?.header.id
+      if (id === undefined) throw new Error('credential-notification-native: missing cold Session')
       const reader = await cold.open(id, 'read')
       try { expect((await reader.read()).events).toEqual(events) }
       finally { await reader.close() }

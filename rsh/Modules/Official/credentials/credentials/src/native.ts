@@ -11,12 +11,6 @@ declare module '@deepseek-ai/dsh-native-runtime' {
      * @param ref - committed reference whose stored value changed.
      */
     'credentials/reference-updated': { mode: 'parallel'; args: [ref: CredentialRef]; result: void }
-    /**
-     * Notify subscribers after a stored record changes.
-     * @mode parallel
-     * @param key - committed record whose stored value changed.
-     */
-    'credentials/record-updated': { mode: 'parallel'; args: [key: CredentialKey]; result: void }
   }
 }
 
@@ -56,6 +50,16 @@ export interface NativeCredentials {
   readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
   listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
+  /**
+   * Receive a committed record change from this selected Provider instance.
+   * The Provider invokes the listener synchronously after a durable write or
+   * removal, or after adopting an observed external change. Asynchronous
+   * listener work does not delay the operation. Listener failures are logged
+   * and contained; the disposer stops later delivery and drains admitted work.
+   * @param listener - callback receiving the changed record address, never its payload.
+   * @returns an idempotent disposer; call it outside the listener so it cannot await itself.
+   */
+  onRecordUpdated(listener: (key: CredentialKey) => void | Promise<void>): () => Promise<void>
   /**
    * Read-decide-replace one record under the Provider's write queue.
    * @param key - record address.

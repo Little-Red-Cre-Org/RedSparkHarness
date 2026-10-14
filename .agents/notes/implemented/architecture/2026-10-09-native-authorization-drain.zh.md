@@ -22,4 +22,4 @@ Cordis 服务保留现有的遗弃运行语义；两个入口共享 flow、sessi
 
 ## 后果
 
-忽略 signal 的 flow 会让 `cancel()` 一直挂起；原生 flow 必须响应 signal。界面在 `settled` 或 `credentials/record-updated` 之后刷新模型目录；不另设目录事件。
+忽略 signal 的 flow 会让 `cancel()` 一直挂起；原生 flow 必须响应 signal。Native 模型 adapter 现在通过所选 `NativeCredentials` Provider 观察凭据变更；Cordis 保留 `credentials/record-updated`。当前 Native 投递路径见[原生凭据 service 通知](../bug-fix/2026-10-14-native-credential-service-notifications.zh.md)。

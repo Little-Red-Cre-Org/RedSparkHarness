@@ -18,6 +18,8 @@ import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepse
 import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { LlmError } from '@deepseek-ai/dsh-llm/native'
 
+type CredentialOperations = Pick<NativeCredentials, 'resolve' | 'readRecord' | 'listRecords' | 'modifyRecord' | 'deleteRecord'>
+
 /**
  * The record scope every credential this adapter family stores is written
  * under. It is the plugin's registered name, which is what tells a later
@@ -108,7 +110,7 @@ function toRecord(credential: Credential): CredentialRecord {
  * @returns the live service.
  * @throws {LlmError} code `NO_CREDENTIAL_STORE` when none is mounted.
  */
-function writableStore(credentials: NativeCredentials | undefined): NativeCredentials {
+function writableStore(credentials: CredentialOperations | undefined): CredentialOperations {
   if (credentials === undefined) {
     throw new LlmError(
       'llm-pi-ai: this composition mounts no credentials service, so there is nowhere to store the'
@@ -136,7 +138,7 @@ function writableStore(credentials: NativeCredentials | undefined): NativeCreden
  * @param credentials - the credential service, when the composition provides one.
  * @returns the store to hand `createModels()`.
  */
-export function credentialStoreFrom(credentials: NativeCredentials | undefined): CredentialStore {
+export function credentialStoreFrom(credentials: CredentialOperations | undefined): CredentialStore {
   return {
     async read(providerId) {
       if (credentials === undefined) return undefined
@@ -202,7 +204,7 @@ export function credentialStoreFrom(credentials: NativeCredentials | undefined):
  * @returns the auth context to hand `createModels()`.
  */
 export function authContextFrom(
-  credentials: NativeCredentials | undefined,
+  credentials: CredentialOperations | undefined,
   environment: LaunchEnvironmentSnapshot,
 ): AuthContext {
   return {

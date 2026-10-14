@@ -116,11 +116,11 @@ One doctrine and four consequences:
 - **Records are durable, and presence is the fact.** A record is stored per `<scope>/<id>` and survives restarts; the empty-value rule does not apply, so an `api-key` record carrying neither a key nor environment values is a deliberate statement, not a blank.
 - **Listener failures are contained.** `notifyUpdated` fans `credentials/reference-updated` out so every listener runs; a sync throw or async rejection is logged without changing the committed operation's outcome, except `INVARIANT`-coded failures, which rethrow after every listener ran.
 
-### The credentials/reference-updated event
+### Credential change notifications
 
 `credentials/reference-updated (ref)` fires after a committed change to a provider-managed source — a `set`, an `unset`, or an external edit observed in storage. Ambient process-environment changes are not observable and never emit. Consumers do not need the event (they re-resolve per operation); it exists for configuration UIs refreshing a "configured" badge.
 
-`credentials/record-updated (key)` fires after a committed change to a stored record — a `modifyRecord` that wrote, a `deleteRecord` that removed, or an external edit observed in storage. It stays a separate event because the two key grammars are disjoint: a listener receiving both spaces on one event could not tell which one a subject belongs to.
+Cordis emits `credentials/record-updated (key)` after a committed record write or removal, or an external edit adopted from storage. Native Host consumers subscribe with `NativeCredentials.onRecordUpdated` on the selected service instance. Both paths pass only the branded record address, never its payload; Native listeners run synchronously after the provider updates its committed snapshot, while their asynchronous work does not delay the write.
 
 ### Record write and read paths
 
@@ -131,12 +131,13 @@ One doctrine and four consequences:
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition: the `credentialRef`/`credentialKey` brands, `ResolvedCredential`/`CredentialRecordInfo`, the abstract provider over both key spaces, contained fan-out |
-| [`src/types.ts`](src/types.ts) | Client-safe type surface: the `CredentialRef` and `CredentialKey` brands, the stored-record union, the `CredentialInfo` reference view, the `credentials/reference-updated` and `credentials/record-updated` declarations |
+| [`src/types.ts`](src/types.ts) | Cordis event declarations and client-safe credential brands and record types |
+| [`src/native.ts`](src/native.ts) | Native Host service Definition: selected-provider record notifications and durable record operations |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `credentials/reference-updated` only fires while a credentials service is live |
 
 ### Client-safe types
 
-The `./types` subpath export holds the event declarations together with the `CredentialRef` and `CredentialKey` brands, the stored-record union they name, and the `CredentialInfo` reference view a configuration surface reads, and the package root re-exports them. A consumer outside the Host compilation face therefore reads the very signature the Host emits instead of restating it.
+The `./types` subpath export holds the Cordis event declarations together with the `CredentialRef` and `CredentialKey` brands, the stored-record union they name, and the `CredentialInfo` reference view a configuration surface reads, and the package root re-exports them. Native Host consumers import the `./native` Definition, which pairs selected-provider notifications with the record methods.
 
 ### Lifecycle
 

@@ -17,7 +17,14 @@ export interface NativeCredentialRuntime {
     error(message: unknown, ...args: unknown[]): void
   }
   referenceUpdated(ref: CredentialRef): void
-  recordUpdated(key: CredentialKey): void
+  recordUpdated?(key: CredentialKey): void
+}
+
+interface RecordUpdatedSubscription {
+  readonly listener: (key: CredentialKey) => void | Promise<void>
+  readonly pending: Set<Promise<void>>
+  active: boolean
+  disposal?: Promise<void>
 }
 
 /** File-backed credentials provider (`$DSH_HOME/.credentials.yaml`). */
@@ -42,6 +49,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
   /** Set at dispose: refuse new writes and let in-flight work no-op. */
   private closed = false
   private watcher?: ReturnType<typeof chokidarWatch>
+  private readonly recordUpdatedSubscriptions = new Set<RecordUpdatedSubscription>()
 
   /** Opaque read of {@link closed}: control flow cannot narrow it across awaits. */
   private isClosed(): boolean {
@@ -110,8 +118,10 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
   /** Refuse new work, close the watcher, then drain queued operations. */
   async dispose(): Promise<void> {
     this.closed = true
+    const subscriptions = [...this.recordUpdatedSubscriptions].map(subscription => this.disposeRecordUpdatedSubscription(subscription))
     await this.watcher?.close()
     await this.operations
+    await Promise.all(subscriptions)
   }
 
   resolve(ref: CredentialRef): Promise<NativeResolvedCredential | undefined> {
@@ -171,6 +181,18 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     })))
   }
 
+  /**
+   * Subscribe to committed changes owned by this Provider instance.
+   * @param listener - callback receiving the changed record address.
+   * @returns idempotent removal that drains admitted callback work.
+   */
+  onRecordUpdated(listener: (key: CredentialKey) => void | Promise<void>): () => Promise<void> {
+    if (this.closed) throw new Error('credentials-local is disposed: cannot subscribe to record updates')
+    const subscription: RecordUpdatedSubscription = { listener, pending: new Set(), active: true }
+    this.recordUpdatedSubscriptions.add(subscription)
+    return () => this.disposeRecordUpdatedSubscription(subscription)
+  }
+
   async modifyRecord(
     key: CredentialKey,
     mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
@@ -203,7 +225,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
         this.text = nextText
         this.records.set(key, next)
         // After the commit, on the same terms as a reference write.
-        this.runtime.recordUpdated(key)
+        this.notifyRecordUpdated(key)
         return next
       }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
     })
@@ -226,7 +248,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
         await writeFileAtomic(this.spec.filename, nextText, { mode: 0o600, dirMode: 0o700 })
         this.text = nextText
         this.records.delete(key)
-        this.runtime.recordUpdated(key)
+        this.notifyRecordUpdated(key)
       }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
     })
   }
@@ -254,6 +276,35 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     })
   }
   /* jscpd:ignore-end */
+
+  /** Close one listener's admission and drain its already-started work. */
+  private disposeRecordUpdatedSubscription(subscription: RecordUpdatedSubscription): Promise<void> {
+    if (subscription.disposal !== undefined) return subscription.disposal
+    subscription.active = false
+    this.recordUpdatedSubscriptions.delete(subscription)
+    return subscription.disposal = Promise.all(subscription.pending).then(() => undefined)
+  }
+
+  /** Invoke subscribers synchronously after a record commit, then contain async failures. */
+  private notifyRecordUpdated(key: CredentialKey): void {
+    for (const subscription of [...this.recordUpdatedSubscriptions]) {
+      if (!subscription.active) continue
+      try {
+        const result = subscription.listener(key)
+        if (result === undefined) continue
+        const pending = Promise.resolve(result).catch((error: unknown) => {
+          this.runtime.logger.warn('credentials-local: record update listener failed for %s', key)
+          this.runtime.logger.warn(error)
+        })
+        subscription.pending.add(pending)
+        void pending.then(() => { subscription.pending.delete(pending) })
+      } catch (error) {
+        this.runtime.logger.warn('credentials-local: record update listener failed for %s', key)
+        this.runtime.logger.warn(error)
+      }
+    }
+    this.runtime.recordUpdated?.(key)
+  }
 
   /** Queue one line edit; entry checks reject early, the queue re-judges them at run time. */
   private async write(ref: CredentialRef, value: string | undefined): Promise<void> {
@@ -410,7 +461,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     this.values = next.refs
     this.records = next.records
     for (const ref of changedRefs) this.runtime.referenceUpdated(ref)
-    for (const key of changedRecords) this.runtime.recordUpdated(key)
+    for (const key of changedRecords) this.notifyRecordUpdated(key)
   }
   /* jscpd:ignore-end */
 
