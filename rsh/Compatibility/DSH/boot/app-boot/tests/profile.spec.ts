@@ -9,7 +9,7 @@ import {
   unlinkSync, writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -892,13 +892,75 @@ describe('healProfilesModuleFallback', () => {
     }
   })
 
+  it('omits platform asset packages without JavaScript entries', async () => {
+    for (const asset of [
+      { name: '@vscode/ripgrep-win32-x64', path: 'bin/rg.exe', files: ['bin/'] },
+      { name: '@esbuild/win32-x64', path: 'esbuild.exe' },
+    ]) {
+      const anchor = stageInstallation({}, asset.name)
+      const packageDir = dirname(anchor)
+      const manifest = JSON.parse(readFileSync(anchor, 'utf8')) as Record<string, unknown>
+      delete manifest.main
+      manifest.os = ['win32']
+      manifest.cpu = ['x64']
+      if (asset.files === undefined) delete manifest.files
+      else manifest.files = asset.files
+      writeFileSync(anchor, JSON.stringify(manifest))
+      rmSync(join(packageDir, 'index.js'))
+      const payload = join(packageDir, asset.path)
+      mkdirSync(dirname(payload), { recursive: true })
+      writeFileSync(payload, 'platform payload')
+      Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
+      try {
+        const home = tmp()
+        await healProfilesModuleFallback({ installAnchor: anchor, home })
+        expect(existsSync(join(home, 'profiles', 'node_modules', asset.name))).toBe(false)
+      } finally {
+        delete (process as NodeJS.Process & { pkg?: unknown }).pkg
+      }
+    }
+  })
+
+  it('keeps JavaScript-bearing and explicitly declared missing entries fatal for platform packages', async () => {
+    for (const mode of ['script', 'declared-main'] as const) {
+      const name = `platform-${mode}`
+      const anchor = stageInstallation({}, name)
+      const packageDir = dirname(anchor)
+      const manifest = JSON.parse(readFileSync(anchor, 'utf8')) as Record<string, unknown>
+      manifest.os = ['win32']
+      manifest.cpu = ['x64']
+      manifest.files = ['bin/']
+      if (mode === 'script') delete manifest.main
+      else manifest.main = './missing.js'
+      writeFileSync(anchor, JSON.stringify(manifest))
+      rmSync(join(packageDir, 'index.js'))
+      const payload = join(packageDir, 'bin', 'tool.exe')
+      mkdirSync(dirname(payload), { recursive: true })
+      writeFileSync(payload, 'platform payload')
+      if (mode === 'script') writeFileSync(join(packageDir, 'worker.js'), 'export const worker = true\n')
+      Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
+      try {
+        await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow(
+          'main entry is missing',
+        )
+      } finally {
+        delete (process as NodeJS.Process & { pkg?: unknown }).pkg
+      }
+    }
+  })
+
   it('fails loud on a missing legacy main entry', async () => {
     const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' } })
     const bundleDir = join(anchor, '..', 'node_modules', 'bundle-a')
     const manifest = JSON.parse(readFileSync(join(bundleDir, 'package.json'), 'utf8')) as Record<string, unknown>
     delete manifest.main
+    manifest.os = ['win32']
+    manifest.cpu = ['x64']
+    manifest.files = ['bin/']
     writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(manifest))
     rmSync(join(bundleDir, 'index.js'))
+    mkdirSync(join(bundleDir, 'bin'))
+    writeFileSync(join(bundleDir, 'bin', 'tool.exe'), 'platform payload')
     Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
     try {
       await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow('main entry is missing')

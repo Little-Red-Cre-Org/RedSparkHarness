@@ -28,7 +28,7 @@ import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync,
   symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import type { EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
@@ -347,6 +347,38 @@ function packageEntryFromPackage(
   return undefined
 }
 
+/** Return whether the manifest and installed files identify a platform asset package with no JavaScript entry. */
+function isPlatformAssetPackage(
+  packageDir: string,
+  manifest: { cpu?: unknown; dsh?: unknown; files?: unknown; os?: unknown },
+): boolean {
+  const isTargetList = (value: unknown): boolean => {
+    if (!Array.isArray(value) || value.length === 0
+      || !value.every((target): target is string => typeof target === 'string' && target.length > 0)) return false
+    return value.some(target => !target.startsWith('!') && target !== 'any') && !value.includes('any')
+  }
+  if (manifest.dsh !== undefined || !isTargetList(manifest.os) || !isTargetList(manifest.cpu)) return false
+  if (manifest.files !== undefined && (!Array.isArray(manifest.files)
+    || !manifest.files.every(file => typeof file === 'string')
+    || manifest.files.some(file => /\b(?:js|mjs|cjs|jsx|ts|mts|cts|tsx)\b/iu.test(file)))) return false
+
+  let hasPayload = false
+  const inspectFiles = (dir: string): boolean => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules') continue
+      if (entry.isDirectory()) {
+        if (!inspectFiles(join(dir, entry.name))) return false
+      } else if (entry.isFile()) {
+        if (/\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/iu.test(extname(entry.name))) return false
+        if (!/^(?:package\.json|readme|license|notice|copying|changelog|changes)(?:\.|$)/iu.test(entry.name)
+          && !/\.(?:md|mdx|txt|rst)$/iu.test(entry.name)) hasPayload = true
+      } else return false
+    }
+    return true
+  }
+  return inspectFiles(packageDir) && hasPayload
+}
+
 /** Resolve every explicit ESM runtime export that an out-of-tree plugin can import. */
 function packageProxySource(
   packageName: string,
@@ -354,8 +386,12 @@ function packageProxySource(
 ): { version: string; targets: Record<string, string> } {
   const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as {
     bin?: unknown
+    cpu?: unknown
+    dsh?: unknown
     exports?: unknown
+    files?: unknown
     main?: unknown
+    os?: unknown
     types?: unknown
     typings?: unknown
     version?: unknown
@@ -372,7 +408,8 @@ function packageProxySource(
       return { version: manifest.version, targets: { '.': pathToFileURL(resolved).href } }
     } catch (error) {
       if (main === undefined
-        && (manifest.bin !== undefined || manifest.types !== undefined || manifest.typings !== undefined)) {
+        && (manifest.bin !== undefined || manifest.types !== undefined || manifest.typings !== undefined
+          || (manifest.main === undefined && isPlatformAssetPackage(packageDir, manifest)))) {
         return { version: manifest.version, targets: {} }
       }
       throw new Error(`dsh: installed package ${packageName} main entry is missing at ${entry}`, { cause: error })
