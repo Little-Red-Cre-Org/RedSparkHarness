@@ -1,5 +1,5 @@
 /** Framework-independent credential definition for native providers and consumers. */
-import type { CredentialInfo, CredentialKey, CredentialRecord, CredentialRef } from './native-types.ts'
+import type { CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef } from './native-types.ts'
 import type {} from '@deepseek-ai/dsh-native-runtime'
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -15,7 +15,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 }
 
 export type {
-  ApiKeyRecord, CredentialInfo, CredentialKey, CredentialRecord, CredentialRef, GrantRecord,
+  ApiKeyRecord, CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef, GrantRecord,
 } from './native-types.ts'
 export {
   credentialRef, isCredentialRefName, isCredentialKeySegment, credentialKey,
@@ -48,6 +48,42 @@ export interface NativeCredentials {
   set(ref: CredentialRef, value: string): Promise<void>
   unset(ref: CredentialRef): Promise<void>
   readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+  /**
+   * Read owner-private JSON metadata kept outside enumerable credential records.
+   * @param key - owner-scoped address.
+   * @returns the JSON value, or `undefined` while absent.
+   */
+  readMetadata(key: CredentialKey): Promise<unknown>
+  /**
+   * Read-decide-replace owner-private JSON metadata under the Provider's write lock.
+   * Returning `undefined` leaves the current value unchanged.
+   * @param key - owner-scoped address.
+   * @param mutate - decides the next JSON value from the current one.
+   * @param options - `signal` is checked before mutation begins; once it begins the value is committed.
+   * @returns the committed value, or the unchanged current value.
+   */
+  modifyMetadata(
+    key: CredentialKey,
+    mutate: (current: unknown) => Promise<unknown>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown>
+  /**
+   * Reconcile a legacy record and metadata value under the shared file lock.
+   * The Provider verifies the sidecar write before retiring the legacy record.
+   * @param key - address shared by the old record and new metadata value.
+   * @param migrate - validates detached metadata and legacy values; sibling records are detached copies read from the same locked snapshot.
+   * @param options - checked before migration begins; an admitted migration completes atomically.
+   * @returns the verified metadata value.
+   */
+  migrateRecordToMetadata(
+    key: CredentialKey,
+    migrate: (
+      current: unknown,
+      legacy: CredentialRecord | undefined,
+      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
+    ) => Promise<CredentialMetadataMigration>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown>
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
   listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
   /**

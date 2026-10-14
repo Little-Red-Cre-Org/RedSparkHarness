@@ -57,6 +57,8 @@ interface CredentialInfo {
 
 Native Host 消费方从按其 scope 选出的 `credentials` Provider 接收记录变更。`onRecordUpdated` 在 Provider 提交已更新快照后传递带品牌的 key；回调会同步调用，但返回的异步工作不会延迟凭据写入。disposer 会关闭新回调的准入并等待已开始的回调，因此消费方应通过 `context.effect` 注册它，并在回调之外调用。此 service 通知与下方的 Cordis 事件分开。
 
+凭据提供方还按 `CredentialKey` 存储拥有者私有的 JSON 元数据。元数据不会解析为凭据、不会出现在 `listRecords` 中，也不会发出记录更新事件。提供方可以在同一把锁下协调旧记录与元数据，并且只有在验证元数据已持久化后才移除旧记录。
+
 ```ts type-equiv
 /** Service implemented by a native credential Provider. */
 interface NativeCredentials {
@@ -65,6 +67,42 @@ interface NativeCredentials {
   set(ref: CredentialRef, value: string): Promise<void>
   unset(ref: CredentialRef): Promise<void>
   readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+  /**
+   * Read owner-private JSON metadata kept outside enumerable credential records.
+   * @param key - owner-scoped address.
+   * @returns the JSON value, or `undefined` while absent.
+   */
+  readMetadata(key: CredentialKey): Promise<unknown | undefined>
+  /**
+   * Read-decide-replace owner-private JSON metadata under the Provider's write lock.
+   * Returning `undefined` leaves the current value unchanged.
+   * @param key - owner-scoped address.
+   * @param mutate - decides the next JSON value from the current one.
+   * @param options - `signal` is checked before mutation begins; once it begins the value is committed.
+   * @returns the committed value, or the unchanged current value.
+   */
+  modifyMetadata(
+    key: CredentialKey,
+    mutate: (current: unknown | undefined) => Promise<unknown | undefined>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown | undefined>
+  /**
+   * Reconcile a legacy record and metadata value under the shared file lock.
+   * The Provider verifies the sidecar write before retiring the legacy record.
+   * @param key - address shared by the old record and new metadata value.
+   * @param migrate - validates detached metadata and legacy values; sibling records are detached copies read from the same locked snapshot.
+   * @param options - checked before migration begins; an admitted migration completes atomically.
+   * @returns the verified metadata value.
+   */
+  migrateRecordToMetadata(
+    key: CredentialKey,
+    migrate: (
+      current: unknown | undefined,
+      legacy: CredentialRecord | undefined,
+      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
+    ) => Promise<CredentialMetadataMigration>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown | undefined>
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
   listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
   /**
@@ -226,6 +264,34 @@ abstract unset(ref: CredentialRef): Promise<void>
  * @returns the record, or `undefined` while none is stored.
  */
 abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+
+/**
+ * Read JSON metadata owned by a plugin. Metadata is stored separately from
+ * credential records and never appears in {@link listRecords}.
+ * @param key - owner-scoped metadata address.
+ * @returns the JSON value, or `undefined` while absent.
+ */
+abstract readMetadata(key: CredentialKey): Promise<unknown>
+
+/**
+ * Read-decide-replace plugin-owned JSON metadata under the provider's write
+ * lock. Returning `undefined` leaves the current value unchanged.
+ * @param key - owner-scoped metadata address.
+ * @param mutate - decides the next JSON value from the current one.
+ * @returns the committed value, or the unchanged current value.
+ */
+abstract modifyMetadata( key: CredentialKey, mutate: (current: unknown) => Promise<unknown>, ): Promise<unknown>
+
+/**
+ * Reconcile owner metadata with a legacy credential record under the same
+ * provider lock. The legacy record is removed only after metadata is durable
+ * and verified. The callback receives detached metadata and legacy values
+ * and can read detached sibling-record copies from that locked snapshot.
+ * @param key - address shared by the old record and new metadata value.
+ * @param migrate - validates detached values from the locked snapshot and chooses the durable metadata result.
+ * @returns the verified metadata value.
+ */
+abstract migrateRecordToMetadata( key: CredentialKey, migrate: ( current: unknown, legacy: CredentialRecord | undefined, readRecord: (key: CredentialKey) => CredentialRecord | undefined, ) => Promise<CredentialMetadataMigration>, ): Promise<unknown>
 
 /**
  * Describe one record for configuration surfaces without exposing its value.

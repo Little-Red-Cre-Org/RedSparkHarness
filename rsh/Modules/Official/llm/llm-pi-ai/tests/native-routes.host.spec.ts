@@ -35,6 +35,7 @@ describe('native account model routes', () => {
     provider, key, account, inferenceOrigin, baseURL,
   }) => {
     const records = new Map<CredentialKey, CredentialRecord>()
+    const metadata = new Map<CredentialKey, unknown>()
     type RecordListener = (key: CredentialKey) => void | Promise<void>
     const recordListeners = new Set<RecordListener>()
     const pendingRecordCallbacks = new Map<RecordListener, Set<Promise<void>>>()
@@ -93,6 +94,25 @@ describe('native account model routes', () => {
           await accountSnapshotGate
         }
         return record
+      },
+      async readMetadata(key: CredentialKey) {
+        return metadata.get(key)
+      },
+      async modifyMetadata(key: CredentialKey, mutate, options) {
+        options?.signal?.throwIfAborted()
+        const next = await mutate(metadata.get(key))
+        if (next !== undefined) metadata.set(key, next)
+        return metadata.get(key)
+      },
+      async migrateRecordToMetadata(key: CredentialKey, migrate, options) {
+        options?.signal?.throwIfAborted()
+        const result = await migrate(metadata.get(key), records.get(key), (recordKey) => {
+          const record = records.get(recordKey)
+          return record === undefined ? undefined : structuredClone(record)
+        })
+        if (result.value !== undefined) metadata.set(key, result.value)
+        if (result.retireRecord && records.delete(key)) publishRecordUpdated(key)
+        return result.value
       },
       async describeRecord(recordKey: CredentialKey) {
         const record = records.get(recordKey)
