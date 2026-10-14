@@ -38,6 +38,8 @@ Python 客户端提供显式 Harness home，并选择 `sdk` profile 与有序 pa
 
 exe 的 VFS 内是**构建产物形态的真实包树**（各包的 `lib/` + 真实 `node_modules`）。打包专用 JSON-RPC 入口会向 app-boot 的根 Include 提供自身已安装 harness 的基准位置：相对插件说明符从外部配置目录解析，裸包名则从 VFS 解析，因此位于另一个 Node 项目内的配置无法遮蔽已打包的插件集合。普通开发 bin 仍由配置项目提供裸包。打包入口中的裸包名从该入口在 VFS 内的位置沿 `node_modules` 向上解析，自然落在 VFS 内。封闭集不需要白名单代码——VFS 中安装了什么，集合中就有什么；`import()` 集合外的名称会失败。
 
+`@deepseek-ai/node-addon-system-<platform>-<arch>` 载荷包只导出 `./package.json`；聚合入口仍可读取其元数据，打包模块后备机制会因为它们没有 JavaScript export 而省略代理。
+
 部署根目录是 [`rsh/Programs/SDK/python/sdk-runtime/package.json`](../../../../rsh/Programs/SDK/python/sdk-runtime/package.json)（`dsh-python-runtime-closure`，pnpm 工作区成员、零代码纯依赖 manifest），也是「exe 安装哪些插件」与「Python 运行时分发什么」的统一真源。向 exe 添加插件，就是在 manifest 中增加一行依赖后重新打包。[`rsh/Scripts/verify-runtime-closure.ts`](../../../../rsh/Scripts/verify-runtime-closure.ts) 读取每个已发布的 `rsh/Engine/preset/agent-presets/presets/*/agent.cordis.yml`，针对 `rsh/Programs/SDK/python/sdk-runtime/platforms.json` 中的每个目标解析比较 `process.platform` 的 `disabled` 条件，并要求该目标启用的每个工作区插件都通过显式的 `workspace:` 依赖列在运行时根目录。它还遍历该 manifest 覆盖的全部工作区包，要求每个非可选的工作区对等依赖（peer dependency）都显式列出，并报告“preset 或引用包 → 缺失依赖”的完整链路；无法识别的平台条件会保持启用，避免因不支持的表达式遗漏插件。`pnpm run hygiene`、CI 静态检查与 single-exe 构建都会在打包前运行该门禁。部署还会依据各包的 `files` 字段打包，因此 tsdown 拆出的共享分片必须被 `files` 覆盖。
 
 部署根目录显式包含 `@deepseek-ai/dsh-mcp-client`，将其作为自定义配置可用的插件，即使随附 preset 均未挂载该插件。外部配置因此可以连接由用户提供的 stdio 与 Streamable HTTP MCP server 并注册其工具；分发物不包含这些 server，也不将桥接范围扩展到 MCP Resources 和 Prompts。可执行程序与已安装 wheel 包的冒烟测试会启动临时 stdio server，发现其工具，并完成一次由模型请求的调用。

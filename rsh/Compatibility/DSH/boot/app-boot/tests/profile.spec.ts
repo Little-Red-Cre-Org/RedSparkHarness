@@ -908,22 +908,27 @@ describe('healProfilesModuleFallback', () => {
   })
 
   it('omits unavailable ESM exports and rejects malformed export targets', async () => {
-    for (const mode of ['missing', 'directory', 'absent-map', 'invalid', 'escape', 'null', 'null-subpath']) {
+    for (const mode of ['missing', 'directory', 'absent-map', 'metadata-only', 'invalid', 'escape', 'null', 'null-subpath']) {
       const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' } })
       const bundleDir = join(anchor, '..', 'node_modules', 'bundle-a')
       const manifest = JSON.parse(readFileSync(join(bundleDir, 'package.json'), 'utf8')) as Record<string, unknown>
       const target = mode === 'missing' ? './missing.js'
         : mode === 'directory' ? './mini'
           : '../outside.js'
-      manifest.exports = mode === 'absent-map' ? null
-        : mode === 'null-subpath' ? { './bad': null }
-          : { '.': mode === 'null' ? null : { import: target } }
+      manifest.exports = mode === 'metadata-only' ? { './package.json': './package.json' }
+        : mode === 'absent-map' ? null
+          : mode === 'null-subpath' ? { './bad': null }
+            : { '.': mode === 'null' ? null : { import: target } }
+      if (mode === 'metadata-only') {
+        delete manifest.main
+        rmSync(join(bundleDir, 'index.js'))
+      }
       writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(manifest))
       if (mode === 'directory') mkdirSync(join(bundleDir, 'mini'))
       Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
       try {
         const home = tmp()
-        if (mode === 'missing' || mode === 'directory' || mode === 'absent-map') {
+        if (mode === 'missing' || mode === 'directory' || mode === 'absent-map' || mode === 'metadata-only') {
           await healProfilesModuleFallback({ installAnchor: anchor, home })
           expect(existsSync(join(home, 'profiles', 'node_modules', 'bundle-a'))).toBe(false)
         } else {
