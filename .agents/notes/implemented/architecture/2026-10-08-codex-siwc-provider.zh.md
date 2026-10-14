@@ -10,7 +10,7 @@ pi-ai 的 `openai-codex` 目录描述的是某个捆绑版本，而不是登录 
 
 ## 决策
 
-`openai-codex` 路由使用本应用注册的 Sign in with ChatGPT OAuth。授权流程使用 loopback callback、state、nonce 与 PKCE；它依据 OpenAI 发布的 JWKS 验证返回的 ID token，并将已保存的 subject 与签发的 client ID 绑定。现有凭据存储会在打开浏览器授权前保存稳定的 agent host ID，并在 token exchange 前保存签发的 client ID；OAuth grant 与轮换 refresh token 仍由同一凭据存储负责。此路由不读取 Codex CLI 文件，也不解码 access-token claims。
+`openai-codex` 路由使用本应用注册的 Sign in with ChatGPT OAuth。授权流程使用 loopback callback、state、nonce 与 PKCE；它依据 OpenAI 发布的 JWKS 验证返回的 ID token，并将已保存的 subject 与签发的 client ID 绑定。credentials Provider 的拥有者元数据会在打开浏览器授权前保存稳定的 agent host ID，并在 callback 返回后、token exchange 前保存签发的 client ID；中断或取消后，这些 ID 会保留供下一次尝试复用。本地提供方将元数据存入独立的版本化 JSON sidecar，与凭据记录共用跨进程锁，并在写后回读验证；只有验证成功才移除旧注册记录。迁移会在写入或移除记录前，使用同一锁定快照中的 SIWC grant 检查注册身份；冲突时会保留旧记录。OAuth grant 与轮换 refresh token 仍保存在 `openai-codex` 凭据记录中。此路由不读取 Codex CLI 文件，也不解码 access-token claims。
 
 `listModels` 与 Models 页面发现通过同一个 pi-ai `Models` collection 和推理使用的已保存 OAuth grant。账户目录来自 `GET https://api.openai.com/v1/models`；picker 只加入 `models[]` 中 `visibility: "list"` 的条目，以 `slug` 作为请求 id，以 `display_name` 作为标签。全新 collection 首次精确解析模型时会在推理前加载目录，因此保存的模型无需先由界面列出。请求经由 pi-ai 的 OpenAI Responses 实现发送到公开 `POST https://api.openai.com/v1/responses` 路由。请求使用 `store: false` 与 streaming；只有 Responses 流到达终止事件后，提供方才接受其为完成。
 

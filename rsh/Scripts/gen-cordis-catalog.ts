@@ -612,6 +612,7 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   CredentialRef: 'credentials.md',
   CredentialKey: 'credentials.md',
   CredentialInfo: 'credentials.md',
+  CredentialMetadataMigration: 'credentials.md',
   CredentialRecord: 'credentials.md',
   CredentialRecordEntry: 'credentials.md',
   CredentialRecordInfo: 'credentials.md',
