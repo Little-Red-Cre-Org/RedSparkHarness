@@ -32,7 +32,7 @@ export function createWebConnectionRpc(doFetch?: RpcFetch, openStream?: RpcStrea
   const send: RpcFetch = doFetch ?? ((input, init) => globalThis.fetch(input, init))
   return {
     response(channel, endpoint, payload, signal, request) {
-      assertTarget(channel, endpoint)
+      assertTarget(channel, endpoint, request !== undefined)
       const init: RequestInit & { duplex?: 'half' } = request === undefined
         ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal }
         : { method: request.method ?? 'POST', ...(request.headers === undefined ? {} : { headers: request.headers }),
@@ -119,8 +119,8 @@ function resolveBase(): string {
   return location?.origin !== undefined && location.origin !== 'null' ? location.origin : INTERNAL_BASE
 }
 
-function assertTarget(channel: string, endpoint: string): void {
-  const path = endpoint.split('?', 1)[0] ?? ''
+function assertTarget(channel: string, endpoint: string, allowQuery = false): void {
+  const path = allowQuery ? endpoint.split('?', 1)[0] ?? '' : endpoint
   const segments = path.split('/')
   if (!CHANNEL_PATTERN.test(channel)
     || endpoint.includes('#') || segments.some(segment =>
