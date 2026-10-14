@@ -94,5 +94,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板没有常驻预设组合、plan-mode Provider 或 permission-preset Provider；自定义 profile 可以添加。没有可选预设时模式选择器保持禁用；只有 Host 提供相应能力时才显示 Plan 和权限控件。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
 - 其他模型片段呈现仍属于独立工作。
-- 侧边栏尚未提供 Workspace 排序或移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
+- 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。
