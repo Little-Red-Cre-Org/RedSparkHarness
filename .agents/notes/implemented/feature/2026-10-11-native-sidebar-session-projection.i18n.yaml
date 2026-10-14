@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-11-native-sidebar-session-projection.md
-2026-10-11-native-sidebar-session-projection.md: 4716193ca94cc4a2cca68f1dd3f3c9866d759515
-2026-10-11-native-sidebar-session-projection.zh.md: 4ddbd5e54daf396b039cef4df034e55f15eb02b6
+2026-10-11-native-sidebar-session-projection.md: 553ad06ecedeecf90bb70061b844c059bfa4fed0
+2026-10-11-native-sidebar-session-projection.zh.md: 2bb896d5f006d69b455bf8212342fe413d84cd5e
