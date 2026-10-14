@@ -69,10 +69,12 @@ export interface NativeCredentials {
   ): Promise<unknown>
   /**
    * Reconcile a legacy record and metadata value under the shared file lock.
-   * The Provider verifies the sidecar write before retiring the legacy record.
+   * Metadata is written and read back before the legacy record is removed; the two writes are not
+   * one atomic transaction.
    * @param key - address shared by the old record and new metadata value.
    * @param migrate - validates detached metadata and legacy values; sibling records are detached copies read from the same locked snapshot.
-   * @param options - checked before migration begins; an admitted migration completes atomically.
+   * @param options - checked when its queued operation starts, before lock acquisition; aborting
+   *   afterward does not stop migration.
    * @returns the verified metadata value.
    */
   migrateRecordToMetadata(

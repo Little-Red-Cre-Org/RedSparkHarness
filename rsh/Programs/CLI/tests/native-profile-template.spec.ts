@@ -21,6 +21,10 @@ const resolutionAuth: PiAiAuthInjection = {
     delete: () => Promise.reject(new Error('Model resolution must not delete credentials')),
   },
   authContext: { env: () => Promise.resolve(undefined), fileExists: () => Promise.resolve(false) },
+  siwcRegistration: {
+    reconcile: () => Promise.reject(new Error('Model resolution must not reconcile registration metadata')),
+    modify: () => Promise.reject(new Error('Model resolution must not persist registration metadata')),
+  },
 }
 
 function piAiResolver(installations: readonly { id: string; config?: unknown }[]): PiAiAdapter {

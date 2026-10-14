@@ -1,5 +1,5 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, type ChildProcess, type Serializable } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -165,7 +165,7 @@ it('serializes two independent migration workers and preserves the first durable
     const closed = (code: number | null, signal: NodeJS.Signals | null): void => { finish({ code, signal }) }
     child.once('close', closed)
   })
-  const send = (child: ChildProcess, message: unknown): Promise<void> => new Promise((resolve, reject) => {
+  const send = (child: ChildProcess, message: Serializable): Promise<void> => new Promise((resolve, reject) => {
     child.send(message, (error) => {
       if (error === null) resolve()
       else reject(error)

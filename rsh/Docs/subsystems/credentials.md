@@ -72,7 +72,7 @@ interface NativeCredentials {
    * @param key - owner-scoped address.
    * @returns the JSON value, or `undefined` while absent.
    */
-  readMetadata(key: CredentialKey): Promise<unknown | undefined>
+  readMetadata(key: CredentialKey): Promise<unknown>
   /**
    * Read-decide-replace owner-private JSON metadata under the Provider's write lock.
    * Returning `undefined` leaves the current value unchanged.
@@ -83,26 +83,28 @@ interface NativeCredentials {
    */
   modifyMetadata(
     key: CredentialKey,
-    mutate: (current: unknown | undefined) => Promise<unknown | undefined>,
+    mutate: (current: unknown) => Promise<unknown>,
     options?: NativeCredentialWriteOptions,
-  ): Promise<unknown | undefined>
+  ): Promise<unknown>
   /**
    * Reconcile a legacy record and metadata value under the shared file lock.
-   * The Provider verifies the sidecar write before retiring the legacy record.
+   * Metadata is written and read back before the legacy record is removed; the two writes are not
+   * one atomic transaction.
    * @param key - address shared by the old record and new metadata value.
    * @param migrate - validates detached metadata and legacy values; sibling records are detached copies read from the same locked snapshot.
-   * @param options - checked before migration begins; an admitted migration completes atomically.
+   * @param options - checked when its queued operation starts, before lock acquisition; aborting
+   *   afterward does not stop migration.
    * @returns the verified metadata value.
    */
   migrateRecordToMetadata(
     key: CredentialKey,
     migrate: (
-      current: unknown | undefined,
+      current: unknown,
       legacy: CredentialRecord | undefined,
       readRecord: (key: CredentialKey) => CredentialRecord | undefined,
     ) => Promise<CredentialMetadataMigration>,
     options?: NativeCredentialWriteOptions,
-  ): Promise<unknown | undefined>
+  ): Promise<unknown>
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
   listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
   /**
