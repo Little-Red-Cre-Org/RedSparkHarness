@@ -41,5 +41,27 @@
   "library": {
     "confirmedIds": [],
     "delivery": "main agent retrieves exact committed PNGs; unsupported local upload helper is not retried"
-  }
+  },
+  "cloudImages": [
+    {
+      "file": "cloud-native-question-375.png",
+      "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+      "browser": "154.0.8037.57",
+      "origin": "http://127.0.0.1:41671",
+      "bytes": 45059,
+      "sha256": "1c02f82f26ce29b6a757400bf28433a734dfbd9292f3ca3f10074c879b7c5ca9",
+      "edited": false,
+      "captureDescription": "Supplementary real Native CLI QA, system Chromium and local deterministic fixture; not official replay. Viewed at actual pixels."
+    },
+    {
+      "file": "cloud-native-question-continued.png",
+      "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+      "browser": "154.0.8037.57",
+      "origin": "http://127.0.0.1:41671",
+      "bytes": 99165,
+      "sha256": "eae200c404bae22f05472a102280ef2a2452f44a18f530af4c4bba52041e1347",
+      "edited": false,
+      "captureDescription": "Supplementary real Native CLI QA, system Chromium and local deterministic fixture; not official replay. Viewed at actual pixels."
+    }
+  ]
 }

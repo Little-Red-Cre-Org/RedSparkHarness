@@ -755,5 +755,314 @@
     "Merged-base documentation/export JSDoc and real Native replay are incomplete after process startup failures. User explicitly requested publication first for remote continuation; normal hooks remain required.",
     "Incoming-main risk reported by the main agent: Windows CI 38514984454 failed native-headless/tests/native.spec.ts:1539 PTC false after 5020ms against 5000ms; Ubuntu succeeded; root cause remains unclassified. No broad investigation is included.",
     "Independent CR, both required SPH platforms and any merge remain with the main agent."
-  ]
+  ],
+  "cloudContinuation": {
+    "incomingHead": "9f20ccf04fcdbb48539dbbac36a78bd95ca23acc",
+    "mergedMain": "fa546a8641c5784963d92fdf32045fbda1bb1ec5",
+    "mergeCommit": "393ff7f65b",
+    "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+    "environment": {
+      "platform": "Linux x64",
+      "node": "24.19.0",
+      "pnpm": "11.28.5",
+      "nodeArchiveSha256": "14b342e71204f811bde6153be8e04b62aef63c236fef92b55f9c83154b409647"
+    },
+    "fixes": [
+      "Compare in-flight observations with actual returned file identities before publishing stale reads.",
+      "Track actual successfully read HTML dependency paths and versions, including removal/recreation and retirement on a new document version."
+    ],
+    "negativeControl": {
+      "initialP2Head": "9f20ccf04fcdbb48539dbbac36a78bd95ca23acc",
+      "initialP2ProbeFailures": 2,
+      "priorSource": "29ab1728b0c50365a33d77cb1b12ae406efe551c",
+      "priorSourceProbesPassed": 2,
+      "scope": "Temporary copies of exact source and existing fixture; no branch edits during CR."
+    },
+    "validation": {
+      "install": {
+        "command": "pnpm install --frozen-lockfile",
+        "exitCode": 0
+      },
+      "build": {
+        "command": "pnpm run build",
+        "exitCode": 0,
+        "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e"
+      },
+      "lint": {
+        "command": "pnpm run lint",
+        "exitCode": 0,
+        "warnings": [
+          "Existing acp-child unused oxlint-disable directive."
+        ]
+      },
+      "docSync": {
+        "command": "pnpm run doc-sync",
+        "passed": 35,
+        "failed": 0,
+        "skipped": 0,
+        "gates": [
+          {
+            "name": "markdown links",
+            "seconds": 35.72
+          },
+          {
+            "name": "type equivalence",
+            "seconds": 26.93
+          },
+          {
+            "name": "doc graphs",
+            "seconds": 97.34
+          },
+          {
+            "name": "documentation build",
+            "seconds": 105.14
+          },
+          {
+            "name": "cordis catalog",
+            "seconds": 47.89
+          },
+          {
+            "name": "Cordis inspect catalog",
+            "seconds": 14.64
+          },
+          {
+            "name": "doc-typecheck",
+            "seconds": 119.65
+          },
+          {
+            "name": "verify-mermaid",
+            "seconds": 21.57
+          },
+          {
+            "name": "client catalog",
+            "seconds": 6.08
+          },
+          {
+            "name": "markdown wrap",
+            "seconds": 18.0
+          },
+          {
+            "name": "tool catalog",
+            "seconds": 5.35
+          },
+          {
+            "name": "export jsdoc",
+            "seconds": 11.54
+          },
+          {
+            "name": "translation pairing",
+            "seconds": 34.26
+          },
+          {
+            "name": "config catalog",
+            "seconds": 3.35
+          },
+          {
+            "name": "persistence catalog",
+            "seconds": 2.96
+          },
+          {
+            "name": "Session format catalog",
+            "seconds": 1.06
+          },
+          {
+            "name": "doc refs",
+            "seconds": 1.68
+          },
+          {
+            "name": "subsystem pages",
+            "seconds": 1.77
+          },
+          {
+            "name": "package groups",
+            "seconds": 2.02
+          },
+          {
+            "name": "public repository links",
+            "seconds": 4.77
+          },
+          {
+            "name": "package paths",
+            "seconds": 2.94
+          },
+          {
+            "name": "config source ownership",
+            "seconds": 1.48
+          },
+          {
+            "name": "package README Summaries",
+            "seconds": 1.23
+          },
+          {
+            "name": "tsconfig paths",
+            "seconds": 2.05
+          },
+          {
+            "name": "agent note format",
+            "seconds": 1.04
+          },
+          {
+            "name": "agent note classification",
+            "seconds": 1.18
+          },
+          {
+            "name": "archived agent notes",
+            "seconds": 1.04
+          },
+          {
+            "name": "skill invocation metadata",
+            "seconds": 1.0
+          },
+          {
+            "name": "scoped events",
+            "seconds": 44.99
+          },
+          {
+            "name": "translation prompt",
+            "seconds": 0.88
+          },
+          {
+            "name": "doc budgets",
+            "seconds": 0.87
+          },
+          {
+            "name": "documentation standard tests",
+            "seconds": 2.69
+          },
+          {
+            "name": "package README model experience",
+            "seconds": 10.28
+          },
+          {
+            "name": "documentation site checks",
+            "seconds": 9.66
+          },
+          {
+            "name": "package README limitations",
+            "seconds": 10.27
+          }
+        ]
+      },
+      "exportJsdoc": {
+        "command": "tsx rsh/Scripts/verify-export-jsdoc.ts",
+        "exitCode": 0
+      },
+      "ownerFiles": {
+        "command": "pnpm exec vitest run rsh/Programs/Web/client/ui-sidebar-right/tests/native-files.client.spec.tsx rsh/Programs/Web/client/native-application/tests/model-controls.client.spec.tsx rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts --retry=0",
+        "passed": 20,
+        "failed": 0,
+        "skipped": 0,
+        "files": 3,
+        "earlierAttempts": [
+          {
+            "passed": 19,
+            "failed": 0,
+            "note": "Earlier owner run; the final owner selection adds the initial-removal parameter."
+          },
+          {
+            "passed": 19,
+            "failed": 1,
+            "case": "creates, resumes and cancels one durable Session through the real browser RPC carrier",
+            "failure": "5000ms test timeout while normal lint was running.",
+            "classification": "Observed timeout; not claimed to be an exact-base failure. Final run used the original budget and no retries after concurrent work finished."
+          }
+        ]
+      }
+    },
+    "environmentFailures": [
+      {
+        "command": "pnpm run build",
+        "failure": "Preinstalled Node lacked Node-API headers.",
+        "resolution": "Installed checksum-verified official Node 24.19.0 distribution inside /workspace/toolchains; normal build passes."
+      }
+    ],
+    "officialReplay": {
+      "status": "blocked",
+      "reason": "Locked Chromium 1228 download returned HTTP 403 Domain forbidden; original target uses chromium.launch() without an executable override. No rejected download route retried and no dependency or sandbox replacement."
+    },
+    "supplementaryQA": {
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "runtime": {
+        "origin": "http://127.0.0.1:41671",
+        "browser": "154.0.8037.57",
+        "executablePath": "/usr/bin/chromium",
+        "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+        "mode": "supplementary QA; local deterministic fixture"
+      },
+      "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+      "result": "cloud-browser-result.json",
+      "command": "DSH_SNAPSHOT=replay DSH_QUESTION_CANCEL_EVIDENCE=<isolated run> pnpm exec vitest run --config .playwright-mcp/native-p2-cloud-qa/vitest.config.ts .playwright-mcp/native-p2-cloud-qa/qa.e2e.ts --retry=0",
+      "adaptations": [
+        "Existing question-cancel fixture copied to ignored QA directory with absolute imports and original repository root.",
+        "System Chromium executable selected only in the copied QA script; official test remains unchanged.",
+        "Independent title and exact runtime provenance recorded; fresh profile, workspace, browser and Session per run."
+      ],
+      "scope": "Real Native CLI/Host button flow and 375px question footer; no claim to visualize file races or complete responsive acceptance."
+    },
+    "rawEvidence": [
+      {
+        "file": "native-p2-cloud-install.log",
+        "bytes": 3377,
+        "sha256": "6c36acdb980d0de487f1d1e8b7395eb71a421b1c14009c7f2e372deabfed1f7f"
+      },
+      {
+        "file": "native-p2-cloud-build.log",
+        "bytes": 1517,
+        "sha256": "8d9faf1cced7c6e73da172488103611912dc5c21afd35d1906854d10ae3ae3ef"
+      },
+      {
+        "file": "native-p2-cloud-build-ready.log",
+        "bytes": 575310,
+        "sha256": "b8531113e523a2446f19c04baac3fdec932dfa25d13e581d81bed4955a9ddcaf"
+      },
+      {
+        "file": "native-p2-cloud-build-final.log",
+        "bytes": 577339,
+        "sha256": "088cd27c862e58c3d6f9d9346023b289b93d39eb0baf56eb96da33b86ffce128"
+      },
+      {
+        "file": "native-p2-cloud-lint.log",
+        "bytes": 258836,
+        "sha256": "0976c2999339c82d062cd1e170e366796d9b80f8b40aab42c05a8bdae46473ba"
+      },
+      {
+        "file": "native-p2-cloud-doc-sync.log",
+        "bytes": 2953,
+        "sha256": "6216211f97b356408af54f862d4c4d1d3add50070c22f68f4b732c258073fcbf"
+      },
+      {
+        "file": "native-p2-cloud-export-jsdoc.log",
+        "bytes": 76,
+        "sha256": "a44102982eb1b0bceccea64b86e7c51bee5c5a277ee03f5b989e4bc802574393"
+      },
+      {
+        "file": "native-p2-cloud-owners.log",
+        "bytes": 900,
+        "sha256": "276485d8031356a401ddd176098fa2a890bf61867a0537b9ece8d70098bd4720"
+      },
+      {
+        "file": "native-p2-cloud-owners-final.log",
+        "bytes": 3309,
+        "sha256": "e9db2a060196729fc39d5a33f49fc0d3d3b9ca81cae4981bb2cd3d55d3da20b1"
+      },
+      {
+        "file": "native-p2-cloud-owners-quiescent.log",
+        "bytes": 900,
+        "sha256": "63b2b3c79dec4261691308ef1fb39c01010e036baf5c3b27b29ad8309d8fd532"
+      },
+      {
+        "file": "native-p2-cloud-system-qa-provenance.log",
+        "bytes": 438,
+        "sha256": "3bade15d30c6650784031ba3c5ee250c55ee5513b841979b2a85e189e88eb3d0"
+      }
+    ],
+    "limits": [
+      "Original Windows evidence and screenshots retain their original source and failure classifications.",
+      "No new broad check:all run; complete normal build/lint/doc-sync and affected owner checks cover this continuation.",
+      "Both required SPH platforms and independent final CR/merge remain with the main agent."
+    ]
+  }
 }

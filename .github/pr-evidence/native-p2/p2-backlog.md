@@ -20,4 +20,15 @@ The first normal build found a missing routableProviders field in the new model 
 
 Older handoff candidates outside these confirmed items remain pending latest-main review. No blanket claim is made that all original P2 candidates or broad-suite failures are resolved.
 
-Current review base: `29ab1728b0c50365a33d77cb1b12ae406efe551c`. Detailed results and unedited screenshot provenance are in `checks.json`, `evidence.md` and `screenshots.json`.
+Original local review base: `29ab1728b0c50365a33d77cb1b12ae406efe551c`. Detailed results and unedited screenshot provenance are in `checks.json`, `evidence.md` and `screenshots.json`.
+
+## Cloud continuation
+
+The branch merges main `fa546a8641c5784963d92fdf32045fbda1bb1ec5` normally. Source commit `12e2c7367b6977d3b7186a21083483349739ef9e` resolves two further P2 regressions confirmed during independent review:
+
+| Item | Owner repair | Evidence |
+| --- | --- | --- |
+| P2-10 | Preserve observations during pending reads and compare the actual returned identity/version before publishing. | Initial P2 probe fails and prior source passes; current tests cover matching versions, newer versions and removal. |
+| P2-11 | Track loaded HTML dependency identities and versions; refresh on change/removal, retry restored assets and retire dependencies when the HTML document changes. | Initial P2 probe fails and prior source passes; current owner scenario covers dependency version changes, unrelated/matching observations, removal/recreation and retirement. |
+
+The owning Native Session details Agent Note and bilingual package README document these semantics. Normal build/lint pass, doc-sync passes all 35 gates, and the final three owner files pass 20/20 without retries or timeout changes. A preceding owner run records one HTTP lifecycle test timeout at 5000ms during concurrent lint; it is retained without an exact-base classification. Locked-Chromium replay remains blocked by download policy. Independent system-Chromium Native QA passes 1/1 and contributes separately identified screenshots; it does not replace the official replay. See the cloud continuation object in [checks.json](checks.json) and [browser result](cloud-browser-result.json).

@@ -31,3 +31,13 @@ The user explicitly requested pushing the local work first for remote continuati
 The [P2 ledger](p2-backlog.md) records the confirmed fixes and remaining review boundary. #219's evidence now distinguishes its direct registry/HTTP cases and Client exclusion/Host inclusion. #222's private checkedTarget comment now matches the original-target return and FS_STALE_VERSION identity refusal; no filesystem policy behavior is changed.
 
 All four PNGs were viewed and copied without editing; [screenshots.json](screenshots.json) records their source commits and hashes. The main agent retrieves these exact committed bytes for Library delivery. The unsupported local Library helper is not retried. Independent CR, both required SPH platforms, and merge remain with the main agent.
+
+## Cloud continuation on latest main
+
+Source commit `12e2c7367b6977d3b7186a21083483349739ef9e` includes main `fa546a8641c5784963d92fdf32045fbda1bb1ec5` through a normal merge. It repairs first-read observation loss and HTML dependency invalidation in the existing file panel owner. The two review probes fail on the initial P2 source and pass on its predecessor; current owner checks pass 20/20. Normal build and lint pass; doc-sync completes 35/35, including export JSDoc and Cordis inspect. One preceding owner run times out the HTTP lifecycle case at 5000ms during concurrent lint; the final run uses the original budget without retries. These cloud outcomes supplement the original Windows results above; they do not rewrite them.
+
+The locked Playwright Chromium download is denied with HTTP 403, and the official question replay has no executable-path override. The following independent QA uses system Chromium 154.0.8037.57, the exact source commit above and fresh Native CLI/Host state at `http://127.0.0.1:41671`. A copied fixture script in the ignored QA directory selects that executable, leaving the official test and production sandbox unchanged. The local deterministic model makes no credentialed or paid calls. The QA passes 1/1, records three model requests, both question cancellations, zero whole-turn cancellation calls, zero browser errors and zero alerts. This verifies the button flow and visible 375px footer; it does not visualize the file races or establish whole-page responsive acceptance. [Result and provenance](cloud-browser-result.json); byte hashes are in [screenshots.json](screenshots.json).
+
+![Cloud supplementary 375px question](cloud-native-question-375.png)
+
+![Cloud supplementary same-turn completion](cloud-native-question-continued.png)
