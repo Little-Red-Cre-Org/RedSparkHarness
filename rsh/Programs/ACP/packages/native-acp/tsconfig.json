@@ -57,6 +57,9 @@
       "path": "../../../../Engine/core/approval-definition"
     },
     {
+      "path": "../../../../Engine/llm/token-meter"
+    },
+    {
       "path": "../../../../Modules/Official/subagent/acp-protocol"
     },
     {
