@@ -7,9 +7,12 @@ import {
 } from '@deepseek-ai/dsh-sdk-runtime'
 import type {
   DeepSeekHarnessOptions,
+  LegacySdkPromptContentBlock,
   NativeDeepSeekHarnessOptions,
+  NativeSdkPromptContentBlock,
   RunOptions,
   RunResult,
+  SessionUploadFileResult,
   SdkPromptContentBlock,
   RuntimeProcessOptions,
 } from '@deepseek-ai/dsh-sdk-runtime'
@@ -77,3 +80,4 @@ export function createNativeDeepSeekHarness(
 }
 
 export type { RunOptions, RunResult, SdkPromptContentBlock }
+export type { LegacySdkPromptContentBlock, NativeSdkPromptContentBlock, SessionUploadFileResult }

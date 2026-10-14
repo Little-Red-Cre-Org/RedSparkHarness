@@ -9,7 +9,9 @@ import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
+import { fileAttachmentsIn } from '@deepseek-ai/dsh-llm/native'
 import type { NativeValueToolContribution, NativeToolExecution, NativeToolApprovalContext } from '@deepseek-ai/dsh-native-tools'
+import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
 import {
   ESCALATION_TARGETS, approveEscalation, escalationHintMarker, sandboxDenialMarker, validateEscalationArgs,
   type SandboxExecutionPolicy, type SandboxMode,
@@ -145,6 +147,29 @@ function actor(call: NativeToolExecution): { agent: { session: object } } {
   return { agent: { session: call.session } }
 }
 
+async function attachedFileTarget(fs: FileSystemOperations, attachments: AttachmentOperations, call: NativeToolExecution,
+  path: string): Promise<{ readonly ref: FileAttachmentRef; readonly target: FsTarget } | undefined> {
+  const cwd = call.session.header.cwd
+  const refs = fileAttachmentsIn(call.session.deriveMessages())
+  if (cwd === undefined || !isAbsolute(cwd) || refs.length === 0) return undefined
+  const requested = await fs.resolve(path, { cwd, signal: call.signal })
+  for (const ref of refs) {
+    const hostPath = attachments.fileHostPath(ref)
+    const executionPath = hostPath === undefined ? undefined : fs.processPathFromHostPath(hostPath)
+    if (executionPath === undefined) continue
+    const admitted = await fs.resolve(executionPath, { cwd, signal: call.signal })
+    if (admitted.targetKey === requested.targetKey) return { ref, target: requested }
+  }
+  return undefined
+}
+
+async function* decodeAttachment(chunks: AsyncIterable<Uint8Array>): AsyncIterable<string> {
+  const decoder = new TextDecoder('utf-8', { ignoreBOM: true })
+  for await (const chunk of chunks) yield decoder.decode(chunk, { stream: true })
+  const trailing = decoder.decode()
+  if (trailing.length > 0) yield trailing
+}
+
 async function workspaceTarget(fs: FileSystemOperations, call: NativeToolExecution, path: string,
   allowOutside = false): Promise<{ root: FsTarget; resolved: FsTarget }> {
   const cwd = call.session.header.cwd
@@ -161,7 +186,8 @@ async function target(fs: FileSystemOperations, call: NativeToolExecution, path:
   return (await workspaceTarget(fs, call, path, allowOutside)).resolved
 }
 
-function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCaps): NativeValueToolContribution {
+function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCaps,
+  attachments?: AttachmentOperations): NativeValueToolContribution {
   return {
     schema: {
       name: 'read', description: 'Read a UTF-8 text file and return line-numbered content.',
@@ -182,6 +208,14 @@ function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCa
         ...fields.offset === undefined ? {} : { offset: fields.offset },
         ...fields.limit === undefined ? {} : { limit: fields.limit },
       }, caps.limit)
+      const attachment = attachments === undefined ? undefined
+        : await attachedFileTarget(fs, attachments, call, input.filePath)
+      if (attachments !== undefined && attachment !== undefined) {
+        const window = await buildWindow(decodeAttachment(attachments.readFileStream(attachment.ref, call.signal)), {
+          offset: input.offset, limit: input.limit, maxLineLength: caps.maxLineLength, maxBytes: caps.maxBytes,
+        }, attachment.target.displayPath)
+        return { path: attachment.target.displayPath, offset: input.offset, lines: window.lines, totalLines: window.totalLines }
+      }
       const resolved = await target(fs, call, input.filePath)
       const info = await fs.stat(resolved, call.signal)
       if (info === undefined) {
@@ -356,7 +390,7 @@ export const plugin: NativePlugin = {
         throw new Error('tool-fs: the mounted filesystem confines but sandboxPolicy is missing')
       }
       const attachments = context.optional('attachments')
-      for (const contribution of [readTool(context, fs, caps),
+      for (const contribution of [readTool(context, fs, caps, attachments),
         ...(attachments === undefined ? [] : [readImageTool(context, fs, attachments)]),
         writeTool(context, fs), editTool(context, fs)]) {
         context.effect(tools.registerValueTool(contribution, context.scope))

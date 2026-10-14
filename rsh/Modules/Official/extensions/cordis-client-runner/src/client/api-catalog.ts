@@ -497,7 +497,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ClientConnectionRpc',
-    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => Promise<Response>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
+    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal, request?: ConnectionFetchRequest) => Promise<Response>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
   },
   {
     name: 'ClientRemote',
@@ -510,6 +510,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ComposedProps',
     declaration: 'export type ComposedProps<K extends keyof SlotMap & string, EntryKey extends EntryKeyOf<K>, S extends keyof SlotMap & string, H, I extends object, M = never, N = undefined> = PropsRuntime<K, EntryKey> & PropsRenderSlots<S> & PropsStore<H> & InjectFace<I> & MatchedShare<SlotMap[K], M> & PropsLocale<N>;',
+  },
+  {
+    name: 'ConnectionFetchRequest',
+    declaration: 'export interface ConnectionFetchRequest {\n    readonly method?: string;\n    readonly headers?: HeadersInit;\n    readonly body?: BodyInit | null;\n    readonly duplex?: \'half\';\n}',
   },
   {
     name: 'ConnectionGeneration',

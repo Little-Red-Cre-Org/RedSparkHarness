@@ -1,0 +1,256 @@
+/** Built native conversation records and restores a keyless Session through the shipped Client roster. */
+import { lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { execa } from 'execa'
+import { chromium, type Browser } from '/workspace/RedSparkHarness/rsh/Programs/Web/application/node_modules/playwright/index.mjs'
+import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '/workspace/RedSparkHarness/rsh/Programs/CLI/src/native-profile-template.ts'
+import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+
+const root = '/workspace/RedSparkHarness'
+const scenario = join(root, 'snapshots/web/native-conversation')
+
+async function main() {
+  const home = mkdtempSync(join(tmpdir(), 'rsh-web-profile-'))
+  const profile = join(home, 'profiles/native-web')
+  const workspace = join(home, 'work')
+  const sessionRoot = join(home, 'sessions')
+  const fixedSessionClock = join(home, 'fixed-session-clock.mjs')
+  const fixedSessionTime = Date.UTC(2025, 0, 1)
+  writeFileSync(fixedSessionClock, `Date.now = () => ${fixedSessionTime}\n`)
+  const readStoredSessionRows = () => {
+    const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
+    const stored = readdirSync(sessionRoot, { recursive: true }).find(path => typeof path === 'string' && path.endsWith(name))
+    if (typeof stored !== 'string') throw new Error('native Web omitted Session JSONL')
+    return readFileSync(join(sessionRoot, stored), 'utf8').trim().split('\n').slice(1)
+      .map((line, index) => parseSessionEvent(JSON.parse(line), index))
+  }
+  const readStoredSessionId = () => {
+    const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
+    const stored = readdirSync(sessionRoot, { recursive: true }).find(path => typeof path === 'string' && path.endsWith(name))
+    if (typeof stored !== 'string') throw new Error('native Web omitted Session JSONL')
+    const header = JSON.parse(readFileSync(join(sessionRoot, stored), 'utf8').split('\n', 1)[0] ?? 'null') as { id?: unknown }
+    if (typeof header.id !== 'string') throw new Error('native Web Session header omitted its id')
+    return header.id
+  }
+  ensureShippedNativeProfile('native-web', home)
+  mkdirSync(workspace)
+  writeFileSync(join(workspace, 'tool-card.txt'), 'Persisted read-card content.\n')
+  const modules = join(profile, 'node_modules/@deepseek-ai')
+  mkdirSync(modules, { recursive: true })
+  const links: string[] = []
+  for (const [name, path] of [
+    ['native-web-host', 'Programs/Web/host/native-web-host'],
+    ['native-web-session-controller', 'Programs/Web/api/native-web-session-controller'],
+    ['settings-file', 'Modules/Official/settings/settings-file'],
+    ['storage', 'Core/storage/storage'],
+    ['storage-json', 'Core/storage/storage-json'],
+    ['storage-domain', 'Core/storage/storage-domain'],
+    ['workspace', 'Modules/Official/workspace/workspace'],
+    ['session-title', 'Engine/session/session-title'],
+    ['session-title-first-prompt-llm', 'Engine/session/session-title-first-prompt-llm'],
+    ['credentials-local', 'Modules/Official/credentials/credentials-local'],
+    ['native-agent', 'Engine/core/native-agent'],
+    ['native-tools', 'Engine/core/native-tools'],
+    ['native-approval', 'Modules/Official/interaction/native-approval'],
+    ['agent-presets', 'Engine/preset/agent-presets'],
+    ['native-model-execution', 'Engine/core/native-model-execution'],
+    ['fs-local', 'Modules/Official/fs/fs-local'],
+    ['session-persistence-jsonl', 'Engine/session/session-persistence-jsonl'],
+    ['client-native-application', 'Programs/Web/client/native-application'],
+    ['client-ui-renderer', 'Programs/Web/client/ui-renderer'],
+    ['client-connection', 'Programs/Web/client/connection'],
+    ['client-native-session', 'Programs/Web/client/native-session'],
+    ['client-locale', 'Programs/Web/client/locale'],
+    ['client-ui-theme', 'Programs/Web/client/ui-theme'],
+    ['client-ui-session', 'Programs/Web/client/ui-session'],
+    ['client-ui-layout', 'Programs/Web/client/ui-layout'],
+    ['client-ui-sidebar', 'Programs/Web/client/ui-sidebar'],
+    ['client-ui-sidebar-right', 'Programs/Web/client/ui-sidebar-right'],
+  ] as const) {
+    const link = join(modules, `dsh-${name}`)
+    symlinkSync(join(root, 'rsh', path), link, 'junction')
+    links.push(link)
+  }
+  const fixtureModel = join(profile, 'node_modules/native-web-fixture-model')
+  mkdirSync(fixtureModel)
+  writeFileSync(join(fixtureModel, 'package.json'), JSON.stringify({
+    name: 'native-web-fixture-model', version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['hostConnection', 'agentPresets', 'tools'], optional: [], provides: ['model', 'modelDirectory'] } },
+  }))
+  writeFileSync(join(fixtureModel, 'native.mjs'), `export const plugin = {
+    apiVersion: 1, name: 'native-web-fixture-model', targets: ['host'], requires: ['hostConnection', 'agentPresets', 'tools'], provides: ['model', 'modelDirectory'],
+    resolve: () => context => {
+      for (const [id, name] of [['standard', 'Standard'], ['alternate', 'Alternate']]) context.own(context.require('agentPresets').register({ id, name, scope: context.scope }));
+      context.effect(context.require('tools').register({ schema: { name: 'guarded', description: 'Guarded fixture.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } }, approval: { reason: 'Protect this action.' },
+        execute: async () => ({ isError: false, content: [{ type: 'text', text: 'guarded allowed' }] }) }, context.scope));
+      const reasoning = { efforts: [{ id: 'medium', name: 'Medium' }, { id: 'high', name: 'High' }], defaultEffort: 'medium' };
+      context.provide('modelDirectory', { providers: () => [{ id: 'mock', name: 'Fixture' }],
+        resolve: async (provider, id) => ({ provider, id, name: id, reasoning, inputModalities: ['text', 'image'] }),
+        catalog: async defaults => ({ default: defaults, routableProviders: ['mock'], failures: [], groups: [{ id: 'mock', name: 'Fixture',
+          models: [{ id: 'fixture', name: 'Initial' }, { id: 'chosen', name: 'Chosen', reasoning }] }] }) });
+      let resume; const continued = new Promise(resolve => { resume = resolve });
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { resume(); return new Response('released') } }));
+      let activeTitleResume; const activeTitleReleased = new Promise(resolve => { activeTitleResume = resolve });
+      let activeTitleStart; const activeTitleObserved = new Promise(resolve => { activeTitleStart = resolve });
+      let idleTitleResume; const idleTitleReleased = new Promise(resolve => { idleTitleResume = resolve });
+      let idleTitleStart; const idleTitleObserved = new Promise(resolve => { idleTitleStart = resolve });
+      let secondAnswerStart; const secondAnswerObserved = new Promise(resolve => { secondAnswerStart = resolve });
+      let secondAnswerResume; const secondAnswerReleased = new Promise(resolve => { secondAnswerResume = resolve });
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/active-title-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await activeTitleObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/active-title-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { activeTitleResume(); return new Response('released') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/idle-title-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await idleTitleObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/idle-title-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { idleTitleResume(); return new Response('released') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/second-answer-started', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { await secondAnswerObserved; return new Response('started') } }));
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-fixture/second-answer-release', methods: ['POST'], requestBody: 'buffered',
+        fetch: async () => { secondAnswerResume(); return new Response('released') } }));
+      context.own(() => { resume(); activeTitleResume(); idleTitleResume(); secondAnswerResume() });
+      let step = 0; let answerCount = 0; let titleCount = 0;
+      const model = { async *stream(request) {
+      if (request.purpose === 'session-title') {
+        if (titleCount++ === 0) {
+          activeTitleStart();
+          await activeTitleReleased;
+        } else {
+          idleTitleStart();
+          await idleTitleReleased;
+        }
+        const title = 'Native browser session';
+        yield { type: 'block-start', index: 0, blockType: 'text' };
+        yield { type: 'text-delta', index: 0, text: title };
+        yield { type: 'block-end', index: 0, block: { type: 'text', text: title } };
+        yield { type: 'finish', reason: { kind: 'stop' } }; return;
+      }
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(${JSON.stringify(join(home, 'image-request.json'))}, JSON.stringify(request.messages));
+      if (step < 5) {
+        const current = step++;
+        const name = current < 2 ? 'guarded' : current === 2 ? 'ask_user_question' : current === 3 ? 'todo_write' : 'read';
+        const args = current < 2 ? {} : current === 2 ? { questions: [{ id: 'mode', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }
+          : current === 3 ? { todos: [{ content: 'Inspect the workspace', status: 'completed' }, { content: 'Report progress', status: 'in_progress' }] }
+          : { file_path: 'tool-card.txt' };
+        const id = 'human-' + current;
+        yield { type: 'block-start', index: 0, blockType: 'tool-call' };
+        yield { type: 'tool-call-delta', index: 0, id, name, argumentsDelta: JSON.stringify(args) };
+        yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name, arguments: JSON.stringify(args) } };
+        yield { type: 'finish', reason: { kind: 'tool-calls' } }; return;
+      }
+      const reasoning = 'I will inspect the result.\\nThen I will summarize it.';
+      yield { type: 'block-start', index: 0, blockType: 'reasoning' };
+      yield { type: 'reasoning-delta', index: 0, text: reasoning };
+      yield { type: 'block-end', index: 0, block: { type: 'reasoning', text: reasoning } };
+      const text = 'Native browser answer.';
+      yield { type: 'block-start', index: 1, blockType: 'text' };
+      yield { type: 'text-delta', index: 1, text };
+      if (answerCount++ === 0) {
+        const abort = () => { resume() }; request.signal.addEventListener('abort', abort, { once: true });
+        if (request.signal.aborted) resume();
+        try { await continued } finally { request.signal.removeEventListener('abort', abort) }
+      } else {
+        const abort = () => { secondAnswerResume() }; request.signal.addEventListener('abort', abort, { once: true });
+        if (request.signal.aborted) secondAnswerResume();
+        secondAnswerStart();
+        try { await secondAnswerReleased } finally { request.signal.removeEventListener('abort', abort) }
+      }
+      yield { type: 'block-end', index: 1, block: { type: 'text', text } };
+      yield { type: 'usage', usage: { inputTokens: 20, outputTokens: 8 } };
+      yield { type: 'finish', reason: { kind: 'stop' } };
+    } };
+      context.provide('model', model);
+    } };`)
+  writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-web-snapshot', private: true,
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
+  const shipped = shippedNativeProfileComposition(home, 'native-web')
+  const app = shipped.installations.find(row => row.id === 'app')
+  if (app?.config === undefined) throw new Error('shipped native-web has no Host settings')
+  const rows = [
+    ['app', 'native-web-host', { ...app.config as object, port: 0 }],
+    ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: '{{system}}',
+      workspaceRoutes: { maxRoutes: 2, allowedRoots: [workspace] }, maxSteps: 6, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
+      maxFollowers: 3, maxPendingHumanRequests: 2 }],
+    ['tools', 'native-tools'], ['approval', 'native-approval'],
+    ['agents', 'native-agent'], ['model-execution', 'native-model-execution'],
+    ['presets', 'agent-presets', { default: 'standard' }],
+    ['fs', 'fs-local', { cwd: workspace }], ['storage', 'session-persistence-jsonl', { root: sessionRoot, compression: 'none' }],
+    ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],
+  ] as const
+  writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
+    ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
+    ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'storage-hub' || row.id === 'storage-json' || row.id === 'storage-domain' || row.id === 'workspace' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-llm' || row.id === 'settings'),
+    { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
+  ] }))
+  const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
+    const workflowId = 'native-workflow-history' as SessionId
+    const workflowInput = readFileSync(join(root, 'snapshots/session/workflow-run/session.v3.jsonl'), 'utf8')
+      .replaceAll('{{session:1}}', workflowId).replaceAll('{{session:2}}', 'native-workflow-child')
+      .replaceAll('{{workflow:1}}', 'native-workflow-run').replaceAll('{{cwd}}', workspace)
+    const workflowRows = workflowInput.trim().split('\n').slice(1).map(line => JSON.parse(line) as { type: string })
+      .map((row, seq) => parseSessionEvent({ ...row, seq, time: seq }, seq))
+    workflowRows.push(parseSessionEvent({ type: 'session/title', seq: workflowRows.length, time: 1,
+      data: { title: 'Native workflow history', messageSeqs: [], source: { kind: 'user' } } }, workflowRows.length))
+    const handle = await storage.create({ version: SESSION_FORMAT_VERSION, id: workflowId, createdAt: 1,
+      cwd: workspace, isSeeded: false })
+    try {
+      await handle.append(workflowRows)
+      await handle.flush()
+    } finally { await handle.close() }
+  const child = execa(process.execPath, [
+    '--import', pathToFileURL(fixedSessionClock).href, join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web',
+  ], {
+    cwd: root, env: { ...process.env, DSH_HOME: home }, reject: false,
+  })
+  let browser: Browser | undefined
+  try {
+    const address = await new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Host URL timeout')), 30000)
+      let output = ''
+      child.stdout?.on('data', (chunk: Buffer) => {
+        output += chunk.toString()
+        const url = /http:\/\/[^\s]+\n/.exec(output)?.[0].trim()
+        if (url !== undefined) { clearTimeout(timeout); resolve(url) }
+      })
+      void child.then(result => { clearTimeout(timeout); reject(new Error(result.stderr)) })
+    })
+    browser = await chromium.launch({ executablePath: '/usr/bin/chromium' })
+    const page = await browser.newPage({ locale: 'en-US', viewport: { width: 1365, height: 900 } })
+    page.on('pageerror', error => console.log('PAGE ERROR', error.message))
+    page.on('response', response => { if (new URL(response.url()).pathname === '/api') void response.json().then(data => console.log('HISTORY', JSON.stringify(data))).catch(() => {}) })
+    await page.goto(address)
+    await page.waitForFunction(() => document.querySelector('#root')?.getAttribute('data-native-boot-state') === 'ready')
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await page.locator('[class*="onboardingOverlay"]').waitFor({ state: 'detached' })
+    await page.waitForFunction(() => { const button = document.querySelector<HTMLButtonElement>('button[aria-label="New workspace"]'); return button !== null && !button.disabled })
+    await page.getByRole('treeitem').filter({ hasText: 'Native workflow history' }).press('Enter')
+    const workflow = page.locator('[data-workflow-run]')
+    try { await workflow.waitFor() } catch (error) { console.log('PAGE', await page.locator('body').innerText()); await page.screenshot({ path: '/workspace/RedSparkHarness/.artifacts/m3-workflow/native-debug.png', fullPage: true }); throw error }
+    await workflow.locator('[data-disclosure-row]').first().click()
+    await workflow.locator('[data-disclosure-row]').nth(1).click()
+    console.log('Native run count', await workflow.count(), 'status', await workflow.getAttribute('data-run-status'),
+      'tool count', await page.locator('[data-tool="workflow"]').count(), 'member links', await workflow.getByRole('button', { name: /^Open / }).count())
+    await page.screenshot({ path: '/workspace/RedSparkHarness/.artifacts/m3-workflow/native-workflow-history.png', fullPage: true })
+    await page.setViewportSize({ width: 560, height: 900 })
+    await page.screenshot({ path: '/workspace/RedSparkHarness/.artifacts/m3-workflow/native-workflow-narrow.png', fullPage: true })
+    console.log('SOURCE: real built Native CLI --profile native-web, Host history RPC, recorded workflow-run session.v3.jsonl, system Chromium', browser.version())
+  } finally {
+    await browser?.close()
+    child.kill('SIGTERM')
+    await child
+    for (const link of links) unlinkSync(link)
+    rmSync(home, { recursive: true })
+  }
+}
+await main()

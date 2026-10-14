@@ -664,6 +664,7 @@
       "@deepseek-ai/dsh-client-ui-tool/tool-renderer": ["./rsh/Programs/Web/client/ui-tool/src/tool-renderer.ts"],
       "@deepseek-ai/dsh-client-ui-trajectory/native": ["./rsh/Programs/Web/client/ui-trajectory/src/native.tsx"],
       "@deepseek-ai/dsh-client-ui-user-questions/native": ["./rsh/Programs/Web/client/ui-user-questions/src/native.ts"],
+      "@deepseek-ai/dsh-client-ui-workflow-run/native": ["./rsh/Programs/Web/client/ui-workflow-run/src/native.ts"],
       "@deepseek-ai/dsh-code-runtime-process-sandbox/native": ["./rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/native.ts"],
       "@deepseek-ai/dsh-codex-app-server/native": ["./rsh/Modules/Official/subagent/codex-app-server/src/native.ts"],
       "@deepseek-ai/dsh-codex-app-server/wire": ["./rsh/Modules/Official/subagent/codex-app-server/src/wire.ts"],

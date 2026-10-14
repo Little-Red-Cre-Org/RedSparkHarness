@@ -38,6 +38,8 @@ print(result.final_response)
 
 显式选择 `profile="native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片字典（`{"type": "image", "data": ..., "mimeType": "image/png"}`）；原生附件 Provider 负责校验与持久化存储。
 
+`Session.upload_file(data, name=None)` 为后续 Native 提示词或 steer 保存原始字节，并返回进程内 `NativeStagedFileReceipt`。将 `{"type": "file", "receiptId": receipt.receipt_id}` 放入 Native 内容块可保留其在持久化消息中的位置；Cordis profile 不接受文件回执或 `session/upload-file`。回执仅在本地运行时进程内有效，重启后需重新上传字节。
+
 `Session.steer(input)` 与 `HarnessClient.session_steer(session_id, content_blocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发。turn 中断后若 root 已暂停，steer 会唤醒它；显式重新启用之前，Goal 工作仍保持关闭。空闲或未知 Session 及兼容 profile 拒绝该请求。
 
 `Session.fork(destination_session_id, at_seq=None)` 返回新的 native-sdk 句柄，其下一次运行恢复复制历史；`HarnessClient.session_fork` 提供协议回执。分叉不调用模型。

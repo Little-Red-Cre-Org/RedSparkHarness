@@ -109,15 +109,15 @@ interface NativeSettingsDescription {
 }
 ```
 
-Prompt uploads carry ordered encoded raster images; the Host admits them under its root owner. Advertised image limits come from the selected attachment Provider. Image reads send only a Session identity and recorded attachment identity, then validate response media type and byte length before returning a Blob.
+`uploadFile(sessionId, file, signal?)` streams bytes to the Host and returns a process-local receipt. Initial prompts and `queueContent`/`steerContent` can place those receipts among ordered text and encoded images; the Host admits images under its root owner and retires file receipts after durable admission. Advertised image limits come from the selected attachment Provider. Image reads send only a Session identity and recorded attachment identity, then validate response media type and byte length before returning a Blob.
 
-`close()` cancels the Client's owned prompts and awaits their Host settlement replies; native installation teardown awaits this operation.
+`close()` cancels the Client's owned prompts and follows, aborts its uploads, and waits for their calls to settle; native installation teardown awaits this operation.
 
 The published declarations reference native-runtime, client-connection, native-model-selection, agent-presets, workspace-files and brand, so those packages are production dependencies for type resolution. The shared Session package remains a peer because event validation and format interpretation use the application's same Session implementation.
 
 A prompt first receives its exact admission identity and then awaits settlement. Caller cancellation before sending refuses admission; later cancellation requests Host drain for that identity and the Promise finishes only after durable settlement. Pending turns and settlement readers are separately bounded by maxPendingRequests; unclaimed results continue occupying slots. Installation shutdown cancels and drains all turns.
 
-`queue(sessionId, prompt, requestId, signal?)` and `steer(...)` submit text to `next-turn` and `next-step` only while this Client's root turn is active. `dequeue(sessionId, requestId)` removes a still-pending request from either inbox. `submissions(sessionId, signal?)` returns `{ throughSeq, submissions }` with full durable pending messages. `editSubmission(sessionId, requestId, text, signal?)` replaces the message's complete content with text while retaining its identity and position through the exact root owner, including idle maintenance. `promoteSubmission(sessionId, requestId, signal?)` moves queued input to `next-step` and requires an active browser turn. Their results distinguish `updated`/`stale` and `promoted`/`stale`/`not-promotable`. `nativeSubmissionRequestId(value)` brands a caller-generated id, which becomes the durable user-message id. Queue and steer resolve after durable admission; refusal rejects with `NativeSessionRpcError` details containing `requestId`. When `prompt` uses an observer, its follow callback receives accepted, rejected and settled `submission-update` frames keyed by the same id.
+`queue(sessionId, prompt, requestId, signal?)` and `steer(...)` submit text to `next-turn` and `next-step` only while this Client's root turn is active. `queueContent(sessionId, content, requestId, signal?)` and `steerContent(...)` accept ordered text, encoded image and staged-file receipt parts for those same inboxes. `dequeue(sessionId, requestId)` removes a still-pending request from either inbox. `submissions(sessionId, signal?)` returns `{ throughSeq, submissions }` with full durable pending messages. `editSubmission(sessionId, requestId, text, signal?)` replaces the message's complete content with text while retaining its identity and position through the exact root owner, including idle maintenance. `promoteSubmission(sessionId, requestId, signal?)` moves queued input to `next-step` and requires an active browser turn. Their results distinguish `updated`/`stale` and `promoted`/`stale`/`not-promotable`. `nativeSubmissionRequestId(value)` brands a caller-generated id, which becomes the durable user-message id. Queue and steer resolve after durable admission; refusal rejects with `NativeSessionRpcError` details containing `requestId`. When `prompt` uses an observer, its follow callback receives accepted, rejected and settled `submission-update` frames keyed by the same id.
 
 <a id="invariants"></a>
 
@@ -139,7 +139,7 @@ The native Session executor owns persistence and Agents; this package owns trans
 
 #### What the model sees
 
-Submitted human text and admitted durable image references become model input through the Host executor; this package contributes no model tools or prompt sections.
+Submitted human text, admitted durable image references and staged file blocks reach the Host executor; its attachment-aware `read_file` tools expose uploaded bytes to the model.
 
 #### Token effect
 
@@ -153,5 +153,5 @@ This package does not alter the history prefix; a new user message extends the r
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Full product UI, file and audio uploads are not provided by this package.
+- Full product UI and audio uploads are not provided by this package; file uploads are available through typed Client operations.
 - The Host can report active schedules only for an attached root owner; cold Session rows report `hasActiveSchedule: false` because the scheduler list is owner-scoped.
