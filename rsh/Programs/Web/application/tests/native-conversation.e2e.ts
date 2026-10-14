@@ -10,7 +10,7 @@ import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
@@ -181,6 +181,7 @@ it('creates, submits and restores the built native conversation through the ship
   const rows = [
     ['app', 'native-web-host', { ...app.config as object, port: 0 }],
     ['sessions', 'native-web-session-controller', { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
+      workspaceRoutes: { maxRoutes: 2, allowedRoots: [workspace] },
       maxSteps: 6, maxPendingRequests: 8, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 3, maxPendingHumanRequests: 2 }],
     ['tools', 'native-tools'], ['approval', 'native-approval'],
@@ -592,6 +593,40 @@ it('creates, submits and restores the built native conversation through the ship
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0]!, prompts.slice(1)))
         writeFileSync(join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0]!, schemas.slice(1)))
       } else expect(normalized).toBe(readFileSync(join(scenario, name), 'utf8'))
+    }
+    // Restore the recorded workflow through the real Host history RPC; no model request is made.
+    const workflowId = 'native-workflow-history' as SessionId
+    const workflowInput = readFileSync(join(root, 'snapshots/session/workflow-run/session.v3.jsonl'), 'utf8')
+      .replaceAll('{{session:1}}', workflowId).replaceAll('{{session:2}}', 'native-workflow-child')
+      .replaceAll('{{workflow:1}}', 'native-workflow-run').replaceAll('{{cwd}}', workspace)
+      .replaceAll('{{system}}', 'Answer the user.')
+    const workflowRows = workflowInput.trim().split('\n').slice(1).map(line => JSON.parse(line) as { type: string })
+      .map((row, seq) => parseSessionEvent({ ...row, seq, time: seq }, seq))
+    workflowRows.push(parseSessionEvent({ type: 'session/title', seq: workflowRows.length, time: 1,
+      data: { title: 'Native workflow history', messageSeqs: [], source: { kind: 'user' } } }, workflowRows.length))
+    const handle = await storage.create({ version: SESSION_FORMAT_VERSION, id: workflowId, createdAt: 1,
+      cwd: workspace, isSeeded: false })
+    try {
+      await handle.append(workflowRows)
+      await handle.flush()
+    } finally { await handle.close() }
+    await page.reload()
+    await page.waitForFunction(() => document.querySelector('#root')?.getAttribute('data-native-boot-state') === 'ready')
+    await page.getByRole('button', { name: '切换语言', exact: true }).click()
+    await page.getByRole('treeitem').filter({ hasText: 'Native workflow history' }).click()
+    const workflow = page.locator('[data-workflow-run]')
+    await workflow.waitFor()
+    expect(await workflow.count()).toBe(1)
+    expect(await workflow.getAttribute('data-run-status')).toBe('completed')
+    await workflow.locator('[data-disclosure-row]').first().click()
+    await workflow.locator('[data-disclosure-row]').nth(1).click()
+    expect(await workflow.locator('[data-member-status="completed"]').count()).toBe(1)
+    expect(await workflow.getByRole('button', { name: /^Open / }).count()).toBe(0)
+    expect(await page.locator('[data-tool="workflow"]').count()).toBe(1)
+    const workflowEvidence = process.env.DSH_NATIVE_WORKFLOW_EVIDENCE
+    if (workflowEvidence !== undefined) {
+      mkdirSync(workflowEvidence, { recursive: true })
+      await page.screenshot({ path: join(workflowEvidence, 'native-workflow-history.png'), fullPage: true })
     }
   } finally {
     await browser?.close()

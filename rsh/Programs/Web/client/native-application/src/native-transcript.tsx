@@ -1,5 +1,6 @@
 /** Native adapter from durable Session events to shared chat presentation. */
 import { useMemo } from 'react'
+import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@deepseek-ai/dsh-client-ui-workflow-run/native'
 import {
   ChatAssistantMessage, ChatContextMessage, ChatMessageActionMeta, ChatMessageActionRow, ChatMessageCopyAction,
   ChatReasoningDisclosure, ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, JsonBlock, MarkdownText,
@@ -80,9 +81,9 @@ export function groupNativeTranscriptEvents(
   let currentTurn: number | undefined
   for (const event of events) {
     if (event.type === 'turn/start') currentTurn = event.data.turn
-    const turn = eventTurn(event) ?? currentTurn
+    const turn = eventTurn(event) ?? currentTurn ?? (event.type === 'tool-workflow/run-start' ? 0 : undefined)
     if (turn !== undefined) currentTurn = turn
-    if (cards.has(event.seq) || transcriptMessage(event) !== null) {
+    if (cards.has(event.seq) || event.type === 'tool-workflow/run-start' || transcriptMessage(event) !== null) {
       if (turn !== undefined) {
         const rows = grouped.get(turn) ?? []
         rows.push(event)
@@ -199,6 +200,10 @@ export function NativeTranscript({
   truncatedClassName: string | undefined
   activity?: string | undefined
 }) {
+  const workflows = useMemo(
+    () => new Map(workflowRunsFromSessionEvents(snapshot.events).map(run => [run.seq, run.data])),
+    [snapshot.events],
+  )
   const cards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const turns = useMemo(() => groupNativeTranscriptEvents(snapshot.events, cards), [snapshot.events, cards])
   const stepStarts = useMemo(() => new Map(snapshot.events.flatMap(event =>
@@ -208,6 +213,8 @@ export function NativeTranscript({
   return <ChatTranscript>
     {turns.map(({ turn, events }) => <ChatTurnGroup key={turn} turn={turn}>
       {events.map((event) => {
+        const workflow = workflows.get(event.seq)
+        if (workflow !== undefined) return <NativeWorkflowRunPanel key={event.seq} data={workflow} locale={locale} />
         const card = cards.get(event.seq)
         return card === undefined
           ? <Message key={event.seq} event={event}
