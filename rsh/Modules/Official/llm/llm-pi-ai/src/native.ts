@@ -18,7 +18,7 @@ import { CodexUsageStore } from './rate-limits.ts'
 export type { AccountBalance, AccountKey, AccountSummary, AccountUsage, NativeAccounts, Quota, QuotaWindow } from './accounts.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { PiAiProviderProfile } from './config.ts'
-import { authContextFrom, credentialStoreFrom } from './auth-core.ts'
+import { authContextFrom, credentialStoreFrom, siwcRegistrationStoreFrom } from './auth-core.ts'
 import { createPiAiFlows } from './login-core.ts'
 import { configurableProviderEntries } from './configurable-providers.ts'
 import { discoverModels } from './discovery.ts'
@@ -76,7 +76,11 @@ export const plugin: NativePlugin = {
       const settings = context.optional('settings')
       const authorization = context.optional('authorization')
       const deepseekAccount = context.optional('deepseekAccount')
-      const auth = { credentials: credentialStoreFrom(credentials), authContext: authContextFrom(credentials, environment) }
+      const auth = {
+        credentials: credentialStoreFrom(credentials),
+        authContext: authContextFrom(credentials, environment),
+        siwcRegistration: siwcRegistrationStoreFrom(credentials),
+      }
       if (authorization !== undefined) {
         for (const flow of createPiAiFlows(auth)) context.effect(authorization.registerFlow(flow))
       }

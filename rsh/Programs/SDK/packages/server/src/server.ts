@@ -19,10 +19,12 @@ import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
 import type {
   InitializeParams,
   InitializeResult,
+  LegacySdkPromptContentBlock,
   JsonRpcTransportPeer,
   SessionEventNotification,
   SessionPromptParams,
   SessionPromptResult,
+  SdkFileReceiptBlock,
   SdkEncodedImageBlock,
   SubagentFinishedNotification,
   SubagentStartedNotification,
@@ -36,7 +38,16 @@ function encodedImage(block: SessionPromptParams['contentBlocks'][number]): bloc
   return block.type === 'image' && 'data' in block
 }
 
-async function durablePromptContent(ctx: Context, blocks: SessionPromptParams['contentBlocks']): Promise<ContentBlock[]> {
+function fileReceipt(block: SessionPromptParams['contentBlocks'][number]): block is SdkFileReceiptBlock {
+  return block.type === 'file' && 'receiptId' in block
+}
+
+function legacyPromptContent(blocks: SessionPromptParams['contentBlocks']): readonly LegacySdkPromptContentBlock[] {
+  if (blocks.some(fileReceipt)) throw new Error('SDK file receipts require the native-sdk profile')
+  return blocks as readonly LegacySdkPromptContentBlock[]
+}
+
+async function durablePromptContent(ctx: Context, blocks: readonly LegacySdkPromptContentBlock[]): Promise<ContentBlock[]> {
   const images = blocks.filter(encodedImage)
   if (images.length === 0) return blocks as ContentBlock[]
   const attachments = ctx.get('attachments')
@@ -184,12 +195,13 @@ export class HarnessSdkJsonRpcServer {
    */
   async prompt(params: SessionPromptParams): Promise<SessionPromptResult> {
     if (!this.initialized) throw new Error('SDK server is not initialized')
+    const blocks = legacyPromptContent(params.contentBlocks)
     const rec = await this.getOrCreateSession(params.sessionId)
     // An agent-loop-only reload disposes the loop's agents while this record
     // survives; a retained agent accepts followup() silently, so validate the
     // record against the live registry before delivery.
     this.assertLiveAgent(rec, params.sessionId)
-    const content = await durablePromptContent(this.ctx, params.contentBlocks)
+    const content = await durablePromptContent(this.ctx, blocks)
     // Attachment admission crosses an async boundary where shutdown or an
     // agent-loop reload may detach the retained handle.
     this.assertLiveAgent(rec, params.sessionId)

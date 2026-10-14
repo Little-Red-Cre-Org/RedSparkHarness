@@ -56,6 +56,14 @@ export interface GrantRecord {
 /** One durable credential record, tagged by what the seam may do with it. */
 export type CredentialRecord = ApiKeyRecord | GrantRecord
 
+/** Result of moving one owner record into the provider's metadata sidecar. */
+export interface CredentialMetadataMigration {
+  /** JSON value to keep under the same owner-scoped address. */
+  readonly value: unknown
+  /** Remove the legacy record only after the metadata value has been verified durable. */
+  readonly retireRecord: boolean
+}
+
 /**
  * Source and writability facts for one reference, safe for configuration UIs —
  * never the value. The view has no slot a value could ride in, which is what

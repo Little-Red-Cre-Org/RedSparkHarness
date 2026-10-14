@@ -18,7 +18,7 @@ Program 会校验已协商的 policy metadata，并通过共享 Session writer �
 
 承载层接受标准文本与图像提示、已声明的模型控制、stdio 与 Streamable HTTP MCP 工具连接以及 permission requests。模型选择与权限结果仍绑定到精确 Session owner。兼容 `acp` profile 仍是默认组合；`native-acp` profile 需要显式选择。
 
-输入 EOF 与 Host cancellation 会停止 admission、取消已接收工作，并排空模型初始化、permission requests、协议资源和 executor teardown。只有来自已中止 execution signal 的完全相同 reason 才映射为 ACP cancelled response；清理失败和其他 execution error 仍作为协议错误。原生承载层不提供 ACP question requests、attachment presentation、MCP resources 或 prompts、audio 或 embedded-context input，也没有 shutdown request。该 profile 未启用动态 workspace selection；标准 `session/new` 与 `session/resume` 负责选择并验证 Session workspace。
+输入 EOF 与 Host cancellation 会停止 admission、取消已接收工作，并排空模型初始化、permission requests、协议资源和 executor teardown。只有来自已中止 execution signal 的完全相同 reason 才映射为 ACP cancelled response；清理失败和其他 execution error 仍作为协议错误。承载层会展示已提交的助手和工具结果图片，在条件满足时投影 usage，并为 `session/list` 分页；[原生 ACP 展示与列表决策](../feature/2026-10-14-native-acp-presentation-and-listing.zh.md)记录这些语义。ACP question 请求（向人请求补充输入）、音频或嵌入资源输入、MCP resources 或 prompts，以及 shutdown 仍不支持。该 profile 未启用动态 workspace selection；标准 `session/new` 与 `session/resume` 负责选择并验证 Session workspace。
 
 ## 考虑过的替代方案
 

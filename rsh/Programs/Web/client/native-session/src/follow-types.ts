@@ -7,6 +7,25 @@ import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 /** Stable identity shared by a queued request and its durable inbox message. */
 export type NativeSubmissionRequestId = Branded<'native-submission-request'>
 
+/** Process-local receipt for a file stored by the selected Native Program. */
+export type NativeSessionFileReceiptId = Branded<'native-session-file-receipt'>
+
+/** Upload acknowledgement; the durable FileBlock is created only when a message consumes the receipt. */
+export interface NativeSessionFileReceipt {
+  readonly receiptId: NativeSessionFileReceiptId
+  readonly name: string
+  readonly bytes: number
+}
+
+/** Ordered message content accepted by Native Session prompt and inbox operations. */
+export type NativeSessionInputPart =
+  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'image'; readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; readonly data: string; readonly name?: string }
+  | { readonly type: 'file'; readonly receiptId: NativeSessionFileReceiptId }
+
+/** Ordered text, encoded images and staged files accepted by queue and steer operations. */
+export type NativeSessionSubmissionPart = NativeSessionInputPart
+
 /** Brand one caller-generated submission identity.
  * @param value - stable request identity.
  * @returns the same value branded for Native Session submissions.

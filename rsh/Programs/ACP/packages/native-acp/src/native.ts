@@ -4,13 +4,13 @@ import { isAbsolute, resolve } from 'node:path'
 import { Readable, Writable } from 'node:stream'
 import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type AgentConnection, type NewSessionRequest, type PromptRequest, type PromptResponse,
-  type SessionUpdate, type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
+  type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, resolveCallConfigWithModel } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
-import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { SessionId, Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
 import { nativeSessionExecutionPolicy, type NativeSessionExecutionPolicy, type NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
 import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionRequestMetadata, nativeAcpSubagentPolicyMetadata,
   nativeAcpSubagentServerMetadata, readNativeAcpSubagentClientCapabilities,
@@ -18,7 +18,8 @@ import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionReques
   type NativeAcpSubagentClientCapabilities, type NativeAcpSubagentPolicy,
   type NativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
-  NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+  NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeRootStagedFileOperations,
+  NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
 import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
@@ -29,8 +30,10 @@ import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type {} from '@deepseek-ai/dsh-token-meter/native'
 import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
 import { NativeAcpModelControls } from './model-controls.ts'
+import { nativeAcpUpdates, nativeAcpUsageUpdate } from './presentation.ts'
 
 /** Profile-owned model route and turn policy. */
 export interface Config {
@@ -54,9 +57,17 @@ export interface Config {
   readonly maxPendingPermissions?: number
   /** MCP tool timeout in milliseconds; defaults to 60000. */
   readonly mcpToolCallTimeoutMs?: number
+  /** Maximum resumable Sessions returned by one session/list page; defaults to 100. */
+  readonly sessionListPageSize?: number
 }
 
-type ResolvedConfig = Config & { readonly maxPendingPermissions: number; readonly mcpToolCallTimeoutMs: number }
+type ResolvedConfig = Config & {
+  readonly maxPendingPermissions: number
+  readonly mcpToolCallTimeoutMs: number
+  readonly sessionListPageSize: number
+}
+
+const DEFAULT_SESSION_LIST_PAGE_SIZE = 100
 
 function resolveAllowedTools(value: unknown): readonly string[] | undefined {
   if (value === undefined) return undefined
@@ -78,6 +89,7 @@ interface OwnedSession {
   controlTail: Promise<void>
   controls: number
   notifications: Promise<void>
+  notificationFailures: unknown[]
   current?: { readonly abort: AbortController; readonly done: Promise<PromptResponse> }
   closing?: Promise<void>
 }
@@ -87,12 +99,17 @@ interface RootExecutionWaiter {
   readonly fail: (cause: unknown) => void
 }
 
+interface SessionListCursor {
+  readonly createdAt: number
+  readonly sessionId: string
+}
+
 function resolveConfig(input: unknown): ResolvedConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('native ACP: configuration must be an object')
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
     if (!['provider', 'model', 'systemPrompt', 'maxSteps', 'maxTokens', 'builtinTools', 'allowedTools',
-      'workspaceWriteRoot', 'maxPendingPermissions', 'mcpToolCallTimeoutMs'].includes(key)) {
+      'workspaceWriteRoot', 'maxPendingPermissions', 'mcpToolCallTimeoutMs', 'sessionListPageSize'].includes(key)) {
       throw new Error(`native ACP: unknown configuration field ${key}`)
     }
   }
@@ -128,13 +145,17 @@ function resolveConfig(input: unknown): ResolvedConfig {
     || mcpToolCallTimeoutMs < 1 || mcpToolCallTimeoutMs > MAX_TIMER_DELAY_MS) {
     throw new TypeError('native ACP: mcpToolCallTimeoutMs must be a positive timer-sized integer')
   }
+  const sessionListPageSize = fields.sessionListPageSize === undefined ? DEFAULT_SESSION_LIST_PAGE_SIZE : fields.sessionListPageSize
+  if (typeof sessionListPageSize !== 'number' || !Number.isSafeInteger(sessionListPageSize) || sessionListPageSize <= 0) {
+    throw new TypeError('native ACP: sessionListPageSize must be a positive safe integer')
+  }
   return { provider: fields.provider as string, model: fields.model as string,
     systemPrompt: fields.systemPrompt as string, maxSteps: fields.maxSteps,
     ...(maxTokens === undefined ? {} : { maxTokens }),
     ...(builtinTools === undefined ? {} : { builtinTools }),
     ...allowedTools === undefined ? {} : { allowedTools },
     ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
-    maxPendingPermissions, mcpToolCallTimeoutMs }
+    maxPendingPermissions, mcpToolCallTimeoutMs, sessionListPageSize }
 }
 
 function effectivePolicy(requested: NativeAcpSubagentPolicy | undefined, profile: ResolvedConfig,
@@ -176,34 +197,39 @@ function acpPolicy(policy: NativeSessionExecutionPolicy): NativeAcpSubagentPolic
     permissionMode: policy.permission.mode === 'deny' ? 'deny' : 'parent-relay' }
 }
 
-/** Standard protocol updates reconstructed solely from committed Session facts. */
-function updates(event: SessionEvent): SessionUpdate[] {
-  switch (event.type) {
-    case 'assistant/message': return event.data.message.content.flatMap((block) => {
-      if (block.type !== 'text' && block.type !== 'reasoning') return []
-      return [{ sessionUpdate: block.type === 'text' ? 'agent_message_chunk' : 'agent_thought_chunk',
-        messageId: event.data.message.id, content: { type: 'text', text: block.text } }]
-    })
-    case 'tool/call': {
-      let rawInput: unknown
-      try { rawInput = JSON.parse(event.data.arguments) as unknown }
-      catch (_invalidModelArguments) { rawInput = event.data.arguments }
-      return [{ sessionUpdate: 'tool_call', toolCallId: event.data.callId, title: event.data.name,
-        kind: 'other', status: 'in_progress', rawInput }]
+/** Decode the compatibility bridge's canonical newest-first continuation key. */
+function decodeSessionListCursor(value: string | null | undefined): SessionListCursor | undefined {
+  if (value === undefined || value === null) return undefined
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('session/list cursor is invalid')
+  try {
+    const decoded = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown
+    const createdAt: unknown = Array.isArray(decoded) ? decoded[0] : undefined
+    const sessionId: unknown = Array.isArray(decoded) ? decoded[1] : undefined
+    if (!Array.isArray(decoded) || decoded.length !== 2 || typeof createdAt !== 'number'
+      || !Number.isSafeInteger(createdAt) || createdAt < 0 || typeof sessionId !== 'string' || sessionId.length === 0) {
+      throw new Error('invalid cursor fields')
     }
-    case 'tool/result': {
-      const result = event.data.message.content[0]
-      return [{ sessionUpdate: 'tool_call_update', toolCallId: result.toolCallId,
-        status: result.isError === true ? 'failed' : 'completed',
-        content: result.content.flatMap(block => block.type === 'text'
-          ? [{ type: 'content' as const, content: { type: 'text' as const, text: block.text } }] : []) }]
-    }
-    case 'command/done': return event.data.text === undefined ? [] : [{
-      sessionUpdate: 'agent_message_chunk', messageId: String(event.data.commandId),
-      content: { type: 'text', text: event.data.text },
-    }]
-    default: return [] // The merge-extensible Session map contains non-presentation facts.
+    if (Buffer.from(JSON.stringify(decoded), 'utf8').toString('base64url') !== value) throw new Error('non-canonical cursor')
+    return { createdAt, sessionId }
+  } catch (_invalidCursor) {
+    throw new Error('session/list cursor is invalid')
   }
+}
+
+/** Encode the last returned key using the compatibility bridge's stable wire format. */
+function encodeSessionListCursor(entry: SessionListCursor): string {
+  return Buffer.from(JSON.stringify([entry.createdAt, entry.sessionId]), 'utf8').toString('base64url')
+}
+
+/** Test whether a stored Session follows the cursor in newest-first list order. */
+function isAfterSessionListCursor(entry: SessionListCursor, cursor: SessionListCursor): boolean {
+  return entry.createdAt < cursor.createdAt
+    || (entry.createdAt === cursor.createdAt && compareSessionIds(entry.sessionId, cursor.sessionId) > 0)
+}
+
+/** Compare opaque Session ids by UTF-8 bytes without process-locale ordering. */
+function compareSessionIds(left: string, right: string): number {
+  return Buffer.compare(Buffer.from(left), Buffer.from(right))
 }
 
 /** Owns one ACP connection and its independently cancellable native Sessions. */
@@ -247,7 +273,28 @@ export class NativeAcpApplication implements NativeApplication {
         return operations.restore(request, this.routeSignal(record, signal))
       },
     }
+    const stagedFiles: NativeRootStagedFileOperations = {
+      stageStream: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.stagedFiles.stageStream(request, this.routeSignal(record, signal))
+      },
+      stageEncoded: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.stagedFiles.stageEncoded(request, this.routeSignal(record, signal))
+      },
+      prepare: (request) => {
+        const record = this.ownerRoute(request.owner)
+        return record.executor.rootExecution.stagedFiles.prepare({ ...request,
+          signal: this.routeSignal(record, request.signal) })
+      },
+      enqueue: (request) => {
+        const record = this.ownerRoute(request.owner)
+        return record.executor.rootExecution.stagedFiles.enqueue({ ...request,
+          signal: this.routeSignal(record, request.signal) })
+      },
+    }
     this.rootExecution = Object.freeze({
+      stagedFiles,
       ...deletions === undefined ? {} : { deletions },
       ready: async (signal) => {
         await this.waitForInitialization(signal)
@@ -304,6 +351,7 @@ export class NativeAcpApplication implements NativeApplication {
     this.assertOpen()
     if (this.initialized) return
     await new Promise<void>((resolve, reject) => {
+      const rejectReason: (reason: unknown) => void = reject
       const cleanup = (): void => {
         signal.removeEventListener('abort', abort)
         this.rootExecutionWaiters.delete(waiter)
@@ -312,8 +360,7 @@ export class NativeAcpApplication implements NativeApplication {
         wake: () => { cleanup(); resolve() },
         fail: (cause) => {
           cleanup()
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-          reject(cause)
+          rejectReason(cause)
         },
       }
       const abort = (): void => { waiter.fail(signal.reason) }
@@ -403,6 +450,7 @@ export class NativeAcpApplication implements NativeApplication {
           callId: request.callId, toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
           policy: 'ask', signal: request.signal }) ?? Promise.resolve('unavailable')
         return new Promise<NativeApprovalOutcome>((resolve, reject) => {
+          const rejectReason: (reason: unknown) => void = reject
           let settled = false
           const complete = (outcome: NativeApprovalOutcome): void => {
             if (settled) return
@@ -414,8 +462,7 @@ export class NativeAcpApplication implements NativeApplication {
             if (settled) return
             settled = true
             request.signal.removeEventListener('abort', onAbort)
-            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact owner or transport rejection reason.
-            reject(error)
+            rejectReason(error)
           }
           const onAbort = (): void => { complete('cancelled') }
           request.signal.addEventListener('abort', onAbort, { once: true })
@@ -518,8 +565,20 @@ export class NativeAcpApplication implements NativeApplication {
               assertRestorablePolicy(policy, this.config, this.parentRelayAvailable())
             }
             await this.assertOutputTokenLimit(policy?.maxTokens ?? this.config.maxTokens, requestSignal)
+            const restored = Session.fromRestore(id, events.events, handle.header, handle.inheritedEventCount, events.eventState)
+            const meterAvailable = this.context.optional('tokenMeter') !== undefined
             for (const event of events.events) {
-              for (const update of updates(event)) await this.notify({ sessionId: params.sessionId, update })
+              const eventSession = event.type === 'assistant/message' && event.data.usage !== undefined
+                && meterAvailable
+                ? Session.fromRestore(id, structuredClone(events.events.slice(0, event.seq + 1)), handle.header,
+                  handle.inheritedEventCount, 'detached')
+                : restored
+              const usage = event.type === 'assistant/message' && event.data.usage !== undefined
+                && meterAvailable
+                ? nativeAcpUsageUpdate(this.context, eventSession, event) : undefined
+              for (const update of await nativeAcpUpdates(this.context, event, requestSignal, usage)) {
+                await this.notify({ sessionId: params.sessionId, update })
+              }
             }
           } finally { await handle.close() }
           const record = this.createExecutor(params.sessionId, cwd, policy)
@@ -542,12 +601,21 @@ export class NativeAcpApplication implements NativeApplication {
       })()))
       .onRequest(methods.agent.session.list, ({ params, signal: requestSignal }) => this.track((async () => {
         this.ready()
-        if (params.cursor !== undefined && params.cursor !== null) throw RequestError.invalidParams(undefined, 'native ACP list has no pagination cursor')
         if (params.cwd !== undefined && params.cwd !== null && !isAbsolute(params.cwd)) throw RequestError.invalidParams(undefined, 'cwd must be absolute')
+        let cursor: SessionListCursor | undefined
+        try { cursor = decodeSessionListCursor(params.cursor) }
+        catch { throw RequestError.invalidParams(undefined, 'session/list cursor is invalid') }
         const stored = await this.context.require('sessionPersistence').list({ signal: requestSignal })
-        return { sessions: stored.flatMap(({ header }) => header.cwd === undefined || header.parentSession !== undefined
+        const entries = stored.flatMap(({ header }) => header.cwd === undefined || header.parentSession !== undefined
           || header.origin === 'subagent' || (params.cwd !== undefined && params.cwd !== null && resolve(params.cwd) !== header.cwd)
-          ? [] : [{ sessionId: String(header.id), cwd: header.cwd, updatedAt: new Date(header.createdAt).toISOString() }]) }
+          ? [] : [{ sessionId: String(header.id), cwd: header.cwd, createdAt: header.createdAt }])
+          .sort((left, right) => right.createdAt - left.createdAt || compareSessionIds(left.sessionId, right.sessionId))
+        const remaining = cursor === undefined ? entries : entries.filter(entry => isAfterSessionListCursor(entry, cursor))
+        const page = remaining.slice(0, this.config.sessionListPageSize)
+        const next = remaining.length > page.length ? page.at(-1) : undefined
+        return { sessions: page.map(({ sessionId, cwd, createdAt }) => ({ sessionId, cwd,
+          updatedAt: new Date(createdAt).toISOString() })),
+        ...next === undefined ? {} : { nextCursor: encodeSessionListCursor(next) } }
       })()))
       .onRequest(methods.agent.session.prompt, ({ params, signal: requestSignal }) => this.track(this.prompt(params, requestSignal)))
       .onRequest(methods.agent.session.setConfigOption, ({ params, signal: requestSignal }) => this.track((async () => {
@@ -663,7 +731,7 @@ export class NativeAcpApplication implements NativeApplication {
 
   private createExecutor(id: string, cwd: string, policy?: NativeAcpSubagentPolicy): OwnedSession {
     const { maxPendingPermissions: _permissionCapacity, mcpToolCallTimeoutMs: _mcpTimeout,
-      maxTokens: _profileTokens, ...turn } = this.config
+      maxTokens: _profileTokens, sessionListPageSize: _listPageSize, ...turn } = this.config
     const resources = new ResourceOwner()
     const scope = new NativeScope(this.context.scope)
     const rootRoute = brandString<NativeRootRouteId>(`acp:${id}`)
@@ -674,7 +742,7 @@ export class NativeAcpApplication implements NativeApplication {
       executor: createNativeHeadlessApplication(this.context, { ...turn, maxSteps: policy?.maxSteps ?? this.config.maxSteps,
         ...(maxTokens === undefined ? {} : { maxTokens }), cwd, rootRouteId: rootRoute }, scope, authority),
       resources, scope, lifetime: resources.controller, controlTail: Promise.resolve(), controls: 0,
-      notifications: Promise.resolve(), ...(policy === undefined ? {} : { policy }) }
+      notifications: Promise.resolve(), notificationFailures: [], ...(policy === undefined ? {} : { policy }) }
     this.rootRoutes.set(rootRoute, record)
     this.ownedExecutors.add(record)
     return record
@@ -710,7 +778,12 @@ export class NativeAcpApplication implements NativeApplication {
 
   private async releaseSession(record: OwnedSession): Promise<void> {
     record.lifetime.abort(new Error('ACP Session released'))
+    const connection = this.connection
     const failures: unknown[] = []
+    for (const error of await this.drainNotifications(record)) {
+      if (error !== record.lifetime.signal.reason && error !== this.lifetime.signal.reason
+        && !(connection?.signal.aborted && error === connection.signal.reason)) failures.push(error)
+    }
     const owner = this.context.require('activeSessions').owners().find(candidate => candidate.session.id === record.id)
     if (owner !== undefined) {
       try {
@@ -724,6 +797,15 @@ export class NativeAcpApplication implements NativeApplication {
     if (failures.length > 0) throw new AggregateError(failures, 'native ACP Session resource cleanup failed')
     this.ownedExecutors.delete(record)
     for (const [route, owner] of this.rootRoutes) if (owner === record) this.rootRoutes.delete(route)
+  }
+
+  private async drainNotifications(record: OwnedSession): Promise<unknown[]> {
+    while (true) {
+      const pending = record.notifications
+      try { await pending } catch (error: unknown) { record.notificationFailures.push(error) }
+      if (record.notifications !== pending) continue
+      return record.notificationFailures.splice(0)
+    }
   }
 
   private modelOperation(record: OwnedSession, id: string, signal: AbortSignal,
@@ -748,9 +830,9 @@ export class NativeAcpApplication implements NativeApplication {
     let abort: (() => void) | undefined
     try {
       await Promise.race([previous, new Promise<never>((_resolve, reject) => {
+        const rejectReason: (reason: unknown) => void = reject
         abort = () => {
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-          reject(signal.reason)
+          rejectReason(signal.reason)
         }
         signal.addEventListener('abort', abort, { once: true })
       })])
@@ -825,6 +907,29 @@ export class NativeAcpApplication implements NativeApplication {
     }, signal)
   }
 
+  private sessionFor(record: OwnedSession): Session {
+    const owner = this.context.require('activeSessions').owners().find(candidate => candidate.invocation === 'root'
+      && candidate.session.id === record.id && this.rootExecution.capture(candidate).id === record.rootRoute)
+    if (owner === undefined) throw new Error('native ACP: event has no matching root Session owner')
+    return owner.session
+  }
+
+  private enqueueUpdates(record: OwnedSession, event: SessionEvent, signal: AbortSignal, session?: Session): void {
+    const connection = this.connection
+    const usage = event.type === 'assistant/message' && event.data.usage !== undefined && this.context.optional('tokenMeter') !== undefined
+      ? nativeAcpUsageUpdate(this.context, session ?? this.sessionFor(record), event) : undefined
+    record.notifications = record.notifications.then(async () => {
+      for (const update of await nativeAcpUpdates(this.context, event, signal, usage)) {
+        try { await this.notify({ sessionId: String(record.id), update }) }
+        catch (error: unknown) {
+          if (signal.aborted && connection?.signal.aborted && signal.reason === connection.signal.reason) throw signal.reason
+          throw error
+        }
+      }
+    })
+      .catch((error: unknown) => { record.notificationFailures.push(error) })
+  }
+
   private async dispatchCommand(record: OwnedSession, line: string, signal: AbortSignal): Promise<boolean> {
     const commands: NativeCommandOperations | undefined = this.context.optional('commands')
     const parsed = commands?.parse(line)
@@ -832,10 +937,7 @@ export class NativeAcpApplication implements NativeApplication {
     return this.withRootCommandOwner(record, signal, async (owner, admitted) => {
       if (!commands.list(owner.agent.scope).some(command => command.name === parsed.name)) return false
       const release = owner.onEvent((event) => {
-        for (const update of updates(event)) {
-          record.notifications = record.notifications.then(() => this.notify({ sessionId: String(record.id), update }))
-          void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
-        }
+        this.enqueueUpdates(record, event, admitted, owner.session)
       })
       try {
         const result = await commands.dispatch({ agent: owner.agent, session: owner.session, line, attachments: [], signal: admitted })
@@ -872,8 +974,9 @@ export class NativeAcpApplication implements NativeApplication {
     const signal = AbortSignal.any([requestSignal, abort.signal, this.lifetime.signal])
     const done = Promise.resolve().then(async (): Promise<PromptResponse> => {
       let stopReason: PromptResponse['stopReason'] = 'end_turn'
-      record.notifications = Promise.resolve()
-      let exitCode: number
+      let startedPromptTurn = false
+      let exitCode = 1
+      let operationFailure: { error: unknown } | undefined
       try {
         const commandLine = params.prompt.length === 1 && params.prompt[0]?.type === 'text' ? params.prompt[0].text : undefined
         if (commandLine !== undefined && await this.dispatchCommand(record, commandLine, signal)) {
@@ -885,7 +988,7 @@ export class NativeAcpApplication implements NativeApplication {
             const directory = this.context.optional('modelDirectory')
             if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
             if (attachments === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
-            input = { prepareMessage: async (model, admitted) => {
+            input = { prepareMessage: async (model, _owner, admitted) => {
               const info = await directory.resolve(model.provider, model.model, admitted)
               if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
               admitted.throwIfAborted()
@@ -907,11 +1010,9 @@ export class NativeAcpApplication implements NativeApplication {
             id: SessionId(params.sessionId), resume: true,
             ...input, ...(record.policy?.permissionMode === 'parent-relay'
               ? { issueOwnerApproval: (owner: NativeActiveSessionOwner) => this.ownerApproval(record, owner) } : {}), onEvent: (event) => {
-              for (const update of updates(event)) {
-                record.notifications = record.notifications.then(() => this.notify({ sessionId: params.sessionId, update }))
-                void record.notifications.catch(() => {}) // The prompt awaits and reports this transport failure after durable settlement.
-              }
-              if (event.type === 'turn/end') {
+              this.enqueueUpdates(record, event, signal)
+              if (event.type === 'turn/start') startedPromptTurn = true
+              if (event.type === 'turn/end' && startedPromptTurn) {
                 if (event.data.reason.kind === 'max-tokens') stopReason = 'max_tokens'
                 else if (event.data.reason.kind === 'interrupted') stopReason = 'cancelled'
               }
@@ -919,12 +1020,19 @@ export class NativeAcpApplication implements NativeApplication {
           exitCode = result.exitCode
         }
       } catch (error: unknown) {
-        if (isImageAdmissionError(error)) throw RequestError.invalidParams(undefined, error.message)
-        if (!signal.aborted || error !== signal.reason) throw error
-        exitCode = 1
+        if (isImageAdmissionError(error)) operationFailure = { error: RequestError.invalidParams(undefined, error.message) }
+        else if (!signal.aborted || error !== signal.reason) operationFailure = { error }
+        else exitCode = 1
       }
-      await record.notifications
-      if (abort.signal.aborted || requestSignal.aborted) return { stopReason: 'cancelled' }
+      const notificationFailures = (await this.drainNotifications(record))
+        .filter(error => !signal.aborted || error !== signal.reason)
+      if (operationFailure !== undefined && notificationFailures.length > 0) {
+        throw new AggregateError([operationFailure.error, ...notificationFailures], 'native ACP prompt and notification delivery failed')
+      }
+      if (operationFailure !== undefined) throw operationFailure.error
+      if (notificationFailures.length === 1) throw notificationFailures[0]
+      if (notificationFailures.length > 1) throw new AggregateError(notificationFailures, 'native ACP notification delivery failed')
+      if (signal.aborted) return { stopReason: 'cancelled' }
       if (exitCode !== 0) throw RequestError.internalError(undefined, 'native ACP turn failed; inspect Session log')
       return { stopReason }
     })
@@ -954,7 +1062,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands', 'requestContexts'],
+    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands', 'requestContexts', 'tokenMeter'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)

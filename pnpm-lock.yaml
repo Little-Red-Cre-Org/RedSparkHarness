@@ -4481,6 +4481,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -9375,6 +9378,9 @@ importers:
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
+      '@deepseek-ai/dsh-token-meter':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/token-meter
     devDependencies:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
@@ -10248,6 +10254,9 @@ importers:
       '@deepseek-ai/dsh-native-subagent':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/native-subagent
+      '@deepseek-ai/dsh-sdk-protocol':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/sdk-protocol
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session

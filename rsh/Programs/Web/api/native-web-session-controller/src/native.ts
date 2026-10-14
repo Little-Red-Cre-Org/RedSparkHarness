@@ -27,6 +27,7 @@ import { createNativeHeadlessApplication, resolveNativeHeadlessConfig, type Conf
   type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeStagedFileBlock, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
@@ -45,7 +46,7 @@ import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
-import type { TextBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock, TextBlock } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { FileSystemOperations, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
@@ -93,6 +94,53 @@ import { NativeWebWorkspaceService } from './workspaces.ts'
 import { NativeWebDirectoryService } from './directories.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
+
+type NativeWebInputPart =
+  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'image'; readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; readonly data: string; readonly name?: string }
+  | { readonly type: 'file'; readonly receiptId: NativeStagedFileReceiptId }
+
+type NativeWebPromptPart = Exclude<NativeWebInputPart, { readonly type: 'file' }>
+type NativeWebSubmissionPart = NativeWebInputPart
+
+const nativeWebImageUploadSchema = z.strictObject({
+  mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']), data: z.string(), name: z.string().optional(),
+})
+const nativeWebInputPartSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('text'), text: z.string() }),
+  z.strictObject({ type: z.literal('image'), ...nativeWebImageUploadSchema.shape }),
+  z.strictObject({ type: z.literal('file'), receiptId: z.string().min(1).max(256) }),
+])
+const nativeWebSubmissionPartSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('text'), text: z.string() }),
+  z.strictObject({ type: z.literal('image'), ...nativeWebImageUploadSchema.shape }),
+  z.strictObject({ type: z.literal('file'), receiptId: z.string().min(1).max(256) }),
+])
+
+function nativeWebInputPart(part: z.infer<typeof nativeWebInputPartSchema>): NativeWebInputPart {
+  if (part.type === 'file') return { type: 'file', receiptId: brandString<NativeStagedFileReceiptId>(part.receiptId) }
+  if (part.type === 'image') return { type: 'image', mediaType: part.mediaType, data: part.data,
+    ...(part.name === undefined ? {} : { name: part.name }) }
+  return part
+}
+
+function nativeMessageContent(parts: readonly NativeWebInputPart[], admitted: readonly ContentBlock[],
+  files: readonly NativeStagedFileBlock[]): ContentBlock[] {
+  let admittedIndex = 0
+  let fileIndex = 0
+  return parts.map(part => part.type === 'file'
+    ? files[fileIndex++] as NativeStagedFileBlock
+    : admitted[admittedIndex++] as ContentBlock)
+}
+
+function nativeSubmissionContent(parts: readonly NativeWebInputPart[], admitted: readonly ContentBlock[],
+  files: readonly NativeStagedFileBlock[]): ContentBlock[] {
+  let fileIndex = 0
+  let admittedIndex = 0
+  return parts.map(part => part.type === 'file'
+    ? files[fileIndex++] as NativeStagedFileBlock
+    : admitted[admittedIndex++] as ContentBlock)
+}
 const CODEX_ACCOUNT_KEY = parseCredentialKey('llm-pi-ai/openai-codex')
 const DEEPSEEK_ACCOUNT_KEY = parseCredentialKey('deepseek-account/default')
 
@@ -309,6 +357,44 @@ async function* workspaceFileText(file: FileHandle, signal: AbortSignal, path: s
     yield decoder.decode(chunk, { stream: true })
   }
   yield decoder.decode()
+}
+
+async function* requestBodyChunks(body: ReadableStream<Uint8Array> | null, signal: AbortSignal,
+  onCleanupFailure: (error: unknown) => void): AsyncIterable<Uint8Array> {
+  signal.throwIfAborted()
+  if (body === null) return
+  const reader = body.getReader()
+  let cancellation: Promise<void> | undefined
+  let complete = false
+  let readFailure: { readonly cause: unknown } | undefined
+  const cancel = (): Promise<void> => {
+    if (cancellation === undefined) {
+      cancellation = reader.cancel(signal.reason)
+      void cancellation.catch(() => {})
+    }
+    return cancellation
+  }
+  const stop = (): void => { void cancel() }
+  signal.addEventListener('abort', stop, { once: true })
+  if (signal.aborted) stop()
+  try {
+    while (true) {
+      signal.throwIfAborted()
+      let item: ReadableStreamReadResult<Uint8Array>
+      try { item = await reader.read() } catch (error) { readFailure = { cause: error }; throw error }
+      signal.throwIfAborted()
+      if (item.done) { complete = true; return }
+      yield item.value
+    }
+  } finally {
+    signal.removeEventListener('abort', stop)
+    try {
+      if (!complete) await cancel()
+    } catch (error) {
+      if (readFailure === undefined) onCleanupFailure(error)
+      throw error
+    } finally { reader.releaseLock() }
+  }
 }
 
 function workspaceFilePath(path: string, allowRoot = false): string {
@@ -562,22 +648,71 @@ export class NativeWebSessionService {
     } }, context.scope))
   }
 
+  /** Admit one authenticated raw upload through the selected Program attachment Provider.
+   * @param request - streaming Fetch request with Session identity and optional display name in its query.
+   * @returns process-local receipt without aggregating the request body.
+   */
+  async uploadFile(request: Request): Promise<Response> {
+    if (request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase() !== 'application/octet-stream') {
+      return new Response('content type must be application/octet-stream', { status: 415 })
+    }
+    const url = new URL(request.url)
+    const sessionId = url.searchParams.get('sessionId')
+    const name = url.searchParams.get('name') ?? undefined
+    if (sessionId === null || sessionId.length === 0 || sessionId.length > 256) {
+      return new Response('sessionId is required', { status: 400 })
+    }
+    const id = SessionId(sessionId)
+    let result: ConnectionRpcResult<unknown>
+    try {
+      const value = await this.requests.run(request.signal, async (signal) => {
+        const route = await this.routeForSession(id, signal)
+        return this.executor.rootExecution.stagedFiles.stageStream({ route, id,
+          data: requestBodyChunks(request.body, signal, (error) => { this.requests.recordCleanupFailure(error) }),
+          ...(name === undefined ? {} : { name }) }, signal)
+      })
+      result = { ok: true, value }
+    } catch (error: unknown) {
+      result = { ok: false, error: { code: 'native/session', message: errorMessage(error), details: {} } }
+    }
+    return new Response(JSON.stringify(result), { headers: {
+      'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
+    } })
+  }
+
   private async start(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId }> {
     signal.throwIfAborted()
     const fields = object(payload)
-    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow', 'lastSeq', 'images'].includes(key)) throw new Error('native web session: unexpected prompt field')
+    for (const key of Object.keys(fields)) if (!['sessionId', 'text', 'resume', 'follow', 'lastSeq', 'images', 'content'].includes(key)) {
+      throw new Error('native web session: unexpected prompt field')
+    }
     const id = sessionId(fields.sessionId)
-    if (typeof fields.text !== 'string' || fields.text.length === 0 || fields.text.length > this.config.maxPromptChars) throw new TypeError('native web session: text exceeds configured limits or is empty')
     if (fields.follow !== undefined && typeof fields.follow !== 'boolean') throw new TypeError('native web session: follow must be boolean')
     if (fields.follow === true && (typeof fields.lastSeq !== 'number' || !Number.isSafeInteger(fields.lastSeq) || fields.lastSeq < -1)
       || fields.follow !== true && fields.lastSeq !== undefined) throw new TypeError('native web session: follow cursor must be an integer at least -1')
     if (typeof fields.resume !== 'boolean') throw new TypeError('native web session: resume must be explicit')
-    const images = fields.images === undefined ? [] : z.array(z.strictObject({
-      mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']), data: z.string(), name: z.string().optional(),
-    })).parse(fields.images)
+    let input: NativeWebInputPart[]
+    if (fields.content === undefined) {
+      if (typeof fields.text !== 'string' || fields.text.length === 0) throw new TypeError('native web session: text input is empty')
+      const images = fields.images === undefined ? [] : z.array(nativeWebImageUploadSchema).parse(fields.images)
+      input = [{ type: 'text', text: fields.text }, ...images.map(image => nativeWebInputPart({ type: 'image', ...image }))]
+    } else {
+      if (fields.text !== undefined || fields.images !== undefined) throw new TypeError('native web session: content cannot be combined with legacy text or images')
+      input = nativeWebInputPartSchema.array().parse(fields.content).map(nativeWebInputPart)
+      if (input.length === 0 || input.every(part => part.type === 'text' && part.text.length === 0)) {
+        throw new TypeError('native web session: content input is empty')
+      }
+    }
+    if (input.reduce((sum, part) => sum + (part.type === 'text' ? part.text.length : 0), 0) > this.config.maxPromptChars) {
+      throw new TypeError('native web session: text exceeds configured limits')
+    }
+    const promptParts = input.filter((part): part is NativeWebPromptPart => part.type !== 'file')
+    const receiptIds = input.filter((part): part is Extract<NativeWebInputPart, { readonly type: 'file' }> => part.type === 'file')
+      .map(part => part.receiptId)
+    const hasImages = promptParts.some(part => part.type === 'image')
     const attachments = this.selections.attachments
     const directory = this.selections.directory
-    const imageProviders = images.length === 0 ? undefined : (() => {
+    const imageProviders = !hasImages ? undefined : (() => {
       if (attachments === undefined || directory === undefined) throw new Error('native web session: image input is unavailable')
       return { attachments, directory }
     })()
@@ -647,16 +782,24 @@ export class NativeWebSessionService {
       const turnSignal = AbortSignal.any([accepted, controller.signal])
       try {
         const route = await this.routeForSession(id, turnSignal)
+        const createMessage = (admitted: readonly ContentBlock[], files: readonly NativeStagedFileBlock[]) =>
+          createUserMessage({ source: { kind: 'user' }, content: nativeMessageContent(input, admitted, files) })
         const result = await this.executor.executeRootTurn({ id, route, resume: fields.resume as boolean,
-          ...imageProviders === undefined ? { message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: fields.text as string }] }) }
-            : { prepareMessage: async (route, preparationSignal) => {
-              const info = await imageProviders.directory.resolve(route.provider, route.model, preparationSignal)
+          ...receiptIds.length === 0 && !hasImages
+            ? { message: createUserMessage({ source: { kind: 'user' }, content: [...input as readonly ContentBlock[]] }) }
+            : { prepareMessage: async (model, owner, preparationSignal) => {
+              if (hasImages) {
+                const info = await imageProviders?.directory.resolve(model.provider, model.model, preparationSignal)
+                preparationSignal.throwIfAborted()
+                if (!info?.inputModalities?.includes('image')) throw new Error('native web session: selected model does not accept images')
+              }
+              const admitted = imageProviders === undefined ? promptParts as readonly ContentBlock[]
+                : await imageProviders.attachments.admitPromptContent(promptParts)
               preparationSignal.throwIfAborted()
-              if (!info.inputModalities?.includes('image')) throw new Error('native web session: selected model does not accept images')
-              const content = await imageProviders.attachments.admitPromptContent([{ type: 'text', text: fields.text as string },
-                ...images.map(image => ({ type: 'image' as const, mediaType: image.mediaType, data: image.data, ...image.name === undefined ? {} : { name: image.name } }))])
-              preparationSignal.throwIfAborted()
-              return createUserMessage({ source: { kind: 'user' }, content })
+              const build = (files: readonly NativeStagedFileBlock[]) => createMessage(admitted, files)
+              return receiptIds.length === 0 ? build([]) : this.executor.rootExecution.stagedFiles.prepare({
+                owner, receiptIds, signal: preparationSignal, createMessage: files => build(files),
+              })
             } },
           ...feed === undefined ? {} : { onEvent: (event) => {
             feed.push({ type: 'event', event })
@@ -926,9 +1069,20 @@ export class NativeWebSessionService {
   private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativeSubmissionAcknowledgement> {
     const request = z.strictObject({
       sessionId: z.string().min(1).max(256),
-      prompt: z.string().min(1).max(this.config.maxPromptChars),
+      prompt: z.string().min(1).max(this.config.maxPromptChars).optional(),
+      content: nativeWebSubmissionPartSchema.array().optional(),
       requestId: z.string().min(1).max(256),
     }).parse(payload)
+    if ((request.prompt === undefined) === (request.content === undefined)) {
+      throw new TypeError('native web session: provide either prompt text or ordered content')
+    }
+    const content: NativeWebSubmissionPart[] = request.content === undefined
+      ? [{ type: 'text', text: request.prompt as string }]
+      : request.content.map(nativeWebInputPart)
+    if (content.length === 0 || content.every(part => part.type === 'text' && part.text.length === 0)
+      || content.reduce((sum, part) => sum + (part.type === 'text' ? part.text.length : 0), 0) > this.config.maxPromptChars) {
+      throw new TypeError('native web session: submission content is empty or exceeds configured limits')
+    }
     const id = SessionId(request.sessionId)
     const turn = this.turns.get(id)
     const owner = this.active.owners().find(candidate => candidate.session.id === id
@@ -939,11 +1093,35 @@ export class NativeWebSessionService {
     this.executor.rootExecution.capture(owner)
     const requestId = brandString<NativeSubmissionRequestId>(request.requestId)
     if (turn.submissions.has(requestId)) throw new Error('native web session: duplicate submission request id')
-    const message = freezeMessage({ id: MessageId(request.requestId), role: 'user' as const, source: { kind: 'user' as const },
-      content: [{ type: 'text' as const, text: request.prompt }] })
     turn.submissions.set(requestId, 'submitting')
-    try { await owner.enqueue(message, target, true, signal) }
-    catch (error: unknown) { turn.submissions.delete(requestId); throw error }
+    try {
+      const receiptIds = content.filter((part): part is Extract<NativeWebSubmissionPart, { readonly type: 'file' }> => part.type === 'file')
+        .map(part => part.receiptId)
+      const promptParts = content.filter((part): part is NativeWebPromptPart => part.type !== 'file')
+      const hasImages = promptParts.some(part => part.type === 'image')
+      let admitted: readonly ContentBlock[]
+      const message = (files: readonly NativeStagedFileBlock[]) => freezeMessage({ id: MessageId(request.requestId), role: 'user' as const,
+        source: { kind: 'user' as const }, content: nativeSubmissionContent(content, admitted, files) })
+      if (!hasImages) admitted = promptParts as readonly ContentBlock[]
+      else {
+        const attachments = this.selections.attachments
+        const directory = this.selections.directory
+        if (attachments === undefined || directory === undefined) throw new Error('native web session: image input is unavailable')
+        const selection = await this.selections.models?.selection.state(owner, signal)
+        const selected = selection?.next ?? this.selections.defaultModel?.()
+          ?? { provider: this.config.provider, model: this.config.model }
+        const info = await directory.resolve(selected.provider, selected.model, signal)
+        if (!info.inputModalities?.includes('image')) throw new Error('native web session: selected model does not accept images')
+        admitted = await attachments.admitPromptContent(promptParts)
+        signal.throwIfAborted()
+      }
+      if (receiptIds.length === 0) await owner.enqueue(message([]), target, true, signal)
+      else await this.executor.rootExecution.stagedFiles.enqueue({ owner, receiptIds, target, wake: true, signal,
+        createMessage: files => message(files) })
+    } catch (error: unknown) {
+      if (turn.submissions.get(requestId) === 'submitting') turn.submissions.delete(requestId)
+      throw error
+    }
     return { requestId, placement: target === 'next-turn' ? 'queued' : 'steering', status: 'accepted' }
   }
 
@@ -2082,6 +2260,8 @@ export const plugin: NativePlugin = {
         fetch: request => workspaceService.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/file-upload', methods: ['POST'], requestBody: 'streaming',
+        fetch: request => service.uploadFile(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/list-follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.followList(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/files-follow', methods: ['POST'], requestBody: 'buffered',
