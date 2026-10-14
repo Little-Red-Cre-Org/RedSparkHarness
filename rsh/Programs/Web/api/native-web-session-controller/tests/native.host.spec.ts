@@ -185,7 +185,7 @@ it('waits for an owned file upload to settle when the Native Session Client clos
     },
   } as unknown as ClientConnectionRpc
   const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
-  const upload = client.uploadFile(SessionId('upload-close'), new Blob(['staged bytes']))
+  const upload = client.uploadFile(SessionId('upload-close'), { data: new Blob(['staged bytes']) })
   let closed = false
   const closing = client.close().then(() => { closed = true })
   try {
