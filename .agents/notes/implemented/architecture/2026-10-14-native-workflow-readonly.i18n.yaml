@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-14-native-workflow-readonly.md
-2026-10-14-native-workflow-readonly.md: a68e6fd7ce24e79609110042a477b961fa6c0d7a
-2026-10-14-native-workflow-readonly.zh.md: 8ef8be4935cc14085a6b145fd8a044ed9db2d750
+2026-10-14-native-workflow-readonly.md: 1c3779a70d5395015bbeef054e7a8486f99f8b4d
+2026-10-14-native-workflow-readonly.zh.md: 45bfaa9445137ff53484997977c8c95257ba658a

@@ -10,7 +10,7 @@ Native Session history includes workflow events, but its transcript needs the sa
 
 ## Decision
 
-[ui-workflow-run](../../../../rsh/Programs/Web/client/ui-workflow-run/README.md) shares a props-driven view and durable event projection between its Cordis adapter and `./native` library. Native anchors each panel at the run-start sequence and retains ordinary tool cards. Only the owning step or turn closing permits inferred interruption. Member rows are read-only; Session seed/fork headers supply no logical child-navigation authority.
+[ui-workflow-run](../../../../rsh/Programs/Web/client/ui-workflow-run/README.md) shares a props-driven view and durable event projection between its Cordis adapter and `./native` library. Native anchors each panel at the run-start sequence and retains ordinary tool cards. Consecutive display segments keep session-scope runs in log order without assigning them a synthetic owning turn. Panel identity includes the Session id so disclosure choices do not carry across Session changes. Only the owning step or turn closing permits inferred interruption. Member rows are read-only; Session seed/fork headers supply no logical child-navigation authority.
 
 ## Alternatives considered
 

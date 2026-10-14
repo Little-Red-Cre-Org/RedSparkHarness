@@ -1,5 +1,5 @@
 /** Native adapter from durable Session events to shared chat presentation. */
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@deepseek-ai/dsh-client-ui-workflow-run/native'
 import {
   ChatAssistantMessage, ChatContextMessage, ChatMessageActionMeta, ChatMessageActionRow, ChatMessageCopyAction,
@@ -17,7 +17,8 @@ import { NativeMessageImage } from './attachments.tsx'
 type Translate = TranslateNS<'nativeApplication'>
 
 interface NativeTurn {
-  readonly turn: number
+  readonly key: string
+  readonly turn: number | undefined
   readonly events: readonly SessionEvent[]
 }
 
@@ -68,31 +69,31 @@ function contextSourceDetails(source: unknown): {
   }
 }
 
-/** Group rendered Session facts by the durable turn that owns them.
+/** Group consecutive rendered Session facts without reordering session-scope runs.
  * @param events - accepted live or restored Session events.
  * @param cards - root Tool presentations indexed by their call event sequence.
- * @returns ordered turns containing only transcript rows with a renderer.
+ * @returns ordered display segments; session-scope runs have no owning turn.
  */
 export function groupNativeTranscriptEvents(
   events: readonly SessionEvent[],
   cards: ReadonlyMap<number, ReturnType<typeof toolCardRecords>[number]['block']>,
 ): readonly NativeTurn[] {
-  const grouped = new Map<number, SessionEvent[]>()
+  const grouped: { key: string; turn: number | undefined; events: SessionEvent[] }[] = []
   let currentTurn: number | undefined
   for (const event of events) {
     if (event.type === 'turn/start') currentTurn = event.data.turn
-    const turn = eventTurn(event) ?? currentTurn ?? (event.type === 'tool-workflow/run-start' ? 0 : undefined)
+    const turn = eventTurn(event) ?? currentTurn
     if (turn !== undefined) currentTurn = turn
     if (cards.has(event.seq) || event.type === 'tool-workflow/run-start' || transcriptMessage(event) !== null) {
-      if (turn !== undefined) {
-        const rows = grouped.get(turn) ?? []
-        rows.push(event)
-        grouped.set(turn, rows)
+      if (turn !== undefined || event.type === 'tool-workflow/run-start') {
+        const previous = grouped.at(-1)
+        if (turn !== undefined && previous?.turn === turn) previous.events.push(event)
+        else grouped.push({ key: `${turn === undefined ? 'session' : `turn:${turn}`}:${event.seq}`, turn, events: [event] })
       }
     }
     if (event.type === 'turn/end') currentTurn = undefined
   }
-  return [...grouped].map(([turn, rows]) => ({ turn, events: rows }))
+  return grouped
 }
 
 function formatCount(value: number, locale: 'en' | 'zh'): string {
@@ -211,10 +212,10 @@ export function NativeTranscript({
   const liveTurn = turns.at(-1)?.turn
 
   return <ChatTranscript>
-    {turns.map(({ turn, events }) => <ChatTurnGroup key={turn} turn={turn}>
-      {events.map((event) => {
+    {turns.map(({ key, turn, events }) => {
+      const rows = events.map((event) => {
         const workflow = workflows.get(event.seq)
-        if (workflow !== undefined) return <NativeWorkflowRunPanel key={event.seq} data={workflow} locale={locale} />
+        if (workflow !== undefined) return <NativeWorkflowRunPanel key={`${sessionId}:${event.seq}`} data={workflow} locale={locale} />
         const card = cards.get(event.seq)
         return card === undefined
           ? <Message key={event.seq} event={event}
@@ -222,8 +223,11 @@ export function NativeTranscript({
             locale={locale} t={t} sessionId={sessionId} loadImage={loadImage} markdownLabels={markdownLabels}
             imageGroupClassName={imageGroupClassName} />
           : <ToolCard key={event.seq} block={card} locale={locale} cwd={snapshot.header?.cwd} />
-      })}
-    </ChatTurnGroup>)}
+      })
+      return turn === undefined
+        ? <Fragment key={key}>{rows}</Fragment>
+        : <ChatTurnGroup key={key} turn={turn}>{rows}</ChatTurnGroup>
+    })}
     {snapshot.liveText === undefined && activity === undefined ? null : <ChatTurnGroup turn={liveTurn ?? 0}>
       <ChatAssistantMessage streaming>
         {snapshot.liveText === undefined || snapshot.liveText.length === 0 ? <ChatTurnActivity>{activity ?? t('sending')}</ChatTurnActivity>
