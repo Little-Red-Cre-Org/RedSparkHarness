@@ -12,7 +12,7 @@ it('keeps disabled packages visible and offers recovery without a running backen
   const toggle = vi.fn(async (_name: string, active: boolean) => { enabled = active })
   const api = {
     locale: async () => resolveDesktopLocale('en'),
-    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', message: 'plugin requires Cordis ^2.0.0' }, retry: vi.fn() },
+    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', message: 'plugin requires Cordis ^2.0.0' }, retry: vi.fn(), subscribe: () => () => {} },
     plugins: { list: async () => [{ name: 'example-plugin', version: '1.0.0', enabled }], disableAll, toggle },
   }
   Object.defineProperty(dom.window, 'dshDesktop', { value: api })
@@ -29,5 +29,5 @@ it('keeps disabled packages visible and offers recovery without a running backen
     document.querySelector<HTMLButtonElement>('#plugins li button')?.click()
     await expect.poll(() => toggle.mock.calls).toEqual([['example-plugin', true]])
     await expect.poll(() => document.querySelector('#plugins li')?.textContent).toBe('example-plugin1.0.0DisableUpdateRemove')
-  } finally { dom.window.close() }
+  } finally { dom.window.dispatchEvent(new dom.window.Event('pagehide')); dom.window.close() }
 })

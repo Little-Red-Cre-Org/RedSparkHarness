@@ -39,6 +39,8 @@ Native Host 在应用根路径和 `/native.html` 提供所选原生 Client。桌
 
 兼容 Host 只提供现有应用。如果 profile 中包含 `rsh.client.json`，Host 会在启动时失败并提示配置 `dsh.profile.runtime: "native"`；兼容 Typert Session endpoint 不实现 Native Session 的响应、follow 和 image 路由。没有 `rsh.client.json` 时，`/native.html` 返回 404，`/` 保留现有应用。原生模式支持所选 Session Client 的能力。原生配置不支持兼容插件列表与变更操作，并显示本地化提示。
 
+模块管理 renderer 在提供经审查的 Native facade 时消费它：包操作与 target/id 安装实例控制分开，Host scope 来自库存，写操作使用库存 revision。应用变更后重新读取库存；陈旧请求只刷新，不自动重新提交；状态复用现有后端订阅。只有 list 返回 wrong-profile 拒绝时才选择旧操作。[页面准备提案](../../../.agents/notes/proposed/feature/2026-10-14-native-desktop-module-page.zh.md) 记录尚待交付的 facade 导出、shell 入口、本地化错误键对齐及打包验收；当前 shell 尚未暴露这些 Native 操作。
+
 ### 运行时与插件激活
 
 签名资源中的 `resources/dsh/desktop-runtime.json` 绑定 shell 版本、内置 Node 版本、平台、架构、共享包版本和最终文件清单。启动读取元数据，并检查共享包记录。发布 schema、shell 版本、目标兼容性和文件完整性在打包时验证。首次启动不会把核心包复制到 profile 存储或通过 pnpm 安装核心包。
