@@ -16,7 +16,11 @@ live 消息反馈变更通过所属 Session 追加，并等待其持久化检查
 
 现有需显式启用的 [session-log-deepseek 贡献](../../../../rsh/Modules/Official/llm/session-log-deepseek/README.zh.md)会在后续符合条件的请求中，把反馈纳入普通 `dsh_session_log` 后缀。它使用现有的 DeepSeek 目标选择和接受水位。没有独立的 `dsh_feedback` 上传器、反馈触发的 LLM 请求或模型输入字段。[显式反馈 OTel 决策](2026-09-05-nonofficial-feedback-otel.zh.md)负责面向所有用户和提供方的独立反馈触发上传。
 
-命令用 Session 与匿名用户 id 确认记录，不依赖遥测，也不披露其策略。其追加仍不执行 flush。这取代[已归档共享披露记录](../../archived/feature/2026-08-07-feedback-acknowledgement-sharing-disclosure.md)中的命令文案决策。[遥测服务的策略 API](../../../../rsh/Engine/session/session-telemetry/README.zh.md#the-sharing-disclosure) 仍可独立使用：后端披露策略，而不保证投递或保留，可选 OTel 包不拥有这套词汇。
+Native feedback Provider 仅在 flush 与权威日志读回确认事件持久化后发出 `feedback/committed`；消息反馈同时支持 live 写入与 cold 持久化写租约。Native telemetry 从该共享事件授权一个前缀，并对记录副本脱敏。Native Host 关闭会先排空已接纳的应用任务，再关闭事件观察方并释放 Provider；Native Web application 会等待 HTTP listener 关闭，使已接纳的 RPC mutation 在该排空过程内完成。这样反馈保持仅写日志，无需第二 writer、durable outbox 或 delegated owner retention 路径。
+
+已发布 Native 声明将 `dsh-native-runtime` 与 `dsh-launch-environment` 保留为 peer，并将 `@opentelemetry/otlp-exporter-base` 与 Native 反馈类型保留为生产依赖。Native session 客户端还保留 command-feedback 运行时依赖，因为其请求校验会读取 `FEEDBACK_CATEGORIES`。
+
+Cordis 命令使用 Session 与匿名用户 id 确认记录，不依赖遥测，也不披露其策略；其追加不执行 flush。Native `/feedback` 命令会等待 owner flush 和权威日志读回后，再确认持久化记录。两种确认都不代表采集端已接收。它们取代[已归档共享披露记录](../../archived/feature/2026-08-07-feedback-acknowledgement-sharing-disclosure.md)中的命令文案决策。[遥测服务的策略 API](../../../../rsh/Engine/session/session-telemetry/README.zh.md#the-sharing-disclosure) 仍可独立使用：后端披露策略，而不保证投递或保留，可选 OTel 包不拥有这套词汇。
 
 ## 考虑过的替代方案
 
@@ -25,6 +29,10 @@ live 消息反馈变更通过所属 Session 追加，并等待其持久化检查
 **对消息编辑复用 `feedback/record`。** 自由文本的 Session 备注不能标识条目变更。独立事件保留消息身份和删除语义；上传策略仍由消费方负责。
 
 **增加专用反馈上传器或立即发起 LLM 请求。** 需显式启用的日志贡献在符合条件的请求上传送权威事件。现有 OTel 流水线独立处理所有提供方的显式反馈上传，无需自定义反馈上传器或另一个模型请求。
+
+**为后台遥测保留活跃 owner。** 委派 owner 不能作为 root 后台任务保留，cold 写入也没有活跃 owner。单一的持久化后提交事件覆盖 root、委派与 cold 反馈，无需新增 writer。
+
+**依靠 Web Host 资源释放来排空直接 RPC。** Native Web application 会在退出前等待 HTTP listener 的 `close()`，使已接纳的 RPC mutation 在 Native Host 排空应用任务和事件期间保持运行。
 
 ## 后果
 

@@ -3,13 +3,10 @@
  * @module @deepseek-ai/dsh-message-feedback
  */
 
-import { Buffer } from 'node:buffer'
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
-import { z } from 'zod'
-import { FEEDBACK_CATEGORIES } from '@deepseek-ai/dsh-command-feedback'
 import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
@@ -19,20 +16,15 @@ import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type {
   MessageFeedbackDeleteRequest,
   MessageFeedbackDeleteResult,
-  MessageFeedbackFailure,
   MessageFeedbackItem,
   MessageFeedbackListRequest,
   MessageFeedbackListResult,
-  MessageFeedbackNoteBlank,
-  MessageFeedbackNoteTooLarge,
   MessageFeedbackPutRequest,
   MessageFeedbackPutResult,
-  MessageFeedbackRejected,
-  MessageFeedbackSessionNotFound,
-  MessageFeedbackSuccess,
   MessageFeedbackVersion,
-  MessageFeedbackVersionConflict,
 } from './types.ts'
+import { currentItems, rejected, resolveNote, snapshotItem, success, versionConflict,
+  type Append, type FeedbackEvent, type MissingSession } from './shared.ts'
 
 export type * from './types.ts'
 
@@ -57,61 +49,6 @@ declare module '@deepseek-ai/cordis' {
      */
     'feedback/committed'(inspection: SessionInspection): void
   }
-}
-
-const timestamp = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-const itemSchema = z.object({
-  messageId: z.string().min(1),
-  rating: z.enum(['positive', 'negative']),
-  note: z.string().refine(note => note.trim().length > 0).optional(),
-  category: z.enum(FEEDBACK_CATEGORIES).optional(),
-  version: z.uuid(),
-  createdAt: timestamp,
-  updatedAt: timestamp,
-}).refine(item => item.updatedAt >= item.createdAt)
-const putSchema = z.object({ sessionId: z.string().min(1), item: itemSchema })
-const deleteSchema = z.object({ sessionId: z.string().min(1), messageId: z.string().min(1) })
-
-type FeedbackEvent = SessionEvent<'feedback/message-put' | 'feedback/message-delete'>
-type Mutation = Pick<SessionEvent<'feedback/message-put'>, 'type' | 'data'>
-  | Pick<SessionEvent<'feedback/message-delete'>, 'type' | 'data'>
-type Append = (event?: Mutation) => Promise<void>
-type MissingSession = MessageFeedbackRejected<MessageFeedbackSessionNotFound>
-type ResolvedNote = MessageFeedbackSuccess<string | undefined>
-  | MessageFeedbackRejected<MessageFeedbackNoteBlank | MessageFeedbackNoteTooLarge>
-
-/** Return a caller-owned immutable value, detached from the log. */
-function snapshotItem(item: MessageFeedbackItem): MessageFeedbackItem {
-  return Object.freeze({ ...item })
-}
-
-function success<T>(value: T): MessageFeedbackSuccess<T> {
-  return Object.freeze({ ok: true, value })
-}
-
-function rejected<E extends MessageFeedbackFailure>(error: E): MessageFeedbackRejected<E> {
-  return Object.freeze({ ok: false, error: Object.freeze(error) })
-}
-
-/** Validate persisted payloads before deriving current, Session-owned feedback. */
-function currentItems(sessionId: SessionId, events: readonly SessionEvent[]): MessageFeedbackItem[] {
-  const items = new Map<MessageFeedbackItem['messageId'], MessageFeedbackItem>()
-  for (const event of events) {
-    switch (event.type) {
-      case 'feedback/message-put':
-        putSchema.parse(event.data)
-        if (event.data.sessionId === sessionId) items.set(event.data.item.messageId, event.data.item)
-        break
-      case 'feedback/message-delete':
-        deleteSchema.parse(event.data)
-        if (event.data.sessionId === sessionId) items.delete(event.data.messageId)
-        break
-      default:
-        // Other plugins' events do not change message feedback.
-        break
-    }
-  }
-  return [...items.values()]
 }
 
 /** Session-log service; cold operations never construct a Session or Agent. */
@@ -165,7 +102,7 @@ export class MessageFeedbackService extends TypertRemoteService {
    */
   @Remote('put')
   put(request: MessageFeedbackPutRequest): Promise<MessageFeedbackPutResult> {
-    const note = this.resolveNote(request.note)
+    const note = resolveNote(request.note, this.maxNoteBytes)
     if (!note.ok) return Promise.resolve(note)
     return this.enqueue(request.sessionId, () => this.withSession(request.sessionId, true, async (events, append) => {
       const items = currentItems(request.sessionId, events)
@@ -176,7 +113,7 @@ export class MessageFeedbackService extends TypertRemoteService {
       }
       const existing = items.find(item => item.messageId === request.messageId)
       if (request.ifVersion !== (existing?.version ?? null)) {
-        return rejected(this.versionConflict(existing ?? null))
+        return rejected(versionConflict(existing ?? null))
       }
       if (existing !== undefined && existing.rating === request.rating && existing.note === note.value
         && existing.category === request.category) {
@@ -208,7 +145,7 @@ export class MessageFeedbackService extends TypertRemoteService {
     return this.enqueue(request.sessionId, () => this.withSession(request.sessionId, true, async (events, append) => {
       const existing = currentItems(request.sessionId, events).find(item => item.messageId === request.messageId)
       if (existing !== undefined) {
-        if (request.ifVersion !== existing.version) return rejected(this.versionConflict(existing))
+        if (request.ifVersion !== existing.version) return rejected(versionConflict(existing))
         await append({ type: 'feedback/message-delete', data: { sessionId: request.sessionId, messageId: request.messageId } })
       } else {
         await append()
@@ -281,20 +218,6 @@ export class MessageFeedbackService extends TypertRemoteService {
     } finally {
       await handle.close()
     }
-  }
-
-  private resolveNote(note: string | undefined): ResolvedNote {
-    if (note === undefined) return success(undefined)
-    if (note.trim().length === 0) return rejected({ code: 'note-blank' })
-    const actualBytes = Buffer.byteLength(note, 'utf8')
-    if (actualBytes > this.maxNoteBytes) {
-      return rejected({ code: 'note-too-large', maxBytes: this.maxNoteBytes, actualBytes })
-    }
-    return success(note)
-  }
-
-  private versionConflict(current: MessageFeedbackItem | null): MessageFeedbackVersionConflict {
-    return { code: 'version-conflict', current: current === null ? null : snapshotItem(current) }
   }
 
   /** Serialize complete operations and drain their handles before disposal. */

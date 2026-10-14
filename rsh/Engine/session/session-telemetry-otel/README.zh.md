@@ -27,14 +27,18 @@ kind: "package-reference"
 
 当部署方需要通过 OpenTelemetry 日志导出会话记录时挂载此插件。选择一个模式、给导出器一个端点，并决定是否在 seam 上挂载脱敏规则。
 
+Native Host 在显式 profile 中选择本包的 `./native` 入口；随 CLI 提供的 Native profile 模板不会安装它。Native 入口要求 `launchEnvironment`，默认使用 `FEEDBACK_ONLY`；除非配置或进程级强制关闭已禁用它，否则必须提供 `exporter.url`。非空的进程级 `DSH_TELEMETRY_DISABLED` 值会强制使用 `DISABLED`，不受插件配置覆盖。
+
 ### 模式
 
 | `mode` | 行为 |
 |---|---|
 | `FEEDBACK_ONLY` | 默认值。文本反馈、评分创建或修改、备注修改和撤回释放尚未交接的前缀，截止该权威反馈事件；后续记录等待 |
-| `DISABLED` | 不构造协调器、提供方、处理器或导出器；没有遥测记录离开进程。活跃会话反馈在本地告警；冷会话修改保持静默 |
+| `DISABLED` | 不构造 OpenTelemetry Provider、处理器或导出器；没有遥测记录离开进程。Cordis 会对活跃反馈告警；Native 会对已提交反馈告警 |
 
-程序化 TypeScript 配置使用导出的 `SessionTelemetryMode` 枚举；原始字符串字面量不可赋值。`FULL` 会被拒绝，不是别名。[`sharing` 属性](../session-telemetry/README.zh.md#the-sharing-disclosure)报告 `feedback-only` 或 `disabled`，不代表投递回执。`/feedback` 确认文本只确认记录。
+Native 入口只观察 Native 反馈提供方发出的持久化后 `feedback/committed` 通知。它对活跃 owner 与冷写入提交应用相同的共享模式和导出策略。
+
+Cordis TypeScript 配置使用导出的 `SessionTelemetryMode` 枚举；Native 入口从 profile 配置中解析相同值。`FULL` 会被拒绝，不是别名。两个服务 API 都报告 `feedback-only` 或 `disabled`，不代表投递回执。`/feedback` 确认文本只确认记录。
 
 ### 最小配置
 
@@ -64,6 +68,8 @@ kind: "package-reference"
 
 模型请求、请求头、Session 创建或接纳、恢复，以及插件挂载或 HMR（热模块替换）均不授权捕获。仅凭已存储的反馈不会触发任何操作。SDK 定时刷新和关闭可以完成先前已授权的批次，但绝不捕获新记录。
 
+Native Host 关闭时会停止接纳提交、排空已接纳的反馈捕获，然后关闭 SDK 导出器。Native Web Host 会等待 HTTP 监听器完成已接纳请求，再释放其提供方资源。
+
 ### 哪些数据会离开本机
 
 在上传模式中，记录携带 seam 的 `sessionTelemetry/record` waterfall（瀑布式事件）返回的完整 `event.data`——消息内容、工具参数与结果、系统提示词与工具 schema、todo 文本、压缩（compaction）摘要、反馈文本，以及会话 `cwd`。提供方凭据绝不会出现：适配器的 API key 是构造函数参数而非会话事件，因此它们在结构上就不存在于日志中，也就不存在于遥测中。`DISABLED` 不构造 SDK 流水线，也不把任何捕获内容交给后端。
@@ -91,10 +97,11 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：模式解析、fail-closed 校验、SDK 流水线接线、协调器组装、关闭截止时间 |
+| [`src/native.ts`](src/native.ts) | Cordis-free Host Provider：进程级强制关闭、持久化反馈提交、脱敏副本、已接纳捕获的排空 |
 
 ### 捕获接线
 
-后端使用包含存储历史的按需捕获。只有新的自身 `feedback/record`、`feedback/message-put` 或 `feedback/message-delete` 事件触发活跃会话捕获，并以该事件为上限。冷会话 `feedback/committed` 通知提供已提交的权威快照，不发布存活 Session 或 Agent。同对象交接游标抑制重复捕获。后端不实现 `flush()`；SDK 负责批处理和关闭排空。
+Cordis 入口使用包含存储历史的按需协调器。Native 入口在反馈持久化后消费权威日志前缀，包括不会创建存活 Session 或 Agent 的冷写入。两个入口都在交给 SDK 前，把候选副本送过 `session-telemetry/record` 脱敏 waterfall。Native Provider 使用进程本地的每会话游标；它不会新增持久化 outbox 或投递水位。两个入口都不实现 `flush()`；SDK 负责批处理和导出关闭。
 
 ### 字段映射
 
@@ -136,7 +143,7 @@ kind: "package-reference"
 - **真实 collector 行为属于 SDK 导出器**——身份验证、TLS、限流及其他真实 OTLP 部署行为遵循上游 SDK，不由本包自有兼容层处理。
 - **尽力交接**——新冷快照以及重启后的新反馈提交可能重复前缀；接收方按 Session id、格式版本和事件 seq 去重。没有持久化 outbox、投递水位、自动重试承诺或采集端接受保证。OTel 与需显式启用的 DeepSeek API 路径可能重叠。撤回导出删除事件，不是远端擦除。
 
-- **后端可用性**——本插件禁用或卸载期间提交的反馈会记录在本地，但恢复插件不会自动重放。捕获要求订阅方保持挂载直到观察到提交；在冷写入尚未完成时卸载，可能错过其 flush 后通知。
+- **后端可用性**——本插件禁用或卸载期间提交的反馈会记录在本地，但恢复插件不会自动重放。提交必须到达已挂载的 Provider 才能授权捕获；仅有已存储反馈不会触发导出。
 
 <a id="dev-note"></a>
 ### 开发备注

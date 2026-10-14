@@ -1594,7 +1594,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/feedback/message-feedback/src/index.ts:40`](../Modules/Official/feedback/message-feedback/src/index.ts)
+Source: [`rsh/Modules/Official/feedback/message-feedback/src/index.ts:32`](../Modules/Official/feedback/message-feedback/src/index.ts)
 
 <a id="deepseek-aidsh-permission-presets"></a>
 

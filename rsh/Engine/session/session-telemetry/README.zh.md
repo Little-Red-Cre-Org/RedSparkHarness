@@ -31,6 +31,8 @@ kind: "package-library"
 
 只加载一个后端插件；它把捕获协调器与投递流水线注册为 `ctx.sessionTelemetry`。重复加载会抛出异常。必需的 [`sharing` 成员](#the-sharing-disclosure) 报告部署模式，不代表会话准入或投递。只有在未挂载任何遥测服务时，消费方才可报告「未配置」。`/feedback` 命令确认记录，不读取此策略。
 
+Native Host 使用独立的 `./native-definition` 导出获取 `NativeSessionTelemetryOperations` 与 `session-telemetry/record` 事件。被选中的后端通过 Native runtime 提供 `sessionTelemetry` 服务键，而不是 Cordis context。`./records` 导出纯 ledger 投影，供 Native 后端复用；该路径不组装 Cordis 协调器或其 handoff 游标。
+
 ### 后端约定
 
 后端实现三个成员：`emit(record)` 必须是非阻塞入队，因为它会在会话事件路径上同步执行；可选的 `flush()` 是轮次结束后的即发即忘提示，多数后端为了遵循 SDK 自身的批处理计划而省略它；`shutdown()` 排空已入队记录，并在 SDK 停止后结束，dispose（资源释放）会等待它。实现 `flush()` 的后端必须安排并发 flush 与最终 `shutdown()` 排空的先后顺序。
@@ -69,8 +71,11 @@ seam 建立在一个边界之上：harness 的职责止于 `emit()`。完整事�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition：`SessionTelemetryBackend`/`SessionTelemetrySink` 约定、记录词汇、`session-telemetry/record` waterfall 声明 |
+| [`src/index.ts`](src/index.ts) | Cordis Service Definition 与 `session-telemetry/record` waterfall 声明 |
+| [`src/types.ts`](src/types.ts) | 共享记录词汇与后端约定 |
 | [`src/coordinator.ts`](src/coordinator.ts) | 捕获：live 监听器、生命周期本地 on-demand 回放、脱敏、handoff 游标、异常隔离 |
+| [`src/native-definition.ts`](src/native-definition.ts) | Native 服务与记录脱敏事件 Definition |
+| [`src/records.ts`](src/records.ts) | 与 Native 后端共享的纯 ledger 投影 |
 
 ### 捕获流程
 

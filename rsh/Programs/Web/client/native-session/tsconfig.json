@@ -34,6 +34,12 @@
     },
     {
       "path": "../../../../Engine/workspace/workspace-definition"
+    },
+    {
+      "path": "../../../../Modules/Official/feedback/command-feedback"
+    },
+    {
+      "path": "../../../../Modules/Official/feedback/message-feedback"
     }
   ]
 }

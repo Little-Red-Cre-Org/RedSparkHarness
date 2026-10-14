@@ -24,6 +24,11 @@ import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanMod
 export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import { FEEDBACK_CATEGORIES, type SessionFeedbackRecordRequest, type SessionFeedbackRecordResult } from '@deepseek-ai/dsh-command-feedback/types'
+import type {
+  MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult, MessageFeedbackListRequest,
+  MessageFeedbackItem, MessageFeedbackListResult, MessageFeedbackPutRequest, MessageFeedbackPutResult,
+} from '@deepseek-ai/dsh-message-feedback/types'
 import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
 import { createNativeWorkspaceClients } from './workspaces.ts'
@@ -353,6 +358,30 @@ export type NativeAccountBalance =
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
+  /** Record human Session feedback through the Host's durable log writer.
+   * @param request - Session id, optional remark and category.
+   * @param signal - caller cancellation before the append is admitted.
+   * @returns durable acknowledgement or a missing-live-Session result.
+   */
+  sessionFeedbackRecord(request: SessionFeedbackRecordRequest, signal?: AbortSignal): Promise<SessionFeedbackRecordResult>
+  /** List feedback for a persisted Session.
+   * @param request - target Session.
+   * @param signal - caller cancellation.
+   * @returns current immutable message ratings or a missing-Session result.
+   */
+  messageFeedbackList(request: MessageFeedbackListRequest, signal?: AbortSignal): Promise<MessageFeedbackListResult>
+  /** Create or replace feedback for one assistant message.
+   * @param request - target, desired value and observed item version.
+   * @param signal - caller cancellation before the mutation is admitted.
+   * @returns durable item or an explicit business failure.
+   */
+  messageFeedbackPut(request: MessageFeedbackPutRequest, signal?: AbortSignal): Promise<MessageFeedbackPutResult>
+  /** Delete message feedback after observing its current version.
+   * @param request - Session, message and observed version.
+   * @param signal - caller cancellation before the mutation is admitted.
+   * @returns durable absence or an explicit business failure.
+   */
+  messageFeedbackDelete(request: MessageFeedbackDeleteRequest, signal?: AbortSignal): Promise<MessageFeedbackDeleteResult>
   /** List native preset folders and installed standing compositions.
    * @param signal - caller cancellation.
    * @returns current preset catalog; empty with a null default when no Registry is installed.
@@ -962,8 +991,48 @@ const workspaceFileWatchFrameSchema = z.discriminatedUnion('kind', [
     z.strictObject({ absolutePath: z.string().min(1), absent: z.literal(true) }),
   ]) }),
 ]) as z.ZodType<WorkspaceFileWatchFrame>
+const messageFeedbackItemSchema = z.strictObject({
+  messageId: z.string().min(1), rating: z.enum(['positive', 'negative']), note: z.string().optional(),
+  category: z.enum(FEEDBACK_CATEGORIES).optional(), version: z.uuid(),
+  createdAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+}).refine(item => item.updatedAt >= item.createdAt) as unknown as z.ZodType<MessageFeedbackItem>
+const feedbackSessionMissingSchema = z.strictObject({ code: z.literal('session-not-found'), sessionId: z.string().min(1) })
+const feedbackConflictSchema = z.strictObject({ code: z.literal('version-conflict'), current: messageFeedbackItemSchema.nullable() })
+const feedbackTargetMissingSchema = z.strictObject({ code: z.literal('target-not-found'), sessionId: z.string().min(1), messageId: z.string().min(1) })
+const feedbackMutationErrorSchema = z.discriminatedUnion('code', [feedbackSessionMissingSchema,
+  feedbackConflictSchema, feedbackTargetMissingSchema, z.strictObject({ code: z.literal('note-blank') }),
+  z.strictObject({ code: z.literal('note-too-large'), maxBytes: z.number().int().positive(), actualBytes: z.number().int().positive() })])
+
+function feedbackReply<T>(
+  value: unknown,
+  success: z.ZodType<T>,
+): { readonly ok: true; readonly value: T } | {
+  readonly ok: false
+  readonly error: z.infer<typeof feedbackMutationErrorSchema>
+} {
+  const data = fields(value)
+  if (data.ok === true) return z.strictObject({ ok: z.literal(true), value: success }).parse(value)
+  return z.strictObject({ ok: z.literal(false), error: feedbackMutationErrorSchema }).parse(value)
+}
 
 function decodeReply(endpoint: string, value: unknown): unknown {
+  if (endpoint === 'feedback/session-record') {
+    const reply = z.union([
+      z.strictObject({ ok: z.literal(true), value: z.strictObject({ recorded: z.literal(true) }) }),
+      z.strictObject({ ok: z.literal(false), error: feedbackSessionMissingSchema }),
+    ]).parse(value)
+    return reply
+  }
+  if (endpoint === 'feedback/message-list') {
+    return feedbackReply(value, z.strictObject({ items: z.array(messageFeedbackItemSchema) }))
+  }
+  if (endpoint === 'feedback/message-put') {
+    return feedbackReply(value, messageFeedbackItemSchema)
+  }
+  if (endpoint === 'feedback/message-delete') {
+    return feedbackReply(value, z.strictObject({ absent: z.literal(true) }))
+  }
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
   if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
   if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
@@ -1301,6 +1370,10 @@ export function createNativeSessionClient(
     }
   }
   return {
+    sessionFeedbackRecord: (request, signal) => call<SessionFeedbackRecordResult>('feedback/session-record', request, signal),
+    messageFeedbackList: (request, signal) => call<MessageFeedbackListResult>('feedback/message-list', request, signal),
+    messageFeedbackPut: (request, signal) => call<MessageFeedbackPutResult>('feedback/message-put', request, signal),
+    messageFeedbackDelete: (request, signal) => call<MessageFeedbackDeleteResult>('feedback/message-delete', request, signal),
     agentPresetsList: signal => call('agent-presets/list', {}, signal),
     agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
     async agentPresetCopy(from, id, name, signal) {
