@@ -57,6 +57,9 @@ const ASSET_GLOBS = [
   'node_modules/**/*.wasm',
   'node_modules/**/*.yaml',
   'node_modules/**/*.yml',
+  // Keep platform-only package payloads visible to profile fallback classification.
+  'node_modules/**/*.exe',
+  'node_modules/**/bin/*',
   // web-app builds this path dynamically, so pkg cannot discover the static frontend.
   'node_modules/@deepseek-ai/dsh-web-frontend/dist/**/*',
   // skill-badge resolves both Markdown and image resources through import.meta.url.
