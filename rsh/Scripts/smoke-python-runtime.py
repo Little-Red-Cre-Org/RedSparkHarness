@@ -102,6 +102,7 @@ LEGACY_CUSTOM_DISABLED_ROWS = (
     "goal-round-driver",
     "command-goal",
     "plan-mode",
+    "archify",
     "skill",
     "skill-filesystem",
     "tool-fs",
