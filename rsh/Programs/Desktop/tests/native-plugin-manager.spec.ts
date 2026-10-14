@@ -50,8 +50,9 @@ function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.res
   } }
   const legacy = { list: vi.fn(async () => [{ name: 'legacy-plugin', version: '1.0.0', enabled: true }]),
     add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), update: vi.fn(), disableAll: vi.fn() }
+  const getLocale = vi.fn(async () => resolveDesktopLocale(locale))
   Object.defineProperty(dom.window, 'dshDesktop', { value: {
-    locale: async () => resolveDesktopLocale(locale), backend, plugins: { ...legacy, native },
+    locale: getLocale, backend, plugins: { ...legacy, native },
   } })
   const element = (selector: string): HTMLElement => {
     const result = dom.window.document.querySelector<HTMLElement>(selector)
@@ -66,7 +67,7 @@ function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.res
   const start = (): void => { runInContext(readFileSync(new URL('../renderer/plugin-manager.js', import.meta.url), 'utf8'), dom.getInternalVMContext()) }
   const settled = async () => { await expect.poll(() => element('main').getAttribute('aria-busy')).toBe('false') }
   const publish = (state: DesktopBackendState) => { for (const listener of listeners) listener(state) }
-  return { dom, native, backend, legacy, element, button, input, select, textarea, form, start, settled, publish, unsubscribe }
+  return { dom, native, backend, legacy, getLocale, element, button, input, select, textarea, form, start, settled, publish, unsubscribe }
 }
 
 it('groups actual package versions and instances, retains capabilities, and lists empty Host scopes', async () => {
@@ -231,4 +232,18 @@ it('keeps subscribed state over a late status response and detaches once on page
   expect(p.native.list).toHaveBeenCalledTimes(reads)
   p.publish({ phase: 'ready' })
   expect(p.element('#backend-state').textContent).toBe('Backend: error')
+})
+
+it('does not subscribe or read inventory when locale arrives after pagehide', async () => {
+  const p = page()
+  const locale = Promise.withResolvers<ReturnType<typeof resolveDesktopLocale>>()
+  p.getLocale.mockImplementationOnce(() => locale.promise)
+  p.start()
+  p.dom.window.dispatchEvent(new p.dom.window.Event('pagehide'))
+  locale.resolve(resolveDesktopLocale('en'))
+  await locale.promise
+  expect(p.native.list).not.toHaveBeenCalled()
+  expect(p.backend.status).not.toHaveBeenCalled()
+  expect(p.unsubscribe).not.toHaveBeenCalled()
+  expect(p.element('#title').textContent).toBe('')
 })

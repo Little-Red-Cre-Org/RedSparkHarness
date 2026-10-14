@@ -2,7 +2,11 @@
 const api = window.dshDesktop
 
 async function main() {
+  let closed = false
+  let unsubscribe
+  window.addEventListener('pagehide', () => { closed = true; unsubscribe?.() }, { once: true })
   const locale = await api.locale()
+  if (closed) return
   const messages = locale.messages
   const message = (key, values = {}) => messages[key].replaceAll(/\{([^{}]+)\}/gu, (placeholder, name) => values[name] ?? placeholder)
   document.documentElement.lang = locale.id
@@ -29,7 +33,6 @@ async function main() {
   let nativeMode = nativeApi !== undefined
   let inventory
   let busy = false
-  let closed = false
   let backendChanges = 0
   let backendReads = 0
   const disableAll = document.querySelector('#disable-all')
@@ -78,12 +81,11 @@ async function main() {
     configureMode()
   }
 
-  const unsubscribe = api.backend.subscribe(backend => {
+  unsubscribe = api.backend.subscribe(backend => {
     if (closed) return
     backendChanges += 1
     renderBackend(backend)
   })
-  window.addEventListener('pagehide', () => { closed = true; unsubscribe() }, { once: true })
 
   // A query issued before a subscription event cannot replace that newer state.
   async function readBackend() {
