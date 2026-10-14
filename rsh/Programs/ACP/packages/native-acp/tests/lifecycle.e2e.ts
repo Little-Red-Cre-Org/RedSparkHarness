@@ -32,6 +32,36 @@ const resumedInstructionPrompt = 'ACP_INSTRUCTIONS_COLD_RESTORE_3af85d'
 const workspaceInstruction = 'ACP_WORKSPACE_INSTRUCTIONS_3af85d'
 const globalInstruction = 'ACP_GLOBAL_INSTRUCTIONS_3af85d'
 
+interface McpFixtureStart {
+  event: 'start'
+  pid: number
+  nonce: string
+}
+
+async function readMcpFixtureStarts(path: string): Promise<McpFixtureStart[]> {
+  const lines = (await readFile(path, 'utf8')).split(/\r?\n/).filter(line => line.length > 0)
+  return lines.map((line) => {
+    const value: unknown = JSON.parse(line)
+    if (typeof value !== 'object' || value === null
+      || !('event' in value) || value.event !== 'start'
+      || !('pid' in value) || typeof value.pid !== 'number' || !Number.isSafeInteger(value.pid) || value.pid < 1
+      || !('nonce' in value) || typeof value.nonce !== 'string' || value.nonce.length === 0) {
+      throw new Error(`invalid MCP fixture start record: ${line}`)
+    }
+    return { event: value.event, pid: value.pid, nonce: value.nonce }
+  })
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ESRCH') return false
+    throw error
+  }
+}
+
 function modelRequestText(value: unknown): string {
   if (typeof value !== 'object' || value === null || !('messages' in value) || !Array.isArray(value.messages)) return ''
   return value.messages.flatMap((message: unknown) => {
@@ -453,6 +483,8 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
   let permissionSettled = Promise.withResolvers<undefined>()
   let holdPermission = false
   const permissionRequests: Record<string, unknown>[] = []
+  const mcpLifecycleFile = join(home, 'mcp-fixture-starts.jsonl')
+  await writeFile(mcpLifecycleFile, '')
   let lastUpdate: unknown
   const sessionUpdates: unknown[] = []
   const requests: unknown[] = []
@@ -588,13 +620,19 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await permissionSettled.promise
     await expect(readFile(join(home, 'permission.txt'))).rejects.toHaveProperty('code', 'ENOENT')
     const stdioServers = [{ name: 'fixture', command: process.execPath,
-      args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')], env: [] }]
+      args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')],
+      env: [{ name: 'MCP_FIXTURE_LIFECYCLE_FILE', value: mcpLifecycleFile }] }]
     await expect(transport.request('session/new', { cwd: home, mcpServers: [{ ...stdioServers[0],
       command: join(home, 'missing-mcp-server') }] }, requestSignal())).rejects.toMatchObject({
       name: 'JsonRpcResponseError', code: -32603, message: 'Internal error',
       data: { details: 'mcp-client(fixture): initial connection or tool synchronization failed' },
     })
     const stdioSession = await transport.request('session/new', { cwd: home, mcpServers: stdioServers }, requestSignal()) as { sessionId: string }
+    await vi.waitFor(async () => expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(1),
+      { timeout: 5_000, interval: 10 })
+    const [firstMcpStart] = await readMcpFixtureStarts(mcpLifecycleFile)
+    if (firstMcpStart === undefined) throw new Error('ACP MCP server did not publish its PID')
+    expect(isProcessAlive(firstMcpStart.pid)).toBe(true)
     const httpSession = await transport.request('session/new', { cwd: home, mcpServers: [{ type: 'http', name: 'fixture',
       url: http.url, headers: [{ name: 'Authorization', value: 'Bearer native-acp-test' }] }] }, requestSignal()) as { sessionId: string }
     const firstPage = await transport.request('session/list', { cwd: home }, requestSignal()) as {
@@ -646,13 +684,21 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       && block.content.type === 'image' && block.content.mimeType === 'image/png')
     expect(hasImagePayload).toBe(true)
     await transport.request('session/close', { sessionId: stdioSession.sessionId }, requestSignal())
+    expect(isProcessAlive(firstMcpStart.pid)).toBe(false)
     mcpCall = { name: 'mcp__fixture__ping', arguments: '{}' }
     await mcpPrompt(httpSession.sessionId, 'mcp__fixture__ping', 'mcp__fixture__add')
     expect(http.authorization).toContain('Bearer native-acp-test')
     await transport.request('session/resume', { sessionId: stdioSession.sessionId, cwd: home, mcpServers: stdioServers }, requestSignal())
+    await vi.waitFor(async () => expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(2),
+      { timeout: 5_000, interval: 10 })
+    const [, resumedMcpStart] = await readMcpFixtureStarts(mcpLifecycleFile)
+    if (resumedMcpStart === undefined) throw new Error('resumed ACP MCP server did not publish its PID')
+    expect(resumedMcpStart.nonce).not.toBe(firstMcpStart.nonce)
+    expect(isProcessAlive(resumedMcpStart.pid)).toBe(true)
     mcpCall = { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
     await mcpPrompt(stdioSession.sessionId, 'mcp__fixture__add', 'mcp__fixture__ping')
     await transport.request('session/close', { sessionId: stdioSession.sessionId }, requestSignal())
+    expect(isProcessAlive(resumedMcpStart.pid)).toBe(false)
     await transport.request('session/close', { sessionId: httpSession.sessionId }, requestSignal())
     mcpCall = undefined
     const instructionsSession = await transport.request('session/new', { cwd: instructionWorkspace, mcpServers: [] }, requestSignal()) as { sessionId: string }
@@ -770,18 +816,22 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       expect(text.split(instructionText)).toHaveLength(2)
     }
   } catch (error: unknown) {
-    child.kill('SIGKILL')
-    const exit = await child
     const message = error instanceof Error ? error.message : String(error)
+    permissionRelease.resolve(undefined)
+    child.stdin.end()
+    const exit = await child
     throw new Error(`${message}\nACP launcher stderr:\n${exit.stderr}`, { cause: error })
   } finally {
     permissionRelease.resolve(undefined)
     transport.close()
-    child.kill('SIGKILL')
+    child.stdin.end()
     await child
     await http.close()
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => { resolve() }))
+    for (const start of await readMcpFixtureStarts(mcpLifecycleFile)) {
+      await vi.waitFor(() => expect(isProcessAlive(start.pid)).toBe(false), { timeout: 5_000, interval: 10 })
+    }
     await rm(home, { recursive: true, force: true })
   }
 })

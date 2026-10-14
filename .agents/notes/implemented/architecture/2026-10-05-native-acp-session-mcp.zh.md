@@ -23,3 +23,5 @@ Session 关闭或 Program EOF 会停止准入，并取消选定执行器与连�
 ## 影响
 
 显式原生 ACP profile 安装既有工具 Provider。同级 Session 可复用服务名，并独立释放连接。兼容默认值和历史 Session 代际不变。不增加 MCP 资源、提示词或不支持的传输类型。
+
+生命周期检查会在 Session 关闭和 MCP client 释放时探测 MCP fixture 子进程，并要求崩溃的子进程退出后才验证重连。ACP 用例还会确认 stdio Session 关闭后，同级 HTTP Session 仍可用。
