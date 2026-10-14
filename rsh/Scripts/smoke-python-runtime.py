@@ -1788,12 +1788,105 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
             request_timeout_seconds=60,
         ) as harness:
             text_result = harness.run("reply with the smoke text", session_id="custom-smoke")
+            assert text_result.final_response == EXPECTED_TEXT, text_result.final_response
             code_result = harness.run(CODE_PROMPT, session_id="custom-smoke")
+            assert code_result.final_response == CODE_WORKER_TEXT, (
+                "custom SDK code-worker response mismatch: " + sdk_run_diagnostic(code_result)
+            )
             workflow_result = harness.run(WORKFLOW_PROMPT, session_id="custom-smoke")
-        assert text_result.final_response == EXPECTED_TEXT, text_result.final_response
-        assert code_result.final_response == CODE_WORKER_TEXT, code_result.final_response
-        assert workflow_result.final_response == WORKFLOW_WORKER_TEXT, workflow_result.final_response
+            assert workflow_result.final_response == WORKFLOW_WORKER_TEXT, workflow_result.final_response
         assert_session_log(sessions, root, EXPECTED_TEXT, CODE_WORKER_TEXT, WORKFLOW_WORKER_TEXT)
+
+
+def sdk_run_diagnostic(result: "RunResult") -> str:
+    """Summarize a failed smoke turn without logging model-provided arguments or content."""
+    def safe_text(value: object) -> str | None:
+        if not isinstance(value, str):
+            return None
+        text = value
+        for fixture_input in (CODE_PROMPT, "return 6 * 7", "Compute the smoke value"):
+            text = text.replace(fixture_input, "<smoke input>")
+        text = re.split(r"\nCaptured output:\n", text, maxsplit=1)[0]
+        text = re.sub(
+            r"(?i)(Bearer\s+|(?:api[_ -]?key|authorization|token|secret|password)\s*[:=]\s*)\S+",
+            r"\1<redacted>",
+            text,
+        )
+        text = re.sub(r"(?i)\bsk-[a-z0-9_-]+\b", "<redacted>", text)
+        return text[:1000]
+
+    def failure(value: object) -> dict[str, object] | None:
+        if not isinstance(value, dict):
+            return None
+        detail = {key: value[key] for key in ("name", "code", "status")
+                  if isinstance(value.get(key), (str, int))}
+        message = safe_text(value.get("message"))
+        if message is not None:
+            detail["message"] = message
+        return detail
+
+    calls: list[dict[str, object]] = []
+    results: list[dict[str, object]] = []
+    attempts: list[dict[str, object]] = []
+    endings: list[dict[str, object]] = []
+    for event in result.events:
+        kind = event.get("type")
+        data = event.get("data")
+        if not isinstance(data, dict):
+            continue
+        if kind == "tool/call":
+            calls.append({"seq": event.get("seq"), "call_id": data.get("callId"), "name": data.get("name")})
+        elif kind == "assistant/attempt":
+            stream = data.get("stream")
+            for record in stream if isinstance(stream, list) else []:
+                chunk = record.get("chunk") if isinstance(record, dict) else None
+                reason = chunk.get("reason") if isinstance(chunk, dict) and chunk.get("type") == "finish" else None
+                if isinstance(reason, dict):
+                    item = {"seq": event.get("seq"), "kind": reason.get("kind")}
+                    detail = failure(reason.get("failure"))
+                    if detail is not None:
+                        item["failure"] = detail
+                    attempts.append(item)
+        elif kind == "tool/result":
+            message = data.get("message")
+            blocks = message.get("content") if isinstance(message, dict) else None
+            block = next((part for part in blocks if isinstance(part, dict)
+                          and part.get("type") == "tool-result"), None) if isinstance(blocks, list) else None
+            is_error = block.get("isError") if isinstance(block, dict) else None
+            item: dict[str, object] = {"seq": event.get("seq"), "is_error": is_error}
+            identity = failure(data.get("error"))
+            if identity is not None:
+                item["error"] = identity
+            content = block.get("content") if isinstance(block, dict) else None
+            if is_error is True and isinstance(content, list):
+                detail = "\n".join(
+                    text for part in content
+                    if isinstance(part, dict) and part.get("type") == "text"
+                    and (text := safe_text(part.get("text"))) is not None
+                )
+                if detail:
+                    item["detail"] = detail[:1000]
+            results.append(item)
+        elif kind == "turn/end":
+            reason = data.get("reason")
+            if isinstance(reason, dict):
+                item = {"seq": event.get("seq"), "kind": reason.get("kind")}
+                detail = failure(reason.get("error"))
+                if detail is not None:
+                    item["error"] = detail
+                endings.append(item)
+    summary = {
+        "final_response": (
+            None if (response := safe_text(result.final_response)) is None else repr(response)
+        ),
+        "finish_reason": result.finish_reason,
+        "events": [{"seq": event.get("seq"), "type": event.get("type")} for event in result.events],
+        "tool_calls": calls,
+        "tool_results": results,
+        "assistant_attempts": attempts,
+        "turn_endings": endings,
+    }
+    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
 
 
 def smoke_sdk_minimal(
