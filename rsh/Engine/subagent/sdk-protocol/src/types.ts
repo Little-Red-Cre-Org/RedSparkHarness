@@ -9,6 +9,7 @@
  */
 
 import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import type { NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent-protocol'
 
@@ -46,9 +47,22 @@ export interface InitializeResult {
 export interface SessionPromptParams {
   /** The SDK-side session id; an unknown id lazily creates the agent+session pair. */
   sessionId: string
-  /** The prompt content blocks, sent verbatim as the user message. */
+  /** Ordered blocks accepted by the selected profile; Native file receipts resolve during admission. */
   contentBlocks: SdkPromptContentBlock[]
 }
+
+/** Parameters for storing one file before it is included in a prompt. */
+export interface SessionUploadFileParams {
+  /** Stable SDK session identity that will consume the receipt. */
+  sessionId: string
+  /** Canonical base64-encoded file bytes. */
+  data: string
+  /** Optional display filename; never interpreted as a path. */
+  name?: string
+}
+
+/** Native-only process-local receipt returned by `session/upload-file`. */
+export type SessionUploadFileResult = NativeStagedFileReceipt
 
 /** Parameters for cancelling only the currently admitted native Session turn. */
 export interface SessionCancelParams {
@@ -95,15 +109,40 @@ export interface SdkEncodedImageBlock {
   mimeType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
 }
 
-/** SDK prompt input: ordinary durable blocks plus inline images awaiting admission. */
-export type SdkPromptContentBlock = ContentBlock | SdkEncodedImageBlock
+/** One staged file inserted into an ordered SDK prompt or steer input. */
+export interface SdkFileReceiptBlock {
+  type: 'file'
+  /** Receipt returned for an upload to this SDK session. */
+  receiptId: NativeStagedFileReceiptId
+}
+
+/** A text block accepted by the SDK prompt APIs. */
+export interface SdkTextBlock {
+  type: 'text'
+  /** Text sent to the selected runtime. */
+  text: string
+}
+
+/** Prompt blocks accepted by the legacy Cordis SDK server. */
+export type LegacySdkPromptContentBlock = ContentBlock | SdkEncodedImageBlock
+
+/** Ordered Native SDK prompt input: text, encoded images, and staged file receipts. */
+export type NativeSdkPromptContentBlock =
+  | SdkTextBlock
+  | SdkEncodedImageBlock
+  | SdkFileReceiptBlock
+
+/** Shared prompt wire vocabulary; legacy runtimes reject Native-only file receipts. */
+export type SdkPromptContentBlock =
+  | LegacySdkPromptContentBlock
+  | SdkFileReceiptBlock
 
 /** Ordered input for the active native SDK root's next step. */
 export interface SessionSteerParams {
   /** Currently admitted Session owned by this SDK runtime. */
   sessionId: string
-  /** Text and encoded image blocks admitted through the same attachment policy as prompts. */
-  contentBlocks: SdkPromptContentBlock[]
+  /** Native text, encoded image, and staged-file inputs admitted through the prompt policy. */
+  contentBlocks: NativeSdkPromptContentBlock[]
 }
 
 /** Durable receipt for a next-step input; not a model result or interruption receipt. */
@@ -204,6 +243,7 @@ export interface HarnessSdkIncomingRequestMap {
 /** Client-to-server request methods with their param and result shapes. */
 export interface HarnessSdkRequestMap {
   'initialize': { params: InitializeParams; result: InitializeResult }
+  'session/upload-file': { params: SessionUploadFileParams; result: SessionUploadFileResult }
   'session/cancel': { params: SessionCancelParams; result: SessionCancelResult }
   'session/fork': { params: SessionForkParams; result: SessionForkResult }
   'session/steer': { params: SessionSteerParams; result: SessionSteerResult }

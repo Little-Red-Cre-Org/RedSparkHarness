@@ -7,7 +7,8 @@ from typing import Callable
 
 from .client import HarnessClient, HarnessConfig
 from .errors import SdkProtocolError
-from .models import InitializeResponse, JsonObject, Notification
+from .models import (InitializeResponse, JsonObject, NativeSdkPromptContentBlock, NativeStagedFileReceipt,
+                     Notification, SdkPromptContentBlock)
 
 
 @dataclass(slots=True)
@@ -136,7 +137,7 @@ class DeepSeekHarness:
 
     def run(
         self,
-        input: str | list[JsonObject],
+        input: str | list[SdkPromptContentBlock],
         *,
         session_id: str | None = None,
         on_notification: Callable[[Notification], None] | None = None,
@@ -149,13 +150,19 @@ class Session:
         self.harness = harness
         self.id = session_id
 
-    def steer(self, input: str | list[JsonObject]) -> str:
+    def steer(self, input: str | list[NativeSdkPromptContentBlock]) -> str:
         """Queue input for this admitted native SDK root's next step and wake it after an interruption.
 
         Returns the durable message id; idle Sessions and unsupported profiles reject.
         """
         self.harness.start()
-        return self.harness.client.session_steer(self.id, normalize_input(input))
+        content_blocks = [{"type": "text", "text": input}] if isinstance(input, str) else input
+        return self.harness.client.session_steer(self.id, content_blocks)
+
+    def upload_file(self, data: bytes, name: str | None = None) -> NativeStagedFileReceipt:
+        """Store file bytes and return a receipt for a later Native SDK prompt or steer."""
+        self.harness.start()
+        return self.harness.client.session_upload_file(self.id, data, name)
 
     def cancel(self) -> bool:
         """Cancel this Session's admitted native-sdk turn and await owned cleanup.
@@ -173,7 +180,7 @@ class Session:
 
     def run(
         self,
-        input: str | list[JsonObject],
+        input: str | list[SdkPromptContentBlock],
         *,
         on_notification: Callable[[Notification], None] | None = None,
     ) -> RunResult:
@@ -237,7 +244,7 @@ def _is_inbox_receipt(notification: Notification, session_id: str, message_id: s
     )
 
 
-def normalize_input(input: str | list[JsonObject]) -> list[JsonObject]:
+def normalize_input(input: str | list[SdkPromptContentBlock]) -> list[SdkPromptContentBlock]:
     if isinstance(input, str):
         return [{"type": "text", "text": input}]
     return input

@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
@@ -22,7 +22,7 @@ import {
   type NativeSubagentOperations,
 } from '@deepseek-ai/dsh-native-subagent/native'
 import { AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
+import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import { plugin as sessionExecutionPlugin } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -49,6 +49,7 @@ import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId,
   NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeToolDelegationContext, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
@@ -92,6 +93,7 @@ async function fixture(
     sandboxPolicy?: NativeSandboxPolicy
     modelSelection?: NativeModelSelectionOperations
     attachments?: AttachmentOperations
+    parentAttachments?: AttachmentOperations
     externalSubagentDriver?: NativeExternalSubagentDriver
   } = {},
 ) {
@@ -100,13 +102,15 @@ async function fixture(
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
   await import('node:fs/promises').then(fs => fs.mkdir(workspace, { recursive: true }))
-  const scope = new NativeScope()
+  const parentScope = options.parentAttachments === undefined ? undefined : new NativeScope()
+  const scope = new NativeScope(parentScope)
   const adapter = new MockAdapter(script)
-  let app: NativeApplication | undefined
+  let app: NativeHeadlessApplication | undefined
   let filesystem: LocalFileSystemBackend | undefined
   let agents: NativeAgentRegistry | undefined
   let tools: NativeToolRegistry | undefined
   let rootExecution: NativeRootExecutionOperations | undefined
+  let persistence: NativeSessionPersistenceOperations | undefined
   let sessionExecution: NativeSessionExecutionOperations | undefined
   let subagents: NativeSubagentOperations | undefined
   let approval: NativeApprovalServiceDefinition | undefined
@@ -129,6 +133,10 @@ async function fixture(
     apiVersion: 1, name: 'test-attachments', targets: ['host'], requires: [], provides: ['attachments'],
     resolve: () => (context) => { context.provide('attachments', options.attachments!) },
   }
+  const parentAttachmentProvider: NativePlugin | undefined = options.parentAttachments === undefined ? undefined : {
+    apiVersion: 1, name: 'test-parent-attachments', targets: ['host'], requires: [], provides: ['attachments'],
+    resolve: () => (context) => { context.provide('attachments', options.parentAttachments!) },
+  }
   const externalSubagentDriver = options.externalSubagentDriver
   const externalSubagentDriverProvider: NativePlugin | undefined = externalSubagentDriver === undefined ? undefined : {
     apiVersion: 1, name: 'test-external-subagent-driver', targets: ['host'], requires: [], provides: ['externalSubagentDriver'],
@@ -140,15 +148,16 @@ async function fixture(
     resolve: () => (context) => { context.provide('shell', selectedShell) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution'], optional: ['approval', 'sessionExecution', 'subagents'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'], optional: ['approval', 'sessionExecution', 'subagents'], provides: [],
     resolve: () => (context) => {
-      app = context.require('application')
+      app = context.require('application') as NativeHeadlessApplication
       const provided = context.require('fs')
       if (!(provided instanceof LocalFileSystemBackend)) throw new Error('missing local filesystem')
       filesystem = provided
       agents = context.require('agents')
       tools = context.require('tools')
       rootExecution = context.require('rootExecution')
+      persistence = context.require('sessionPersistence')
       sessionExecution = context.optional('sessionExecution')
       subagents = context.optional('subagents')
       approval = context.optional('approval')
@@ -157,6 +166,10 @@ async function fixture(
   let host: NativeHost | undefined
   try {
     host = new NativeHost(resolveInstallation([
+      ...(parentScope === undefined ? [] : [{ plugin: localFilesystemPlugin, scope: parentScope, config: { cwd: directory } }]),
+      ...(parentScope === undefined || parentAttachmentProvider === undefined ? [] : [
+        { plugin: parentAttachmentProvider, scope: parentScope, config: undefined },
+      ]),
       { plugin: capture, scope, config: undefined },
       ...(modelSelectionProvider === undefined ? [] : [{ plugin: modelSelectionProvider, scope, config: undefined }]),
       ...(attachmentProvider === undefined ? [] : [{ plugin: attachmentProvider, scope, config: undefined }]),
@@ -192,7 +205,8 @@ async function fixture(
       ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
     ], 'host'))
     await host.start()
-    if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined || rootExecution === undefined) {
+    if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined
+      || rootExecution === undefined || persistence === undefined) {
       throw new Error('missing native application dependencies')
     }
   } catch (error: unknown) {
@@ -210,7 +224,7 @@ async function fixture(
   }
   if (host === undefined) throw new Error('native-headless fixture has no Host')
   return {
-    host, scope, app, filesystem, agents, tools, rootExecution, sessionExecution, subagents, approval,
+    host, scope, app, filesystem, agents, tools, rootExecution, persistence, sessionExecution, subagents, approval,
     adapter, directory, workspace, sessions,
   }
 }
@@ -261,6 +275,208 @@ function imageAttachmentOperations(readImage: AttachmentOperations['readImage'])
     isAttachmentError: () => false,
   }
 }
+
+it('streams current Session attachment reads while denying other outside reads and writes', async () => {
+  const attachmentDirectory = await mkdtemp(join(tmpdir(), 'rsh-native-file-read-'))
+  const attachmentPath = join(attachmentDirectory, 'notes.txt')
+  const outsidePath = join(attachmentDirectory, 'private.txt')
+  const bytes = new TextEncoder().encode('first line\nsecond 📎\nthird line')
+  await writeFile(attachmentPath, bytes)
+  await writeFile(outsidePath, 'private')
+  const ref: FileAttachmentRef = { attachmentId: AttachmentId('file-read-stream'), name: 'notes.txt', bytes: bytes.length }
+  const decoyRef: FileAttachmentRef = { ...ref, attachmentId: AttachmentId('parent-decoy-file') }
+  let selectedSaveCount = 0
+  let decoySaveCount = 0
+  let removeCapturedRead: (() => Promise<void>) | undefined
+  let streamFinished = false
+  let readCount = 0
+  const attachments: AttachmentOperations = {
+    ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
+    async saveFileStream({ data }) {
+      const chunks: Uint8Array[] = []
+      for await (const chunk of data) chunks.push(chunk)
+      expect(Buffer.concat(chunks).equals(Buffer.from(bytes))).toBe(true)
+      selectedSaveCount++
+      return ref
+    },
+    fileHostPath: file => file.attachmentId === ref.attachmentId ? attachmentPath : undefined,
+    async *readFileStream(file, signal) {
+      expect(file).toEqual(ref)
+      signal?.throwIfAborted()
+      readCount++
+      const split = bytes.findIndex(value => value === 0xf0) + 2
+      yield bytes.subarray(0, split)
+      yield bytes.subarray(split)
+      streamFinished = true
+    },
+  }
+  const parentAttachments: AttachmentOperations = {
+    ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
+    async saveFileStream({ data }) {
+      for await (const _chunk of data) {}
+      decoySaveCount++
+      return decoyRef
+    },
+    fileHostPath: file => file.attachmentId === decoyRef.attachmentId ? outsidePath : undefined,
+  }
+  const state = await fixture([
+    toolCallResponse('read-uploaded-file', 'read', { file_path: attachmentPath, offset: 2, limit: 1 }),
+    toolCallResponse('read-captured-upload', 'read-captured-upload', {}),
+    toolCallResponse('read-private-file', 'read', { file_path: outsidePath }),
+    toolCallResponse('write-uploaded-file', 'write_file', { path: attachmentPath, content: 'overwritten' }),
+    textResponse('finished'),
+  ], { attachments, parentAttachments, fileReferences: true, allowedTools: ['read', 'read_file', 'write_file', 'read-captured-upload'] })
+  const id = SessionId('native-attachment-read')
+  const route = brandString<NativeRootRouteId>('root')
+  const signal = new AbortController().signal
+  let sibling: Awaited<ReturnType<typeof fixture>> | undefined
+  try {
+    removeCapturedRead = state.tools.registerValueTool({
+      schema: { name: 'read-captured-upload', description: 'Read the exact Session attachment through captured Headless tools.',
+        parameters: { type: 'object', properties: {}, additionalProperties: false } },
+      output: { schema: { type: 'string' }, render: (_call, value) => {
+        if (typeof value !== 'string') throw new Error('captured attachment result must be text')
+        return { content: [{ type: 'text', text: value }], isError: false }
+      } },
+      async execute(call) {
+        if (state.sessionExecution === undefined) throw new Error('sessionExecution is unavailable')
+        const operations = await state.sessionExecution.captureExternalTools(call.agent, call.session, {
+          depth: 1, maxDepth: 1, cwd: state.workspace, provider: 'mock', model: 'fixture', maxSteps: 3,
+          toolNames: ['read_file'], builtinToolNames: ['read_file'], programToolNames: [],
+        }, call.signal)
+        try {
+          const read = await operations.execute({ callId: ToolCallId('captured-file-read'), name: 'read_file',
+            arguments: { path: attachmentPath } }, call.signal)
+          const readText = read.result.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('')
+          expect(read.result.isError).toBe(false)
+          expect(readText).toBe(new TextDecoder().decode(bytes))
+          read.acceptRecordedResult()
+          return readText
+        } finally { await operations.dispose() }
+      },
+    })
+    expect(state.filesystem.config.cwd).toBe(state.workspace)
+    await state.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
+    const receipt = await state.rootExecution.stagedFiles.stageStream({ route, id,
+      data: (async function* () { yield bytes })(), name: ref.name }, signal)
+    expect(selectedSaveCount).toBe(1)
+    expect(decoySaveCount).toBe(0)
+    sibling = await fixture([textResponse('must not execute with another Program receipt')], {
+      attachments, fileReferences: true, allowedTools: [],
+    })
+    await sibling.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
+    await expect(sibling.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
+      sibling!.rootExecution.stagedFiles.prepare({ owner, receiptIds: [receipt.receiptId], signal,
+        createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [...files] }) })
+    }, signal)).rejects.toThrow('staged file receipt')
+    expect(sibling.adapter.requests).toHaveLength(0)
+    await state.app.executeRootTurn({ route, id, resume: true, prepareMessage: async (_model, owner, ownerSignal) =>
+      state.rootExecution.stagedFiles.prepare({ owner, receiptIds: [receipt.receiptId], signal: ownerSignal,
+        createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [
+          { type: 'text', text: 'Read the uploaded file.' }, ...files, { type: 'text', text: 'Keep this after the file.' },
+        ] }) }) }, signal)
+
+    expect(state.adapter.requests[0]?.messages.some(message =>
+      message.content.some(block => block.type === 'text' && block.text.includes(JSON.stringify(attachmentPath))))).toBe(true)
+    expect(readCount).toBe(2)
+    expect(streamFinished).toBe(true)
+    expect(selectedSaveCount).toBe(1)
+    expect(decoySaveCount).toBe(0)
+    expect(JSON.stringify(state.adapter.requests[1]?.messages)).toContain('2: second 📎')
+    expect(state.adapter.requests[2]?.messages.some(message => message.content.some(block =>
+      block.type === 'tool-result' && block.content.some(result =>
+        result.type === 'text' && result.text.includes(new TextDecoder().decode(bytes)))))).toBe(true)
+    expect(JSON.stringify(state.adapter.requests[3]?.messages)).toContain('path outside workspace')
+    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const reader = await storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        const writeCall = events.find(event => event.type === 'tool/call' && event.data.name === 'write_file')
+        if (writeCall?.type !== 'tool/call') throw new Error('uploaded-file write call was not recorded')
+        const writeResult = events.find(event => event.type === 'tool/result' && event.data.message.source.kind === 'tool'
+          && event.data.message.source.callId === writeCall.data.callId)
+        expect(writeResult).toMatchObject({ type: 'tool/result', data: { error: { code: 'FS_SANDBOX_DENIED' } } })
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+    await expect(readFile(attachmentPath).then(value => new Uint8Array(value))).resolves.toEqual(bytes)
+  } finally {
+    if (sibling !== undefined) {
+      await sibling.host.stop()
+      await rm(sibling.directory, { recursive: true, force: true })
+    }
+    if (removeCapturedRead !== undefined) await removeCapturedRead()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+    await rm(attachmentDirectory, { recursive: true, force: true })
+  }
+})
+
+it.each(['initial stat', 'file save', 'final stat'] as const)(
+  'rejects an upload when delete and same-header restore replace its generation during %s', async (barrier) => {
+    const entered = Promise.withResolvers<undefined>()
+    const release = Promise.withResolvers<undefined>()
+    let saveCalls = 0
+    const saved: FileAttachmentRef = {
+      attachmentId: AttachmentId(`sha256:${'a'.repeat(64)}`), name: 'staged.txt', bytes: 3,
+    }
+    const attachments: AttachmentOperations = {
+      ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
+      async saveFileStream({ data }) {
+        for await (const _chunk of data) {}
+        saveCalls++
+        if (barrier === 'file save' && saveCalls === 2) {
+          entered.resolve(undefined)
+          await release.promise
+        }
+        return saved
+      },
+    }
+    const state = await fixture([textResponse('ready')], { attachments, fileReferences: true })
+    const id = SessionId(`staged-generation-${barrier.replaceAll(' ', '-')}`)
+    const route = brandString<NativeRootRouteId>('root')
+    const signal = new AbortController().signal
+    let stage: Promise<Awaited<ReturnType<NativeRootExecutionOperations['stagedFiles']['stageStream']>>> | undefined
+    let statCalls = 0
+    const originalStat = state.persistence.stat.bind(state.persistence)
+    try {
+      await state.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
+      const retained = await state.rootExecution.stagedFiles.stageStream({ route, id,
+        data: (async function* () { yield Uint8Array.of(1, 2, 3) })(), name: 'idle-retained.txt' }, signal)
+      await state.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
+        const admission = state.rootExecution.stagedFiles.prepare({ owner, receiptIds: [retained.receiptId], signal,
+          createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [...files] }) })
+        expect(admission.message.content).toEqual([{ type: 'file', attachment: saved }])
+        admission.refused()
+      }, signal)
+      state.persistence.stat = async (candidate, options) => {
+        statCalls++
+        const blocked = candidate === id && (barrier === 'initial stat' ? statCalls === 1
+          : barrier === 'final stat' && statCalls === 2)
+        if (blocked) {
+          entered.resolve(undefined)
+          await release.promise
+        }
+        return originalStat(candidate, options)
+      }
+      async function* upload(): AsyncIterable<Uint8Array> { yield Uint8Array.of(1, 2, 3) }
+      stage = state.rootExecution.stagedFiles.stageStream({ route, id, data: upload(), name: saved.name }, signal)
+      await entered.promise
+      const deletions = state.rootExecution.deletions
+      if (deletions === undefined) throw new Error('Session deletion Provider is unavailable')
+      const deleted = await deletions.delete({ route, id }, signal)
+      await deletions.restore({ route, id: deleted.id }, signal)
+      release.resolve(undefined)
+      await expect(stage).rejects.toThrow('staged file Session generation changed during upload')
+      if (barrier !== 'initial stat') expect(statCalls).toBeGreaterThanOrEqual(2)
+    } finally {
+      release.resolve(undefined)
+      await stage?.catch(() => undefined)
+      await state.host.stop()
+      await rm(state.directory, { recursive: true, force: true })
+    }
+  },
+)
 
 it('reads deduplicated images only after an external tool result and its settlement are accepted, then drains reads', async () => {
   const first: ImageAttachmentRef = { attachmentId: AttachmentId('captured-image-first'), mediaType: 'image/png', bytes: 2, width: 1, height: 1 }
@@ -752,7 +968,7 @@ it('prepares root input with the effective default model for a fresh Session', a
   const prepared: { provider: string; model: string }[] = []
   try {
     await state.host.run(state.scope, { kind: 'prepared-model' }, invocation =>
-      (state.app as NativeHeadlessApplication).executeRootTurn({ id: SessionId('prepared-model'), resume: false,
+      state.app.executeRootTurn({ id: SessionId('prepared-model'), resume: false,
         prepareMessage: async (model) => {
           prepared.push(model)
           return createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Prepared prompt.' }] })
