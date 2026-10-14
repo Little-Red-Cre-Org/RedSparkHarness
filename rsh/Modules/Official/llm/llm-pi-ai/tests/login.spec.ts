@@ -122,11 +122,16 @@ afterEach(async () => {
 describe('pi-ai login flows', () => {
   it.each([false, true])('native login and catalog services follow optional authorization (%s)', async (withAuthorization) => {
     const writeSignals: (AbortSignal | undefined)[] = []
+    let recordUpdated: ((key: string) => void | Promise<void>) | undefined
     const credentials = {
       resolve: async () => undefined,
       describeRecord: async () => ({ configured: false, writable: true }),
       readRecord: async () => undefined,
       listRecords: async () => [],
+      onRecordUpdated(listener: (key: string) => void | Promise<void>) {
+        recordUpdated = listener
+        return async () => {}
+      },
       modifyRecord: async (_key: string, mutate: (record: undefined) => Promise<unknown>, options?: { signal?: AbortSignal }) => {
         writeSignals.push(options?.signal)
         return mutate(undefined)
@@ -140,7 +145,6 @@ describe('pi-ai login flows', () => {
     const services = new Map<string, unknown>()
     const disposers: (() => void | Promise<void>)[] = []
     const effects: (() => void | Promise<void>)[] = []
-    let recordUpdated: ((key: string) => void) | undefined
     const signal = new AbortController().signal
     const context = {
       signal,
@@ -151,7 +155,6 @@ describe('pi-ai login flows', () => {
       optional: (name: string) => name === 'authorization' && withAuthorization ? authorization : undefined,
       own(dispose: () => void | Promise<void>) { disposers.push(dispose); return async () => {} },
       effect(dispose: () => void | Promise<void>) { effects.push(dispose); return async () => {} },
-      on: (_key: string, listener: (key: string) => void) => { recordUpdated = listener; return async () => {} },
       provide: (name: string, service: unknown) => { services.set(name, service) },
     } as unknown as NativeContext
 
@@ -160,12 +163,12 @@ describe('pi-ai login flows', () => {
       const codex = flows.find(flow => flow.key === recordKeyFor('openai-codex'))
       if (!withAuthorization) {
         expect(codex).toBeUndefined()
-        expect(effects).toHaveLength(0)
+        expect(effects).toHaveLength(1)
         return
       }
 
       expect(codex?.methods.map(method => method.id)).toEqual(['oauth'])
-      expect(effects).toHaveLength(flows.length)
+      expect(effects).toHaveLength(flows.length + 1)
       const sessionSignal = new AbortController().signal
       login.mockImplementation(async () => (
         { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
@@ -182,7 +185,7 @@ describe('pi-ai login flows', () => {
       expect(nativeModels.collections).toBe(before + 1)
       expect(nativeModels.refreshes).toBe(1)
       const afterFirstCatalog = nativeModels.collections
-      recordUpdated?.(recordKeyFor('openai-codex'))
+      await recordUpdated?.(recordKeyFor('openai-codex'))
       await catalog()
       expect(nativeModels.collections).toBe(afterFirstCatalog + 1)
       expect(nativeModels.refreshes).toBe(2)

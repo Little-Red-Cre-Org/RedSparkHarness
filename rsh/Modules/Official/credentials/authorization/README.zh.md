@@ -116,7 +116,7 @@ notice 是单向的，且从不携带机密：一条消息，以及可选的「�
 
 ### 提交确认
 
-尝试期间，seam 监听该 flow 键上的 `credentials/record-updated`，`run()` 返回后再重读 `describeRecord`——确认提交确实发生在当下，因为在重新授权时记录早已存在，只看存在与否会让陈旧凭据冒充新鲜授权。未提交就返回的 flow，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
+Native 尝试期间，所选 `credentials` Provider 会在记录持久化提交后同步报告 flow 键；authorization 监听器会在写入返回前记录本次尝试已提交。Cordis 对应使用 `credentials/record-updated` 事件确认。`run()` 返回后，authorization 仍会重读 `describeRecord`，因为重新授权时记录可能早已存在，仅检查存在会让陈旧凭据冒充新鲜授权。本次尝试未提交就返回，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
 
 </details>
 

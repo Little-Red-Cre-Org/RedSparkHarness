@@ -57,6 +57,7 @@ function harness(beforeCommit?: () => Promise<void>): {
         : { configured: true, kind: record.kind, writable: true }
     },
     listRecords: async () => [...records].map(([key, record]) => ({ key, kind: record.kind })),
+    onRecordUpdated: () => async () => {},
     modifyRecord: async (key, mutate, options) => {
       options?.signal?.throwIfAborted()
       const current = records.get(key)

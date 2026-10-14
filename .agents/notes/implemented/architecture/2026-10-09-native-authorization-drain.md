@@ -22,4 +22,4 @@ The Cordis service keeps its existing orphaned-run semantics; both entries share
 
 ## Consequences
 
-A flow that ignores its signal keeps `cancel()` pending; native flows must honor the signal. Surfaces refresh the model catalog after `settled` or `credentials/record-updated`; there is no separate catalog event.
+A flow that ignores its signal keeps `cancel()` pending; native flows must honor the signal. Native model adapters now observe credential changes through the selected `NativeCredentials` Provider; Cordis keeps `credentials/record-updated`. See [Native Credential Service Notifications](../bug-fix/2026-10-14-native-credential-service-notifications.md) for the current Native delivery path.

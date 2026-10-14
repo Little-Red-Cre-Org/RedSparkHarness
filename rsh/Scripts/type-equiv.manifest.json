@@ -1897,6 +1897,11 @@
       "source": "rsh/Modules/Official/credentials/credentials/src/native-types.ts"
     },
     {
+      "doc": "rsh/Docs/subsystems/credentials.md",
+      "symbol": "NativeCredentials",
+      "source": "rsh/Modules/Official/credentials/credentials/src/native.ts"
+    },
+    {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsDescribeOptions",
       "source": "rsh/Core/settings/settings-definition/src/index.ts"
