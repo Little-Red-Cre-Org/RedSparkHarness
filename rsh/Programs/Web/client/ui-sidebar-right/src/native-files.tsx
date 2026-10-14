@@ -55,6 +55,10 @@ type PreviewRead = {
   htmlVersion?: string
 }
 
+function isUnknownPresentFile(read: PreviewRead, absolutePath: string, version: string | undefined): boolean {
+  return version !== undefined && !read.files.has(absolutePath)
+}
+
 // File identity arrives with the response; retain observations only while a
 // read is pending so a newer observation cannot be lost before that identity.
 async function readPreviewFile<T extends { readonly absolutePath: string; readonly version: string }>(
@@ -72,7 +76,14 @@ async function readPreviewFile<T extends { readonly absolutePath: string; readon
     }
     return result
   } catch (error) {
-    if (!signal.aborted) read.retryOnObservation = true
+    if (!signal.aborted) {
+      read.retryOnObservation = true
+      for (const [absolutePath, version] of read.observations) {
+        if (!isUnknownPresentFile(read, absolutePath, version)) continue
+        read.invalidate()
+        break
+      }
+    }
     throw error
   } finally {
     read.pending -= 1
@@ -196,7 +207,7 @@ export function NativeFilesPanel({
           // Failed reads provide no resolved identity. A new present-file
           // observation can make the preview usable; matching known reads and
           // absence observations must not retry their own failed reads.
-          if (read.retryOnObservation && version !== undefined && !read.files.has(absolutePath)) {
+          if (read.retryOnObservation && isUnknownPresentFile(read, absolutePath, version)) {
             read.invalidate()
             continue
           }

@@ -14,7 +14,7 @@ Native 会话详情位于 legacy Cordis Sidebar 旁边，但属于独立组合�
 
 注册了 `clientNativeWorkspaceFiles` 时，同一面板会增加“文件”和“预览”。“文件”按需列出工作区相对目录；点击文件会将它选为预览内容。文本分页调用 `read`；HTML、图片和 PDF 完整内容调用 `readAll`；HTML 直接声明的相对脚本与样式表调用 `readRelated`，并在不透明的 `sandbox="allow-scripts"` iframe 中运行。`follow` 会刷新已展开目录。`ui-primitives` 持有 props-only 树行以及 Native 与 legacy 适配器共用的代码、Markdown、HTML、图片和加载展示。
 
-预览读取拥有分页以及主文件和成功加载的 HTML 依赖身份；版本变化或删除会使该读取失效，无关路径和相同版本保留已显示的页面。读取响应发布前会将读取期间收到的 observation 与响应的实际绝对路径和版本比较，避免旧响应掩盖新 observation。失败读取不返回身份，因此预览失败后，已知身份之外的新文件存在 observation 会触发重试；缺失 observation 和已知同版本不会触发该恢复重试。预览成功后继续按已知路径与版本过滤。重新展开目录会刷新列表，文本分页按行数保留空页。
+预览读取拥有分页以及主文件和成功加载的 HTML 依赖身份；版本变化或删除会使该读取失效，无关路径和相同版本保留已显示的页面。读取响应发布前会将读取期间收到的 observation 与响应的实际绝对路径和版本比较，避免旧响应掩盖新 observation。失败读取不返回身份，因此预览失败后，已知身份之外的新文件存在 observation 会触发重试；缺失 observation 和已知同版本不会触发该恢复重试。失败路径会在清除在途 observation 前，使用与实时 follow 处理器相同的恢复条件检查拒绝前收到的 observation。预览成功后继续按已知路径与版本过滤。重新展开目录会刷新列表，文本分页按行数保留空页。
 
 ## Alternatives considered
 
@@ -30,4 +30,4 @@ Native 会话详情位于 legacy Cordis Sidebar 旁边，但属于独立组合�
 
 ## Verification
 
-文件面板 owner 测试覆盖空页、目录重新展开、无关路径及同版本 observation、过期分页的成功和失败、首次读取响应前收到新 observation，HTML 打包后依赖版本变化，以及首次打包失败后创建原本缺失的依赖。首次读取和已加载依赖的审查探针在初始 P2 修复中失败，在响应发布前检查 observation 并跟踪依赖后通过。另一个 fixture 参数在后续云端检查点的首次依赖读取拒绝时失败，加入 observation 触发的失败读取恢复后通过。这些测试使用现有组件 fixture，不声称完成真实浏览器回放。
+文件面板 owner 测试覆盖空页、目录重新展开、无关路径及同版本 observation、过期分页的成功和失败、首次读取响应前收到新 observation，HTML 打包后依赖版本变化，以及首次打包失败后创建原本缺失的依赖。首次读取和已加载依赖的审查探针在初始 P2 修复中失败，在响应发布前检查 observation 并跟踪依赖后通过。另一个 fixture 参数在后续云端检查点的首次依赖读取拒绝时失败，加入 observation 触发的失败读取恢复后通过。延迟拒绝参数还会把创建 observation 放在失败响应之前；它在先前的恢复检查点失败，在失败路径检查缓存 observation 后通过。这些测试使用现有组件 fixture，不声称完成真实浏览器回放。

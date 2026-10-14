@@ -165,10 +165,11 @@ it.each(['v1', 'v2', 'absent'])('compares an in-flight preview response with obs
   }
 })
 
-it.each([false, true])('refreshes HTML dependencies (initially missing: %s)', async (initiallyMissing) => {
+it.each([false, true, 'pending'] as const)('refreshes HTML dependencies (initially missing: %s)', async (initiallyMissing) => {
   const state = fixture()
   const descriptors = new Map(['createObjectURL', 'revokeObjectURL'].map(key => [key, Object.getOwnPropertyDescriptor(URL, key)]))
   let unmount: (() => void) | undefined
+  const pendingFailure = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceFilesClient['readRelated']>>>()
   let sequence = 0
   try {
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => `blob:review-${++sequence}` })
@@ -177,19 +178,22 @@ it.each([false, true])('refreshes HTML dependencies (initially missing: %s)', as
     state.readAll.mockImplementation(async () => ({ absolutePath: '/fixture/index.html', version: 'html-v1',
       offset: 0, eof: true, data: btoa('<script src="app.js"></script>') }))
     const related = state.readRelated.mockImplementation(async () => ({ absolutePath: '/fixture/app.js', version: 'js-v1', offset: 0, eof: true, data: btoa('window.marker = 1') }))
-    if (initiallyMissing) related.mockRejectedValueOnce(new Error('dependency not created yet'))
+    if (initiallyMissing === 'pending') related.mockImplementationOnce(() => pendingFailure.promise)
+    else if (initiallyMissing) related.mockRejectedValueOnce(new Error('dependency not created yet'))
     const extra = initiallyMissing ? 1 : 0
     const view = render(<state.Panel />)
     unmount = () => { view.unmount() }
     fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
     if (initiallyMissing) {
-      await screen.findByRole('alert')
+      if (initiallyMissing === 'pending') await waitFor(() => { expect(related).toHaveBeenCalledTimes(1) })
+      else await screen.findByRole('alert')
       await act(async () => {
         state.emit({ kind: 'change', change: { absolutePath: '/fixture/index.html', version: 'html-v1' } })
         state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', absent: true } })
       })
       expect(related).toHaveBeenCalledTimes(1)
       await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v1' } }) })
+      if (initiallyMissing === 'pending') await act(async () => { pendingFailure.reject(new Error('delayed missing dependency response')) })
     }
     await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
     expect(related).toHaveBeenCalledTimes(1 + extra)
@@ -215,6 +219,7 @@ it.each([false, true])('refreshes HTML dependencies (initially missing: %s)', as
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v3' } }) })
     expect(state.readAll).toHaveBeenCalledTimes(5 + extra)
   } finally {
+    pendingFailure.resolve({ absolutePath: '/fixture/app.js', version: 'js-v1', offset: 0, eof: true, data: btoa('') })
     await act(async () => { unmount?.() })
     await state.closed()
     for (const [key, descriptor] of descriptors) {
