@@ -39,7 +39,7 @@ The existing profile keeps its Cordis Host by default. A profile selects one nat
 
 The compatibility Host serves only the existing application. If its profile contains `rsh.client.json`, Host startup fails with an error requiring `dsh.profile.runtime: "native"`; the compatibility Typert Session endpoints do not implement the Native Session response, follow, and image routes. Without `rsh.client.json`, `/native.html` returns 404 and `/` keeps the existing application. Native mode supports the selected Session Client capabilities. Legacy compatibility-plugin list and mutation actions are unavailable for native profiles and report a localized message; Native profiles use `dshDesktop.plugins.native`.
 
-The module-management renderer consumes the reviewed Native facade when supplied: package actions remain distinct from target/id installation controls, Host scopes come from inventory, and mutations use its revision. It re-reads inventory after application, refreshes stale requests without resubmitting, and uses existing backend status subscriptions. Only a wrong-profile list refusal selects legacy operations. The [page preparation proposal](../../../.agents/notes/proposed/feature/2026-10-14-native-desktop-module-page.md) records the pending facade exports, shell entry, localized error-key alignment and packaged acceptance; the current shell does not expose these Native operations.
+See the [Native Desktop module page decision](../../../.agents/notes/implemented/feature/2026-10-14-native-desktop-module-page.md) for request handling, inventory refresh, and compatibility fallback in the renderer.
 
 ### Runtime and plugin activation
 
