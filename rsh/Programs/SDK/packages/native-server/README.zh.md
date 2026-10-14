@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供现有的按行分帧 SDK JSON-RPC 方法：`initialize`、`session/prompt`、`session/cancel`、`session/steer`、`session/fork` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
+显式选择的 `dsh --profile native-sdk` 应用通过标准输入输出提供按行分帧的 SDK JSON-RPC 方法：`initialize`、`session/upload-file`、`session/prompt`、`session/cancel`、`session/steer`、`session/fork` 和 `shutdown`。它使用一个原生 Session 执行器处理具名 Session，发送已持久化的 `session.event` 通知和整个 Session 的 `session.status` 状态变化，并在关闭或输入结束时取消并等待模型初始化与已接收的轮次结束。TypeScript 与 Python 客户端仍默认使用 `sdk` profile；调用方需显式选择 `native-sdk`。
 
 ## 目录
 
@@ -30,9 +30,11 @@ Profile 设置 `systemPrompt` 和正整数 `maxSteps`。`initialize` 为当前�
 
 `session/fork` 将源历史复制至已结束轮次，写入新的目标 Session，不调用模型。可选 `atSeq` 选择该已结束轮次中的既有事件，省略时选择最后结束的轮次。源历史保持不变，目标的下一次提示恢复持久化副本。根执行要求 Session-execution 与活动所有者 Provider。精简组装可不安装 Subagent Provider；选定后它才启用 `subagent.finished` 投影，随附 native-sdk profile 会安装它。
 
-`session/prompt` 接受有序文本块及编码栅格图片（`{ type: "image", data, mimeType }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
+`session/prompt` 接受有序文本块、编码栅格图片（`{ type: "image", data, mimeType }`）及文件回执（`{ type: "file", receiptId }`）。必需的附件 Provider 在持久化收件回执之前校验规范 base64、声明媒体类型、解码字节与部署限额。Session 保存不可变引用；所选模型适配器读取已验证的请求变体，重启或分叉后同样如此。拒绝调用者提供的持久化附件引用。所选模型必须支持图片输入。
 
-`session/steer` 通过精确的活动 Session 所有者，为已接收根任务的下一步排入有序提示内容。持久化后返回消息 ID，不中断当前模型派发。若 turn 中断后该 root 已暂停，steer 也会唤醒它的普通驱动；Goal 驱动显式重新启用之前，Goal 准入仍保持关闭。拒绝未知、空闲、已取消或属于其它 Program 的所有者。如果下一步开始之前任务被取消或自然结束，已接收输入仍保留为待处理项，恢复轮次会认领它。引导输入与普通提示共用图片准入。
+`session/upload-file` 接受稳定的 SDK Session ID、base64 数据及可选显示名称。它通过该 Program 选定的附件 Provider 保存原始字节，并返回绑定到该 Program、路由与 Session generation 的进程内回执。首次提示词之前也可上传；Program 通过已有 writer 创建或恢复该 Session 后再暂存字节。只有已接收的持久 inbox 消息含有文件引用；单独上传不会创建用户消息或启动模型轮次。runtime 重启会丢弃未使用回执，因此使用前需重新上传字节。
+
+`session/steer` 通过精确的活动 Session 所有者，为已接收根任务的下一步排入有序提示内容。持久化后返回消息 ID，不中断当前模型派发。若 turn 中断后该 root 已暂停，steer 也会唤醒它的普通驱动；Goal 驱动显式重新启用之前，Goal 准入仍保持关闭。拒绝未知、空闲、已取消或属于其它 Program 的所有者。如果下一步开始之前任务被取消或自然结束，已接收输入仍保留为待处理项，恢复轮次会认领它。引导输入与普通提示共用图片和暂存文件准入。
 
 应用声明共享执行器可选的 `modelSelection` 服务；装配可以安装该 Provider，无需另建 SDK 模型注册表。
 

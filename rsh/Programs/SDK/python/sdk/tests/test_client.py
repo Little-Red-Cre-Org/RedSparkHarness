@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import inspect
 import sys
@@ -682,6 +683,47 @@ for line in sys.stdin:
         client.initialize(provider="deepseek-official", cwd="/workspace", model="dsagent")
         with pytest.raises(ValueError):
             client.session_prompt("main", [{"type": "text", "text": "fix it"}])
+
+
+def test_client_encodes_native_file_upload_and_returns_receipt(tmp_path: Path) -> None:
+    script = tmp_path / "fake_runtime.py"
+    upload_dump = tmp_path / "upload.json"
+    script.write_text(
+        """
+import json
+import os
+import sys
+
+for line in sys.stdin:
+    msg = json.loads(line)
+    method = msg.get("method")
+    if method == "initialize":
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {"serverInfo": {"name": "fake-dsh"}}}), flush=True)
+    elif method == "session/upload-file":
+        json.dump(msg["params"], open(os.environ["UPLOAD_DUMP"], "w"))
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {
+            "receiptId": "staged-1", "name": "notes.txt", "bytes": 10}}), flush=True)
+    elif method == "shutdown":
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {}}), flush=True)
+        break
+""".strip()
+    )
+
+    with HarnessClient(
+        HarnessConfig(env={"UPLOAD_DUMP": str(upload_dump)}),
+        _launch_args=(sys.executable, str(script)),
+    ) as client:
+        client.initialize(provider="deepseek-official", cwd="/workspace", model="dsagent")
+        receipt = client.session_upload_file("session-1", b"hello file", "notes.txt")
+
+    assert receipt.receipt_id == "staged-1"
+    assert receipt.name == "notes.txt"
+    assert receipt.bytes == 10
+    assert json.loads(upload_dump.read_text()) == {
+        "sessionId": "session-1",
+        "data": base64.b64encode(b"hello file").decode("ascii"),
+        "name": "notes.txt",
+    }
 
 
 def test_client_routes_parent_approval_requests_and_correlated_responses(tmp_path: Path) -> None:

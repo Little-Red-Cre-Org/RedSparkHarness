@@ -26,7 +26,7 @@ kind: "package-reference"
 
 Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
-当此 Program 的浏览器轮次处于活动状态时，`session/queue` 与 `session/steer` 接受带稳定身份的文本。Queue 将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id。`session/submission/edit` 会用文本块替换待处理消息的全部 content，同时保留其 id、source 和位置；它使用精确的 root owner，没有活动 owner 时可通过 idle maintenance 执行，并返回 `updated` 或 `stale`。`session/submission/promote` 要求活动浏览器轮次，并用一条 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾；它返回 `promoted`、`stale` 或 `not-promotable`。`session/submissions` 会折叠持久 Session 前缀，并连同 `throughSeq` 返回完整待处理消息。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
+`session/file-upload` 通过经过身份验证的 `application/octet-stream` 请求体流式传输字节，并交给选定的不可变附件 Provider 保存；响应返回绑定 Program route 与 Session 代际的进程内回执。初始 prompt、`session/queue` 与 `session/steer` 接受有序文本、图片和回执部分；queue 与 steer 要求此 Program 有活动的浏览器轮次。Queue 将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id。只有精确附着的 root owner 能消费回执；FileBlock 在持久化接纳后回执才退休。writer 交接结果不确定时会隔离回执并要求重新上传。`session/submission/edit` 会用文本块替换待处理消息的全部 content，同时保留其 id、source 和位置；它使用精确的 root owner，没有活动 owner 时可通过 idle maintenance 执行，并返回 `updated` 或 `stale`。`session/submission/promote` 要求活动浏览器轮次，并用一条 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾；它返回 `promoted`、`stale` 或 `not-promotable`。`session/submissions` 会折叠持久 Session 前缀，并连同 `throughSeq` 返回完整待处理消息。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
 
 `session/list` 投影持久历史与确切活跃 owner，添加已确认的工作区归属，并按最新事件时间排序。历史无法读取的行仍会显示，标题标记为不可用；`updatedAt` 回退为 `header.createdAt`，`blank` 和 `completed` 为 false，运行状态及 Host 管理的字段仍会投影。经过身份验证的 POST `/api/native-session/list-follow` 接受 `{}`，然后流式发送基线及合并后的 upsert／remove 帧。`maxFollowBufferBytes` 限制非空基线和每条 upsert 帧的编码字节数：基线超限时先发送空基线，再逐 Session 发送 upsert；单条 upsert 超限时跳过。`session/search` 接受 `{ query, cursor? }`，每页最多扫描 100 个 header，并返回最多 20 个标题或当前消息匹配结果。`session/archive` 委托 `workspaceRegistry.archiveSession` 并返回 `{ archived: true }`；缺少该注册表时以 `native/sessions` 失败。
 
@@ -54,7 +54,7 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 安装 Settings 与 modelSettings 后，此 Host 会持有 `agent-default-model`。账户授权以 `authorized` 结算后，只有在没有已保存默认值且没有通过 profile 引用、提供方原生认证或已存提供方 key 配置的非账户提供方 API key 时，才会保存第一个已登录账户模型。启用 modelSelection 后，只有当 root Session 历史中没有记录的模型路由时，才会使用已保存的 provider/model；持久化选择和历史请求路由优先。Settings 写入会发布 `settings/document-updated`，账户路由变更后 pi-ai 会发布 `llm/adapters-updated`。
 
-可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。共享附件 Provider 验证规范编码及批量限额；只有持久化引用进入用户消息。图片读取由身份认证及完整 Session 历史约束，包含继承引用。端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
+可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。文件上传使用同一个选定不可变附件 Provider；精确 root owner 将 FileBlock 加入持久 Session inbox 前，回执元数据仅保留在进程内。模型请求通过 `projectFilesToText` 投影已记录文件引用，并将选定 Provider 路径转换成执行文件系统路径，不会发送 Host 路径或接受客户端自造的持久引用。图片读取由身份认证及完整 Session 历史约束，包含继承引用。图片端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
 可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
 
@@ -106,5 +106,5 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 完整产品 UI、文件及音频上传不由该包提供。
+- 产品 UI 与音频上传呈现不由该包提供；经过身份验证的 Session API 提供暂存文件上传，不承担页面策略或集成。
 - 控制器对所有 Session 行均返回 `hasActiveSchedule: false`。控制器提供 `rootExecution`，而 `taskScheduler` 要求该服务；若控制器依赖 scheduler 会形成加载循环。
