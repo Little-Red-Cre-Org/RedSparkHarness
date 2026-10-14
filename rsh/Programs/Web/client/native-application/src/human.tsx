@@ -17,8 +17,11 @@ export function HumanInteraction({ answerHuman, prompt, disabled, locale }: {
   if (prompt.kind === 'approval') return <NativeApprovalCard
     presentationKey={String(prompt.id)} toolName={prompt.toolName} reason={prompt.reason}
     disabled={disabled} locale={locale}
+    onAllowSession={prompt.canAllowSession === true
+      ? () => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-session' }) } : undefined}
     onAnswer={(outcome) => { void answerHuman(prompt, { kind: 'approval', outcome }) }} />
   return <NativeQuestionComposer
     requestKey={String(prompt.id)} questions={prompt.questions} disabled={disabled} locale={locale}
+    onCancel={() => answerHuman(prompt, { kind: 'cancel-questions' })}
     onAnswer={answer => answerHuman(prompt, { kind: 'questions', answer })} />
 }

@@ -1,0 +1,67 @@
+{
+  "base": "73380d26c6376391655ae9b791f2680831d3c106",
+  "model": "local deterministic fixture; no credentials or paid calls",
+  "library": {
+    "status": "blocked before upload",
+    "confirmedIds": [],
+    "reason": "current official helper reports Library prepare_uploads is not available"
+  },
+  "images": [
+    {
+      "file": "native-approval-desktop.png",
+      "description": "1365x900: pending Host-admitted Session approval with three real actions.",
+      "sha256": "82136c1192abb0dadc100085d919fcac294f0cb797a65ae18ade16b0e5a25b10",
+      "bytes": 85104,
+      "edited": false
+    },
+    {
+      "file": "native-approval-375.png",
+      "description": "375x900: approval actions wrap after the automatic sidebar collapse settles to its 56px rail.",
+      "sha256": "d1338a17c7d23d4c4aab91202d6cc43097e9800ae79900f19dc2e9ba0646f68a",
+      "bytes": 38329,
+      "edited": false
+    },
+    {
+      "file": "native-approval-completed.png",
+      "description": "1365x900: two file writes completed after one Session approval button click.",
+      "sha256": "57582ccac902df6fb186cb2229674543e66bfc97fc23b105516a39198cf5ffdc",
+      "bytes": 79152,
+      "edited": false
+    },
+    {
+      "file": "native-question-desktop.png",
+      "description": "1365x900: a two-question pending batch with the existing Dismiss all questions control.",
+      "sha256": "b10f566231e56dd25dd46af9a99b528b28531bf05c32331cd0822c3f83b7baf5",
+      "bytes": 90808,
+      "edited": false
+    },
+    {
+      "file": "native-question-375.png",
+      "description": "375x900: dismissal is visible; the generic Next footer capsule is clipped and full-page acceptance is not claimed.",
+      "sha256": "5cfbda91508ce87b45bd61c68d4a20f334c8d5ad68aa742c9c74aa7904ae182f",
+      "bytes": 38424,
+      "edited": false
+    },
+    {
+      "file": "native-plan-desktop.png",
+      "description": "1365x900: real exit_plan_mode review with Chat about it, Refuse and Approve.",
+      "sha256": "9730d4e25ab574c06ee7dea5062e8439145a1185c99dfcbfccc9c2e6adfea6df",
+      "bytes": 91681,
+      "edited": false
+    },
+    {
+      "file": "native-plan-375.png",
+      "description": "375x900: all three plan actions fit and wrap beside the settled 56px rail.",
+      "sha256": "8b1c4dd5559ed0dbf16bef8e751fbd7435d64cabd2667fdd9c20e9655e34199d",
+      "bytes": 42064,
+      "edited": false
+    },
+    {
+      "file": "native-question-completed.png",
+      "description": "1365x900: both Provider waits cancelled and the same turn completed with plan mode retained.",
+      "sha256": "efec6e69885cc03d84ba9f0309879fc89b3cd0c901da38e46aa8b178847fb8b0",
+      "bytes": 86676,
+      "edited": false
+    }
+  ]
+}

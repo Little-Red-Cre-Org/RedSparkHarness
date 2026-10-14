@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-12-native-human-interactions.md
-2026-10-12-native-human-interactions.md: 8ab1b157a7aa6e56e07348458ae3eec1f092124e
-2026-10-12-native-human-interactions.zh.md: a6f58e4654cbbde2216693d867229ad3e3a79dd3
+2026-10-12-native-human-interactions.md: c238ec6d132f704553e9cc23d7d0a7ee388d8ab3
+2026-10-12-native-human-interactions.zh.md: 9bcaf2983c19a67f669ce38ef5f038a14cb4fec6

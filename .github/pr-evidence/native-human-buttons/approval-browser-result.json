@@ -1,0 +1,59 @@
+{
+  "base": "73380d26c6376391655ae9b791f2680831d3c106",
+  "model": "local deterministic mock; no credentials or paid calls",
+  "filesystem": "shipped fs-sandbox; workspace-write; identity-preserving confinement",
+  "approval": "real Allow for this session button; authenticated session/answer-human RPC, allowed-session",
+  "narrow": {
+    "width": 375,
+    "sidebarWidth": 56.375,
+    "buttons": [
+      {
+        "left": 175.890625,
+        "right": 243.109375,
+        "width": 67.21875,
+        "text": "Reject"
+      },
+      {
+        "left": 251.109375,
+        "right": 347,
+        "width": 95.890625,
+        "text": "Allow once"
+      },
+      {
+        "left": 187.25,
+        "right": 347,
+        "width": 159.75,
+        "text": "Allow for this session"
+      }
+    ]
+  },
+  "modelRequests": 3,
+  "humanAnswers": 1,
+  "toolResults": [
+    {
+      "type": "tool-result",
+      "toolCallId": "first-write",
+      "content": [
+        {
+          "type": "text",
+          "text": "<path>C:\\Users\\zzn19\\AppData\\Local\\Temp\\rsh-session-grant-browser-fGVddm\\work\\approved.txt</path>\n<type>file</type>\n<content>\nCreated file\n</content>"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "type": "tool-result",
+      "toolCallId": "second-write",
+      "content": [
+        {
+          "type": "text",
+          "text": "<path>C:\\Users\\zzn19\\AppData\\Local\\Temp\\rsh-session-grant-browser-fGVddm\\work\\approved.txt</path>\n<type>file</type>\n<content>\nUpdated file\n</content>"
+        }
+      ],
+      "isError": false
+    }
+  ],
+  "actualFile": "Approved exact operation.",
+  "pageErrors": [],
+  "alerts": []
+}

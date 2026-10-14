@@ -147,7 +147,6 @@ export const plugin = {
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     const start = await started
     const payload = start.request().postDataJSON() as { payload: { sessionId: string } }
-    const accepted = await start.json() as { result: { value: { admissionId: string } } }
     const card = page.locator('[data-approval-key]')
     await card.waitFor()
     expect(await card.innerText()).toContain('Waiting for approval')
@@ -158,12 +157,29 @@ export const plugin = {
       mkdirSync(evidence, { recursive: true })
       await page.screenshot({ path: join(evidence, 'native-grant-pending.png'), fullPage: true })
     }
-    const reply = await page.evaluate(async ({ sessionId, admissionId, id }) => {
-      const response = await fetch('/api/session/answer-human', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'client-request', rpcId: 'session-grant-evidence', method: 'session/answer-human',
-          payload: { sessionId, admissionId, id, answer: { kind: 'approval', outcome: 'allowed-session' } } }) })
-      return response.json() as Promise<{ result: { ok: boolean } }>
-    }, { sessionId: payload.payload.sessionId, admissionId: accepted.result.value.admissionId, id })
+    await page.setViewportSize({ width: 375, height: 900 })
+    await page.locator('[data-sidebar-collapsed="true"]').waitFor()
+    await page.getByRole('button', { name: 'Open sidebar', exact: true }).waitFor()
+    await page.waitForFunction(() => (document.querySelector('[data-slot="sidebar"]')?.parentElement?.getBoundingClientRect().width ?? Infinity) <= 57)
+    const narrow = await card.evaluate(element => ({ width: window.innerWidth,
+      sidebarWidth: document.querySelector('[data-slot="sidebar"]')?.parentElement?.getBoundingClientRect().width,
+      buttons: [...element.querySelectorAll('button')].map((button) => {
+        const box = button.getBoundingClientRect()
+        return { left: box.left, right: box.right, width: box.width, text: button.textContent }
+      }) }))
+    if (evidence !== undefined) await page.screenshot({ path: join(evidence, 'native-grant-narrow.png'), fullPage: true })
+    expect(narrow.buttons).toHaveLength(3)
+    expect(narrow.buttons.every(button => button.left >= 0 && button.right <= narrow.width && button.width > 0)).toBe(true)
+    await page.setViewportSize({ width: 1365, height: 900 })
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).waitFor()
+    await page.waitForFunction(() => (document.querySelector('[data-slot="sidebar"]')?.parentElement?.getBoundingClientRect().width ?? 0) >= 279)
+    const answered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/session/answer-human')
+    await card.getByRole('button', { name: 'Allow for this session', exact: true }).click()
+    const response = await answered
+    expect(response.request().postDataJSON()).toMatchObject({ payload: {
+      sessionId: payload.payload.sessionId, id, answer: { kind: 'approval', outcome: 'allowed-session' },
+    } })
+    const reply = await response.json() as { result: { ok: boolean } }
     expect(reply.result.ok).toBe(true)
     await card.waitFor({ state: 'detached' })
     await page.getByText('Two writes completed with one Host approval.', { exact: true }).waitFor()
@@ -178,10 +194,11 @@ export const plugin = {
     expect(pageErrors).toEqual([])
     if (evidence !== undefined) {
       await page.screenshot({ path: join(evidence, 'native-grant-completed.png'), fullPage: true })
-      writeFileSync(join(evidence, 'browser-result.json'), JSON.stringify({ base: '2e55ca187716ceb69bfc5f2fab1532d1f1ab80b8',
+      writeFileSync(join(evidence, 'browser-result.json'), JSON.stringify({ base: '73380d26c6376391655ae9b791f2680831d3c106',
         model: 'local deterministic mock; no credentials or paid calls',
         filesystem: 'shipped fs-sandbox; workspace-write; identity-preserving confinement',
-        approval: 'real authenticated session/answer-human Host RPC, allowed-session; existing UI buttons unchanged',
+        approval: 'real Allow for this session button; authenticated session/answer-human RPC, allowed-session',
+        narrow,
         modelRequests: messages.length, humanAnswers: 1, toolResults: results, actualFile: readFileSync(join(workspace, 'approved.txt'), 'utf8'),
         pageErrors, alerts: [] }, null, 2) + '\n')
     }
