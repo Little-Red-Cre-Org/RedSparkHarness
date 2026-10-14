@@ -4,7 +4,25 @@
 
 对外的会话上报拆分为一项[能力 seam](../capability-seams.zh.md)：Service Definition 与捕获协调器（[dsh-session-telemetry](../../Engine/session/session-telemetry)，`ctx.sessionTelemetry`）拥有完整的权威事件捕获、`session-telemetry/record` 脱敏 waterfall（瀑布式事件）、handoff 游标与最小后端约定；部署方加载的 Service Provider（[dsh-session-telemetry-otel](../../Engine/session/session-telemetry-otel)）则是原样配置的 OpenTelemetry JS SDK 日志流水线。它是一项可选能力，不属于 agent loop（智能体循环）主干，这里也没有任何内容会进入模型请求。边界公理（harness 的职责止于 `emit()`；批处理、重试、排队与丢失策略都属于上报 SDK）连同被否决的替代方案，均已在[复活 Agent Note](../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.zh.md)中定案；捕获与游标约定见 [Service Definition README](../../Engine/session/session-telemetry/README.zh.md)。
 
-源码：[`rsh/Engine/session/session-telemetry/src/index.ts`](../../Engine/session/session-telemetry/src/index.ts)
+源码：[`rsh/Engine/session/session-telemetry/src/types.ts`](../../Engine/session/session-telemetry/src/types.ts)
+
+## Native Host 服务
+
+Native Host 使用本包的 `./native-definition` 导出获取 Host 服务，其共享策略沿用同一词汇。Native OTel Provider 消费持久化反馈提交，通过 `session-telemetry/record` 脱敏记录副本，并在 Native Host 释放资源前排空已接纳的捕获；它不组装 Cordis 协调器或 handoff 游标。
+
+```ts type-equiv
+/** Native telemetry service provided by an explicitly selected backend. */
+interface NativeSessionTelemetryOperations {
+  /** Selected sharing policy; this does not confirm collector delivery. */
+  readonly sharing: SessionTelemetrySharingStatus
+  /** @param record - direct submissions are refused by FEEDBACK_ONLY backends. */
+  emit(record: SessionTelemetryRecord): void
+  /** @returns completion after accepted exporter work has drained. */
+  shutdown(): Promise<void>
+}
+```
+
+源码：[`rsh/Engine/session/session-telemetry/src/native-definition.ts`](../../Engine/session/session-telemetry/src/native-definition.ts)
 
 ## 逻辑记录
 

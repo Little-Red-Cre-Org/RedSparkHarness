@@ -86,6 +86,13 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
     return history.events
   }
   /** @inheritdoc */
+  async readCommittedEvents(maxEvents?: number): Promise<readonly SessionEvent[]> {
+    this.assertAvailable()
+    const history = await this.owner.read(undefined, maxEvents)
+    this.assertAvailable()
+    return history.events
+  }
+  /** @inheritdoc */
   messages(target: InboxTarget): readonly UserMessage[] { this.assertAvailable(); return this.owner.messages(target) }
   /** @inheritdoc */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId> {

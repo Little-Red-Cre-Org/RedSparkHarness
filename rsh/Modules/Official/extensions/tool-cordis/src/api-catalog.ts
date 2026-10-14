@@ -4399,7 +4399,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'FeedbackCategory',
-    declaration: 'export type FeedbackCategory = \'task-result\' | \'instruction-following\' | \'product-interaction\' | \'service-stability\' | \'resource-cost\' | \'security-privacy-permission\' | \'other\';',
+    declaration: 'export type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number];',
   },
   {
     name: 'FiberState',

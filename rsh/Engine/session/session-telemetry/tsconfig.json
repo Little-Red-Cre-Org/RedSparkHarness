@@ -19,6 +19,15 @@
     },
     {
       "path": "../../core/agent"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../Modules/Official/feedback/command-feedback"
+    },
+    {
+      "path": "../../../Modules/Official/feedback/message-feedback"
     }
   ]
 }

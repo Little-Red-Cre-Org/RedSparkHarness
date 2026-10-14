@@ -215,12 +215,15 @@ export function shippedNativeProfileComposition(
         { id: 'user-questions', plugin: '@deepseek-ai/dsh-user-questions', scope: ROOT },
         { id: 'ask-user-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: ROOT },
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
+        { id: 'command-feedback', plugin: '@deepseek-ai/dsh-command-feedback', scope: ROOT },
         { id: 'command-goal', plugin: '@deepseek-ai/dsh-command-goal', scope: ROOT },
         { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
       ] : []),
       ...(profile === 'native-web' ? [
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
+        { id: 'command-feedback', plugin: '@deepseek-ai/dsh-command-feedback', scope: ROOT },
         { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
+        { id: 'message-feedback', plugin: '@deepseek-ai/dsh-message-feedback', scope: ROOT, config: { maxNoteBytes: 8192 } },
       ] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? [
         { id: 'plan-mode', plugin: '@deepseek-ai/dsh-plan-mode', scope: ROOT, config: { section: PLAN_MODE_SECTION } },
@@ -279,6 +282,7 @@ export function shippedNativeProfileComposition(
       ...NATIVE_COMPACTION_INSTALLATIONS,
       ...(profile === 'native-acp' ? [
         { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: ROOT },
+        { id: 'command-feedback', plugin: '@deepseek-ai/dsh-command-feedback', scope: ROOT },
         { id: 'command-compact', plugin: '@deepseek-ai/dsh-command-compact', scope: ROOT },
       ] : []),
       { id: 'timeout-policy', plugin: '@deepseek-ai/dsh-tool-call-timeout-policy', scope: ROOT },

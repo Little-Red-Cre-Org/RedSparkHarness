@@ -71,6 +71,13 @@ import { canOpenNativePath, openNativePath, openNativeTextFile } from '@deepseek
 import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
 import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
+import type { NativeSessionFeedbackOperations } from '@deepseek-ai/dsh-command-feedback/native-definition'
+import type { FeedbackRecord } from '@deepseek-ai/dsh-command-feedback/types'
+import { FEEDBACK_CATEGORIES } from '@deepseek-ai/dsh-command-feedback/types'
+import type { NativeMessageFeedbackOperations } from '@deepseek-ai/dsh-message-feedback/native-definition'
+import type { MessageFeedbackDeleteRequest, MessageFeedbackListRequest, MessageFeedbackPutRequest } from '@deepseek-ai/dsh-message-feedback/types'
+import type {} from '@deepseek-ai/dsh-command-feedback/native-definition'
+import type {} from '@deepseek-ai/dsh-message-feedback/native-definition'
 import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-settings-definition/native'
 import { NativeWebAccounts, NativeWebAuthorization } from './authorization.ts'
@@ -357,7 +364,8 @@ const endpoints = new Set(['session/list', 'session/history', 'session/create', 
   'workspaces/list', 'workspaces/create', 'workspaces/rename', 'workspaces/delete', 'workspaces/reorder', 'workspaces/reorder-session',
   'workspaces/archive-session', 'workspaces/search', 'workspaces/connect',
   'directories/pick', 'directories/list', 'directories/create-directory',
-  'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related'])
+  'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related',
+  'feedback/session-record', 'feedback/message-list', 'feedback/message-put', 'feedback/message-delete'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
@@ -379,6 +387,17 @@ const nativeSessionSearch = z.strictObject({
   query: z.string().trim().min(1).max(sessionSearchQueryMaxChars).refine(query => !query.includes('\0')),
   cursor: z.string().regex(/^(0|[1-9][0-9]*)$/).optional(),
 })
+const nativeSessionFeedbackRecord = z.strictObject({
+  sessionId: z.string().min(1).max(256), text: z.string().optional(), category: z.enum(FEEDBACK_CATEGORIES).optional(),
+})
+const nativeMessageFeedbackList = z.strictObject({ sessionId: z.string().min(1).max(256) })
+const nativeMessageFeedbackPut = z.strictObject({
+  sessionId: z.string().min(1).max(256), messageId: z.string().min(1), rating: z.enum(['positive', 'negative']),
+  note: z.string().optional(), category: z.enum(FEEDBACK_CATEGORIES).optional(), ifVersion: z.union([z.string().uuid(), z.null()]),
+})
+const nativeMessageFeedbackDelete = z.strictObject({
+  sessionId: z.string().min(1).max(256), messageId: z.string().min(1), ifVersion: z.string().uuid(),
+})
 
 /** Optional selected authorities; no fallback catalog or composition registry is created. */
 export interface NativeWebSelectionProviders {
@@ -396,6 +415,8 @@ export interface NativeWebSelectionProviders {
   readonly credentials?: NativeCredentials | undefined
   readonly titles?: NativeSessionTitles | undefined
   readonly commands?: NativeCommandOperations | undefined
+  readonly sessionFeedback?: NativeSessionFeedbackOperations | undefined
+  readonly messageFeedback?: NativeMessageFeedbackOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
   readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
@@ -1278,6 +1299,43 @@ export class NativeWebSessionService {
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     try {
+      if (endpoint.startsWith('feedback/')) {
+        return { ok: true, value: await this.requests.run(signal, async (accepted) => {
+          if (endpoint === 'feedback/session-record') {
+            const service = this.selections.sessionFeedback
+            if (service === undefined) throw new Error('native web session: Session feedback is unavailable')
+            const request = nativeSessionFeedbackRecord.parse(payload)
+            const id = SessionId(request.sessionId)
+            const entry: FeedbackRecord = { ...(request.text === undefined ? {} : { text: request.text }),
+              ...(request.category === undefined ? {} : { category: request.category }) }
+            const route = await this.routeForSession(id, accepted)
+            return this.executor.executeSessionOperation({ id, resume: true, route },
+              owner => service.record(owner, entry, accepted), accepted)
+          }
+          const service = this.selections.messageFeedback
+          if (service === undefined) throw new Error('native web session: message feedback is unavailable')
+          if (endpoint === 'feedback/message-list') {
+            const request = nativeMessageFeedbackList.parse(payload)
+            return service.list({ sessionId: SessionId(request.sessionId) } satisfies MessageFeedbackListRequest, accepted)
+          }
+          if (endpoint === 'feedback/message-put') {
+            const request = nativeMessageFeedbackPut.parse(payload)
+            const typed: MessageFeedbackPutRequest = { sessionId: SessionId(request.sessionId), messageId: MessageId(request.messageId),
+              rating: request.rating,
+              ...(request.note === undefined ? {} : { note: request.note }),
+              ...(request.category === undefined ? {} : { category: request.category }),
+              ifVersion: request.ifVersion as MessageFeedbackPutRequest['ifVersion'] }
+            return service.put(typed, accepted)
+          }
+          if (endpoint === 'feedback/message-delete') {
+            const request = nativeMessageFeedbackDelete.parse(payload)
+            const typed: MessageFeedbackDeleteRequest = { sessionId: SessionId(request.sessionId),
+              messageId: MessageId(request.messageId), ifVersion: request.ifVersion as MessageFeedbackDeleteRequest['ifVersion'] }
+            return service.delete(typed, accepted)
+          }
+          throw new Error(`native web session: unsupported feedback endpoint ${endpoint}`)
+        }) }
+      }
       if (endpoint.startsWith('agent-presets/')) {
         return { ok: true, value: await this.controls.run(signal, accepted => this.agentPresets(endpoint, payload, accepted)) }
       }
@@ -1857,7 +1915,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionFeedback', 'messageFeedback'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -1917,6 +1975,7 @@ export const plugin: NativePlugin = {
           planMode: context.optional('planMode'), permissionPresets: context.optional('permissionPresets'),
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
+          sessionFeedback: context.optional('sessionFeedback'), messageFeedback: context.optional('messageFeedback'),
           workspaceRegistry,
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },

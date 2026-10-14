@@ -93,7 +93,9 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:^"
+    "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
+    "@deepseek-ai/dsh-command-feedback": "workspace:^",
+    "@deepseek-ai/dsh-message-feedback": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

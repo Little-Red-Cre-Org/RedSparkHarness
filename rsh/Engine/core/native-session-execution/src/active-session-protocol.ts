@@ -94,6 +94,12 @@ export interface NativeActiveSessionOwner {
    */
   readEvents(options?: { readonly maxEvents?: number; readonly signal?: AbortSignal }): Promise<readonly SessionEvent[]>
   /**
+   * Read the canonical prefix after an append and its flush have been accepted, without turn cancellation.
+   * @param maxEvents - optional exclusive event-count bound; omission reads the complete current history.
+   * @returns accepted Session events through the requested prefix bound.
+   */
+  readCommittedEvents(maxEvents?: number): Promise<readonly SessionEvent[]>
+  /**
    * Read one detached durable pending list.
    * @param target - inbox destination.
    * @returns captured pending messages.
