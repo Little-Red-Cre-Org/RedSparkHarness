@@ -27,6 +27,8 @@ Use `dsh-client-ui-workflow-run` to inspect each durable top-level workflow run 
 
 A top-level workflow run through `dsh-tool-workflow` appears in the conversation as its own node: expand the run to see its phases, and expand a phase to see its members. Phase groups come only from members that started, and settlement changes status without removing or reordering members.
 
+The `./native` export provides `workflowRunsFromSessionEvents` and `NativeWorkflowRunPanel`. Native renders one read-only panel at each run-start sequence from the selected Session history, alongside ordinary tool cards. Member rows do not navigate. Only closure of the owning Step or Turn permits inferred interruption; transport activity does not.
+
 ### Navigating the node
 
 The run uses a 32-pixel row with persistent chevrons, an inline state dot, and status text; phases use disclosure rows with title and member count in the main area and a fixed aggregate-status tail; members use a 16-pixel dot slot, a truncating name area, and a fixed status column. Opening a member's child Session requires the member to be running, the child id to be in the ordinary Session list, the row to have `origin: 'subagent'`, its `parentId` to be the current Session, and the list row to still be running — remote, addressed-only, wrong-parent, or terminal rows remain non-interactive.
@@ -47,7 +49,7 @@ The node is a deterministic replay of durable session events: `tool-workflow/run
 
 ### Disclosure choices
 
-Ordinary running updates preserve the current choice, the first abnormal edge opens once, normal completion closes once, and a completed phase plus the outer run open again when a new running member starts under the same phase key. If an entire new clean cycle arrives in one render while the run remains active, the phase finishes folded but the outer run opens once to expose its updated summary. `WorkflowRunPanel` owns the phase choices, so closing and reopening the outer run does not reset them; a renderer remount reconstructs every initial choice from durable facts.
+Ordinary running updates preserve the current choice, the first abnormal edge opens once, normal completion closes once, and a completed phase plus the outer run open again when a new running member starts under the same phase key. If an entire new clean cycle arrives in one render while the run remains active, the phase finishes folded but the outer run opens once to expose its updated summary. `WorkflowRunView` owns the phase choices, so closing and reopening the outer run does not reset them; a renderer remount reconstructs every initial choice from durable facts.
 
 ### Composition
 
