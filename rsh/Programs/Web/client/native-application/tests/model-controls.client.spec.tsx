@@ -87,15 +87,16 @@ it.each(['mode', 'plan', 'permission'] as const)('routes the %s composer control
   }
 })
 
-it('keeps initial catalog failures retryable before a Session is selected', async () => {
+it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable and locks loaded rows without a Session ($catalogError)', async ({ catalogError }) => {
   const snapshot: ConversationSnapshot = {
-    sessions: [], events: [], state: 'ready', error: 'catalog offline',
+    sessions: [], events: [], state: 'ready', error: catalogError,
   }
   const refreshModelControls = vi.fn(async () => undefined)
+  const selectModel = vi.fn(async () => undefined)
   const t = (key: ConversationLocaleKey, params?: Record<string, unknown>): string =>
     key === 'error.action' ? `Failed: ${String(params?.message)}` : key
 
-  render(<ModelPickerControl snapshot={snapshot} selectModel={async () => undefined}
+  const view = render(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
     refreshModelControls={refreshModelControls} t={t} />)
 
   const trigger = screen.getByRole<HTMLButtonElement>('button', { name: 'trigger.selectAria' })
@@ -106,4 +107,24 @@ it('keeps initial catalog failures retryable before a Session is selected', asyn
   fireEvent.click(screen.getByRole('button', { name: 'retry' }))
 
   expect(refreshModelControls).toHaveBeenCalledTimes(2)
+  view.rerender(<ModelPickerControl snapshot={{ ...snapshot, state: 'sending', error: undefined }}
+    selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />)
+  expect(screen.getByRole('menu')).toBeTruthy()
+  expect(screen.getByText('status.loading')).toBeTruthy()
+
+  view.rerender(<ModelPickerControl snapshot={{ ...snapshot, error: undefined, modelControls: {
+    canSelectModel: true, presets: [], catalog: {
+      default: { provider: 'fixture', model: 'one' }, routableProviders: ['fixture'], failures: [], groups: [{ id: 'fixture', name: 'Fixture', models: [
+        { id: 'one', name: 'One', reasoning: { defaultEffort: 'high', efforts: [{ id: 'high', name: 'High' }] } },
+        { id: 'two', name: 'Two' },
+      ] }],
+    },
+  } }} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />)
+  const model = screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'Two' })
+  expect.soft(model.disabled).toBe(true)
+  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' })
+  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.effort/ }))
+  expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'High' }).disabled).toBe(true)
+  fireEvent.click(screen.getByRole('menuitemradio', { name: 'High' }))
+  expect(selectModel).not.toHaveBeenCalled()
 })

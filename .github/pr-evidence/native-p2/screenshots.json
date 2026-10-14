@@ -1,0 +1,67 @@
+{
+  "images": [
+    {
+      "file": "native-question-375-before.png",
+      "sourceCommit": "e9a8e82bc7a8f935ef9cbf0396f269c5ce9756c2",
+      "captureDescription": "Original clean main capture",
+      "description": "375x900, original main: Next clipped after the automatic 56px rail settles.",
+      "bytes": 38679,
+      "sha256": "2c2a03416359a2380475c4e5e2d9b8990b722793d098e631376f753627ee3504",
+      "edited": false
+    },
+    {
+      "file": "native-question-375-after.png",
+      "sourceCommit": null,
+      "captureDescription": "P2 WIP on e9a8e82 before normal checkpoint c902b698a96de54d663abe517bfbedc6eb303b20; not a merged-base capture",
+      "description": "375x900, P2 before merge: pager and action group wrap; Next is fully visible.",
+      "bytes": 39434,
+      "sha256": "7806f265bb0006e6650c9e7075f1dedc19e8122a4de950735561ccd4398ac2f2",
+      "edited": false
+    },
+    {
+      "file": "native-question-desktop.png",
+      "sourceCommit": null,
+      "captureDescription": "P2 WIP on e9a8e82 before normal checkpoint c902b698a96de54d663abe517bfbedc6eb303b20; not a merged-base capture",
+      "description": "1365x900, P2 before merge, real Native CLI and authenticated Host: the pending two-question batch.",
+      "bytes": 90968,
+      "sha256": "1d8119fa5a905404c8a9f7891fba67d98c2582666ae22eae2933144fedc49895",
+      "edited": false
+    },
+    {
+      "file": "native-question-completed.png",
+      "sourceCommit": null,
+      "captureDescription": "P2 WIP on e9a8e82 before normal checkpoint c902b698a96de54d663abe517bfbedc6eb303b20; not a merged-base capture",
+      "description": "1365x900, P2 before merge: generic dismissal and plan discussion completed in the same turn.",
+      "bytes": 86836,
+      "sha256": "88738ff662682d27c87a4d6f218217e583c37420bb03d230e498d1c0a83676ce",
+      "edited": false
+    }
+  ],
+  "model": "local deterministic fixture; no credentials or paid model calls",
+  "library": {
+    "confirmedIds": [],
+    "delivery": "main agent retrieves exact committed PNGs; unsupported local upload helper is not retried"
+  },
+  "cloudImages": [
+    {
+      "file": "cloud-native-question-375.png",
+      "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+      "browser": "154.0.8037.57",
+      "origin": "http://127.0.0.1:41671",
+      "bytes": 45059,
+      "sha256": "1c02f82f26ce29b6a757400bf28433a734dfbd9292f3ca3f10074c879b7c5ca9",
+      "edited": false,
+      "captureDescription": "Supplementary real Native CLI QA, system Chromium and local deterministic fixture; not official replay. Viewed at actual pixels."
+    },
+    {
+      "file": "cloud-native-question-continued.png",
+      "sourceCommit": "12e2c7367b6977d3b7186a21083483349739ef9e",
+      "browser": "154.0.8037.57",
+      "origin": "http://127.0.0.1:41671",
+      "bytes": 99165,
+      "sha256": "eae200c404bae22f05472a102280ef2a2452f44a18f530af4c4bba52041e1347",
+      "edited": false,
+      "captureDescription": "Supplementary real Native CLI QA, system Chromium and local deterministic fixture; not official replay. Viewed at actual pixels."
+    }
+  ]
+}
