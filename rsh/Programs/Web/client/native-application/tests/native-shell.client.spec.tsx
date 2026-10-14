@@ -334,7 +334,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(screen.queryByRole('button', { name: 'Move session Alpha down' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'View options' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sort by manual order' }))
-    expect(screen.getByRole('button', { name: 'Move session Alpha up' }).disabled).toBe(true)
+    expect(screen.getByRole('button', { name: 'Move session Alpha up' })).toHaveProperty('disabled', true)
     fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
     await waitFor(() => { expect(reorderSession).toHaveBeenCalledWith(workspaceId, 'session-alpha', undefined, expect.any(AbortSignal)) })
     await waitFor(() => { expect(screen.getByRole('treeitem', { name: /Beta/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Alpha/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy() })
@@ -407,7 +407,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
 
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
-    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move workspace New up' }).disabled).toBe(true) })
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move workspace New up' })).toHaveProperty('disabled', true) })
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New down' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenLastCalledWith('workspace-new', undefined, expect.any(AbortSignal)) })
 
