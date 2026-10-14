@@ -27,7 +27,7 @@ The dsh web client sidebar shows the active build, starts sessions, collapses na
 
 The sidebar is the navigation shell: users see the brand, start new sessions, collapse the rail, and reach Settings. Feature plugins fill its seats — ui-workspace fills `sidebar.workspaces`, ui-settings registers the trigger row and settings panel at `sidebar.settings`.
 
-In the native-web profile, the native application fills these seats with a Host-backed Session roster and Settings panel. The workspace section groups rows by registered `workspaceId`, follows Session activity and Workspace changes, supports recent-activity/manual ordering, grouped or flat views, Session search and archive, and Workspace creation, selection, rename, and deletion. Workspace creation uses the shared in-app directory browser. The scheduled-tasks header action opens a read-only list that follows Host changes while selected; compact language and theme controls stay in the sidebar footer.
+In the native-web profile, the native application fills these seats with a Host-backed Session roster and Settings panel. The workspace section groups rows by registered `workspaceId`, follows Session activity and Workspace changes, supports recent-activity/manual ordering, grouped or flat views, Session search and archive, and Workspace creation, selection, rename, and deletion. In manual ordering with Workspace grouping, up/down buttons persist Workspace and group-member order through the Host; controls disable during a write and failed writes leave the followed order intact. Workspace creation uses the shared in-app directory browser. The scheduled-tasks header action opens a read-only list that follows Host changes while selected; compact language and theme controls stay in the sidebar footer.
 
 ### Brand and New Session
 
@@ -93,7 +93,7 @@ None; this package neither assembles nor sends a provider request.
 These limits define what the shell owns versus what its occupants own; they are current package constraints.
 
 - **The legacy Workspace browser remains owned by ui-workspace** — the Native sidebar composes its Host-backed rows here and shares row and directory-browser presentation components.
-- **Native Workspace rows do not support drag reordering or moving Sessions** — the native Host exposes ordering commands, but the sidebar does not present those gestures.
+- **Native Workspace rows do not support drag reordering or moving Sessions** — up/down controls provide persisted ordering; drag gestures and cross-Workspace moves remain unavailable.
 - **Native Session search shows one Host page** — additional pages are not presented.
 - **The Native Schedule list is read-only** — it shows task names, states, schedule times, and next runs without prompts or management actions.
 - **"New task completed" unread marking is local viewing state** — completion-time > last-seen never reaches the host.

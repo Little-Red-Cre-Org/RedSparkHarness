@@ -651,3 +651,38 @@
     animation: none;
   }
 }
+
+.orderedRow {
+  display: flex;
+  align-items: center;
+}
+
+.orderedRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderControls {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.orderControls button {
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.orderControls button:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.orderControls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
