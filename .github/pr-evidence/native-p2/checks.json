@@ -1064,5 +1064,74 @@
       "No new broad check:all run; complete normal build/lint/doc-sync and affected owner checks cover this continuation.",
       "Both required SPH platforms and independent final CR/merge remain with the main agent."
     ]
+  },
+  "initialMissingDependencyRepair": {
+    "baseHead": "2ff4ebf981e2c43511f789018c507e06fcf6f889",
+    "sourceCommit": "447828188cdb74785ac2477d2d482cefb4c65b7d",
+    "scope": "Frontend NativeFilesPanel, existing HTML owner test parameter, bilingual README and owning Agent Note. No Host, protocol type, Settings or core/SDK changes.",
+    "behavior": "A failed read has no returned identity. A present-file observation outside known identities retries the failed preview. Absence observations and matching known identities do not trigger that retry; a successful preview continues to filter known paths and versions.",
+    "negativeControl": {
+      "command": "pnpm exec vitest run rsh/Programs/Web/client/ui-sidebar-right/tests/native-files.client.spec.tsx -t 'initially missing: true' --retry=0",
+      "before": {
+        "exitCode": 1,
+        "failed": 1,
+        "skipped": 6,
+        "failure": "After the initial related-read rejection and creation observation, the iframe remains absent."
+      },
+      "after": {
+        "exitCode": 0,
+        "passed": 1,
+        "skipped": 6
+      }
+    },
+    "owners": {
+      "command": "pnpm exec vitest run rsh/Programs/Web/client/ui-sidebar-right/tests/native-files.client.spec.tsx rsh/Programs/Web/client/native-application/tests/model-controls.client.spec.tsx rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts --retry=0",
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0,
+      "files": 3
+    },
+    "lint": {
+      "command": "pnpm run lint",
+      "exitCode": 0,
+      "warning": "Existing acp-child unused oxlint-disable directive."
+    },
+    "docs": {
+      "command": "pnpm run doc-sync",
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 184.6,
+      "note": "A final Agent Note wording correction distinguishes the earlier P2 probes from this checkpoint-specific negative control; targeted pairing and Markdown checks cover the final prose."
+    },
+    "typecheck": "Normal pre-push hook required; actual push outcome reported after execution.",
+    "screenshots": "Existing supplementary captures retain sourceCommit 12e2c7367b6977d3b7186a21083483349739ef9e. No new screenshot or official replay is claimed for this follow-up.",
+    "rawEvidence": [
+      {
+        "file": "native-p2-initial-missing-before.log",
+        "bytes": 2368,
+        "sha256": "248a147768494e30402959f965155bf2df2f55b1d193fefaf64284af57f24aab"
+      },
+      {
+        "file": "native-p2-initial-missing-after.log",
+        "bytes": 910,
+        "sha256": "75425787320693a04be3cc68e01b550151041da87b784ca893b061dfedb98850"
+      },
+      {
+        "file": "native-p2-missing-owner.log",
+        "bytes": 900,
+        "sha256": "864e691cd23a9cbd92169d84a8c35b6d2a575285e6de0b01f7e3f24ff47a9d38"
+      },
+      {
+        "file": "native-p2-missing-lint.log",
+        "bytes": 259031,
+        "sha256": "7ef600b11067a4c2926cf1cd1c846f1ce1c7c258608138b147c836fec76d6fb2"
+      },
+      {
+        "file": "native-p2-missing-docs.log",
+        "bytes": 2955,
+        "sha256": "3e50c19890b3f9ab59d415b86debc271bb228abb47cef7a8a19e900d72dc7571"
+      }
+    ]
   }
 }
