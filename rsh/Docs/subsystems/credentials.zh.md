@@ -53,6 +53,56 @@ interface CredentialInfo {
 
 `credentials/reference-updated (ref)` 在提供方管理的来源发生已提交变更后发出——`set`、`unset` 或在存储中观察到的外部编辑。进程环境自身的变化不可观测，永不发出事件。消费方不需要该事件（它们按操作重新解析）；它服务于配置界面刷新「已配置」徽标。
 
+## Native Host service
+
+Native Host 消费方从按其 scope 选出的 `credentials` Provider 接收记录变更。`onRecordUpdated` 在 Provider 提交已更新快照后传递带品牌的 key；回调会同步调用，但返回的异步工作不会延迟凭据写入。disposer 会关闭新回调的准入并等待已开始的回调，因此消费方应通过 `context.effect` 注册它，并在回调之外调用。此 service 通知与下方的 Cordis 事件分开。
+
+```ts type-equiv
+/** Service implemented by a native credential Provider. */
+interface NativeCredentials {
+  resolve(ref: CredentialRef): Promise<NativeResolvedCredential | undefined>
+  describe(ref: CredentialRef): Promise<CredentialInfo>
+  set(ref: CredentialRef, value: string): Promise<void>
+  unset(ref: CredentialRef): Promise<void>
+  readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+  describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
+  listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
+  /**
+   * Receive a committed record change from this selected Provider instance.
+   * The Provider invokes the listener synchronously after a durable write or
+   * removal, or after adopting an observed external change. Asynchronous
+   * listener work does not delay the operation. Listener failures are logged
+   * and contained; the disposer stops later delivery and drains admitted work.
+   * @param listener - callback receiving the changed record address, never its payload.
+   * @returns an idempotent disposer; call it outside the listener so it cannot await itself.
+   */
+  onRecordUpdated(listener: (key: CredentialKey) => void | Promise<void>): () => Promise<void>
+  /**
+   * Read-decide-replace one record under the Provider's write queue.
+   * @param key - record address.
+   * @param mutate - decides the next record from the current one; undefined keeps it.
+   * @param options - `signal` is checked when the queued write starts, before
+   *   reading; once `mutate` begins the write always commits. A queued write
+   *   rejects with the signal's reason and writes nothing.
+   * @returns the committed record, or the unchanged current one.
+   */
+  modifyRecord(
+    key: CredentialKey,
+    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<CredentialRecord | undefined>
+  /**
+   * Remove one record under the Provider's write queue.
+   * @param key - record address.
+   * @param options - `signal` is checked inside the queue before the removal commits;
+   *   `when` decides against the record as it stands inside the queue, so a later write is never removed.
+   */
+  deleteRecord(key: CredentialKey, options?: NativeCredentialDeleteOptions): Promise<void>
+}
+```
+
+Source: [`rsh/Modules/Official/credentials/credentials/src/native.ts`](../../Modules/Official/credentials/credentials/src/native.ts)
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

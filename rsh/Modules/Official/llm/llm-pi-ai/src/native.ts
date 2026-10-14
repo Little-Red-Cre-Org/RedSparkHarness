@@ -97,7 +97,7 @@ export const plugin: NativePlugin = {
       let credentialSnapshotsReady = false
       let codexAvailable = false
       let deepseekAccountAvailable = false
-      context.on('credentials/record-updated', async (key) => {
+      context.effect(credentials.onRecordUpdated(async (key) => {
         if (!credentialSnapshotsReady) {
           if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) credentialSnapshotsDirty = true
           return
@@ -121,7 +121,7 @@ export const plugin: NativePlugin = {
         if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) {
           await context.events.parallel(context.scope, 'accounts/changed', key)
         }
-      })
+      }))
       do {
         context.signal.throwIfAborted()
         // Reconcile account commits delivered while either snapshot is pending.

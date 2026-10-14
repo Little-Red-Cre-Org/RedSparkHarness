@@ -142,7 +142,9 @@ records:
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 提供方：环境分层、写锁下的引用与记录写入，以及 watcher 生命周期 |
+| [`src/index.ts`](src/index.ts) | 基于共用 backend 的 Cordis Service adapter |
+| [`src/native.ts`](src/native.ts) | Native Host Provider 入口与所选 service 的发布 |
+| [`src/backend.ts`](src/backend.ts) | 共用文档读写、提供方范围内的记录通知，以及 watcher 生命周期 |
 | [`src/document.ts`](src/document.ts) | 共用文档解析和格式化、文件权限检查及存储默认值 |
 | — | 未发布运行时不变式配套入口；Service Definition 的配套入口（`dsh-credentials/invariant`）负责 `credentials/reference-updated` 生命周期约定；本提供方的文件与环境分层属于异步 I/O，并由其单元测试套件加以约束。 |
 
@@ -150,11 +152,11 @@ records:
 
 `resolve` 与 `describe` 按优先级顺序读取继承环境快照、已解析文档快照与 `.env` 后备层。`set`/`unset` 排入同一条独占操作链：入口检查提前拒绝（已释放、空值、被环境遮蔽），队列在运行时会重新判定，随后在写锁下执行读-改-写、提交，并恰好触发一次 `credentials/reference-updated`。
 
-`modifyRecord` 走同一条链与同一把锁：它重新读取文档、把当前记录交给变更函数、准入其结果——非空的 API 密钥、能经受 JSON 往返的 grant payload——整体渲染该记录并提交，恰好触发一次 `credentials/record-updated`。并非由产品 CLI（命令行界面）启动的组合只有继承环境这一层。
+`modifyRecord` 走同一条链与同一把锁：它重新读取文档、把当前记录交给变更函数、准入其结果——非空的 API 密钥、能经受 JSON 往返的 grant payload——整体渲染该记录并提交。Native 消费方在所选 service 上收到一次仅含地址的回调；Cordis 消费方收到一次 `credentials/record-updated` 事件。并非由产品 CLI（命令行界面）启动的组合只有继承环境这一层。
 
 ### 重载生命周期
 
-watcher 事件或就绪时的对账会将一次刷新排到同一链条之后。`reconcileFromDisk` 重新检查权限、重读文本，文本有差异时整体替换两个快照，并按变更引用或记录逐个发布事件；与文本缓存一致的内容——包括提供方自己的写入——是 no-op。释放时设置关闭标志、停止接收事件、关闭 watcher，并等待排队操作结算完毕，确保资源销毁后不再发布任何事件。
+watcher 事件或就绪时的对账会将一次刷新排到同一链条之后。`reconcileFromDisk` 重新检查权限、重读文本，文本有差异时整体替换两个快照，并对每个变更的引用或记录只通知一次；与文本缓存一致的内容——包括提供方自己的写入——是 no-op。Native 记录订阅在释放时会停止接收新回调，提供方 teardown 还会等待正在运行的回调和排队操作结束。
 
 ### 文档版本化
 

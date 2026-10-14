@@ -116,7 +116,7 @@ A notice is one-way and never carries a secret: a message, optionally the page t
 
 ### Commit confirmation
 
-During the attempt the seam watches `credentials/record-updated` for the flow's key, then after `run()` resolves it re-reads `describeRecord` — confirming the commit happened now, because on a re-auth the record already exists and presence alone would let a stale credential pass as freshly authorized. A flow that resolves without committing, or that deleted its record instead of committing one, throws `NOT_COMMITTED`.
+During a Native attempt, the Provider selected for `credentials` synchronously reports the flow key after its durable commit; the authorization listener records that this attempt committed before the write resolves. Cordis uses its `credentials/record-updated` event for the same confirmation. After `run()` resolves, authorization still re-reads `describeRecord`, because on re-auth the record may already exist and presence alone would let stale credentials pass as fresh. A flow that resolves without committing during this attempt, or deletes the record instead of committing one, throws `NOT_COMMITTED`.
 
 </details>
 

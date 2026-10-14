@@ -55,7 +55,40 @@ import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
-import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
+import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig, type NativeWebSelectionProviders } from '../src/native.ts'
+
+it.each([{ namespace: 'optional-settings' }])('describes absent optional Settings without accepting writes ($namespace)', async ({ namespace }) => {
+  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
+    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1,
+    maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 })
+  const lifetime = new AbortController().signal
+  const active = {
+    onAttached: () => async () => {}, onDetached: () => async () => {}, owners: () => [],
+  } as unknown as NativeActiveSessionOperations
+  const failedSettings = { describe: () => { throw new Error('actual provider read failure') } } as unknown as NativeWebSelectionProviders['settings']
+  const services = [undefined, failedSettings].map(settings => new NativeWebSessionService(
+    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+    {} as NativeSessionPersistenceOperations, active, config, lifetime, { settings },
+  ))
+  const clients = services.map(service => createNativeSessionClient({
+    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime),
+  }, { maxFollowBufferChars: 1000 }))
+  try {
+    await expect(clients[0]?.settingsDescribe()).resolves.toEqual({ hasDocument: false, namespaces: [],
+      limits: { maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 } })
+    await expect(clients[0]?.settingsMutate(namespace, [{ op: 'set', path: ['enabled'], value: true }], 0))
+      .rejects.toMatchObject({ code: 'native/settings' })
+    await expect(clients[0]?.settingsOpenDocument()).rejects.toMatchObject({ code: 'native/settings' })
+    await expect(clients[1]?.settingsDescribe()).rejects.toBeInstanceOf(NativeSessionRpcError)
+    await expect(clients[1]?.settingsDescribe()).rejects.toMatchObject({
+      code: 'native/settings', message: 'Settings request failed.',
+    })
+  } finally {
+    await Promise.all(clients.map(client => client.close()))
+    await Promise.all(services.map(service => service.close()))
+  }
+})
 
 it('closes a list follower aborted while its consumer is paused at yield', async () => {
   const rpc = {

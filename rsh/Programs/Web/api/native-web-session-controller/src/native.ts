@@ -2063,10 +2063,10 @@ export class NativeWebSessionService {
   private async configuration(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
     if (endpoint === 'settings/describe') {
       if (Object.keys(object(payload)).length !== 0) throw new TypeError('native settings: describe takes no fields')
-      const settings = this.settings()
+      const settings = this.selections.settings
       return {
-        hasDocument: settings.documentPath !== undefined,
-        namespaces: settings.describe(),
+        hasDocument: settings?.documentPath !== undefined,
+        namespaces: settings === undefined ? [] : settings.describe(),
         limits: {
           maxCredentialRefsPerRead: this.config.maxCredentialRefsPerRead,
           maxSettingsOperations: this.config.maxSettingsOperations,
