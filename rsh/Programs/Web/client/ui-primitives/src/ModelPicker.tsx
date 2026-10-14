@@ -399,7 +399,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
                             className={clsx(css.option, selected && css.selected)}
                             key={model.id}
                             title={model.name}
-                            disabled={busy}
+                            disabled={busy || locked}
                             onClick={() => { choose({ provider: group.id, model: model.id }) }}
                           >
                             <span className={css.optionCopy}>
@@ -439,7 +439,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
                     aria-checked={effectiveEffort === level.effort}
                     className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
                     key={level.key}
-                    disabled={busy}
+                    disabled={busy || locked}
                     onClick={() => { chooseEffort(level.effort) }}
                   >
                     <span className={css.optionCopy}>

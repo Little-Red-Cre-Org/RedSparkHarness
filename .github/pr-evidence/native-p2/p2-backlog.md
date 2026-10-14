@@ -1,0 +1,21 @@
+# Native UI P2 backlog
+
+Audit base: main `e9a8e82bc7a8f935ef9cbf0396f269c5ce9756c2` after #223. The concentrated repair uses `codex/native-p2-20261014`; final independent CR, required SPH on both platforms and merge belong to the main agent.
+
+| Item | Confirmed problem and minimal owner fix | Current evidence/status |
+| --- | --- | --- |
+| P2-01 | Optional Settings absence blocks onboarding. Return the existing empty description and real limits; preserve read errors and refuse writes/open-document. | Implemented. Key Host/validated-client regression passes; absence fails before the repair. |
+| P2-02 | Loaded model/effort rows ignore the no-Session lock after catalog retry. Use the shared row lock and retain the open menu while loading. | Implemented. Existing Native control scenario passes; both rows are enabled before the repair. |
+| P2-03 | Empty text pages lose line separators. Join by line counts; a zero-line EOF adds no separator. | Implemented. Blank pages and zero-line EOF pass; original source loses both leading blank lines. |
+| P2-04 | Reopening a cached collapsed directory shows old entries. Reuse loadDirectory and its generation guard on every expansion. | Implemented. The reopened directory lists fresh entries; original source performs only one list call. |
+| P2-05 | Unrelated/same-version observations reset preview pagination. Filter the selected absolute path and observed version, including removal. | Implemented. Both observations retain pages; a changed version or removal refreshes them. |
+| P2-06 | Old loadMore success/failure contaminates a same-path refresh. Bind pagination to the existing preview read's AbortController. | Implemented. Both delayed completion branches pass after refresh; original source appends obsolete text and displays an obsolete alert. |
+| P2-07 | Generic Next is clipped at settled 375px with the automatic 56px rail. Wrap the narrow footer and keep its action group aligned. | Reproduced on the fresh main build in a real Native CLI screenshot; CSS repair implemented, after-image verification pending. |
+| P2-08 | #219 describes two HTTP cases and two exclusions. | Corrected to one direct registry case plus one authenticated HTTP case, and application Client exclusion plus Host inclusion. Historical counts are preserved. |
+| P2-09 | #222 private checkedTarget comment promises the fresh target. | Corrected to return the original target after confinement/identity validation and reject changed identity as FS_STALE_VERSION. Runtime policy is unchanged. |
+
+Four important scenarios were changed or added. Before the repair, all four fail on the expected contracts. After the repair, all four pass; the three owner files record 15 passed and one unrelated failure. That older HTTP lifecycle fixture fails because foreign-program does not declare optional requestContexts; a narrow rerun reproduces the same error in the earlier checkout whose Git tree exactly equals this merged base (tree `32adfb836fdc37a7af7ba1890b688be3525bdbf7`). This comparison covers that one failure only.
+
+The first normal build found a missing routableProviders field in the new model catalog fixture; the field is supplied without a production fallback. The corrected normal build passes. Full local checks, documentation/export JSDoc, final screenshots and normal hooks remain to be recorded before publication.
+
+Older handoff candidates outside these confirmed items remain pending latest-main review. No blanket claim is made that all original P2 candidates or broad-suite failures are resolved.

@@ -27,6 +27,7 @@ type FilePreviewState =
     readonly path: string
     readonly format: 'code' | 'markdown' | 'text'
     readonly absolutePath: string
+    readonly version: string
     readonly text: string
     readonly lines: number
     readonly eof: boolean
@@ -38,6 +39,7 @@ type FilePreviewState =
     readonly path: string
     readonly format: 'html' | 'image' | 'pdf'
     readonly absolutePath: string
+    readonly version: string
     readonly data: Uint8Array<ArrayBuffer>
   }
 
@@ -63,10 +65,6 @@ function formatOf(path: string): PreviewFormat {
   if (kind === 'markdown') return 'markdown'
   if (isCodeFileType(kind) || languageForPath(path) !== undefined) return 'code'
   return 'text'
-}
-
-function joinText(left: string, right: string): string {
-  return left.length === 0 || right.length === 0 ? left + right : `${left}\n${right}`
 }
 
 /** Keep one preview Blob URL alive only while its byte result is displayed. */
@@ -99,6 +97,10 @@ export function NativeFilesPanel({
   const controller = useRef<AbortController>()
   const [selectedPath, setSelectedPath] = useState<string>()
   const [preview, setPreview] = useState<FilePreviewState>()
+  const previewRead = useRef<AbortController>()
+  // Retain the observed identity during a same-file refresh so duplicate frames
+  // do not discard the new read while its result is still pending.
+  const previewFile = useRef<{ sessionId: SessionId; path: string; absolutePath: string; version?: string }>()
   const [previewRevision, setPreviewRevision] = useState(0)
   const [followFailed, setFollowFailed] = useState(false)
 
@@ -153,7 +155,14 @@ export function NativeFilesPanel({
         for await (const frame of service.follow(sessionId, watch.signal)) {
           if (frame.kind !== 'change') continue
           for (const path of treeRef.current.expanded) loadDirectory(path, watch.signal)
-          if (selectedPath !== undefined) setPreviewRevision(value => value + 1)
+          const currentFile = previewFile.current
+          if (selectedPath !== undefined && currentFile?.sessionId === sessionId && currentFile.path === selectedPath
+            && currentFile.absolutePath === frame.change.absolutePath
+            && ('version' in frame.change ? currentFile.version !== frame.change.version : currentFile.version !== undefined)) {
+            previewFile.current = { sessionId, path: selectedPath, absolutePath: frame.change.absolutePath,
+              ...'version' in frame.change ? { version: frame.change.version } : {} }
+            setPreviewRevision(value => value + 1)
+          }
         }
       } catch {
         if (!watch.signal.aborted) setFollowFailed(true)
@@ -165,6 +174,8 @@ export function NativeFilesPanel({
   useEffect(() => {
     if (!previewActive || sessionId === undefined || selectedPath === undefined) return undefined
     const read = new AbortController()
+    previewRead.current = read
+    if (previewFile.current?.sessionId !== sessionId || previewFile.current.path !== selectedPath) previewFile.current = undefined
     setPreview({ kind: 'loading', path: selectedPath })
     const format = formatOf(selectedPath)
     void (async () => {
@@ -175,6 +186,7 @@ export function NativeFilesPanel({
           path: selectedPath,
           format,
           absolutePath: result.absolutePath,
+          version: result.version,
           data: bytesOf(result.data),
         }
       }
@@ -184,15 +196,23 @@ export function NativeFilesPanel({
         path: selectedPath,
         format,
         absolutePath: result.absolutePath,
+        version: result.version,
         text: result.text,
         lines: result.lines,
         eof: result.eof,
       }
     })().then(
-      (result) => { if (!read.signal.aborted) setPreview(result) },
+      (result) => {
+        if (read.signal.aborted) return
+        previewFile.current = { sessionId, path: selectedPath, absolutePath: result.absolutePath, version: result.version }
+        setPreview(result)
+      },
       () => { if (!read.signal.aborted) setPreview({ kind: 'failed', path: selectedPath }) },
     )
-    return () => { read.abort() }
+    return () => {
+      read.abort()
+      if (previewRead.current === read) previewRead.current = undefined
+    }
   }, [previewActive, previewRevision, selectedPath, service, sessionId])
 
   const toggleDirectory = (path: string): void => {
@@ -202,7 +222,7 @@ export function NativeFilesPanel({
       expanded: expanded ? current.expanded.filter(item => item !== path) : [...current.expanded, path],
     }))
     const signal = controller.current?.signal
-    if (!expanded && tree.levels[path] === undefined && signal !== undefined) loadDirectory(path, signal)
+    if (!expanded && signal !== undefined) loadDirectory(path, signal)
   }
 
   const reloadTree = (): void => {
@@ -213,7 +233,7 @@ export function NativeFilesPanel({
 
   const loadMore = (): void => {
     if (preview?.kind !== 'text' || preview.loadingMore || preview.eof || sessionId === undefined) return
-    const signal = controller.current?.signal
+    const signal = previewRead.current?.signal
     if (signal === undefined) return
     const current = preview
     setPreview({ ...current, loadingMore: true, failure: false })
@@ -222,7 +242,7 @@ export function NativeFilesPanel({
         if (signal.aborted) return
         setPreview(value => value?.kind !== 'text' || value.path !== current.path ? value : {
           ...value,
-          text: joinText(value.text, result.text),
+          text: value.lines > 0 && result.lines > 0 ? `${value.text}\n${result.text}` : value.text + result.text,
           lines: value.lines + result.lines,
           eof: result.eof,
           absolutePath: result.absolutePath,
