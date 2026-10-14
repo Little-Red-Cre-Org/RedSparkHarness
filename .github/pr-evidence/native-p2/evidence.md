@@ -45,3 +45,7 @@ The locked Playwright Chromium download is denied with HTTP 403, and the officia
 ## Initially missing dependency recovery
 
 Source commit `447828188cdb74785ac2477d2d482cefb4c65b7d` adds frontend recovery when the first HTML dependency read rejects before establishing an identity. The same existing-fixture parameter fails before the repair and passes afterward; matching known observations and absence observations do not retrigger the failed read. Successful previews retain the identity/version filter. The final owner run passes 21/21, normal lint passes and doc-sync passes all 35 gates. [checks.json](checks.json) records this follow-up separately. The images above retain their original source commits and do not claim to capture this additional recovery path. Host implementations, protocol types and the accepted Settings response are unchanged by this follow-up.
+
+## Creation observed before dependency rejection
+
+Source commit `585f75f72ce5b01af033db1fdac370c138b5f363` checks buffered unknown present-file observations in catch before finally clears them. The delayed-rejection parameter fails on the prior checkpoint and passes in the final 22/22 owner run. Normal lint passes and doc-sync completes 35/35. The shared predicate preserves the existing known-version/absence filtering, cancellation checks and original rejection. [checks.json](checks.json) records this timing separately; the screenshots above retain their original source and do not claim a new capture for this follow-up.

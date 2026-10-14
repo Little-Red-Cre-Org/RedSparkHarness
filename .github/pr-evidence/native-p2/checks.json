@@ -1133,5 +1133,64 @@
         "sha256": "3e50c19890b3f9ab59d415b86debc271bb228abb47cef7a8a19e900d72dc7571"
       }
     ]
+  },
+  "pendingDependencyRejectionRepair": {
+    "baseHead": "ddaf46a0d280a12bdab5a6fc0779f629a30a70ef",
+    "sourceCommit": "585f75f72ce5b01af033db1fdac370c138b5f363",
+    "scope": "Pure frontend catch/follow recovery predicate, existing HTML fixture parameter and owning bilingual documentation. Host, protocol types, Settings, Core and SDK remain unchanged.",
+    "behavior": "Before clearing buffered observations, a non-aborted read rejection invalidates the preview if an unknown present-file observation arrived while that read was pending. Catch and live follow use the same predicate; the original rejection is rethrown.",
+    "negativeControl": {
+      "command": "pnpm exec vitest run rsh/Programs/Web/client/ui-sidebar-right/tests/native-files.client.spec.tsx -t 'initially missing: pending' --retry=0",
+      "before": {
+        "failed": 1,
+        "skipped": 7,
+        "exitCode": 1,
+        "failure": "The deferred related read rejects after the creation observation; no iframe appears on the prior source."
+      },
+      "after": "The new pending-rejection parameter passes in the complete 22-case owner run."
+    },
+    "owners": {
+      "command": "pnpm exec vitest run rsh/Programs/Web/client/ui-sidebar-right/tests/native-files.client.spec.tsx rsh/Programs/Web/client/native-application/tests/model-controls.client.spec.tsx rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts --retry=0",
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "files": 3
+    },
+    "lint": {
+      "command": "pnpm run lint",
+      "exitCode": 0,
+      "warning": "Existing acp-child unused oxlint-disable directive."
+    },
+    "docs": {
+      "command": "pnpm run doc-sync",
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 189.25
+    },
+    "typecheck": "Normal pre-push hook required; actual outcome reported after execution.",
+    "screenshots": "No new browser capture or replay claimed. Prior images retain their original source commits.",
+    "rawEvidence": [
+      {
+        "file": "native-p2-pending-rejection-before.log",
+        "bytes": 2374,
+        "sha256": "2f19c7b25f285271b88b64562a448241849a874281c20588fc58c78e446abf5d"
+      },
+      {
+        "file": "native-p2-pending-rejection-owners.log",
+        "bytes": 900,
+        "sha256": "a74e0d71460e17527bbd3926c9c0cd155b498d3cdeebe83e90598e3521078d88"
+      },
+      {
+        "file": "native-p2-pending-rejection-lint.log",
+        "bytes": 260205,
+        "sha256": "c1a4eabef8f35027ad3a777c775e6561e1182aa0ec311142fd53bf7c4db3d95e"
+      },
+      {
+        "file": "native-p2-pending-rejection-docs.log",
+        "bytes": 2955,
+        "sha256": "2641ad8b649cc501831d536c487e0c8cdd9211e2560860fd877f8d83d4540bf3"
+      }
+    ]
   }
 }
