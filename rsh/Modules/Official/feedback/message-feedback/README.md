@@ -24,6 +24,8 @@ This service records positive or negative ratings, an optional category from the
 
 Mount `dsh-message-feedback` alongside `sessions` and `sessionPersistence`. It needs no storage-domain service. The Web bundle supplies the browser consumer and a note limit of 8192 bytes.
 
+Native profiles select the package's `./native` entry with `activeSessions` and `sessionPersistence`; it provides `messageFeedback` with the same configuration and request/result types.
+
 ### Configuration
 
 | Field | Default | Meaning |
@@ -51,17 +53,21 @@ Targets must be non-empty assistant messages produced by append-origin events. U
 
 `feedback/message-put` stores the owning Session id and complete item, including its version and timestamps. `feedback/message-delete` stores the owner and message id. Current state is derived from these events, ignoring other Session owners. Durable payloads are validated before use. No second feedback store or cache exists.
 
-Live operations append through `Session.append` and await `sessions.flush`, then verify the captured log endpoint and Session header through a persistence read handle before reporting success. Cold mutations hold a persistence write handle across read, validation, comparison, append, flush, and close. Cold reads use a read handle. Neither path constructs a Session or appends lifecycle events.
+DSH/Cordis live operations append through `Session.append` and await `sessions.flush`, then verify the captured log endpoint and Session header through a persistence read handle before reporting success. Cold mutations hold a persistence write handle across read, validation, comparison, append, flush, and close. Cold reads use a read handle. Neither path constructs a Session or appends lifecycle events.
+
+Native live operations use the exact Program owner. After a material mutation and flush, they read the canonical prefix through that mutation with `readCommittedEvents()` and await `feedback/committed` observers before completing. Natural owner detachment drains transactions already selected on that owner; queued operations that have not selected an owner do not hold its detach barrier.
 
 A per-Session queue serializes operations within one service instance; the persistence write handle excludes competing cold writers. Disposal stops admission and drains admitted operations before releasing the service. Persistence failures reject instead of becoming business failures. A failed flush does not roll back an accepted event; callers can list and retry with its version. Successful no-op mutations also flush the current prefix.
 
-Cold material mutations emit `feedback/committed` after flush with a borrowed read-only canonical prefix; observers must deep-clone it before transferring ownership. Observers finish before write ownership is released, must not await another feedback operation for that Session, and cannot reject an already committed mutation. Live consumers observe `session/event`.
+Cold material mutations emit `feedback/committed` after flush with a borrowed read-only canonical prefix; observers must deep-clone it before transferring ownership. Observers finish before write ownership is released, must not await another feedback operation for that Session, and cannot reject an already committed mutation. DSH/Cordis live consumers observe `session/event`.
 
 ### Source map
 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Remote service, payload validation, event projection, and persistence ownership |
+| [`src/native.ts`](src/native.ts) | Native Provider, exact-owner transactions, and detach draining |
+| [`src/shared.ts`](src/shared.ts) | Shared payload validation and current-feedback derivation |
 | [`src/types.ts`](src/types.ts) | Requests, results, and Session event declarations; types only |
 
 No runtime invariant companion is published: the service derives feedback directly from validated canonical events and owns no independently mutable projection.

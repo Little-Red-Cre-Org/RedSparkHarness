@@ -24,7 +24,8 @@ import {
   type SessionSeqCursor,
 } from '@deepseek-ai/dsh-session'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { SessionTelemetrySink, SessionTelemetryRecord, SessionTelemetrySeverity } from './index.ts'
+import type { SessionTelemetrySink, SessionTelemetryRecord } from './types.ts'
+import { ledgerRecord } from './records.ts'
 
 /** Whether capture follows live events or reads the canonical log only when requested. */
 export type SessionTelemetryCapture = 'live' | 'on-demand'
@@ -178,15 +179,7 @@ export class SessionTelemetryCoordinator {
   /** Copy, redact, and hand one canonical event to the backend. */
   private captureEvent(session: Session, event: SessionEvent): void {
     this.deliver(session, {
-      record: this.redact({
-        channel: 'ledger',
-        time: event.time,
-        severity: severityOf(event),
-        attributes: identityOf(session, event),
-        // The canonical event object is mutable and the backend serializes
-        // later; append-time validation guarantees this clone cannot throw.
-        body: structuredClone(event.data),
-      }),
+      record: this.redact(ledgerRecord(session.header, session.inheritedEventCount, event)),
       seq: event.seq,
     })
   }
@@ -263,40 +256,8 @@ function shutdownRecord(session: Session): SessionTelemetryRecord {
   }
 }
 
-/** Map an event's own outcome flag to the pre-baked alerting severity. */
-function severityOf(event: SessionEvent): SessionTelemetrySeverity {
-  switch (event.type) {
-    case 'tool/result':
-      return event.data.message.content[0].isError === true ? 'error' : 'info'
-    case 'turn/end':
-      return event.data.reason.kind === 'error' ? 'error' : 'info'
-    default:
-      // Merge-extensible fall-through (no assertNever): event types this coordinator
-      // does not depend on — including plugin-merged ones it never heard of —
-      // pass through as info; their owners' outcome semantics stay theirs.
-      return 'info'
-  }
-}
-
 /** Normalize the live bus's arbitrary thrown value into the stable operational-record shape. */
 function errorDetail(error: unknown): { name: string; message: string } {
   const normalized = error instanceof Error ? error : new Error(String(error))
   return { name: normalized.name, message: normalized.message }
-}
-
-/** Build the minimal identity attributes: envelope plus self-contained header facts. */
-function identityOf(session: Session, event: SessionEvent): Record<string, string | number> {
-  const attributes: Record<string, string | number> = {
-    'session.id': String(session.id),
-    'session.format_version': session.header.version,
-    'event.type': event.type,
-    'event.seq': event.seq,
-  }
-  const { cwd, parentSession, isSeeded } = session.header
-  if (cwd !== undefined) attributes['session.cwd'] = cwd
-  if (parentSession !== undefined) attributes['session.parent_id'] = String(parentSession)
-  // The durable fork boundary and lineage: the child ledger is complete;
-  // parent_id and seed_length identify which leading events were inherited.
-  if (isSeeded) attributes['session.seed_length'] = session.inheritedEventCount
-  return attributes
 }

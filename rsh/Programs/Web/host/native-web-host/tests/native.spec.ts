@@ -26,20 +26,31 @@ it('accepts live Client reload only as an explicit Host choice', () => {
 })
 
 it('prints the authenticated URL and waits for native host cancellation', async () => {
+  const closeStarted = Promise.withResolvers<undefined>()
+  const releaseClose = Promise.withResolvers<undefined>()
+  let closeCalls = 0
   const host = {
     url: 'http://127.0.0.1:43123/',
     connection: { authenticatedUrl: (url: string) => `${url}?token=test` },
+    close: async () => { closeCalls++; closeStarted.resolve(undefined); await releaseClose.promise },
   } as NativeHttpHost
   const application = new NativeWebApplication(host)
   const controller = new AbortController()
   const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => { return true })
   try {
     const running = application.run([], controller.signal)
+    let settled = false
+    void running.then(() => { settled = true })
     await vi.waitFor(() => { expect(write).toHaveBeenCalledWith('http://127.0.0.1:43123/?token=test\n') })
     controller.abort()
+    await closeStarted.promise
+    expect(settled).toBe(false)
+    releaseClose.resolve(undefined)
     await expect(running).resolves.toBe(0)
+    expect(closeCalls).toBe(1)
     await expect(application.run(['unexpected'], controller.signal)).rejects.toThrow('task arguments are unsupported')
   } finally {
+    releaseClose.resolve(undefined)
     write.mockRestore()
   }
 })

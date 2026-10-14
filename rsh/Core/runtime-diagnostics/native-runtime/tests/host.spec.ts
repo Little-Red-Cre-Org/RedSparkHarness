@@ -152,8 +152,12 @@ describe('native installation', () => {
     const second = { session: 'second' }
     const entered = Promise.withResolvers<undefined>()
     const release = Promise.withResolvers<undefined>()
+    const trace: string[] = []
+    let contextSignal: AbortSignal | undefined
     let released = false
     const request = { scope, config: {}, plugin: plugin('owner', { resolve: () => (ctx) => {
+      contextSignal = ctx.signal
+      ctx.on('hold', () => { trace.push('event'); expect(released).toBe(false) })
       ctx.own(() => { released = true })
     } }) }
     const host = new NativeHost(resolveInstallation([request], 'host'))
@@ -163,6 +167,7 @@ describe('native installation', () => {
       entered.resolve(undefined)
       await release.promise
       expect(released).toBe(false)
+      await host.events.serial(scope, 'hold')
       return invocation.initiator
     })
     const secondCall = host.run(scope, second, async (invocation) => {
@@ -171,11 +176,13 @@ describe('native installation', () => {
     })
     await entered.promise
     const stopping = host.stop()
+    expect(contextSignal?.aborted).toBe(true)
     await expect(host.run(scope, first, () => 0)).rejects.toThrow('stopped')
     expect(released).toBe(false)
     release.resolve(undefined)
     expect(await Promise.all([firstCall, secondCall])).toEqual([first, second])
     await stopping
+    expect(trace).toEqual(['event'])
     expect(released).toBe(true)
   })
 

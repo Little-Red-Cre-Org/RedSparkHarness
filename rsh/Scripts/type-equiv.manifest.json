@@ -2098,6 +2098,11 @@
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
+      "symbol": "NativeSessionTelemetryOperations",
+      "source": "rsh/Engine/session/session-telemetry/src/native-definition.ts"
+    },
+    {
+      "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetryCapture",
       "source": "rsh/Engine/session/session-telemetry/src/coordinator.ts"
     },
@@ -2109,22 +2114,22 @@
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySharingStatus",
-      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySeverity",
-      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetryRecord",
-      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySink",
-      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/typert.md",

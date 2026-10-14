@@ -433,7 +433,7 @@ Source: [`rsh/Modules/Official/feedback/message-feedback/src/types.ts:56`](../Mo
 'feedback/record': FeedbackRecord
 ```
 
-Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:40`](../Modules/Official/feedback/command-feedback/src/types.ts)
+Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:38`](../Modules/Official/feedback/command-feedback/src/types.ts)
 
 ### `goal/*`
 

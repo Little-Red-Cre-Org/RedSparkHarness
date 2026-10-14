@@ -435,7 +435,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'feedback/record': FeedbackRecord
 ```
 
-来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts:40`](../Modules/Official/feedback/command-feedback/src/types.ts)
+来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts:38`](../Modules/Official/feedback/command-feedback/src/types.ts)
 
 ### `goal/*`
 
