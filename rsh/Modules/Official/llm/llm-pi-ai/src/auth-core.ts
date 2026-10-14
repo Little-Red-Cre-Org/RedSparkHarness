@@ -17,8 +17,12 @@ import {
 import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { LlmError } from '@deepseek-ai/dsh-llm/native'
+import { migrateExistingSiwcRegistration } from './siwc.ts'
+import type { SiwcRegistrationStore } from './siwc.ts'
 
-type CredentialOperations = Pick<NativeCredentials, 'resolve' | 'readRecord' | 'listRecords' | 'modifyRecord' | 'deleteRecord'>
+type CredentialOperations = Pick<NativeCredentials,
+  'resolve' | 'readRecord' | 'listRecords' | 'modifyRecord' | 'deleteRecord'
+  | 'modifyMetadata' | 'migrateRecordToMetadata'>
 
 /**
  * The record scope every credential this adapter family stores is written
@@ -27,7 +31,7 @@ type CredentialOperations = Pick<NativeCredentials, 'resolve' | 'readRecord' | '
  * provider name — that this plugin owns the format inside the record.
  */
 export const RECORD_SCOPE = 'llm-pi-ai'
-const INTERNAL_RECORD_IDS = new Set(['openai-codex-siwc-registration'])
+const SIWC_REGISTRATION_KEY = credentialKey(RECORD_SCOPE, 'openai-codex-siwc-registration')
 
 /**
  * The record address for one pi-ai provider id.
@@ -146,6 +150,12 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
       return toPiCredential(await credentials.readRecord(recordKeyFor(providerId)))
     },
     async list(): Promise<readonly CredentialInfo[]> {
+      if (credentials !== undefined) {
+        await writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
+          (current, legacy, readRecord) => migrateExistingSiwcRegistration(
+            current, legacy, toPiCredential(readRecord(recordKeyFor('openai-codex'))),
+          ))
+      }
       const stored = await credentials?.listRecords() ?? []
       const mine: CredentialInfo[] = []
       for (const entry of stored) {
@@ -153,7 +163,6 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
         // their payloads are written in a format pi-ai never agreed to.
         if (credentialKeyScope(entry.key) !== RECORD_SCOPE) continue
         const providerId = credentialKeyId(entry.key)
-        if (INTERNAL_RECORD_IDS.has(providerId)) continue
         mine.push({
           providerId,
           type: entry.kind === 'api-key' ? 'api_key' : 'oauth',
@@ -184,6 +193,19 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
       await writableStore(credentials).deleteRecord(
         recordKeyFor(providerId), options?.signal === undefined ? {} : { signal: options.signal })
     },
+  }
+}
+
+/** Owner-private SIWC metadata storage over the selected credential provider.
+ * @param credentials - the selected Native credentials service.
+ * @returns the adapter shared by Native and Cordis auth consumers.
+ */
+export function siwcRegistrationStoreFrom(credentials: CredentialOperations | undefined): SiwcRegistrationStore {
+  return {
+    reconcile: migrate => writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
+      (current, legacy, readRecord) => migrate(current, legacy,
+        toPiCredential(readRecord(recordKeyFor('openai-codex'))))),
+    modify: mutate => writableStore(credentials).modifyMetadata(SIWC_REGISTRATION_KEY, mutate),
   }
 }
 

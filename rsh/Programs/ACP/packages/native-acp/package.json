@@ -55,7 +55,8 @@
         "attachments",
         "modelDirectory",
         "commands",
-        "requestContexts"
+        "requestContexts",
+        "tokenMeter"
       ],
       "provides": [
         "application",
@@ -89,6 +90,7 @@
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
+    "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-acp-protocol": "workspace:^"
   },
   "devDependencies": {

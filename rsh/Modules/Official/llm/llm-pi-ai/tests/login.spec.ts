@@ -38,8 +38,10 @@ vi.mock('../src/siwc.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/siwc.ts')>()
   return {
     ...actual,
-    createSiwcOAuth(credentials: Parameters<typeof actual.createSiwcOAuth>[0]): ReturnType<typeof actual.createSiwcOAuth> {
-      const oauth = actual.createSiwcOAuth(credentials)
+    createSiwcOAuth(
+      registration: Parameters<typeof actual.createSiwcOAuth>[0],
+    ): ReturnType<typeof actual.createSiwcOAuth> {
+      const oauth = actual.createSiwcOAuth(registration)
       return {
         ...oauth,
         login: interaction => login('openai-codex', 'oauth', interaction) as ReturnType<typeof oauth.login>,
@@ -48,7 +50,7 @@ vi.mock('../src/siwc.ts', async (importOriginal) => {
   }
 })
 
-const { credentialStoreFrom, authContextFrom, recordKeyFor } = await import('../src/auth.ts')
+const { credentialStoreFrom, authContextFrom, recordKeyFor, siwcRegistrationStoreFrom } = await import('../src/auth.ts')
 const { catalogProvider } = await import('../src/catalog.ts')
 const { registerPiAiFlows } = await import('../src/login.ts')
 const { plugin: nativePlugin } = await import('../src/native.ts')
@@ -68,7 +70,11 @@ async function harness(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
   await ctx.plugin(AuthorizationService)
-  registerPiAiFlows(ctx, { credentials: credentialStoreFrom(ctx), authContext: authContextFrom(ctx) })
+  registerPiAiFlows(ctx, {
+    credentials: credentialStoreFrom(ctx),
+    authContext: authContextFrom(ctx),
+    siwcRegistration: siwcRegistrationStoreFrom(ctx),
+  })
   return ctx
 }
 
@@ -197,7 +203,16 @@ describe('pi-ai login flows', () => {
 
   it('offers one flow per installed provider, with the methods that provider ships', async () => {
     const ctx = await harness()
+    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
+    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve({
+      kind: 'api-key',
+      key: 'siwc-registration-v1:{"extAgentHostId":"login-host-fixture"}',
+    }))
+    await credentialStoreFrom(ctx).list()
+    expect((await ctx.credentials.listRecords()).some(record => record.key === registrationKey)).toBe(false)
+    expect(ctx.authorization.describe(registrationKey)).toBeUndefined()
     const offered = ctx.authorization.list()
+    expect(offered.some(entry => entry.key === registrationKey)).toBe(false)
 
     // The OAuth-only provider is exactly the case this exists for: nothing
     // else could ever configure it.

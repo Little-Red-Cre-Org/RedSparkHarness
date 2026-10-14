@@ -1,5 +1,10 @@
 [
   {
+    "sessionUpdate": "usage_update",
+    "used": 1725,
+    "size": 262144
+  },
+  {
     "sessionUpdate": "tool_call",
     "toolCallId": "permission-proof-call",
     "title": "mcp__fixture__add",
@@ -30,5 +35,10 @@
       "type": "text",
       "text": "native ACP snapshot reply"
     }
+  },
+  {
+    "sessionUpdate": "usage_update",
+    "used": 1753,
+    "size": 262144
   }
 ]

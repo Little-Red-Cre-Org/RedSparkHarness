@@ -9378,6 +9378,9 @@ importers:
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
+      '@deepseek-ai/dsh-token-meter':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/token-meter
     devDependencies:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
@@ -10023,9 +10026,24 @@ importers:
 
   rsh/Programs/Desktop:
     dependencies:
+      '@deepseek-ai/dsh-brand':
+        specifier: workspace:^
+        version: link:../../Core/util/brand
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../Core/util/launch-environment
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-web-assets':
+        specifier: workspace:^
+        version: link:../Web/host/native-web-assets
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@9.4.0)
+      js-yaml:
+        specifier: ^4.3.2
+        version: 4.3.2
       semver:
         specifier: ^7.8.5
         version: 7.8.5
@@ -10063,9 +10081,6 @@ importers:
       extract-zip:
         specifier: ^2.0.1
         version: 2.0.1(supports-color@9.4.0)
-      js-yaml:
-        specifier: ^4.3.2
-        version: 4.3.2
       pnpm:
         specifier: 11.28.5
         version: 11.28.5

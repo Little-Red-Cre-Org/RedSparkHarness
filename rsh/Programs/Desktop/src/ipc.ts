@@ -3,6 +3,15 @@
 import type { DesktopPluginRecord } from './project-manager.ts'
 import type { DesktopLocale } from './locale.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
+import type {
+  NativeDesktopInstallRequest,
+  NativeDesktopListOutcome,
+  NativeDesktopMutationOutcome,
+  NativeDesktopMutationRequest,
+  NativeDesktopPackageMutationRequest,
+  NativeDesktopToggleRequest,
+  NativeDesktopUpdateRequest,
+} from './native-module-management.ts'
 
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
@@ -46,6 +55,8 @@ export interface DshDesktopApi {
     update(name: string, version: string): Promise<void>
     toggle(name: string, enabled: boolean): Promise<void>
     disableAll(): Promise<void>
+    /** Native profile operations use the same authenticated plugin IPC channels. */
+    readonly native: NativeDesktopModuleManagementApi
   }
   readonly backend: {
     status(): Promise<DesktopBackendState>
@@ -57,6 +68,22 @@ export interface DshDesktopApi {
     install(): Promise<void>
     subscribe(listener: (state: DesktopUpdateState) => void): () => void
   }
+}
+
+/** Native profile capability exposed to the shell-owned module-management page. */
+export interface NativeDesktopModuleManagementApi {
+  /** Reads Native package and installation state under the Desktop profile lock. */
+  list(): Promise<NativeDesktopListOutcome>
+  /** Installs one exact package version and its explicit Host or Client rows. */
+  install(request: NativeDesktopInstallRequest): Promise<NativeDesktopMutationOutcome>
+  /** Removes a profile-managed package and every selected row for it. */
+  remove(request: NativeDesktopPackageMutationRequest): Promise<NativeDesktopMutationOutcome>
+  /** Updates a profile-managed package while preserving every installation row. */
+  update(request: NativeDesktopUpdateRequest): Promise<NativeDesktopMutationOutcome>
+  /** Enables or disables exactly one persisted target row. */
+  toggle(request: NativeDesktopToggleRequest): Promise<NativeDesktopMutationOutcome>
+  /** Disables enabled rows outside the backend-computed required-provider closure. */
+  disableAll(request: NativeDesktopMutationRequest): Promise<NativeDesktopMutationOutcome>
 }
 
 /** Startup-page controls, unavailable to backend-provided application documents. */

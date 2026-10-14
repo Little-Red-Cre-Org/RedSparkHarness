@@ -1,7 +1,19 @@
 /** In-place owner of the reserved desktop profile and its private pnpm state. */
 
+import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { valid } from 'semver'
-import { profileDirectoryRuntime, profileDirectoryReloadMode, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
+import {
+  createNativePluginInventoryProvider, expandNativeProfilePresets, nativeProfileChildProviderRoutes, nativeProfileChildRuntimeProviders,
+  nativeProfileChildSupportInstallations, profileDirectoryRuntime, profileDirectoryReloadMode, readNativeProfile,
+  type NativeProfileChildRouteProvider, type NativeProfileConfig,
+} from '@deepseek-ai/dsh/native-profile'
+import { NativeScope, parseNativeEntryManifest,
+  type NativeEntryManifest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { parseNativeClientProfile, prepareNativeClientProfileBundle, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { load as loadYaml } from 'js-yaml'
 import { spawn } from 'node:child_process'
 import {
   existsSync,
@@ -18,13 +30,15 @@ import {
   writeFileSync,
   writeSync,
 } from 'node:fs'
-import { delimiter, dirname, join, resolve, sep } from 'node:path'
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { Worker, type WorkerOptions } from 'node:worker_threads'
 import {
   DESKTOP_HOST_PACKAGE,
   desktopCorePackageOverrides,
   verifyDesktopCorePackageSet,
 } from './core-package-set.ts'
 import type { DesktopPaths } from './paths.ts'
+import type { NativeHostPreflightInput, NativeHostPreflightReply } from './native-host-preflight-types.ts'
 import { removeOwnedDirectory } from './owned-directory.ts'
 import type { DesktopRelease } from './release.ts'
 import { desktopRuntimeId, readDesktopRuntime, type DesktopRuntimeDescriptor } from './runtime-tree.ts'
@@ -32,6 +46,29 @@ import {
   desktopPluginLockHash, linkDesktopHostPackages, readDesktopProfileState,
   unlinkDesktopHostPackages, validateDesktopPluginGraph, type DesktopProfileState,
 } from './profile-packages.ts'
+import {
+  NativeDesktopOperationFailure,
+  type NativeDesktopBackendProjection,
+  type NativeDesktopErrorCode,
+  type NativeDesktopInstallationKey,
+  type NativeDesktopInstallationId,
+  type NativeDesktopInstallationView,
+  type NativeDesktopInventory,
+  type NativeDesktopInstallRequest,
+  type NativeDesktopListOutcome,
+  type NativeDesktopMutationOutcome,
+  type NativeDesktopMutationRequest,
+  type NativeDesktopPackageMutationRequest,
+  type NativeDesktopPackageView,
+  type NativeDesktopRevision,
+  type NativeDesktopRetentionReason,
+  type NativeDesktopScopeId,
+  type NativeDesktopScopeView,
+  type NativeDesktopTarget,
+  type NativeDesktopToggleRequest,
+  type NativeDesktopUpdateRequest,
+} from './native-module-management.ts'
+import type { DesktopBackendState } from './backend-controller.ts'
 
 /** Desktop plugin record derived from the installed profile. */
 export interface DesktopPluginRecord {
@@ -221,6 +258,654 @@ function inspectPlugin(projectDir: string, requestedName: string): DesktopPlugin
   return { name: requestedName, version: manifest.version, enabled: profilePluginNames(projectDir).includes(requestedName) }
 }
 
+interface NativePackageMetadata {
+  readonly name: string
+  readonly version: string
+  readonly root: string
+  readonly manifestPath: string
+  readonly entryPath: string
+  readonly entry: NativeEntryManifest
+}
+
+interface NativeSelectedRow {
+  readonly target: NativeDesktopTarget
+  readonly id: string
+  readonly plugin: string
+  readonly scope?: string
+  readonly config: unknown
+  readonly hasConfig: boolean
+  readonly disabled?: boolean
+  readonly metadata: NativePackageMetadata
+}
+
+interface NativeProfileFiles {
+  readonly host: NativeProfileConfig
+  readonly client: NativeClientProfile
+}
+
+interface NativeResolvedComposition {
+  readonly rows: readonly NativeSelectedRow[]
+  /** CLI-owned packages added only to satisfy missing child-runtime services. */
+  readonly supportRows: readonly NativeSelectedRow[]
+  /** Selected required and optional Providers in their runtime ordering graph. */
+  readonly dependencies: ReadonlyMap<string, readonly string[]>
+  /** Required edges only; disabling an installation preserves this transitive closure. */
+  readonly requiredDependencies: ReadonlyMap<string, readonly string[]>
+  /** Actual profile-loader Providers serialized into Host preflight. */
+  readonly profileProviders: readonly { readonly scope: string; readonly plugin: NativePlugin }[]
+  readonly carrierKey: string
+}
+
+interface NativePlanningResult {
+  readonly files: NativeProfileFiles
+  readonly rows: readonly NativeSelectedRow[]
+  readonly composition: NativeResolvedComposition
+  readonly retained: Map<string, NativeDesktopRetentionReason[]>
+}
+
+interface NativeGraphNode {
+  readonly key: string
+  readonly scope: NativeScope
+  readonly name: string
+  readonly requires: readonly string[]
+  readonly optional: readonly string[]
+  readonly provides: readonly string[]
+}
+
+const desktopCarrierProvider = {
+  apiVersion: 1,
+  name: 'desktop-private-carrier',
+  targets: ['host'],
+  requires: ['credentials'],
+  provides: ['hostConnection', 'application'],
+  resolve: () => () => {},
+} as unknown as NativePlugin
+
+async function validateHostInFreshWorker(profile: NativeProfileConfig, rows: readonly NativeSelectedRow[],
+  profileProviders: NativeResolvedComposition['profileProviders'], supportRows: readonly NativeSelectedRow[]): Promise<void> {
+  const root = profile.scopes.find(scope => scope.parent === undefined)
+  if (root === undefined) throw new Error('desktop native profile has no root scope')
+  const workerData: NativeHostPreflightInput = {
+    scopes: profile.scopes,
+    installations: [...rows.filter(row => row.target === 'host'), ...supportRows].map((row) => {
+      if (row.metadata.entry.provides.some(service => service === 'application' || service === 'hostConnection')) {
+        throw new Error('desktop native profile selects a reserved Desktop provider')
+      }
+      if (row.scope === undefined) throw new Error(`desktop native installation has no scope: ${row.id}`)
+      return { entryPath: row.metadata.entryPath, entry: row.metadata.entry, scope: row.scope, config: row.config }
+    }),
+    providers: profileProviders.map(({ scope, plugin }) => ({
+      scope, apiVersion: plugin.apiVersion, name: plugin.name, targets: plugin.targets,
+      requires: plugin.requires, optional: plugin.optional ?? [], provides: plugin.provides,
+    })),
+    carrierScope: root.id,
+    carrier: {
+      apiVersion: 1,
+      name: desktopCarrierProvider.name,
+      targets: desktopCarrierProvider.targets,
+      requires: desktopCarrierProvider.requires,
+      optional: desktopCarrierProvider.optional ?? [],
+      provides: desktopCarrierProvider.provides,
+    },
+  }
+  const source = import.meta.url.endsWith('.ts')
+  const workerEntry = new URL(source ? './native-host-preflight-worker.ts' : './native-host-preflight-worker.js', import.meta.url)
+  let entry: string | URL = workerEntry
+  const options: WorkerOptions = { workerData, execArgv: [] }
+  if (source) {
+    const bootstrap = [
+      `import { register as registerEsm } from ${JSON.stringify(import.meta.resolve('tsx/esm/api'))}`,
+      `import { register as registerCjs } from ${JSON.stringify(import.meta.resolve('tsx/cjs/api'))}`,
+      'registerCjs()',
+      'registerEsm()',
+      `await import(${JSON.stringify(workerEntry.href)})`,
+    ].join('\n')
+    entry = new URL(`data:text/javascript,${encodeURIComponent(bootstrap)}`)
+  }
+  const worker = new Worker(entry, options)
+  let received = false
+  const result = new Promise<void>((resolve, reject) => {
+    worker.once('message', (reply: NativeHostPreflightReply) => {
+      received = true
+      if (reply.valid) resolve()
+      else reject(new Error(reply.message ?? 'Native Host preflight failed'))
+    })
+    worker.once('error', (reason) => {
+      if (received) return
+      received = true
+      reject(reason)
+    })
+    worker.once('exit', (code) => {
+      if (received) return
+      received = true
+      reject(new Error(`Native Host preflight worker exited without a result (${code})`))
+    })
+  })
+  try { await result }
+  finally { await worker.terminate() }
+}
+
+interface NativeCandidate {
+  readonly files: NativeProfileFiles
+  readonly rows: readonly NativeSelectedRow[]
+  readonly validateBeforeStop: boolean
+  readonly preflightFiles?: NativeProfileFiles
+  readonly preflightRows?: readonly NativeSelectedRow[]
+  readonly changed: boolean
+  readonly blockedBy?: readonly NativeDesktopInstallationKey[]
+  readonly packageOperation?: {
+    readonly args: readonly string[]
+    readonly filesAfterInstall?: NativeProfileFiles
+    readonly writeFiles: boolean
+  }
+}
+
+function within(root: string, path: string): boolean {
+  const child = relative(root, path)
+  return child === '' || (!isAbsolute(child) && child !== '..' && !child.startsWith(`..${sep}`))
+}
+
+function rowKey(target: NativeDesktopTarget, id: string): string { return `${target}\u0000${id}` }
+
+function injectedProviderKey(name: string, scopeId: string): string { return `@desktop\u0000${name}\u0000${scopeId}` }
+
+function selectedRows(files: NativeProfileFiles, profile: string, runtimeDir: string,
+  runtime: DesktopRuntimeDescriptor): NativeSelectedRow[] {
+  const rows: Omit<NativeSelectedRow, 'metadata'>[] = [
+    ...files.host.installations.map(row => ({ target: 'host' as const, id: row.id, plugin: row.plugin,
+      scope: row.scope, config: row.config, hasConfig: Object.hasOwn(row, 'config'),
+      ...row.disabled === undefined ? {} : { disabled: row.disabled } })),
+    ...files.client.installations.map(row => ({ target: 'client' as const, id: row.id, plugin: row.plugin,
+      config: row.config, hasConfig: Object.hasOwn(row, 'config'),
+      ...row.disabled === undefined ? {} : { disabled: row.disabled } })),
+  ]
+  const cache = new Map<string, NativePackageMetadata>()
+  return rows.map((row) => {
+    let metadata = cache.get(row.plugin)
+    if (metadata === undefined) {
+      metadata = nativePackageMetadata(profile, runtimeDir, runtime, row.plugin)
+      cache.set(row.plugin, metadata)
+    }
+    if (!metadata.entry.targets.includes(row.target)) {
+      throw new Error(`desktop native profile: ${row.plugin} does not support ${row.target}`)
+    }
+    return { ...row, metadata }
+  })
+}
+
+function nativePackageMetadata(profile: string, runtimeDir: string, runtime: DesktopRuntimeDescriptor,
+  name: string): NativePackageMetadata {
+  assertPackageName(name)
+  const shared = runtime.sharedPackages.find(item => item.name === name)
+  const candidate = join(shared === undefined ? profile : runtimeDir, 'node_modules', ...name.split('/'))
+  const manifestPath = join(candidate, 'package.json')
+  if (!existsSync(manifestPath)) throw new Error(`desktop native package is unavailable: ${name}`)
+  const root = realpathSync(candidate)
+  const allowedRoot = realpathSync(shared === undefined ? profile : runtimeDir)
+  if (!within(allowedRoot, root)) throw new Error(`desktop native package escaped its owner: ${name}`)
+  const manifest = readJson(manifestPath)
+  if (!isRecord(manifest) || manifest.name !== name || typeof manifest.version !== 'string'
+    || valid(manifest.version) !== manifest.version || !isRecord(manifest.exports)) {
+    throw new Error(`desktop native package has an invalid manifest: ${name}`)
+  }
+  const entry = parseNativeEntryManifest(
+    isRecord(manifest.dsh) ? manifest.dsh.native : undefined,
+    new Set(Object.keys(manifest.exports)),
+  )
+  const entryPath = realpathSync(createRequire(manifestPath).resolve(`${name}${entry.entry.slice(1)}`))
+  if (!within(root, entryPath)) throw new Error(`desktop native package entry escaped its package: ${name}`)
+  return { name, version: manifest.version, root, manifestPath, entryPath, entry }
+}
+
+function scopeTree(profile: NativeProfileConfig): ReadonlyMap<string, NativeScope> {
+  const declarations = new Map(profile.scopes.map(row => [row.id, row]))
+  const scopes = new Map<string, NativeScope>()
+  const create = (id: string): NativeScope => {
+    const existing = scopes.get(id)
+    if (existing !== undefined) return existing
+    const row = declarations.get(id)
+    if (row === undefined) throw new Error(`desktop native profile has an unknown scope: ${id}`)
+    const parent = row.parent === undefined ? undefined : create(row.parent)
+    const scope = new NativeScope(parent)
+    scopes.set(id, scope)
+    return scope
+  }
+  for (const row of profile.scopes) create(row.id)
+  return scopes
+}
+
+function validateStaticGraph(rows: readonly NativeSelectedRow[], host: NativeProfileConfig,
+  resolvePackage: (name: string) => NativePackageMetadata,
+  routeValidation: 'strict' | 'metadata' = 'strict'): NativeResolvedComposition {
+  const routeProviders: NativeProfileChildRouteProvider[] = rows.flatMap((row) => {
+    if (row.target !== 'host' || row.disabled === true) return []
+    if (row.scope === undefined) throw new Error(`desktop native installation has no scope: ${row.id}`)
+    return [{ id: row.id, plugin: row.plugin, scope: row.scope,
+      ...row.hasConfig ? { config: row.config } : {}, provides: row.metadata.entry.provides }]
+  })
+  const routedHost = routeValidation === 'strict' ? nativeProfileChildProviderRoutes(host, routeProviders) : host
+  const hostInstallations = new Map(routedHost.installations.map(row => [row.id, row]))
+  const routedRows = rows.map((row) => {
+    if (row.target !== 'host') return row
+    const installation = hostInstallations.get(row.id)
+    if (installation === undefined) throw new Error(`desktop native profile lost installation ${row.id}`)
+    return { ...row, config: installation.config, hasConfig: Object.hasOwn(installation, 'config') }
+  })
+  const active = routedRows.filter(row => row.disabled !== true)
+  const hostScopes = scopeTree(routedHost)
+  const clientScope = new NativeScope()
+  const scopeFor = (row: NativeSelectedRow): NativeScope => {
+    if (row.target === 'client') return clientScope
+    const scope = hostScopes.get(row.scope ?? '')
+    if (scope === undefined) throw new Error(`desktop native installation has an unknown scope: ${row.id}`)
+    return scope
+  }
+  const serviceProviders = active.filter(row => row.target === 'host' && row.scope !== undefined).map(row => ({
+    scope: row.scope as string, provides: row.metadata.entry.provides,
+  }))
+  const disabledProvider = (ancestry: readonly string[], service: string): string | undefined => {
+    for (const scope of ancestry) {
+      const disabled = rows.find(row => row.target === 'host' && row.disabled === true && row.scope === scope
+        && row.metadata.entry.provides.includes(service))
+      if (disabled !== undefined) return disabled.plugin
+    }
+    return undefined
+  }
+  const supportRows = nativeProfileChildSupportInstallations(routedHost, serviceProviders, disabledProvider)
+    .map((row): NativeSelectedRow => {
+      const metadata = resolvePackage(row.plugin)
+      if (!metadata.entry.provides.includes(row.service)) {
+        throw new Error(`desktop child runtime package ${row.plugin} does not provide ${row.service}`)
+      }
+      return { target: 'host', id: row.id, plugin: row.plugin, scope: row.scope, config: undefined,
+        hasConfig: false, metadata }
+    })
+  const graphRows = [...active, ...supportRows]
+  const nodes: NativeGraphNode[] = graphRows.map(row => ({
+    key: rowKey(row.target, row.id),
+    scope: scopeFor(row),
+    name: row.plugin,
+    requires: row.metadata.entry.requires,
+    optional: row.metadata.entry.optional,
+    provides: row.metadata.entry.provides,
+  }))
+  const profileProviders: Array<{ readonly scope: string; readonly plugin: NativePlugin }> = []
+  const launchEnvironment = launchEnvironmentProvider(createLaunchEnvironmentSnapshot([]))
+  const roots = routedHost.scopes.filter(row => row.parent === undefined)
+  for (const root of roots) {
+    const scope = hostScopes.get(root.id)
+    if (scope === undefined) throw new Error(`desktop native profile lost root scope ${root.id}`)
+    nodes.push({
+      key: injectedProviderKey(launchEnvironment.name, root.id),
+      scope,
+      name: launchEnvironment.name,
+      requires: launchEnvironment.requires,
+      optional: launchEnvironment.optional ?? [],
+      provides: launchEnvironment.provides,
+    })
+    profileProviders.push({ scope: root.id, plugin: createNativePluginInventoryProvider(() => undefined) })
+  }
+  const childProviders = nativeProfileChildRuntimeProviders(routedHost,
+    [...serviceProviders, ...supportRows.map(row => ({
+      scope: row.scope as string, provides: row.metadata.entry.provides,
+    }))], disabledProvider)
+  profileProviders.push(...childProviders)
+  for (const provider of profileProviders) {
+    const scope = hostScopes.get(provider.scope)
+    if (scope === undefined) throw new Error(`desktop native profile lost injected Provider scope ${provider.scope}`)
+    nodes.push({
+      key: injectedProviderKey(provider.plugin.name, provider.scope),
+      scope,
+      name: provider.plugin.name,
+      requires: provider.plugin.requires,
+      optional: provider.plugin.optional ?? [],
+      provides: provider.plugin.provides,
+    })
+  }
+  const root = roots[0]
+  if (root === undefined) throw new Error('desktop native profile has no root scope')
+  const carrierScope = hostScopes.get(root.id)
+  if (carrierScope === undefined) throw new Error('desktop native profile lost its carrier scope')
+  const carrierKey = injectedProviderKey(desktopCarrierProvider.name, root.id)
+  nodes.push({
+    key: carrierKey,
+    scope: carrierScope,
+    name: desktopCarrierProvider.name,
+    requires: desktopCarrierProvider.requires,
+    optional: desktopCarrierProvider.optional ?? [],
+    provides: desktopCarrierProvider.provides,
+  })
+  const providerNodes = new Map<NativeScope, Map<string, NativeGraphNode[]>>()
+  for (const node of nodes) {
+    const scope = node.scope
+    let scoped = providerNodes.get(scope)
+    if (scoped === undefined) { scoped = new Map(); providerNodes.set(scope, scoped) }
+    for (const service of node.provides) {
+      const rowsForService = scoped.get(service) ?? []
+      rowsForService.push(node)
+      scoped.set(service, rowsForService)
+    }
+  }
+  for (const services of providerNodes.values()) for (const [service, candidates] of services) {
+    if (candidates.length > 1) throw new Error(`desktop native profile has duplicate ${service} providers in one scope`)
+  }
+  const findProvider = (node: NativeGraphNode, service: string): NativeGraphNode | undefined => {
+    for (let scope: NativeScope | undefined = node.scope; scope !== undefined; scope = scope.parent) {
+      const candidates = providerNodes.get(scope)?.get(service)
+      if (candidates !== undefined) {
+        if (candidates.length !== 1) throw new Error(`desktop native profile has ambiguous ${service} providers`)
+        return candidates[0]
+      }
+    }
+    return undefined
+  }
+  const dependencies = new Map<string, string[]>()
+  const requiredDependencies = new Map<string, string[]>()
+  for (const node of nodes) {
+    const selected = new Set<string>()
+    const required = new Set<string>()
+    for (const service of [...node.requires, ...node.optional]) {
+      const provider = findProvider(node, service)
+      if (provider === undefined) {
+        if (node.requires.includes(service)) throw new Error(`desktop native profile requires missing ${service} for ${node.name}`)
+      } else {
+        selected.add(provider.key)
+        if (node.requires.includes(service)) required.add(provider.key)
+      }
+    }
+    dependencies.set(node.key, [...selected])
+    requiredDependencies.set(node.key, [...required])
+  }
+  const byKey = new Map(nodes.map(node => [node.key, node]))
+  const visiting = new Set<string>(), visited = new Set<string>()
+  const visit = (key: string): void => {
+    if (visiting.has(key)) {
+      const node = byKey.get(key)
+      throw new Error(`desktop native profile has a dependency cycle at ${node?.name ?? key}`)
+    }
+    if (visited.has(key)) return
+    visiting.add(key)
+    for (const dependency of dependencies.get(key) ?? []) visit(dependency)
+    visiting.delete(key)
+    visited.add(key)
+  }
+  nodes.forEach((node) => { visit(node.key) })
+  return { rows: active, supportRows, dependencies, requiredDependencies, profileProviders, carrierKey }
+}
+
+function nativeRequiredClosure(
+  files: NativeProfileFiles,
+  composition: NativeResolvedComposition,
+  persistedFiles: NativeProfileFiles = files,
+): Map<string, NativeDesktopRetentionReason[]> {
+  const retained = new Map<string, NativeDesktopRetentionReason[]>()
+  const byKey = new Map(composition.rows.map(row => [rowKey(row.target, row.id), row]))
+  const visited = new Set<string>()
+  const include = (key: string, reason: NativeDesktopRetentionReason): void => {
+    if (!composition.dependencies.has(key)) throw new Error('desktop native profile lost a required installation')
+    const row = byKey.get(key)
+    if (row !== undefined) {
+      const reasons = retained.get(key) ?? []
+      if (!reasons.includes(reason)) reasons.push(reason)
+      retained.set(key, reasons)
+    }
+    if (visited.has(key)) return
+    visited.add(key)
+    for (const dependency of composition.requiredDependencies.get(key) ?? []) include(dependency, 'required-provider')
+  }
+  const hostRoots = files.host.scopes.filter(scope => scope.parent === undefined)
+  const root = hostRoots[0]
+  if (root === undefined) throw new Error('desktop native profile has no root scope')
+  const controllers = composition.rows.filter(row => row.target === 'host' && row.metadata.entry.provides.includes('nativeWebSession'))
+  const controller = controllers[0]
+  if (controllers.length !== 1 || controller === undefined) throw new Error('desktop native profile requires exactly one native Session controller')
+  include(rowKey(controller.target, controller.id), 'desktop-host-session')
+  include(composition.carrierKey, 'desktop-private-carrier-provider')
+  const hostScopes = scopeTree(files.host)
+  const carrierScope = hostScopes.get(root.id)
+  if (carrierScope === undefined) throw new Error('desktop native profile lost its root scope')
+  let credentialProvider: NativeSelectedRow | undefined
+  for (let scope: NativeScope | undefined = carrierScope; scope !== undefined && credentialProvider === undefined; scope = scope.parent) {
+    credentialProvider = composition.rows.find(row => row.target === 'host' && hostScopes.get(row.scope ?? '') === scope
+      && row.metadata.entry.provides.includes('credentials'))
+  }
+  if (credentialProvider === undefined) throw new Error('desktop native profile is missing its root credentials Provider')
+  include(rowKey(credentialProvider.target, credentialProvider.id), 'desktop-private-carrier-provider')
+  for (const service of ['clientApplication', 'clientRenderer']) {
+    const providers = composition.rows.filter(row => row.target === 'client' && row.metadata.entry.provides.includes(service))
+    const provider = providers[0]
+    if (providers.length !== 1 || provider === undefined) throw new Error(`desktop native Client requires exactly one ${service} Provider`)
+    include(rowKey(provider.target, provider.id), 'client-boot-requirement')
+  }
+  const persistedScopes = new Set(persistedFiles.host.scopes.map(scope => scope.id))
+  const presetScopes = files.host.scopes.flatMap((scope) => {
+    if (persistedScopes.has(scope.id) || scope.parent === undefined) return []
+    const manager = composition.rows.find(row => row.target === 'host' && row.scope === scope.parent
+      && row.plugin === '@deepseek-ai/dsh-agent-presets')
+    const rows = composition.rows.filter(row => row.target === 'host' && row.scope === scope.id)
+    if (manager === undefined || !rows.some(row => row.id === scope.id
+      && row.plugin === '@deepseek-ai/dsh-agent-preset-standing')) return []
+    return [{ managerKey: rowKey(manager.target, manager.id), rows }]
+  })
+  let addedPresetRows: boolean
+  do {
+    addedPresetRows = false
+    for (const preset of presetScopes) {
+      if (!retained.has(preset.managerKey) && !preset.rows.some(row => retained.has(rowKey(row.target, row.id)))) continue
+      const previousSize = retained.size
+      include(preset.managerKey, 'required-provider')
+      for (const row of preset.rows) include(rowKey(row.target, row.id), 'required-provider')
+      addedPresetRows ||= retained.size > previousSize
+    }
+  } while (addedPresetRows)
+  return retained
+}
+
+async function planNativeComposition(files: NativeProfileFiles, profileDir: string, runtimeDir: string,
+  runtime: DesktopRuntimeDescriptor, home: string,
+  routeValidation: 'strict' | 'metadata' = 'strict'): Promise<NativePlanningResult> {
+  const anchors = [createRequire(join(runtimeDir, 'package.json')), createRequire(join(profileDir, 'package.json'))]
+  const host = await expandNativeProfilePresets(files.host, anchors, home)
+  const effectiveFiles = { ...files, host }
+  const rows = selectedRows(effectiveFiles, profileDir, runtimeDir, runtime)
+  const composition = validateStaticGraph(rows, host,
+    name => nativePackageMetadata(profileDir, runtimeDir, runtime, name), routeValidation)
+  return { files: effectiveFiles, rows, composition,
+    retained: nativeRequiredClosure(effectiveFiles, composition, files) }
+}
+
+async function validateNativeComposition(files: NativeProfileFiles, profileDir: string, runtimeDir: string,
+  runtime: DesktopRuntimeDescriptor, home: string): Promise<void> {
+  const plan = await planNativeComposition(files, profileDir, runtimeDir, runtime, home)
+  await validateHostInFreshWorker(plan.files.host, plan.composition.rows,
+    plan.composition.profileProviders, plan.composition.supportRows)
+  // Client entry files can reference browser globals; esbuild validates them without executing them in the shell.
+  await prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)
+}
+
+function parseNativeLock(text: string): unknown {
+  try { return loadYaml(text) }
+  catch { throw new NativeDesktopOperationFailure('recovery-required', true) }
+}
+
+function assertLockedVersion(lock: unknown, name: string, expected: string): void {
+  if (!isRecord(lock) || !isRecord(lock.importers) || !isRecord(lock.importers['.'])) {
+    throw new Error('desktop native profile has no package lock importer')
+  }
+  const importer = lock.importers['.']
+  const dependencies = isRecord(importer.dependencies) ? importer.dependencies : {}
+  const row = dependencies[name]
+  if (!isRecord(row) || row.specifier !== expected || typeof row.version !== 'string'
+    || row.version.split('(')[0] !== expected) {
+    throw new Error(`desktop native package lock differs for ${name}`)
+  }
+}
+
+type NativeDesktopMutation =
+  | { readonly type: 'install'; readonly request: NativeDesktopInstallRequest }
+  | { readonly type: 'remove'; readonly request: NativeDesktopPackageMutationRequest }
+  | { readonly type: 'update'; readonly request: NativeDesktopUpdateRequest }
+  | { readonly type: 'toggle'; readonly request: NativeDesktopToggleRequest }
+  | { readonly type: 'disable-all'; readonly request: NativeDesktopMutationRequest }
+
+const nativeErrorMessageKeys = {
+  'wrong-profile': 'nativeWrongProfile',
+  'invalid-request': 'nativeInvalidRequest',
+  'stale-revision': 'nativeStaleRevision',
+  'unsupported-module': 'nativeUnsupportedModule',
+  'package-immutable': 'nativePackageImmutable',
+  'not-found': 'nativeNotFound',
+  'dependency-conflict': 'nativeDependencyConflict',
+  busy: 'nativeBusy',
+  'host-stop-failed': 'nativeHostStopFailed',
+  'package-operation-failed': 'nativePackageOperationFailed',
+  'profile-invalid': 'nativeProfileInvalid',
+  'host-start-failed': 'nativeHostStartFailed',
+  'recovery-required': 'nativeRecoveryError',
+} satisfies Record<NativeDesktopErrorCode, string>
+
+function backendProjection(state: DesktopBackendState, profileRecovery?: boolean): NativeDesktopBackendProjection {
+  const recovery = profileRecovery ?? (state.phase === 'error' ? state.profileRecovery : undefined)
+  return { phase: state.phase, ...recovery === undefined ? {} : { profileRecovery: recovery } }
+}
+
+function buildNativeCandidate(files: NativeProfileFiles, rows: readonly NativeSelectedRow[], mutation: NativeDesktopMutation,
+  dependencies: Readonly<Record<string, string>>, runtime: DesktopRuntimeDescriptor, profileDir: string,
+  runtimeDir: string, retained: ReadonlyMap<string, readonly NativeDesktopRetentionReason[]>): NativeCandidate {
+  const profile = files.host
+  const client = files.client
+  const dependency = (name: string): string | undefined => dependencies[name]
+  const isShared = (name: string): boolean => runtime.sharedPackages.some(row => row.name === name)
+  const packageName = (name: string): string => {
+    try { assertPackageName(name); return name }
+    catch { throw new NativeDesktopOperationFailure('invalid-request') }
+  }
+  const version = (value: string): string => {
+    try { assertVersion(value) } catch { throw new NativeDesktopOperationFailure('invalid-request') }
+    if (valid(value) !== value) throw new NativeDesktopOperationFailure('invalid-request')
+    return value
+  }
+  const hostScopes = new Set(profile.scopes.map(row => row.id))
+  const noPackageOperation = (nextFiles: NativeProfileFiles, nextRows = rows, changed = true,
+    validateBeforeStop = true, blockedBy?: readonly NativeDesktopInstallationKey[]): NativeCandidate => ({
+    files: nextFiles, rows: nextRows, changed, validateBeforeStop,
+    ...(blockedBy === undefined ? {} : { blockedBy }),
+  })
+  switch (mutation.type) {
+    case 'install': {
+      const name = packageName(mutation.request.packageName)
+      const requestedVersion = version(mutation.request.version)
+      if (isShared(name)) throw new NativeDesktopOperationFailure('package-immutable')
+      const selectedVersion = dependency(name)
+      if (selectedVersion !== undefined && selectedVersion !== requestedVersion) {
+        throw new NativeDesktopOperationFailure('invalid-request')
+      }
+      const hostInstallations = [...profile.installations]
+      const clientInstallations = [...client.installations]
+      for (const intent of mutation.request.installations) {
+        const existing = intent.target === 'host' ? hostInstallations : clientInstallations
+        if (existing.some(row => row.id === intent.id)) throw new NativeDesktopOperationFailure('invalid-request')
+        if (intent.target === 'host' && !hostScopes.has(intent.scope)) {
+          throw new NativeDesktopOperationFailure('invalid-request')
+        }
+        if (intent.target === 'host') {
+          hostInstallations.push({ id: intent.id, plugin: name, scope: intent.scope,
+            ...intent.config === undefined ? {} : { config: intent.config },
+            ...intent.enabled ? {} : { disabled: true } })
+        } else {
+          clientInstallations.push({ id: intent.id, plugin: name,
+            ...intent.config === undefined ? {} : { config: intent.config },
+            ...intent.enabled ? {} : { disabled: true } })
+        }
+      }
+      const nextFiles: NativeProfileFiles = {
+        host: { ...profile, installations: hostInstallations },
+        client: { ...client, installations: clientInstallations },
+      }
+      if (selectedVersion !== undefined) {
+        const nextRows = selectedRows(nextFiles, profileDir, runtimeDir, runtime)
+        return noPackageOperation(nextFiles, nextRows)
+      }
+      return {
+        files: nextFiles, rows, changed: true, validateBeforeStop: false,
+        preflightFiles: files, preflightRows: rows,
+        packageOperation: { args: ['add', `${name}@${requestedVersion}`, '--save-exact', '--ignore-scripts'],
+          filesAfterInstall: nextFiles, writeFiles: true },
+      }
+    }
+    case 'remove': {
+      const name = packageName(mutation.request.packageName)
+      if (isShared(name)) throw new NativeDesktopOperationFailure('package-immutable')
+      if (dependency(name) === undefined) throw new NativeDesktopOperationFailure('not-found')
+      const nextFiles: NativeProfileFiles = {
+        host: { ...profile, installations: profile.installations.filter(row => row.plugin !== name) },
+        client: { ...client, installations: client.installations.filter(row => row.plugin !== name) },
+      }
+      const nextRows = rows.filter(row => row.plugin !== name)
+      return {
+        ...noPackageOperation(nextFiles, nextRows),
+        packageOperation: { args: ['remove', name, '--config.ignore-scripts=true'],
+          filesAfterInstall: nextFiles, writeFiles: true },
+      }
+    }
+    case 'update': {
+      const name = packageName(mutation.request.packageName)
+      const requestedVersion = version(mutation.request.version)
+      if (isShared(name)) throw new NativeDesktopOperationFailure('package-immutable')
+      const currentVersion = dependency(name)
+      if (currentVersion === undefined) throw new NativeDesktopOperationFailure('not-found')
+      if (currentVersion === requestedVersion) return noPackageOperation(files, rows, false)
+      return {
+        files, rows, changed: true, validateBeforeStop: false, preflightFiles: files, preflightRows: rows,
+        packageOperation: { args: ['add', `${name}@${requestedVersion}`, '--save-exact', '--ignore-scripts'],
+          filesAfterInstall: files, writeFiles: false },
+      }
+    }
+    case 'toggle': {
+      const { target, id } = mutation.request.key
+      const key = rowKey(target, id)
+      const selected = rows.find(row => rowKey(row.target, row.id) === key)
+      if (selected === undefined) throw new NativeDesktopOperationFailure('not-found')
+      if ((selected.disabled !== true) === mutation.request.enabled) return noPackageOperation(files, rows, false)
+      if (!mutation.request.enabled) {
+        if (retained.has(key)) {
+          throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, [{ target, id: brandString(id) }])
+        }
+      }
+      const nextHost = target === 'host' ? profile.installations.map(row => row.id === id
+        ? toggleDisabled(row, mutation.request.enabled) : row) : profile.installations
+      const nextClient = target === 'client' ? client.installations.map(row => row.id === id
+        ? toggleDisabled(row, mutation.request.enabled) : row) : client.installations
+      const nextFiles: NativeProfileFiles = {
+        host: { ...profile, installations: nextHost },
+        client: { ...client, installations: nextClient },
+      }
+      return noPackageOperation(nextFiles, selectedRows(nextFiles, profileDir, runtimeDir, runtime))
+    }
+    case 'disable-all': {
+      const disable = <Row extends { readonly id: string; readonly disabled?: boolean }>(target: NativeDesktopTarget, row: Row): Row => {
+        const key = rowKey(target, row.id)
+        return row.disabled !== true && !retained.has(key) ? { ...row, disabled: true } : row
+      }
+      const nextFiles: NativeProfileFiles = {
+        host: { ...profile, installations: profile.installations.map(row => disable('host', row)) },
+        client: { ...client, installations: client.installations.map(row => disable('client', row)) },
+      }
+      const changed = JSON.stringify(nextFiles) !== JSON.stringify(files)
+      return noPackageOperation(nextFiles, selectedRows(nextFiles, profileDir, runtimeDir, runtime), changed)
+    }
+    default:
+      return mutation satisfies never
+  }
+}
+
+function toggleDisabled<Row extends { readonly disabled?: boolean }>(row: Row, enabled: boolean): Row {
+  if (!enabled) return { ...row, disabled: true }
+  const { disabled: _disabled, ...rest } = row
+  return rest as Row
+}
+
+
 /** Desktop npm project manager with direct writes and no rollback. */
 export class DesktopProjectManager {
   private lockDescriptor: number | undefined
@@ -234,6 +919,293 @@ export class DesktopProjectManager {
     readonly paths: DesktopPaths,
     readonly runtime: DesktopRuntimeExecutables,
   ) {}
+
+  /** Read the locked Native Desktop inventory without stopping the Host. */
+  async listNativeModules(currentBackend: () => DesktopBackendState): Promise<NativeDesktopListOutcome> {
+    try {
+      const inventory = await this.withLock(async () => {
+        this.descriptor = this.readRuntime()
+        this.assertNativeProfile()
+        if (existsSync(this.pendingPackages)) throw new NativeDesktopOperationFailure('recovery-required', true)
+        const files = this.readNativeFiles()
+        const rows = selectedRows(files, this.paths.profile, this.runtime.dsh, this.currentRuntime())
+        const runtime = this.currentRuntime()
+        const plan = await planNativeComposition(files, this.paths.profile, this.runtime.dsh, runtime,
+          dirname(this.paths.root), 'metadata')
+        const retained = plan.retained
+        const lock = existsSync(join(this.paths.profile, 'pnpm-lock.yaml'))
+          ? parseNativeLock(readFileSync(join(this.paths.profile, 'pnpm-lock.yaml'), 'utf8')) : undefined
+        const dependencies = projectManifest(this.paths.profile).dependencies
+        this.assertNativePackageState(plan.rows, dependencies, lock)
+        const packages = new Map<string, NativeDesktopInstallationView[]>()
+        for (const row of rows) {
+          const key = rowKey(row.target, row.id)
+          const reasons = retained.get(key) ?? []
+          let canEnable = false
+          let canDisable = row.disabled !== true && reasons.length === 0
+          if (row.disabled) {
+            const candidateFiles: NativeProfileFiles = row.target === 'host'
+              ? { ...files, host: { ...files.host, installations: files.host.installations.map(value => value.id === row.id
+                ? toggleDisabled(value, true) : value) } }
+              : { ...files, client: { ...files.client, installations: files.client.installations.map(value => value.id === row.id
+                ? toggleDisabled(value, true) : value) } }
+            try {
+              const candidatePlan = await planNativeComposition(candidateFiles, this.paths.profile,
+                this.runtime.dsh, runtime, dirname(this.paths.root))
+              this.assertNativePackageState(candidatePlan.rows, dependencies, lock)
+              canEnable = true
+            } catch { /* A disabled row stays visible with enabling unavailable. */ }
+          } else if (canDisable) {
+            const candidateFiles: NativeProfileFiles = row.target === 'host'
+              ? { ...files, host: { ...files.host, installations: files.host.installations.map(value => value.id === row.id
+                ? toggleDisabled(value, false) : value) } }
+              : { ...files, client: { ...files.client, installations: files.client.installations.map(value => value.id === row.id
+                ? toggleDisabled(value, false) : value) } }
+            try {
+              const candidatePlan = await planNativeComposition(candidateFiles, this.paths.profile,
+                this.runtime.dsh, runtime, dirname(this.paths.root))
+              this.assertNativePackageState(candidatePlan.rows, dependencies, lock)
+            } catch { canDisable = false }
+          }
+          const view: NativeDesktopInstallationView = row.target === 'host'
+            ? {
+              target: 'host', id: brandString<NativeDesktopInstallationId>(row.id),
+              scope: brandString<NativeDesktopScopeId>(row.scope ?? ''), packageName: row.plugin,
+              enabled: row.disabled !== true, ...row.disabled === undefined ? {} : { disabled: row.disabled },
+              hasConfig: row.hasConfig, availableTargets: row.metadata.entry.targets, nativeApiVersion: 1,
+              canEnable, canDisable,
+              ...reasons.length === 0 ? {} : { disableReasons: reasons },
+            }
+            : {
+              target: 'client', id: brandString<NativeDesktopInstallationId>(row.id), packageName: row.plugin,
+              enabled: row.disabled !== true, ...row.disabled === undefined ? {} : { disabled: row.disabled },
+              hasConfig: row.hasConfig, availableTargets: row.metadata.entry.targets, nativeApiVersion: 1,
+              canEnable, canDisable,
+              ...reasons.length === 0 ? {} : { disableReasons: reasons },
+            }
+          const list = packages.get(row.plugin) ?? []
+          list.push(view)
+          packages.set(row.plugin, list)
+        }
+        const inventoryPackages = [...packages].map(([name, installations]): NativeDesktopPackageView => {
+          const metadata = rows.find(row => row.plugin === name)?.metadata
+          if (metadata === undefined) throw new Error(`desktop native inventory lost package ${name}`)
+          const managedBy = this.currentRuntime().sharedPackages.some(shared => shared.name === name) ? 'signed-runtime' : 'profile'
+          const manageable = managedBy === 'profile' && Object.hasOwn(dependencies, name)
+          return {
+            packageName: name, packageVersion: metadata.version, managedBy,
+            packageCapabilities: { canRemovePackage: manageable, canUpdatePackage: manageable },
+            installations,
+          }
+        }).sort((left, right) => left.packageName.localeCompare(right.packageName))
+        const scopes: NativeDesktopScopeView[] = files.host.scopes.map(scope => ({
+          id: brandString<NativeDesktopScopeId>(scope.id),
+          ...scope.parent === undefined ? {} : { parent: brandString<NativeDesktopScopeId>(scope.parent) },
+        }))
+        return {
+          runtime: 'native' as const,
+          revision: this.nativeRevision(files, rows),
+          scopes, packages: inventoryPackages,
+        } satisfies NativeDesktopInventory
+      })
+      return { status: 'listed', inventory }
+    } catch (error) {
+      const failure = this.nativeFailure(error, false)
+      const state = currentBackend()
+      return {
+        status: failure.afterHandoff || existsSync(this.pendingPackages) ? 'recovery-required' : 'refused',
+        error: this.nativeError(failure, state),
+      }
+    }
+  }
+
+  /** @returns Whether the installed Desktop project selects the Native profile runtime. */
+  supportsNativeModuleManagement(): boolean {
+    return existsSync(this.paths.profile) && profileDirectoryRuntime(this.paths.profile) === 'native'
+  }
+
+  /** Return a safe Native operation refusal for IPC requests rejected before manager admission. */
+  refuseNativeMutation(code: NativeDesktopErrorCode, state: DesktopBackendState): NativeDesktopMutationOutcome {
+    return { status: 'refused', error: this.nativeError(new NativeDesktopOperationFailure(code), state) }
+  }
+
+  /** Return a safe Native inventory refusal for IPC requests rejected before manager admission. */
+  refuseNativeList(code: NativeDesktopErrorCode, state: DesktopBackendState): NativeDesktopListOutcome {
+    return { status: 'refused', error: this.nativeError(new NativeDesktopOperationFailure(code), state) }
+  }
+
+  /** Apply one Native Desktop package or installation mutation under the profile lock. */
+  async mutateNativeModules(mutation: NativeDesktopMutation, hooks: DesktopProjectHooks,
+    currentBackend: () => DesktopBackendState): Promise<NativeDesktopMutationOutcome> {
+    let afterHandoff = false
+    try {
+      const revision = await this.withLock(async () => {
+        this.descriptor = this.readRuntime()
+        this.assertNativeProfile()
+        if (existsSync(this.pendingPackages)) throw new NativeDesktopOperationFailure('recovery-required', true)
+        const files = this.readNativeFiles()
+        const rows = selectedRows(files, this.paths.profile, this.runtime.dsh, this.currentRuntime())
+        const currentRevision = this.nativeRevision(files, rows)
+        if (mutation.request.expectedRevision !== currentRevision) {
+          throw new NativeDesktopOperationFailure('stale-revision', false, currentRevision)
+        }
+        const manifest = projectManifest(this.paths.profile)
+        const lockPath = join(this.paths.profile, 'pnpm-lock.yaml')
+        const lock = existsSync(lockPath) ? parseNativeLock(readFileSync(lockPath, 'utf8')) : undefined
+        const metadataOnly = mutation.type === 'disable-all'
+          || mutation.type === 'toggle' && !mutation.request.enabled
+        const plan = await planNativeComposition(files, this.paths.profile, this.runtime.dsh,
+          this.currentRuntime(), dirname(this.paths.root), metadataOnly ? 'metadata' : 'strict')
+        this.assertNativePackageState(plan.rows, manifest.dependencies, lock)
+        const next = this.nativeCandidate(files, rows, mutation, manifest.dependencies, plan.retained)
+        if (!next.changed) return currentRevision
+        if (next.validateBeforeStop) {
+          try { await validateNativeComposition(next.files, this.paths.profile, this.runtime.dsh,
+            this.currentRuntime(), dirname(this.paths.root)) }
+          catch { throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, next.blockedBy) }
+        } else {
+          try { await validateNativeComposition(files, this.paths.profile, this.runtime.dsh,
+            this.currentRuntime(), dirname(this.paths.root)) }
+          catch { throw new NativeDesktopOperationFailure('profile-invalid') }
+        }
+        try { await hooks.beforeChange() }
+        catch { throw new NativeDesktopOperationFailure('host-stop-failed') }
+        afterHandoff = true
+        try {
+          if (next.packageOperation !== undefined) {
+            const operation = next.packageOperation
+            unlinkDesktopHostPackages(this.paths.profile)
+            try {
+              await this.runPnpm(this.paths.profile, operation.args)
+              const afterInstallFiles = operation.filesAfterInstall ?? next.files
+              let afterInstallPlan: NativePlanningResult
+              try { afterInstallPlan = await planNativeComposition(afterInstallFiles, this.paths.profile,
+                this.runtime.dsh, this.currentRuntime(), dirname(this.paths.root)) }
+              catch { throw new NativeDesktopOperationFailure('unsupported-module', true) }
+              const installedDependencies = projectManifest(this.paths.profile).dependencies
+              const installedLockPath = join(this.paths.profile, 'pnpm-lock.yaml')
+              const installedLock = existsSync(installedLockPath)
+                ? parseNativeLock(readFileSync(installedLockPath, 'utf8')) : undefined
+              this.assertNativePackageState(afterInstallPlan.rows, installedDependencies, installedLock)
+              try { await validateNativeComposition(afterInstallFiles, this.paths.profile, this.runtime.dsh,
+                this.currentRuntime(), dirname(this.paths.root)) }
+              catch { throw new NativeDesktopOperationFailure('unsupported-module', true) }
+              if (operation.writeFiles) this.writeNativeFiles(next.files)
+              await this.finishPackageOperation(this.paths.profile)
+            } finally {
+              linkDesktopHostPackages(this.paths.profile, this.runtime.dsh, this.currentRuntime())
+            }
+          } else {
+            this.writeNativeFiles(next.files)
+          }
+        } catch (error) {
+          if (error instanceof NativeDesktopOperationFailure) throw error
+          const code: NativeDesktopErrorCode = existsSync(this.pendingPackages)
+            ? 'package-operation-failed' : 'recovery-required'
+          throw new NativeDesktopOperationFailure(code, true)
+        }
+        try { await hooks.afterChange() }
+        catch { throw new NativeDesktopOperationFailure('host-start-failed', true) }
+        const committedFiles = this.readNativeFiles()
+        const committedRows = selectedRows(committedFiles, this.paths.profile, this.runtime.dsh, this.currentRuntime())
+        return this.nativeRevision(committedFiles, committedRows)
+      })
+      return { status: 'applied', revision, backend: backendProjection(currentBackend()) }
+    } catch (error) {
+      const failure = this.nativeFailure(error, afterHandoff)
+      const state = currentBackend()
+      return {
+        status: failure.afterHandoff || existsSync(this.pendingPackages)
+          || (failure.code === 'host-stop-failed' && state.phase !== 'ready') ? 'recovery-required' : 'refused',
+        error: this.nativeError(failure, state),
+      }
+    }
+  }
+
+  private assertNativeProfile(): void {
+    if (!existsSync(this.paths.profile) || profileDirectoryRuntime(this.paths.profile) !== 'native'
+      || profileDirectoryReloadMode(this.paths.profile) !== 'startup') {
+      throw new NativeDesktopOperationFailure('wrong-profile')
+    }
+    projectManifest(this.paths.profile)
+    readNativeProfile({ profile: 'desktop', profileDir: this.paths.profile, patchFiles: [] })
+  }
+
+  private readNativeFiles(): NativeProfileFiles {
+    const host = readNativeProfile({ profile: 'desktop', profileDir: this.paths.profile, patchFiles: [] })
+    const client = parseNativeClientProfile(readJson(join(this.paths.profile, 'rsh.client.json')))
+    return { host, client }
+  }
+
+  private writeNativeFiles(files: NativeProfileFiles): void {
+    writeJson(join(this.paths.profile, 'rsh.profile.json'), files.host)
+    writeJson(join(this.paths.profile, 'rsh.client.json'), files.client)
+  }
+
+  private nativeRevision(files: NativeProfileFiles, rows: readonly NativeSelectedRow[]): NativeDesktopRevision {
+    const hash = createHash('sha256')
+    const add = (name: string, path: string): void => {
+      hash.update(name).update('\0')
+      if (!existsSync(path)) { hash.update('absent\0'); return }
+      const bytes = readFileSync(path)
+      hash.update('present\0').update(String(bytes.byteLength)).update('\0').update(bytes).update('\0')
+    }
+    hash.update(desktopRuntimeId(this.currentRuntime())).update('\0')
+    const revisionFiles = [
+      ['package.json', join(this.paths.profile, 'package.json')],
+      ['pnpm-lock.yaml', join(this.paths.profile, 'pnpm-lock.yaml')],
+      ['rsh.profile.json', join(this.paths.profile, 'rsh.profile.json')],
+      ['rsh.client.json', join(this.paths.profile, 'rsh.client.json')],
+      ['desktop-runtime-state.json', join(this.paths.profile, 'desktop-runtime-state.json')],
+    ] as const
+    for (const [name, path] of revisionFiles) add(name, path)
+    for (const path of [...new Set(rows.map(row => row.metadata.manifestPath))].sort()) add(`native-package:${path}`, path)
+    // Keep the validated values in the revision calculation even if an editor rewrites equivalent JSON bytes.
+    hash.update(JSON.stringify([files.host.scopes, files.host.installations, files.client.installations]))
+    return brandString<NativeDesktopRevision>(hash.digest('hex'))
+  }
+
+  private nativeCandidate(files: NativeProfileFiles, rows: readonly NativeSelectedRow[], mutation: NativeDesktopMutation,
+    dependencies: Readonly<Record<string, string>>,
+    retained: ReadonlyMap<string, readonly NativeDesktopRetentionReason[]>): NativeCandidate {
+    return buildNativeCandidate(files, rows, mutation, dependencies, this.currentRuntime(), this.paths.profile,
+      this.runtime.dsh, retained)
+  }
+
+  private assertNativePackageState(rows: readonly NativeSelectedRow[], dependencies: Readonly<Record<string, string>>,
+    lock: unknown): void {
+    const shared = new Set(this.currentRuntime().sharedPackages.map(row => row.name))
+    const packages = new Map<string, NativePackageMetadata>()
+    for (const row of rows) if (!shared.has(row.plugin)) packages.set(row.plugin, row.metadata)
+    for (const [name, metadata] of packages) {
+      const dependency = dependencies[name]
+      if (dependency === undefined) throw new NativeDesktopOperationFailure('profile-invalid')
+      if (lock === undefined) throw new NativeDesktopOperationFailure('recovery-required', true)
+      try { assertLockedVersion(lock, name, dependency) }
+      catch { throw new NativeDesktopOperationFailure('recovery-required', true) }
+      if (metadata.version !== dependency) throw new NativeDesktopOperationFailure('recovery-required', true)
+    }
+  }
+
+  private nativeFailure(error: unknown, afterHandoff: boolean): NativeDesktopOperationFailure {
+    if (error instanceof NativeDesktopOperationFailure) return error
+    if (error instanceof Error && error.message.includes('another package transaction is active')) {
+      return new NativeDesktopOperationFailure('busy')
+    }
+    return new NativeDesktopOperationFailure(existsSync(this.pendingPackages) ? 'recovery-required' : 'profile-invalid',
+      afterHandoff || existsSync(this.pendingPackages))
+  }
+
+  private nativeError(failure: NativeDesktopOperationFailure, state: DesktopBackendState) {
+    const profileRecovery = existsSync(this.pendingPackages) || (state.phase === 'error' && state.profileRecovery)
+    return {
+      code: failure.code,
+      messageKey: nativeErrorMessageKeys[failure.code],
+      backend: backendProjection(state, profileRecovery),
+      ...failure.currentRevision === undefined ? {} : { currentRevision: failure.currentRevision },
+      ...failure.blockedBy === undefined ? {} : { blockedBy: failure.blockedBy },
+    }
+  }
 
   /** Read the active desktop plugin inventory. */
   listPlugins(): readonly DesktopPluginRecord[] {
@@ -541,7 +1513,7 @@ export class DesktopProjectManager {
     fsyncSync(descriptor)
   }
 
-  private async withLock<T>(operation: () => Promise<T>): Promise<T> {
+  private async withLock<T>(operation: () => T | Promise<T>): Promise<T> {
     mkdirSync(this.paths.profile, { recursive: true, mode: 0o700 })
     if (lstatSync(this.paths.profile).isSymbolicLink()) throw new Error('desktop project: profile directory must not be a link')
     let descriptor: number
