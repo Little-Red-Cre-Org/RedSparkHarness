@@ -1,0 +1,5 @@
+import { createRequire } from 'node:module';
+const require = createRequire('/workspace/RedSparkHarness/rsh/Programs/Web/application/package.json');
+const { chromium } = require('playwright');
+const original = chromium.launch.bind(chromium);
+chromium.launch = options => original({ ...options, executablePath: '/usr/bin/chromium' });

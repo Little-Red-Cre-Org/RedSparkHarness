@@ -1,0 +1,13 @@
+{
+  "initial_checkpoint": "18a305983ef18579c86e885ca72abffa78d7755e",
+  "p2_repair_source_sha": "1eb5ae8518df47614a5265da4e0e358dd4a84157",
+  "negative_control_transcript_source_sha": "18a305983ef18579c86e885ca72abffa78d7755e",
+  "exact_source_run": "logs/p2-exact-source.log.gz",
+  "source_blobs": {
+    "rsh/Programs/Web/client/native-application/src/native-transcript.tsx": "4a356960da23afb8c9a5dcda5653762fd72f8ff2",
+    "rsh/Programs/Web/client/native-application/tests/workflow.client.spec.tsx": "2e0e75d03ed8eb3be671d93311221f09bd3bb3f7"
+  },
+  "evidence_commit": "Separate following commit; see Git history and final handoff.",
+  "browser_capture_source_sha": null,
+  "capture_limitation": "Historical pre-203f345510 WIP; not final HEAD browser acceptance."
+}

@@ -74,8 +74,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const followedSession = useRef(snapshot.selected)
   const ready = snapshot.state === 'ready'
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
-  const hasConversation = snapshot.events.some(event => isAppendSurfaceEvent(event)
-    && deriveEventMessage(event)?.role !== 'system')
+  const hasConversation = snapshot.events.some(event => event.type === 'tool-workflow/run-start'
+    || (isAppendSurfaceEvent(event) && deriveEventMessage(event)?.role !== 'system'))
   const petState = snapshot.human !== undefined ? 'waiting' : sending ? 'thinking' : 'idle'
   const workspace = snapshot.header?.cwd?.split(/[\\/]/).at(-1) ?? t('workspaceUnavailable')
   const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
