@@ -9375,6 +9375,9 @@ importers:
       '@deepseek-ai/dsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
+      '@deepseek-ai/dsh-token-meter':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/token-meter
     devDependencies:
       '@deepseek-ai/dsh-fs-local':
         specifier: workspace:^
