@@ -218,7 +218,7 @@ it('keeps subscribed state over a late status response and detaches once on page
   await p.settled()
   expect(p.element('#backend-state').textContent).toBe('Backend: error')
   expect(p.element('#profile-recovery').hidden).toBe(false)
-  expect(p.element('#startup-error').textContent).toBe('<img src=x>')
+  expect(p.element('#startup-error').textContent).toBe('Backend: error')
   expect(p.element('#startup-error').childElementCount).toBe(0)
   const pending = Promise.withResolvers<unknown>()
   p.native.toggle.mockImplementationOnce(() => pending.promise)
@@ -246,4 +246,46 @@ it('does not subscribe or read inventory when locale arrives after pagehide', as
   expect(p.backend.status).not.toHaveBeenCalled()
   expect(p.unsubscribe).not.toHaveBeenCalled()
   expect(p.element('#title').textContent).toBe('')
+})
+
+it('keeps raw backend diagnostics out of Native initial status and subscriptions', async () => {
+  const diagnostic = 'config apiKey=SECRET; /private/profile/rsh.client.json; pnpm stderr: private output'
+  const p = page('en', Promise.resolve({ phase: 'error', profileRecovery: true, message: diagnostic }))
+  p.start()
+  await p.settled()
+  const expectSafe = () => {
+    expect(p.element('#startup-error').textContent).toBe('Backend: error')
+    for (const fragment of ['apiKey=SECRET', '/private/profile/', 'pnpm stderr', 'private output']) {
+      expect(p.dom.window.document.body.textContent).not.toContain(fragment)
+    }
+    expect(p.element('#backend-state').textContent).toBe('Backend: error')
+  }
+  expectSafe()
+  p.publish({ phase: 'error', profileRecovery: false, message: diagnostic })
+  expectSafe()
+  expect(p.element('#profile-recovery').hidden).toBe(true)
+})
+
+it('submits the legacy form after Native inventory switches to wrong-profile', async () => {
+  const p = page()
+  p.start()
+  await p.settled()
+  expect(p.form('#install-form').checkValidity()).toBe(false)
+  p.native.list.mockResolvedValue(failure('wrong-profile'))
+  p.button('#refresh').click()
+  await p.settled()
+  p.input('#package-spec').value = 'legacy-plugin@1.2.3'
+  expect(p.form('#install-form').checkValidity()).toBe(true)
+  const expectInactiveFields = () => {
+    for (const control of p.dom.window.document.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('#native-install input, #native-install select, #native-install textarea, #native-install button')) {
+      expect(control.disabled).toBe(true)
+      expect(control.dataset.unavailable).toBe('true')
+    }
+  }
+  expectInactiveFields()
+  p.form('#install-form').requestSubmit()
+  await p.settled()
+  expect(p.legacy.add).toHaveBeenCalledWith('legacy-plugin@1.2.3')
+  expect(p.native.install).not.toHaveBeenCalled()
+  expectInactiveFields()
 })

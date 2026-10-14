@@ -58,12 +58,13 @@ async function main() {
     disableAll.textContent = nativeMode ? messages.nativeDisableAll : messages.disableAll
     disableAll.hidden = !nativeMode && document.querySelector('#recovery').hidden
     if (nativeMode) {
+      document.querySelector('#startup-error').textContent = ''
       for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, inventory !== undefined)
       available(disableAll, inventory !== undefined && inventory.packages.some(pkg => pkg.installations.some(row => row.canDisable)))
       if (inventory === undefined) for (const control of list.querySelectorAll('button')) available(control, false)
       updateEditorRemoval()
     } else {
-      for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, true)
+      for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, control.closest('#native-install') === null)
       available(disableAll, true)
       available(retry, true)
     }
@@ -77,8 +78,10 @@ async function main() {
     document.querySelector('#profile-recovery').textContent = messages.nativeProfileRecovery
     document.querySelector('#recovery').hidden = backend.phase !== 'error'
     document.querySelector('#recovery-description').textContent = nativeMode ? messages.nativeRecoveryAdvice : messages.recoveryDescription
-    document.querySelector('#startup-error').textContent = backend.phase === 'error' ? (backend.message ?? '') : ''
     configureMode()
+    // Native status uses only localized state; legacy diagnostics retain their existing presentation.
+    document.querySelector('#startup-error').textContent = backend.phase === 'error'
+      ? (nativeMode ? messages.nativeBackendError : (backend.message ?? '')) : ''
   }
 
   unsubscribe = api.backend.subscribe(backend => {
