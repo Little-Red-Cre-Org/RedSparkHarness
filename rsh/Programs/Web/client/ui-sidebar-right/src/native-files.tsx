@@ -51,6 +51,7 @@ type PreviewRead = {
   readonly observations: Map<string, string | undefined>
   readonly invalidate: () => void
   pending: number
+  retryOnObservation: boolean
   htmlVersion?: string
 }
 
@@ -70,6 +71,9 @@ async function readPreviewFile<T extends { readonly absolutePath: string; readon
       }
     }
     return result
+  } catch (error) {
+    if (!signal.aborted) read.retryOnObservation = true
+    throw error
   } finally {
     read.pending -= 1
     if (read.pending === 0) read.observations.clear()
@@ -189,6 +193,13 @@ export function NativeFilesPanel({
           if (read === undefined || read.controller.signal.aborted || read.sessionId !== sessionId || read.path !== selectedPath) continue
           const { absolutePath } = frame.change
           const version = 'version' in frame.change ? frame.change.version : undefined
+          // Failed reads provide no resolved identity. A new present-file
+          // observation can make the preview usable; matching known reads and
+          // absence observations must not retry their own failed reads.
+          if (read.retryOnObservation && version !== undefined && !read.files.has(absolutePath)) {
+            read.invalidate()
+            continue
+          }
           if (read.pending > 0) read.observations.set(absolutePath, version)
           if (read.files.has(absolutePath) && read.files.get(absolutePath) !== version) {
             read.files.set(absolutePath, version)
@@ -211,7 +222,7 @@ export function NativeFilesPanel({
     const sameFile = previous?.sessionId === sessionId && previous.path === selectedPath
     const read: PreviewRead = {
       controller, sessionId, path: selectedPath,
-      files: new Map(sameFile ? previous.files : undefined), observations: new Map(), pending: 0,
+      files: new Map(sameFile ? previous.files : undefined), observations: new Map(), pending: 0, retryOnObservation: false,
       ...sameFile && previous.htmlVersion !== undefined ? { htmlVersion: previous.htmlVersion } : {},
       invalidate: () => {
         if (controller.signal.aborted) return

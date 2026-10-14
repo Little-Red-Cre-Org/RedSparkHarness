@@ -165,7 +165,7 @@ it.each(['v1', 'v2', 'absent'])('compares an in-flight preview response with obs
   }
 })
 
-it('refreshes only loaded HTML dependencies with a changed version', async () => {
+it.each([false, true])('refreshes HTML dependencies (initially missing: %s)', async (initiallyMissing) => {
   const state = fixture()
   const descriptors = new Map(['createObjectURL', 'revokeObjectURL'].map(key => [key, Object.getOwnPropertyDescriptor(URL, key)]))
   let unmount: (() => void) | undefined
@@ -177,32 +177,43 @@ it('refreshes only loaded HTML dependencies with a changed version', async () =>
     state.readAll.mockImplementation(async () => ({ absolutePath: '/fixture/index.html', version: 'html-v1',
       offset: 0, eof: true, data: btoa('<script src="app.js"></script>') }))
     const related = state.readRelated.mockImplementation(async () => ({ absolutePath: '/fixture/app.js', version: 'js-v1', offset: 0, eof: true, data: btoa('window.marker = 1') }))
+    if (initiallyMissing) related.mockRejectedValueOnce(new Error('dependency not created yet'))
+    const extra = initiallyMissing ? 1 : 0
     const view = render(<state.Panel />)
     unmount = () => { view.unmount() }
     fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
+    if (initiallyMissing) {
+      await screen.findByRole('alert')
+      await act(async () => {
+        state.emit({ kind: 'change', change: { absolutePath: '/fixture/index.html', version: 'html-v1' } })
+        state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', absent: true } })
+      })
+      expect(related).toHaveBeenCalledTimes(1)
+      await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v1' } }) })
+    }
     await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
-    expect(related).toHaveBeenCalledTimes(1)
+    expect(related).toHaveBeenCalledTimes(1 + extra)
     await act(async () => {
       state.emit({ kind: 'change', change: { absolutePath: '/fixture/unrelated.js', version: 'v2' } })
       state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v1' } })
     })
-    expect(related).toHaveBeenCalledTimes(1)
+    expect(related).toHaveBeenCalledTimes(1 + extra)
     related.mockResolvedValue({ absolutePath: '/fixture/app.js', version: 'js-v2', offset: 0, eof: true, data: btoa('window.marker = 2') })
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v2' } }) })
-    await waitFor(() => { expect(related).toHaveBeenCalledTimes(2) })
+    await waitFor(() => { expect(related).toHaveBeenCalledTimes(2 + extra) })
     related.mockRejectedValueOnce(new Error('dependency removed'))
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', absent: true } }) })
     await screen.findByRole('alert')
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v2' } }) })
     await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
-    expect(related).toHaveBeenCalledTimes(4)
+    expect(related).toHaveBeenCalledTimes(4 + extra)
     state.readAll.mockResolvedValue({ absolutePath: '/fixture/index.html', version: 'html-v2',
       offset: 0, eof: true, data: btoa('<p>No dependencies</p>') })
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/index.html', version: 'html-v2' } }) })
     await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
-    expect(state.readAll).toHaveBeenCalledTimes(5)
+    expect(state.readAll).toHaveBeenCalledTimes(5 + extra)
     await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v3' } }) })
-    expect(state.readAll).toHaveBeenCalledTimes(5)
+    expect(state.readAll).toHaveBeenCalledTimes(5 + extra)
   } finally {
     await act(async () => { unmount?.() })
     await state.closed()
