@@ -137,7 +137,7 @@ if (command === 'add' || command === 'remove') {
   return script
 }
 
-function writeCurrentProfile(manager: DesktopProjectManager, profile: string): void {
+function writeCurrentProfile(profile: string): void {
   writeNativeProfile(profile, initialHostRows, initialClientRows)
   prepareNativePackages(profile)
 }
@@ -166,7 +166,7 @@ function configurePresetFixture(manager: DesktopProjectManager, profile: string,
   presetDependencies['@fixture/preset-consumer'] = '1.0.0'
   writeFileSync(join(profile, 'package.json'), JSON.stringify(presetManifest))
   const presetLock = readJson(join(profile, 'pnpm-lock.yaml'))
-  const lockImporter = (presetLock.importers as Record<string, { dependencies: Record<string, unknown> }>)['.']
+  const lockImporter = (presetLock.importers as { '.': { dependencies: Record<string, unknown> } })['.']
   lockImporter.dependencies['@deepseek-ai/dsh-agent-preset-standing'] = { specifier: '1.0.0', version: '1.0.0' }
   lockImporter.dependencies['@fixture/preset-consumer'] = { specifier: '1.0.0', version: '1.0.0' }
   writeFileSync(join(profile, 'pnpm-lock.yaml'), JSON.stringify(presetLock))
@@ -194,7 +194,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const root = fixtureRoot()
   const { manager, profile } = prepareFixture(root)
   await manager.applyRelease()
-  writeCurrentProfile(manager, profile)
+  writeCurrentProfile(profile)
   const lifecycle = { stop: 0, start: 0 }
   const listed = await manager.listNativeModules(ready)
   expect(listed.status).toBe('listed')
@@ -428,7 +428,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const root = fixtureRoot()
   const { manager, profile } = prepareFixture(root)
   await manager.applyRelease()
-  writeCurrentProfile(manager, profile)
+  writeCurrentProfile(profile)
   const lifecycle = { stop: 0, start: 0 }
   const initial = await manager.listNativeModules(ready)
   expect(initial.status).toBe('listed')
