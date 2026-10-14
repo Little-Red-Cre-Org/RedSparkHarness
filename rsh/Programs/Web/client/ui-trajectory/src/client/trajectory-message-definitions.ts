@@ -112,22 +112,35 @@ function applySplice(
   }
 }
 
+/** Apply the durable move that appends one queued identity to the next-step list. */
+function applyMove(previous: ConversationPreviousContext<InboxState> | undefined, messageId: string): InboxState {
+  const priorPending = previous?.state.pending ?? EMPTY_PENDING
+  const pending = materializePending(priorPending)
+  if (pending.includes(messageId)) throw new Error(`trajectory-inbox: duplicate moved message "${messageId}"`)
+  return {
+    pending: { kind: 'splice', previous: priorPending, start: pending.length, removedCount: 0, inserted: [messageId] },
+    currentClaimed: withoutInserted(previous?.state.currentClaimed ?? EMPTY_CURRENT_CLAIMED, [messageId]),
+  }
+}
+
 const trajectoryInboxDefinition: ConversationNodeDefinition<InboxState> = {
   kind: 'trajectory-inbox-next-step',
   match: (event) => {
+    if (event.type === 'agent/inbox/moved') return { id: String(event.seq), role: 'start' }
     if (event.type === 'agent/inbox/spliced' && event.data.target === 'next-step') {
       return { id: String(event.seq), role: 'start' }
     }
     return null
   },
   start: (_context, match, reader) => {
+    const previous = reader.previous<InboxState>('trajectory-inbox-next-step')
+    if (match.event.type === 'agent/inbox/moved') {
+      return applyMove(previous, String(match.event.data.messageId))
+    }
     if (match.event.type !== 'agent/inbox/spliced') {
       throw new Error('trajectory-inbox-next-step start requires agent/inbox/spliced')
     }
-    return applySplice(
-      reader.previous<InboxState>('trajectory-inbox-next-step'),
-      match.event.data,
-    )
+    return applySplice(previous, match.event.data)
   },
   update: context => context.state,
   publication: () => 'none',

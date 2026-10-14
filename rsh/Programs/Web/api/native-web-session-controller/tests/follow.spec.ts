@@ -172,24 +172,30 @@ it('queues and steers identified inputs through the active root inbox', async ()
   const pending: Record<'next-turn' | 'next-step', ReturnType<typeof createUserMessage>[]> = {
     'next-turn': [], 'next-step': [],
   }
+  const events: SessionEvent[] = []
   let acceptedRequest!: NativeTurnRequest
   let seq = 0
+  const record = (type: SessionEvent['type'], data: unknown): SessionEvent => {
+    const event = { type, seq: seq++, time: seq, data } as SessionEvent
+    events.push(event)
+    acceptedRequest.onEvent?.(event)
+    return event
+  }
   const owner = {
     agent: {}, session: { id: sessionId }, invocation: 'root', writerAvailable: true,
     onEvent: () => () => {},
-    readEvents: async () => [],
+    readEvents: async () => events,
     messages: (target: 'next-turn' | 'next-step') => pending[target],
     enqueue: async (message: ReturnType<typeof createUserMessage>, target: 'next-turn' | 'next-step') => {
       pending[target].push(message)
-      acceptedRequest.onEvent?.({ type: 'agent/inbox/spliced', seq: seq++, time: seq,
-        data: { target, start: pending[target].length - 1, inserted: [message] } } as SessionEvent)
+      record('agent/inbox/spliced', { target, start: pending[target].length - 1, inserted: [message] })
       return message.id
     },
     remove: async (ids: readonly string[], target: 'next-turn' | 'next-step') => {
+      const start = pending[target].findIndex(message => ids.includes(message.id))
       const removed = pending[target].filter(message => ids.includes(message.id))
       pending[target] = pending[target].filter(message => !ids.includes(message.id))
-      acceptedRequest.onEvent?.({ type: 'agent/inbox/spliced', seq: seq++, time: seq,
-        data: { target, start: 0, removedCount: removed.length, inserted: [], outcome: 'canceled' } } as unknown as SessionEvent)
+      record('agent/inbox/spliced', { target, start, removedCount: removed.length, inserted: [], outcome: 'canceled' })
     },
   }
   const active = {
@@ -212,7 +218,7 @@ it('queues and steers identified inputs through the active root inbox', async ()
   try {
     const started = await service.handle('session/start', { sessionId, text: 'current turn', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
     if (!started.ok) throw new Error(started.error.message)
-    const request = await accepted.promise
+    await accepted.promise
     const queueId = 'queued-request'
     const steerId = 'steering-request'
     await expect(service.handle('session/queue', { sessionId, prompt: 'later', requestId: queueId }, new AbortController().signal))
@@ -221,7 +227,8 @@ it('queues and steers identified inputs through the active root inbox', async ()
       .resolves.toMatchObject({ ok: true, value: { requestId: steerId, placement: 'steering', status: 'accepted' } })
     const claimedSteer = pending['next-step'].shift()
     if (claimedSteer === undefined) throw new Error('missing claimed steering fixture message')
-    request.onEvent?.({ type: 'user/message', seq: seq++, time: seq, data: claimedSteer } as SessionEvent)
+    record('agent/inbox/spliced', { target: 'next-step', start: 0, removedCount: 1, inserted: [] })
+    record('user/message', claimedSteer)
     const canceledId = 'canceled-request'
     await expect(service.handle('session/queue', { sessionId, prompt: 'remove me', requestId: canceledId }, new AbortController().signal))
       .resolves.toMatchObject({ ok: true, value: { requestId: canceledId, placement: 'queued', status: 'accepted' } })
@@ -229,8 +236,10 @@ it('queues and steers identified inputs through the active root inbox', async ()
       .resolves.toMatchObject({ ok: true, value: { requestId: canceledId } })
     await expect(service.handle('session/submissions', { sessionId }, new AbortController().signal)).resolves.toMatchObject({
       ok: true,
-      value: { submissions: [
-        { requestId: queueId, placement: 'queued', status: 'accepted' },
+      value: { throughSeq: seq - 1, submissions: [
+        { requestId: queueId, placement: 'queued', status: 'accepted', message: {
+          id: queueId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'later' }],
+        } },
       ] },
     })
     await expect(service.handle('session/start', { sessionId, text: 'second turn', resume: true }, new AbortController().signal))
@@ -240,8 +249,9 @@ it('queues and steers identified inputs through the active root inbox', async ()
     const response = await service.follow(new Request('http://localhost', { method: 'POST', body: JSON.stringify({ sessionId, admissionId }) }))
     const queuedMessage = pending['next-turn'].shift()
     if (queuedMessage === undefined) throw new Error('missing next-turn fixture message')
-    request.onEvent?.({ type: 'user/message', seq: seq++, time: seq, data: queuedMessage } as SessionEvent)
-    request.onEvent?.({ type: 'turn/end', seq: seq++, time: seq, data: { turn: 1, reason: { kind: 'completed' } } } as SessionEvent)
+    record('agent/inbox/spliced', { target: 'next-turn', start: 0, removedCount: 1, inserted: [] })
+    record('user/message', queuedMessage)
+    record('turn/end', { turn: 1, reason: { kind: 'completed' } })
     settled.resolve({ exitCode: 0 })
     const frames: unknown[] = []
     const reader = response.body!.getReader()

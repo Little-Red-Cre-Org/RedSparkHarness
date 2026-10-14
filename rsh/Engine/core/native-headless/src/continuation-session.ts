@@ -1,7 +1,8 @@
 /** Program-owned resident Session storage and durable pending-message projection. */
 import { interruptedTurnClosers, Session, type SessionEvent, type SessionHeader, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { InboxTarget } from '@deepseek-ai/dsh-native-agent'
+import { foldNativeInboxEvent, type NativeInboxState } from '@deepseek-ai/dsh-native-agent/inbox'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 
 type Writer = Awaited<ReturnType<NativeSessionPersistenceOperations['open']>>
@@ -10,7 +11,7 @@ type AppendObserver = (event: SessionEvent) => void
 /** One exclusive writer retained across a resident Agent's turns and inbox admissions. */
 export class NativeContinuationSession {
   readonly pending: SessionEvent[] = []
-  private readonly inbox: Record<InboxTarget, readonly UserMessage[]> = { 'next-turn': [], 'next-step': [] }
+  private inbox: NativeInboxState = { 'next-turn': [], 'next-step': [] }
   private readonly tracked = new Set<AppendObserver>()
   private readonly accepted = new Set<AppendObserver>()
   private rootOrigin: 'scheduled' | undefined
@@ -149,12 +150,41 @@ export class NativeContinuationSession {
   async enqueue(message: UserMessage, target: InboxTarget, signal: AbortSignal): Promise<MessageId> {
     this.assertOpen()
     signal.throwIfAborted()
-    if (Object.values(this.inbox).some(messages => messages.some(pending => pending.id === message.id))) {
+    if (this.inbox['next-turn'].some(pending => pending.id === message.id)
+      || this.inbox['next-step'].some(pending => pending.id === message.id)) {
       throw new Error('native-continuation: message is already pending')
     }
     this.track(this.session.append('agent/inbox/spliced', { target, start: this.inbox[target].length, inserted: [message] }))
     await this.persist()
     return message.id
+  }
+
+  /** Replace one pending message's complete content with text blocks, preserving identity, source and position. */
+  async editPendingText(id: MessageId, content: readonly TextBlock[], signal: AbortSignal): Promise<{ readonly kind: 'updated' | 'stale' }> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    for (const target of ['next-step', 'next-turn'] as const) {
+      const index = this.inbox[target].findIndex(message => message.id === id)
+      if (index < 0) continue
+      const message = this.inbox[target][index]
+      if (message === undefined) throw new Error('native-continuation: located inbox message disappeared')
+      this.track(this.session.append('agent/inbox/spliced', { target, start: index, removedCount: 1,
+        inserted: [{ ...message, content: structuredClone([...content]) }], outcome: 'canceled' }))
+      await this.persist()
+      return { kind: 'updated' }
+    }
+    return { kind: 'stale' }
+  }
+
+  /** Move one pending queued message to the end of next-step as a single durable event. */
+  async promotePending(id: MessageId, signal: AbortSignal): Promise<{ readonly kind: 'promoted' | 'stale' | 'not-promotable' }> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    if (this.inbox['next-step'].some(message => message.id === id)) return { kind: 'not-promotable' }
+    if (!this.inbox['next-turn'].some(message => message.id === id)) return { kind: 'stale' }
+    this.track(this.session.append('agent/inbox/moved', { messageId: id }))
+    await this.persist()
+    return { kind: 'promoted' }
   }
 
   /**
@@ -295,18 +325,8 @@ export class NativeContinuationSession {
   }
 
   private foldInbox(event: SessionEvent): void {
-    if (event.type !== 'agent/inbox/spliced') return
-    const splice = event.data
-    const list = this.inbox[splice.target]
-    const removed = splice.removedCount ?? 0
-    if (!Number.isSafeInteger(splice.start) || splice.start < 0 || splice.start > list.length
-      || !Number.isSafeInteger(removed) || removed < 0 || splice.start + removed > list.length) {
-      throw new Error('native-continuation: invalid persisted inbox splice')
-    }
-    const next = list.toSpliced(splice.start, removed, ...structuredClone(splice.inserted))
-    const both = splice.target === 'next-turn' ? [...next, ...this.inbox['next-step']] : [...this.inbox['next-turn'], ...next]
-    if (new Set(both.map(message => message.id)).size !== both.length) throw new Error('native-continuation: duplicate pending identity')
-    this.inbox[splice.target] = next
+    try { this.inbox = foldNativeInboxEvent(this.inbox, event) }
+    catch (error: unknown) { throw new Error('native-continuation: invalid persisted inbox event', { cause: error }) }
   }
 }
 
