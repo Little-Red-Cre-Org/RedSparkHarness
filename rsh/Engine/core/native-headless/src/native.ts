@@ -1,5 +1,6 @@
 /** Native headless Agent authority over the existing Session and filesystem interfaces. */
 import { createHash, randomUUID } from 'node:crypto'
+import { isDeepStrictEqual } from 'node:util'
 import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
@@ -69,6 +70,22 @@ interface NativeRootForkSeed {
   readonly source: SessionId
   readonly agentPreset?: string
   readonly events: readonly SessionEvent[]
+}
+
+interface EligibleInboxSnapshot {
+  readonly nextStep: readonly UserMessage[]
+  readonly nextTurn: readonly UserMessage[]
+}
+
+function eligibleInboxSnapshot(owner: NativeContinuationSession, step: number): EligibleInboxSnapshot {
+  return {
+    nextStep: owner.messages('next-step'),
+    nextTurn: step === 1 ? owner.messages('next-turn').slice(0, 1) : [],
+  }
+}
+
+function eligibleInboxMatches(owner: NativeContinuationSession, step: number, snapshot: EligibleInboxSnapshot): boolean {
+  return isDeepStrictEqual(snapshot, eligibleInboxSnapshot(owner, step))
 }
 
 /** One identified user turn accepted by the native Session executor. */
@@ -394,7 +411,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   private readonly rootOperations = new Map<Promise<unknown>, NativeAgent>()
   private readonly rootForks = new Set<Promise<SessionId>>()
   private readonly operationCancellation = new AbortController()
-  private readonly currentTurns = new Map<NativeContinuationSession, { release?: () => void }>()
+  private readonly currentTurns = new Map<NativeContinuationSession, { preparingStep: boolean; release?: () => void }>()
 
   constructor(
     private readonly context: NativeContext,
@@ -676,7 +693,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     let activeOwner: NativeProgramActiveSession | undefined
     let activePreparedStep: NativePreparedModelStep | undefined
     const toolSnapshots: NativeToolExecutionSnapshot[] = []
-    let turnOwnership: { release?: () => void } | undefined
+    let turnOwnership: { preparingStep: boolean; release?: () => void } | undefined
     let acceptedPreset: string | null = null
     let closersToAppend: SessionEvent[] = []
     let turn = 1
@@ -839,7 +856,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         }
         releaseObservation = undefined
       }
-      turnOwnership = {}
+      turnOwnership = { preparingStep: false }
       this.currentTurns.set(owner, turnOwnership)
       const rootEpoch = this.rootEpochs.get(id)
       if (rootEpoch !== undefined) turnOwnership.release = rootEpoch.activation.retainChild()
@@ -1209,240 +1226,290 @@ export class NativeHeadlessApplication implements NativeApplication {
             if (this.requestContexts?.hasProviders(agent.scope) === true) {
               throw new Error('native-headless: request-context providers require the exact active Session owner')
             }
-            return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), commitChecks: [], ...prepared }
+            return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), snapshot: undefined,
+              commitChecks: [], ...prepared }
           }
-          const candidates = [...owner.messages('next-step'), ...step === 1 ? owner.messages('next-turn').slice(0, 1) : []]
-          const commitChecks: NativeStepAdmissionCommitCheck[] = []
-          let registrationOpen = true
-          let decision: Awaited<ReturnType<NativeProgramActiveSession['admission']['decide']>>
-          try {
-            decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal,
-              registerCommitCheck: (check) => {
-                if (!registrationOpen) throw new Error('native-headless: admission commit checks must register before admission settles')
-                commitChecks.push(check)
-              } })
-          } finally { registrationOpen = false }
-          signal.throwIfAborted()
-          if (decision.kind === 'reject') {
-            await owner.remove(decision.discard, 'canceled', signal)
-            reason = { kind: 'blocked' }
-            return undefined
-          }
-          const prepared = await prepare()
-          return { inputs: decision.messages, commitChecks, ...prepared }
-        }
-        const initialInputs = await admit(1)
-        request.initialize?.((type, data, ...options) => {
-          const event = session.append(type, data, ...options)
-          track(event as SessionEvent)
-          return event
-        })
-        await persist()
-        request.onReady?.(agent)
-        for (let step = 1; step <= config.maxSteps; step++) {
-          signal.throwIfAborted()
-          const admitted = step === 1 ? initialInputs : await admit(step)
-          if (admitted === undefined) break
-          const { inputs, selection, preparedStep, commitChecks } = admitted
-          activePreparedStep = preparedStep
-          const stepConfig = preparedStep.config
-          const instructionContexts = await this.agentInstructions?.prepare(session, inputs, signal)
-          signal.throwIfAborted()
-          const timeContext = this.timeContext?.prepare({ session, turn, step })
-          const tmuxContext = await this.tmuxContext?.prepare({ session, turn, step, signal })
-          signal.throwIfAborted()
-          const acceptStep = async (requestContextMessages: readonly UserMessage[]): Promise<'accepted' | 'rejected'> => {
-            if (activeOwner !== undefined) {
-              const admittedIds = new Set(inputs.map(input => input.id))
-              const rejected = new Set<MessageId>()
-              for (const check of commitChecks) {
-                const rejectedByCheck: unknown = check()
-                if (!Array.isArray(rejectedByCheck)) {
-                  if (typeof rejectedByCheck === 'object' && rejectedByCheck !== null && 'then' in rejectedByCheck) {
-                    // Observe a rejected async check after refusing its result synchronously.
-                    void Promise.resolve(rejectedByCheck).then(undefined, () => undefined)
-                  }
-                  throw new Error('native-headless: admission commit check must return message ids synchronously')
-                }
-                for (const messageId of rejectedByCheck as MessageId[]) {
-                  if (!admittedIds.has(messageId)) throw new Error('native-headless: admission commit check rejected an unadmitted message')
-                  rejected.add(messageId)
-                }
-              }
-              if (rejected.size > 0) {
-                await owner.remove([...rejected], 'canceled', signal)
-                admissionInvalidated = true
-                exitCode = 0
-                return 'rejected'
-              }
-              signal.throwIfAborted()
-              owner.removePending(inputs.map(input => input.id), undefined)
-            }
-            track(session.append('step/start', { turn, step }))
-            if (step === 1) {
-              if (session.deriveMessages().every(message => message.role !== 'system')) {
-                track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
-              }
-            }
-            for (const input of inputs) {
-              track(session.append('user/message', input, { surfaceOp: 'append' }))
-            }
-            if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
-            for (const instructionContext of instructionContexts ?? []) {
-              track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
-            }
-            if (timeContext !== undefined) track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
-            if (tmuxContext !== undefined) track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
-            for (const requestContextMessage of requestContextMessages) {
-              track(session.append('user/message', requestContextMessage, { surfaceOp: 'append' }))
-            }
-            const priorHeader = session.requestHeader()
-            if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
-              track(session.append('request/header', {
-                header: { config: { ...stepConfig }, ...schemas.length === 0 ? {} : { tools: schemas } },
-                reason: priorHeader === undefined ? 'initial' : 'resume',
-              }))
-            }
-            const priorContext = session.requestContext()
-            const contextWindow = preparedStep.modelInfo?.context?.contextWindow
-            if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model
-              || priorContext.contextWindow !== contextWindow) {
-              track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model,
-                ...contextWindow === undefined ? {} : { contextWindow } }))
-            }
-            await persist()
-            return 'accepted'
-          }
-          let acceptance: 'accepted' | 'rejected'
-          if (this.requestContexts !== undefined && activeOwner !== undefined) {
-            const durableEvents = await activeOwner.readEvents({ signal })
-            signal.throwIfAborted()
-            acceptance = await this.requestContexts.prepareAndAccept({
-              owner: activeOwner, scope: agent.scope, turn, step, inputs, durableEvents,
-              toolVisibility: { includes: registration => modelSnapshot?.includesRegistration(registration) === true
-                || programSnapshot?.includesRegistration(registration) === true }, signal,
-            }, acceptStep)
-          } else {
-            acceptance = await acceptStep([])
-          }
-          if (acceptance === 'rejected') {
-            if (!isAdmissionInvalidated()) reason = { kind: 'blocked' }
-            admissionInvalidated = true
-            exitCode = 0
-            break
-          }
-          const options: GenerateOptions = {
-            ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
-          }
-          const { message, finish } = await this.modelExecution.execute({
-            session, turn, step, options, prepared: preparedStep, append: track, persist,
-            rebuildOptions: () => ({ ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal }),
-            onChunk: (chunk) => {
-              request.onChunk?.(chunk)
-              for (const observe of this.rootChunkObservers.get(owner) ?? []) {
-                if (observe !== request.onChunk) observe(chunk)
-              }
-            },
-          })
-          const calls = message.content.filter((block): block is ToolCallBlock => block.type === 'tool-call')
-          if (finish.kind === 'max-tokens') {
-            if (calls.length > 0) throw new Error('native-headless: truncated tool call')
-            reason = { kind: 'max-tokens' }
-          }
-          concludedByTool = false
-          const actor = agent
-          for (const call of calls) {
-            track(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
-            const toolCallSeq = SessionSeq(session.seq - 1)
-            await persist()
-            let content: ContentBlock[]
-            let isError = false
-            let error: { name: string; code: string } | undefined
-            let meta: JsonValue | undefined
-            let additionalContexts: readonly UserMessage[] = []
-            let execution: NativeToolExecution | undefined
+          while (true) {
+            const snapshot = eligibleInboxSnapshot(owner, step)
+            const candidates = [...snapshot.nextStep, ...snapshot.nextTurn]
+            const commitChecks: NativeStepAdmissionCommitCheck[] = []
+            let registrationOpen = true
+            let decision: Awaited<ReturnType<NativeProgramActiveSession['admission']['decide']>>
             try {
-              if (!toolNames.includes(call.name)) {
-                throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's tool authority`, 'TOOL_DENIED')
-              }
-              if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
-                const args = toolArguments(call.arguments, call.name)
-                const target = await this.target(args.path, root, signal, config.cwd)
-                if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
-                  const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal,
-                    sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
-                      context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
-                    reason: 'Writing a file changes the selected workspace.' })
-                  if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
-                }
-                content = [{ type: 'text', text: await this.execute(call, args, target, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
-              } else if (builtinToolNames.includes(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
-                const outcome = await this.executeCode(call, session, signal)
-                content = [{ type: 'text', text: outcome.text }]
-                if (outcome.error !== undefined) {
-                  isError = true
-                  error = outcome.error
-                }
-              } else {
-                if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
-                execution = {
-                  agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
-                  ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
-                  ...(request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext }),
-                  appendEvent: async (type, data, ...opts) => {
-                    if (type !== 'tool/ptc-dispatch') signal.throwIfAborted()
-                    const event = session.append(type, data, ...opts)
-                    track(event as SessionEvent)
-                    await persist()
-                    return event
-                  },
-                  ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
-                }
-                if (modelSnapshot === undefined) throw new HarnessError(`native-headless: tool ${call.name} is outside the captured model catalog`, 'TOOL_DENIED')
-                const captured = await modelSnapshot.execute(execution)
-                execution = captured.call
-                const result = captured.result
-                content = [...result.content]
-                isError = result.isError
-                meta = result.meta
-                additionalContexts = structuredClone(result.additionalContexts ?? [])
-                if (!result.isError && result.concludesTurn === true) concludedByTool = true
-                error = result.error === undefined ? undefined : { ...result.error }
-              }
-            } catch (failure: unknown) {
-              if (signal.aborted) throw failure
-              content = [{ type: 'text', text: failure instanceof Error ? failure.message : String(failure) }]
-              isError = true
-              error = {
-                name: failure instanceof Error ? failure.name : 'Error',
-                code: failure instanceof FsError ? failure.code
-                  : failure instanceof NativeApprovalRejection ? `APPROVAL_${failure.outcome.toUpperCase()}`
-                    : failure instanceof HarnessError ? failure.code : 'UNKNOWN',
-              }
+              decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal,
+                registerCommitCheck: (check) => {
+                  if (!registrationOpen) throw new Error('native-headless: admission commit checks must register before admission settles')
+                  commitChecks.push(check)
+                } })
+            } finally { registrationOpen = false }
+            signal.throwIfAborted()
+            if (!eligibleInboxMatches(owner, step, snapshot)) continue
+            if (decision.kind === 'reject') {
+              if (turnOwnership !== undefined) turnOwnership.preparingStep = false
+              await owner.remove(decision.discard, 'canceled', signal)
+              reason = { kind: 'blocked' }
+              return undefined
             }
-            track(session.append('tool/result', {
-              turn, step, message: createToolResultMessage({ callId: call.id, content, isError }),
-              ...error === undefined ? {} : { error },
-              ...meta === undefined ? {} : { meta },
-            }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
-            await persist()
-            const recorded = { content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta } }
-            if (execution !== undefined) this.tools?.acceptResult(execution, recorded)
-            const settlementContexts = this.tools?.settlementContexts({
-              agent, session, callId: call.id, name: call.name,
-              arguments: execution === undefined ? settlementArguments(call.arguments) : execution.arguments, result: recorded,
-            }) ?? []
-            for (const context of [...settlementContexts, ...additionalContexts]) {
-              track(session.append('user/message', context, { surfaceOp: 'append' }))
-              await persist()
-            }
+            const prepared = await prepare()
+            signal.throwIfAborted()
+            if (!eligibleInboxMatches(owner, step, snapshot)) continue
+            return { inputs: decision.messages, snapshot, commitChecks, ...prepared }
           }
-          track(session.append('step/end', { turn, step }))
-          await persist()
-          if (calls.length === 0 || concludedByTool) {
-            settledAnswer = message.content.filter(block => block.type === 'text').map(block => block.text).join('')
-            exitCode = 0
-            break
+        }
+        const initialInputs = await (async () => {
+          turnOwnership.preparingStep = true
+          try {
+            const inputs = await admit(1)
+            request.initialize?.((type, data, ...options) => {
+              const event = session.append(type, data, ...options)
+              track(event as SessionEvent)
+              return event
+            })
+            await persist()
+            request.onReady?.(agent)
+            return inputs
+          } finally {
+            turnOwnership.preparingStep = false
+          }
+        })()
+        let firstAdmission = true
+        for (let step = 1; step <= config.maxSteps;) {
+          turnOwnership.preparingStep = true
+          try {
+            signal.throwIfAborted()
+            const admitted = firstAdmission ? initialInputs : await admit(step)
+            firstAdmission = false
+            if (admitted === undefined) break
+            const { inputs, selection, preparedStep, commitChecks } = admitted
+            const hasCurrentCandidates = (): boolean => admitted.snapshot === undefined
+              || eligibleInboxMatches(owner, step, admitted.snapshot)
+            if (!hasCurrentCandidates()) continue
+            activePreparedStep = preparedStep
+            const stepConfig = preparedStep.config
+            const instructionContexts = await this.agentInstructions?.prepare(session, inputs, signal)
+            signal.throwIfAborted()
+            if (!hasCurrentCandidates()) continue
+            const timeContext = this.timeContext?.prepare({ session, turn, step })
+            const tmuxContext = await this.tmuxContext?.prepare({ session, turn, step, signal })
+            signal.throwIfAborted()
+            if (!hasCurrentCandidates()) continue
+            let candidateChanged = false
+            const hasCandidateChanged = (): boolean => candidateChanged
+            const acceptStep = async (requestContextMessages: readonly UserMessage[]): Promise<'accepted' | 'rejected'> => {
+              if (activeOwner !== undefined) {
+                if (!hasCurrentCandidates()) {
+                  candidateChanged = true
+                  return 'rejected'
+                }
+                const admittedIds = new Set(inputs.map(input => input.id))
+                const rejected = new Set<MessageId>()
+                for (const check of commitChecks) {
+                  const rejectedByCheck: unknown = check()
+                  if (!Array.isArray(rejectedByCheck)) {
+                    if (typeof rejectedByCheck === 'object' && rejectedByCheck !== null && 'then' in rejectedByCheck) {
+                      // Observe a rejected async check after refusing its result synchronously.
+                      void Promise.resolve(rejectedByCheck).then(undefined, () => undefined)
+                    }
+                    throw new Error('native-headless: admission commit check must return message ids synchronously')
+                  }
+                  for (const messageId of rejectedByCheck as MessageId[]) {
+                    if (!admittedIds.has(messageId)) throw new Error('native-headless: admission commit check rejected an unadmitted message')
+                    rejected.add(messageId)
+                  }
+                }
+                if (!hasCurrentCandidates()) {
+                  candidateChanged = true
+                  return 'rejected'
+                }
+                if (rejected.size > 0) {
+                  if (turnOwnership !== undefined) turnOwnership.preparingStep = false
+                  await owner.remove([...rejected], 'canceled', signal)
+                  admissionInvalidated = true
+                  exitCode = 0
+                  return 'rejected'
+                }
+                signal.throwIfAborted()
+                if (!hasCurrentCandidates()) {
+                  candidateChanged = true
+                  return 'rejected'
+                }
+                owner.removePending(inputs.map(input => input.id), undefined)
+                if (turnOwnership !== undefined) turnOwnership.preparingStep = false
+              }
+              track(session.append('step/start', { turn, step }))
+              if (step === 1) {
+                if (session.deriveMessages().every(message => message.role !== 'system')) {
+                  track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
+                }
+              }
+              for (const input of inputs) {
+                track(session.append('user/message', input, { surfaceOp: 'append' }))
+              }
+              if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
+              for (const instructionContext of instructionContexts ?? []) {
+                track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
+              }
+              if (timeContext !== undefined) track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
+              if (tmuxContext !== undefined) track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
+              for (const requestContextMessage of requestContextMessages) {
+                track(session.append('user/message', requestContextMessage, { surfaceOp: 'append' }))
+              }
+              const priorHeader = session.requestHeader()
+              if (priorHeader === undefined || step === 1 && request.resume || !callConfigEquals(priorHeader.config, stepConfig)) {
+                track(session.append('request/header', {
+                  header: { config: { ...stepConfig }, ...schemas.length === 0 ? {} : { tools: schemas } },
+                  reason: priorHeader === undefined ? 'initial' : 'resume',
+                }))
+              }
+              const priorContext = session.requestContext()
+              const contextWindow = preparedStep.modelInfo?.context?.contextWindow
+              if (priorContext?.provider !== stepConfig.provider || priorContext.model !== stepConfig.model
+                || priorContext.contextWindow !== contextWindow) {
+                track(session.append('request/context', { provider: stepConfig.provider, model: stepConfig.model,
+                  ...contextWindow === undefined ? {} : { contextWindow } }))
+              }
+              await persist()
+              return 'accepted'
+            }
+            let acceptance: 'accepted' | 'rejected'
+            if (this.requestContexts !== undefined && activeOwner !== undefined) {
+              const durableEvents = await activeOwner.readEvents({ signal })
+              signal.throwIfAborted()
+              if (!hasCurrentCandidates()) continue
+              acceptance = await this.requestContexts.prepareAndAccept({
+                owner: activeOwner, scope: agent.scope, turn, step, inputs, durableEvents,
+                toolVisibility: { includes: registration => modelSnapshot?.includesRegistration(registration) === true
+                  || programSnapshot?.includesRegistration(registration) === true }, signal,
+              }, acceptStep)
+            } else {
+              acceptance = await acceptStep([])
+            }
+            if (acceptance === 'rejected' && !hasCandidateChanged() && !isAdmissionInvalidated()
+              && !hasCurrentCandidates()) candidateChanged = true
+            if (acceptance === 'rejected') {
+              if (candidateChanged) continue
+              if (!isAdmissionInvalidated()) reason = { kind: 'blocked' }
+              admissionInvalidated = true
+              exitCode = 0
+              break
+            }
+            const options: GenerateOptions = {
+              ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
+            }
+            turnOwnership.preparingStep = false
+            const { message, finish } = await this.modelExecution.execute({
+              session, turn, step, options, prepared: preparedStep, append: track, persist,
+              rebuildOptions: () => ({ ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal }),
+              onChunk: (chunk) => {
+                request.onChunk?.(chunk)
+                for (const observe of this.rootChunkObservers.get(owner) ?? []) {
+                  if (observe !== request.onChunk) observe(chunk)
+                }
+              },
+            })
+            const calls = message.content.filter((block): block is ToolCallBlock => block.type === 'tool-call')
+            if (finish.kind === 'max-tokens') {
+              if (calls.length > 0) throw new Error('native-headless: truncated tool call')
+              reason = { kind: 'max-tokens' }
+            }
+            concludedByTool = false
+            const actor = agent
+            for (const call of calls) {
+              track(session.append('tool/call', { turn, step, callId: call.id, name: call.name, arguments: call.arguments }))
+              const toolCallSeq = SessionSeq(session.seq - 1)
+              await persist()
+              let content: ContentBlock[]
+              let isError = false
+              let error: { name: string; code: string } | undefined
+              let meta: JsonValue | undefined
+              let additionalContexts: readonly UserMessage[] = []
+              let execution: NativeToolExecution | undefined
+              try {
+                if (!toolNames.includes(call.name)) {
+                  throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's tool authority`, 'TOOL_DENIED')
+                }
+                if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                  const args = toolArguments(call.arguments, call.name)
+                  const target = await this.target(args.path, root, signal, config.cwd)
+                  if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
+                    const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal,
+                      sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
+                        context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
+                      reason: 'Writing a file changes the selected workspace.' })
+                    if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                  }
+                  content = [{ type: 'text', text: await this.execute(call, args, target, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
+                } else if (builtinToolNames.includes(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
+                  const outcome = await this.executeCode(call, session, signal)
+                  content = [{ type: 'text', text: outcome.text }]
+                  if (outcome.error !== undefined) {
+                    isError = true
+                    error = outcome.error
+                  }
+                } else {
+                  if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
+                  execution = {
+                    agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                    ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
+                    ...(request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext }),
+                    appendEvent: async (type, data, ...opts) => {
+                      if (type !== 'tool/ptc-dispatch') signal.throwIfAborted()
+                      const event = session.append(type, data, ...opts)
+                      track(event as SessionEvent)
+                      await persist()
+                      return event
+                    },
+                    ...(approvalAuthority === undefined ? {} : { approvalAuthority }),
+                  }
+                  if (modelSnapshot === undefined) throw new HarnessError(`native-headless: tool ${call.name} is outside the captured model catalog`, 'TOOL_DENIED')
+                  const captured = await modelSnapshot.execute(execution)
+                  execution = captured.call
+                  const result = captured.result
+                  content = [...result.content]
+                  isError = result.isError
+                  meta = result.meta
+                  additionalContexts = structuredClone(result.additionalContexts ?? [])
+                  if (!result.isError && result.concludesTurn === true) concludedByTool = true
+                  error = result.error === undefined ? undefined : { ...result.error }
+                }
+              } catch (failure: unknown) {
+                if (signal.aborted) throw failure
+                content = [{ type: 'text', text: failure instanceof Error ? failure.message : String(failure) }]
+                isError = true
+                error = {
+                  name: failure instanceof Error ? failure.name : 'Error',
+                  code: failure instanceof FsError ? failure.code
+                    : failure instanceof NativeApprovalRejection ? `APPROVAL_${failure.outcome.toUpperCase()}`
+                      : failure instanceof HarnessError ? failure.code : 'UNKNOWN',
+                }
+              }
+              track(session.append('tool/result', {
+                turn, step, message: createToolResultMessage({ callId: call.id, content, isError }),
+                ...error === undefined ? {} : { error },
+                ...meta === undefined ? {} : { meta },
+              }, { surfaceOp: 'append', sourceEventSeqs: [toolCallSeq] }))
+              await persist()
+              const recorded = { content, isError, ...error === undefined ? {} : { error }, ...meta === undefined ? {} : { meta } }
+              if (execution !== undefined) this.tools?.acceptResult(execution, recorded)
+              const settlementContexts = this.tools?.settlementContexts({
+                agent, session, callId: call.id, name: call.name,
+                arguments: execution === undefined ? settlementArguments(call.arguments) : execution.arguments, result: recorded,
+              }) ?? []
+              for (const context of [...settlementContexts, ...additionalContexts]) {
+                track(session.append('user/message', context, { surfaceOp: 'append' }))
+                await persist()
+              }
+            }
+            track(session.append('step/end', { turn, step }))
+            await persist()
+            if (calls.length === 0 || concludedByTool) {
+              settledAnswer = message.content.filter(block => block.type === 'text').map(block => block.text).join('')
+              exitCode = 0
+              break
+            }
+            step += 1
+          } finally {
+            turnOwnership.preparingStep = false
           }
         }
         if (reason.kind === 'completed' && settledAnswer === undefined && !concludedByTool && !isAdmissionInvalidated()) {
@@ -2456,6 +2523,21 @@ export class NativeHeadlessApplication implements NativeApplication {
       retainBackground: () => {
         if (invocation !== 'root') throw new Error('native-headless: background retention requires a root owner')
         return this.retainRootBackground(owner, agent, config)
+      },
+      wake: () => {
+        const id = owner.session.id
+        const epoch = this.rootEpochs.get(id)
+        if (epoch !== undefined) {
+          if (epoch.owner !== owner) throw new Error('native-headless: pending-input wake lost its resident owner')
+          epoch.activation.wakePending()
+          return
+        }
+        const execution = this.executions.get(id)?.execution
+        if (execution?.agent !== agent) throw new Error('native-headless: pending-input wake lost its exact Agent execution')
+        if (!owner.hasPending) return
+        // This turn will re-admit changed candidates after its asynchronous step preparation.
+        if (this.currentTurns.get(owner)?.preparingStep === true) return
+        this.queueRootWake(id, execution)
       },
       ...invocation === 'root' ? { rootOperations: this.rootSessionOperations(agent, owner.session.id) } : {},
       enqueue: (message, target, wake, signal) =>

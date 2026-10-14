@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { verifyRuntimeClosure } from './verify-runtime-closure.ts'
+import { shippedNativeProfileComposition } from '../Programs/CLI/src/native-profile-template.ts'
 
 const roots: string[] = []
 
@@ -32,6 +33,24 @@ function workspace(root: string, name: string, manifest: Record<string, unknown>
   writeFileSync(path, `${JSON.stringify({ name, ...manifest }, null, 2)}\n`)
 }
 
+function nativeSdkDependencies(): Record<string, string> {
+  const plugins = new Set<string>()
+  for (const platform of ['linux', 'darwin', 'win32'] as const) {
+    for (const row of shippedNativeProfileComposition('/dsh-test', 'native-sdk', platform).installations) {
+      plugins.add(row.plugin)
+    }
+  }
+  return Object.fromEntries([...plugins].map(plugin => [plugin, 'workspace:^']))
+}
+
+function runtimeDependencies(
+  overrides: Record<string, string> = {},
+  missing: readonly string[] = [],
+): Record<string, string> {
+  const dependencies = { ...nativeSdkDependencies(), ...overrides }
+  return Object.fromEntries(Object.entries(dependencies).filter(([name]) => !missing.includes(name)))
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
@@ -39,7 +58,7 @@ afterEach(() => {
 describe('verifyRuntimeClosure', () => {
   it('requires only plugins active for each published target', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: { '@scope/shared': 'workspace:^' } },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies({ '@scope/shared': 'workspace:^' }) },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': `
 - id: tools
@@ -72,7 +91,7 @@ describe('verifyRuntimeClosure', () => {
 
   it('treats an unsupported disabled expression as active on every target', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: {} },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies() },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': `
 - id: conditional
@@ -90,7 +109,7 @@ describe('verifyRuntimeClosure', () => {
 
   it('does not interpret an ordinary plugin array config as nested Loader entries', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: { '@scope/plugin': 'workspace:^' } },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies({ '@scope/plugin': 'workspace:^' }) },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': `
 - id: plugin
@@ -105,9 +124,15 @@ describe('verifyRuntimeClosure', () => {
     expect(result.failures).toEqual([])
   })
 
-  it('requires preset plugins to be linked from the workspace', async () => {
+  it('requires preset and native-sdk plugins to be linked from the workspace', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: { '@scope/plugin': '1.2.3' } },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': {
+        name: 'runtime',
+        dependencies: runtimeDependencies(
+          { '@scope/plugin': '1.2.3' },
+          ['@deepseek-ai/dsh-native-sdk-server'],
+        ),
+      },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': `
 - id: plugin
@@ -119,12 +144,13 @@ describe('verifyRuntimeClosure', () => {
 
     expect(result.failures).toEqual([
       'standard preset -> @scope/plugin [runtime dependency is "1.2.3"; expected workspace:] (linux-arm64, linux-x64, macos-arm64, macos-x64, win-x64)',
+      'native-sdk profile -> @deepseek-ai/dsh-native-sdk-server (linux-arm64, linux-x64, macos-arm64, macos-x64, win-x64)',
     ])
   })
 
   it('fails when no shipped preset is discovered', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: {} },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies() },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
     })
 
@@ -138,7 +164,7 @@ describe('verifyRuntimeClosure', () => {
 
   it('fails when the runtime platform manifest has no targets', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: {} },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies() },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': {},
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': '[]\n',
     })
@@ -152,7 +178,7 @@ describe('verifyRuntimeClosure', () => {
 
   it('retains the required workspace-peer closure check', async () => {
     const root = fixture({
-      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: { '@scope/root': 'workspace:^' } },
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': { name: 'runtime', dependencies: runtimeDependencies({ '@scope/root': 'workspace:^' }) },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
       'rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml': '[]\n',
     })

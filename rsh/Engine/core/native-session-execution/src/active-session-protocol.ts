@@ -1,7 +1,7 @@
 /** Active Session owner and lifecycle Consumer types, without execution Providers. */
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent/definition'
 import type { InboxTarget } from '@deepseek-ai/dsh-native-agent/inbox'
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { Session, SessionEvent, SessionId, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session/native'
 
 /** Live Program-owned interaction recipient and the root Session displaying its requests. */
@@ -114,6 +114,22 @@ export interface NativeActiveSessionOwner {
    * @returns the durably accepted input id.
    */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId>
+  /**
+   * Replace one exact pending message with complete text-only content, preserving its identity, source, and position.
+   * Resolve only after the replacement is durable.
+   * @param id - stable pending identity.
+   * @param content - complete replacement content, restricted to text blocks.
+   * @param signal - cancellation before the synchronous replacement commit.
+   * @returns `updated` after flush, or `stale` when the message was already claimed or removed.
+   */
+  editPendingText(id: MessageId, content: readonly TextBlock[], signal: AbortSignal): Promise<{ readonly kind: 'updated' | 'stale' }>
+  /**
+   * Move one queued message to the next-step inbox and wait for its durability barrier.
+   * @param id - stable pending identity.
+   * @param signal - cancellation before the synchronous move commit.
+   * @returns `promoted`, `stale` when no longer pending, or `not-promotable` when already steering.
+   */
+  promotePending(id: MessageId, signal: AbortSignal): Promise<{ readonly kind: 'promoted' | 'stale' | 'not-promotable' }>
   /**
    * Cancel exact pending inputs, preserving concurrent admissions.
    * @param ids - captured pending message identities.

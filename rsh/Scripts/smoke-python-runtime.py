@@ -43,6 +43,23 @@ MCP_TEXT = "MCP client smoke ok"
 PROFILE_PLUGIN_PROMPT = "Verify the Python-installed dsh profile plugin."
 PROFILE_PLUGIN_TEXT = "profile plugin smoke ok"
 PROFILE_PLUGIN_MARKER = "PYTHON_INSTALLED_DSH_PROFILE_PLUGIN"
+NATIVE_EXTERNAL_OPERATION_PROMPT = "Delegate one filesystem change to an external child and report completion."
+NATIVE_EXTERNAL_OPERATION_COLD_PROMPT = "Continue after an external SDK process restart."
+NATIVE_EXTERNAL_OPERATION_CHILD_PROMPT = "Create one file using the write tool, then report the result."
+NATIVE_EXTERNAL_OPERATION_TEXT = "external child completed"
+NATIVE_INBOX_FIRST_TASK = "Start the Native SDK Inbox move fixture."
+NATIVE_INBOX_COLD_TASK = "Restore the Native SDK Inbox Session after a process restart."
+NATIVE_INBOX_FIRST_REPLY = "Native Inbox owner completed."
+NATIVE_INBOX_COLD_REPLY = "Native Inbox Session restored."
+NATIVE_SDK_REFERENCES = (
+    Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "native-sdk" / "references.json"
+)
+NATIVE_SDK_EXTERNAL_FIXTURE = NATIVE_SDK_REFERENCES.parent / "external-operation"
+NATIVE_SDK_EXTERNAL_DRIVER = NATIVE_SDK_EXTERNAL_FIXTURE / "driver.mjs"
+NATIVE_SDK_EXTERNAL_PATHS = NATIVE_SDK_EXTERNAL_FIXTURE / "workspace-paths.mjs"
+NATIVE_SDK_EXTERNAL_WORKSPACE = (
+    Path(__file__).resolve().parents[2] / "snapshots" / "native-sdk" / "external-operation" / "workspace.expected"
+)
 IS_WINDOWS = sys.platform == "win32"
 MINIMAL_SHELL_TOOL = "pwsh" if IS_WINDOWS else "bash"
 MINIMAL_SHELL_COMMAND = (
@@ -325,6 +342,10 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
     if latest.get("role") == "tool":
         call_id, tool_name = latest_tool_call(messages)
         tool_text = message_text(latest.get("content"))
+        if call_id == "native-sdk-external-child" and tool_name == "subagent":
+            if "Child wrote created.txt." not in tool_text:
+                raise AssertionError(f"external SDK child returned no recorded file result: {tool_text}")
+            return text_chunks(NATIVE_EXTERNAL_OPERATION_TEXT)
         mcp = mcp_tool_followup(call_id, tool_name, tool_text)
         if mcp is not None:
             return mcp
@@ -374,6 +395,10 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         RESTART_FIRST_PROMPT,
         RESTART_SECOND_PROMPT,
         PROFILE_PLUGIN_PROMPT,
+        NATIVE_EXTERNAL_OPERATION_PROMPT,
+        NATIVE_EXTERNAL_OPERATION_COLD_PROMPT,
+        NATIVE_INBOX_FIRST_TASK,
+        NATIVE_INBOX_COLD_TASK,
     }
     prompt = next(
         (candidate for candidate in user_prompts if candidate in scenario_prompts),
@@ -456,6 +481,18 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         if PROFILE_PLUGIN_MARKER not in system_text:
             raise AssertionError("external profile plugin contributed no model-visible marker")
         return text_chunks(PROFILE_PLUGIN_TEXT)
+    if prompt == NATIVE_EXTERNAL_OPERATION_PROMPT:
+        assert_advertised_tool(body, "subagent")
+        return tool_call_chunks("native-sdk-external-child", "subagent", {
+            "description": "Replay one external Native SDK operation sequence.",
+            "prompt": NATIVE_EXTERNAL_OPERATION_CHILD_PROMPT,
+        })
+    if prompt == NATIVE_EXTERNAL_OPERATION_COLD_PROMPT:
+        return text_chunks("cold SDK Session restored")
+    if prompt == NATIVE_INBOX_FIRST_TASK:
+        return text_chunks(NATIVE_INBOX_FIRST_REPLY)
+    if prompt == NATIVE_INBOX_COLD_TASK:
+        return text_chunks(NATIVE_INBOX_COLD_REPLY)
     return text_chunks(EXPECTED_TEXT)
 
 
@@ -783,7 +820,8 @@ def main() -> None:
         if args.scenario in {"all", "sdk-default"}:
             smoke_sdk_default(model.url)
         if args.scenario == "sdk-native" or (args.scenario == "all" and args.installed_wheel):
-            smoke_sdk_native(model.url)
+            assert args.exe is not None
+            smoke_sdk_native(model.url, args.exe.resolve())
         if args.scenario in {"all", "sdk-custom"}:
             assert args.exe is not None
             smoke_sdk_custom(model.url, args.exe.resolve())
@@ -821,12 +859,12 @@ def assert_installed_wheel_environment() -> Path:
     """Prove that this process imports matching non-editable wheel installations."""
     if sys.prefix == sys.base_prefix:
         raise AssertionError("installed-wheel smoke must run inside a virtual environment")
-    if os.environ.get("PYTHONPATH"):
+    if "PYTHONPATH" in os.environ:
         raise AssertionError("installed-wheel smoke requires PYTHONPATH to be unset")
-    if os.environ.get("DSH_RUNTIME_MODE"):
+    if "DSH_RUNTIME_MODE" in os.environ:
         raise AssertionError("installed-wheel smoke requires DSH_RUNTIME_MODE to be unset")
 
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parents[2]
     cwd = Path.cwd().resolve()
     if cwd.is_relative_to(repo_root):
         raise AssertionError(f"installed-wheel smoke must run outside the repository, got {cwd}")
@@ -1011,52 +1049,380 @@ def smoke_sdk_default(base_url: str) -> None:
         assert_zstd_session_log(sessions)
 
 
-def smoke_sdk_native(base_url: str) -> None:
-    """Run one Native SDK turn through the installed wheel's default executable carrier."""
+def read_native_sdk_reference(name: str) -> dict[str, object]:
+    """Read one explicit, read-only canonical Session reference for installed-wheel replay."""
+    manifest = json.loads(NATIVE_SDK_REFERENCES.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict) or manifest.get("version") != 1:
+        raise AssertionError(f"invalid installed Native SDK reference owner: {NATIVE_SDK_REFERENCES}")
+    entry = manifest.get(name)
+    if not isinstance(entry, dict):
+        raise AssertionError(f"invalid installed Native SDK reference owner: {NATIVE_SDK_REFERENCES}")
+    session_reference = entry.get("session")
+    if not isinstance(session_reference, str):
+        raise AssertionError(f"Native SDK reference omitted its canonical Session path: {name}")
+    session_path = (NATIVE_SDK_REFERENCES.parent / session_reference).resolve()
+    repo_root = Path(__file__).resolve().parents[2]
+    if not session_path.is_relative_to(repo_root) or not session_path.is_file():
+        raise AssertionError(f"Native SDK canonical reference is missing or outside the checkout: {session_path}")
+    version_match = re.fullmatch(r"session\.v([1-9]\d*)\.jsonl", session_path.name)
+    if version_match is None:
+        raise AssertionError(f"Native SDK reference must name a versioned parent Session: {session_path}")
+    selected_parent = selected_snapshot_session_files(session_path.parent).get(0)
+    if selected_parent is None or selected_parent.resolve() != session_path:
+        raise AssertionError(
+            f"Native SDK Session reference is stale: {session_path}; selected parent is {selected_parent}"
+        )
+    session_text = session_path.read_text(encoding="utf-8")
+    records = [json.loads(line) for line in session_text.splitlines() if line]
+    if not records:
+        raise AssertionError(f"Native SDK canonical reference has a mismatched Session generation: {session_path}")
+    owner_path = entry.get("owner")
+    if owner_path is not None:
+        resolved_owner = (NATIVE_SDK_REFERENCES.parent / str(owner_path)).resolve()
+        if not resolved_owner.is_relative_to(repo_root) or not resolved_owner.is_file():
+            raise AssertionError(f"Native SDK reference owner is missing or outside the checkout: {resolved_owner}")
+        entry["ownerPath"] = resolved_owner
+    entry["sessionPath"] = session_path
+    entry["records"] = records
+    return entry
+
+
+def native_public_inputs(records: list[dict[str, object]], expected: tuple[str, ...]) -> list[str]:
+    """Select only the canonical scenario's explicitly owned public request texts."""
+    selected: list[str] = []
+    for event in records:
+        data = event.get("data")
+        message = data if isinstance(data, dict) else None
+        if event.get("type") != "user/message" or not isinstance(message, dict) \
+                or not isinstance(message.get("source"), dict) or message["source"].get("kind") != "user":
+            continue
+        text = message_text(message.get("content"))
+        if text in expected:
+            selected.append(text)
+    if tuple(selected) != expected:
+        raise AssertionError(f"canonical Native SDK public inputs differ: expected={expected}, actual={selected}")
+    return selected
+
+
+def initialize_installed_native_profile(executable: Path, home: Path, cwd: Path,
+                                         installations: list[dict[str, object]]) -> Path:
+    """Create the shipped native-sdk profile with the installed runtime before adding user plugins."""
+    env = {**os.environ, "DSH_HOME": str(home), "DSH_TELEMETRY_DISABLED": "1"}
+    result = subprocess.run(
+        [str(executable), "--profile", "native-sdk", "--dump-config"],
+        cwd=cwd, env=env, capture_output=True, text=True, timeout=30, check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"installed runtime failed to initialize its shipped native-sdk profile: "
+            f"exit={result.returncode}\n{result.stdout}\n{result.stderr}"
+        )
+    profile = home / "profiles" / "native-sdk"
+    config_path = profile / "rsh.profile.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    config["installations"].extend(installations)
+    config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return profile
+
+
+def write_installed_profile_plugin(profile: Path, name: str, source: Path,
+                                   requires: list[str], provides: list[str]) -> Path:
+    """Install one fixture-owned Native plugin into the external profile directory."""
+    package = profile / "node_modules" / name
+    package.mkdir(parents=True)
+    shutil.copyfile(source, package / "native.mjs")
+    (package / "package.json").write_text(json.dumps({
+        "name": name,
+        "version": "0.0.0",
+        "private": True,
+        "type": "module",
+        "exports": {"./package.json": "./package.json", "./native": "./native.mjs"},
+        "dsh": {"native": {"apiVersion": 1, "entry": "./native", "targets": ["host"],
+                             "requires": requires, "optional": [], "provides": provides}},
+    }), encoding="utf-8")
+    return package
+
+
+def write_native_sdk_model_patch(path: Path, cwd: Path, sessions: Path, base_url: str,
+                                 system_prompt: str, extra: list[dict[str, object]] | None = None) -> None:
+    """Point one shipped Native SDK composition at the keyless model and its isolated Session store."""
+    installations: list[dict[str, object]] = [
+        {"id": "app", "config": {"systemPrompt": system_prompt, "maxSteps": 4}},
+        {"id": "storage", "config": {"root": str(sessions), "compression": "none"}},
+        {"id": "fs", "config": {"cwd": str(cwd)}},
+        {"id": "pi-ai", "config": {"providers": {"fixture": {
+            "apiKeyEnv": "NATIVE_SDK_FIXTURE_KEY",
+            "api": "openai-completions",
+            "baseURL": f"{base_url}/v1",
+            "models": [{"id": "fixture-model", "input": ["text"]}],
+        }}}},
+    ]
+    installations.extend(extra or [])
+    path.write_text(json.dumps({"formatVersion": 1, "installations": installations}, indent=2) + "\n",
+                    encoding="utf-8")
+
+
+def run_installed_native_turn(home: Path, cwd: Path, patch: Path, session_id: str, task: str,
+                              executable: Path):
+    """Run one Native SDK turn through the installed Python package's bundled executable."""
     from deepseek_harness import DeepSeekHarness
 
-    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-") as temporary:
+    with DeepSeekHarness(
+        provider="fixture",
+        model="fixture-model",
+        cwd=str(cwd),
+        dsh_home=str(home),
+        profile="native-sdk",
+        patches=(str(patch),),
+        env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1",
+             "DSH_PERMISSION_MODE": "danger-full-access"},
+        request_timeout_seconds=60,
+    ) as harness:
+        result = harness.start_session(session_id).run(task)
+        process = harness.client._proc
+        process_id = None if process is None else process.pid
+        launch_args = None if process is None else process.args
+    if process is None or process.poll() != 0:
+        raise AssertionError(
+            f"installed Native SDK runtime did not exit cleanly: "
+            f"{None if process is None else process.returncode}\nstderr tail:\n"
+            + "\n".join(harness.client._stderr_lines)
+        )
+    if not isinstance(launch_args, (list, tuple)) or not launch_args \
+            or Path(str(launch_args[0])).resolve() != executable.resolve():
+        raise AssertionError(f"installed SDK launched {launch_args!r}, expected bundled wheel runtime {executable}")
+    return result, process_id
+
+
+def native_notification_events(result: "RunResult", session_id: str,
+                               event_types: set[str]) -> list[dict[str, object]]:
+    """Project selected full Session events from one public Python SDK notification interval."""
+    return [
+        event for notification in result.notifications
+        if notification.method == "session.event" and notification.payload.get("sessionId") == session_id
+        and isinstance((event := notification.payload.get("event")), dict)
+        and event.get("type") in event_types
+    ]
+
+
+def native_session_events(records: list[dict[str, object]], event_types: set[str]) -> list[dict[str, object]]:
+    """Select full persisted Session events, retaining sequence, time, payload, and lineage fields."""
+    return [event for event in records[1:] if event.get("type") in event_types]
+
+
+def native_request_user_texts(request: dict[str, object]) -> list[str]:
+    """Read actual user-message order from one installed runtime wire request."""
+    messages = request.get("messages")
+    if not isinstance(messages, list):
+        raise AssertionError("installed Native SDK model request omitted messages")
+    return [message_text(message.get("content")) for message in messages
+            if isinstance(message, dict) and message.get("role") == "user"]
+
+
+def smoke_sdk_native(base_url: str, executable: Path) -> None:
+    """Replay the two canonical Native SDK references through installed wheels and cold processes."""
+    external = read_native_sdk_reference("externalOperation")
+    inbox = read_native_sdk_reference("inboxMoved")
+    smoke_sdk_native_external(base_url, executable, external)
+    smoke_sdk_native_inbox(base_url, executable, inbox)
+
+
+def smoke_sdk_native_external(base_url: str, executable: Path, reference: dict[str, object]) -> None:
+    """Drive canonical external-operation facts through the installed Python SDK and runtime."""
+    records = reference["records"]
+    if not isinstance(records, list):
+        raise AssertionError("external-operation reference has no Session rows")
+    session_id = str(reference["sessionId"])
+    expected_tasks = (NATIVE_EXTERNAL_OPERATION_PROMPT, NATIVE_EXTERNAL_OPERATION_COLD_PROMPT)
+    native_public_inputs(records, expected_tasks)
+    operation_script = [event["data"] for event in records
+                        if event.get("type") == "subagent/external-operation" and isinstance(event.get("data"), dict)]
+    if len(operation_script) != 9:
+        raise AssertionError(f"external-operation reference has an incomplete operation script: {len(operation_script)}")
+    call = next((event.get("data") for event in records
+                 if event.get("type") == "tool/call" and isinstance(event.get("data"), dict)
+                 and event["data"].get("name") == "subagent"), None)
+    if not isinstance(call, dict):
+        raise AssertionError("external-operation reference omitted its subagent call")
+    result = next((event.get("data") for event in records
+                   if event.get("type") == "tool/result" and isinstance(event.get("data"), dict)
+                   and event["data"].get("message", {}).get("source", {}).get("callId") == call.get("callId")), None)
+    message = result.get("message") if isinstance(result, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    output = next((block.get("content") for block in content if isinstance(block, dict)
+                   and block.get("type") == "tool-result" and block.get("toolCallId") == call.get("callId")), None) \
+        if isinstance(content, list) else None
+    if not isinstance(output, list):
+        raise AssertionError("external-operation reference omitted the recorded child output")
+
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-external-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
+        home, cwd = root / "home", root / "work"
+        sessions = home / "sessions"
+        cwd.mkdir(parents=True)
+        driver_config = {"operationScript": operation_script, "childOutput": output}
+        profile = initialize_installed_native_profile(executable, home, cwd, [
+            {"id": "external-driver", "plugin": "native-sdk-installed-external-driver", "scope": "root",
+             "config": driver_config},
+            {"id": "policy", "plugin": "@deepseek-ai/dsh-fs-observation-policy", "scope": "root"},
+            {"id": "file-tools", "plugin": "@deepseek-ai/dsh-tool-fs", "scope": "root"},
+        ])
+        write_installed_profile_plugin(profile, "native-sdk-installed-external-driver",
+                                       NATIVE_SDK_EXTERNAL_DRIVER, [], ["externalSubagentDriver"])
+        shutil.copyfile(NATIVE_SDK_EXTERNAL_PATHS, profile / "node_modules" / "native-sdk-installed-external-driver"
+                        / "workspace-paths.mjs")
         patch = root / "native.patch.json"
-        patch.write_text(json.dumps({
-            "formatVersion": 1,
-            "installations": [{
-                "id": "pi-ai",
-                "config": {"providers": {"deepseek-official": {
-                    "apiKeyEnv": "DEEPSEEK_API_KEY",
-                    "api": "openai-completions",
-                    "baseURL": f"{base_url}/v1",
-                    "models": [{"id": "smoke-model"}],
-                }}},
-            }],
-        }), encoding="utf-8")
-        with DeepSeekHarness(
-            provider="deepseek-official",
-            model="smoke-model",
-            cwd=str(root),
-            dsh_home=str(dsh_home),
-            profile="native-sdk",
-            patches=(str(patch),),
-            env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
-            },
-            api_key="sk-keyless-smoke",
-            request_timeout_seconds=60,
-        ) as harness:
-            result = harness.run("reply with the smoke text", session_id="native-smoke")
-            process = harness.client._proc
-        if result.final_response != EXPECTED_TEXT or result.finish_reason != "completed":
-            raise AssertionError(
-                f"native result={result.final_response!r} finish={result.finish_reason!r}"
-            )
-        if process is None or process.poll() != 0:
-            raise AssertionError(
-                f"native runtime did not exit cleanly after shutdown: "
-                f"{None if process is None else process.returncode}"
-            )
-        assert_session_log(dsh_home / "sessions", root, EXPECTED_TEXT)
+        write_native_sdk_model_patch(patch, cwd, sessions, base_url,
+            "Delegate one file creation to the external child.", [
+                {"id": "subagents", "config": {"providerName": "external-fixture"}},
+                {"id": "workflow-worker", "config": {"subagentProvider": "external-fixture"}},
+                {"id": "subagent-tool", "config": {"toolName": "subagent", "maxDepth": 1}},
+                {"id": "ralph-tool", "disabled": True},
+            ])
+
+        offset = len(MockModelHandler.requests)
+        first, first_process = run_installed_native_turn(home, cwd, patch, session_id, expected_tasks[0], executable)
+        recovery, recovery_process = run_installed_native_turn(home, cwd, patch, session_id, expected_tasks[1], executable)
+        if first.final_response != NATIVE_EXTERNAL_OPERATION_TEXT or first.finish_reason != "completed":
+            raise AssertionError(f"installed external-operation first turn differed: {first.final_response!r} {first.finish_reason!r}")
+        if recovery.final_response != "cold SDK Session restored" or recovery.finish_reason != "completed":
+            raise AssertionError(f"installed external-operation cold turn differed: {recovery.final_response!r} {recovery.finish_reason!r}")
+        if first_process is None or recovery_process is None or first_process == recovery_process:
+            raise AssertionError(f"external-operation did not use independent runtime processes: {first_process}, {recovery_process}")
+
+        requests = MockModelHandler.requests[offset:]
+        if len(requests) != 3 or NATIVE_EXTERNAL_OPERATION_PROMPT not in native_request_user_texts(requests[0]) \
+                or NATIVE_EXTERNAL_OPERATION_COLD_PROMPT not in native_request_user_texts(requests[2]):
+            raise AssertionError(f"installed external-operation model requests differ: {len(requests)}")
+        expected_kinds = [event["kind"] for event in operation_script]
+        first_operations = [event for event in first.events if event.get("type") == "subagent/external-operation"]
+        recovery_operations = [event for event in recovery.events if event.get("type") == "subagent/external-operation"]
+        if [event.get("data", {}).get("kind") for event in first_operations] != expected_kinds or recovery_operations:
+            raise AssertionError("installed external-operation SDK events differ from canonical operations or repeated after cold restore")
+        event_types = {"subagent/external-operation"}
+        if native_notification_events(first, session_id, event_types) != first_operations \
+                or native_notification_events(recovery, session_id, event_types) != []:
+            raise AssertionError("installed external-operation notifications differ from SDK events or replayed after cold restore")
+        stored = read_session_logs(sessions).get(session_id)
+        if stored is None or native_session_events(stored, event_types) != first_operations:
+            raise AssertionError("installed external-operation durable facts differ from the Python SDK event interval")
+        assert_session_log(sessions, cwd, NATIVE_EXTERNAL_OPERATION_TEXT, "cold SDK Session restored")
+        expected_workspace = (NATIVE_SDK_EXTERNAL_WORKSPACE / "created.txt").read_bytes()
+        actual_workspace = (cwd / "created.txt").read_bytes()
+        if actual_workspace != expected_workspace:
+            raise AssertionError("installed external-operation wrote bytes that differ from its canonical workspace oracle")
+
+
+def smoke_sdk_native_inbox(base_url: str, executable: Path, reference: dict[str, object]) -> None:
+    """Drive the canonical Inbox owner through the installed Python SDK and a second cold process."""
+    records = reference["records"]
+    owner_path = reference.get("ownerPath")
+    if not isinstance(records, list) or not isinstance(owner_path, Path):
+        raise AssertionError("Inbox reference omitted its Session or Native owner source")
+    session_id = str(reference["sessionId"])
+    expected_tasks = (NATIVE_INBOX_FIRST_TASK, NATIVE_INBOX_COLD_TASK)
+    native_public_inputs(records, expected_tasks)
+    facts_types = {"agent/inbox/spliced", "agent/inbox/moved"}
+    canonical_facts = native_session_events(records, facts_types)
+    canonical_moves = [event for event in canonical_facts if event.get("type") == "agent/inbox/moved"]
+    canonical_edits = [event for event in canonical_facts
+                       if event.get("type") == "agent/inbox/spliced"
+                       and event.get("data", {}).get("outcome") == "canceled"]
+    canonical_inserted = canonical_edits[0].get("data", {}).get("inserted") if len(canonical_edits) == 1 else None
+    if len(canonical_moves) != 1 or len(canonical_edits) != 1 or not isinstance(canonical_inserted, list) \
+            or len(canonical_inserted) != 1:
+        raise AssertionError("Inbox canonical reference must own one text edit and one move")
+    canonical_target = canonical_inserted[0]
+    canonical_edit_data = canonical_edits[0]["data"]
+    canonical_move_data = canonical_moves[0].get("data")
+    canonical_source = canonical_target.get("source") if isinstance(canonical_target, dict) else None
+    if not isinstance(canonical_target, dict) or not isinstance(canonical_move_data, dict) \
+            or not isinstance(canonical_edit_data, dict) or not isinstance(canonical_source, dict) \
+            or canonical_move_data.get("messageId") != canonical_target.get("id") \
+            or canonical_edit_data.get("target") != "next-turn" \
+            or not isinstance(canonical_edit_data.get("start"), int) \
+            or canonical_edit_data.get("removedCount") != 1 \
+            or canonical_source.get("kind") != "user" \
+            or canonical_target.get("content") != [{"type": "text", "text": "edited target text"}]:
+        raise AssertionError("Inbox canonical reference does not describe the same edited message moving to next-step")
+    canonical_edit_start = canonical_edit_data.get("start")
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-inbox-") as temporary:
+        root = Path(temporary).resolve()
+        home, cwd = root / "home", root / "work"
+        sessions = home / "sessions"
+        cwd.mkdir(parents=True)
+        owner_state = home / "inbox-owner-state.json"
+        profile = initialize_installed_native_profile(executable, home, cwd, [
+            {"id": "inbox-owner-fixture", "plugin": "native-sdk-inbox-owner", "scope": "root",
+             "config": {"sessionId": session_id, "statePath": str(owner_state)}},
+        ])
+        write_installed_profile_plugin(profile, "native-sdk-inbox-owner", owner_path,
+                                       ["activeSessions"], [])
+        patch = root / "native.patch.json"
+        write_native_sdk_model_patch(patch, cwd, sessions, base_url, "Verify Native SDK Inbox projection.")
+
+        offset = len(MockModelHandler.requests)
+        first, first_process = run_installed_native_turn(home, cwd, patch, session_id, expected_tasks[0], executable)
+        recovery, recovery_process = run_installed_native_turn(home, cwd, patch, session_id, expected_tasks[1], executable)
+        if first.final_response != NATIVE_INBOX_FIRST_REPLY or recovery.final_response != NATIVE_INBOX_COLD_REPLY \
+                or first.finish_reason != "completed" or recovery.finish_reason != "completed":
+            raise AssertionError("installed Inbox Native SDK turns did not complete with their recorded replies")
+        if first_process is None or recovery_process is None or first_process == recovery_process:
+            raise AssertionError(f"Inbox did not use independent runtime processes: {first_process}, {recovery_process}")
+
+        requests = MockModelHandler.requests[offset:]
+        if len(requests) != 2:
+            raise AssertionError(f"installed Inbox case expected two model requests, got {len(requests)}")
+        first_wire = native_request_user_texts(requests[0])
+        cold_wire = native_request_user_texts(requests[1])
+        if first_wire != ["keep next-step before", "edited target text", expected_tasks[0]]:
+            raise AssertionError(f"installed Inbox first request lost steering-before-queued order: {first_wire}")
+        if cold_wire.count(expected_tasks[1]) != 1 or cold_wire.count("edited target text") != 1 \
+                or "original target text" in cold_wire:
+            raise AssertionError(f"installed Inbox cold model input changed restored content: {cold_wire}")
+
+        state = json.loads(owner_state.read_text(encoding="utf-8"))
+        if state.get("first", {}).get("edited") != {"kind": "updated"} \
+                or state.get("first", {}).get("promoted") != {"kind": "promoted"} \
+                or state.get("recovery", {}).get("moveCount") != 1:
+            raise AssertionError(f"installed Inbox owner did not record a separate cold-state observation: {state}")
+        first_facts = [event for event in first.events if event.get("type") in facts_types]
+        recovery_facts = [event for event in recovery.events if event.get("type") in facts_types]
+        first_moved = [event for event in first_facts if event.get("type") == "agent/inbox/moved"]
+        if len(first_moved) != 1 or recovery_facts and any(event.get("type") == "agent/inbox/moved" for event in recovery_facts):
+            raise AssertionError("installed Inbox did not emit exactly one move before cold recovery")
+        moved_message_id = first_moved[0].get("data", {}).get("messageId")
+        recovery_state = state["recovery"]
+        if not isinstance(recovery_state.get("nextTurn"), list) or not isinstance(recovery_state.get("nextStep"), list) \
+                or any(isinstance(message, dict) and message.get("id") == moved_message_id
+                       for message in [*recovery_state["nextTurn"], *recovery_state["nextStep"]]):
+            raise AssertionError(f"installed Inbox cold observation retained the moved message in a pending queue: {state}")
+        edit = next((event for event in first_facts if event.get("type") == "agent/inbox/spliced"
+                     and event.get("data", {}).get("outcome") == "canceled"
+                     and any(message.get("content") == [{"type": "text", "text": "edited target text"}]
+                             for message in event.get("data", {}).get("inserted", []))), None)
+        if edit is None or edit.get("data", {}).get("target") != "next-turn" \
+                or edit.get("data", {}).get("start") != canonical_edit_start \
+                or edit.get("data", {}).get("removedCount") != 1 \
+                or moved_message_id != edit["data"]["inserted"][0].get("id"):
+            raise AssertionError("installed Inbox edit and move did not retain one message identity")
+        if native_notification_events(first, session_id, facts_types) != first_facts \
+                or native_notification_events(recovery, session_id, facts_types) != recovery_facts:
+            raise AssertionError("installed Inbox public notifications differ from Python SDK event intervals")
+        stored = read_session_logs(sessions).get(session_id)
+        projected = [*first_facts, *recovery_facts]
+        sequences = [event.get("seq") for event in projected]
+        if any(not isinstance(sequence, int) for sequence in sequences) \
+                or sequences != sorted(sequences) or len(set(sequences)) != len(sequences):
+            raise AssertionError(f"installed Inbox SDK event intervals are not in durable sequence order: {sequences}")
+        if stored is None or native_session_events(stored, facts_types) != projected:
+            raise AssertionError("installed Inbox durable facts differ from the Python SDK event intervals")
+        edited_messages = [event for event in stored if event.get("type") == "user/message"
+                           and event.get("data", {}).get("id") == edit["data"]["inserted"][0].get("id")]
+        if len(edited_messages) != 1 or edited_messages[0].get("data", {}).get("content") \
+                != [{"type": "text", "text": "edited target text"}]:
+            raise AssertionError("installed Inbox durable model input lost the edited target identity or text")
+        assert_session_log(sessions, cwd, NATIVE_INBOX_FIRST_REPLY, NATIVE_INBOX_COLD_REPLY)
 
 
 def smoke_sdk_custom(base_url: str, executable: Path) -> None:
@@ -1803,7 +2169,7 @@ def assert_session_log(sessions: Path, cwd: Path, *expected_texts: str) -> None:
     logs = latest_persisted_session_paths(sessions)
     if len(logs) != 1:
         raise AssertionError(f"expected one JSONL session log under {sessions}, found {logs}")
-    content = logs[0].read_text()
+    content = logs[0].read_text(encoding="utf-8")
     assert_persisted_session_version(logs[0], content)
     lines = content.splitlines()
     header = json.loads(lines[0])

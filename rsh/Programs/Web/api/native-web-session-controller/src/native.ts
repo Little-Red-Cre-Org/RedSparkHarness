@@ -9,10 +9,13 @@ import { TextDecoder } from 'node:util'
 import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { NativeSessionFeed } from './follow.ts'
-import type { NativePendingSubmission, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
+import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult, NativeSubmissionPromotionResult,
+  NativeSubmissionsSnapshot, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
+import { foldNativeInboxEvent } from '@deepseek-ai/dsh-native-agent/inbox'
+import type { NativeInboxState } from '@deepseek-ai/dsh-native-agent/inbox'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
 import type {} from '@deepseek-ai/dsh-llm-pi-ai/native'
@@ -42,6 +45,7 @@ import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
+import type { TextBlock } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { FileSystemOperations, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
@@ -176,6 +180,7 @@ function errorMessage(error: unknown): string {
 
 function submissionErrorDetails(endpoint: string, payload: unknown): Record<string, unknown> {
   if (endpoint !== 'session/queue' && endpoint !== 'session/steer' && endpoint !== 'session/dequeue'
+    && endpoint !== 'session/submission/edit' && endpoint !== 'session/submission/promote'
     || payload === null || typeof payload !== 'object' || Array.isArray(payload)) return {}
   const requestId = (payload as Record<string, unknown>)['requestId']
   return typeof requestId === 'string' ? { requestId } : {}
@@ -354,7 +359,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
 const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
   'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
   'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
-  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions',
+  'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/submission/edit', 'session/submission/promote',
   'agent-presets/list',
   'agent-presets/read', 'agent-presets/copy', 'agent-presets/delete',
   'agent-presets/can-open-directory', 'agent-presets/open-directory',
@@ -586,6 +591,57 @@ export class NativeWebSessionService {
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
     const submissions = new Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>()
+    let inbox: NativeInboxState | undefined
+    let inboxThroughSeq: number | undefined
+    const eventsBeforeBaseline: SessionEvent[] = []
+    const processTurnEvent = (event: SessionEvent): void => {
+      const removed = event.type === 'agent/inbox/spliced'
+        ? inbox?.[event.data.target].slice(event.data.start, event.data.start + (event.data.removedCount ?? 0)) ?? []
+        : []
+      if (inbox === undefined) throw new Error('native web session: inbox projection is unavailable before its baseline')
+      inbox = foldNativeInboxEvent(inbox, event)
+      if (event.type === 'agent/inbox/spliced') {
+        for (const message of event.data.inserted) {
+          const requestId = brandString<NativeSubmissionRequestId>(message.id)
+          if (submissions.get(requestId) === 'submitting') {
+            submissions.set(requestId, 'accepted')
+            feed?.push({ type: 'submission-update', requestId, status: 'accepted' })
+          }
+        }
+        if (event.data.outcome === 'canceled') {
+          const insertedIds = new Set(event.data.inserted.map(message => message.id))
+          for (const message of removed) {
+            if (insertedIds.has(message.id)) continue
+            const requestId = brandString<NativeSubmissionRequestId>(message.id)
+            if (submissions.get(requestId) === 'accepted') {
+              submissions.delete(requestId)
+              feed?.push({ type: 'submission-update', requestId, status: 'rejected' })
+            }
+          }
+        }
+      }
+      if (event.type === 'user/message') {
+        const requestId = brandString<NativeSubmissionRequestId>(event.data.id)
+        if (submissions.get(requestId) === 'accepted') submissions.set(requestId, 'claimed')
+      }
+      if (event.type === 'turn/end') {
+        for (const [requestId, status] of submissions) {
+          if (status === 'claimed') {
+            submissions.delete(requestId)
+            feed?.push({ type: 'submission-update', requestId, status: 'settled' })
+          }
+        }
+      }
+    }
+    const observeTurnEvent = (event: SessionEvent): void => {
+      if (inbox === undefined || inboxThroughSeq === undefined) {
+        eventsBeforeBaseline.push(event)
+        return
+      }
+      if (event.seq <= inboxThroughSeq) return
+      processTurnEvent(event)
+      inboxThroughSeq = event.seq
+    }
     const execution = this.requests.run(this.lifetime, async (accepted) => {
       admitted()
       const turnSignal = AbortSignal.any([accepted, controller.signal])
@@ -604,40 +660,7 @@ export class NativeWebSessionService {
             } },
           ...feed === undefined ? {} : { onEvent: (event) => {
             feed.push({ type: 'event', event })
-            if (event.type === 'agent/inbox/spliced') {
-              for (const message of event.data.inserted) {
-                const requestId = brandString<NativeSubmissionRequestId>(message.id)
-                if (submissions.get(requestId) === 'submitting') {
-                  submissions.set(requestId, 'accepted')
-                  feed.push({ type: 'submission-update', requestId, status: 'accepted' })
-                }
-              }
-              if (event.data.outcome === 'canceled') {
-                const owner = this.active.owners().find(candidate => candidate.session.id === id
-                  && candidate.invocation === 'root' && candidate.writerAvailable)
-                const pendingIds = new Set(owner === undefined ? [] : [
-                  ...owner.messages('next-turn'), ...owner.messages('next-step'),
-                ].map(message => message.id))
-                for (const [requestId, status] of submissions) {
-                  if (status === 'accepted' && !pendingIds.has(MessageId(requestId))) {
-                    submissions.delete(requestId)
-                    feed.push({ type: 'submission-update', requestId, status: 'rejected' })
-                  }
-                }
-              }
-            }
-            if (event.type === 'user/message') {
-              const requestId = brandString<NativeSubmissionRequestId>(event.data.id)
-              if (submissions.get(requestId) === 'accepted') submissions.set(requestId, 'claimed')
-            }
-            if (event.type === 'turn/end') {
-              for (const [requestId, status] of submissions) {
-                if (status === 'claimed') {
-                  submissions.delete(requestId)
-                  feed.push({ type: 'submission-update', requestId, status: 'settled' })
-                }
-              }
-            }
+            observeTurnEvent(event)
           }, onBaseline: async (owner, baselineSignal) => {
             if (owner.session.id !== id || owner.invocation !== 'root' || !owner.writerAvailable
               || this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: history baseline lost its exact root owner')
@@ -645,6 +668,18 @@ export class NativeWebSessionService {
             baselineSignal.throwIfAborted()
             if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: history baseline owner was released')
             if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
+            const observedSeqs = new Set(eventsBeforeBaseline.map(event => event.seq))
+            inbox = { 'next-turn': [], 'next-step': [] }
+            for (const event of events) {
+              if (observedSeqs.has(event.seq)) processTurnEvent(event)
+              else inbox = foldNativeInboxEvent(inbox, event)
+            }
+            inboxThroughSeq = events.at(-1)?.seq ?? -1
+            for (const event of eventsBeforeBaseline.splice(0)) {
+              if (event.seq <= inboxThroughSeq) continue
+              processTurnEvent(event)
+              inboxThroughSeq = event.seq
+            }
             const cursor = fields.lastSeq as number
             if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
               throw new Error('native web session: follow cursor is outside the exact Session history')
@@ -888,7 +923,7 @@ export class NativeWebSessionService {
     }, signal)
   }
 
-  private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativePendingSubmission> {
+  private async submit(payload: unknown, target: 'next-turn' | 'next-step', signal: AbortSignal): Promise<NativeSubmissionAcknowledgement> {
     const request = z.strictObject({
       sessionId: z.string().min(1).max(256),
       prompt: z.string().min(1).max(this.config.maxPromptChars),
@@ -936,27 +971,72 @@ export class NativeWebSessionService {
     return this.executor.executeSessionOperation({ id, resume: true, route }, remove, signal)
   }
 
-  private async pendingSubmissions(id: SessionId, signal: AbortSignal): Promise<{ submissions: readonly NativePendingSubmission[] }> {
+  private async editSubmission(payload: unknown, signal: AbortSignal): Promise<NativeSubmissionEditResult> {
+    const request = z.strictObject({
+      sessionId: z.string().min(1).max(256), requestId: z.string().min(1).max(256),
+      text: z.string().min(1).max(this.config.maxPromptChars),
+    }).parse(payload)
+    if (request.text.trim().length === 0) throw new Error('native web session: edited submission text must not be blank')
+    const id = SessionId(request.sessionId)
+    const messageId = MessageId(request.requestId)
+    const content: readonly TextBlock[] = [{ type: 'text', text: request.text }]
+    const edit = async (owner: NativeActiveSessionOwner): Promise<NativeSubmissionEditResult> => {
+      if (owner.session.id !== id || owner.invocation !== 'root' || !owner.writerAvailable
+        || this.active.owner(owner.agent, owner.session) !== owner) {
+        throw new Error('native web session: submission edit requires the exact root Session owner')
+      }
+      this.executor.rootExecution.capture(owner)
+      const result = await owner.editPendingText(messageId, content, signal)
+      return { requestId: brandString<NativeSubmissionRequestId>(request.requestId), outcome: result.kind }
+    }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) return edit(owner)
+    if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
+    const route = await this.routeForSession(id, signal)
+    return this.executor.executeSessionOperation({ id, resume: true, route }, edit, signal)
+  }
+
+  private async promoteSubmission(payload: unknown, signal: AbortSignal): Promise<NativeSubmissionPromotionResult> {
+    const request = z.strictObject({ sessionId: z.string().min(1).max(256),
+      requestId: z.string().min(1).max(256) }).parse(payload)
+    const id = SessionId(request.sessionId)
+    const turn = this.turns.get(id)
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (turn === undefined || turn.settled || turn.controller.signal.aborted || owner === undefined) {
+      throw new Error('native web session: submission promotion requires an active browser turn')
+    }
+    this.executor.rootExecution.capture(owner)
+    const requestId = brandString<NativeSubmissionRequestId>(request.requestId)
+    const result = await owner.promotePending(MessageId(request.requestId), signal)
+    return { requestId, outcome: result.kind }
+  }
+
+  private async pendingSubmissions(id: SessionId, signal: AbortSignal): Promise<NativeSubmissionsSnapshot> {
     const owner = this.active.owners().find(candidate => candidate.session.id === id
       && candidate.invocation === 'root' && candidate.writerAvailable)
     if (owner !== undefined) {
       this.executor.rootExecution.capture(owner)
-      return { submissions: this.projectPendingSubmissions(owner) }
+      return this.projectPendingSubmissions(owner, signal)
     }
     if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
     const route = await this.routeForSession(id, signal)
-    const submissions = await this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
-      Promise.resolve(this.projectPendingSubmissions(activeOwner)), signal)
-    return { submissions }
+    return this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
+      this.projectPendingSubmissions(activeOwner, signal), signal)
   }
 
-  private projectPendingSubmissions(owner: NativeActiveSessionOwner): readonly NativePendingSubmission[] {
-    return [
-      ...owner.messages('next-turn').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
-        placement: 'queued' as const, status: 'accepted' as const })),
-      ...owner.messages('next-step').map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
-        placement: 'steering' as const, status: 'accepted' as const })),
+  private async projectPendingSubmissions(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativeSubmissionsSnapshot> {
+    const events = await owner.readEvents({ signal })
+    let inbox: NativeInboxState = { 'next-turn': [], 'next-step': [] }
+    for (const event of events) inbox = foldNativeInboxEvent(inbox, event)
+    const submissions: readonly NativePendingSubmission[] = [
+      ...inbox['next-turn'].map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'queued' as const, status: 'accepted' as const, message })),
+      ...inbox['next-step'].map(message => ({ requestId: brandString<NativeSubmissionRequestId>(message.id),
+        placement: 'steering' as const, status: 'accepted' as const, message })),
     ]
+    return { throughSeq: events.at(-1)?.seq ?? -1, submissions }
   }
 
   /** Deliver one Native filesystem observation to every open Session file feed.
@@ -1354,6 +1434,12 @@ export class NativeWebSessionService {
       }
       if (endpoint === 'session/dequeue') {
         return { ok: true, value: await this.requests.run(signal, accepted => this.dequeue(payload, accepted)) }
+      }
+      if (endpoint === 'session/submission/edit') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.editSubmission(payload, accepted)) }
+      }
+      if (endpoint === 'session/submission/promote') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.promoteSubmission(payload, accepted)) }
       }
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)

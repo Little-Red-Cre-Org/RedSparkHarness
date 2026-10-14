@@ -38,6 +38,8 @@ NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的�
 
 `NativeActiveSessionOwner.appendBatch` 通过 Program 唯一保留的 writer 接收关联事实。被拒绝的批次不会跟踪任何事件；已接收事件保持序号顺序，并由 `flush()` 通过既有持久化屏障写入。
 
+Owner 可用文本块替换待处理消息的全部 content，同时保留身份、source 和位置。它可用一条持久化 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾。Edit 返回 `updated` 或 `stale`；promotion 区分 `promoted`、`stale` 与 `not-promotable`。
+
 仅供 Host 使用的 `./read-history` 工具通过选定的精确存活所有者或既有持久化 reader 读取，不激活 Agent。明确的历史上限额外请求一个事件，以检测超限并拒绝截断。读取后重新检查存活所有权；等待冷 reader 关闭，清理失败保留原读取失败并报告给调用请求的所有者。
 
 `NativeProgramInteractionOwner` 描述 Program 选定的存活请求者及显示根。Program 从实际执行入口和委派关系派生这一只读归属，不依赖持久 Session parent header。交互 Consumer 回答前必须验证确切存活的 Agent 和 Session；显示根不会替代请求 Session 或其 writer。

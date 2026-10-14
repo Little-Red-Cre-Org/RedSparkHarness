@@ -61,6 +61,8 @@ writer 刷新后会通知已接纳事件观察者；若某个观察者抛出异�
 
 `sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。模型和指令准备等异步操作完成后，Program 执行 admission 提交检查，随后同步移除确切的已选 inbox 输入并追加 step 与模型可见输入事件；仅取消失效输入，其他待处理消息仍留在队列中。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
 
+Active owner 编辑待处理消息时，会将其全部 content 替换为文本块，同时保留 id、source 和位置。它通过一条持久化 `agent/inbox/moved` 事件 promotion queued 消息。若异步指令或上下文准备后发现 eligible 快照已变化，Headless 会让这些输入继续待处理，并在同步 claim 检查前重新执行依赖输入的准备。
+
 Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，保留每条物理父子关系，并要求遍历中的委派深度递增。每次检查都会返回直接物理父节点的深度；subagent consumer 在打开或发送给子任务前核验持久化的逻辑深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 
 `rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork 及可选可恢复删除。确切活动 root owner 还提供由 Program 绑定的 turn 中断操作，详见[Session 执行所有权](../native-session-execution/README.zh.md#execution-ownership)。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。撤销路由时会退休没有活动 Session owner 的空闲 Agent，并保留其持久日志；活跃工作和待处理准入仍会阻止撤销。路由退休期间，调用方不能解析或重新选择该路由；退休失败时会保留该路由，并允许再次选择。删除日志时不会取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。

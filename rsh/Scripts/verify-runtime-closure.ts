@@ -1,8 +1,7 @@
 /**
  * Verify that the executable deploy manifest supplies every plugin referenced
- * by a shipped agent preset and every required workspace peer in its dependency
- * graph. With auto peer installation disabled, either omission can otherwise
- * fail only when Cordis loads the packaged plugin.
+ * by shipped agent presets and the native-sdk profile, plus every required
+ * workspace peer in its dependency graph.
  */
 import { globSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -10,6 +9,7 @@ import { basename, dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { isCordisGroupEntry, loadCordisYaml } from './cordis-yaml.ts'
 import { PACKAGE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
+import { shippedNativeProfileComposition } from '../Programs/CLI/src/native-profile-template.ts'
 
 interface PackageManifest {
   name?: string
@@ -40,7 +40,7 @@ export interface RuntimeClosureResult {
 }
 
 /**
- * Check that the runtime manifest contains every shipped-preset plugin and workspace peer.
+ * Check that the runtime manifest contains every shipped-preset and native-sdk plugin and workspace peer.
  * @param root repository root containing the runtime manifest and shipped presets.
  * @param manifestPath runtime manifest path relative to {@link root}.
  * @returns the discovered preset count, reachable workspace package count, and violations.
@@ -69,6 +69,7 @@ export async function verifyRuntimeClosure(
   if (presetPaths.length === 0) failures.push(`no agent presets matched ${AGENT_PRESET_GLOB}`)
   if (targets.length === 0) failures.push('rsh/Programs/SDK/python/sdk-runtime/platforms.json defines no runtime targets')
   failures.push(...await missingPresetPlugins(root, runtimeDependencies, presetPaths, targets))
+  failures.push(...missingNativeSdkPlugins(root, runtimeDependencies, targets))
   for (let index = 0; index < queue.length; index += 1) {
     const packageName = queue[index]
     if (packageName === undefined) continue
@@ -107,7 +108,7 @@ if (import.meta.main) {
   })
   const result = await verifyRuntimeClosure(root, values.manifest)
   if (result.failures.length > 0) {
-    console.error('verify-runtime-closure: preset plugins or required workspace peers are missing from rsh/Programs/SDK/python/sdk-runtime dependencies:')
+    console.error('verify-runtime-closure: shipped profile plugins or required workspace peers are missing from rsh/Programs/SDK/python/sdk-runtime dependencies:')
     for (const failure of result.failures) console.error(`  ${failure}`)
     process.exitCode = 1
   } else {
@@ -152,6 +153,31 @@ async function missingPresetPlugins(
   return failures
 }
 
+function missingNativeSdkPlugins(
+  root: string,
+  runtimeDependencies: Readonly<Record<string, string>>,
+  targets: readonly string[],
+): string[] {
+  const missing = new Map<string, Set<string>>()
+  for (const target of targets) {
+    const profile = shippedNativeProfileComposition(root, 'native-sdk', processPlatformForTarget(target))
+    for (const row of profile.installations) {
+      const plugin = barePackageName(row.plugin)
+      if (plugin === undefined || runtimeDependencies[plugin]?.startsWith('workspace:') === true) continue
+      const version = runtimeDependencies[plugin]
+      const declaration = version === undefined
+        ? ''
+        : ` [runtime dependency is ${JSON.stringify(version)}; expected workspace:]`
+      const key = `native-sdk profile -> ${plugin}${declaration}`
+      const affectedTargets = missing.get(key) ?? new Set<string>()
+      affectedTargets.add(target)
+      missing.set(key, affectedTargets)
+    }
+  }
+  return [...missing.entries()].map(([plugin, affectedTargets]) =>
+    `${plugin} (${[...affectedTargets].sort().join(', ')})`)
+}
+
 function activeBarePluginPackages(entries: unknown[], processPlatform: string): Set<string> {
   const packages = new Set<string>()
   const visit = (value: unknown, parentDisabled: boolean): void => {
@@ -179,7 +205,7 @@ function disabledOnPlatform(value: unknown, processPlatform: string): boolean {
   return operator === '===' ? processPlatform === expected : processPlatform !== expected
 }
 
-function processPlatformForTarget(target: string): string {
+function processPlatformForTarget(target: string): NodeJS.Platform {
   if (target.startsWith('linux-')) return 'linux'
   if (target.startsWith('macos-')) return 'darwin'
   if (target.startsWith('win-')) return 'win32'
