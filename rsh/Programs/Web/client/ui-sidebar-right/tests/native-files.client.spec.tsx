@@ -20,6 +20,8 @@ function fixture() {
   const watches = new Set<ReadableStreamDefaultController<WatchFrame>>()
   const closed: Promise<undefined>[] = []
   const read = vi.fn<NativeWorkspaceFilesClient['read']>()
+  const readAll = vi.fn<NativeWorkspaceFilesClient['readAll']>()
+  const readRelated = vi.fn<NativeWorkspaceFilesClient['readRelated']>()
   const list = vi.fn<NativeWorkspaceFilesClient['list']>(async (_id, path) => ({ path, truncated: false,
     entries: path === '.' ? [{ name: 'folder', type: 'directory' }, { name: 'preview-data', type: 'file' }]
       : folderEntries.map(name => ({ name, type: 'file' })),
@@ -27,8 +29,7 @@ function fixture() {
   const service: NativeWorkspaceFilesClient = {
     list, read,
     async stat() { throw new Error('unexpected stat') },
-    async readAll() { throw new Error('unexpected byte read') },
-    async readRelated() { throw new Error('unexpected related read') },
+    readAll, readRelated,
     async *follow(_id, signal) {
       const done = Promise.withResolvers<undefined>()
       closed.push(done.promise)
@@ -54,7 +55,7 @@ function fixture() {
     return <NativeFilesPanel sessionId={'session' as SessionId} workspaceRoot="/fixture" section={section}
       service={service} onOpenPreview={() => { setSection('preview') }} t={t} />
   }
-  return { Panel, read, list,
+  return { Panel, read, list, readAll, readRelated,
     replaceFolder() { folderEntries = ['fresh-entry'] },
     emit(frame: WatchFrame) { for (const watch of watches) watch.enqueue(frame) },
     async closed() { await Promise.all(closed) },
@@ -136,5 +137,78 @@ it.each([{ fresh: 'fresh preview' }])('isolates preview lifecycle from unrelated
   } finally {
     await act(async () => { view.unmount(); oldSuccess.resolve(page('', 0, true)); oldFailure.resolve(page('', 0, true)) })
     await state.closed()
+  }
+})
+
+it.each(['v1', 'v2', 'absent'])('compares an in-flight preview response with observation %s', async (observed) => {
+  const state = fixture()
+  const first = Promise.withResolvers<Page>()
+  state.read.mockImplementationOnce(() => first.promise).mockImplementation(async () => {
+    if (observed === 'absent') throw new Error('file removed')
+    return page('fresh preview', 1, true, 'v2')
+  })
+  const view = render(<state.Panel />)
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: 'preview-data' }))
+    await waitFor(() => { expect(state.read).toHaveBeenCalledTimes(1) })
+    await act(async () => { state.emit({ kind: 'change', change: observed === 'absent'
+      ? { absolutePath: '/fixture/preview-data', absent: true }
+      : { absolutePath: '/fixture/preview-data', version: observed } }) })
+    await act(async () => { first.resolve(page('stale preview', 1, true, 'v1')) })
+    if (observed === 'absent') await screen.findByRole('alert')
+    else await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe(observed === 'v1' ? 'stale preview' : 'fresh preview') })
+    expect(state.read).toHaveBeenCalledTimes(observed === 'v1' ? 1 : 2)
+  } finally {
+    first.resolve(page('stale preview', 1, true, 'v1'))
+    await act(async () => { view.unmount() })
+    await state.closed()
+  }
+})
+
+it('refreshes only loaded HTML dependencies with a changed version', async () => {
+  const state = fixture()
+  const descriptors = new Map(['createObjectURL', 'revokeObjectURL'].map(key => [key, Object.getOwnPropertyDescriptor(URL, key)]))
+  let unmount: (() => void) | undefined
+  let sequence = 0
+  try {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => `blob:review-${++sequence}` })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: () => {} })
+    state.list.mockResolvedValue({ path: '.', truncated: false, entries: [{ name: 'index.html', type: 'file' }] })
+    state.readAll.mockImplementation(async () => ({ absolutePath: '/fixture/index.html', version: 'html-v1',
+      offset: 0, eof: true, data: btoa('<script src="app.js"></script>') }))
+    const related = state.readRelated.mockImplementation(async () => ({ absolutePath: '/fixture/app.js', version: 'js-v1', offset: 0, eof: true, data: btoa('window.marker = 1') }))
+    const view = render(<state.Panel />)
+    unmount = () => { view.unmount() }
+    fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
+    await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
+    expect(related).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      state.emit({ kind: 'change', change: { absolutePath: '/fixture/unrelated.js', version: 'v2' } })
+      state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v1' } })
+    })
+    expect(related).toHaveBeenCalledTimes(1)
+    related.mockResolvedValue({ absolutePath: '/fixture/app.js', version: 'js-v2', offset: 0, eof: true, data: btoa('window.marker = 2') })
+    await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v2' } }) })
+    await waitFor(() => { expect(related).toHaveBeenCalledTimes(2) })
+    related.mockRejectedValueOnce(new Error('dependency removed'))
+    await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', absent: true } }) })
+    await screen.findByRole('alert')
+    await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v2' } }) })
+    await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
+    expect(related).toHaveBeenCalledTimes(4)
+    state.readAll.mockResolvedValue({ absolutePath: '/fixture/index.html', version: 'html-v2',
+      offset: 0, eof: true, data: btoa('<p>No dependencies</p>') })
+    await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/index.html', version: 'html-v2' } }) })
+    await waitFor(() => { expect(view.container.querySelector('iframe')).not.toBeNull() })
+    expect(state.readAll).toHaveBeenCalledTimes(5)
+    await act(async () => { state.emit({ kind: 'change', change: { absolutePath: '/fixture/app.js', version: 'js-v3' } }) })
+    expect(state.readAll).toHaveBeenCalledTimes(5)
+  } finally {
+    await act(async () => { unmount?.() })
+    await state.closed()
+    for (const [key, descriptor] of descriptors) {
+      if (descriptor === undefined) Reflect.deleteProperty(URL, key)
+      else Object.defineProperty(URL, key, descriptor)
+    }
   }
 })

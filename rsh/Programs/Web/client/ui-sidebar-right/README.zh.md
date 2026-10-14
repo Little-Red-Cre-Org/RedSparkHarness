@@ -62,7 +62,7 @@ kind: "package-reference"
 
 Native 组合通过本包的 Native 入口与 rightbar slot 提供详情。概览读取当前 Session header 与 roster；活动页从 durable history 统计轮次、消息、工具调用和 token 用量，并显示最近的 provider、model 与请求上下文。`SidebarPathBar` 展示工作目录。
 
-存在 `clientNativeWorkspaceFiles` 时，“文件”页会按需列出工作区相对目录，“预览”页会显示所选文件。重新展开目录时通过现有 generation 检查刷新列表。文本与源码分页调用 `read`；按页的行数保留空行，零行 EOF 不增加分隔符。Markdown 和代码复用 `ui-primitives` 中零 Cordis 的渲染器。HTML、图片和 PDF 调用 `readAll`；HTML 直接引用的相对脚本和样式表通过 `readRelated` 读取，并在不透明源沙箱 iframe 中运行。`follow` 会重新读取已展开目录；只有当前绝对文件路径的版本变化或删除才刷新其预览。无关文件与同版本 observation 保留已加载页面。分页归属当前预览的读取生命周期，同路径刷新后旧分页响应不能追加内容或错误。缺少该可选服务时只显示“概览”和“活动”。Native 不使用 Cordis tab 或 legacy 插件入口；legacy 文件树与预览适配器也使用相同的 props-only 行和文档展示。Trajectory 与 turn inspector 仍不属于本面板。
+存在 `clientNativeWorkspaceFiles` 时，“文件”页会按需列出工作区相对目录，“预览”页会显示所选文件。重新展开目录时通过现有 generation 检查刷新列表。文本与源码分页调用 `read`；按页的行数保留空行，零行 EOF 不增加分隔符。Markdown 和代码复用 `ui-primitives` 中零 Cordis 的渲染器。HTML、图片和 PDF 调用 `readAll`；HTML 直接引用的相对脚本和样式表通过 `readRelated` 读取，并在不透明源沙箱 iframe 中运行。`follow` 会重新读取已展开目录；当前绝对文件路径或已加载 HTML 依赖的版本变化或删除会刷新预览。读取响应登记实际绝对路径和版本；读取期间收到的 observation 在响应发布前与响应比较，读取相同版本不触发再次刷新。同版本 HTML 文档保留缺失依赖的身份以响应文件恢复；新文档版本会清除旧依赖身份。无关文件与同版本 observation 保留已加载页面。分页归属当前预览的读取生命周期，同路径刷新后旧分页响应不能追加内容或错误。缺少该可选服务时只显示“概览”和“活动”。Native 不使用 Cordis tab 或 legacy 插件入口；legacy 文件树与预览适配器也使用相同的 props-only 行和文档展示。Trajectory 与 turn inspector 仍不属于本面板。
 
 <a id="state"></a>
 ## 状态

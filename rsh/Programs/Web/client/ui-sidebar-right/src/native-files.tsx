@@ -43,6 +43,39 @@ type FilePreviewState =
     readonly data: Uint8Array<ArrayBuffer>
   }
 
+type PreviewRead = {
+  readonly controller: AbortController
+  readonly sessionId: SessionId
+  readonly path: string
+  readonly files: Map<string, string | undefined>
+  readonly observations: Map<string, string | undefined>
+  readonly invalidate: () => void
+  pending: number
+  htmlVersion?: string
+}
+
+// File identity arrives with the response; retain observations only while a
+// read is pending so a newer observation cannot be lost before that identity.
+async function readPreviewFile<T extends { readonly absolutePath: string; readonly version: string }>(
+  read: PreviewRead, signal: AbortSignal, operation: () => Promise<T>,
+): Promise<T> {
+  read.pending += 1
+  try {
+    const result = await operation()
+    if (!signal.aborted) {
+      read.files.set(result.absolutePath, result.version)
+      if (read.observations.has(result.absolutePath) && read.observations.get(result.absolutePath) !== result.version) {
+        read.files.set(result.absolutePath, read.observations.get(result.absolutePath))
+        read.invalidate()
+      }
+    }
+    return result
+  } finally {
+    read.pending -= 1
+    if (read.pending === 0) read.observations.clear()
+  }
+}
+
 /** Props for the Native file panel. */
 export interface NativeFilesPanelProps {
   readonly sessionId: SessionId | undefined
@@ -97,10 +130,7 @@ export function NativeFilesPanel({
   const controller = useRef<AbortController>()
   const [selectedPath, setSelectedPath] = useState<string>()
   const [preview, setPreview] = useState<FilePreviewState>()
-  const previewRead = useRef<AbortController>()
-  // Retain the observed identity during a same-file refresh so duplicate frames
-  // do not discard the new read while its result is still pending.
-  const previewFile = useRef<{ sessionId: SessionId; path: string; absolutePath: string; version?: string }>()
+  const previewRead = useRef<PreviewRead>()
   const [previewRevision, setPreviewRevision] = useState(0)
   const [followFailed, setFollowFailed] = useState(false)
 
@@ -155,13 +185,14 @@ export function NativeFilesPanel({
         for await (const frame of service.follow(sessionId, watch.signal)) {
           if (frame.kind !== 'change') continue
           for (const path of treeRef.current.expanded) loadDirectory(path, watch.signal)
-          const currentFile = previewFile.current
-          if (selectedPath !== undefined && currentFile?.sessionId === sessionId && currentFile.path === selectedPath
-            && currentFile.absolutePath === frame.change.absolutePath
-            && ('version' in frame.change ? currentFile.version !== frame.change.version : currentFile.version !== undefined)) {
-            previewFile.current = { sessionId, path: selectedPath, absolutePath: frame.change.absolutePath,
-              ...'version' in frame.change ? { version: frame.change.version } : {} }
-            setPreviewRevision(value => value + 1)
+          const read = previewRead.current
+          if (read === undefined || read.controller.signal.aborted || read.sessionId !== sessionId || read.path !== selectedPath) continue
+          const { absolutePath } = frame.change
+          const version = 'version' in frame.change ? frame.change.version : undefined
+          if (read.pending > 0) read.observations.set(absolutePath, version)
+          if (read.files.has(absolutePath) && read.files.get(absolutePath) !== version) {
+            read.files.set(absolutePath, version)
+            read.invalidate()
           }
         }
       } catch {
@@ -173,14 +204,32 @@ export function NativeFilesPanel({
 
   useEffect(() => {
     if (!previewActive || sessionId === undefined || selectedPath === undefined) return undefined
-    const read = new AbortController()
+    const controller = new AbortController()
+    // Keep dependency identities across retries of the same document, including
+    // removed assets whose recreation can make a failed HTML pack usable again.
+    const previous = previewRead.current
+    const sameFile = previous?.sessionId === sessionId && previous.path === selectedPath
+    const read: PreviewRead = {
+      controller, sessionId, path: selectedPath,
+      files: new Map(sameFile ? previous.files : undefined), observations: new Map(), pending: 0,
+      ...sameFile && previous.htmlVersion !== undefined ? { htmlVersion: previous.htmlVersion } : {},
+      invalidate: () => {
+        if (controller.signal.aborted) return
+        controller.abort()
+        setPreviewRevision(value => value + 1)
+      },
+    }
     previewRead.current = read
-    if (previewFile.current?.sessionId !== sessionId || previewFile.current.path !== selectedPath) previewFile.current = undefined
     setPreview({ kind: 'loading', path: selectedPath })
     const format = formatOf(selectedPath)
     void (async () => {
       if (format === 'html' || format === 'image' || format === 'pdf') {
-        const result = await service.readAll(sessionId, selectedPath, read.signal)
+        const result = await readPreviewFile(read, controller.signal, () => service.readAll(sessionId, selectedPath, controller.signal))
+        if (format === 'html' && read.htmlVersion !== result.version) {
+          read.files.clear()
+          read.files.set(result.absolutePath, result.version)
+          read.htmlVersion = result.version
+        }
         return {
           kind: 'bytes' as const,
           path: selectedPath,
@@ -190,7 +239,8 @@ export function NativeFilesPanel({
           data: bytesOf(result.data),
         }
       }
-      const result = await service.read(sessionId, selectedPath, { offset: 1 }, read.signal)
+      const result = await readPreviewFile(read, controller.signal,
+        () => service.read(sessionId, selectedPath, { offset: 1 }, controller.signal))
       return {
         kind: 'text' as const,
         path: selectedPath,
@@ -203,15 +253,12 @@ export function NativeFilesPanel({
       }
     })().then(
       (result) => {
-        if (read.signal.aborted) return
-        previewFile.current = { sessionId, path: selectedPath, absolutePath: result.absolutePath, version: result.version }
-        setPreview(result)
+        if (!controller.signal.aborted) setPreview(result)
       },
-      () => { if (!read.signal.aborted) setPreview({ kind: 'failed', path: selectedPath }) },
+      () => { if (!controller.signal.aborted) setPreview({ kind: 'failed', path: selectedPath }) },
     )
     return () => {
-      read.abort()
-      if (previewRead.current === read) previewRead.current = undefined
+      controller.abort()
     }
   }, [previewActive, previewRevision, selectedPath, service, sessionId])
 
@@ -233,7 +280,7 @@ export function NativeFilesPanel({
 
   const loadMore = (): void => {
     if (preview?.kind !== 'text' || preview.loadingMore || preview.eof || sessionId === undefined) return
-    const signal = previewRead.current?.signal
+    const signal = previewRead.current?.controller.signal
     if (signal === undefined) return
     const current = preview
     setPreview({ ...current, loadingMore: true, failure: false })
@@ -259,7 +306,11 @@ export function NativeFilesPanel({
   const readRelated = useCallback<ReadHtmlRelative>(async (reference, signal) => {
     if (sessionId === undefined || selectedPath === undefined) throw new Error('No file is selected')
     const path = htmlRelativePath(reference)
-    const result = await service.readRelated(sessionId, selectedPath, path, signal)
+    const read = previewRead.current
+    if (read === undefined || read.sessionId !== sessionId || read.path !== selectedPath) throw new Error('No preview read is active')
+    const lifetime = AbortSignal.any([signal, read.controller.signal])
+    lifetime.throwIfAborted()
+    const result = await readPreviewFile(read, lifetime, () => service.readRelated(sessionId, selectedPath, path, lifetime))
     return bytesOf(result.data)
   }, [selectedPath, service, sessionId])
 
