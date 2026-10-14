@@ -17,6 +17,7 @@ import type {
   WorkspaceFileWatchFrame,
 } from '@deepseek-ai/dsh-api-workspace-files/native-types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
 import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
@@ -35,9 +36,12 @@ import { createNativeWorkspaceClients } from './workspaces.ts'
 import { NativeSessionRpcError } from './rpc-error.ts'
 export { NativeSessionRpcError } from './rpc-error.ts'
 import { nativeSubmissionRequestId as brandSubmissionRequestId } from './follow-types.ts'
-import type { NativePendingSubmission, NativeSubmissionRequestId as NativeSubmissionRequestIdType } from './follow-types.ts'
+import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
+  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot,
+  NativeSubmissionRequestId as NativeSubmissionRequestIdType } from './follow-types.ts'
 export { nativeSubmissionRequestId } from './follow-types.ts'
-export type { NativePendingSubmission, NativeSubmissionRequestId, NativeSubmissionUpdate } from './follow-types.ts'
+export type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
+  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionUpdate } from './follow-types.ts'
 export type {
   NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
   NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -693,7 +697,7 @@ export interface NativeSessionClient {
    * @returns accepted queue placement; Host failures retain the request id in error details.
    */
   queue(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativePendingSubmission>
+    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
   /** Submit one identified prompt to the active Session's next-step inbox.
    * @param sessionId - selected Session.
    * @param prompt - non-empty text for the next model step.
@@ -702,7 +706,7 @@ export interface NativeSessionClient {
    * @returns accepted steering placement; Host failures retain the request id in error details.
    */
   steer(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativePendingSubmission>
+    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
   /** Remove one identified request that is still waiting in a Host inbox.
    * @param sessionId - selected Session.
    * @param requestId - stable identity supplied when the request was queued or steered.
@@ -713,9 +717,26 @@ export interface NativeSessionClient {
   /** Read accepted submissions still waiting in either Host inbox.
    * @param sessionId - selected Session.
    * @param signal - caller cancellation.
-   * @returns pending queued and steering requests with their stable identities.
+   * @returns pending requests reconstructed from one durable event prefix.
    */
-  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<readonly NativePendingSubmission[]>
+  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<NativeSubmissionsSnapshot>
+  /** Replace all text content on one still-pending request without changing its id or placement.
+   * @param sessionId - selected Session.
+   * @param requestId - stable identity supplied when the request was queued or steered.
+   * @param text - complete replacement text.
+   * @param signal - caller cancellation.
+   * @returns `updated` after durability, or `stale` after prior removal or claim.
+   */
+  editSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, text: string,
+    signal?: AbortSignal): Promise<NativeSubmissionEditResult>
+  /** Move one still-queued request to the next model-step inbox.
+   * @param sessionId - selected Session.
+   * @param requestId - stable identity supplied when the request was queued.
+   * @param signal - caller cancellation.
+   * @returns the durable move, `stale` after removal, or `not-promotable` when already steering.
+   */
+  promoteSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType,
+    signal?: AbortSignal): Promise<NativeSubmissionPromotionResult>
   /**
    * @param sessionId - selected identity.
    * @param text - human input.
@@ -1116,7 +1137,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
       ...item.snippet === undefined ? {} : { snippet: item.snippet },
     })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
   }
-  if (endpoint === 'session/queue' || endpoint === 'session/steer') return pendingSubmission(value)
+  if (endpoint === 'session/queue' || endpoint === 'session/steer') return submissionAcknowledgement(value)
   if (endpoint === 'session/dequeue') {
     const data = fields(value)
     if (Object.keys(data).length !== 1 || typeof data.requestId !== 'string' || data.requestId.length === 0) {
@@ -1124,12 +1145,16 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     }
     return undefined
   }
+  if (endpoint === 'session/submission/edit') return submissionEditResult(value)
+  if (endpoint === 'session/submission/promote') return submissionPromotionResult(value)
   if (endpoint === 'session/submissions') {
     const data = fields(value)
-    if (Object.keys(data).length !== 1 || !Array.isArray(data.submissions)) {
+    if (Object.keys(data).length !== 2 || !Array.isArray(data.submissions)
+      || typeof data.throughSeq !== 'number' || !Number.isSafeInteger(data.throughSeq) || data.throughSeq < -1) {
       throw new TypeError('invalid native Session submissions snapshot')
     }
-    return { submissions: data.submissions.map(pendingSubmission) }
+    return { throughSeq: data.throughSeq === -1 ? -1 : SessionSeq(data.throughSeq),
+      submissions: data.submissions.map(pendingSubmission) }
   }
   const data = fields(value)
   switch (endpoint) {
@@ -1227,12 +1252,42 @@ function followFrame(value: unknown): NativeSessionFollowFrame {
   throw new TypeError('native Session follow: invalid frame')
 }
 
-function pendingSubmission(value: unknown): NativePendingSubmission {
+function submissionAcknowledgement(value: unknown): NativeSubmissionAcknowledgement {
   const data = fields(value)
   if (typeof data.requestId !== 'string' || data.requestId.length === 0
     || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
     || Object.keys(data).length !== 3) throw new TypeError('invalid native Session pending submission')
   return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted' }
+}
+
+function pendingSubmission(value: unknown): NativePendingSubmission {
+  const data = fields(value)
+  if (typeof data.requestId !== 'string' || data.requestId.length === 0
+    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
+    || Object.keys(data).length !== 4) throw new TypeError('invalid native Session pending submission')
+  const message = parseSessionEvent({ type: 'user/message', seq: 0, time: 0, data: data.message, surfaceOp: 'append' }, 0)
+  if (message.type !== 'user/message' || message.data.id !== data.requestId) {
+    throw new TypeError('native Session pending submission identity does not match its message')
+  }
+  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted', message: message.data }
+}
+
+function submissionEditResult(value: unknown): NativeSubmissionEditResult {
+  const data = fields(value)
+  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
+    || data.outcome !== 'updated' && data.outcome !== 'stale') {
+    throw new TypeError('invalid native Session submission edit result')
+  }
+  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
+}
+
+function submissionPromotionResult(value: unknown): NativeSubmissionPromotionResult {
+  const data = fields(value)
+  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
+    || data.outcome !== 'promoted' && data.outcome !== 'stale' && data.outcome !== 'not-promotable') {
+    throw new TypeError('invalid native Session submission promotion result')
+  }
+  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
 }
 
 function objectConfig(input: unknown): Record<string, unknown> {
@@ -1522,13 +1577,15 @@ export function createNativeSessionClient(
       call('session/queue', { sessionId, prompt, requestId }, signal),
     steer: (sessionId, prompt, requestId, signal) =>
       call('session/steer', { sessionId, prompt, requestId }, signal),
+    editSubmission: (sessionId, requestId, text, signal) =>
+      call('session/submission/edit', { sessionId, requestId, text }, signal),
+    promoteSubmission: (sessionId, requestId, signal) =>
+      call('session/submission/promote', { sessionId, requestId }, signal),
     async dequeue(sessionId, requestId, signal) {
       await call('session/dequeue', { sessionId, requestId }, signal)
     },
     async submissions(sessionId, signal) {
-      return (await call<{ submissions: readonly NativePendingSubmission[] }>(
-        'session/submissions', { sessionId }, signal,
-      )).submissions
+      return call<NativeSubmissionsSnapshot>('session/submissions', { sessionId }, signal)
     },
     prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
       const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq)

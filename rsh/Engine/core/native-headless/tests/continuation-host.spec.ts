@@ -21,9 +21,12 @@ import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import type { NativeToolDelegationContext, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as presetsPlugin, type NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence/native'
 import { NativeSessionProjectionRegistry, type NativeProjectionDefinition } from '@deepseek-ai/dsh-session-projection/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
+import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '../src/native.ts'
 import { NativeContinuationActivation } from '../src/continuation-activation.ts'
@@ -55,7 +58,8 @@ const observerUnit = (key: NativeObserverKey): NativeObserverUnit => ({
   stateVersion: 1,
 })
 
-async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], selectedPreset = false) {
+async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], selectedPreset = false,
+  providers: readonly NativePlugin[] = []) {
   const root = await mkdtemp(join(tmpdir(), 'rsh-continuation-host-'))
   const scope = new NativeScope()
   const model = new MockAdapter(script)
@@ -90,6 +94,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
     } }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined },
+    ...providers.map(plugin => ({ plugin, scope, config: undefined })),
     { plugin: appPlugin, scope, config: { cwd: root, provider: 'mock', model: 'parent', systemPrompt: 'Parent.', maxSteps: 4 } },
     { plugin: executionPlugin, scope, config: undefined },
     { plugin: agentPlugin, scope, config: undefined },
@@ -110,6 +115,271 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], sel
   return { root, host, scope, model, app, storage, agents, execution, tools, activeSessions, meter, events: host.events, presets,
     async close() { await host.stop(); await rm(root, { recursive: true }) } }
 }
+
+
+it('reprepares a same-id text edit made while admitted instructions are preparing', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const prepared: string[][] = []
+  const instructions = {
+    seed() {},
+    async prepare(_session: unknown, inputs: readonly UserMessage[]) {
+      prepared.push(inputs.flatMap(message => message.content.flatMap(block => block.type === 'text' ? [block.text] : [])))
+      if (prepared.length === 1) { entered.resolve(undefined); await release.promise }
+      return []
+    },
+  } as unknown as NativeAgentInstructions
+  const provider: NativePlugin = { apiVersion: 1, name: 'test-instructions', targets: ['host'],
+    requires: [], provides: ['agentInstructions'],
+    resolve: () => (context) => { context.provide('agentInstructions', instructions) } }
+  const state = await fixture([textResponse('Edited input accepted.')], false, [provider])
+  const id = SessionId('same-id-edit-during-instructions')
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Original queued text.' }] })
+  const signal = new AbortController().signal
+  let active: NativeActiveSessionOwner | undefined
+  const attached = state.activeSessions.onAttached(async (owner) => {
+    if (owner.session.id !== id) return
+    active = owner
+    await owner.enqueue(message, 'next-step', false, signal)
+  })
+  try {
+    const running = state.app.executeRootTurn({ id, resume: false }, signal)
+    await entered.promise
+    if (active === undefined) throw new Error('the exact active owner was not attached')
+    await expect(active.editPendingText(message.id, [{ type: 'text', text: 'Edited queued text.' }], signal))
+      .resolves.toEqual({ kind: 'updated' })
+    release.resolve(undefined)
+    await expect(running).resolves.toMatchObject({ answer: 'Edited input accepted.' })
+
+    expect(prepared).toHaveLength(2)
+    expect(prepared[0]).toContain('Original queued text.')
+    expect(prepared[1]).toContain('Edited queued text.')
+    const wire = JSON.stringify(state.model.requests[0]?.messages)
+    expect(wire).toContain('Edited queued text.')
+    expect(wire).not.toContain('Original queued text.')
+    const reader = await state.storage.open(id, 'read')
+    try {
+      const events = (await reader.read()).events
+      const splice = events.find(event => event.type === 'agent/inbox/spliced'
+        && event.data.removedCount === 1
+        && event.data.outcome === 'canceled'
+        && event.data.inserted.some(inserted => inserted.id === message.id))
+      if (splice?.type !== 'agent/inbox/spliced') throw new Error('the durable edit splice was not recorded')
+      expect(splice.data.target).toBe('next-step')
+      expect(splice.data.removedCount).toBe(1)
+      expect(splice.data.outcome).toBe('canceled')
+      expect(splice.data.inserted).toHaveLength(1)
+      expect(splice.data.inserted[0]?.id).toBe(message.id)
+      expect(splice.data.inserted[0]?.content).toEqual([{ type: 'text', text: 'Edited queued text.' }])
+      const userEvent = events.find(event => event.type === 'user/message')
+      if (userEvent?.type !== 'user/message') throw new Error('the edited user message was not committed')
+      expect(userEvent.data.id).toBe(message.id)
+      expect(userEvent.data.content).toEqual([{ type: 'text', text: 'Edited queued text.' }])
+    } finally { await reader.close() }
+  } finally {
+    release.resolve(undefined)
+    await attached()
+    await state.close()
+  }
+})
+
+it('re-admits a promoted captured next-turn head while request contexts await acceptance', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const calls: { readonly inputs: readonly UserMessage[]; readonly durableTypes: readonly string[] }[] = []
+  const contexts = {
+    hasProviders: () => true,
+    async prepareAndAccept(request: { readonly inputs: readonly UserMessage[]; readonly durableEvents: readonly SessionEvent[] },
+      accept: (messages: readonly UserMessage[]) => Promise<'accepted' | 'rejected'>) {
+      calls.push({ inputs: structuredClone(request.inputs), durableTypes: request.durableEvents.map(event => event.type) })
+      if (calls.length === 1) { entered.resolve(undefined); await release.promise }
+      return accept([])
+    },
+  } as unknown as NativeRequestContexts
+  const provider: NativePlugin = { apiVersion: 1, name: 'test-request-contexts', targets: ['host'],
+    requires: [], provides: ['requestContexts'],
+    resolve: () => (context) => { context.provide('requestContexts', contexts) } }
+  const state = await fixture([textResponse('Promoted input accepted.')], false, [provider])
+  const id = SessionId('promote-during-request-contexts')
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Queued head.' }] })
+  const signal = new AbortController().signal
+  let active: NativeActiveSessionOwner | undefined
+  let execution: ReturnType<typeof state.agents.execution> | undefined
+  const attached = state.activeSessions.onAttached(async (owner) => {
+    if (owner.session.id !== id) return
+    active = owner
+    execution = state.agents.execution(owner.agent)
+    await owner.enqueue(message, 'next-turn', false, signal)
+  })
+  try {
+    const running = state.app.executeRootTurn({ id, resume: false }, signal)
+    await entered.promise
+    if (active === undefined || execution === undefined) throw new Error('the exact active owner was not attached')
+    const runAgent = vi.spyOn(execution, 'run')
+    await expect(active.promotePending(message.id, signal)).resolves.toEqual({ kind: 'promoted' })
+    release.resolve(undefined)
+    await expect(running).resolves.toMatchObject({ answer: 'Promoted input accepted.' })
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0]?.inputs).toEqual(calls[1]?.inputs)
+    expect(calls[0]?.inputs.map(input => input.id)).toEqual([message.id])
+    expect(calls[0]?.durableTypes).not.toContain('agent/inbox/moved')
+    expect(calls[1]?.durableTypes).toContain('agent/inbox/moved')
+    expect(runAgent).not.toHaveBeenCalled()
+    expect(state.model.requests).toHaveLength(1)
+    expect(JSON.stringify(state.model.requests[0]?.messages).split('Queued head.')).toHaveLength(2)
+  } finally {
+    release.resolve(undefined)
+    await attached()
+    await state.close()
+  }
+})
+
+it('does not wake after promotion durability crosses the input claim', async () => {
+  const entered = Promise.withResolvers<undefined>()
+  const releasePreparation = Promise.withResolvers<undefined>()
+  const flushEntered = Promise.withResolvers<undefined>()
+  const releaseFlush = Promise.withResolvers<undefined>()
+  const prepared: string[][] = []
+  const instructions = {
+    seed() {},
+    async prepare(_session: unknown, inputs: readonly UserMessage[]) {
+      prepared.push(inputs.flatMap(message => message.content.flatMap(block => block.type === 'text' ? [block.text] : [])))
+      if (prepared.length === 1) { entered.resolve(undefined); await releasePreparation.promise }
+      return []
+    },
+  } as unknown as NativeAgentInstructions
+  const provider: NativePlugin = { apiVersion: 1, name: 'test-instructions', targets: ['host'],
+    requires: [], provides: ['agentInstructions'],
+    resolve: () => (context) => { context.provide('agentInstructions', instructions) } }
+  const state = await fixture([textResponse('Promoted input accepted.')], false, [provider])
+  const id = SessionId('promote-flush-cross-claim')
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Queued head.' }] })
+  const signal = new AbortController().signal
+  let holdFlush = false
+  let writer: Awaited<ReturnType<NativeSessionPersistenceOperations['create']>> | undefined
+  const create = state.storage.create.bind(state.storage)
+  const captureWriter = vi.spyOn(state.storage, 'create').mockImplementation(async (header, options) => {
+    const created = await create(header, options)
+    writer = created
+    const flush = created.flush.bind(created)
+    vi.spyOn(created, 'flush').mockImplementation(async (flushOptions) => {
+      if (holdFlush) {
+        holdFlush = false
+        flushEntered.resolve(undefined)
+        await releaseFlush.promise
+      }
+      return flush(flushOptions)
+    })
+    return created
+  })
+  let active: NativeActiveSessionOwner | undefined
+  let execution: ReturnType<typeof state.agents.execution> | undefined
+  const attached = state.activeSessions.onAttached(async (owner) => {
+    if (owner.session.id !== id) return
+    active = owner
+    execution = state.agents.execution(owner.agent)
+    await owner.enqueue(message, 'next-turn', false, signal)
+  })
+  try {
+    const running = state.app.executeRootTurn({ id, resume: false }, signal)
+    await entered.promise
+    if (active === undefined || execution === undefined || writer === undefined) {
+      throw new Error('the exact active owner and its writer were not attached')
+    }
+    const runAgent = vi.spyOn(execution, 'run')
+    holdFlush = true
+    const promotion = active.promotePending(message.id, signal)
+    let promotionCompleted = false
+    void promotion.then(() => { promotionCompleted = true })
+    await flushEntered.promise
+    expect(promotionCompleted).toBe(false)
+    releasePreparation.resolve(undefined)
+    await vi.waitFor(() => {
+      expect(prepared).toHaveLength(2)
+      expect(active?.messages('next-turn')).toEqual([])
+      expect(active?.messages('next-step')).toEqual([])
+    })
+    releaseFlush.resolve(undefined)
+    await expect(promotion).resolves.toEqual({ kind: 'promoted' })
+    expect(runAgent).not.toHaveBeenCalled()
+    await expect(running).resolves.toMatchObject({ answer: 'Promoted input accepted.' })
+
+    expect(prepared).toEqual([['Queued head.'], ['Queued head.']])
+    expect(state.model.requests).toHaveLength(1)
+  } finally {
+    releasePreparation.resolve(undefined)
+    releaseFlush.resolve(undefined)
+    await attached()
+    captureWriter.mockRestore()
+    await state.close()
+  }
+})
+
+it('rejects teardown-time mutations and completes an admitted promotion without a late wake', async () => {
+  const state = await fixture([])
+  const id = SessionId('promotion-during-owner-teardown')
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Durable queued head.' }] })
+  const flushEntered = Promise.withResolvers<undefined>()
+  const releaseFlush = Promise.withResolvers<undefined>()
+  let holdFlush = false
+  let writer: Awaited<ReturnType<NativeSessionPersistenceOperations['create']>> | undefined
+  const create = state.storage.create.bind(state.storage)
+  const captureWriter = vi.spyOn(state.storage, 'create').mockImplementation(async (header, options) => {
+    const created = await create(header, options)
+    writer = created
+    const flush = created.flush.bind(created)
+    vi.spyOn(created, 'flush').mockImplementation(async (flushOptions) => {
+      if (holdFlush) {
+        holdFlush = false
+        flushEntered.resolve(undefined)
+        await releaseFlush.promise
+      }
+      return flush(flushOptions)
+    })
+    return created
+  })
+  const signal = new AbortController().signal
+  let active: NativeActiveSessionOwner | undefined
+  let releaseRetention: (() => void) | undefined
+  const attached = state.activeSessions.onAttached(async (owner) => {
+    if (owner.session.id !== id) return
+    active = owner
+    releaseRetention = owner.retain()
+  })
+  try {
+    await state.app.executeSessionOperation({ id, resume: false }, async (owner) => {
+      await owner.enqueue(message, 'next-turn', false, signal)
+    }, signal)
+    if (active === undefined || writer === undefined) throw new Error('the retained active writer was not captured')
+
+    holdFlush = true
+    const promotion = active.promotePending(message.id, signal)
+    await flushEntered.promise
+    const disposing = state.app.dispose()
+    let mutationError: unknown
+    try { void active.editPendingText(message.id, [{ type: 'text', text: 'Too late.' }], new AbortController().signal) }
+    catch (error: unknown) { mutationError = error }
+    expect(mutationError).toBeDefined()
+
+    releaseFlush.resolve(undefined)
+    await expect(promotion).resolves.toEqual({ kind: 'promoted' })
+    await disposing
+    const reader = await state.storage.open(id, 'read')
+    try {
+      expect((await reader.read()).events).toContainEqual(expect.objectContaining({
+        type: 'agent/inbox/moved', data: { messageId: message.id },
+      }))
+    } finally { await reader.close() }
+    expect(state.model.requests).toHaveLength(0)
+  } finally {
+    releaseFlush.resolve(undefined)
+    releaseRetention?.()
+    await attached()
+    captureWriter.mockRestore()
+    await state.close()
+  }
+})
 
 
 it('reports projection observers without starving units or poisoning the retained writer', async () => {
@@ -324,7 +594,7 @@ it('catalogs selected descendants through ordinary sessions and rejects foreign 
         [child, ordinary, state.root, 'subagent', 1],
         [damaged, parent, state.root, undefined, 0],
         [damagedChild, damaged, state.root, 'subagent', 1],
-        [wrongDepth, parent, state.root, 'subagent', 2],
+        [wrongDepth, parent, state.root, 'subagent', 0],
         [foreign, ordinary, join(state.root, 'other'), 'subagent', 1],
       ] as const) {
         const writer = await state.storage.create({ version: SESSION_FORMAT_VERSION, id, parentSession,
