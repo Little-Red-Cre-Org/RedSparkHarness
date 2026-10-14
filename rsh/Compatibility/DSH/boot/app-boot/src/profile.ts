@@ -364,14 +364,15 @@ function isPlatformAssetPackage(
 
   let hasPayload = false
   const inspectFiles = (dir: string): boolean => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === 'node_modules') continue
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules') continue
+      const entry = lstatSync(join(dir, name))
       if (entry.isDirectory()) {
-        if (!inspectFiles(join(dir, entry.name))) return false
+        if (!inspectFiles(join(dir, name))) return false
       } else if (entry.isFile()) {
-        if (/\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/iu.test(extname(entry.name))) return false
-        if (!/^(?:package\.json|readme|license|notice|copying|changelog|changes)(?:\.|$)/iu.test(entry.name)
-          && !/\.(?:md|mdx|txt|rst)$/iu.test(entry.name)) hasPayload = true
+        if (/\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/iu.test(extname(name))) return false
+        if (!/^(?:package\.json|readme|license|notice|copying|changelog|changes)(?:\.|$)/iu.test(name)
+          && !/\.(?:md|mdx|txt|rst)$/iu.test(name)) hasPayload = true
       } else return false
     }
     return true
