@@ -54,6 +54,7 @@ export function workflowRunsFromSessionEvents(events: readonly SessionEvent[]): 
 }
 
 const NO_NAVIGATION: readonly never[] = []
+/* v8 ignore next -- Native members never receive navigation eligibility, so the shared view cannot invoke this callback. */
 function readOnly(): void {}
 
 /** Render a workflow run with read-only members using the shared Cordis presentation.

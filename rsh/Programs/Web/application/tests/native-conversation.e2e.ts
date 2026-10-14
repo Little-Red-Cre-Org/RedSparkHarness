@@ -613,7 +613,11 @@ it('creates, submits and restores the built native conversation through the ship
     await page.reload()
     await page.waitForFunction(() => document.querySelector('#root')?.getAttribute('data-native-boot-state') === 'ready')
     await page.getByRole('button', { name: '切换语言', exact: true }).click()
-    await page.getByRole('treeitem').filter({ hasText: 'Native workflow history' }).click()
+    await page.waitForFunction(() => {
+      const button = document.querySelector<HTMLButtonElement>('button[aria-label="New workspace"]')
+      return button !== null && !button.disabled
+    })
+    await page.getByRole('treeitem').filter({ hasText: 'Native workflow history' }).press('Enter')
     const workflow = page.locator('[data-workflow-run]')
     await workflow.waitFor()
     expect(await workflow.count()).toBe(1)

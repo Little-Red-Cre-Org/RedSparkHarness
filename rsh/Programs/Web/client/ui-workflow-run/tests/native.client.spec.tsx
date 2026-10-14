@@ -23,6 +23,7 @@ it('keeps a stable start anchor, exact phases and start order through live appen
   expect(initial.data.status).toBe('running')
   expect(initial.data.phases.map(phase => [phase.phase, phase.members.map(member => member.seq)]))
     .toEqual([[null, [2, 3]], ['', [1]]])
+  expect(workflowRunsFromSessionEvents([...starts, at(6, 'turn/end', { turn: 9 })])[0]!.data.status).toBe('running')
   const settled = [...starts,
     at(6, 'tool-workflow/agent-end', { runId: 'audit', seq: 2, outcome: 'completed' }),
     at(7, 'step/end', { turn: 9, step: 1 }),
