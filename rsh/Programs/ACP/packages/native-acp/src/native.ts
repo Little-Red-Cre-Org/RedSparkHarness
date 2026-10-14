@@ -326,6 +326,7 @@ export class NativeAcpApplication implements NativeApplication {
     this.assertOpen()
     if (this.initialized) return
     await new Promise<void>((resolve, reject) => {
+      const rejectReason: (reason: unknown) => void = reject
       const cleanup = (): void => {
         signal.removeEventListener('abort', abort)
         this.rootExecutionWaiters.delete(waiter)
@@ -334,7 +335,7 @@ export class NativeAcpApplication implements NativeApplication {
         wake: () => { cleanup(); resolve() },
         fail: (cause) => {
           cleanup()
-          reject(cause)
+          rejectReason(cause)
         },
       }
       const abort = (): void => { waiter.fail(signal.reason) }
@@ -424,6 +425,7 @@ export class NativeAcpApplication implements NativeApplication {
           callId: request.callId, toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
           policy: 'ask', signal: request.signal }) ?? Promise.resolve('unavailable')
         return new Promise<NativeApprovalOutcome>((resolve, reject) => {
+          const rejectReason: (reason: unknown) => void = reject
           let settled = false
           const complete = (outcome: NativeApprovalOutcome): void => {
             if (settled) return
@@ -435,7 +437,7 @@ export class NativeAcpApplication implements NativeApplication {
             if (settled) return
             settled = true
             request.signal.removeEventListener('abort', onAbort)
-            reject(error)
+            rejectReason(error)
           }
           const onAbort = (): void => { complete('cancelled') }
           request.signal.addEventListener('abort', onAbort, { once: true })
@@ -768,8 +770,9 @@ export class NativeAcpApplication implements NativeApplication {
     let abort: (() => void) | undefined
     try {
       await Promise.race([previous, new Promise<never>((_resolve, reject) => {
+        const rejectReason: (reason: unknown) => void = reject
         abort = () => {
-          reject(signal.reason)
+          rejectReason(signal.reason)
         }
         signal.addEventListener('abort', abort, { once: true })
       })])

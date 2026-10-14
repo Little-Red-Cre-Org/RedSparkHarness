@@ -968,7 +968,7 @@ it('prepares root input with the effective default model for a fresh Session', a
   const prepared: { provider: string; model: string }[] = []
   try {
     await state.host.run(state.scope, { kind: 'prepared-model' }, invocation =>
-      (state.app as NativeHeadlessApplication).executeRootTurn({ id: SessionId('prepared-model'), resume: false,
+      state.app.executeRootTurn({ id: SessionId('prepared-model'), resume: false,
         prepareMessage: async (model) => {
           prepared.push(model)
           return createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Prepared prompt.' }] })

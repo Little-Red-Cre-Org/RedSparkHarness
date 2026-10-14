@@ -1282,7 +1282,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       }
       if (message !== undefined) {
         let event: SessionEvent
-        try { event = session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [message] }) as SessionEvent }
+        try { event = session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [message] }) }
         catch (error: unknown) { stagedFileAdmission?.refused(); throw error }
         try {
           track(event)

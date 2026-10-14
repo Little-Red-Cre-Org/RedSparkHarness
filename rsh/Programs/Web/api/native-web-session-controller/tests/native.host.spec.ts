@@ -1014,11 +1014,15 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const stagedHistory = await client.history(sessionId)
     const stagedMessage = stagedHistory.events.findLast(event => event.type === 'user/message'
       && event.data.content.some(block => block.type === 'file' && block.attachment.name === 'web-upload.txt'))
-    expect(stagedMessage?.type === 'user/message' ? stagedMessage.data.content : []).toEqual([
-      { type: 'text', text: 'before staged file' },
-      expect.objectContaining({ type: 'file', attachment: expect.objectContaining({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength }) }),
-      { type: 'text', text: 'after staged file' },
-    ])
+    const stagedContent = stagedMessage?.type === 'user/message' ? stagedMessage.data.content : []
+    expect(stagedContent.map(block => block.type)).toEqual(['text', 'file', 'text'])
+    expect(stagedContent[0]).toEqual({ type: 'text', text: 'before staged file' })
+    expect(stagedContent[2]).toEqual({ type: 'text', text: 'after staged file' })
+    const stagedFile = stagedContent[1]
+    expect(stagedFile?.type).toBe('file')
+    if (stagedFile?.type === 'file') {
+      expect(stagedFile.attachment).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
+    }
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))

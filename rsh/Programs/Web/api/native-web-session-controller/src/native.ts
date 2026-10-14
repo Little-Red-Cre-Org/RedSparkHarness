@@ -366,7 +366,7 @@ async function* requestBodyChunks(body: ReadableStream<Uint8Array> | null, signa
   const reader = body.getReader()
   let cancellation: Promise<void> | undefined
   let complete = false
-  let readerFailed = false
+  let readFailure: { readonly cause: unknown } | undefined
   const cancel = (): Promise<void> => {
     if (cancellation === undefined) {
       cancellation = reader.cancel(signal.reason)
@@ -381,7 +381,7 @@ async function* requestBodyChunks(body: ReadableStream<Uint8Array> | null, signa
     while (true) {
       signal.throwIfAborted()
       let item: ReadableStreamReadResult<Uint8Array>
-      try { item = await reader.read() } catch (error) { readerFailed = true; throw error }
+      try { item = await reader.read() } catch (error) { readFailure = { cause: error }; throw error }
       signal.throwIfAborted()
       if (item.done) { complete = true; return }
       yield item.value
@@ -391,7 +391,7 @@ async function* requestBodyChunks(body: ReadableStream<Uint8Array> | null, signa
     try {
       if (!complete) await cancel()
     } catch (error) {
-      if (!readerFailed) onCleanupFailure(error)
+      if (readFailure === undefined) onCleanupFailure(error)
       throw error
     } finally { reader.releaseLock() }
   }
@@ -668,7 +668,7 @@ export class NativeWebSessionService {
       const value = await this.requests.run(request.signal, async (signal) => {
         const route = await this.routeForSession(id, signal)
         return this.executor.rootExecution.stagedFiles.stageStream({ route, id,
-          data: requestBodyChunks(request.body, signal, error => this.requests.recordCleanupFailure(error)),
+          data: requestBodyChunks(request.body, signal, (error) => { this.requests.recordCleanupFailure(error) }),
           ...(name === undefined ? {} : { name }) }, signal)
       })
       result = { ok: true, value }
