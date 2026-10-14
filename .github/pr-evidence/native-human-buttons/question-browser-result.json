@@ -1,0 +1,73 @@
+{
+  "base": "73380d26c6376391655ae9b791f2680831d3c106",
+  "model": "local deterministic mock; no credentials or paid calls",
+  "filesystem": "shipped fs-sandbox; workspace-write",
+  "cancellation": "real Dismiss all questions and Chat about it buttons; pending batch only",
+  "nextRequestToolResults": [
+    {
+      "type": "tool-result",
+      "toolCallId": "question",
+      "content": [
+        {
+          "type": "text",
+          "text": "the user cancelled ask_user_question"
+        }
+      ],
+      "isError": true
+    },
+    {
+      "type": "tool-result",
+      "toolCallId": "plan-question",
+      "content": [
+        {
+          "type": "text",
+          "text": "The user dismissed the plan review to speak instead; stay in plan mode, stop here, and wait for their message."
+        }
+      ],
+      "isError": true
+    }
+  ],
+  "providerCancellations": [
+    {
+      "ids": [
+        "decision",
+        "route"
+      ],
+      "code": "ASK_CANCELLED"
+    },
+    {
+      "ids": [
+        "plan-review"
+      ],
+      "code": "ASK_CANCELLED"
+    }
+  ],
+  "modelRequests": 3,
+  "wholeTurnCancelCalls": 0,
+  "narrowPlan": {
+    "width": 375,
+    "sidebarWidth": 56.359375,
+    "buttons": [
+      {
+        "left": 140.640625,
+        "right": 271.140625,
+        "width": 130.5,
+        "text": "Chat about it"
+      },
+      {
+        "left": 279.140625,
+        "right": 350,
+        "width": 70.859375,
+        "text": "Refuse"
+      },
+      {
+        "left": 269.40625,
+        "right": 350,
+        "width": 80.59375,
+        "text": "Approve"
+      }
+    ]
+  },
+  "pageErrors": [],
+  "alerts": []
+}

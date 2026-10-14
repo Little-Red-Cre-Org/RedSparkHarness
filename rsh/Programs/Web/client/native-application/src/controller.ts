@@ -430,8 +430,13 @@ export class NativeConversationController {
     if (id === undefined || this.snapshot.human !== prompt || this.snapshot.answeringHuman || this.snapshot.state !== 'sending') throw new Error('native conversation: no matching unanswered presentation')
     this.publish({ answeringHuman: true, error: undefined })
     const work = this.client.answerHuman(id, prompt.id, answer, this.lifetime.signal).catch((error: unknown) => {
-      this.publish({ error: error instanceof Error ? error.message : String(error) })
-    }).finally(() => { this.pending.delete(work); this.publish({ answeringHuman: false }) })
+      if (this.snapshot.selected === id && this.snapshot.human === prompt) {
+        this.publish({ error: error instanceof Error ? error.message : String(error) })
+      }
+    }).finally(() => {
+      this.pending.delete(work)
+      if (this.snapshot.selected === id && this.snapshot.human === prompt) this.publish({ answeringHuman: false })
+    })
     this.pending.add(work)
     return work
   }

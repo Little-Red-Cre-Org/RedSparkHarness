@@ -33,9 +33,9 @@ kind: "package-reference"
 
 ### plan-review 卡片
 
-`plan-review` 意图——由 `dsh-plan-mode` 在 `exit_plan_mode` 审阅上设置——渲染等待审批卡片的布局：一条 `Plan review` 条带、计划作为可滚动的 markdown 主体，以及一行 `Chat about it` / `Refuse` / `Approve` 的决定操作。Approve 与 Refuse 用提问方自己的选项标签回答；`Chat about it` 以 `ASK_CANCELLED` 拒绝该等待，让编辑器归位，用户可以直接说出他想说的话。
+`plan-review` 意图——由 `dsh-plan-mode` 在 `exit_plan_mode` 审阅上设置——渲染等待审批卡片的布局：一条 `Plan review` 条带、计划作为可滚动的 markdown 主体，以及可换行的 `Chat about it` / `Refuse` / `Approve` 操作组。Approve 与 Refuse 用提问方自己的选项标签回答；`Chat about it` 以 `ASK_CANCELLED` 拒绝该等待，让编辑器归位，用户可以直接说出他想说的话。
 
-`./native` 入口通过 props 导出共享的问题 composer 和 plan-review 展示。Native 使用现有结构化答案响应 plan-review 意图；Native Host 答案 API 不支持仅取消单个问题，因此普通问题视图不显示关闭操作，plan-review 视图不显示 `Chat about it`。
+`./native` 通过 props 导出共享的问题 composer 和 plan-review 展示。Native 使用既有结构化答案回答计划审查。可选取消回调为整个待答问题批次提供通用关闭和计划讨论动作，同时保持该轮活动。
 
 ### 失败与恢复
 

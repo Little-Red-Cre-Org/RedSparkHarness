@@ -136,17 +136,24 @@ export function QuestionFlow({ pending, t, progress, onProgress, onClear, disabl
     onProgress({ index: nextIndex, drafts: nextDrafts })
   }
 
+  const finishSubmission = (): void => {
+    onClear?.()
+    if (releaseBusyOnResolve) setBusy(null)
+  }
+
+  const failSubmission = (cause: unknown): void => {
+    setBusy(null)
+    setError({ text: cause instanceof Error ? cause.message : String(cause) })
+  }
+
   const cancelFlow = (): void => {
     setBusy('cancel')
     setError(null)
     const cancel = pending.cancel
     if (cancel === undefined) return
     void cancel()
-      .then(() => { onClear?.() })
-      .catch((cause: unknown) => {
-        setBusy(null)
-        setError({ text: cause instanceof Error ? cause.message : String(cause) })
-      })
+      .then(finishSubmission)
+      .catch(failSubmission)
   }
 
   const updateDraft = (
@@ -197,11 +204,8 @@ export function QuestionFlow({ pending, t, progress, onProgress, onClear, disabl
     setBusy('answer')
     setError(null)
     void pending.answer(answer)
-      .then(() => { onClear?.(); if (releaseBusyOnResolve) setBusy(null) })
-      .catch((cause: unknown) => {
-        setBusy(null)
-        setError({ text: cause instanceof Error ? cause.message : String(cause) })
-      })
+      .then(finishSubmission)
+      .catch(failSubmission)
   }
 
   const continueFlow = (): void => {

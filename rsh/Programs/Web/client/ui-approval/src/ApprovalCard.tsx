@@ -8,7 +8,7 @@ import css from './client/ApprovalPanel.module.css'
  * @param props - request copy, detail, locale and decision callback.
  * @returns approval actions and their explanation.
  */
-export function ApprovalCard({ presentationKey, toolName, reason, detail, t, disabled, onAnswer }: {
+export function ApprovalCard({ presentationKey, toolName, reason, detail, t, disabled, onAnswer, onAllowSession }: {
   presentationKey?: string
   toolName: string
   reason?: string | undefined
@@ -16,6 +16,7 @@ export function ApprovalCard({ presentationKey, toolName, reason, detail, t, dis
   t: TranslateNS<'approval'>
   disabled: boolean
   onAnswer: (outcome: 'allowed-once' | 'rejected') => void
+  onAllowSession?: (() => void) | undefined
 }) {
   return (
     <div className={css.root} data-approval-key={presentationKey}>
@@ -38,6 +39,9 @@ export function ApprovalCard({ presentationKey, toolName, reason, detail, t, dis
           <Button variant="primary" disabled={disabled} onClick={() => { onAnswer('allowed-once') }}>
             {t('allowOnce')}
           </Button>
+          {onAllowSession === undefined ? null : <Button variant="outline" disabled={disabled} onClick={onAllowSession}>
+            {t('allowSession')}
+          </Button>}
         </div>
       </div>
     </div>
