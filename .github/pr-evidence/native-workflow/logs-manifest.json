@@ -202,5 +202,23 @@
     "original_sha256": "78a2022f479ba65291a274b081b1c0e07d8d10ad56cd952c1c86b77ac9fb77c0",
     "gzip_sha256": "abd6b920fc4168acac071612b622d8f0d8f112dc7915104ac93ec2d6de7fdcbb",
     "original_bytes": 1571
+  },
+  {
+    "file": "current-client-build.log.gz",
+    "original_sha256": "cfb93794e3454827f78cc55eb485f6520d156d99b17258b08910ecc72d2540a0",
+    "gzip_sha256": "fa23a4aed6d0b7b11f1d45a19c02c31a2055c46ba879c756f7e196b2fa4f7c48",
+    "original_bytes": 5022
+  },
+  {
+    "file": "current-head-capture.log.gz",
+    "original_sha256": "fbd0a922b69f5389cc82da752744de0a65b21d7f27d426ca8fcc24821cb8e4e2",
+    "gzip_sha256": "9fb2e11192b826f7a507e4e5586cc81c713ec45b3725f8247b7e06a5bcf74459",
+    "original_bytes": 941
+  },
+  {
+    "file": "current-head-capture-final.log.gz",
+    "original_sha256": "ce47101d91a89de05d049d0294c05496dbb0ec5cff4cbbaaee5a97f3f9300d42",
+    "gzip_sha256": "966d85918a0d447ef19248b8c661219bb09d47bf3d1685d1405b310a392739b9",
+    "original_bytes": 767
   }
 ]

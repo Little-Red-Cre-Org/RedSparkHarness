@@ -36,3 +36,7 @@ The original table preserves historical results; none was rerun or relabelled fo
 | Relevant documentation checks | Export JSDoc, links, wrap, note format/classification and translation pairing passed | [JSDoc](logs/p2-jsdoc.log.gz), [links](logs/p2-links.log.gz), [wrap](logs/p2-wrap.log.gz), [note format](logs/p2-note-format.log.gz), [note classification](logs/p2-note-classification.log.gz), [pairing](logs/p2-pairing.log.gz) |
 
 Normal pre-push typecheck is required for the evidence publication. There is no new full build, official browser replay, screenshot or complete GUI claim on the repair/evidence commits.
+
+## Exact-source Native recapture
+
+A focused TSC build plus the workflow and Native application Client bundles passed on exact HEAD `943d452f42ef24084819045b19bf535ab5cf06cc`, product-source equivalent to `1eb5ae8518df47614a5265da4e0e358dd4a84157`. The real CLI/Host restored-history QA then succeeded and generated three new Native PNGs, including a collapsed-sidebar, expanded-workflow narrow view with a visible member. Its initial extra collapse-button action timed out after automatic responsive collapse; that failure is preserved and the capture-only navigation was corrected. No UI/interface change, task/model request, exhaustive rerun or official pinned-browser pass is claimed. [Capture manifest](current-head-capture.json) supplies exact source, commands, paths and hashes; [runtime images](evidence.md#current-exact-source-native-recapture) show the result.

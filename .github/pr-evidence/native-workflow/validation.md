@@ -43,3 +43,19 @@ With the new tests and the transcript module restored to exact old source `18a30
 The separate evidence publication follows `1eb5ae8518df47614a5265da4e0e358dd4a84157` and changes only this evidence directory. Its commit hash is reported in the handoff instead of self-referencing inside its contents. Current CI and independent rereview remain with the parent agent.
 
 The original logs are stored as lossless gzip files to preserve terminal whitespace while satisfying repository whitespace hooks. [logs-manifest.json](logs-manifest.json) records hashes of both original and compressed bytes; decompress them for inspection. No check outcomes were edited.
+
+## Current-source recapture after focused rebuild
+
+On exact source HEAD `943d452f42ef24084819045b19bf535ab5cf06cc` (product source equivalent to `1eb5ae8518df47614a5265da4e0e358dd4a84157`), the following focused build sequence completes:
+
+```sh
+pnpm exec tsc -b rsh/Programs/Web/client/native-application/tsconfig.json
+pnpm --filter @deepseek-ai/dsh-client-ui-workflow-run exec tsdown --env.DSH_BUILD_FACE client
+pnpm --filter @deepseek-ai/dsh-client-native-application exec tsdown --env.DSH_BUILD_FACE client
+```
+
+The Native Host assembles the newly built package entries into its real Client bundle. The existing Web shell and CLI/Host source did not change and were not rebuilt as a full suite. The executed QA script is retained as [qa-current-head.capture-source.txt](qa-current-head.capture-source.txt); it preserves the original launch, JSONL storage fixture, matching normalized systemPrompt, workspaceRoutes and local deterministic model setup. It changes only output filenames, provenance logging and normal narrow capture navigation/scroll. The exact temporary paths are in [current-head-capture.json](current-head-capture.json) and were cleaned up after the run.
+
+The successful run records 1 completed panel, 1 ordinary workflow tool card and 0 member links, then captures wide, narrow-at-resize and normal collapsed/scrolled narrow states. Both run and phase disclosures are expanded and the member is within the 560×900 viewport. It uses system Chromium `154.0.8037.57` and submits no task or model request. The first navigation attempt timed out on the absent Collapse sidebar affordance after automatic responsive collapse; the raw failure is retained, and only that QA navigation was adjusted. No interfaces or UI source were modified.
+
+These new PNGs are exact-source supplemental restored-history captures. The earlier historical PNGs, official replay failure, unclassified Model menu timeout and coverage limitations remain unchanged. No exhaustive or official-browser check was rerun or newly claimed. New image hashes and rebuilt local artifact hashes are recorded in the capture manifest; original log bytes remain losslessly compressed.
