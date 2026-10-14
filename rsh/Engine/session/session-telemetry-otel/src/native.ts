@@ -2,7 +2,6 @@
 import { createRequire } from 'node:module'
 import { z } from 'zod'
 import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { APP_IDENTITY } from '@deepseek-ai/dsh-llm/native'
 import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
@@ -54,7 +53,7 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = configSchema.parse(input ?? {}) as Config
     return (context) => {
-      const environment = context.require('launchEnvironment') as LaunchEnvironmentSnapshot
+      const environment = context.require('launchEnvironment')
       const hardOff = (environment.getFrom('DSH_TELEMETRY_DISABLED', ['process'])?.value.length ?? 0) > 0
       const disabled = hardOff || config.mode === 'DISABLED'
       const telemetry = new NativeTelemetry(context, config, disabled)
@@ -147,7 +146,7 @@ class NativeTelemetry {
       await this.capturePrefix(inspection.meta, inspection.inheritedEventCount, inspection.events,
         cursor, trigger.seq, commit.scope, (next) => { this.cursors.set(sessionId, next) })
     })
-    const tail = operation.then(() => undefined, (error) => {
+    const tail = operation.then(() => undefined, (error: unknown) => {
       console.warn(`session-telemetry: feedback capture failed: ${String(error)}`)
     })
     this.tails.set(sessionId, tail)
@@ -184,8 +183,9 @@ class NativeTelemetry {
     const providerShutdown = this.provider.shutdown()
     let timer: ReturnType<typeof setTimeout> | undefined
     const deadline = new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(() => reject(new Error(`session-telemetry: exporter shutdown exceeded ${this.shutdownTimeoutMillis}ms`)),
-        this.shutdownTimeoutMillis)
+      timer = setTimeout(() => {
+        reject(new Error(`session-telemetry: exporter shutdown exceeded ${this.shutdownTimeoutMillis}ms`))
+      }, this.shutdownTimeoutMillis)
     })
     this.shutdownResult = Promise.race([providerShutdown, deadline]).finally(() => {
       if (timer !== undefined) clearTimeout(timer)

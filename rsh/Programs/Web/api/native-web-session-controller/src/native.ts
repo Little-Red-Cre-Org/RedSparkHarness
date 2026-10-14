@@ -393,10 +393,10 @@ const nativeSessionFeedbackRecord = z.strictObject({
 const nativeMessageFeedbackList = z.strictObject({ sessionId: z.string().min(1).max(256) })
 const nativeMessageFeedbackPut = z.strictObject({
   sessionId: z.string().min(1).max(256), messageId: z.string().min(1), rating: z.enum(['positive', 'negative']),
-  note: z.string().optional(), category: z.enum(FEEDBACK_CATEGORIES).optional(), ifVersion: z.union([z.string().uuid(), z.null()]),
+  note: z.string().optional(), category: z.enum(FEEDBACK_CATEGORIES).optional(), ifVersion: z.union([z.uuid(), z.null()]),
 })
 const nativeMessageFeedbackDelete = z.strictObject({
-  sessionId: z.string().min(1).max(256), messageId: z.string().min(1), ifVersion: z.string().uuid(),
+  sessionId: z.string().min(1).max(256), messageId: z.string().min(1), ifVersion: z.uuid(),
 })
 
 /** Optional selected authorities; no fallback catalog or composition registry is created. */

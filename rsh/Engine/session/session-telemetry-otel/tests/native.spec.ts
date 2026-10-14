@@ -137,7 +137,7 @@ it('drains an accepted delegated feedback prefix through owner release and Nativ
     { plugin: redactor, scope, config: undefined },
     { plugin, scope, config: {
       mode: 'FEEDBACK_ONLY',
-      exporter: { url: 'http://127.0.0.1:' + address.port + '/v1/logs' },
+      exporter: { url: `http://127.0.0.1:${address.port}/v1/logs` },
       processor: { scheduledDelayMillis: 60_000 },
     } },
     { plugin: consumer, scope, config: undefined },
@@ -179,7 +179,9 @@ it('drains an accepted delegated feedback prefix through owner release and Nativ
           await releaseFlush.promise
         }
         const value: unknown = Reflect.get(target, property, target)
-        return typeof value === 'function' ? value.bind(target) : value
+        if (typeof value !== 'function') return value
+        const bound: unknown = value.bind(target)
+        return bound
       },
     })
     continuation = NativeContinuationSession.adopt(session, writer, session.snapshotEvents(), [])

@@ -993,7 +993,7 @@ const workspaceFileWatchFrameSchema = z.discriminatedUnion('kind', [
 ]) as z.ZodType<WorkspaceFileWatchFrame>
 const messageFeedbackItemSchema = z.strictObject({
   messageId: z.string().min(1), rating: z.enum(['positive', 'negative']), note: z.string().optional(),
-  category: z.enum(FEEDBACK_CATEGORIES).optional(), version: z.string().uuid(),
+  category: z.enum(FEEDBACK_CATEGORIES).optional(), version: z.uuid(),
   createdAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
 }).refine(item => item.updatedAt >= item.createdAt) as unknown as z.ZodType<MessageFeedbackItem>
@@ -1022,16 +1022,16 @@ function decodeReply(endpoint: string, value: unknown): unknown {
       z.strictObject({ ok: z.literal(true), value: z.strictObject({ recorded: z.literal(true) }) }),
       z.strictObject({ ok: z.literal(false), error: feedbackSessionMissingSchema }),
     ]).parse(value)
-    return reply as SessionFeedbackRecordResult
+    return reply
   }
   if (endpoint === 'feedback/message-list') {
-    return feedbackReply(value, z.strictObject({ items: z.array(messageFeedbackItemSchema) })) as MessageFeedbackListResult
+    return feedbackReply(value, z.strictObject({ items: z.array(messageFeedbackItemSchema) }))
   }
   if (endpoint === 'feedback/message-put') {
-    return feedbackReply(value, messageFeedbackItemSchema) as MessageFeedbackPutResult
+    return feedbackReply(value, messageFeedbackItemSchema)
   }
   if (endpoint === 'feedback/message-delete') {
-    return feedbackReply(value, z.strictObject({ absent: z.literal(true) })) as MessageFeedbackDeleteResult
+    return feedbackReply(value, z.strictObject({ absent: z.literal(true) }))
   }
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
   if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)

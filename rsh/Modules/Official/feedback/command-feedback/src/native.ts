@@ -2,7 +2,6 @@
 import { isDeepStrictEqual } from 'node:util'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
 import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session/types'
@@ -53,7 +52,7 @@ export const plugin: NativePlugin = {
         },
       }
       context.provide('sessionFeedback', operations)
-      const commands = context.optional('commands') as NativeCommandOperations | undefined
+      const commands = context.optional('commands')
       if (commands !== undefined) context.effect(commands.register({
         definitionId: CommandDefinitionId('@deepseek-ai/dsh-command-feedback'),
         name: 'feedback',
