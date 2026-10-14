@@ -43,7 +43,7 @@ import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/na
 import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
-import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import { createNativeSessionClient, nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
 import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
@@ -247,6 +247,13 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let foreignApprovals = 0
   const requests: GenerateOptions[] = []
   const firstContinue = Promise.withResolvers<undefined>()
+  const racePreparation = Array.from({ length: 2 }, () => ({
+    entered: Promise.withResolvers<undefined>(), release: Promise.withResolvers<undefined>(),
+  }))
+  let racePreparationCount = 0
+  let racePreparationEnabled = false
+  const submissionUpdates: Array<{ requestId: string; status: string }> = []
+  let restoreClientPrompt: (() => void) | undefined
   const resolving = Promise.withResolvers<undefined>()
   const releaseResolution = Promise.withResolvers<undefined>()
   let holdResolution = false
@@ -323,6 +330,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             context.own(releaseRetainedRoot)
           }
           if (holdResolution) { resolving.resolve(undefined); await releaseResolution.promise }
+          if (racePreparationEnabled) {
+            const barrier = racePreparation[racePreparationCount]
+            if (barrier !== undefined) {
+              racePreparationCount++
+              barrier.entered.resolve(undefined)
+              await barrier.release.promise
+            }
+          }
           if (holdImage) {
             const owner = context.require('activeSessions').owners().find(owner => owner.invocation === 'root')!
             imageExecution = context.require('agents').execution(owner.agent)
@@ -467,7 +482,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignProgram: NativePlugin = {
     apiVersion: 1, name: 'foreign-program', targets: ['host'],
     requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
-    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'], provides: [],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'], provides: [],
     resolve: () => (context) => {
       persistence = context.require('sessionPersistence')
       foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',
@@ -602,6 +617,13 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
+    const originalPrompt = client.prompt.bind(client)
+    client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq) => originalPrompt(
+      selectedSession, text, resume, signal, (frame) => {
+        if (frame.type === 'submission-update') submissionUpdates.push({ requestId: frame.requestId, status: frame.status })
+        observe?.(frame)
+      }, images, onFollowError, lastSeq)
+    restoreClientPrompt = () => { client.prompt = originalPrompt }
     const settingsDescription = await client.settingsDescribe()
     expect((await client.pluginInventoryList()).entries).toContainEqual(expect.objectContaining({ name: plugin.name, state: 'ready' }))
     expect(await rpc.call('/api', 'settings/open-document', {}, new AbortController().signal)).toMatchObject({
@@ -714,17 +736,83 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     releaseRetainedRoot?.()
     await conversation.select(sessionId)
+    racePreparationEnabled = true
     const first = conversation.send('first input')
-    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
+    await racePreparation[0]!.entered.promise
+    expect(requests).toHaveLength(0)
+    const submissionId = nativeSubmissionRequestId('native-host-edit-promote')
+    await expect(client.queue(sessionId, 'queued original', submissionId)).resolves.toMatchObject({
+      requestId: submissionId, placement: 'queued', status: 'accepted',
+    })
+    await expect(client.editSubmission(sessionId, submissionId, 'edited before promotion')).resolves.toEqual({
+      requestId: submissionId, outcome: 'updated',
+    })
+    const editedSubmissions = await client.submissions(sessionId)
+    expect(editedSubmissions.throughSeq).toBeGreaterThanOrEqual(0)
+    expect(editedSubmissions.submissions).toContainEqual(expect.objectContaining({
+      requestId: submissionId, placement: 'queued', status: 'accepted',
+      message: { id: submissionId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'edited before promotion' }] },
+    }))
+    await expect(client.promoteSubmission(sessionId, submissionId)).resolves.toEqual({
+      requestId: submissionId, outcome: 'promoted',
+    })
+    const promotedSnapshot = await client.submissions(sessionId)
+    expect(promotedSnapshot.throughSeq).toBeGreaterThanOrEqual(0)
+    const promoted = promotedSnapshot.submissions.find(submission => submission.requestId === submissionId)
+    if (promoted === undefined) throw new Error('pending reader missed the promoted submission')
+    expect(promoted.placement).toBe('steering')
+    expect(promoted.status).toBe('accepted')
+    expect(nativeSubmissionRequestId(promoted.message.id)).toBe(submissionId)
+    expect(promoted.message.content).toEqual([{ type: 'text', text: 'edited before promotion' }])
+    racePreparation[0]!.release.resolve(undefined)
+    await racePreparation[1]!.entered.promise
+    const owner = activeSessionsService?.owners().find(candidate => candidate.session.id === sessionId
+      && candidate.invocation === 'root')
+    if (owner === undefined) throw new Error('missing browser root owner for existing pending submission')
+    await expect(client.editSubmission(sessionId, submissionId, 'edited immediately before claim')).resolves.toEqual({
+      requestId: submissionId, outcome: 'updated',
+    })
+    racePreparation[1]!.release.resolve(undefined)
+    await vi.waitFor(() => { expect(owner.messages('next-step')).toEqual([]) })
+    await expect(owner.flush()).resolves.toBeUndefined()
+    await vi.waitFor(() => {
+      expect(conversation.getSnapshot().error).toBeUndefined()
+      expect(conversation.getSnapshot().liveText).toBe('swer')
+      expect(requests).toHaveLength(1)
+    })
     expect(conversation.getSnapshot()).toMatchObject({ state: 'sending', liveTruncated: true })
     expect(conversation.getSnapshot().events.some(event => event.type === 'user/message')).toBe(true)
     expect(conversation.getSnapshot().events.some(event => event.type === 'assistant/message')).toBe(false)
+    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
+      && block.text === 'edited immediately before claim'))).toBe(true)
+    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
+      && block.text === 'edited before promotion'))).toBe(false)
+    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
+      && block.text === 'queued original'))).toBe(false)
+    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
+    const existing = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'queued by another owner consumer' }] })
+    const existingRequestId = nativeSubmissionRequestId(existing.id)
+    await owner.enqueue(existing, 'next-turn', false, new AbortController().signal)
+    const pendingSnapshot = await client.submissions(sessionId)
+    const observed = pendingSnapshot.submissions.find(submission => submission.requestId === existingRequestId)
+    expect(observed).toMatchObject({ requestId: existingRequestId, placement: 'queued', status: 'accepted', message: existing })
+    if (observed === undefined) throw new Error('pending reader missed the existing queued submission')
+    await expect(client.promoteSubmission(sessionId, observed.requestId)).resolves.toEqual({
+      requestId: observed.requestId, outcome: 'promoted',
+    })
+    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [{
+      requestId: existingRequestId, placement: 'steering', status: 'accepted', message: existing,
+    }] })
+    await expect(client.dequeue(sessionId, observed.requestId)).resolves.toBeUndefined()
+    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
     const admission = followFields as { sessionId: string; admissionId: string }
     expect((await fetch(new URL('/api/native-session/follow', url), { method: 'POST', body: JSON.stringify(admission) })).status).toBe(401)
     expect((await rpc.response!('/api', 'native-session/follow', { ...admission, admissionId: 'wrong' }, new AbortController().signal)).status).toBe(409)
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
+    expect(submissionUpdates.filter(update => update.requestId === submissionId).map(update => update.status))
+      .toEqual(['accepted', 'settled'])
     const search = await client.search('first input')
     expect(search.items.map(item => item.sessionId)).toEqual([sessionId])
     expect(search.items[0]?.snippet).toContain('first input')
@@ -761,7 +849,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
-      .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
+      .toEqual(['user/message', 'user/message', 'assistant/message', 'user/message', 'assistant/message'])
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
     const early = new AbortController()
     early.abort(new Error('before admission'))
@@ -1051,6 +1139,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       await (hostStop ?? host.stop())
     }
   } finally {
+    for (const barrier of racePreparation) barrier.release.resolve(undefined)
+    restoreClientPrompt?.()
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
     holdResolution = false

@@ -64,6 +64,13 @@ export class NativeContinuationActivation {
   /** Whether this residency epoch has stopped admitting messages or owned descendants. */
   get isClosing(): boolean { return this.closing !== undefined }
 
+  /** Wake the existing turn driver after an already committed pending-input mutation. */
+  wakePending(): void {
+    if (this.closing !== undefined) throw new Error('native-continuation: Activation is closing')
+    this.parked = false
+    this.wake()
+  }
+
   /** Whether admitted descendants or retained work still hold residency. */
   get isRetained(): boolean { return this.children > 0 || this.backgroundTasks > 0 }
 

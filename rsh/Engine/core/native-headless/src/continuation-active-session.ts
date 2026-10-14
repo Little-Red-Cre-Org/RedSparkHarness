@@ -1,6 +1,6 @@
 /** Active Session access and admission hooks backed by the Program's exclusive resident writer. */
 import type { NativeAgent, InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContinuationSession } from './continuation-session.ts'
@@ -29,6 +29,8 @@ export interface NativeActiveSessionDriver {
    * @returns durable accepted identity.
    */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId>
+  /** Wake the existing driver after a committed inbox move. */
+  wake(): void
 }
 
 /** One active registry owner with drained hooks and no independent queue, writer or model loop. */
@@ -100,6 +102,18 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
     return this.driver.enqueue(message, target, wake, signal)
   }
   /** @inheritdoc */
+  editPendingText(id: MessageId, content: readonly TextBlock[], signal: AbortSignal): Promise<{ readonly kind: 'updated' | 'stale' }> {
+    const admissionSignal = this.admissionSignal(signal)
+    return this.owner.editPendingText(id, content, admissionSignal)
+  }
+  /** @inheritdoc */
+  async promotePending(id: MessageId, signal: AbortSignal): Promise<{ readonly kind: 'promoted' | 'stale' | 'not-promotable' }> {
+    const admissionSignal = this.admissionSignal(signal)
+    const result = await this.owner.promotePending(id, admissionSignal)
+    if (result.kind === 'promoted' && this.writerAvailable && this.admissionOpen && !this.driver.signal.aborted) this.driver.wake()
+    return result
+  }
+  /** @inheritdoc */
   remove(ids: readonly MessageId[], target: InboxTarget, signal: AbortSignal): Promise<void> {
     this.assertAvailable()
     const selected = new Set(ids)
@@ -169,5 +183,11 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   private assertAdmitting(): void {
     this.assertAvailable()
     if (!this.admissionOpen) throw new Error('native-active-session: owner is detaching')
+  }
+  private admissionSignal(signal: AbortSignal): AbortSignal {
+    this.assertAdmitting()
+    const combined = AbortSignal.any([signal, this.driver.signal])
+    combined.throwIfAborted()
+    return combined
   }
 }

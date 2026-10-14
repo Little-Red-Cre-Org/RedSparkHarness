@@ -37,6 +37,8 @@ The ./root-route export owns the shared NativeRootRouteId brand without importin
 
 `NativeActiveSessionOwner.appendBatch` admits related facts through the Program’s sole retained writer. Rejected batches track no events; accepted events retain their sequence order and `flush()` persists them through the existing durability barrier.
 
+The owner can replace a pending message's complete content with text blocks while retaining its identity, source and position. It can move a queued message to the end of `next-step` as one durable `agent/inbox/moved` event. Edit returns `updated` or `stale`; promotion distinguishes `promoted`, `stale` and `not-promotable`.
+
 The Host-only `./read-history` utility reads through the selected exact live owner or an existing persistence reader without activating an Agent. Explicit history limits request one extra event to detect overflow and refuse truncation. Live ownership is rechecked after reading; cold reader closure is awaited, and teardown failures preserve any primary read failure and are reported to the calling request owner.
 
 `NativeProgramInteractionOwner` describes a Program-selected live requester and its display root. Programs derive this read-only association from actual execution entry and delegation ancestry, independently of stored Session parent headers. Interaction Consumers must verify exact live Agent and Session identity before answering; a display root does not replace the requesting Session or its writer.

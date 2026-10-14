@@ -169,9 +169,10 @@ interface SessionHeader {
    */
   readonly origin?: 'subagent'
   /**
-   * Delegation depth: absent (zero) for a top-level session, parent depth + 1
-   * for a subagent child. Persisted so a recursion budget survives restart and
-   * resume — a runtime-only depth would reset a resumed child to top-level.
+   * Logical delegation depth: absent (zero) for a top-level session; one more
+   * than its logical parent agent for a subagent Session. The logical parent
+   * may have no local Session, so this can exceed the physical parent's depth
+   * by more than one. Persisted so recursion budgets survive restart and resume.
    */
   readonly delegationDepth?: number
   /**

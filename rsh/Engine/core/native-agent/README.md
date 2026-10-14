@@ -31,7 +31,7 @@ Agent cleanup starts every registered release before waiting for any completion,
 
 `./consumed-work` folds accepted turn, step and inbox events into the ending that accounts for consumed work. Compatibility Agent consumers forward this pure leaf; it owns no Session or writer.
 
-`./inbox` owns the shared Host and Client InboxTarget and agent/inbox/spliced declarations; the compatibility Agent forwards these types. The Client program includes only this declaration and does not load the native registry implementation.
+`./inbox` owns the shared Host and Client InboxTarget and `agent/inbox/spliced` / `agent/inbox/moved` declarations; the compatibility Agent forwards these types. The Client program includes only these declarations and does not load the native registry implementation.
 
 ## Model Experience
 

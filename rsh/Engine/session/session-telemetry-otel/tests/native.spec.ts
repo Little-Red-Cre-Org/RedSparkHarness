@@ -192,6 +192,7 @@ it('drains an accepted delegated feedback prefix through owner release and Nativ
         retain: () => () => {},
         retainBackground: () => () => {},
         enqueue: async message => message.id,
+        wake: () => { throw new Error('Native Program wake was not expected') },
       })
     releaseRegistration = await activeSessions.register(programOwner)
     const applicationWork = host.run(scope, { kind: 'test' }, async ({ signal }) => {

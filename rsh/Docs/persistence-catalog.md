@@ -83,11 +83,26 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-Sources: [`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:418`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:440`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:471`](../Engine/core/session/src/types.ts)
+Sources: [`rsh/Engine/core/session/src/types.ts:411`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:419`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:441`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:472`](../Engine/core/session/src/types.ts)
 
 ## Events
 
 ### `agent/*`
+
+<a id="agentinboxmoved--log-only"></a>
+
+#### `agent/inbox/moved` — log-only
+
+```ts persistence-catalog
+/**
+ * Move one queued message to the end of the next-step list as one replayable fact.
+ * @param data - exact queued message identity to move.
+ * @param data.messageId - stable id already pending in `next-turn`.
+ */
+'agent/inbox/moved': { messageId: MessageId }
+```
+
+Source: [`rsh/Engine/core/native-agent/src/inbox.ts:75`](../Engine/core/native-agent/src/inbox.ts)
 
 <a id="agentinboxspliced--log-only"></a>
 
@@ -98,6 +113,7 @@ Sources: [`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src
  * One normalized mutation of an agent's durable pending-message lists.
  * The session-projection registry applies the committed event before
  * `Session.append()` returns; Inbox live notifications follow that commit.
+ * @param data - selected list splice and optional cancellation attribution.
  */
 'agent/inbox/spliced': {
   target: InboxTarget
@@ -108,7 +124,7 @@ Sources: [`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src
 }
 ```
 
-Source: [`rsh/Engine/core/native-agent/src/inbox.ts:15`](../Engine/core/native-agent/src/inbox.ts)
+Source: [`rsh/Engine/core/native-agent/src/inbox.ts:63`](../Engine/core/native-agent/src/inbox.ts)
 
 ### `agent-preset/*`
 
@@ -183,7 +199,7 @@ Source: [`rsh/Engine/core/approval-definition/src/index.ts:118`](../Engine/core/
 'assistant/attempt': { turn: number; step: number; stream: AssistantStreamRecord[] }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:335`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:336`](../Engine/core/session/src/types.ts)
 
 <a id="assistantmessage--surface"></a>
 
@@ -213,7 +229,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:335`](../Engine/core/session/src/
 
 Types: [TokenUsage](subsystems/llm-streaming.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:321`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:322`](../Engine/core/session/src/types.ts)
 
 ### `command/*`
 
@@ -625,7 +641,7 @@ Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Offi
 'request/context': RequestContext
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:377`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:378`](../Engine/core/session/src/types.ts)
 
 <a id="requestheader--log-only"></a>
 
@@ -644,7 +660,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:377`](../Engine/core/session/src/
 }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:365`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:366`](../Engine/core/session/src/types.ts)
 
 ### `sandbox/*`
 
@@ -713,7 +729,7 @@ Source: [`rsh/Engine/schedule/schedule/src/types.ts:219`](../Engine/schedule/sch
 'session/end-seed': { inherited?: true }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:401`](../Engine/core/session/src/types.ts)
 
 <a id="sessionroot-origin--log-only"></a>
 
@@ -728,7 +744,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/
 'session/root-origin': { origin: 'scheduled' }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:407`](../Engine/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 
@@ -790,7 +806,7 @@ Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/types.ts:81`](../Mod
 'step/end': { turn: number; step: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:289`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:290`](../Engine/core/session/src/types.ts)
 
 <a id="stepstart--log-only"></a>
 
@@ -801,7 +817,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:289`](../Engine/core/session/src/
 'step/start': { turn: number; step: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:287`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:288`](../Engine/core/session/src/types.ts)
 
 ### `subagent/*`
 
@@ -922,7 +938,7 @@ Source: [`rsh/Engine/subagent/tool-subagent/src/model-selection-state.ts:17`](..
 'system/message': { turn: number; step: number; message: SystemMessage }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:310`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:311`](../Engine/core/session/src/types.ts)
 
 ### `team/*`
 
@@ -1015,7 +1031,7 @@ Source: [`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:341`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:342`](../Engine/core/session/src/types.ts)
 
 <a id="toolptc-dispatch--log-only"></a>
 
@@ -1091,7 +1107,7 @@ Source: [`rsh/Engine/core/native-tools/src/types.ts:64`](../Engine/core/native-t
 }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:353`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:354`](../Engine/core/session/src/types.ts)
 
 ### `tool-workflow/*`
 
@@ -1171,7 +1187,7 @@ Source: [`rsh/Engine/workflow/tool-workflow/src/types.ts:47`](../Engine/workflow
 
 Types: [TurnEndReason](subsystems/session.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:285`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:286`](../Engine/core/session/src/types.ts)
 
 <a id="turnstart--log-only"></a>
 
@@ -1187,7 +1203,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:285`](../Engine/core/session/src/
 'turn/start': { turn: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:276`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:277`](../Engine/core/session/src/types.ts)
 
 ### `user/*`
 
@@ -1206,7 +1222,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:276`](../Engine/core/session/src/
 'user/message': UserMessage
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:297`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:298`](../Engine/core/session/src/types.ts)
 
 ### `web/*`
 
