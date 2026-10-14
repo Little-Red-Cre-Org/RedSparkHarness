@@ -117,6 +117,91 @@ it('closes a list follower aborted while its consumer is paused at yield', async
   }
 })
 
+it('cancels and drains a stalled upload body before Native Web shutdown completes', async () => {
+  const stageStarted = Promise.withResolvers<undefined>()
+  const cancelStarted = Promise.withResolvers<undefined>()
+  const finishCancel = Promise.withResolvers<undefined>()
+  const cleanupError = new Error('request body reader cleanup failed')
+  const dispose = vi.fn(async () => undefined)
+  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
+  let bodyCanceled = false
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) { bodyController = controller },
+    cancel() { bodyCanceled = true; cancelStarted.resolve(undefined); return finishCancel.promise },
+  })
+  const executor = {
+    rootExecution: { stagedFiles: { async stageStream({ data }: { readonly data: AsyncIterable<Uint8Array> }, signal: AbortSignal) {
+      stageStarted.resolve(undefined)
+      for await (const chunk of data) expect(chunk).toBeInstanceOf(Uint8Array)
+      signal.throwIfAborted()
+      throw new Error('stalled upload unexpectedly completed')
+    } } },
+    dispose,
+  } as unknown as NativeHeadlessApplication
+  const active = { owners: () => [], onAttached: () => () => {}, onDetached: () => () => {} } as unknown as NativeActiveSessionOperations
+  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
+      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
+      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal)
+  const upload = service.uploadFile(new Request('http://localhost/api/native-session/file-upload?sessionId=stalled-upload', {
+    method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body,
+    duplex: 'half',
+  } as RequestInit & { duplex: 'half' }))
+  let closing: Promise<void> | undefined
+  let closed = false
+  try {
+    await stageStarted.promise
+    closing = service.close().then(() => { closed = true })
+    await vi.waitFor(() => { expect(bodyCanceled).toBe(true) }, { interval: 10, timeout: 1000 })
+    expect(closed).toBe(false)
+    finishCancel.reject(cleanupError)
+    const closeFailure = await closing.then(() => undefined, (error: unknown) => error)
+    expect(closeFailure).toMatchObject({ errors: [{ errors: [cleanupError] }] })
+    const response = await upload
+    expect(await response.json()).toMatchObject({ ok: false, error: { message: cleanupError.message } })
+    expect(dispose).toHaveBeenCalledOnce()
+  } finally {
+    finishCancel.resolve(undefined)
+    if (!bodyCanceled) bodyController?.close()
+    await Promise.allSettled([upload, ...(closing === undefined ? [] : [closing])])
+    await Promise.allSettled([service.close()])
+  }
+})
+
+it('waits for an owned file upload to settle when the Native Session Client closes', async () => {
+  const fetchStarted = Promise.withResolvers<undefined>()
+  const abortObserved = Promise.withResolvers<undefined>()
+  const finishFetch = Promise.withResolvers<undefined>()
+  const rpc = {
+    call: async () => ({ ok: true as const, value: {} }),
+    response: async (_base: string, _endpoint: string, _payload: unknown, signal: AbortSignal) => {
+      fetchStarted.resolve(undefined)
+      await new Promise<void>((resolve) => {
+        const abort = (): void => { abortObserved.resolve(undefined); void finishFetch.promise.then(resolve) }
+        signal.addEventListener('abort', abort, { once: true })
+        if (signal.aborted) abort()
+      })
+      return new Response(null, { status: 499 })
+    },
+  } as unknown as ClientConnectionRpc
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
+  const upload = client.uploadFile(SessionId('upload-close'), { data: new Blob(['staged bytes']) })
+  let closed = false
+  const closing = client.close().then(() => { closed = true })
+  try {
+    await fetchStarted.promise
+    await abortObserved.promise
+    expect(closed).toBe(false)
+    finishFetch.resolve(undefined)
+    await closing
+    await expect(upload).rejects.toThrow('native Session file upload failed with HTTP 499')
+  } finally {
+    finishFetch.resolve(undefined)
+    await Promise.allSettled([upload, closing])
+    await client.close()
+  }
+})
+
 it('includes nested AggregateError messages in native Session failures', async () => {
   const failure = new AggregateError([
     new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
@@ -279,6 +364,16 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let foreignStep = 0
   let foreignApprovals = 0
   const requests: GenerateOptions[] = []
+  const streamedFileBytes = new TextEncoder().encode('uploaded through the Native Web carrier\n')
+  let streamedUploadRequest: {
+    readonly path: string
+    readonly sessionId: string | null
+    readonly method: string | undefined
+    readonly contentType: string | null
+    readonly body: BodyInit | null | undefined
+  } | undefined
+  let streamedUploadResponseStatus: number | undefined
+  let streamedFileProjected = false
   const firstContinue = Promise.withResolvers<undefined>()
   const racePreparation = Array.from({ length: 2 }, () => ({
     entered: Promise.withResolvers<undefined>(), release: Promise.withResolvers<undefined>(),
@@ -446,7 +541,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             return
           }
           if (humanSteps !== undefined) { yield* humanSteps.shift() ?? textResponse('human complete'); return }
-          if (requests.length > 2) {
+          if (requests.length === 3 && request.messages.some(message => message.content.some(block => block.type === 'text'
+            && block.text.includes('File "web-upload.txt"') && block.text.includes('saved at')))) {
+            streamedFileProjected = true
+            yield* textResponse('staged file projected')
+            return
+          }
+          const latestUser = request.messages.findLast(message => message.role === 'user')
+          if (latestUser?.content.some(block => block.type === 'text' && block.text === 'cancel input')) {
             const signal = request.signal
             if (signal === undefined) throw new Error('missing model cancellation')
             await new Promise<void>((resolve) => {
@@ -629,11 +731,20 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const cookie = login.headers.get('set-cookie')?.split(';')[0]
     if (cookie === undefined) throw new Error('missing browser authentication')
     const url = web.url
-    const rpc = createWebConnectionRpc((input, init) => {
+    const rpc = createWebConnectionRpc(async (input, init) => {
       if (input.pathname.endsWith('/native-session/follow')) followFields = JSON.parse(init.body as string)
+      if (input.pathname.endsWith('/native-session/file-upload')) {
+        const uploadUrl = new URL(input.href)
+        streamedUploadRequest = { path: uploadUrl.pathname, sessionId: uploadUrl.searchParams.get('sessionId'),
+          method: init.method, contentType: new Headers(init.headers).get('content-type'), body: init.body }
+      }
       const headers = new Headers(init.headers)
       headers.set('cookie', cookie)
-      return fetch(new URL(input.pathname, url), { ...init, headers })
+      const response = await fetch(new URL(input.pathname + input.search, url), { ...init, headers })
+      if (input.pathname.endsWith('/native-session/file-upload')) {
+        streamedUploadResponseStatus = response.status
+      }
+      return response
     })
     const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
@@ -707,7 +818,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.credentialsDescribe(['UNRELATED_KEY'])).rejects.toBeInstanceOf(NativeSessionRpcError)
     await expect(client.credentialsDescribe(['NATIVE_TEST_KEY', 'NATIVE_TEST_KEY', 'NATIVE_TEST_KEY']))
       .rejects.toMatchObject({ code: 'native/credentials' })
-    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 100 })
+    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 200 })
     await conversation.load()
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
@@ -879,6 +990,39 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const blob = await client.image(sessionId, image.attachment)
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe(image.attachment.bytes)
+    const receipt = await client.uploadFile(sessionId, { data: new Blob([streamedFileBytes]), name: 'web-upload.txt' })
+    expect(receipt).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
+    expect(streamedUploadRequest).toMatchObject({ path: '/api/native-session/file-upload', sessionId, method: 'POST',
+      contentType: 'application/octet-stream' })
+    expect(streamedUploadResponseStatus).toBe(200)
+    expect(streamedUploadRequest?.body).toBeInstanceOf(Blob)
+    expect(new Uint8Array(await (streamedUploadRequest?.body as Blob).arrayBuffer())).toEqual(streamedFileBytes)
+    await expect(client.promptContent(sessionId, [
+      { type: 'text', text: 'before staged file' },
+      { type: 'file', receiptId: receipt.receiptId },
+      { type: 'text', text: 'after staged file' },
+    ], true)).resolves.toMatchObject({ exitCode: 0 })
+    await conversation.select(sessionId)
+    expect(streamedFileProjected).toBe(true)
+    expect(requests[2]?.messages.some((message) => {
+      const text = message.content.flatMap(block => block.type === 'text' ? [block.text] : [])
+      const before = text.findIndex(block => block === 'before staged file')
+      const handle = text.findIndex(block => block.includes('File "web-upload.txt"') && block.includes('saved at'))
+      const after = text.findIndex(block => block === 'after staged file')
+      return before >= 0 && handle > before && after > handle
+    })).toBe(true)
+    const stagedHistory = await client.history(sessionId)
+    const stagedMessage = stagedHistory.events.findLast(event => event.type === 'user/message'
+      && event.data.content.some(block => block.type === 'file' && block.attachment.name === 'web-upload.txt'))
+    const stagedContent = stagedMessage?.type === 'user/message' ? stagedMessage.data.content : []
+    expect(stagedContent.map(block => block.type)).toEqual(['text', 'file', 'text'])
+    expect(stagedContent[0]).toEqual({ type: 'text', text: 'before staged file' })
+    expect(stagedContent[2]).toEqual({ type: 'text', text: 'after staged file' })
+    const stagedFile = stagedContent[1]
+    expect(stagedFile?.type).toBe('file')
+    if (stagedFile?.type === 'file') {
+      expect(stagedFile.attachment).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
+    }
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
@@ -887,11 +1031,11 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const early = new AbortController()
     early.abort(new Error('before admission'))
     await expect(client.prompt(sessionId, 'not admitted', true, early.signal)).rejects.toThrow('before admission')
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(3)
     let settled = false
     const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
-    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(3) })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(4) })
     // Control admission still cancels the accepted turn and awaits cleanup.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
     conversation.cancel()

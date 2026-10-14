@@ -18,7 +18,8 @@ import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionReques
   type NativeAcpSubagentClientCapabilities, type NativeAcpSubagentPolicy,
   type NativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
-  NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+  NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeRootStagedFileOperations,
+  NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
 import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
@@ -247,7 +248,28 @@ export class NativeAcpApplication implements NativeApplication {
         return operations.restore(request, this.routeSignal(record, signal))
       },
     }
+    const stagedFiles: NativeRootStagedFileOperations = {
+      stageStream: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.stagedFiles.stageStream(request, this.routeSignal(record, signal))
+      },
+      stageEncoded: (request, signal) => {
+        const record = this.routeOwner(request.route)
+        return record.executor.rootExecution.stagedFiles.stageEncoded(request, this.routeSignal(record, signal))
+      },
+      prepare: (request) => {
+        const record = this.ownerRoute(request.owner)
+        return record.executor.rootExecution.stagedFiles.prepare({ ...request,
+          signal: this.routeSignal(record, request.signal) })
+      },
+      enqueue: (request) => {
+        const record = this.ownerRoute(request.owner)
+        return record.executor.rootExecution.stagedFiles.enqueue({ ...request,
+          signal: this.routeSignal(record, request.signal) })
+      },
+    }
     this.rootExecution = Object.freeze({
+      stagedFiles,
       ...deletions === undefined ? {} : { deletions },
       ready: async (signal) => {
         await this.waitForInitialization(signal)
@@ -304,6 +326,7 @@ export class NativeAcpApplication implements NativeApplication {
     this.assertOpen()
     if (this.initialized) return
     await new Promise<void>((resolve, reject) => {
+      const rejectReason: (reason: unknown) => void = reject
       const cleanup = (): void => {
         signal.removeEventListener('abort', abort)
         this.rootExecutionWaiters.delete(waiter)
@@ -312,8 +335,7 @@ export class NativeAcpApplication implements NativeApplication {
         wake: () => { cleanup(); resolve() },
         fail: (cause) => {
           cleanup()
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-          reject(cause)
+          rejectReason(cause)
         },
       }
       const abort = (): void => { waiter.fail(signal.reason) }
@@ -403,6 +425,7 @@ export class NativeAcpApplication implements NativeApplication {
           callId: request.callId, toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
           policy: 'ask', signal: request.signal }) ?? Promise.resolve('unavailable')
         return new Promise<NativeApprovalOutcome>((resolve, reject) => {
+          const rejectReason: (reason: unknown) => void = reject
           let settled = false
           const complete = (outcome: NativeApprovalOutcome): void => {
             if (settled) return
@@ -414,8 +437,7 @@ export class NativeAcpApplication implements NativeApplication {
             if (settled) return
             settled = true
             request.signal.removeEventListener('abort', onAbort)
-            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact owner or transport rejection reason.
-            reject(error)
+            rejectReason(error)
           }
           const onAbort = (): void => { complete('cancelled') }
           request.signal.addEventListener('abort', onAbort, { once: true })
@@ -748,9 +770,9 @@ export class NativeAcpApplication implements NativeApplication {
     let abort: (() => void) | undefined
     try {
       await Promise.race([previous, new Promise<never>((_resolve, reject) => {
+        const rejectReason: (reason: unknown) => void = reject
         abort = () => {
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Preserve the exact caller cancellation identity.
-          reject(signal.reason)
+          rejectReason(signal.reason)
         }
         signal.addEventListener('abort', abort, { once: true })
       })])
@@ -885,7 +907,7 @@ export class NativeAcpApplication implements NativeApplication {
             const directory = this.context.optional('modelDirectory')
             if (directory === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require a model directory')
             if (attachments === undefined) throw RequestError.invalidParams(undefined, 'native ACP images require attachment storage')
-            input = { prepareMessage: async (model, admitted) => {
+            input = { prepareMessage: async (model, _owner, admitted) => {
               const info = await directory.resolve(model.provider, model.model, admitted)
               if (!info.inputModalities?.includes('image')) throw RequestError.invalidParams(undefined, 'selected model does not declare image input')
               admitted.throwIfAborted()

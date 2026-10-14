@@ -19,7 +19,11 @@ export type {
   HarnessSdkRequestMap,
   InitializeParams,
   InitializeResult,
+  LegacySdkPromptContentBlock,
+  NativeSdkPromptContentBlock,
+  SdkFileReceiptBlock,
   SdkEncodedImageBlock,
+  SdkTextBlock,
   SdkPromptContentBlock,
   SdkRunStatus,
   SessionChunkNotification,
@@ -31,8 +35,11 @@ export type {
   SessionStatusNotification,
   SessionPromptParams,
   SessionPromptResult,
+  SessionUploadFileParams,
+  SessionUploadFileResult,
   SessionSteerParams,
   SessionSteerResult,
   SubagentFinishedNotification,
   SubagentStartedNotification,
 } from './types.ts'
+export type { NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'

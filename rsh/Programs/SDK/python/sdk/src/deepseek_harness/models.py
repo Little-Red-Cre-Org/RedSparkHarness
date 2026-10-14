@@ -1,13 +1,43 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, TypedDict
 
-from pydantic import BaseModel, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 
 JsonScalar: TypeAlias = str | int | float | bool | None
 JsonValue: TypeAlias = JsonScalar | dict[str, "JsonValue"] | list["JsonValue"]
 JsonObject: TypeAlias = dict[str, JsonValue]
+LegacySdkPromptContentBlock: TypeAlias = JsonObject
+
+
+class SdkTextBlock(TypedDict):
+    type: Literal["text"]
+    text: str
+
+
+class SdkEncodedImageBlock(TypedDict):
+    type: Literal["image"]
+    data: str
+    mimeType: Literal["image/png", "image/jpeg", "image/webp", "image/gif"]
+
+
+class SdkFileReceiptBlock(TypedDict):
+    type: Literal["file"]
+    receiptId: str
+
+
+NativeSdkPromptContentBlock: TypeAlias = SdkTextBlock | SdkEncodedImageBlock | SdkFileReceiptBlock
+SdkPromptContentBlock: TypeAlias = LegacySdkPromptContentBlock | NativeSdkPromptContentBlock
+
+
+class NativeStagedFileReceipt(BaseModel):
+    """Native-only process-local receipt accepted by later prompt or steer input."""
+
+    model_config = ConfigDict(frozen=True)
+    receipt_id: StrictStr = Field(alias="receiptId", min_length=1)
+    name: StrictStr
+    bytes: StrictInt = Field(ge=0)
 
 
 @dataclass(slots=True)

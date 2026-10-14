@@ -73,6 +73,9 @@
     },
     {
       "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-workflow-run"
     }
   ]
 }

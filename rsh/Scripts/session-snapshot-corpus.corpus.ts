@@ -52,6 +52,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/web-tools-native.snapshot.ts',
   'snapshots/native-headless/workflow-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
+  'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
   'snapshots/native-sdk/inbox-moved.snapshot.ts',
   'snapshots/native-sdk/skills.snapshot.ts',

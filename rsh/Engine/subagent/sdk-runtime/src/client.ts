@@ -22,6 +22,9 @@ import {
   type ApprovalRequestResult,
   type InitializeParams,
   type InitializeResult,
+  type NativeSdkPromptContentBlock,
+  type SessionUploadFileParams,
+  type SessionUploadFileResult,
   type SessionPromptParams,
   type SdkPromptContentBlock,
 } from '@deepseek-ai/dsh-sdk-protocol'
@@ -377,12 +380,34 @@ export class HarnessClient {
   }
 
   /**
+   * Stage file bytes for a Native SDK Session before prompt admission.
+   * @param sessionId - stable Session identity that will consume the receipt.
+   * @param bytes - file contents stored by the selected Native runtime.
+   * @param name - optional display filename; never interpreted as a path.
+   * @returns the Native-only receipt for ordered prompt or steer input.
+   */
+  async uploadFile(sessionId: string, bytes: Uint8Array, name?: string): Promise<SessionUploadFileResult> {
+    const params: SessionUploadFileParams = {
+      sessionId,
+      data: Buffer.from(bytes).toString('base64'),
+      ...(name === undefined ? {} : { name }),
+    }
+    const result = await this.request('session/upload-file', params)
+    if (!isRecord(result) || typeof result.receiptId !== 'string' || result.receiptId.length === 0
+      || typeof result.name !== 'string' || typeof result.bytes !== 'number'
+      || !Number.isSafeInteger(result.bytes) || result.bytes < 0) {
+      throw new SdkProtocolError(`session/upload-file returned an invalid file receipt: ${JSON.stringify(result)}`)
+    }
+    return result as unknown as SessionUploadFileResult
+  }
+
+  /**
    * Durably steer the admitted native SDK root at its next step and wake it after a turn interruption.
    * @param sessionId - active Session owned by this runtime; idle or unknown identities reject.
-   * @param contentBlocks - ordered text and encoded images, admitted through the prompt policy.
+   * @param contentBlocks - ordered Native text, encoded images, and staged file receipts.
    * @returns the durable next-step message id; unsupported profiles reject.
    */
-  async steer(sessionId: string, contentBlocks: SdkPromptContentBlock[]): Promise<string> {
+  async steer(sessionId: string, contentBlocks: NativeSdkPromptContentBlock[]): Promise<string> {
     const result = await this.request('session/steer', { sessionId, contentBlocks })
     if (!isRecord(result) || typeof result.messageId !== 'string' || result.messageId.length === 0) {
       throw new SdkProtocolError(`session/steer returned no message id: ${JSON.stringify(result)}`)

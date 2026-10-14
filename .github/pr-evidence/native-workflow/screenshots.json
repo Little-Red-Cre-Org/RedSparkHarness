@@ -1,0 +1,92 @@
+{
+  "evidence_for_source_head": "1eb5ae8518df47614a5265da4e0e358dd4a84157",
+  "capture_source_warning": "The original three captures remain historical WIP. Entries beginning native-workflow-current- are newly built/captured on exact source 943d452f42 (product source equivalent to 1eb5ae8518); all are system-Chromium supplementary QA.",
+  "screenshots": [
+    {
+      "file": "native-workflow-history.png",
+      "sha256": "9176c4dc4e38ca460260ec0c5ece44537955f6ab7991f18e936d6210506e817c",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "capture_source_sha": null,
+      "base_sha": "7c15423eff5569180e3a9024277ab8397b26649e",
+      "source_state": "pre-203f345510 WIP and its earlier built Client artifacts; exact capture source commit was not recorded",
+      "native_cli_profile": "native-web",
+      "fixture": "snapshots/session/workflow-run/session.v3.jsonl",
+      "dimensions": [
+        1365,
+        900
+      ]
+    },
+    {
+      "file": "native-workflow-narrow.png",
+      "sha256": "6e50f79c4dc55362837275c87d14c5746775886d6c8edb2f9de5d50fd6888588",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "capture_source_sha": null,
+      "base_sha": "7c15423eff5569180e3a9024277ab8397b26649e",
+      "source_state": "pre-203f345510 WIP and its earlier built Client artifacts; exact capture source commit was not recorded",
+      "native_cli_profile": "native-web",
+      "fixture": "snapshots/session/workflow-run/session.v3.jsonl",
+      "dimensions": [
+        560,
+        900
+      ]
+    },
+    {
+      "file": "cordis-workflow-history.png",
+      "sha256": "b8f3dd9ecc8512dfe08ee288b29a9978bba667683cd998de298108b514bab6ab",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "capture_source_sha": null,
+      "base_sha": "7c15423eff5569180e3a9024277ab8397b26649e",
+      "source_state": "pre-203f345510 WIP and its earlier built Client artifacts; exact capture source commit was not recorded",
+      "native_cli_profile": null,
+      "fixture": "snapshots/session/workflow-run/session.v3.jsonl",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "native-workflow-current-wide.png",
+      "sha256": "9991ac246794d766f822a74f9fb9207b4b3745fa2ed389f5802cb7eec03f6dbc",
+      "dimensions": [
+        1365,
+        900
+      ],
+      "capture_source_sha": "943d452f42ef24084819045b19bf535ab5cf06cc",
+      "implementation_source_sha": "1eb5ae8518df47614a5265da4e0e358dd4a84157",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "ui_state": "wide"
+    },
+    {
+      "file": "native-workflow-current-narrow-sidebar-open.png",
+      "sha256": "6e50f79c4dc55362837275c87d14c5746775886d6c8edb2f9de5d50fd6888588",
+      "dimensions": [
+        560,
+        900
+      ],
+      "capture_source_sha": "943d452f42ef24084819045b19bf535ab5cf06cc",
+      "implementation_source_sha": "1eb5ae8518df47614a5265da4e0e358dd4a84157",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "ui_state": "immediately after narrow resize, before responsive sidebar collapse settles",
+      "byte_identical_to_historical_capture": "native-workflow-narrow.png"
+    },
+    {
+      "file": "native-workflow-current-narrow.png",
+      "sha256": "6c510215da5b70de081430df82d7d57d43f953ac13054a567348cf40723108ea",
+      "dimensions": [
+        560,
+        900
+      ],
+      "capture_source_sha": "943d452f42ef24084819045b19bf535ab5cf06cc",
+      "implementation_source_sha": "1eb5ae8518df47614a5265da4e0e358dd4a84157",
+      "browser": "system Chromium 154.0.8037.57",
+      "official_replay": false,
+      "ui_state": "sidebar collapsed, workflow/member scrolled into viewport"
+    }
+  ],
+  "initial_source_checkpoint": "18a305983ef18579c86e885ca72abffa78d7755e"
+}

@@ -1,0 +1,2 @@
+import config from '/workspace/RedSparkHarness/vitest.web.config.ts'
+export default { ...config, test: { ...config.test, setupFiles: ['/tmp/m3-system-browser.mjs'] } }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import queue
@@ -15,7 +16,9 @@ from typing import Callable, TypeAlias, TypeVar
 from pydantic import BaseModel, StrictBool, StrictStr
 
 from .errors import JsonRpcError, SdkProtocolError, TransportClosedError
-from .models import ApprovalOutcome, ApprovalRequest, IncomingRequest, InitializeResponse, JsonObject, JsonValue, Notification
+from .models import (ApprovalOutcome, ApprovalRequest, IncomingRequest, InitializeResponse, JsonObject,
+                     JsonValue, NativeStagedFileReceipt, NativeSdkPromptContentBlock, Notification,
+                     SdkPromptContentBlock)
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 NotificationFilter: TypeAlias = Callable[[Notification], bool]
@@ -205,7 +208,7 @@ class HarnessClient:
     def session_prompt(
         self,
         session_id: str,
-        content_blocks: list[JsonObject],
+        content_blocks: list[SdkPromptContentBlock],
         *,
         on_notification: Callable[[Notification], None] | None = None,
         notification_subscription: "NotificationSubscription | None" = None,
@@ -221,7 +224,14 @@ class HarnessClient:
         )
         return response.messageId
 
-    def session_steer(self, session_id: str, content_blocks: list[JsonObject]) -> str:
+    def session_upload_file(self, session_id: str, data: bytes, name: str | None = None) -> NativeStagedFileReceipt:
+        """Store file bytes and return a Native-only receipt for this Session."""
+        payload: JsonObject = {"sessionId": session_id, "data": base64.b64encode(data).decode("ascii")}
+        if name is not None:
+            payload["name"] = name
+        return self.request("session/upload-file", payload, response_model=NativeStagedFileReceipt)
+
+    def session_steer(self, session_id: str, content_blocks: list[NativeSdkPromptContentBlock]) -> str:
         """Durably queue the active native SDK root's next-step input without interrupting dispatch.
 
         Idle or unknown Sessions and unsupported profiles reject the request.

@@ -11,7 +11,8 @@ import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionExecutionOperations,
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
   NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest,
-  NativeResponsesPreparedGeneration } from '@deepseek-ai/dsh-native-session-execution'
+  NativeResponsesPreparedGeneration, NativeStagedFileAdmission, NativeStagedFileBlock,
+  NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
 import { nativeSessionExecutionPolicy } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
@@ -28,7 +29,7 @@ import { isAbsolute, resolve } from 'node:path'
 import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
-import type { AttachmentOperations, ImageAttachmentRef, StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
+import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef, StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
 import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -60,16 +61,25 @@ import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
 import type { NativeTmuxContext } from '@deepseek-ai/dsh-tmux-context-definition'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
-  callConfigEquals, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
+  callConfigEquals, fileAttachmentsIn, projectFilesToText, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
+  type UserMessage,
 } from '@deepseek-ai/dsh-llm/native'
-import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent, type TurnEndCancelCause } from '@deepseek-ai/dsh-session/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq,
+  type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@deepseek-ai/dsh-session/native'
+import { deepFreeze, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 
 interface NativeRootForkSeed {
   readonly source: SessionId
   readonly agentPreset?: string
   readonly events: readonly SessionEvent[]
+}
+
+interface NativeStagedFileSession {
+  readonly route: NativeRootRouteId
+  header: SessionHeader | undefined
+  readonly generation: object
+  readonly receipts: Map<NativeStagedFileReceiptId, { readonly block: NativeStagedFileBlock; reserved: boolean }>
 }
 
 interface EligibleInboxSnapshot {
@@ -102,10 +112,12 @@ export interface NativeTurnRequest {
   /**
    * Prepare root input instead of message while the original Agent owns execution and the Session writer.
    * @param model - next durable selection, or the selected root route's explicit model defaults.
+   * @param owner - exact root owner attached to this turn.
    * @param signal - composed caller, Agent and Program cancellation.
-   * @returns identified user input; rejection admits no input or model request.
+   * @returns identified input or staged-file admission; rejection admits no input or model request.
    */
-  readonly prepareMessage?: (model: Readonly<Pick<LlmCallConfig, 'provider' | 'model'>>, signal: AbortSignal) => Promise<UserMessage>
+  readonly prepareMessage?: (model: Readonly<Pick<LlmCallConfig, 'provider' | 'model'>>, owner: NativeActiveSessionOwner,
+    signal: AbortSignal) => Promise<UserMessage | NativeStagedFileAdmission>
   /** Observe accepted model chunks without assigning process output to the executor. */
   readonly onChunk?: (chunk: StreamChunk) => void
   /** Observe Session events after backend append; a failure interrupts the turn. */
@@ -400,6 +412,9 @@ export class NativeHeadlessApplication implements NativeApplication {
   private disposal: Promise<void> | undefined
   private readonly activeSessions = new Map<ReturnType<typeof SessionId>, Session>()
   private readonly continuationOwners = new Map<ReturnType<typeof SessionId>, NativeContinuationSession>()
+  private readonly stagedFileSessions = new Map<SessionId, NativeStagedFileSession>()
+  private readonly stagedFileAdmissionOutcomes = new WeakMap<NativeStagedFileAdmission,
+    () => 'accepted' | 'refused' | 'uncertain' | undefined>()
   private readonly seededContinuations = new WeakSet<NativeContinuationSession>()
   private readonly continuationRuntime: NativeContinuationRuntime
   private readonly noticeWakes = new Set<Promise<NativeTurnResult>>()
@@ -458,6 +473,37 @@ export class NativeHeadlessApplication implements NativeApplication {
       return owned
     }
     this.rootExecution = Object.freeze({
+      stagedFiles: Object.freeze({
+        stageStream: (request: {
+          readonly route: NativeRootRouteId
+          readonly id: SessionId
+          readonly data: AsyncIterable<Uint8Array>
+          readonly name?: string
+        }, signal: AbortSignal) =>
+          this.trackStorageRequest(() => this.stageFileStream(request, signal)),
+        stageEncoded: (request: {
+          readonly route: NativeRootRouteId
+          readonly id: SessionId
+          readonly data: string
+          readonly name?: string
+        }, signal: AbortSignal) =>
+          this.trackStorageRequest(() => this.stageEncodedFile(request, signal)),
+        prepare: (request: {
+          readonly owner: NativeActiveSessionOwner
+          readonly receiptIds: readonly NativeStagedFileReceiptId[]
+          readonly signal: AbortSignal
+          readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+        }) =>
+          this.prepareStagedFiles(request, 'next-turn'),
+        enqueue: (request: {
+          readonly owner: NativeActiveSessionOwner
+          readonly receiptIds: readonly NativeStagedFileReceiptId[]
+          readonly target: 'next-turn' | 'next-step'
+          readonly wake: boolean
+          readonly signal: AbortSignal
+          readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+        }) => this.enqueueStagedFiles(request),
+      }),
       ...storage.deletions === undefined ? {} : { deletions: {
         list: (request: { readonly route: NativeRootRouteId; readonly limit: number }, signal: AbortSignal) =>
           this.trackStorageRequest(() => this.listStoredDeletions(request, signal)),
@@ -596,6 +642,30 @@ export class NativeHeadlessApplication implements NativeApplication {
     const target = await this.fs.resolve(path, { cwd, signal })
     if (!this.fs.contains(root, target)) throw new FsError(`path outside workspace: ${path}`, 'FS_SANDBOX_DENIED')
     return target
+  }
+
+  private async attachedFile(session: Session, path: string, cwd: string, signal: AbortSignal): Promise<FileAttachmentRef | undefined> {
+    if (this.attachments === undefined) return undefined
+    const refs = fileAttachmentsIn(session.deriveMessages())
+    if (refs.length === 0) return undefined
+    const requested = await this.fs.resolve(path, { cwd, signal })
+    for (const ref of refs) {
+      const hostPath = this.attachments.fileHostPath(ref)
+      const executionPath = hostPath === undefined ? undefined : this.fs.processPathFromHostPath(hostPath)
+      if (executionPath === undefined) continue
+      const admitted = await this.fs.resolve(executionPath, { cwd, signal })
+      if (admitted.targetKey === requested.targetKey) return ref
+    }
+    return undefined
+  }
+
+  private async readAttachedFile(ref: FileAttachmentRef, signal: AbortSignal): Promise<string> {
+    const attachments = this.attachments
+    if (attachments === undefined) throw new Error('native-headless: attachment provider is unavailable')
+    const decoder = new TextDecoder('utf-8', { ignoreBOM: true })
+    let text = ''
+    for await (const chunk of attachments.readFileStream(ref, signal)) text += decoder.decode(chunk, { stream: true })
+    return text + decoder.decode()
   }
 
   private async execute(call: ToolCallBlock, args: ReturnType<typeof toolArguments>, target: FsTarget, actor: object, session: Session,
@@ -1045,15 +1115,21 @@ export class NativeHeadlessApplication implements NativeApplication {
                 try {
                   if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
                     const args = toolArguments(block.arguments, block.name)
-                    const target = await this.target(args.path, capturedRoot, effectiveSignal, delegation.cwd)
-                    if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
-                      const outcome = await requestApproval({ agent, session, callId: call.callId, toolName: call.name,
-                        reason: 'Writing a file changes the selected workspace.', signal: effectiveSignal })
-                      if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                    const attached = call.name === 'read_file'
+                      ? await this.attachedFile(session, args.path, delegation.cwd, effectiveSignal) : undefined
+                    if (attached !== undefined) {
+                      result = { content: [{ type: 'text', text: await this.readAttachedFile(attached, effectiveSignal) }], isError: false }
+                    } else {
+                      const target = await this.target(args.path, capturedRoot, effectiveSignal, delegation.cwd)
+                      if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
+                        const outcome = await requestApproval({ agent, session, callId: call.callId, toolName: call.name,
+                          reason: 'Writing a file changes the selected workspace.', signal: effectiveSignal })
+                        if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                      }
+                      const text = await this.execute(block, args, target, agent, session, effectiveSignal,
+                        delegation.cwd, config.workspaceWriteRoot)
+                      result = { content: [{ type: 'text', text }], isError: false }
                     }
-                    const text = await this.execute(block, args, target, agent, session, effectiveSignal,
-                      delegation.cwd, config.workspaceWriteRoot)
-                    result = { content: [{ type: 'text', text }], isError: false }
                   } else if (allowedBuiltins.has(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
                     const outcome = await this.executeCode(block, session, effectiveSignal)
                     result = { content: [{ type: 'text', text: outcome.text }], isError: outcome.error !== undefined,
@@ -1190,17 +1266,36 @@ export class NativeHeadlessApplication implements NativeApplication {
         return { exitCode: 0 }
       }
       let message = request.message
+      let stagedFileAdmission: NativeStagedFileAdmission | undefined
       if (request.prepareMessage !== undefined) {
         if (activeOwner === undefined || invocation !== 'root') throw new Error('native-headless: input preparation requires the active root owner')
         const selection = await this.modelSelection?.state(activeOwner, signal)
         const selected = selection?.next ?? this.rootDefaults(config)
         signal.throwIfAborted()
-        message = await request.prepareMessage({ provider: selected.provider, model: selected.model }, signal)
-        signal.throwIfAborted()
+        const prepared = await request.prepareMessage({ provider: selected.provider, model: selected.model }, activeOwner, signal)
+        if ('message' in prepared) {
+          stagedFileAdmission = prepared
+          message = prepared.message
+        } else message = prepared
+        try { signal.throwIfAborted() }
+        catch (error: unknown) { stagedFileAdmission?.refused(); throw error }
       }
       if (message !== undefined) {
-        track(session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [message] }))
-        await persist()
+        let event: SessionEvent
+        try { event = session.append('agent/inbox/spliced', { target: 'next-turn', start: 0, inserted: [message] }) }
+        catch (error: unknown) { stagedFileAdmission?.refused(); throw error }
+        try {
+          track(event)
+          await persist()
+          stagedFileAdmission?.accepted()
+        } catch (error: unknown) {
+          stagedFileAdmission?.uncertain()
+          if (stagedFileAdmission !== undefined
+            && this.stagedFileAdmissionOutcomes.get(stagedFileAdmission)?.() === 'uncertain') {
+            throw new Error('native-headless: staged file admission is uncertain; upload the file again before retrying', { cause: error })
+          }
+          throw error
+        }
       }
       track(session.append('turn/start', { turn }))
       let reason: import('@deepseek-ai/dsh-session/native').TurnEndReason = { kind: 'completed' }
@@ -1393,13 +1488,17 @@ export class NativeHeadlessApplication implements NativeApplication {
               exitCode = 0
               break
             }
+            const modelMessages = (): GenerateOptions['messages'] => [...projectFilesToText(session.deriveMessages(), (ref) => {
+              const hostPath = this.attachments?.fileHostPath(ref)
+              return hostPath === undefined ? undefined : this.fs.processPathFromHostPath(hostPath)
+            })]
             const options: GenerateOptions = {
-              ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal,
+              ...stepConfig, messages: modelMessages(), tools: schemas, sessionId: id, signal,
             }
             turnOwnership.preparingStep = false
             const { message, finish } = await this.modelExecution.execute({
               session, turn, step, options, prepared: preparedStep, append: track, persist,
-              rebuildOptions: () => ({ ...stepConfig, messages: session.deriveMessages(), tools: schemas, sessionId: id, signal }),
+              rebuildOptions: () => ({ ...stepConfig, messages: modelMessages(), tools: schemas, sessionId: id, signal }),
               onChunk: (chunk) => {
                 request.onChunk?.(chunk)
                 for (const observe of this.rootChunkObservers.get(owner) ?? []) {
@@ -1430,15 +1529,21 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
                   const args = toolArguments(call.arguments, call.name)
-                  const target = await this.target(args.path, root, signal, config.cwd)
-                  if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
-                    const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal,
-                      sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
-                        context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
-                      reason: 'Writing a file changes the selected workspace.' })
-                    if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                  const attached = call.name === 'read_file' ? await this.attachedFile(session, args.path, config.cwd, signal) : undefined
+                  if (attached !== undefined) {
+                    content = [{ type: 'text', text: await this.readAttachedFile(attached, signal) }]
+                  } else {
+                    const target = await this.target(args.path, root, signal, config.cwd)
+                    if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
+                      const outcome = await requestApproval({ agent, session, callId: call.id, toolName: call.name, signal,
+                        sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
+                          context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
+                        reason: 'Writing a file changes the selected workspace.' })
+                      if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+                    }
+                    content = [{ type: 'text', text: await this.execute(call, args, target, actor, session, signal, config.cwd,
+                      config.workspaceWriteRoot) }]
                   }
-                  content = [{ type: 'text', text: await this.execute(call, args, target, actor, session, signal, config.cwd, config.workspaceWriteRoot) }]
                 } else if (builtinToolNames.includes(call.name) && call.name === 'run_code' && this.codeRuntime !== undefined) {
                   const outcome = await this.executeCode(call, session, signal)
                   content = [{ type: 'text', text: outcome.text }]
@@ -1767,11 +1872,13 @@ export class NativeHeadlessApplication implements NativeApplication {
     }
     let acquired: ReturnType<typeof this.executions.get>
     try {
-      return await this.withRootExecution({ id: request.id, resume: false, route: request.route }, effective, (execution) => {
+      const forked = await this.withRootExecution({ id: request.id, resume: false, route: request.route }, effective, (execution) => {
         acquired = this.executions.get(request.id)
         return this.runIdleSessionOperation(execution,
           { id: request.id, resume: false, route: request.route }, () => Promise.resolve(request.id), effective, seed)
       }, seed)
+      this.retireStagedFiles(request.id)
+      return forked
     } catch (error: unknown) {
       if (acquired === undefined) throw error
       try { await acquired.unregister() }
@@ -2164,6 +2271,190 @@ export class NativeHeadlessApplication implements NativeApplication {
     return pending
   }
 
+  private async stageFileStream(request: {
+    readonly route: NativeRootRouteId
+    readonly id: SessionId
+    readonly data: AsyncIterable<Uint8Array>
+    readonly name?: string
+  }, signal: AbortSignal): Promise<NativeStagedFileReceipt> {
+    const attachments = this.attachments
+    if (attachments === undefined) throw new Error('native-headless: file attachments are unavailable')
+    return this.stageFile(request, signal, effective => attachments.saveFileStream({ data: request.data,
+      ...(request.name === undefined ? {} : { name: request.name }), signal: effective }))
+  }
+
+  private async stageEncodedFile(request: {
+    readonly route: NativeRootRouteId
+    readonly id: SessionId
+    readonly data: string
+    readonly name?: string
+  }, signal: AbortSignal): Promise<NativeStagedFileReceipt> {
+    const attachments = this.attachments
+    if (attachments === undefined) throw new Error('native-headless: file attachments are unavailable')
+    return this.stageFile(request, signal, async () => {
+      signal.throwIfAborted()
+      const file = await attachments.admitEncodedFile({ data: request.data,
+        ...(request.name === undefined ? {} : { name: request.name }) })
+      signal.throwIfAborted()
+      return file
+    })
+  }
+
+  private async stageFile(request: { readonly route: NativeRootRouteId; readonly id: SessionId; readonly name?: string },
+    signal: AbortSignal, save: (signal: AbortSignal) => Promise<NativeStagedFileBlock['attachment']>): Promise<NativeStagedFileReceipt> {
+    const effective = AbortSignal.any([signal, this.context.signal, this.operationCancellation.signal])
+    effective.throwIfAborted()
+    if (this.storageMutations.has(request.id)) throw new Error('native-headless: Session storage mutation is in progress')
+    const route = this.rootExecution.resolve(request.route)
+    if (this.storageMutations.has(request.id)) throw new Error('native-headless: Session storage mutation is in progress')
+    const session = this.stagedFileSession(request.id, route.id)
+    const assertGeneration = (): void => {
+      if (this.storageMutations.has(request.id) || this.stagedFileSessions.get(request.id) !== session) {
+        throw new Error('native-headless: staged file Session generation changed during upload')
+      }
+    }
+    const captureHeader = (header: SessionHeader): void => {
+      if (header.cwd !== route.configuration.cwd) {
+        throw new Error('native-headless: staged file Session workspace differs from selected route')
+      }
+      if (session.header === undefined) session.header = structuredClone(header)
+      else if (!isDeepStrictEqual(header, session.header)) {
+        throw new Error('native-headless: staged file Session generation changed during upload')
+      }
+    }
+    try {
+      const stored = await this.storage.stat(request.id, { signal: effective })
+      assertGeneration()
+      if (stored === undefined) throw new SessionPersistenceNotFoundError(request.id)
+      captureHeader(stored.header)
+      const file = await save(effective)
+      effective.throwIfAborted()
+      assertGeneration()
+      const currentRoute = this.rootExecution.resolve(request.route)
+      const current = await this.storage.stat(request.id, { signal: effective })
+      assertGeneration()
+      if (currentRoute.id !== session.route) throw new Error('native-headless: staged file Session route changed during upload')
+      if (current === undefined) throw new SessionPersistenceNotFoundError(request.id)
+      captureHeader(current.header)
+      effective.throwIfAborted()
+      assertGeneration()
+      const receiptId = brandString<NativeStagedFileReceiptId>(randomUUID())
+      const block: NativeStagedFileBlock = deepFreeze({ type: 'file', attachment: structuredClone(file) })
+      session.receipts.set(receiptId, { block, reserved: false })
+      return { receiptId, name: file.name, bytes: file.bytes }
+    } catch (error: unknown) {
+      if (this.stagedFileSessions.get(request.id) === session && session.header === undefined && session.receipts.size === 0) {
+        this.stagedFileSessions.delete(request.id)
+      }
+      throw error
+    }
+  }
+
+  private stagedFileSession(id: SessionId, route: NativeRootRouteId): NativeStagedFileSession {
+    const current = this.stagedFileSessions.get(id)
+    if (current !== undefined) {
+      if (current.route !== route) throw new Error('native-headless: staged file receipt belongs to another root route')
+      return current
+    }
+    const session: NativeStagedFileSession = { route, header: undefined, generation: {}, receipts: new Map() }
+    this.stagedFileSessions.set(id, session)
+    return session
+  }
+
+  private prepareStagedFiles(request: {
+    readonly owner: NativeActiveSessionOwner
+    readonly receiptIds: readonly NativeStagedFileReceiptId[]
+    readonly signal: AbortSignal
+    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+  },
+  target: InboxTarget): NativeStagedFileAdmission {
+    request.signal.throwIfAborted()
+    if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
+    const route = this.rootExecution.capture(request.owner)
+    const id = request.owner.session.id
+    const session = this.stagedFileSessions.get(id)
+    if (session === undefined || session.route !== route.id || session.header === undefined
+      || !isDeepStrictEqual(session.header, request.owner.session.header)) {
+      throw new Error('native-headless: staged file receipt does not match the exact root Session')
+    }
+    if (new Set(request.receiptIds).size !== request.receiptIds.length) throw new Error('native-headless: staged file receipts must be unique')
+    const selected = request.receiptIds.map((receiptId) => {
+      const entry = session.receipts.get(receiptId)
+      if (entry === undefined || entry.reserved) throw new Error('native-headless: staged file receipt is unavailable')
+      return [receiptId, entry] as const
+    })
+    for (const [, entry] of selected) entry.reserved = true
+    let message: UserMessage
+    let removeObserver = (): void => {}
+    let terminal: 'accepted' | 'refused' | 'uncertain' | undefined
+    const settle = (outcome: 'accepted' | 'refused' | 'uncertain'): boolean => {
+      if (terminal !== undefined) return false
+      terminal = outcome
+      removeObserver()
+      for (const [receiptId, entry] of selected) {
+        if (session.receipts.get(receiptId) !== entry) continue
+        if (outcome === 'refused') entry.reserved = false
+        else session.receipts.delete(receiptId)
+      }
+      return true
+    }
+    try {
+      const files = selected.map(([, entry]) => structuredClone(entry.block))
+      message = request.createMessage(files)
+      const messageFiles = message.content.filter((block): block is NativeStagedFileBlock => block.type === 'file')
+      if (messageFiles.length !== selected.length || messageFiles.some((block, index) => {
+        const stored = selected[index]?.[1].block
+        return stored === undefined || !isDeepStrictEqual(block, stored)
+      })) {
+        throw new Error('native-headless: staged file message must preserve the selected file references in order')
+      }
+      message = deepFreeze(structuredClone(message))
+      removeObserver = request.owner.onEvent((event) => {
+        if (event.type !== 'agent/inbox/spliced' || event.data.target !== target) return
+        const inserted = event.data.inserted.find(candidate => candidate.id === message.id)
+        if (inserted === undefined) return
+        if (isDeepStrictEqual(inserted, message)) settle('accepted')
+        else settle('uncertain')
+      })
+    } catch (error: unknown) {
+      settle('refused')
+      throw error
+    }
+    const admission: NativeStagedFileAdmission = {
+      message, accepted: () => { settle('accepted') }, refused: () => { settle('refused') }, uncertain: () => { settle('uncertain') },
+    }
+    this.stagedFileAdmissionOutcomes.set(admission, () => terminal)
+    return admission
+  }
+
+  private async enqueueStagedFiles(request: {
+    readonly owner: NativeActiveSessionOwner
+    readonly receiptIds: readonly NativeStagedFileReceiptId[]
+    readonly target: InboxTarget
+    readonly wake: boolean
+    readonly signal: AbortSignal
+    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+  }): Promise<MessageId> {
+    const admission = this.prepareStagedFiles(request, request.target)
+    let pending: Promise<MessageId>
+    try { pending = request.owner.enqueue(admission.message, request.target, request.wake, request.signal) }
+    catch (error: unknown) { admission.refused(); throw error }
+    try {
+      const id = await pending
+      if (id !== admission.message.id) throw new Error('native-headless: staged file admission returned a different message identity')
+      admission.accepted()
+      return id
+    } catch (error: unknown) {
+      admission.uncertain()
+      const outcome = this.stagedFileAdmissionOutcomes.get(admission)?.()
+      if (outcome === 'accepted') return admission.message.id
+      if (outcome === 'uncertain') throw new Error('native-headless: staged file admission is uncertain; upload the file again before retrying', { cause: error })
+      throw error
+    }
+  }
+
+  private retireStagedFiles(id: SessionId): void { this.stagedFileSessions.delete(id) }
+
   private deleteStoredSession(request: { readonly route: NativeRootRouteId; readonly id: SessionId },
     signal: AbortSignal): Promise<SessionDeletionReceipt> {
     const route = this.rootExecution.resolve(request.route)
@@ -2174,7 +2465,10 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (stored === undefined) throw new SessionPersistenceNotFoundError(request.id)
       if (stored.header.cwd !== route.configuration.cwd) throw new Error('native-headless: Session deletion workspace differs from selected route')
       return deletion.delete(request.id, { signal: effective, expectedRevision: stored.revision })
-    }, true)
+    }, true).then((receipt) => {
+      this.retireStagedFiles(request.id)
+      return receipt
+    })
   }
 
   private async restoreStoredSession(request: { readonly route: NativeRootRouteId; readonly id: SessionDeletionId },
@@ -2186,8 +2480,10 @@ export class NativeHeadlessApplication implements NativeApplication {
     effective.throwIfAborted()
     const header = await deletion.inspect(request.id, { signal: effective })
     if (header.cwd !== route.configuration.cwd) throw new Error('native-headless: Session restoration workspace differs from selected route')
-    return this.mutateStoredSession(header.id, route, effective, current =>
+    const restored = await this.mutateStoredSession(header.id, route, effective, current =>
       deletion.restore(request.id, { signal: current, expectedCwd: route.configuration.cwd }))
+    this.retireStagedFiles(restored)
+    return restored
   }
 
   private async listStoredDeletions(request: { readonly route: NativeRootRouteId; readonly limit: number },
@@ -2582,6 +2878,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     if (this.disposal !== undefined) return this.disposal
     const completion = Promise.withResolvers<void>()
     this.disposal = completion.promise
+    this.stagedFileSessions.clear()
     void this.disposeInternal().then(completion.resolve, completion.reject)
     return completion.promise
   }

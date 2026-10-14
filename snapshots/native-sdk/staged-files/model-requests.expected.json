@@ -1,0 +1,341 @@
+[
+  {
+    "model": "fixture-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Read the staged first file and inspect the image."
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{home}}/attachments/v1/objects/b1/b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "[encoded fixture image]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      "read_file"
+    ]
+  },
+  {
+    "model": "fixture-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Read the staged first file and inspect the image."
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{home}}/attachments/v1/objects/b1/b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "[encoded fixture image]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-first-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "First staged attachment: alpha-attachment-bytes\n",
+        "tool_call_id": "read-first-file"
+      },
+      {
+        "role": "user",
+        "content": "Read the second staged file too.[File \"second.txt\" (48 bytes, sha256:4ec0bacd): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+      }
+    ],
+    "tools": [
+      "read_file"
+    ]
+  },
+  {
+    "model": "fixture-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Read the staged first file and inspect the image."
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{home}}/attachments/v1/objects/b1/b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "[encoded fixture image]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-first-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "First staged attachment: alpha-attachment-bytes\n",
+        "tool_call_id": "read-first-file"
+      },
+      {
+        "role": "user",
+        "content": "Read the second staged file too.[File \"second.txt\" (48 bytes, sha256:4ec0bacd): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-second-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "Second staged attachment: beta-attachment-bytes\n",
+        "tool_call_id": "read-second-file"
+      }
+    ],
+    "tools": [
+      "read_file"
+    ]
+  },
+  {
+    "model": "fixture-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Read the staged first file and inspect the image."
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{home}}/attachments/v1/objects/b1/b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "[encoded fixture image]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-first-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "First staged attachment: alpha-attachment-bytes\n",
+        "tool_call_id": "read-first-file"
+      },
+      {
+        "role": "user",
+        "content": "Read the second staged file too.[File \"second.txt\" (48 bytes, sha256:4ec0bacd): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-second-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "Second staged attachment: beta-attachment-bytes\n",
+        "tool_call_id": "read-second-file"
+      },
+      {
+        "role": "assistant",
+        "content": "Both uploaded files were read."
+      },
+      {
+        "role": "user",
+        "content": "Cold-read the first staged file again."
+      }
+    ],
+    "tools": [
+      "read_file"
+    ]
+  },
+  {
+    "model": "fixture-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Read the staged first file and inspect the image."
+          },
+          {
+            "type": "text",
+            "text": "Image sha256:b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640; request preview 1x1px. Normalized copy (read-only; may be resized or re-encoded): \"{{home}}/attachments/v1/objects/b1/b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640\" (1x1px, image/png). Source dimensions, format, and byte size may differ. Copy to a writable path ending in .png before editing."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "[encoded fixture image]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-first-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "First staged attachment: alpha-attachment-bytes\n",
+        "tool_call_id": "read-first-file"
+      },
+      {
+        "role": "user",
+        "content": "Read the second staged file too.[File \"second.txt\" (48 bytes, sha256:4ec0bacd): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "read-second-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/4e/4ec0bacd2f846fe546abf1c66ad614c23989cf5e99a7c7622a5fd2ef9f81f5f2/second.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "Second staged attachment: beta-attachment-bytes\n",
+        "tool_call_id": "read-second-file"
+      },
+      {
+        "role": "assistant",
+        "content": "Both uploaded files were read."
+      },
+      {
+        "role": "user",
+        "content": "Cold-read the first staged file again."
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "cold-read-first-file",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "First staged attachment: alpha-attachment-bytes\n",
+        "tool_call_id": "cold-read-first-file"
+      }
+    ],
+    "tools": [
+      "read_file"
+    ]
+  }
+]
