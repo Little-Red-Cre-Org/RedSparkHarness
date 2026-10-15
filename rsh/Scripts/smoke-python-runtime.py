@@ -2150,7 +2150,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             {"id": "snapshot-message-feedback", "name": "@deepseek-ai/dsh-message-feedback",
              "config": {"maxNoteBytes": 1024}},
             {"id": "snapshot-feedback-producer", "name": (
-                Path(__file__).resolve().parent.parent / "snapshots/sdk/text-turn/feedback-producer.mjs"
+                Path(__file__).resolve().parents[2] / "snapshots/sdk/text-turn/feedback-producer.mjs"
             ).as_uri()},
         ]}])
         with DeepSeekHarness(
