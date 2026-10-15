@@ -535,7 +535,6 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       let updated = row
       if (plan.ops.length > 0) {
         updated = await actions.settingsMutate(plugin.namespace, plan.ops, draft.revision ?? row.revision)
-        settingsRequest.current += 1
         const next = descriptorsRef.current.filter(candidate => candidate.namespace !== plugin.namespace)
         next.push(updated)
         publishDescriptors(next)

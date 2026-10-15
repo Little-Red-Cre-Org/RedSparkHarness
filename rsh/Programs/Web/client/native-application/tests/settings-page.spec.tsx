@@ -320,6 +320,54 @@ it('shows refresh pending for a missing namespace and blocks writes past its ann
   await waitFor(() => { expect(save.disabled).toBe(false) })
 })
 
+it('settles an event refresh that started before a save acknowledgment', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  let acknowledgeSave!: () => void
+  const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return describeCount === 1 ? settingsDescription([initial])
+      : await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'shell', revision: 1 }
+  }
+  actions.settingsMutate = vi.fn(async () => {
+    await saveAcknowledged
+    return updated
+  })
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  expect(await screen.findByText(en.settingsPluginRefreshPending)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(actions.settingsMutate).toHaveBeenCalledOnce() })
+  await act(async () => { acknowledgeSave() })
+
+  await act(async () => { finishRefresh(settingsDescription([initial])) })
+  await waitFor(() => { expect(screen.queryByText(en.settingsPluginRefreshPending)).toBeNull() })
+  expect(screen.getByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '9')
+})
+
 it('retains the last plugin settings, revision, and credential info when a refresh omits its namespace', async () => {
   const webSearch = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
