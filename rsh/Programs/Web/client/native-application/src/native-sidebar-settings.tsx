@@ -19,6 +19,7 @@ import css from './NativeSidebarSettings.module.css'
 export function createNativeSettingsActions(client: NativeSessionClient): NativeSettingsActions {
   return {
     settingsDescribe: client.settingsDescribe.bind(client), settingsMutate: client.settingsMutate.bind(client),
+    settingsOpenDocument: client.settingsOpenDocument.bind(client),
     credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
     credentialsUnset: client.credentialsUnset.bind(client),
     authorizationList: client.authorizationList.bind(client),
@@ -50,6 +51,8 @@ type NativeSidebarSettingsInjected = {
   refreshModelControls: NativeConversationController['refreshModelControls']
   setLocale: NativeLocaleService['setLocale']
   toggleTheme: NativeThemeService['toggle']
+  setThemePreference: NativeThemeService['setPreference']
+  setFontSize: NativeThemeService['setFontSize']
 }
 type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
   & InjectFace<NativeSidebarSettingsInjected>
@@ -60,12 +63,23 @@ type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
  * @returns the sidebar controls and optional Settings panel.
  */
 export function NativeSidebarSettings({
-  wide, useLocale, useTheme, settingsActions, refreshModelControls, setLocale, toggleTheme, t,
+  wide, useLocale, useTheme, settingsActions, refreshModelControls, setLocale, toggleTheme,
+  setThemePreference, setFontSize, t,
 }: NativeSidebarSettingsProps) {
   const locale = useLocale(snapshot => snapshot.locale)
   const colorScheme = useTheme(snapshot => snapshot.active.colorScheme)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsSection, setSettingsSection] = useState('general')
+  const [hasSettingsDocument, setHasSettingsDocument] = useState(false)
+  const [settingsDocumentError, setSettingsDocumentError] = useState(false)
+  const openSettingsDocument = async (): Promise<void> => {
+    try {
+      await settingsActions.settingsOpenDocument()
+      setSettingsDocumentError(false)
+    } catch {
+      setSettingsDocumentError(true)
+    }
+  }
   return <>
     <div className={wide ? css.row : `${css.row} ${css.collapsed}`}>
       <Tooltip label={t('settings')} delayMs={500} disabled={wide}>
@@ -102,8 +116,17 @@ export function NativeSidebarSettings({
       activeId={settingsSection}
       onSelect={setSettingsSection}
       onClose={() => { setShowSettings(false) }}
+      actions={hasSettingsDocument ? <>
+        <button type="button" className={css.documentAction} onClick={() => { void openSettingsDocument() }}>
+          {t('settingsOpenDocument')}
+        </button>
+        {settingsDocumentError ? <span role="alert">{t('settingsOpenDocumentError')}</span> : null}
+      </> : null}
     >
       <SettingsPage actions={settingsActions} t={t} section={settingsSection}
+        useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
+        setThemePreference={setThemePreference} setFontSize={setFontSize}
+        onDocumentAvailabilityChange={setHasSettingsDocument}
         onAuthorized={() => { void refreshModelControls() }} />
     </SettingsPanel> : null}
   </>

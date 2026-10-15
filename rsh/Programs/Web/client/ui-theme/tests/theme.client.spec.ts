@@ -331,3 +331,27 @@ it('contains native theme listener failures and drains subscriptions when a cons
     error.mockRestore()
   }
 })
+
+it('publishes the native content font size to the document root', async () => {
+  const scope = new NativeScope()
+  const themeRequest = { plugin: nativeThemePlugin, scope, config: { preference: 'system' } }
+  let service: NativeThemeService | undefined
+  const observer: NativePlugin = {
+    apiVersion: 1,
+    name: 'native-theme-font-size-observer-test',
+    targets: ['client'],
+    requires: ['clientNativeTheme'],
+    provides: [],
+    resolve: () => (context) => { service = context.require('clientNativeTheme') },
+  }
+  const observerRequest = { plugin: observer, scope, config: undefined }
+  const host = new NativeHost(resolveInstallation([themeRequest, observerRequest], 'client'))
+  try {
+    await host.start()
+    service!.setFontSize(16)
+    expect(service!.getSnapshot().fontSize).toBe(16)
+    expect(document.documentElement.style.getPropertyValue('--dsh-content-font-size')).toBe('16px')
+  } finally {
+    await host.stop()
+  }
+})
