@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
+import { PluginInventoryTab } from './plugin-inventory-tab.tsx'
 import css from './plugins-section.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type PluginActions = Pick<NativeSessionClient,
-  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog'>
+  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog' | 'pluginInventoryList'>
 type PluginNamespace = 'shell' | 'agent-loop' | 'subagent-model-selection' | 'web-search-deepseek'
 type ModelRoute = { provider: string; model: string }
 type PluginDraft = {
@@ -645,7 +646,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       </ul>
     </div>
     <div id="plugins-inventory-panel" role="tabpanel" aria-labelledby="plugins-inventory-tab" hidden={tab !== 'inventory'} className={css.panel}>
-      <p className={css.notice}>{t('settingsComingSoon')}</p>
+      <PluginInventoryTab actions={actions} t={t} active={tab === 'inventory'} />
     </div>
   </section>
 }

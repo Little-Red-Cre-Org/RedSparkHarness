@@ -35,7 +35,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
   | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'modelCatalog'
   | 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
-  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'>
+  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'pluginInventoryList'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {

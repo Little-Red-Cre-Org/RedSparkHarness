@@ -46,6 +46,7 @@ const emptyModelActions = {
   modelsListConfigurableProviders: async () => [],
   modelsDiscover: async () => [],
   modelCatalog: async () => null,
+  pluginInventoryList: async () => ({ entries: [] }),
   settingsEvents: async function* (signal: AbortSignal) {
     await new Promise<void>((resolve) => {
       if (signal.aborted) resolve()

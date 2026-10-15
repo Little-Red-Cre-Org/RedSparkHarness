@@ -191,6 +191,18 @@ export const zh = {
   accountListError: '读取账户列表失败。',
   deepSeekAccount: 'DeepSeek 账户', signedIn: '已登录', accountSignedOut: '未登录。', loadingBalance: '正在读取账户余额…',
   balanceUnavailable: '账户余额不可用。', balanceStale: '刷新失败，以下余额可能已过期。', balance: '余额', bonusBalance: '赠送余额',
+  settingsPluginListLoading: '正在读取插件…', settingsPluginListLoadError: '暂时无法读取插件。', settingsPluginListRetry: '重试',
+  settingsPluginListSearch: '搜索插件', settingsPluginListEmpty: '暂无插件。', settingsPluginListEmptySearch: '没有匹配的插件。',
+  settingsPluginListFeatureGap: '当前 Host 尚未开放按 Agent 预设分组和插件开关。', settingsPluginListCount: '个',
+  settingsPluginListHostScope: 'Host 插件', settingsPluginListHostSubtitle: '由当前 Host 安装并管理',
+  settingsPluginListGlobalScope: '全局插件', settingsPluginListGlobalSubtitle: '系统与所有会话共用',
+  settingsPluginListSessionScope: '会话插件', settingsPluginListSessionSubtitle: '属于会话作用域',
+  settingsPluginListOtherScopeSubtitle: '当前 Host 的插件作用域',
+  settingsPluginListReady: '已启用', settingsPluginListPlanned: '等待中', settingsPluginListActivating: '启动中',
+  settingsPluginListDraining: '卸载中', settingsPluginListFailed: '启动失败', settingsPluginListDisposed: '已停用',
+  settingsPluginListId: '标识符', settingsPluginListName: '名称', settingsPluginListScope: '作用域',
+  settingsPluginListState: '状态', settingsPluginListFailure: '失败步骤',
+  settingsPluginListFailureActivation: '启动', settingsPluginListFailureCleanup: '清理', settingsPluginListNoFailure: '无',
 } as const
 
 /** Complete English pair for the native page's Chinese key set. */
@@ -389,6 +401,18 @@ export const en: Record<keyof typeof zh, string> = {
   accountListError: 'Could not load accounts.',
   deepSeekAccount: 'DeepSeek account', signedIn: 'Signed in', accountSignedOut: 'Account is signed out.', loadingBalance: 'Loading account balance…',
   balanceUnavailable: 'Account balance is unavailable.', balanceStale: 'Refresh failed; this balance may be out of date.', balance: 'Balance', bonusBalance: 'Bonus balance',
+  settingsPluginListLoading: 'Loading plugins…', settingsPluginListLoadError: 'Plugins are temporarily unavailable.', settingsPluginListRetry: 'Retry',
+  settingsPluginListSearch: 'Search plugins', settingsPluginListEmpty: 'No plugins are available.', settingsPluginListEmptySearch: 'No matching plugins.',
+  settingsPluginListFeatureGap: 'The current Host has not opened per-preset grouping or plugin toggles yet.', settingsPluginListCount: 'plugins',
+  settingsPluginListHostScope: 'Host plugins', settingsPluginListHostSubtitle: 'Installed and managed by this Host',
+  settingsPluginListGlobalScope: 'Global plugins', settingsPluginListGlobalSubtitle: 'Shared by the system and every session',
+  settingsPluginListSessionScope: 'Session plugins', settingsPluginListSessionSubtitle: 'Installed in a Session scope',
+  settingsPluginListOtherScopeSubtitle: 'Plugin installation scope on this Host',
+  settingsPluginListReady: 'Enabled', settingsPluginListPlanned: 'Pending', settingsPluginListActivating: 'Starting',
+  settingsPluginListDraining: 'Unloading', settingsPluginListFailed: 'Failed to start', settingsPluginListDisposed: 'Disabled',
+  settingsPluginListId: 'Identity', settingsPluginListName: 'Name', settingsPluginListScope: 'Scope',
+  settingsPluginListState: 'State', settingsPluginListFailure: 'Failure step',
+  settingsPluginListFailureActivation: 'Activation', settingsPluginListFailureCleanup: 'Cleanup', settingsPluginListNoFailure: 'None',
 }
 
 /** Native page translation keys. */

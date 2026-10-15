@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-15-native-settings-legacy-alignment.md
-2026-10-15-native-settings-legacy-alignment.md: dd941d7786ca7de43eb0e03de070e1990818be81
-2026-10-15-native-settings-legacy-alignment.zh.md: 2ee741a7d7e78d9527bf67a06c44d473808138fb
+2026-10-15-native-settings-legacy-alignment.md: 22efe41cc628edb89e7e066a662bb6c5a4651b30
+2026-10-15-native-settings-legacy-alignment.zh.md: 3590361eb03964f6517fbe0a18e64f3f21e4245c
