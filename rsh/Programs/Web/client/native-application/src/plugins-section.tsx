@@ -168,6 +168,10 @@ function conflictError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'native/settings-conflict'
 }
 
+function credentialReferenceConflict(): Error {
+  return Object.assign(new Error('Credential reference changed while saving.'), { code: 'native/settings-conflict' })
+}
+
 function cardDraftIsDirty(plugin: PluginDefinition, row: NativeSettingsDescriptor | undefined, draft: PluginDraft): boolean {
   if (row === undefined) return false
   const { ops, invalid } = settingsOps(plugin, row, draft)
@@ -540,9 +544,20 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         publishDescriptors(next)
       }
       if (plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '') {
-        const ref = credentialRef(updated)
+        const latestRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
+        const ref = latestRow === undefined ? undefined : credentialRef(latestRow)
+        if (ref === undefined || ref !== credentialRef(row) || ref !== credentialRef(updated)) {
+          throw credentialReferenceConflict()
+        }
         await actions.credentialsSet(ref, draft.apiKey.trim())
         const result = await readCredential(ref, lifetime.current?.signal)
+        if (result.kind === 'superseded') {
+          const latestRead = credentialRead.current
+          const currentRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
+          if (latestRead?.ref !== ref || currentRow === undefined || credentialRef(currentRow) !== ref) {
+            throw credentialReferenceConflict()
+          }
+        }
         if (result.kind === 'failed' || (result.kind === 'read' && !result.info.configured)) {
           throw new Error('Credential was not reported as configured after saving.')
         }

@@ -269,6 +269,59 @@ it('saves web-search settings and its write-only key through Native Host actions
   ], 1)
 })
 
+it('keeps the web-search key draft when its credential reference changes during save', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 })
+  const newer = pluginSettings('web-search-deepseek', 3, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let acknowledgeSave!: () => void
+  const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async () => ({
+    KEY_A: { configured: false, writable: true },
+    KEY_B: { configured: false, writable: true },
+  }))
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [newer])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 3 }
+  }
+  actions.settingsMutate = vi.fn(async () => {
+    await saveAcknowledged
+    return updated
+  })
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(actions.settingsMutate).toHaveBeenCalledOnce() })
+
+  releaseEvent()
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
+  expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B'])
+  await act(async () => { acknowledgeSave() })
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(credentialsSet).not.toHaveBeenCalled()
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+})
+
 it('shows a Host gap for an absent plugin namespace without a save action', async () => {
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
   actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
