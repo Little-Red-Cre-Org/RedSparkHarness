@@ -222,7 +222,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
     expect(agentPresetsList).toHaveBeenCalledTimes(2)
   })
   expect(screen.getByText(en.agentPresetsDefault)).toBeTruthy()
-  expect(screen.getByText(en.agentPresetsNeedsMigration, { selector: '[role="alert"]' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsNeedsMigration}: Migrating` })).toBeTruthy()
   expect(screen.getByText(en.agentPresetsBrokenBadge)).toBeTruthy()
   expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Legacy` }))

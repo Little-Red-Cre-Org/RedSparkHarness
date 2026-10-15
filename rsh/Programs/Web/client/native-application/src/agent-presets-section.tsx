@@ -268,9 +268,8 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
                     {isDefault ? <Tag tone="solid" className={css.cardDefault}>{t('agentPresetsDefault')}</Tag> : null}
                   </span>
                   <span className={css.cardDesc}>{preset.description ?? t('agentPresetsNoDescription')}</span>
-                  {!isReady ? <span className={css.cardProblem} role="alert">
-                    {preset.problem ?? statusText(preset.status)}
-                  </span> : null}
+                  {!isReady && preset.problem !== undefined
+                    ? <span className={css.cardProblem} role="alert">{preset.problem}</span> : null}
                   <code className={css.cardId}>{preset.id}</code>
                 </button>
                 <div className={css.cardFoot}>
