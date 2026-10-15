@@ -738,19 +738,18 @@ describe('desktop main startup', () => {
     expect(harness.hosts).toHaveLength(2)
     await mutationHost.stopping.promise
     mutationHost.exited.resolve()
+    if (hostReadiness === 'never-ready') await harness.nativeMutationRecoveryWaiting.promise
+    await vi.advanceTimersByTimeAsync(0)
+    expect(harness.quitWasAllowed).toBe(false)
+    if (exitPath === 'update') expect(harness.installUpdate).not.toHaveBeenCalled()
     if (hostReadiness === 'ready') {
       releaseMutation?.()
       await expect(mutation).resolves.toMatchObject({ status: 'applied' })
     } else {
-      await harness.nativeMutationRecoveryWaiting.promise
-      // Let the stopped Host and quit or install continuations settle while the manager is still held.
-      await vi.advanceTimersByTimeAsync(0)
       expect(harness.nativeMutationRecoveryComplete).toBe(true)
       expect(harness.nativeMutationRecoveryRestartError).toBe('desktop backend shutdown has started')
       expect(harness.hosts).toHaveLength(2)
       expect(mutationHost.start).toHaveBeenCalledTimes(1)
-      expect(harness.quitWasAllowed).toBe(false)
-      if (exitPath === 'update') expect(harness.installUpdate).not.toHaveBeenCalled()
       releaseRecovery?.()
       await expect(mutation).resolves.toMatchObject({ status: 'recovery-required' })
       expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'starting' })
