@@ -1,15 +1,19 @@
 /** Agent preset management in Native Web Settings. */
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Button, IconBrowseOutline16, IconCopyOutline16, IconFolderOpenOutline16, IconTrashOutline16, Modal, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativeAgentPresetDocument, NativeAgentPresetList, NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import {
+  Button, IconBrowseOutline16, IconCopyOutline16, IconFolderOpenOutline16, IconTrashOutline16, Modal, Switch, Tag,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import type {
+  NativeAgentPresetDocument, NativeAgentPresetList, NativeSessionClient, NativeSettingsDescriptor,
+} from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './agent-presets-section.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type AgentPresetsSectionProps = {
   actions: Pick<NativeSessionClient, 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
-    | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'settingsEvents'>
+    | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'settingsDescribe' | 'settingsMutate' | 'settingsEvents'>
   t: Translate
 }
 type CopyDraft = { from: string; id: string; name: string; saving: boolean; error: string | null }
@@ -22,10 +26,15 @@ const PRESET_ID = /^[a-z0-9][a-z0-9-]*$/
  */
 export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): ReactNode {
   const [presets, setPresets] = useState<NativeAgentPresetList>()
+  const [settings, setSettings] = useState<NativeSettingsDescriptor>()
+  const [announcedSettingsRevision, setAnnouncedSettingsRevision] = useState(0)
+  const [settingsLoadState, setSettingsLoadState] = useState<'loading' | 'absent' | 'failed' | 'loaded'>('loading')
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [canOpenDirectory, setCanOpenDirectory] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+  const [settingsWriting, setSettingsWriting] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [detail, setDetail] = useState<NativeAgentPresetDocument | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -35,11 +44,13 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   const [deleting, setDeleting] = useState(false)
   const [revealedPaths, setRevealedPaths] = useState<Readonly<Record<string, string>>>({})
   const detailRequest = useRef<string | null>(null)
+  const reloadRoster = useRef<(() => Promise<void>) | undefined>(undefined)
 
   useEffect(() => {
     const lifetime = new AbortController()
     let rosterRequest: AbortController | undefined
-    const load = async (): Promise<void> => {
+    let settingsRequest: AbortController | undefined
+    const loadRoster = async (): Promise<void> => {
       rosterRequest?.abort()
       const request = new AbortController()
       rosterRequest = request
@@ -57,21 +68,49 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         setLoading(false)
       }
     }
+    const loadSettings = async (): Promise<void> => {
+      settingsRequest?.abort()
+      const request = new AbortController()
+      settingsRequest = request
+      setSettingsError(null)
+      try {
+        const result = await actions.settingsDescribe(request.signal)
+        if (lifetime.signal.aborted || request.signal.aborted) return
+        const found = result.namespaces.find(row => row.namespace === 'agent-presets') ?? null
+        if (found === null) {
+          setSettingsLoadState('absent')
+        } else {
+          setSettings(current => current === undefined || current.revision <= found.revision ? found : current)
+          setSettingsLoadState('loaded')
+        }
+      } catch (failure: unknown) {
+        if (lifetime.signal.aborted || request.signal.aborted) return
+        setSettingsError(failure instanceof Error ? failure.message : String(failure))
+        setSettingsLoadState('failed')
+      }
+    }
+    reloadRoster.current = loadRoster
     void actions.agentPresetsCanOpenDirectory(lifetime.signal).then((canOpen) => {
       if (!lifetime.signal.aborted) setCanOpenDirectory(canOpen)
     }, () => {
       if (!lifetime.signal.aborted) setCanOpenDirectory(false)
     })
-    // Subscribe before the first roster read so updates between read and listen are not missed.
+    // Subscribe before the first reads so updates between read and listen are not missed.
     void (async () => {
       try {
         const events = actions.settingsEvents(lifetime.signal)
         const consume = (async () => {
           for await (const event of events) {
-            if (event.type === 'agent-presets/updated') void load()
+            if (event.type === 'agent-presets/updated') void loadRoster()
+            if (event.type === 'settings/document-updated' && event.namespace === 'agent-presets') {
+              setAnnouncedSettingsRevision(current => Math.max(current, event.revision))
+              void loadSettings()
+              void loadRoster()
+            }
           }
         })()
-        void load()
+        void loadRoster()
+        void loadSettings()
         await consume
       } catch (failure: unknown) {
         if (!lifetime.signal.aborted) setError(failure instanceof Error ? failure.message : String(failure))
@@ -80,8 +119,14 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
     return () => {
       lifetime.abort()
       rosterRequest?.abort()
+      settingsRequest?.abort()
+      reloadRoster.current = undefined
     }
-  }, [actions.agentPresetsList, actions.agentPresetsCanOpenDirectory, actions.settingsEvents])
+  }, [actions.agentPresetsList, actions.agentPresetsCanOpenDirectory, actions.settingsDescribe, actions.settingsEvents])
+
+  const settingsAvailable = settingsLoadState === 'loaded' && settings !== undefined
+    && settings.revision >= announcedSettingsRevision
+  const modeSelectionEnabled = settings?.value.modeSelectionEnabled === true
 
   const openDetails = async (id: string): Promise<void> => {
     detailRequest.current = id
@@ -130,6 +175,22 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
     }
   }
 
+  const writeSetting = async (path: string[], value: string | boolean): Promise<void> => {
+    if (!settingsAvailable || settingsWriting) return
+    setSettingsWriting(true)
+    setSettingsError(null)
+    try {
+      const result = await actions.settingsMutate('agent-presets', [{ op: 'set', path, value }], settings.revision)
+      // A settings event may already have read a newer revision; never step back to this write's view.
+      setSettings(current => current === undefined || current.revision <= result.revision ? result : current)
+      await reloadRoster.current?.()
+    } catch (failure: unknown) {
+      setSettingsError(failure instanceof Error ? failure.message : String(failure))
+    } finally {
+      setSettingsWriting(false)
+    }
+  }
+
   const remove = async (): Promise<void> => {
     if (pendingDelete === null || deleting) return
     setDeleting(true)
@@ -151,50 +212,112 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
 
   return <section className={css.section}>
     <h2 className={css.title}>{t('settingsAgentPresets')}</h2>
+    <p className={css.intro}>{t('agentPresetsIntro')}</p>
+    <div className={css.pickerPreference}>
+      <div className={css.pickerPreferenceCopy}>
+        <span className={css.pickerPreferenceTitleRow}>
+          <span className={css.pickerPreferenceTitle}>{t('agentPresetsShowPicker')}</span>
+          <Tag>{t('agentPresetsBeta')}</Tag>
+        </span>
+        <p className={css.pickerPreferenceDescription}>{t('agentPresetsShowPickerDescription')}</p>
+        {settingsLoadState === 'absent' ? <p className={css.hostGap}>{t('agentPresetsHostGap')}</p> : null}
+      </div>
+      <Switch
+        checked={modeSelectionEnabled}
+        label={t('agentPresetsShowPicker')}
+        disabled={!settingsAvailable || settingsWriting}
+        title={settingsLoadState === 'absent' ? t('agentPresetsHostGap') : undefined}
+        onChange={(next) => { void writeSetting(['modeSelectionEnabled'], next) }}
+      />
+    </div>
     {loading ? <p role="status">{t('agentPresetsLoading')}</p> : null}
     {failed ? <p className={css.error} role="alert">{t('agentPresetsLoadFailed')}</p> : null}
     {error === null ? null : <p className={css.error} role="alert">{error}</p>}
+    {settingsError === null ? null : <p className={css.error} role="alert">{settingsError}</p>}
     {!loading && !failed && presets?.presets.length === 0 ? <p>{t('agentPresetsEmpty')}</p> : null}
-    {!loading && !failed && presets !== undefined && presets.presets.length > 0 ? <ul className={css.list}>
-      {presets.presets.map(preset => <li key={preset.id} className={css.card}>
-        <div className={css.header}>
-          <h3 className={css.name}>{preset.name}</h3>
-          <Tag>{t(preset.source === 'user' ? 'agentPresetsSourceUser'
-            : preset.source === 'system' ? 'agentPresetsSourceSystem' : 'agentPresetsSourceProfile')}</Tag>
-          {preset.id === presets.default ? <Tag>{t('agentPresetsDefault')}</Tag> : null}
-          <Tag>{statusText(preset.status)}</Tag>
-        </div>
-        <code className={css.id}>{preset.id}</code>
-        {preset.description === undefined ? null : <p className={css.description}>{preset.description}</p>}
-        {preset.problem === undefined ? null : <p className={css.problem}>{preset.problem}</p>}
-        <div className={css.actions}>
-          <Button variant="outline" onClick={() => { void openDetails(preset.id) }}>
-            <IconBrowseOutline16 size={14} />{t('agentPresetsView')}
-          </Button>
-          {preset.source === 'profile' || preset.status !== 'ready' ? null : (
-            <Button variant="outline" onClick={() => { setCopy({ from: preset.id, id: '', name: '', saving: false, error: null }) }}>
-              <IconCopyOutline16 size={14} />{t('agentPresetsDuplicate')}
-            </Button>
-          )}
-          {preset.source !== 'user' ? null : (
-            <>
-              <Button variant="outline" onClick={() => { void openLocation(preset.id) }}>
-                <IconFolderOpenOutline16 size={14} />{t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}
-              </Button>
-              <Button variant="outline" onClick={() => { setPendingDelete(preset.id) }}>
-                <IconTrashOutline16 size={14} />{t('agentPresetsDelete')}
-              </Button>
-            </>
-          )}
-        </div>
-        {revealedPaths[preset.id] === undefined ? null : (
-          <p className={css.path}>{t('agentPresetsPath')} <code>{revealedPaths[preset.id]}</code></p>
-        )}
-      </li>)}
-    </ul> : null}
+    {!loading && !failed && presets !== undefined && presets.presets.length > 0 ? <>
+      {([
+        ['built-in', 'agentPresetsBuiltInGroup'],
+        ['custom', 'agentPresetsCustomGroup'],
+      ] as const).map(([group, heading]) => {
+        const rows = presets.presets.filter(preset => group === 'custom' ? preset.source === 'user' : preset.source !== 'user')
+        if (rows.length === 0) return null
+        return <section className={css.group} key={group}>
+          <h3 className={css.groupHead}>{t(heading)}</h3>
+          <ul className={css.cards}>
+            {rows.map((preset) => {
+              const isDefault = preset.id === presets.default
+              const isReady = preset.status === 'ready'
+              const selectionDisabled = !settingsAvailable || !modeSelectionEnabled || settingsWriting
+              const selectionLabel = !isReady ? statusText(preset.status)
+                : isDefault ? t('agentPresetsDefault')
+                  : !settingsAvailable ? t('agentPresetsSettingUnavailable')
+                    : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
+              const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
+              return <li key={preset.id} className={[
+                css.card,
+                !isReady ? css.cardBroken : undefined,
+                isDefault ? css.cardActive : undefined,
+                !modeSelectionEnabled && !isDefault && isReady ? css.cardSelectionDisabled : undefined,
+              ].filter(Boolean).join(' ')}>
+                <button
+                  type="button"
+                  className={css.cardMain}
+                  aria-pressed={isDefault}
+                  disabled={isDefault || (isReady && selectionDisabled)}
+                  aria-disabled={!isReady}
+                  aria-label={`${selectionLabel}: ${preset.name}`}
+                  title={selectionLabel}
+                  onClick={() => {
+                    if (!isReady || !modeSelectionEnabled || settingsWriting) return
+                    void writeSetting(['default'], preset.id)
+                  }}
+                >
+                  <span className={css.cardHead}>
+                    <span className={css.cardName}>{preset.name}</span>
+                    {!isReady ? <Tag tone="danger" className={css.brokenBadge}>
+                      {preset.status === 'needs-migration' ? t('agentPresetsNeedsMigration') : t('agentPresetsBrokenBadge')}
+                    </Tag> : null}
+                    <Tag>{t(sourceTag)}</Tag>
+                    {isDefault ? <Tag tone="solid" className={css.cardDefault}>{t('agentPresetsDefault')}</Tag> : null}
+                  </span>
+                  <span className={css.cardDesc}>{preset.description ?? t('agentPresetsNoDescription')}</span>
+                  {!isReady && preset.problem !== undefined
+                    ? <span className={css.cardProblem} role="alert">{preset.problem}</span> : null}
+                  <code className={css.cardId}>{preset.id}</code>
+                </button>
+                <div className={css.cardFoot}>
+                  <button type="button" className={css.iconButton}
+                    data-tip={t('agentPresetsView')} aria-label={`${t('agentPresetsView')}: ${preset.name}`}
+                    onClick={() => { void openDetails(preset.id) }}><IconBrowseOutline16 /></button>
+                  {preset.source !== 'profile' && isReady ? <button type="button" className={css.iconButton}
+                    data-tip={t('agentPresetsDuplicate')} aria-label={`${t('agentPresetsDuplicate')}: ${preset.name}`}
+                    onClick={() => { setCopy({ from: preset.id, id: '', name: '', saving: false, error: null }) }}>
+                    <IconCopyOutline16 />
+                  </button> : null}
+                  {preset.source === 'user' ? <>
+                    <button type="button" className={css.iconButton}
+                      data-tip={t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}
+                      aria-label={`${t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}: ${preset.name}`}
+                      onClick={() => { void openLocation(preset.id) }}><IconFolderOpenOutline16 /></button>
+                    <button type="button" className={`${css.iconButton} ${css.iconDanger}`}
+                      data-tip={t('agentPresetsDelete')} aria-label={`${t('agentPresetsDelete')}: ${preset.name}`}
+                      onClick={() => { setPendingDelete(preset.id) }}><IconTrashOutline16 /></button>
+                  </> : null}
+                </div>
+                {revealedPaths[preset.id] === undefined ? null : <p className={css.revealedPath}>
+                  <span>{t('agentPresetsPath')}</span><code>{revealedPaths[preset.id]}</code>
+                </p>}
+              </li>
+            })}
+          </ul>
+        </section>
+      })}
+    </> : null}
 
     <Modal open={detailId !== null} onClose={() => { detailRequest.current = null; setDetailId(null) }}
-      title={detail?.name ?? detailId ?? t('agentPresetsView')} closeLabel={t('close')} {...dialogProps}>
+      title={detailId === null ? '' : `${t('agentPresetsView')} · ${detail?.name ?? detailId}`}
+      closeLabel={t('close')} {...dialogProps}>
       {detailLoading ? <p role="status">{t('agentPresetsLoading')}</p> : null}
       {detailError === null ? null : <p className={css.error} role="alert">{detailError}</p>}
       {detail === null ? null : <div className={css.detail}>
@@ -204,8 +327,8 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         <p>{t('agentPresetsStatus')}: {statusText(detail.status)}</p>
         {detail.description === undefined ? null : <p>{detail.description}</p>}
         {detail.problem === undefined ? null : <p className={css.problem}>{detail.problem}</p>}
-        <h3 className={css.compositionTitle}>{t('agentPresetsComposition')}</h3>
-        {detail.content === undefined ? <p>{t('agentPresetsNoComposition')}</p> : <pre className={css.composition}><code>{detail.content}</code></pre>}
+        {detail.content === undefined ? <p>{t('agentPresetsNoComposition')}</p>
+          : <pre className={css.composition}><code>{detail.content}</code></pre>}
       </div>}
     </Modal>
 
@@ -217,11 +340,15 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
           {copy?.saving ? t('agentPresetsCreating') : t('agentPresetsCreate')}
         </Button>
       </>}>
-      {copy === null ? null : <div className={css.fields}>
-        <label><span>{t('agentPresetsIdentifier')}</span><input autoFocus spellCheck={false} value={copy.id}
-          placeholder={t('agentPresetsIdPlaceholder')} onChange={(event) => { setCopy({ ...copy, id: event.target.value, error: null }) }} /></label>
-        <label><span>{t('agentPresetsName')}</span><input spellCheck={false} value={copy.name}
-          placeholder={t('agentPresetsNamePlaceholder')} onChange={(event) => { setCopy({ ...copy, name: event.target.value, error: null }) }} /></label>
+      {copy === null ? null : <div className={css.dialogFields}>
+        <label className={css.field}><span className={css.fieldLabel}>{t('agentPresetsIdentifier')}</span>
+          <input className={css.input} autoFocus spellCheck={false} value={copy.id}
+            placeholder={t('agentPresetsIdPlaceholder')} onChange={(event) => { setCopy({ ...copy, id: event.target.value, error: null }) }} />
+        </label>
+        <label className={css.field}><span className={css.fieldLabel}>{t('agentPresetsName')}</span>
+          <input className={css.input} spellCheck={false} value={copy.name}
+            placeholder={t('agentPresetsNamePlaceholder')} onChange={(event) => { setCopy({ ...copy, name: event.target.value, error: null }) }} />
+        </label>
         {copy.error === null ? null : <p className={css.error} role="alert">{copy.error}</p>}
       </div>}
     </Modal>
@@ -230,7 +357,8 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       title={t('agentPresetsDeleteTitle')} closeLabel={t('close')} description={t('agentPresetsDeleteDescription')} {...dialogProps}
       footer={<>
         <Button variant="outline" disabled={deleting} onClick={() => { setPendingDelete(null) }}>{t('modelsCancel')}</Button>
-        <Button disabled={deleting} onClick={() => { void remove() }}>{deleting ? t('agentPresetsDeleting') : t('agentPresetsDeleteConfirm')}</Button>
+        <Button variant="outline" className={css.deleteConfirm} disabled={deleting}
+          onClick={() => { void remove() }}>{deleting ? t('agentPresetsDeleting') : t('agentPresetsDeleteConfirm')}</Button>
       </>}>
       {pendingDelete === null ? null : <p><code>{pendingDelete}</code></p>}
     </Modal>
