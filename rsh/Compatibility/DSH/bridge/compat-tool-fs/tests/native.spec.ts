@@ -495,19 +495,21 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     cordisWriteOuter()
     cordisEditOuter()
     shortCircuit = true
-    const outcomes: { listener: string; result: unknown; dispatches: (() => Promise<unknown>)[] }[] = [
+    const outcomes: { listener: string; result: unknown; dispatches: ((terminal: () => undefined) => Promise<unknown>)[] }[] = [
       { listener: 'native:outer', result: writeResult, dispatches: [
-        () => host.events.waterfall(scope, 'fs/write-intent', () => undefined, target, actor),
-        () => legacy.waterfall('fs/write-intent', target, actor, () => undefined),
+        terminal => host.events.waterfall(scope, 'fs/write-intent', terminal, target, actor),
+        terminal => legacy.waterfall('fs/write-intent', target, actor, terminal),
       ] },
       { listener: 'native:edit', result: editResult, dispatches: [
-        () => host.events.waterfall(scope, 'fs/edit-intent', () => undefined, target, actor),
-        () => legacy.waterfall('fs/edit-intent', target, actor, () => undefined),
+        terminal => host.events.waterfall(scope, 'fs/edit-intent', terminal, target, actor),
+        terminal => legacy.waterfall('fs/edit-intent', target, actor, terminal),
       ] },
     ]
     for (const outcome of outcomes) for (const dispatch of outcome.dispatches) {
       sequence.length = 0
-      await expect(dispatch()).resolves.toBe(outcome.result)
+      let terminalCalls = 0
+      await expect(dispatch(() => { terminalCalls += 1; return undefined })).resolves.toBe(outcome.result)
+      expect(terminalCalls).toBe(0)
       expect(sequence).toEqual([outcome.listener])
     }
 
@@ -515,7 +517,9 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     rejectListener = true
     for (const outcome of outcomes) for (const dispatch of outcome.dispatches) {
       sequence.length = 0
-      await expect(dispatch()).rejects.toBe(failure)
+      let terminalCalls = 0
+      await expect(dispatch(() => { terminalCalls += 1; return undefined })).rejects.toBe(failure)
+      expect(terminalCalls).toBe(0)
       expect(sequence).toEqual([outcome.listener])
     }
   } finally {

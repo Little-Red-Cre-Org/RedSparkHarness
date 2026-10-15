@@ -13,20 +13,23 @@ import { plugin as persistencePlugin } from '@deepseek-ai/dsh-session-persistenc
 import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { plugin as applicationPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { plugin as questionsPlugin } from '@deepseek-ai/dsh-user-questions/native'
 import { plugin as brokerPlugin } from '@deepseek-ai/dsh-user-question-broker/native'
-import type { NativeQuestionBroker, NativePendingQuestion } from '@deepseek-ai/dsh-user-questions/broker'
+import { NativeQuestionBroker, type NativePendingQuestion } from '@deepseek-ai/dsh-user-questions/broker'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin } from '../src/native.ts'
 
-it('persists a human answer and drains its broker presentation when the delegating answerer is removed', async () => {
+it('persists human answers and replaces the broker after draining its pending presentation', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-native-question-'))
   const workspace = join(directory, 'workspace')
   const storageRoot = join(directory, 'sessions')
   await mkdir(workspace)
   const args = { questions: [{ id: 'decision', question: 'Proceed?', options: [{ label: 'Yes' }, { label: 'No' }] }] }
   const adapter = new MockAdapter([toolCallResponse('answer', 'ask_user_question', args), textResponse('answered'),
-    toolCallResponse('cancel', 'ask_user_question', args), textResponse('question cancelled')])
+    toolCallResponse('delegate-cancel', 'ask_user_question', args), textResponse('question cancelled'),
+    toolCallResponse('broker-cancel', 'ask_user_question', args), textResponse('broker question cancelled'),
+    toolCallResponse('replacement-answer', 'ask_user_question', args), textResponse('replacement answered')])
   const scope = new NativeScope()
   let app: NativeApplication | undefined
   let broker: NativeQuestionBroker | undefined
@@ -48,7 +51,32 @@ it('persists a human answer and drains its broker presentation when the delegati
     }, context.scope)) },
   }
   const delegateRequest = { plugin: delegate, scope, config: undefined }
-  const host = new NativeHost(resolveInstallation([
+  const handoff: string[] = []
+  const cleanupEntered = Promise.withResolvers<undefined>()
+  const releaseCleanup = Promise.withResolvers<undefined>()
+  let replacementBroker: NativeQuestionBroker | undefined
+  let oldBrokerDisposedAtActivation = false
+  let retiredBroker: NativeQuestionBroker | undefined
+  const controlledBrokerPlugin: NativePlugin = {
+    apiVersion: 1, name: 'controlled-question-broker', targets: ['host'], requires: ['userQuestions'], provides: ['userQuestionBroker'],
+    resolve: () => async (context) => {
+      const retired = retiredBroker
+      if (retired === undefined) throw new Error('retired question broker was not captured')
+      expect(() => { retired.onRequest(() => {}) }).toThrow(/disposed/)
+      oldBrokerDisposedAtActivation = true
+      const controlled = new NativeQuestionBroker()
+      replacementBroker = controlled
+      context.own(() => controlled.dispose())
+      context.provide('userQuestionBroker', controlled)
+      context.effect(context.require('userQuestions').registerAnswerer('broker', controlled, context.scope))
+      controlled.onRequest((question) => {
+        handoff.push('substitute served')
+        controlled.answer(question.id, question.request.agent, { answers: [{ id: 'decision', selected: ['No'] }] })
+      })
+      handoff.push('substitute provider active')
+    },
+  }
+  const requests = [
     { plugin: agentsPlugin, scope, config: undefined }, { plugin: sessionsPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: toolsPlugin, scope, config: undefined },
     { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
@@ -56,7 +84,8 @@ it('persists a human answer and drains its broker presentation when the delegati
     { plugin: questionsPlugin, scope, config: undefined }, delegateRequest, brokerRequest, { plugin, scope, config: undefined },
     { plugin: model, scope, config: undefined }, { plugin: capture, scope, config: undefined },
     applicationRequest,
-  ], 'host'))
+  ]
+  const host = new NativeHost(resolveInstallation(requests, 'host'))
   const storage = new JsonlSessionBackend({ root: storageRoot, compression: 'none' })
   try {
     await host.start()
@@ -72,25 +101,81 @@ it('persists a human answer and drains its broker presentation when the delegati
     expect(await run).toBe(0)
     receive()
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('Yes')
+
+    const oldBroker = broker
+    if (oldBroker === undefined) throw new Error('question broker was not captured')
+    const removedDelegateQuestion = Promise.withResolvers<NativePendingQuestion>()
+    const receiveRemovedDelegateQuestion = oldBroker.onRequest((question) => { removedDelegateQuestion.resolve(question) })
+    const removingDelegate = host.runOwned(applicationRequest, { kind: 'question-test' },
+      invocation => application.run(['ask again'], invocation.signal))
+    const removedQuestion = await removedDelegateQuestion.promise
+    await host.remove(delegateRequest)
+    await removingDelegate
+    receiveRemovedDelegateQuestion()
+    expect(() => { oldBroker.answer(removedQuestion.id, removedQuestion.request.agent, { answers: [] }) }).toThrow(/no pending question/)
+
+    const oldAsk = oldBroker.ask.bind(oldBroker)
+    oldBroker.ask = async (request, next) => {
+      handoff.push('old request entered')
+      try { return await oldAsk(request, next) }
+      finally { handoff.push('old request settled') }
+    }
+    const disposeOld = oldBroker.dispose.bind(oldBroker)
+    oldBroker.dispose = async () => {
+      handoff.push('old cleanup entered')
+      await disposeOld()
+      cleanupEntered.resolve(undefined)
+      await releaseCleanup.promise
+      handoff.push('old cleanup completed')
+    }
     const second = Promise.withResolvers<NativePendingQuestion>()
-    broker.onRequest((question) => { second.resolve(question) })
-    const cancelling = host.runOwned(applicationRequest, { kind: 'question-test' }, invocation => application.run(['ask again'], invocation.signal))
+    const receiveSecond = oldBroker.onRequest((question) => { second.resolve(question) })
+    const cancelling = host.runOwned(applicationRequest, { kind: 'question-test' }, invocation => application.run(['ask after delegate removal'], invocation.signal))
     const unanswered = await second.promise
-    const settled = await Promise.allSettled([host.remove(delegateRequest), cancelling])
-    expect(settled.map(item => item.status)).toEqual(['fulfilled', 'fulfilled'])
-    expect(() => { questionBroker.answer(unanswered.id, unanswered.request.agent, { answers: [] }) }).toThrow(/no pending question/)
+    retiredBroker = oldBroker
+    const replacementRequest = { plugin: controlledBrokerPlugin, scope, config: undefined }
+    let replacementSettled = false
+    const replacing = host.replace(resolveInstallation(requests.map(request => request === brokerRequest ? replacementRequest : request), 'host'))
+      .then(() => { replacementSettled = true })
+    await cleanupEntered.promise
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(replacementSettled).toBe(false)
+    expect(replacementBroker).toBeUndefined()
+    expect(handoff).toEqual(['old request entered', 'old request settled', 'old cleanup entered'])
+    releaseCleanup.resolve(undefined)
+    await replacing
+    await cancelling
+    receiveSecond()
+    expect(() => { oldBroker.answer(unanswered.id, unanswered.request.agent, { answers: [] }) }).toThrow(/no pending question/)
+    expect(oldBrokerDisposedAtActivation).toBe(true)
+    expect(replacementBroker).toBeDefined()
+    expect(broker).toBe(replacementBroker)
+    expect(handoff).toEqual([
+      'old request entered', 'old request settled', 'old cleanup entered', 'old cleanup completed', 'substitute provider active',
+    ])
+
+    await host.runOwned(applicationRequest, { kind: 'question-test' }, invocation => application.run(['ask again'], invocation.signal))
+    expect(handoff).toEqual([
+      'old request entered', 'old request settled', 'old cleanup entered', 'old cleanup completed',
+      'substitute provider active', 'substitute served',
+    ])
+    expect(JSON.stringify(adapter.requests[7]?.messages)).toContain('No')
     const stored = await storage.list()
-    expect(stored).toHaveLength(2)
+    expect(stored).toHaveLength(4)
     const results = []
     for (const snapshot of stored) {
       const reader = await storage.open(SessionId(snapshot.header.id), 'read')
       try { results.push(...(await reader.read()).events.filter(event => event.type === 'tool/result')) }
       finally { await reader.close() }
     }
-    expect(results).toHaveLength(2)
-    expect(results.some(event => event.data.error?.code === 'ASK_ABORTED')).toBe(true)
+    expect(results).toHaveLength(4)
+    expect(results.filter(event => event.data.error?.code === 'ASK_ABORTED')).toHaveLength(2)
+    expect(results.find(event => event.data.message.source.kind === 'tool'
+      && event.data.message.source.callId === ToolCallId('delegate-cancel'))).toMatchObject({ data: { error: { code: 'ASK_ABORTED' } } })
     expect(JSON.stringify(results)).toContain('Yes')
+    expect(JSON.stringify(results)).toContain('No')
   } finally {
+    releaseCleanup.resolve(undefined)
     await host.stop()
     await storage.close()
     await rm(directory, { recursive: true, force: true })

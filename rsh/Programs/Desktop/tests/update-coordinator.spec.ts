@@ -112,40 +112,46 @@ describe('desktop update coordinator', () => {
     expect(downloadUpdate).toHaveBeenCalledOnce()
   })
 
-  it('recovers an asynchronous installer error and retries the retained release', async () => {
-    const states: DesktopUpdateState[] = []
-    const downloadUpdate = vi.fn(async () => [])
-    const quitAndInstall = vi.fn()
-    const updater = Object.assign(new EventEmitter(), {
-      autoDownload: true,
-      autoInstallOnAppQuit: true,
-      checkForUpdates: vi.fn(async () => ({
-        isUpdateAvailable: true,
-        updateInfo: { version: '1.3.0' },
-      })),
-      downloadUpdate,
-      quitAndInstall,
-    }) as unknown as AppUpdater
-    const beforeRestart = vi.fn(async () => {})
-    const afterFailedRestart = vi.fn(async () => {})
-    const coordinator = new DesktopUpdateCoordinator(
-      (state) => { states.push(state); return state }, beforeRestart, afterFailedRestart, updater, () => true,
-    )
-    quitAndInstall.mockImplementationOnce(() => {
-      void Promise.resolve().then(() => updater.emit('error', new Error('installer could not start')))
-    })
-    quitAndInstall.mockImplementationOnce(() => { updaterApp.emit('before-quit') })
+  it.each(['asynchronous', 'synchronous'] as const)(
+    'recovers a %s installer error and retries the retained release',
+    async (timing) => {
+      const states: DesktopUpdateState[] = []
+      const downloadUpdate = vi.fn(async () => [])
+      const quitAndInstall = vi.fn()
+      const updater = Object.assign(new EventEmitter(), {
+        autoDownload: true,
+        autoInstallOnAppQuit: true,
+        checkForUpdates: vi.fn(async () => ({
+          isUpdateAvailable: true,
+          updateInfo: { version: '1.3.0' },
+        })),
+        downloadUpdate,
+        quitAndInstall,
+      }) as unknown as AppUpdater
+      const beforeRestart = vi.fn(async () => {})
+      const afterFailedRestart = vi.fn(async () => {})
+      const coordinator = new DesktopUpdateCoordinator(
+        (state) => { states.push(state); return state }, beforeRestart, afterFailedRestart, updater, () => true,
+      )
+      quitAndInstall.mockImplementationOnce(() => {
+        const error = new Error('installer could not start')
+        if (timing === 'synchronous') updater.emit('error', error)
+        else void Promise.resolve().then(() => updater.emit('error', error))
+      })
+      quitAndInstall.mockImplementationOnce(() => { updaterApp.emit('before-quit') })
 
-    await coordinator.check()
-    await expect(coordinator.install()).resolves.toEqual({
-      phase: 'error', version: '1.3.0', message: 'installer could not start',
-    })
-    expect(afterFailedRestart).toHaveBeenCalledOnce()
-    await expect(coordinator.install()).resolves.toEqual({ phase: 'ready', version: '1.3.0' })
-    expect(beforeRestart).toHaveBeenCalledTimes(2)
-    expect(downloadUpdate).toHaveBeenCalledTimes(2)
-    expect(quitAndInstall).toHaveBeenCalledTimes(2)
-    expect(states).toContainEqual({ phase: 'error', version: '1.3.0', message: 'installer could not start' })
-    expect(afterFailedRestart).toHaveBeenCalledOnce()
-  })
+      await coordinator.check()
+      await expect(coordinator.install()).resolves.toEqual({
+        phase: 'error', version: '1.3.0', message: 'installer could not start',
+      })
+      expect(afterFailedRestart).toHaveBeenCalledOnce()
+      await expect(coordinator.install()).resolves.toEqual({ phase: 'ready', version: '1.3.0' })
+      expect(beforeRestart).toHaveBeenCalledTimes(2)
+      expect(downloadUpdate).toHaveBeenCalledTimes(2)
+      expect(quitAndInstall).toHaveBeenCalledTimes(2)
+      expect(states).toContainEqual({ phase: 'error', version: '1.3.0', message: 'installer could not start' })
+      expect(afterFailedRestart).toHaveBeenCalledOnce()
+    },
+    1_000,
+  )
 })
