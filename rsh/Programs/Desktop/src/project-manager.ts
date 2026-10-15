@@ -722,10 +722,10 @@ async function validateNativeComposition(files: NativeProfileFiles, profileDir: 
     plan.composition.profileProviders, plan.composition.supportRows)
   // Client entry files can reference browser globals; esbuild validates them without executing them in the shell.
   // esbuild cannot spawn its binary from app.asar.
-  const nativeClientModule: typeof import('@deepseek-ai/dsh-native-web-assets/native-client') = await import(pathToFileURL(
+  const nativeClientModule = await import(pathToFileURL(
     createRequire(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'package.json'))
       .resolve('@deepseek-ai/dsh-native-web-assets/native-client'),
-  ).href)
+  ).href) as typeof import('@deepseek-ai/dsh-native-web-assets/native-client')
   await nativeClientModule.prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)
 }
 
