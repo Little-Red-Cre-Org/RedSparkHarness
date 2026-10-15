@@ -121,6 +121,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     event.preventDefault()
     submit()
   }}>
+    <NativePendingSubmissions snapshot={snapshot} changePending={changePending} refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
@@ -158,7 +159,6 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
       </ChatComposerToolbar>
     </ChatComposerCard>
     {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly' : 'pendingInputHint')}</p> : null}
-    <NativePendingSubmissions snapshot={snapshot} changePending={changePending} refresh={refreshPendingSubmissions} t={t} />
   </form>
   return <>
     <main className={css.page}>

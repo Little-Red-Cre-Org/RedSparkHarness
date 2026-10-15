@@ -26,9 +26,10 @@ export const zh = {
   durationSeconds: '{seconds} 秒', durationMinutes: '{minutes} 分 {seconds} 秒', workspaceUnavailable: '未选择工作区',
   noPreset: '未配置预设', unavailable: '不可用', refreshModels: '刷新模型目录',
   title: 'RedSpark Harness', sessions: '会话', create: '新建会话', choose: '选择会话',
+  pendingExpand: '展开全文', pendingCollapse: '折叠全文',
   pendingRequestFailed: '待处理消息请求失败。请检查文字长度和会话状态后重试。', pendingRefresh: '刷新待处理消息',
   queueMessage: '排队', steerMessage: '引导', pendingTitle: '待处理消息',
-  pendingQueued: '下一轮', pendingSteering: '下一步', pendingRemove: '移除', pendingPromote: '改为引导',
+  pendingRemove: '删除', pendingPromote: '改为引导',
   pendingInputHint: 'Enter 排队到下一轮；引导会加入下一步。Shift+Enter 换行。',
   pendingTextOnly: '排队和引导暂仅支持文字，请先移除附件。',
   pendingLoad: '正在读取待处理消息…', pendingAttachments: '另含 {count} 项非文字内容',
@@ -130,9 +131,10 @@ export const zh = {
 
 /** Complete English pair for the native page's Chinese key set. */
 export const en: Record<keyof typeof zh, string> = {
+  pendingExpand: 'Expand message', pendingCollapse: 'Collapse message',
   pendingRequestFailed: 'The pending-message request failed. Check the text length and session state, then retry.', pendingRefresh: 'Refresh pending messages',
   queueMessage: 'Queue', steerMessage: 'Steer', pendingTitle: 'Pending messages',
-  pendingQueued: 'Next turn', pendingSteering: 'Next step', pendingRemove: 'Remove', pendingPromote: 'Steer instead',
+  pendingRemove: 'Delete', pendingPromote: 'Steer instead',
   pendingInputHint: 'Enter queues for the next turn; Steer joins the next step. Shift+Enter adds a line.',
   pendingTextOnly: 'Queue and Steer currently accept text only. Remove attachments first.',
   pendingLoad: 'Loading pending messages…', pendingAttachments: '{count} additional non-text items',

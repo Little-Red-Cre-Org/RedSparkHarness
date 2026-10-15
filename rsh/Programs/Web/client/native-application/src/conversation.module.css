@@ -146,6 +146,9 @@
 }
 
 .composerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width, 780px);
 }
@@ -258,7 +261,56 @@
   font-size: 12px;
 }
 
-.pending h2 { font-size: 13px; }
-.pending ul { display: grid; gap: 8px; padding: 0; list-style: none; }
-.pending li { padding: 8px; border: 1px solid var(--dsw-alias-line-regular); border-radius: 8px; }
-.pendingText { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pending:empty { display: none; }
+
+.pending ul {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pendingRow {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 6px 2px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.pendingText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 28px;
+}
+
+.pendingRow[data-expanded="true"] .pendingText {
+  padding-block: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 20px;
+}
+
+.pendingAttachmentSummary { display: block; }
+
+.pendingActions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.pendingActions button {
+  width: 28px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.inputHint { margin: 0; }
