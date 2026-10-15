@@ -68,7 +68,7 @@ async function mount(root: string, model: NativeModel, observeOwner: (owner: Nat
       storage = context.require('sessionPersistence')
       agents = context.require('agents')
       tools = context.require('tools')
-      context.effect(context.require('activeSessions').onAttached((owner) => { observeOwner(owner) }))
+      context.effect(context.require('activeSessions').onAttached(async (owner) => { observeOwner(owner) }))
     },
   }
   const host = new NativeHost(resolveInstallation([
