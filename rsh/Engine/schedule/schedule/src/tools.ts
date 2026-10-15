@@ -194,7 +194,7 @@ export function registerScheduleTools(
     flush: () => flushSchedulePersistence(rootCtx, agent.session),
     readEvents: () => {
       // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
-      return agent.session.ownEvents()
+      return Promise.resolve(agent.session.ownEvents())
     },
     append: (change) => { agent.session.append('schedule/change', change) },
     onDurableChange: notifyDurableChange,
