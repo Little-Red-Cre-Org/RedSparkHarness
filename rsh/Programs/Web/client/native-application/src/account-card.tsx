@@ -141,7 +141,6 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
           </h3>
           <div className={`${styles['authorizationStatus']} ${css.accountDetails}`}>
             {identityName === null ? null : <span>{identityName}</span>}
-            {identityName !== null && identityContact !== null ? <span aria-hidden="true"> · </span> : null}
             {identityContact === null ? null : <span>{identityContact}</span>}
             {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
           </div>
