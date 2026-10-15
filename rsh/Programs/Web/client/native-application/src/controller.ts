@@ -464,18 +464,51 @@ export class NativeConversationController {
     this.assertReady()
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
-    this.submissionDraft = undefined
-    const lastSeq = this.snapshot.events.at(-1)?.seq ?? -1
+    const retainedDraft = this.submissionDraft
+    const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
+      && retainedDraft.epoch === this.selectionEpoch && retainedDraft.text === text ? retainedDraft : undefined
+    if (reconcileDraft === undefined) this.submissionDraft = undefined
     const turn = new AbortController()
     const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
-    const admission = { sessionId: id, lastSeq }
-    this.foregroundAdmission = admission
-    this.followErrorOwner = admission
+    let admission = { sessionId: id, lastSeq: this.snapshot.events.at(-1)?.seq ?? -1 }
     this.turn = turn
+    const takeOwnership = (): void => {
+      this.foregroundAdmission = admission
+      this.followErrorOwner = admission
+    }
+    if (reconcileDraft === undefined) {
+      takeOwnership()
+    }
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     return this.run(async () => {
       let turnFailed = false
+      let reconciled = false
       try {
+        if (reconcileDraft !== undefined) {
+          // A ready retry checks the Host receipt before starting another turn.
+          const read = ++this.submissionRead
+          const reads = await Promise.all([
+            this.client.submissions(id, signal), this.client.history(id, signal),
+          ])
+          signal.throwIfAborted()
+          const [submissions, history] = reads
+          const matched = submissions.submissions.some(item => item.requestId === reconcileDraft.requestId)
+            || history.events.some(event => event.type === 'user/message' && event.data.id === String(reconcileDraft.requestId))
+          const selected = this.selectionEpoch === reconcileDraft.epoch && this.snapshot.selected === id
+          if (selected) this.publish({ header: history.header, events: history.events })
+          if (selected && read === this.submissionRead && submissions.throughSeq >= this.submissionFloor
+            && submissions.throughSeq >= (this.snapshot.submissions?.throughSeq ?? -1)) {
+            this.publish({ submissions, submissionError: undefined })
+          }
+          if (matched) {
+            if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
+            reconciled = true
+            this.publish({ error: undefined })
+            return
+          }
+          if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
+          admission = { sessionId: id, lastSeq: history.events.at(-1)?.seq ?? -1 }
+        }
         const images: NativeImageUpload[] = []
         const policy = this.snapshot.modelControls?.images
         if (files.length > 0) {
@@ -506,13 +539,14 @@ export class NativeConversationController {
             images.push({ mediaType, data, name: file.name })
           }
         }
+        if (reconcileDraft !== undefined) takeOwnership()
         const result = await this.client.prompt(id, text, true, signal,
           (frame) => { this.observe(frame, admission) }, images,
           (error) => {
             if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
               this.publish({ error: error instanceof Error ? error.message : String(error) })
             }
-          }, lastSeq)
+          }, admission.lastSeq)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }
@@ -523,7 +557,7 @@ export class NativeConversationController {
         if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
         this.turn = undefined
         this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
-        if (!this.lifetime.signal.aborted && this.snapshot.selected === id) {
+        if (!reconciled && !this.lifetime.signal.aborted && this.snapshot.selected === id) {
           try { await this.restoreSelected(id) }
           catch (error: unknown) { if (!turnFailed) throw error }
         }
