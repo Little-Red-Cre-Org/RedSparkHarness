@@ -75,7 +75,10 @@ function inputError(error: ScheduleInputError): ScheduleToolError {
   return { code: error.code, message: error.message }
 }
 
-/** Validate the selector constraints that the open parameter root cannot express. */
+/** Validate the supported selectors and prompt before writing a reminder.
+ * @param args - Parsed schedule_create arguments.
+ * @returns A stable validation error, or undefined when the arguments are valid.
+ */
 export function validateScheduleCreateArgs(args: ScheduleCreateArgs): ScheduleToolError | undefined {
   const keys = Object.keys(args as unknown as Record<string, unknown>)
   if (keys.some(key => key !== 'prompt'
@@ -144,7 +147,12 @@ async function transact<T>(owner: ScheduleOperationOwner, signal: AbortSignal, t
   })
 }
 
-/** Create and durably confirm one reminder in its owning Session. */
+/** Create and durably confirm one reminder for its current Session owner.
+ * @param owner - The exact Session owner that supplies persistence and lifecycle operations.
+ * @param args - The schedule_create prompt and selector.
+ * @param signal - The tool-call cancellation signal.
+ * @returns The created reminder or a validation, persistence, or internal error.
+ */
 export function createSchedule(
   owner: ScheduleOperationOwner,
   args: ScheduleCreateArgs,
@@ -184,7 +192,11 @@ export function createSchedule(
   })
 }
 
-/** List all active reminders after the exact owner's persistence preflight. */
+/** List active reminders after the exact owner's persistence preflight.
+ * @param owner - The exact Session owner that supplies persistence and lifecycle operations.
+ * @param signal - The tool-call cancellation signal.
+ * @returns Active reminders, a persistence or schedule-log error, or an internal error.
+ */
 export function listSchedules(
   owner: ScheduleOperationOwner,
   signal: AbortSignal,
@@ -197,7 +209,12 @@ export function listSchedules(
   })
 }
 
-/** Delete one active reminder and confirm only after its append is durable. */
+/** Delete one active reminder and confirm only after its append is durable.
+ * @param owner - The exact Session owner that supplies persistence and lifecycle operations.
+ * @param rawId - The exact reminder id supplied to schedule_delete.
+ * @param signal - The tool-call cancellation signal.
+ * @returns The delete result or a validation, persistence, or internal error.
+ */
 export function deleteSchedule(
   owner: ScheduleOperationOwner,
   rawId: string,

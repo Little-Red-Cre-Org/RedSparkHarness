@@ -658,7 +658,11 @@ export function foldScheduleEvents(
   return applyScheduleChanges(initial, changes())
 }
 
-/** Select due records in target and create order, coalescing fixed-rate rules to their latest occurrence. */
+/** Select due reminders in target and creation order, coalescing fixed-rate rules to their latest occurrence.
+ * @param folded - Active reminders and every id already used in this Session.
+ * @param now - Wall-clock decision time in epoch milliseconds.
+ * @returns The next due one-shot, a complete fixed-rate batch, or a wait decision.
+ */
 export function decideDueSchedules(folded: FoldedSchedules, now: number): ScheduleDueDecision {
   const indexed = folded.active.map((record, index) => ({ record, index }))
   const byTargetThenCreate = (
