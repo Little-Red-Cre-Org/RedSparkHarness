@@ -135,7 +135,7 @@ it('renders the ChatGPT identity name before the email', async () => {
 
   const name = await screen.findByText('Ada Lovelace')
   const email = screen.getByText('account@example.com')
-  expect(name.compareDocumentPosition(email)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  expect(name.nextElementSibling).toBe(email)
 })
 
 it('reads, copies, opens and deletes native Agent presets through Host actions', async () => {
