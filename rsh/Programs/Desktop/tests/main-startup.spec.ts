@@ -32,6 +32,7 @@ const harness = await vi.hoisted(async () => {
   let autoReadyRecoveryHost = false
   let updateRestartWaiting = deferred()
   let updateBeforeRestart: (() => Promise<void>) | undefined
+  let updateAfterFailedRestart: (() => Promise<void>) | undefined
   const nativeMutations: unknown[] = []
   let preparing = deferred()
   let prepared = deferred()
@@ -109,7 +110,7 @@ const harness = await vi.hoisted(async () => {
       }
     }),
   })
-  const installUpdate = vi.fn(async () => { app.quit() })
+  const installUpdate = vi.fn<() => Promise<unknown>>(async () => { app.quit() })
   return {
     windows, hosts, handlers, app, FakeWindow, FakeHost, desktopPetClose, desktopPetUpdate, nativeMutations,
     quitPrevented, installUpdate,
@@ -145,11 +146,11 @@ const harness = await vi.hoisted(async () => {
     },
     set autoReadyRecoveryHost(value: boolean) { autoReadyRecoveryHost = value },
     get updateRestartWaiting() { return updateRestartWaiting },
-    setUpdateBeforeRestart(value: () => Promise<void>) { updateBeforeRestart = value },
-    async prepareUpdateRestart() {
-      const restart = updateBeforeRestart?.()
-      updateRestartWaiting.resolve()
-      await restart
+    get updateBeforeRestart() { return updateBeforeRestart },
+    get updateAfterFailedRestart() { return updateAfterFailedRestart },
+    setUpdateCallbacks(beforeRestart: () => Promise<void>, afterFailedRestart: () => Promise<void>) {
+      updateBeforeRestart = beforeRestart
+      updateAfterFailedRestart = afterFailedRestart
     },
     get quitWasAllowed() { return quitWasAllowed },
     get quitWasAllowedAfterNativeRecovery() { return quitWasAllowedAfterNativeRecovery },
@@ -165,7 +166,7 @@ const harness = await vi.hoisted(async () => {
       nativeMutationRecoveryGate = undefined; nativeMutationRecoveryWaiting = deferred()
       autoReadyRecoveryHost = false
       quitPrevented.length = 0; quitWasAllowed = false; quitWasAllowedAfterNativeRecovery = false
-      updateBeforeRestart = undefined; updateRestartWaiting = deferred()
+      updateBeforeRestart = undefined; updateAfterFailedRestart = undefined; updateRestartWaiting = deferred()
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
       navigated = deferred(); errorPublished = deferred(); quitCompleted = deferred()
     },
@@ -253,11 +254,17 @@ vi.mock('../src/update-coordinator.ts', () => ({
   DesktopUpdateCoordinator: class {
     readonly check = vi.fn()
     readonly install = async () => {
-      await harness.prepareUpdateRestart()
-      await harness.installUpdate()
+      const restart = harness.updateBeforeRestart?.()
+      harness.updateRestartWaiting.resolve()
+      await restart
+      return harness.installUpdate()
     }
-    constructor(_publish: unknown, beforeRestart: () => Promise<void>) {
-      harness.setUpdateBeforeRestart(beforeRestart)
+    constructor(
+      _publish: unknown,
+      beforeRestart: () => Promise<void>,
+      afterFailedRestart: () => Promise<void>,
+    ) {
+      harness.setUpdateCallbacks(beforeRestart, afterFailedRestart)
     }
   },
 }))
@@ -620,6 +627,73 @@ describe('desktop main startup', () => {
     expect(harness.dialog.showMessageBox).not.toHaveBeenCalled()
     await expect(Promise.resolve().then(() => invokeFrom(DESKTOP_IPC.pluginsList, 'dsh-app://app/index.html', { runtime: 'native' })))
       .rejects.toThrow('rejected IPC')
+  })
+
+  it('recovers canceled Native mutations after an update handoff failure', async () => {
+    harness.nativeEnabled = true
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.resolve()
+    await harness.hostStarted.promise
+    const firstHost = harness.hosts[0]!
+    firstHost.ready.resolve()
+    await harness.navigated.promise
+
+    harness.nativeMutationOutcome = { status: 'recovery-required', error: {
+      code: 'recovery-required', backend: { phase: 'starting' },
+    } }
+    const recoveryStarted = harness.nextHostStart()
+    const cancelledMutation = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+      runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
+        installations: [{ target: 'client', id: 'cancelled-client', enabled: false }] },
+    }))
+    await firstHost.stopping.promise
+    harness.installUpdate.mockImplementationOnce(async () => {
+      await harness.updateAfterFailedRestart?.()
+      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
+    })
+    const installing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
+    await harness.updateRestartWaiting.promise
+    firstHost.exited.resolve()
+    await expect(cancelledMutation).resolves.toMatchObject({ status: 'recovery-required' })
+    await recoveryStarted
+    const recoveredHost = harness.hosts[1]!
+    recoveredHost.ready.resolve()
+    await expect(installing).resolves.toBeUndefined()
+
+    expect(harness.hosts).toHaveLength(2)
+    expect(invoke(DESKTOP_IPC.backendStatus)).toEqual({ phase: 'ready' })
+    expect(harness.windows[0]!.urls.at(-1)).toBe('dsh-app://app/index.html')
+    expect(harness.windows[0]!.webContents.send).not.toHaveBeenCalledWith(
+      DESKTOP_IPC.backendState, expect.objectContaining({ phase: 'error' }),
+    )
+
+    harness.nativeMutationOutcome = undefined
+    const mutationStarted = harness.nextHostStart()
+    const mutation = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+      runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
+        installations: [{ target: 'client', id: 'retry-client', enabled: false }] },
+    }))
+    await recoveredHost.stopping.promise
+    recoveredHost.exited.resolve()
+    await mutationStarted
+    harness.hosts[2]!.ready.resolve()
+    await expect(mutation).resolves.toMatchObject({ status: 'applied' })
+    expect(harness.nativeMutations).toHaveLength(2)
+
+    harness.installUpdate.mockImplementationOnce(async () => {
+      await harness.updateAfterFailedRestart?.()
+      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
+    })
+    const closing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
+    await harness.hosts[2]!.stopping.promise
+    harness.app.quit()
+    harness.hosts[2]!.exited.resolve()
+    await harness.quitCompleted.promise
+    await expect(closing).resolves.toBeUndefined()
+    expect(harness.hosts).toHaveLength(3)
+    expect(harness.quitPrevented).toEqual([true, false])
+    expect(harness.quitWasAllowed).toBe(true)
   })
 
   it('shows recovery UI when a Native package mutation requires recovery after stopping Host', async () => {

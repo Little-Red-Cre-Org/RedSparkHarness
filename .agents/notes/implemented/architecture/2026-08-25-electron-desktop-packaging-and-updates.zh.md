@@ -73,7 +73,7 @@ Desktop 在直接修改 profile 前停止 Host。包操作失败后保留部分�
 
 ## 更新与恢复
 
-Electron 更新只使用一个 `electron-updater` 发布流和签名 `electron-builder` 产物。该版本就是 Desktop 发布版本；不存在独立 dsh manifest、兼容范围或仅更新 dsh 的操作。前台安装会等待正在进行的后台检查，而不会把检查结果复用成安装结果。更新弹窗下载并安装 Electron 产物，然后重启进入新发布。
+Electron 更新只使用一个 `electron-updater` 发布流和签名 `electron-builder` 产物。该版本就是 Desktop 发布版本；不存在独立 dsh manifest、兼容范围或仅更新 dsh 的操作。前台安装会等待正在进行的后台检查，而不会把检查结果复用成安装结果。更新弹窗下载并安装 Electron 产物，然后重启进入新发布。electron-updater 可能在 `quitAndInstall` 已排队退出应用之后，才以异步 `error` 事件报告安装器启动失败；未排队退出的失败则让应用继续运行。因此 Desktop 只有在 `quitAndInstall` 已返回或抛错、已报告更新器错误，并且再经过一轮事件循环仍未发生 `before-quit` 时，才视为交接失败；重启前停止失败也视为交接失败。交接失败时，它通过常规启动路径重新启动已停止的 Host，保留可用版本，并发布该错误，让用户继续工作并可从弹窗或菜单重试。若用户在交接期间请求了普通退出，则执行退出而不重启 Host。`update-coordinator.spec.ts` 覆盖排队退出后的异步错误，以及不退出时的异步错误与随后的重试；`main-startup.spec.ts` 覆盖 Host 恢复以及恢复后的 Native 变更。
 
 [立即显示窗口决策](2026-09-09-desktop-immediate-window-and-direct-start.zh.md)负责本地加载页、直接启动 Host 和主窗口恢复。profile 协调遵循[内置运行时决策](2026-09-08-desktop-bundled-runtime-and-external-plugins.zh.md)。
 

@@ -1,15 +1,20 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { EventEmitter } from 'node:events'
 import type { AppUpdater } from 'electron-updater'
 import { DESKTOP_HOST_PROTOCOL_VERSION } from '../src/host-protocol.ts'
 import { parseDesktopRelease } from '../src/release.ts'
 import type { DesktopUpdateState } from '../src/ipc.ts'
 
-vi.mock('electron', () => ({ app: { isPackaged: false } }))
+const updaterApp = Object.assign(new EventEmitter(), { isPackaged: false })
+
+vi.mock('electron', () => ({ app: updaterApp }))
 vi.mock('electron-updater', () => ({
   default: { autoUpdater: { autoDownload: true, autoInstallOnAppQuit: true } },
 }))
 
 const { DesktopUpdateCoordinator } = await import('../src/update-coordinator.ts')
+
+afterEach(() => { updaterApp.removeAllListeners() })
 
 describe('desktop release metadata', () => {
   it('accepts one exact release identity for Electron and dsh', () => {
@@ -47,7 +52,7 @@ describe('desktop update coordinator', () => {
     const downloadUpdate = vi.fn(async () => [])
     const quitAndInstall = vi.fn()
     const beforeRestart = vi.fn(async () => {})
-    const updater = {
+    const updater = Object.assign(new EventEmitter(), {
       autoDownload: true,
       autoInstallOnAppQuit: true,
       checkForUpdates: vi.fn(async () => ({
@@ -56,13 +61,19 @@ describe('desktop update coordinator', () => {
       })),
       downloadUpdate,
       quitAndInstall,
-    } as unknown as AppUpdater
+    }) as unknown as AppUpdater
+    quitAndInstall.mockImplementation(() => {
+      setImmediate(() => updaterApp.emit('before-quit'))
+      void Promise.resolve().then(() => updater.emit('error', new Error('installer could not start')))
+    })
+    const afterFailedRestart = vi.fn(async () => {})
     const coordinator = new DesktopUpdateCoordinator(
       (state) => {
         states.push(state)
         return state
       },
       beforeRestart,
+      afterFailedRestart,
       updater,
       () => true,
     )
@@ -71,6 +82,7 @@ describe('desktop update coordinator', () => {
     await expect(coordinator.install()).resolves.toEqual({ phase: 'ready', version: '1.1.0' })
     expect(downloadUpdate).toHaveBeenCalledOnce()
     expect(beforeRestart).toHaveBeenCalledOnce()
+    expect(afterFailedRestart).not.toHaveBeenCalled()
     expect(quitAndInstall).toHaveBeenCalledWith(false, true)
     expect(states.map(state => state.phase)).toEqual(['checking', 'available', 'installing', 'ready'])
   })
@@ -81,14 +93,14 @@ describe('desktop update coordinator', () => {
       updateInfo: { version: string }
     }>()
     const downloadUpdate = vi.fn(async () => [])
-    const updater = {
+    const updater = Object.assign(new EventEmitter(), {
       autoDownload: true,
       autoInstallOnAppQuit: true,
       checkForUpdates: vi.fn(() => checked.promise),
       downloadUpdate,
-      quitAndInstall: vi.fn(),
-    } as unknown as AppUpdater
-    const coordinator = new DesktopUpdateCoordinator(state => state, async () => {}, updater, () => true)
+      quitAndInstall: vi.fn(() => { updaterApp.emit('before-quit') }),
+    }) as unknown as AppUpdater
+    const coordinator = new DesktopUpdateCoordinator(state => state, async () => {}, async () => {}, updater, () => true)
 
     const checking = coordinator.check()
     const installing = coordinator.install()
@@ -98,5 +110,42 @@ describe('desktop update coordinator', () => {
     await expect(checking).resolves.toEqual({ phase: 'available', version: '1.2.0' })
     await expect(installing).resolves.toEqual({ phase: 'ready', version: '1.2.0' })
     expect(downloadUpdate).toHaveBeenCalledOnce()
+  })
+
+  it('recovers an asynchronous installer error and retries the retained release', async () => {
+    const states: DesktopUpdateState[] = []
+    const downloadUpdate = vi.fn(async () => [])
+    const quitAndInstall = vi.fn()
+    const updater = Object.assign(new EventEmitter(), {
+      autoDownload: true,
+      autoInstallOnAppQuit: true,
+      checkForUpdates: vi.fn(async () => ({
+        isUpdateAvailable: true,
+        updateInfo: { version: '1.3.0' },
+      })),
+      downloadUpdate,
+      quitAndInstall,
+    }) as unknown as AppUpdater
+    const beforeRestart = vi.fn(async () => {})
+    const afterFailedRestart = vi.fn(async () => {})
+    const coordinator = new DesktopUpdateCoordinator(
+      (state) => { states.push(state); return state }, beforeRestart, afterFailedRestart, updater, () => true,
+    )
+    quitAndInstall.mockImplementationOnce(() => {
+      void Promise.resolve().then(() => updater.emit('error', new Error('installer could not start')))
+    })
+    quitAndInstall.mockImplementationOnce(() => { updaterApp.emit('before-quit') })
+
+    await coordinator.check()
+    await expect(coordinator.install()).resolves.toEqual({
+      phase: 'error', version: '1.3.0', message: 'installer could not start',
+    })
+    expect(afterFailedRestart).toHaveBeenCalledOnce()
+    await expect(coordinator.install()).resolves.toEqual({ phase: 'ready', version: '1.3.0' })
+    expect(beforeRestart).toHaveBeenCalledTimes(2)
+    expect(downloadUpdate).toHaveBeenCalledTimes(2)
+    expect(quitAndInstall).toHaveBeenCalledTimes(2)
+    expect(states).toContainEqual({ phase: 'error', version: '1.3.0', message: 'installer could not start' })
+    expect(afterFailedRestart).toHaveBeenCalledOnce()
   })
 })

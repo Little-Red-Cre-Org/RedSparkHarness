@@ -196,6 +196,7 @@ async function main(): Promise<void> {
   let startup: Promise<void> | undefined
   let nativeMutationPromise: Promise<unknown> | undefined
   let quitReady = false
+  let ordinaryQuitRequested = false
   let mainWindow: BrowserWindow | undefined
   let pluginWindow: BrowserWindow | undefined
   let shellInstallerOwnsQuit = false
@@ -337,6 +338,28 @@ async function main(): Promise<void> {
         shellInstallerOwnsQuit = false
         throw error
       }
+    },
+    async () => {
+      shellInstallerOwnsQuit = false
+      quitReady = false
+      if (ordinaryQuitRequested) {
+        quitting = true
+        desktopPet.close()
+        try {
+          try { await backend.close() }
+          finally { await nativeMutationPromise?.catch(() => undefined) }
+        }
+        catch (error) { console.error(error) }
+        quitReady = true
+        app.quit()
+        return
+      }
+      if (startup !== undefined) {
+        try { await startup }
+        catch { /* reconcileBackend retries the failed or cancelled startup below. */ }
+      }
+      try { await reconcileBackend() }
+      catch { /* reconcileBackend already showed a Host startup failure. */ }
     },
   )
 
@@ -672,7 +695,11 @@ async function main(): Promise<void> {
   app.on('before-quit', (event) => {
     if (quitReady) return
     event.preventDefault()
-    if (shellInstallerOwnsQuit || quitting) return
+    if (shellInstallerOwnsQuit) {
+      ordinaryQuitRequested = true
+      return
+    }
+    if (quitting) return
     quitting = true
     desktopPet.close()
     void (async () => {
