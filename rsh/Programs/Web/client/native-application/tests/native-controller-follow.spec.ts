@@ -280,6 +280,8 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     await controller.load()
     await controller.select(alpha)
     const sending = controller.send('start')
+    expect(() => controller.create()).toThrow('operation already pending')
+    expect(controller.getSnapshot()).toMatchObject({ selected: alpha, state: 'sending' })
     rejectNext = true
     expect(await controller.submitPending('later', 'queued')).toBe(false)
     expect(controller.getSnapshot()).toMatchObject({ state: 'sending', submissionError: 'not accepted' })
@@ -304,7 +306,11 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     expect(controller.getSnapshot().submissions?.throughSeq).toBe(9)
 
     delayRead = false
-    inbox = { throughSeq: SessionSeq(10), submissions: [] }
+    const pendingId = requestId!
+    inbox = { throughSeq: SessionSeq(10), submissions: [{ requestId: pendingId, placement: 'queued', status: 'accepted', message: {
+      id: String(pendingId) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Still waiting in the last read' }],
+    } }] }
     holdQueue = true
     const lateSubmission = controller.submitPending('concurrent settlement', 'queued')
     expect(controller.getSnapshot().submissionBusy).toBe(true)
@@ -312,7 +318,19 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     turn.resolve({ exitCode: 0, answer: '' })
     await sending
     expect(controller.getSnapshot().state).toBe('ready')
+    expect(controller.getSnapshot().submissions?.submissions).toHaveLength(1)
     delayRead = true
+    observe?.({ type: 'submission-update', requestId: pendingId, status: 'settled' })
+    expect(reads).toHaveLength(3)
+    const updatedInbox = deferred<undefined>()
+    const stopObservingInbox = controller.subscribe(() => {
+      if (controller.getSnapshot().submissions?.throughSeq === 11) updatedInbox.resolve(undefined)
+    })
+    try {
+      reads[2]!.resolve({ throughSeq: SessionSeq(11), submissions: [] })
+      await updatedInbox.promise
+      expect(controller.getSnapshot().submissions).toEqual({ throughSeq: 11, submissions: [] })
+    } finally { stopObservingInbox() }
     const oldRead = controller.refreshPendingSubmissions()
     delayRead = false
     inbox = { throughSeq: -1, submissions: [] }
@@ -320,8 +338,11 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     lateAcknowledgement.resolve({ requestId: requestId!, placement: 'queued', status: 'accepted' })
     expect(await lateSubmission).toBe(true)
     expect(controller.getSnapshot()).toMatchObject({ selected: beta, state: 'ready', submissionBusy: false })
-    reads[2]!.resolve({ throughSeq: SessionSeq(20), submissions: [] })
+    reads[3]!.resolve({ throughSeq: SessionSeq(20), submissions: [] })
     await oldRead
+    const readCount = reads.length
+    observe?.({ type: 'submission-update', requestId: pendingId, status: 'settled' })
+    expect(reads).toHaveLength(readCount)
     expect(controller.getSnapshot()).toMatchObject({ selected: beta, state: 'ready', submissions: { throughSeq: -1 } })
   } finally {
     lateAcknowledgement.resolve({ requestId: requestId!, placement: 'queued', status: 'accepted' })

@@ -525,9 +525,15 @@ export class NativeConversationController {
     if (frame.type === 'title-updated') {
       return
     }
+    // The prompt reply can settle before its final inbox notifications drain.
+    if (this.followErrorOwner === admission && this.snapshot.selected === admission.sessionId) {
+      if (frame.type === 'event' && frame.event.type === 'user/message') {
+        this.submissionFloor = Math.max(this.submissionFloor, frame.event.seq)
+        void this.refreshPendingSubmissions()
+      } else if (frame.type === 'submission-update') void this.refreshPendingSubmissions()
+    }
     if (this.foregroundAdmission !== admission || this.snapshot.selected !== admission.sessionId) return
-    if (frame.type === 'submission-update') { void this.refreshPendingSubmissions() }
-    else if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
+    if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
     else if (frame.type === 'human-removed') { if (this.snapshot.human?.id === frame.id) this.publish({ human: undefined, answeringHuman: false }) }
     else if (frame.type === 'event') {
       const last = this.snapshot.events.at(-1)?.seq
@@ -536,10 +542,8 @@ export class NativeConversationController {
         throw new Error(`native conversation: live history sequence gap; expected ${last + 1}, received ${frame.event.seq} (${frame.event.type})`)
       }
       if (this.snapshot.events.length >= this.limits.maxLiveEvents) throw new Error('native conversation: live history exceeds configured limit')
-      if (frame.event.type === 'user/message') this.submissionFloor = frame.event.seq
       this.publish({ events: [...this.snapshot.events, frame.event],
         ...frame.event.type === 'assistant/message' || frame.event.type === 'assistant/attempt' ? { liveText: undefined, liveTruncated: false } : {} })
-      if (frame.event.type === 'user/message') void this.refreshPendingSubmissions()
     } else if (frame.type === 'text-start') {
       this.publish({ liveText: '', liveTruncated: false })
     } else if (frame.type === 'text') {

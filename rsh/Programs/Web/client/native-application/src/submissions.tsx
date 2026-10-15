@@ -14,8 +14,8 @@ export function NativePendingSubmissions({ snapshot, changePending, refresh, t }
   const disabled = snapshot.submissionBusy || snapshot.state === 'loading' || snapshot.state === 'cancelling'
   return <section className={css.pending} aria-label={t('pendingTitle')}>
     {snapshot.submissionError === undefined ? null : <div role="alert">
-      <p>{snapshot.submissionError}</p>
-      <Button type="button" size="sm" disabled={snapshot.submissionBusy} onClick={() => { void refresh() }}>{t('retry')}</Button>
+      <p>{t('pendingRequestFailed')}</p>
+      <Button type="button" size="sm" disabled={snapshot.submissionBusy} onClick={() => { void refresh() }}>{t('pendingRefresh')}</Button>
     </div>}
     {snapshot.submissions === undefined && snapshot.submissionError === undefined ? <p role="status">{t('pendingLoad')}</p> : null}
     {(snapshot.submissions?.submissions.length ?? 0) === 0 ? null : <>
