@@ -27,6 +27,8 @@ export const zh = {
   noPreset: '未配置预设', unavailable: '不可用', refreshModels: '刷新模型目录',
   title: 'RedSpark Harness', sessions: '会话', create: '新建会话', choose: '选择会话',
   pendingExpand: '展开全文', pendingCollapse: '折叠全文',
+  pendingEdit: '编辑待处理消息', pendingEditSave: '保存', pendingEditCancel: '取消',
+  pendingEditFailed: '待处理消息编辑失败，草稿已保留，请重试。',
   pendingRequestFailed: '待处理消息请求失败。请检查文字长度和会话状态后重试。', pendingRefresh: '刷新待处理消息',
   queueMessage: '排队', steerMessage: '引导', pendingTitle: '待处理消息',
   pendingRemove: '删除', pendingPromote: '改为引导',
@@ -132,6 +134,8 @@ export const zh = {
 /** Complete English pair for the native page's Chinese key set. */
 export const en: Record<keyof typeof zh, string> = {
   pendingExpand: 'Expand message', pendingCollapse: 'Collapse message',
+  pendingEdit: 'Edit pending message', pendingEditSave: 'Save', pendingEditCancel: 'Cancel',
+  pendingEditFailed: 'Could not edit this pending message. Your draft is still here; try again.',
   pendingRequestFailed: 'The pending-message request failed. Check the text length and session state, then retry.', pendingRefresh: 'Refresh pending messages',
   queueMessage: 'Queue', steerMessage: 'Steer', pendingTitle: 'Pending messages',
   pendingRemove: 'Delete', pendingPromote: 'Steer instead',

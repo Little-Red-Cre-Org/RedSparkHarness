@@ -292,6 +292,26 @@
   line-height: 28px;
 }
 
+.pendingEditorWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.pendingEditor {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 20px;
+}
+
 .pendingRow[data-expanded="true"] .pendingText {
   padding-block: 4px;
   white-space: pre-wrap;

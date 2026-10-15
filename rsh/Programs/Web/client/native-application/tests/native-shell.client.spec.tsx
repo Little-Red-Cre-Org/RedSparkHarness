@@ -265,6 +265,13 @@ it('installs modular Native navigation, Session selection, details, locale and t
     inboxRevision++
     return { requestId, outcome: 'promoted' }
   })
+  const editSubmission = vi.fn<NativeSessionClient['editSubmission']>(async (_id, requestId, text) => {
+    pendingMessages = pendingMessages.map(item => item.requestId === requestId ? { ...item, message: {
+      ...item.message, content: [{ type: 'text', text }],
+    } } : item)
+    inboxRevision++
+    return { requestId, outcome: 'updated' }
+  })
   const clientMock = {
     close,
     settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [],
@@ -308,7 +315,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     selectPermissionPreset: vi.fn(async () => undefined),
     selectPreset: vi.fn(async () => undefined),
     submissions: vi.fn(async () => pendingSnapshot()),
-    prompt, queue, steer, dequeue, promoteSubmission,
+    prompt, queue, steer, dequeue, promoteSubmission, editSubmission,
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -404,11 +411,25 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(await within(pendingPanel).findByText('After this turn')).toBeTruthy()
     expect(pendingPanel.compareDocumentPosition(messageInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const row = within(pendingPanel).getByRole('listitem')
-    expect(within(row).getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(['Expand message', 'Steer instead', 'Delete'])
+    expect(within(row).getAllByRole('button').map(button => button.getAttribute('aria-label')))
+      .toEqual(['Expand message', 'Edit pending message', 'Steer instead', 'Delete'])
     fireEvent.click(within(row).getByRole('button', { name: 'Expand message' }))
     expect(within(row).getByRole('button', { name: 'Collapse message' }).getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(within(row).getByRole('button', { name: 'Collapse message' }))
     expect(within(row).getByRole('button', { name: 'Expand message' }).getAttribute('aria-expanded')).toBe('false')
+    const editRequestId = pendingMessages[0]!.requestId
+    editSubmission.mockResolvedValueOnce({ requestId: editRequestId, outcome: 'stale' })
+    fireEvent.click(within(row).getByRole('button', { name: 'Edit pending message' }))
+    const editInput = within(row).getByRole('textbox', { name: 'Edit pending message' })
+    fireEvent.change(editInput, { target: { value: 'Edited pending text' } })
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    expect(await within(row).findByText('Could not edit this pending message. Your draft is still here; try again.')).toBeTruthy()
+    expect(editInput).toHaveProperty('value', 'Edited pending text')
+    expect(editSubmission).toHaveBeenNthCalledWith(1, 'session-alpha', editRequestId, 'Edited pending text', expect.any(AbortSignal))
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    expect(await within(row).findByText('Edited pending text')).toBeTruthy()
+    expect(within(row).queryByRole('textbox', { name: 'Edit pending message' })).toBeNull()
+    expect(editSubmission).toHaveBeenNthCalledWith(2, 'session-alpha', editRequestId, 'Edited pending text', expect.any(AbortSignal))
     expect(queue.mock.calls.at(-1)?.[2]).toBe(refusedId)
     expect(queue).toHaveBeenCalledWith('session-alpha', 'After this turn', expect.any(String), expect.any(AbortSignal))
     fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Steer instead' }))

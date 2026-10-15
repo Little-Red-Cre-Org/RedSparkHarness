@@ -220,6 +220,23 @@ export class NativeConversationController {
     })
   }
 
+  /** Replace one pending request's complete text while retaining its Host identity.
+   * @param requestId - identity from the current Host snapshot.
+   * @param text - complete replacement text.
+   * @returns true after the Host updates the request; false when it is stale or the edit fails.
+   */
+  editPending(requestId: NativeSubmissionRequestId, text: string): Promise<boolean> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || text.trim() === ''
+      || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
+    const epoch = this.selectionEpoch
+    return this.mutateSubmission(id, epoch, async () => {
+      const result = await this.client.editSubmission(id, requestId, text, this.lifetime.signal)
+      return result.outcome === 'updated'
+    })
+  }
+
   private async refreshModeControls(id: SessionId): Promise<void> {
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
     if (!this.lifetime.signal.aborted && this.snapshot.selected === id) this.publish({ modeControls })

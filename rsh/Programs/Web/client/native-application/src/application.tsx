@@ -45,7 +45,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-  selectPlanMode, selectPermissionPreset, submitPending, changePending, refreshPendingSubmissions,
+  selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
   refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -58,6 +58,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   selectPlanMode: NativeConversationController['selectPlanMode']
   submitPending: NativeConversationController['submitPending']
   changePending: NativeConversationController['changePending']
+  editPending: NativeConversationController['editPending']
   refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
   selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
@@ -121,7 +122,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     event.preventDefault()
     submit()
   }}>
-    <NativePendingSubmissions snapshot={snapshot} changePending={changePending} refresh={refreshPendingSubmissions} t={t} />
+    <NativePendingSubmissions snapshot={snapshot} changePending={changePending} editPending={editPending}
+      refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
@@ -267,6 +269,7 @@ export const plugin: NativePlugin = {
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),
+          editPending: controller.editPending.bind(controller),
           refreshPendingSubmissions: controller.refreshPendingSubmissions.bind(controller),
           cancel: () => { controller.cancel() },
           answerHuman: controller.answerHuman.bind(controller),
@@ -277,7 +280,7 @@ export const plugin: NativePlugin = {
           refreshModelControls,
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-        selectPlanMode, selectPermissionPreset, submitPending, changePending, refreshPendingSubmissions,
+        selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
         refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -290,6 +293,7 @@ export const plugin: NativePlugin = {
         selectPlanMode: NativeConversationController['selectPlanMode']
         submitPending: NativeConversationController['submitPending']
         changePending: NativeConversationController['changePending']
+        editPending: NativeConversationController['editPending']
         refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
@@ -298,7 +302,8 @@ export const plugin: NativePlugin = {
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
-        submitPending={submitPending} changePending={changePending} refreshPendingSubmissions={refreshPendingSubmissions}
+        submitPending={submitPending} changePending={changePending} editPending={editPending}
+        refreshPendingSubmissions={refreshPendingSubmissions}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
         themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
