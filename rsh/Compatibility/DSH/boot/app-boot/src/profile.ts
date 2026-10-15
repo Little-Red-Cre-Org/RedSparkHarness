@@ -320,7 +320,7 @@ function isPackagedExecutable(): boolean {
   return (process as NodeJS.Process & { pkg?: unknown }).pkg !== undefined
 }
 
-/** Return one canonical URL for a file inside pkg's Windows snapshot. */
+/** Return a snapshot file URL under the drive root of pkg's Windows entrypoint module graph. */
 function packageTargetURL(entry: string): string {
   const pkg = (process as NodeJS.Process & {
     pkg?: { defaultEntrypoint?: unknown; entrypoint?: unknown }
@@ -345,7 +345,7 @@ function packageTargetURL(entry: string): string {
   if (targetRelativeToSnapshot === '..'
     || targetRelativeToSnapshot.startsWith(`..${win32.sep}`)
     || win32.isAbsolute(targetRelativeToSnapshot)) return pathToFileURL(entry).href
-  return pathToFileURL(win32.resolve('V:\\snapshot', targetRelativeToSnapshot)).href
+  return pathToFileURL(win32.resolve(snapshotRoot, targetRelativeToSnapshot)).href
 }
 
 /** Resolve one available explicit package export under Node ESM import conditions. */

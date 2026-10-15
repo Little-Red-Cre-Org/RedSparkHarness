@@ -779,7 +779,7 @@ describe('healProfilesModuleFallback', () => {
       const outsideProxyManifest = JSON.parse(readFileSync(join(fallback, 'outside', 'package.json'), 'utf8')) as {
         dsh: { moduleFallback: { targets: Record<string, string> } }
       }
-      expect(bundleManifest.dsh.moduleFallback.targets['.']).toBe('file:///V:/snapshot/bundle-a/index.js')
+      expect(bundleManifest.dsh.moduleFallback.targets['.']).toBe(pathToFileURL(join(modulesDir, 'bundle-a', 'index.js')).href)
       expect(outsideProxyManifest.dsh.moduleFallback.targets['.']).toBe(pathToFileURL(join(appDir, 'outside.js')).href)
     } finally {
       delete (process as NodeJS.Process & { pkg?: unknown }).pkg
