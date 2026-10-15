@@ -182,7 +182,7 @@ function cardDraftIsDirty(plugin: PluginDefinition, row: NativeSettingsDescripto
 }
 
 function PluginCard({
-  plugin, row, loaded, loading, announcedRevision, draft, status, saving, credential, credentialLoading, credentialFailed,
+  plugin, row, loaded, loading, describeFailed, announcedRevision, draft, status, saving, credential, credentialLoading, credentialFailed,
   catalog, catalogStatus, catalogPartial,
   t, onDraft, onSave, onDiscard, onRetryCatalog,
 }: {
@@ -190,6 +190,7 @@ function PluginCard({
   row: NativeSettingsDescriptor | undefined
   loaded: boolean
   loading: boolean
+  describeFailed: boolean
   announcedRevision: number | undefined
   draft: PluginDraft
   status: PluginStatus
@@ -266,7 +267,7 @@ function PluginCard({
       {!loaded ? loading ? <p className={css.notice} role="status">{t('settingsPluginLoading')}</p> : null
         : row === undefined ? loading
           ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p>
-          : <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
+          : describeFailed ? null : <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
           : <>
             {revisionUnread ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p> : null}
             {plugin.namespace === 'subagent-model-selection' ? <>
@@ -384,6 +385,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [subscriptionFailed, setSubscriptionFailed] = useState(false)
   const [credential, setCredential] = useState<CredentialInfo>()
   const [credentialLoadingRef, setCredentialLoadingRef] = useState<string>()
   const [credentialFailed, setCredentialFailed] = useState(false)
@@ -394,6 +396,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [statuses, setStatuses] = useState<Readonly<Record<string, PluginStatus>>>({})
   const [saving, setSaving] = useState<PluginNamespace>()
   const lifetime = useRef<AbortController>()
+  const restartSubscription = useRef<(() => void) | undefined>(undefined)
   const settingsRequest = useRef(0)
   const credentialRequest = useRef(0)
   const credentialRead = useRef<CredentialReadRequest>()
@@ -525,14 +528,20 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
           }
         }
       } catch {
-        if (!controller.signal.aborted) setLoadFailed(true)
+        if (!controller.signal.aborted) setSubscriptionFailed(true)
       }
     }
-    void consume()
+    const startSubscription = (): void => {
+      setSubscriptionFailed(false)
+      void consume()
+    }
+    restartSubscription.current = startSubscription
+    startSubscription()
     void load()
     return () => {
       controller.abort()
       if (lifetime.current === controller) lifetime.current = undefined
+      if (restartSubscription.current === startSubscription) restartSubscription.current = undefined
       catalogRequest.current += 1
       settingsRequest.current += 1
       credentialRequest.current += 1
@@ -661,9 +670,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   return <section className={css.section}>
     <h2 className={css.heading}>{t('settingsPluginTitle')}</h2>
     <p className={css.intro}>{t('settingsPluginIntro')}</p>
-    {loadFailed ? <div className={css.error} role="alert">
+    {loadFailed || subscriptionFailed ? <div className={css.error} role="alert">
       <span>{t('settingsPluginLoadFailed')}</span>
-      <Button type="button" size="sm" variant="outline" onClick={() => { void refreshNamespace() }}>{t('retry')}</Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => {
+        if (subscriptionFailed) restartSubscription.current?.()
+        void refreshNamespace()
+      }}>{t('retry')}</Button>
     </div> : null}
     {credentialFailed ? <p className={css.error} role="alert">{t('settingsPluginCredentialLoadFailed')}</p> : null}
     <div className={css.tabs} role="tablist" aria-label={tTabs}>
@@ -683,6 +695,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
           const draft = drafts[plugin.namespace] ?? emptyDraft()
           const activeCredentialRef = row === undefined ? undefined : credentialRef(row)
           return <PluginCard key={plugin.namespace} plugin={plugin} row={row} loaded={loaded} loading={loading}
+            describeFailed={loadFailed}
             announcedRevision={announcedRevisions[plugin.namespace]} draft={draft}
             status={statuses[plugin.namespace]} saving={saving === plugin.namespace} credential={credential}
             credentialLoading={activeCredentialRef !== undefined && credentialLoadingRef === activeCredentialRef}

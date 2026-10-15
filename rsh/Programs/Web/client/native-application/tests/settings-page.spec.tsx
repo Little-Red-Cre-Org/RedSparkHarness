@@ -680,6 +680,7 @@ it('retries a failed plugin settings describe and renders plugin rows', async ()
     if (describeCount === 1) throw new Error('first read failed')
     return settingsDescription([shell])
   })
+  actions.settingsEvents = signal => emptyModelActions.settingsEvents(signal)
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
   const alert = await screen.findByRole('alert')
@@ -689,6 +690,60 @@ it('retries a failed plugin settings describe and renders plugin rows', async ()
   fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
   expect(await screen.findByLabelText(en.settingsPluginShellTimeoutMs)).toHaveProperty('value', '2500')
   expect(actions.settingsDescribe).toHaveBeenCalledTimes(2)
+  await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
+})
+
+it('restarts a failed settings subscription when retrying and refreshes on its next event', async () => {
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let subscriptionCount = 0
+  let describeCount = 0
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    return settingsDescription([pluginSettings('shell', describeCount, { timeoutMs: 1500 + describeCount * 1000 })])
+  })
+  actions.settingsEvents = vi.fn(async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
+    subscriptionCount += 1
+    if (subscriptionCount === 1) throw new Error('settings event stream failed')
+    await event
+    if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'shell', revision: 3 }
+  })
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  const alert = await screen.findByRole('alert')
+  fireEvent.click(within(alert).getByRole('button', { name: en.retry }))
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
+  expect(subscriptionCount).toBe(2)
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(3) })
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByLabelText(en.settingsPluginShellTimeoutMs)).toHaveProperty('value', '4500')
+})
+
+it('does not show a Host gap for a missing namespace after a failed refresh', async () => {
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount > 1) throw new Error('settings refresh failed')
+    return settingsDescription([pluginSettings('shell', 1, { timeoutMs: 2500 })])
+  })
+  actions.settingsEvents = async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
+    await event
+    if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'shell', revision: 2 }
+  }
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Agent loop' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  releaseEvent()
+  expect(await screen.findByRole('alert')).toBeTruthy()
+  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
 })
 
 it('shows refresh pending for a missing namespace and blocks writes past its announced revision', async () => {
