@@ -9,7 +9,7 @@ import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runti
 import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { SUPPORT_RECORD, validateSupportManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
+import type { FileSystemOperations, FsVersion, FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-fs'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
@@ -345,6 +345,7 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
   ], 'host'))
   let unregister: (() => Promise<void>) | undefined
   const disposers: (() => boolean)[] = []
+  const eventDisposers: (() => Promise<void>)[] = []
   try {
     await host.start()
     if (runtime === undefined || filesystem === undefined || tools === undefined || agents === undefined) {
@@ -352,24 +353,24 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     }
     const legacy = runtime.context
     const sequence: string[] = []
-    disposers.push(legacy.on('fs/write-intent', async (_target, _actor, next) => {
+    const writeOuter = legacy.on('fs/write-intent', async (_target, _actor, next) => {
       sequence.push('write:outer')
       return next()
-    }))
-    disposers.push(legacy.on('fs/write-intent', async () => {
+    })
+    const writeTerminal = legacy.on('fs/write-intent', async () => {
       sequence.push('write:terminal')
       return { kind: 'createIfAbsent' }
-    }))
-    disposers.push(legacy.on('fs/edit-intent', async (_target, _actor, next) => {
+    })
+    const editOuter = legacy.on('fs/edit-intent', async (_target, _actor, next) => {
       sequence.push('edit:outer')
       return next()
-    }))
-    disposers.push(legacy.on('fs/edit-intent', async (target) => {
+    })
+    const editTerminal = legacy.on('fs/edit-intent', async (target) => {
       sequence.push('edit:terminal')
       const info = await filesystem?.stat(target)
       if (info === undefined) throw new Error('missing file before edit waterfall')
       return { version: info.version }
-    }))
+    })
 
     const id = SessionId('compat-waterfall-session')
     const session = Session.create(id, undefined, {
@@ -391,7 +392,134 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     const target = await filesystem.resolve('sample.txt')
     expect(await filesystem.readText(target)).toBe('after edit\n')
     expect(sequence).toEqual(['write:outer', 'write:terminal', 'edit:outer', 'edit:terminal'])
+    writeOuter()
+    writeTerminal()
+    editOuter()
+    editTerminal()
+
+    const observed: string[] = []
+    const actor = {}
+    eventDisposers.push(host.events.on(scope, 'fs/observed', () => { observed.push('native') }))
+    disposers.push(legacy.on('fs/observed', () => { observed.push('cordis') }))
+    host.events.emit(scope, 'fs/observed', target, { kind: 'absent' }, actor)
+    expect(observed).toEqual(['native'])
+    observed.length = 0
+    legacy.emit('fs/observed', target, { kind: 'absent' }, actor)
+    expect(observed).toEqual(['native', 'cordis'])
+    const observedFailure = new Error('observation listener failed')
+    eventDisposers.push(host.events.on(scope, 'fs/observed', () => { throw observedFailure }))
+    observed.length = 0
+    expect(() => { host.events.emit(scope, 'fs/observed', target, { kind: 'absent' }, actor) }).toThrow(observedFailure)
+    expect(observed).toEqual(['native'])
+    observed.length = 0
+    expect(() => { legacy.emit('fs/observed', target, { kind: 'absent' }, actor) }).toThrow(observedFailure)
+    expect(observed).toEqual(['native'])
+
+    let shortCircuit = false
+    let rejectListener = false
+    const failure = new Error('native async rejection')
+    const writeResult = { kind: 'createIfAbsent' as const }
+    const editVersion = (await filesystem.stat(target))?.version
+    if (editVersion === undefined) throw new Error('missing file before edit waterfall')
+    const editResult = { version: editVersion }
+    eventDisposers.push(host.events.on(scope, 'fs/write-intent', async (_target, _actor, next) => {
+      sequence.push('native:outer')
+      if (rejectListener) throw failure
+      if (shortCircuit) return writeResult
+      return next()
+    }))
+    eventDisposers.push(host.events.on(scope, 'fs/edit-intent', async (_target, _actor, next) => {
+      sequence.push('native:edit')
+      if (rejectListener) throw failure
+      if (shortCircuit) return editResult
+      return next()
+    }))
+    const cordisWriteOuter = legacy.on('fs/write-intent', async (_target, _actor, next) => {
+      sequence.push('cordis:write')
+      return next()
+    }, { prepend: true })
+    disposers.push(cordisWriteOuter)
+    const cordisEditOuter = legacy.on('fs/edit-intent', async (_target, _actor, next) => {
+      sequence.push('cordis:edit')
+      return next()
+    }, { prepend: true })
+    disposers.push(cordisEditOuter)
+
+    const checkDelegation = async <Result>(
+      name: string,
+      native: (terminal: () => Result | undefined) => Promise<Result | undefined>,
+      cordis: (terminal: () => Result | undefined) => Promise<Result | undefined>,
+      nativeResult: Result,
+      cordisResult: Result,
+    ) => {
+      sequence.length = 0
+      let terminalCalls = 0
+      const direct = await native(() => {
+        terminalCalls += 1
+        sequence.push(`native:${name}:terminal`)
+        return nativeResult
+      })
+      expect(direct).toBe(nativeResult)
+      expect(terminalCalls).toBe(1)
+      expect(sequence).toEqual([`native:${name === 'write' ? 'outer' : name}`, `native:${name}:terminal`])
+
+      sequence.length = 0
+      terminalCalls = 0
+      const bridged = await cordis(() => {
+        terminalCalls += 1
+        sequence.push(`cordis:${name}:terminal`)
+        return cordisResult
+      })
+      expect(bridged).toBe(cordisResult)
+      expect(terminalCalls).toBe(1)
+      expect(sequence).toEqual([`cordis:${name}`, `native:${name === 'write' ? 'outer' : name}`, `cordis:${name}:terminal`])
+    }
+    const cordisWriteResult = { kind: 'createIfAbsent' as const }
+    await checkDelegation<FsWriteIntent>(
+      'write',
+      terminal => host.events.waterfall(scope, 'fs/write-intent', terminal, target, actor),
+      terminal => legacy.waterfall('fs/write-intent', target, actor, terminal),
+      writeResult,
+      cordisWriteResult,
+    )
+    const nativeEditResult = { version: editVersion }
+    const cordisEditResult = { version: editVersion }
+    await checkDelegation<{ version: FsVersion }>(
+      'edit',
+      terminal => host.events.waterfall(scope, 'fs/edit-intent', terminal, target, actor),
+      terminal => legacy.waterfall('fs/edit-intent', target, actor, terminal),
+      nativeEditResult,
+      cordisEditResult,
+    )
+
+    cordisWriteOuter()
+    cordisEditOuter()
+    shortCircuit = true
+    const outcomes: { listener: string; result: unknown; dispatches: (() => Promise<unknown>)[] }[] = [
+      { listener: 'native:outer', result: writeResult, dispatches: [
+        () => host.events.waterfall(scope, 'fs/write-intent', () => undefined, target, actor),
+        () => legacy.waterfall('fs/write-intent', target, actor, () => undefined),
+      ] },
+      { listener: 'native:edit', result: editResult, dispatches: [
+        () => host.events.waterfall(scope, 'fs/edit-intent', () => undefined, target, actor),
+        () => legacy.waterfall('fs/edit-intent', target, actor, () => undefined),
+      ] },
+    ]
+    for (const outcome of outcomes) for (const dispatch of outcome.dispatches) {
+      sequence.length = 0
+      await expect(dispatch()).resolves.toBe(outcome.result)
+      expect(sequence).toEqual([outcome.listener])
+    }
+
+    shortCircuit = false
+    rejectListener = true
+    for (const outcome of outcomes) for (const dispatch of outcome.dispatches) {
+      sequence.length = 0
+      await expect(dispatch()).rejects.toBe(failure)
+      expect(sequence).toEqual([outcome.listener])
+    }
   } finally {
+    for (const dispose of eventDisposers) await dispose()
     for (const dispose of disposers) dispose()
     if (unregister !== undefined) await unregister()
     await host.stop()
