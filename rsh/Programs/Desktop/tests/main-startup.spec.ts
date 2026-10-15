@@ -151,12 +151,14 @@ vi.mock('../src/project-manager.ts', () => ({
       harness.noteNativeList()
       return { status: 'listed', inventory: { runtime: 'native', revision: 'a'.repeat(64), scopes: [], packages: [] } }
     }
-    async mutateNativeModules(mutation: unknown, hooks: { beforeChange(): Promise<void> }) {
+    async mutateNativeModules(mutation: unknown, hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
       harness.nativeMutations.push(mutation)
       if (harness.nativeMutationOutcome !== undefined) {
         await hooks.beforeChange()
         return harness.nativeMutationOutcome
       }
+      await hooks.beforeChange()
+      await hooks.afterChange()
       return { status: 'applied', revision: 'b'.repeat(64), backend: { phase: 'ready' } }
     }
     async mutate(_mutation: unknown, hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
@@ -498,7 +500,7 @@ describe('desktop main startup', () => {
     expect(invoke(DESKTOP_IPC.backendStatus)).toEqual({ phase: 'ready' })
   })
 
-  it('routes tagged Native plugin requests through the shell-authenticated IPC facade', async () => {
+  it('restarts one Host after a tagged Native mutation through the shell-authenticated IPC facade', async () => {
     harness.nativeEnabled = true
     await import('../src/main.ts')
     await harness.preparing.promise
@@ -510,14 +512,24 @@ describe('desktop main startup', () => {
     const list = await Promise.resolve(invoke(DESKTOP_IPC.pluginsList, { runtime: 'native' }))
     expect(list).toMatchObject({ status: 'listed', inventory: { runtime: 'native' } })
     expect(harness.nativeLists).toBe(1)
-    const result = await Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+    const nextHostStart = harness.nextHostStart()
+    const mutation = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
       runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
         installations: [{ target: 'client', id: 'client-fixture', enabled: false }] },
     }))
+    await harness.hosts[0]!.stopping.promise
+    expect(harness.hosts).toHaveLength(1)
+    harness.hosts[0]!.exited.resolve()
+    await nextHostStart
+    expect(harness.hosts).toHaveLength(2)
+    expect(harness.hosts[1]!.start).toHaveBeenCalledTimes(1)
+    harness.hosts[1]!.ready.resolve()
+    const result = await mutation
     expect(result).toMatchObject({ status: 'applied', revision: 'b'.repeat(64) })
     expect(harness.nativeMutations[0]).toMatchObject({ type: 'install', request: {
       packageName: 'fixture-client', version: '1.0.0', installations: [{ target: 'client', id: 'client-fixture', enabled: false }],
     } })
+    expect(harness.hosts).toHaveLength(2)
     const menu = harness.applicationMenu as { items: Array<{ submenu?: Array<{ click?: () => void }> }> }
     menu.items[0]?.submenu?.[0]?.click?.()
     expect(harness.windows).toHaveLength(2)

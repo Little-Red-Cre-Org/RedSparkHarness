@@ -6,10 +6,10 @@ import { dirname, join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
-import type { NativeDesktopInstallationId } from '../src/native-module-management.ts'
+import type { NativeDesktopInstallationId, NativeDesktopScopeId } from '../src/native-module-management.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { expandNativeProfilePresets, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
-import { prepareNativeClientProfileBundle } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { parseNativeClientProfile, prepareNativeClientProfileBundle } from '@deepseek-ai/dsh-native-web-assets/native-client'
 import { runtimeFixture, writePackage } from './runtime-fixture.ts'
 
 (globalThis as Record<string, unknown>).__dshDesktopTestPrepareNativeClientProfileBundle = prepareNativeClientProfileBundle
@@ -116,7 +116,8 @@ if (command === 'add' || command === 'remove') {
     const directory = join(project, 'node_modules', ...name.split('/'))
     mkdirSync(directory, { recursive: true })
     const manifestFile = join(directory, 'package.json')
-    const targets = name === '@fixture/unsupported-client' ? ['legacy'] : ['client']
+    const targets = name === '@fixture/unsupported-client' ? ['legacy']
+      : name === '@fixture/new-client' ? ['host', 'client'] : ['client']
     let created = false
     let installed = { name, version, type: 'module', exports: { './native': './native.js' },
       dsh: { native: { apiVersion: 1, entry: './native', targets, requires: [], optional: [], provides: [] } } }
@@ -201,6 +202,8 @@ afterEach(() => {
 it('lists all scopes and disables only rows outside the Host and Client boot closure', async () => {
   const root = fixtureRoot()
   const { manager, profile } = prepareFixture(root)
+  const hostProfilePath = join(profile, 'rsh.profile.json')
+  const clientProfilePath = join(profile, 'rsh.client.json')
   await manager.applyRelease()
   writeCurrentProfile(profile)
   const lifecycle = { stop: 0, start: 0 }
@@ -213,8 +216,8 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: listed.inventory.revision } },
     hooks(lifecycle), ready)
   expect(applied.status).toBe('applied')
-  const host = readJson(join(profile, 'rsh.profile.json')) as { installations: NativeRow[] }
-  const client = readJson(join(profile, 'rsh.client.json')) as { installations: NativeRow[] }
+  const host = readJson(hostProfilePath) as { installations: NativeRow[] }
+  const client = readJson(clientProfilePath) as { installations: NativeRow[] }
   expect(host.installations.filter(row => row.disabled !== true).map(row => row.id)).toEqual(['credentials', 'native-session'])
   expect(host.installations.find(row => row.id === 'optional-host')).toMatchObject({ disabled: true, config: { token: 'private-host-value' } })
   expect(host.installations.find(row => row.id === 'already-disabled')).toMatchObject({ ...initialHostRows[4], scope: 'root' })
@@ -229,6 +232,8 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const noOp = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: after.inventory.revision } },
     hooks(lifecycle), ready)
   expect(noOp).toMatchObject({ status: 'applied', revision: after.inventory.revision })
+  const staleHostBefore = readFileSync(hostProfilePath, 'utf8')
+  const staleClientBefore = readFileSync(clientProfilePath, 'utf8')
   const stale = await manager.mutateNativeModules({ type: 'toggle', request: {
     expectedRevision: listed.inventory.revision,
     key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: true,
@@ -236,6 +241,10 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(stale).toMatchObject({ status: 'refused', error: {
     code: 'stale-revision', messageKey: 'nativeStaleRevision', currentRevision: after.inventory.revision,
   } })
+  expect(readFileSync(hostProfilePath, 'utf8')).toBe(staleHostBefore)
+  expect(readFileSync(clientProfilePath, 'utf8')).toBe(staleClientBefore)
+  const requiredHostBefore = readFileSync(hostProfilePath, 'utf8')
+  const requiredClientBefore = readFileSync(clientProfilePath, 'utf8')
   const required = await manager.mutateNativeModules({ type: 'toggle', request: {
     expectedRevision: after.inventory.revision,
     key: { target: 'host', id: brandString<NativeDesktopInstallationId>('native-session') }, enabled: false,
@@ -243,9 +252,45 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(required).toMatchObject({ status: 'refused', error: {
     code: 'dependency-conflict', blockedBy: [{ target: 'host', id: 'native-session' }],
   } })
+  expect(readFileSync(hostProfilePath, 'utf8')).toBe(requiredHostBefore)
+  expect(readFileSync(clientProfilePath, 'utf8')).toBe(requiredClientBefore)
+  const preflightFixture = prepareFixture(fixtureRoot())
+  await preflightFixture.manager.applyRelease()
+  writeNativeProfile(preflightFixture.profile, [...initialHostRows,
+    { id: 'throwing-host', plugin: '@fixture/throwing-host', disabled: true },
+  ], initialClientRows)
+  prepareNativePackages(preflightFixture.profile)
+  writeNativePackage(preflightFixture.profile, '@fixture/throwing-host', ['host'], [], [])
+  writeFileSync(join(preflightFixture.profile, 'node_modules/@fixture/throwing-host/native.js'),
+    'export const plugin = { apiVersion: 1, name: "@fixture/throwing-host", targets: ["host"], requires: [], provides: [], resolve() { throw new Error("preflight failed") } }\n')
+  const preflightInventory = await preflightFixture.manager.listNativeModules(ready)
+  expect(preflightInventory.status).toBe('listed')
+  if (preflightInventory.status !== 'listed') return
+  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@fixture/throwing-host')
+    ?.installations[0]).toMatchObject({ id: 'throwing-host', canEnable: true })
+  const preflightHostBefore = readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')
+  const preflightClientBefore = readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')
+  const preflightLifecycle = { stop: 0, start: 0 }
+  const preflightRefusal = await preflightFixture.manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: preflightInventory.inventory.revision,
+    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('throwing-host') }, enabled: true,
+  } }, hooks(preflightLifecycle), ready)
+  expect(preflightRefusal).toMatchObject({ status: 'refused', error: { code: 'dependency-conflict' } })
+  expect(preflightLifecycle).toEqual({ stop: 0, start: 0 })
+  expect(readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')).toBe(preflightHostBefore)
+  expect(readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')).toBe(preflightClientBefore)
   writeFileSync(manager.paths.lock, String(process.pid))
   try {
     expect(await manager.listNativeModules(ready)).toMatchObject({ status: 'refused', error: { code: 'busy' } })
+    const busyHostBefore = readFileSync(hostProfilePath, 'utf8')
+    const busyClientBefore = readFileSync(clientProfilePath, 'utf8')
+    const busy = await manager.mutateNativeModules({ type: 'toggle', request: {
+      expectedRevision: after.inventory.revision,
+      key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: true,
+    } }, hooks(lifecycle), ready)
+    expect(busy).toMatchObject({ status: 'refused', error: { code: 'busy' } })
+    expect(readFileSync(hostProfilePath, 'utf8')).toBe(busyHostBefore)
+    expect(readFileSync(clientProfilePath, 'utf8')).toBe(busyClientBefore)
   } finally {
     if (existsSync(manager.paths.lock)) rmSync(manager.paths.lock)
   }
@@ -441,17 +486,45 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const initial = await manager.listNativeModules(ready)
   expect(initial.status).toBe('listed')
   if (initial.status !== 'listed') return
-  const installed = await manager.mutateNativeModules({ type: 'install', request: {
+  let releaseStop!: () => void
+  let stopStarted!: () => void
+  const stopGate = new Promise<void>((resolve) => { releaseStop = resolve })
+  const stopStartedPromise = new Promise<void>((resolve) => { stopStarted = resolve })
+  const hostBeforeStop = readFileSync(join(profile, 'rsh.profile.json'), 'utf8')
+  const clientBeforeStop = readFileSync(join(profile, 'rsh.client.json'), 'utf8')
+  const pendingInstall = manager.mutateNativeModules({ type: 'install', request: {
     expectedRevision: initial.inventory.revision,
     packageName: '@fixture/new-client', version: '1.0.0',
-    installations: [{ target: 'client', id: brandString<NativeDesktopInstallationId>('new-client'),
-      config: { label: 'keep-me' }, enabled: false }],
-  } }, hooks(lifecycle), ready)
+    installations: [
+      { target: 'client', id: brandString<NativeDesktopInstallationId>('new-client'), config: { label: 'keep-me' }, enabled: true },
+      { target: 'host', id: brandString<NativeDesktopInstallationId>('new-host'), scope: brandString<NativeDesktopScopeId>('root'),
+        config: undefined, enabled: true },
+    ],
+  } }, {
+    beforeChange: async () => { lifecycle.stop += 1; stopStarted(); await stopGate },
+    afterChange: async () => { lifecycle.start += 1 },
+  }, ready)
+  const reachedStop = await Promise.race([stopStartedPromise.then(() => true), pendingInstall.then(() => false)])
+  const hostWhileStopped = readFileSync(join(profile, 'rsh.profile.json'), 'utf8')
+  const clientWhileStopped = readFileSync(join(profile, 'rsh.client.json'), 'utf8')
+  const packageWhileStopped = existsSync(join(profile, 'node_modules/@fixture/new-client'))
+  const pendingMarkerWhileStopped = existsSync(join(profile, 'desktop-packages-pending'))
+  releaseStop()
+  const installed = await pendingInstall
+  expect(reachedStop).toBe(true)
+  expect(hostWhileStopped).toBe(hostBeforeStop)
+  expect(clientWhileStopped).toBe(clientBeforeStop)
+  expect(packageWhileStopped).toBe(false)
+  expect(pendingMarkerWhileStopped).toBe(false)
   expect(installed.status).toBe('applied')
   if (installed.status !== 'applied') return
   const client = readJson(join(profile, 'rsh.client.json')) as { installations: NativeRow[] }
   expect(client.installations.find(row => row.id === 'new-client')).toEqual({ id: 'new-client', plugin: '@fixture/new-client',
-    config: { label: 'keep-me' }, disabled: true })
+    config: { label: 'keep-me' } })
+  expect(client.installations.find(row => row.id === 'client-already-disabled')?.disabled).toBe(true)
+  const host = readJson(join(profile, 'rsh.profile.json')) as { installations: NativeRow[] }
+  expect(host.installations.find(row => row.id === 'new-host')).toEqual({ id: 'new-host', plugin: '@fixture/new-client', scope: 'root' })
+  expect(host.installations.find(row => row.id === 'already-disabled')?.disabled).toBe(true)
 
   const current = await manager.listNativeModules(ready)
   expect(current.status).toBe('listed')
@@ -467,6 +540,13 @@ it('installs, updates, and removes exact Native packages without losing row conf
   expect(afterUpdate.inventory.packages.find(row => row.packageName === '@fixture/host-update')?.packageVersion).toBe('1.1.0')
   const updatedClient = readJson(join(profile, 'rsh.client.json')) as { installations: NativeRow[] }
   expect(updatedClient.installations.find(row => row.id === 'optional-client')).toEqual(initialClientRows[3])
+  expect(updatedClient.installations.find(row => row.id === 'client-already-disabled')?.disabled).toBe(true)
+  const updatedHost = readJson(join(profile, 'rsh.profile.json')) as { installations: NativeRow[] }
+  expect(updatedHost.installations.find(row => row.id === 'already-disabled')?.disabled).toBe(true)
+
+  const clientBeforeRemoval = parseNativeClientProfile(readJson(join(profile, 'rsh.client.json')))
+  const clientBundleBeforeRemoval = await prepareNativeClientProfileBundle(profile, join(root, 'resources', 'dsh'), clientBeforeRemoval, true)
+  expect(clientBundleBeforeRemoval.wire.modules.some(row => row.id === 'new-client')).toBe(true)
 
   const removed = await manager.mutateNativeModules({ type: 'remove', request: {
     expectedRevision: afterUpdate.inventory.revision, packageName: '@fixture/new-client',
@@ -474,7 +554,82 @@ it('installs, updates, and removes exact Native packages without losing row conf
   expect(removed.status).toBe('applied')
   if (removed.status !== 'applied') return
   expect(existsSync(join(profile, 'node_modules/@fixture/new-client'))).toBe(false)
-  expect((await manager.listNativeModules(ready)).status).toBe('listed')
+  const hostAfterRemoval = readJson(join(profile, 'rsh.profile.json')) as { installations: NativeRow[] }
+  const clientAfterRemoval = parseNativeClientProfile(readJson(join(profile, 'rsh.client.json')))
+  // These assertions cover saved configuration and bundle projection; mounted withdrawal remains GUI acceptance.
+  expect(hostAfterRemoval.installations.some(row => row.id === 'new-host')).toBe(false)
+  expect(clientAfterRemoval.installations.some(row => row.id === 'new-client')).toBe(false)
+  const clientBundle = await prepareNativeClientProfileBundle(profile, join(root, 'resources', 'dsh'), clientAfterRemoval, true)
+  expect(clientBundle.wire.modules.some(row => row.id === 'new-client')).toBe(false)
+  const toggleInventory = await manager.listNativeModules(ready)
+  expect(toggleInventory.status).toBe('listed')
+  if (toggleInventory.status !== 'listed') return
+  const hostBeforeToggle = readFileSync(join(profile, 'rsh.profile.json'), 'utf8')
+  const clientBeforeToggle = readFileSync(join(profile, 'rsh.client.json'), 'utf8')
+  let releaseToggleStop!: () => void
+  let toggleStopStarted!: () => void
+  let releaseToggleStart!: () => void
+  let toggleStartStarted!: () => void
+  const toggleStopGate = new Promise<void>((resolve) => { releaseToggleStop = resolve })
+  const toggleStopStartedPromise = new Promise<void>((resolve) => { toggleStopStarted = resolve })
+  const toggleStartGate = new Promise<void>((resolve) => { releaseToggleStart = resolve })
+  const toggleStartStartedPromise = new Promise<void>((resolve) => { toggleStartStarted = resolve })
+  const toggleLifecycle = { stop: 0, start: 0 }
+  const pendingToggle = manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: toggleInventory.inventory.revision,
+    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: false,
+  } }, {
+    beforeChange: async () => { toggleLifecycle.stop += 1; toggleStopStarted(); await toggleStopGate },
+    afterChange: async () => { toggleLifecycle.start += 1; toggleStartStarted(); await toggleStartGate },
+  }, ready)
+  await toggleStopStartedPromise
+  const hostWhileToggleStopped = readFileSync(join(profile, 'rsh.profile.json'), 'utf8')
+  const clientWhileToggleStopped = readFileSync(join(profile, 'rsh.client.json'), 'utf8')
+  releaseToggleStop()
+  await toggleStartStartedPromise
+  let toggleSettledBeforeStart = false
+  void pendingToggle.then(() => { toggleSettledBeforeStart = true })
+  await new Promise<void>(resolve => setImmediate(resolve))
+  const settledBeforeStart = toggleSettledBeforeStart
+  releaseToggleStart()
+  const toggled = await pendingToggle
+  expect(hostWhileToggleStopped).toBe(hostBeforeToggle)
+  expect(clientWhileToggleStopped).toBe(clientBeforeToggle)
+  expect(settledBeforeStart).toBe(false)
+  expect(toggled.status).toBe('applied')
+  expect(toggleLifecycle).toEqual({ stop: 1, start: 1 })
+  if (toggled.status !== 'applied') return
+  expect((readJson(join(profile, 'rsh.client.json')) as { installations: NativeRow[] })
+    .installations.find(row => row.id === 'optional-client')).toMatchObject({ disabled: true })
+
+  const stopFailureFiles = {
+    host: readFileSync(join(profile, 'rsh.profile.json'), 'utf8'),
+    client: readFileSync(join(profile, 'rsh.client.json'), 'utf8'),
+  }
+  const stopFailureLifecycle = { stop: 0, start: 0 }
+  const stopFailure = await manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: toggled.revision,
+    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: true,
+  } }, {
+    beforeChange: async () => { stopFailureLifecycle.stop += 1; throw new Error('Host stop failed') },
+    afterChange: async () => { stopFailureLifecycle.start += 1 },
+  }, ready)
+  expect(stopFailure).toMatchObject({ status: 'refused', error: { code: 'host-stop-failed' } })
+  expect(stopFailureLifecycle).toEqual({ stop: 1, start: 0 })
+  expect(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')).toBe(stopFailureFiles.host)
+  expect(readFileSync(join(profile, 'rsh.client.json'), 'utf8')).toBe(stopFailureFiles.client)
+
+  const startFailure = await manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: toggled.revision,
+    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: true,
+  } }, {
+    beforeChange: async () => {},
+    afterChange: async () => { throw new Error('Host start failed') },
+  }, ready)
+  expect(startFailure).toMatchObject({ status: 'recovery-required', error: { code: 'host-start-failed' } })
+  expect((readJson(join(profile, 'rsh.client.json')) as { installations: NativeRow[] })
+    .installations.find(row => row.id === 'optional-client')).toEqual(initialClientRows[3])
+
   const beforeUnsupported = await manager.listNativeModules(ready)
   expect(beforeUnsupported.status).toBe('listed')
   if (beforeUnsupported.status !== 'listed') return
