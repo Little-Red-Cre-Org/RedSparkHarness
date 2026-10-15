@@ -12,7 +12,7 @@ import {
 } from '@deepseek-ai/dsh/native-profile'
 import { NativeScope, parseNativeEntryManifest,
   type NativeEntryManifest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { parseNativeClientProfile, prepareNativeClientProfileBundle, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { parseNativeClientProfile, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
 import { load as loadYaml } from 'js-yaml'
 import { spawn } from 'node:child_process'
 import {
@@ -32,6 +32,7 @@ import {
 } from 'node:fs'
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { Worker, type WorkerOptions } from 'node:worker_threads'
+import { pathToFileURL } from 'node:url'
 import {
   DESKTOP_HOST_PACKAGE,
   desktopCorePackageOverrides,
@@ -720,7 +721,12 @@ async function validateNativeComposition(files: NativeProfileFiles, profileDir: 
   await validateHostInFreshWorker(plan.files.host, plan.composition.rows,
     plan.composition.profileProviders, plan.composition.supportRows)
   // Client entry files can reference browser globals; esbuild validates them without executing them in the shell.
-  await prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)
+  // esbuild cannot spawn its binary from app.asar.
+  const nativeClientModule: typeof import('@deepseek-ai/dsh-native-web-assets/native-client') = await import(pathToFileURL(
+    createRequire(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'package.json'))
+      .resolve('@deepseek-ai/dsh-native-web-assets/native-client'),
+  ).href)
+  await nativeClientModule.prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)
 }
 
 function parseNativeLock(text: string): unknown {

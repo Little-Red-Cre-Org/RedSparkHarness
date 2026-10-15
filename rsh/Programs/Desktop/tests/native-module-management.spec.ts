@@ -1,5 +1,5 @@
 /** Native Desktop profile inventory, package operations, and lifecycle outcomes. */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -70,6 +70,9 @@ const initialClientRows: readonly NativeRow[] = [
 function prepareFixture(root: string): { manager: DesktopProjectManager; profile: string } {
   const runtime = join(root, 'resources', 'dsh')
   runtimeFixture(runtime)
+  const clientAssets = dirname(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-native-web-assets/package.json'))
+  symlinkSync(clientAssets, join(runtime, 'node_modules', '@deepseek-ai', 'dsh-native-web-assets'),
+    process.platform === 'win32' ? 'junction' : 'dir')
   const paths = resolveDesktopPaths(join(root, '.dsh'))
   const manager = new DesktopProjectManager(paths, { node: process.execPath, pnpm: writeNativePnpm(root), dsh: runtime })
   return { manager, profile: paths.profile }
