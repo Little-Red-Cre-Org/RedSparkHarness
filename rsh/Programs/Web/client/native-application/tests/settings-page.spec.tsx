@@ -44,6 +44,7 @@ const emptyModelActions = {
   modelsListProviders: async () => [],
   modelsListConfigurableProviders: async () => [],
   modelsDiscover: async () => [],
+  modelCatalog: async () => null,
   settingsEvents: async function* (signal: AbortSignal) {
     await new Promise<void>((resolve) => {
       if (signal.aborted) resolve()
@@ -74,6 +75,13 @@ const settingsDescription = (
   hasDocument: false,
   namespaces: namespaces as readonly NativeSettingsDescriptor[],
   limits,
+})
+const pluginSettings = (
+  namespace: string, revision: number, value: Readonly<Record<string, unknown>>,
+  user: Readonly<Record<string, unknown>> = {},
+): NativeSettingsDescriptor => ({
+  namespace, schema: {}, value, base: value, user, applies: 'live', secrets: [],
+  credentialRefs: namespace === 'web-search-deepseek' ? ['DEEPSEEK_API_KEY'] : [], revision,
 })
 
 const chatGptAccount: NativeAccountSummary = {
@@ -124,6 +132,62 @@ it('renders ChatGPT plan and remaining quota', async () => {
   expect(await screen.findByText('Plan: Plus')).toBeTruthy()
   expect(screen.getByText('Remaining 65%')).toBeTruthy()
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
+})
+
+it('shows the four native Plugins configuration cards', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([webSearch]))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  expect(await screen.findByRole('tab', { name: en.settingsPluginConfigTab })).toBeTruthy()
+  expect(screen.getByRole('tab', { name: en.settingsPluginInventoryTab })).toBeTruthy()
+  for (const label of ['Shell', 'Agent loop', 'Subagent', 'Web search']) {
+    expect(screen.getByRole('button', { name: `Show settings: ${label}` })).toBeTruthy()
+  }
+})
+
+it('saves web-search settings and its write-only key through Native Host actions', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  let configured = false
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 })
+  const settingsMutate = vi.fn(async () => updated)
+  const credentialsSet = vi.fn(async () => { configured = true })
+  const credentialsDescribe = vi.fn(async () => ({
+    DEEPSEEK_API_KEY: { configured, writable: true },
+  }))
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
+  actions.settingsMutate = settingsMutate
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'plugin-secret') })
+  expect(settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
+    { op: 'set', path: ['maxUses'], value: 9 },
+  ], 1)
+})
+
+it('shows a Host gap for an absent plugin namespace without a save action', async () => {
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
 })
 
 it('renders the ChatGPT identity name before the email', async () => {

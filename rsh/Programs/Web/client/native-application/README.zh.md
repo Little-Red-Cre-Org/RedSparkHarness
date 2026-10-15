@@ -42,7 +42,7 @@ Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理�
 
 在「订阅模型」区域中，每个 Host 授权条目都有独立的一行，显示连接状态和登录操作；匹配的账户卡片显示在该行内。没有匹配授权条目的账户卡片仍显示在此区域。账户卡片显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits，以及 DeepSeek 身份和钱包余额；只有账户 key 与非空提供方身份仍匹配时，刷新失败才会保留已就绪数据并提示可能陈旧（ChatGPT 使用邮箱，DeepSeek 使用联系方式或姓名）。没有身份的成功读取结果只显示本次读取，不可用的余额不会显示为零。退出登录和授权完成后都会重新读取账户及授权流程。页面不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
-点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置显示旧版风格的偏好行，并把 JSON 编辑器、凭据和刷新操作收在折叠的“高级设置”中。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。任务中心和插件显示本地化迁移占位文案。Agent 预设显示来源、状态及元数据和原生组合文件；可将就绪目录复制到 Host 用户目录，仅删除用户目录，并打开 Host 文件夹或显示路径。复制和删除会发布失效事件并刷新名单。
+点击 Settings 按钮会打开居中模态框，提供通用设置、任务中心、模型、插件和 Agent 预设导航。通用设置显示旧版风格的偏好行，并把 JSON 编辑器、凭据和刷新操作收在折叠的“高级设置”中。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。插件页提供终端、Agent 循环、Subagent 模型选择和 DeepSeek 网页搜索的暂存设置卡；Settings 字段通过带 revision 检查的路径修改保存，网页搜索密钥通过只写 Credentials 操作保存。若 Host 未注册某张卡的 Settings namespace，卡片仍会显示并提示 Host 缺少该 namespace。「插件列表」标签仍显示本地化迁移占位文案；任务中心也一样。Agent 预设显示来源、状态及元数据和原生组合文件；可将就绪目录复制到 Host 用户目录，仅删除用户目录，并打开 Host 文件夹或显示路径。复制和删除会发布失效事件并刷新名单。
 
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
@@ -96,5 +96,5 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 - 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式选择器、Plan 切换和权限选择器。在其他 profile 中，没有可选预设时模式选择器保持禁用；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限选择器。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
 - 其他模型片段呈现仍属于独立工作。
-- 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
+- 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑、插件库存和其他插件的设置仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

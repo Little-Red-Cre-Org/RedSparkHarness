@@ -286,7 +286,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
     accountsList: vi.fn(), accountsUsage: vi.fn(), accountsBalance: vi.fn(), accountsSignOut: vi.fn(),
     modelsListProviders: vi.fn(async () => []), modelsListConfigurableProviders: vi.fn(async () => []),
-    modelsDiscover: vi.fn(async () => []), settingsEvents: async function* () {},
+    modelsDiscover: vi.fn(async () => []), modelCatalog: vi.fn(async () => null), settingsEvents: async function* () {},
     agentPresetsList: vi.fn(async () => ({ default: null, presets: [] })),
     agentPresetRead: vi.fn(async (id: string) => ({ id, source: 'profile' as const, status: 'ready' as const, name: id })),
     agentPresetCopy: vi.fn(async () => ({ updated: true as const })),
