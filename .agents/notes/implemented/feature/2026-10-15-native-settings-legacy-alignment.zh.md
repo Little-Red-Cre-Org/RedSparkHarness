@@ -1,0 +1,40 @@
+# Agent Note: Native Settings pages follow the legacy settings layout
+
+Status: implemented
+
+[English](2026-10-15-native-settings-legacy-alignment.md) | 中文
+
+## Problem
+
+Native Settings 窗口的「通用」页面显示原始命名空间 JSON，「模型」页面的卡片比旧版更宽，「Agent 预设」页面只是一个简单列表。从 Cordis Web GUI 迁移过来的用户会遇到不同的布局，而且不编辑 JSON 就无法修改常用偏好。`native-application` 不能导入 legacy Cordis 插件及其运行时，因此只能依靠 Host 数据重现这些布局。
+
+## Decision
+
+`native-application` 在共享的 [SettingsPanel](../architecture/2026-10-11-shared-settings-panel.zh.md) 中，按旧版的行和卡片结构呈现「通用」「模型」「Agent 预设」页面。它不导入任何 Cordis 或 legacy 插件运行时。所有持久化都通过 Host 带 revision 校验的 `settingsMutate` 完成；页面不保留本地设置存储。
+
+**通用。** 页面包含权限模式、语言、外观、字体大小、对话显示、繁忙时的发送行为（排队发送或插话发送）和桌面宠物等行。每一行写入对应命名空间中的一个字段：`permission`、`locale`、`ui-theme`、`ui-chat`、`ui-conversation.busyEnter` 或 `ui-pet`。语言、外观和字体大小还会立即作用于当前窗口。繁忙发送行使用旧版文案，只写入 `ui-conversation.busyEnter`；写入成功后通知已挂载的输入框，输入框把 `queue`/`steer` 映射为自己的 `queued`/`steering` 默认值。Host 未发布 `ui-conversation` 时，该行被禁用并显示提示，不会改为本地写入。只有 Host 发布了相应命名空间时，权限、对话显示和桌面宠物行才会出现。命名空间 JSON 编辑器和凭据字段移入默认折叠的「高级设置」区域。
+
+**模型。** 在「订阅模型」区域中，授权行、账户卡片和授权错误使用旧版的紧凑卡片、身份行、额度条和次要按钮样式。`account-card.module.css` 只保留账户特有的规则。「API 模型」区域此前已使用 [Models 页面决策](../architecture/2026-10-11-native-models-settings-page.zh.md) 中的共享提供方编辑器，本次未改动。
+
+**Agent 预设。** [预设列表](2026-10-11-native-web-agent-preset-roster.zh.md) 以旧版卡片呈现，分为内置和自定义两组。当前默认预设的卡片会高亮。损坏或需要迁移的预设显示红色边框和徽标；如果 Host 提供了 `problem` 文本，也会一并显示。模式选择开关写入 `agent-presets.modeSelectionEnabled`。点击一张就绪的卡片会写入 `agent-presets.default`，且仅在启用模式选择时允许。页面保留见到过的最高设置 revision，因此较晚返回的写入响应不会覆盖从设置事件读取到的更新值。预设查看器在其高层表面上重新绑定主题滚动条。
+
+## Alternatives considered
+
+**导入 legacy 设置插件。** 拒绝，因为它们依赖 native-application 不得加载的 Cordis 服务和 legacy slots。
+
+**Host 命名空间缺失时退回浏览器存储。** 拒绝，因为这会让同一偏好同时由浏览器和 Host 负责，两个值可能不一致。
+
+**继续把 JSON 编辑器作为「通用」页面的主要视图。** 拒绝，因为常用偏好仍需手工编辑 JSON。这些编辑器仍可在「高级设置」中使用。
+
+## Consequences
+
+Native 页面在外观上与旧版一致，同时 Host 仍是唯一的持久化所有者。Host 未注册命名空间的控件会被隐藏或禁用。当前缺口：
+
+- Native Host 尚未注册 `permission`、`locale`、`ui-theme`、`ui-chat`、`ui-conversation` 和 `ui-pet`。因此繁忙发送保持禁用，语言、外观和字体大小只对当前打开的窗口生效。
+- Native Host 尚未注册 `agent-presets`，因此在 native-web 中，模式选择开关和默认预设选择保持禁用。
+- native-web profile 未安装授权服务，因此 `authorizationList` 为空，「订阅模型」区域只显示标题。
+- `NativeAgentPresetList` 不提供 `authorable` 或 `modeSelectionEnabled`，旧版的创造模式草稿按钮也尚未移植。
+
+## Verification
+
+native-application 中的 `settings-page.spec.tsx` 覆盖：「通用」各行与仅经 Host 的繁忙发送写入、订阅账户卡片的位置，以及预设分组、默认高亮、损坏状态、设置写入和 revision 顺序。
