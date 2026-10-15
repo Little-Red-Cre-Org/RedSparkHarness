@@ -1,5 +1,5 @@
 /** Native plugin settings cards backed by the selected Host's Settings and Credentials actions. */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './plugins-section.module.css'
@@ -10,6 +10,7 @@ type PluginActions = Pick<NativeSessionClient,
 type PluginNamespace = 'shell' | 'agent-loop' | 'subagent-model-selection' | 'web-search-deepseek'
 type ModelRoute = { provider: string; model: string }
 type PluginDraft = {
+  revision?: number
   fields: Readonly<Record<string, string>>
   clears: ReadonlySet<string>
   enabled?: boolean
@@ -30,6 +31,8 @@ type PluginDefinition = {
   fields: readonly PluginField[]
 }
 type CredentialInfo = { ref: string; configured: boolean; writable: boolean }
+type CredentialRead = { kind: 'read'; info: CredentialInfo } | { kind: 'superseded' } | { kind: 'failed' }
+type CredentialReadRequest = { request: number; ref: string; result: Promise<CredentialRead> }
 type ModelCatalog = NativeModelControls['catalog']
 type Candidate = ModelRoute & {
   key: string
@@ -65,6 +68,11 @@ const PLUGINS: readonly PluginDefinition[] = [
 
 function emptyDraft(): PluginDraft {
   return { fields: {}, clears: new Set(), apiKey: '' }
+}
+
+function draftHasValues(draft: PluginDraft): boolean {
+  return Object.keys(draft.fields).length > 0 || draft.clears.size > 0 || draft.enabled !== undefined
+    || draft.models !== undefined || draft.apiKey.trim() !== ''
 }
 
 function routeKey(route: ModelRoute): string {
@@ -354,17 +362,24 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [statuses, setStatuses] = useState<Readonly<Record<string, PluginStatus>>>({})
   const [saving, setSaving] = useState<PluginNamespace>()
   const lifetime = useRef<AbortController>()
+  const settingsRequest = useRef(0)
   const credentialRequest = useRef(0)
+  const credentialRead = useRef<CredentialReadRequest>()
   const catalogRequest = useRef(0)
   const catalogStatusRef = useRef(catalogStatus)
   catalogStatusRef.current = catalogStatus
 
   const publishDescriptors = useCallback((rows: readonly NativeSettingsDescriptor[]): void => {
-    descriptorsRef.current = rows
-    setDescriptors(rows)
+    const current = new Map(descriptorsRef.current.map(row => [row.namespace, row]))
+    const next = rows.map((row) => {
+      const previous = current.get(row.namespace)
+      return previous !== undefined && previous.revision > row.revision ? previous : row
+    })
+    descriptorsRef.current = next
+    setDescriptors(next)
   }, [])
 
-  const readCredential = useCallback(async (ref: string, signal?: AbortSignal): Promise<CredentialInfo | undefined> => {
+  const readCredential = useCallback((ref: string, signal?: AbortSignal): Promise<CredentialRead> => {
     const request = ++credentialRequest.current
     setCredentialFailed(false)
     if (credentialInfo.current?.ref !== ref) {
@@ -372,20 +387,37 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       credentialInfo.current = pending
       setCredential(pending)
     }
-    try {
-      const result = await actions.credentialsDescribe([ref], signal)
-      const currentRow = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
-      if (signal?.aborted || request !== credentialRequest.current || currentRow === undefined
-        || credentialRef(currentRow) !== ref) return undefined
-      const view = result[ref]
-      const info = { ref, configured: view?.configured ?? false, writable: view?.writable ?? true }
-      credentialInfo.current = info
-      setCredential(info)
-      return info
-    } catch {
-      if (!signal?.aborted && request === credentialRequest.current) setCredentialFailed(true)
-      return undefined
-    }
+    const pending = (async (): Promise<CredentialRead> => {
+      try {
+        const result = await actions.credentialsDescribe([ref], signal)
+        if (signal?.aborted) return { kind: 'superseded' }
+        if (request !== credentialRequest.current) {
+          const latest = credentialRead.current
+          return latest !== undefined && latest.request > request && latest.ref === ref
+            ? await latest.result : { kind: 'superseded' }
+        }
+        const currentRow = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
+        if (currentRow === undefined || credentialRef(currentRow) !== ref) return { kind: 'superseded' }
+        const view = result[ref]
+        const info = { ref, configured: view?.configured ?? false, writable: view?.writable ?? true }
+        credentialInfo.current = info
+        setCredential(info)
+        return { kind: 'read', info }
+      } catch {
+        if (signal?.aborted) return { kind: 'superseded' }
+        if (request !== credentialRequest.current) {
+          const latest = credentialRead.current
+          return latest !== undefined && latest.request > request && latest.ref === ref
+            ? latest.result : { kind: 'superseded' }
+        }
+        const currentRow = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
+        if (currentRow === undefined || credentialRef(currentRow) !== ref) return { kind: 'superseded' }
+        setCredentialFailed(true)
+        return { kind: 'failed' }
+      }
+    })()
+    credentialRead.current = { request, ref, result: pending }
+    return pending
   }, [actions.credentialsDescribe])
 
   const loadCatalog = useCallback(async (force = false): Promise<void> => {
@@ -409,9 +441,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
 
   const refreshNamespace = useCallback(async (namespace?: string): Promise<void> => {
     const signal = lifetime.current?.signal
+    const request = ++settingsRequest.current
     try {
       const description = await actions.settingsDescribe(signal)
-      if (signal?.aborted) return
+      if (signal?.aborted || request !== settingsRequest.current) return
       if (namespace === undefined) {
         publishDescriptors(description.namespaces)
         setLoaded(true)
@@ -432,7 +465,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         await readCredential(credentialRef(webSearch), signal)
       }
     } catch {
-      if (!signal?.aborted) setLoadFailed(true)
+      if (!signal?.aborted && request === settingsRequest.current) setLoadFailed(true)
     }
   }, [actions.settingsDescribe, publishDescriptors, readCredential])
 
@@ -462,6 +495,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       controller.abort()
       if (lifetime.current === controller) lifetime.current = undefined
       catalogRequest.current += 1
+      settingsRequest.current += 1
       credentialRequest.current += 1
     }
   }, [actions.settingsEvents, loadCatalog, readCredential, refreshNamespace])
@@ -482,7 +516,8 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     try {
       let updated = row
       if (plan.ops.length > 0) {
-        updated = await actions.settingsMutate(plugin.namespace, plan.ops, row.revision)
+        updated = await actions.settingsMutate(plugin.namespace, plan.ops, draft.revision ?? row.revision)
+        settingsRequest.current += 1
         const next = descriptorsRef.current.filter(candidate => candidate.namespace !== plugin.namespace)
         next.push(updated)
         publishDescriptors(next)
@@ -491,7 +526,9 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         const ref = credentialRef(updated)
         await actions.credentialsSet(ref, draft.apiKey.trim())
         const result = await readCredential(ref, lifetime.current?.signal)
-        if (result?.configured !== true) throw new Error('Credential was not reported as configured after saving.')
+        if (result.kind === 'failed' || (result.kind === 'read' && !result.info.configured)) {
+          throw new Error('Credential was not reported as configured after saving.')
+        }
       }
       setDrafts(current => ({ ...current, [plugin.namespace]: emptyDraft() }))
     } catch (cause: unknown) {
@@ -503,10 +540,33 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   }
 
   const updateDraft = (namespace: PluginNamespace, draft: PluginDraft): void => {
-    setDrafts(current => ({ ...current, [namespace]: draft }))
+    const row = descriptorsRef.current.find(candidate => candidate.namespace === namespace)
+    setDrafts((current) => {
+      const revision = draft.revision ?? current[namespace]?.revision
+        ?? (draftHasValues(draft) ? row?.revision : undefined)
+      const nextDraft = { ...draft }
+      if (revision === undefined) delete nextDraft.revision
+      else nextDraft.revision = revision
+      return { ...current, [namespace]: nextDraft }
+    })
     setStatuses(current => ({ ...current, [namespace]: undefined }))
   }
   const tTabs = t('settingsPluginTabs')
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const moveTab = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
+    let nextIndex: number
+    switch (event.key) {
+      case 'ArrowRight': nextIndex = (index + 1) % 2; break
+      case 'ArrowLeft': nextIndex = (index - 1 + 2) % 2; break
+      case 'Home': nextIndex = 0; break
+      case 'End': nextIndex = 1; break
+      default: return
+    }
+    event.preventDefault()
+    const nextTab = tabRefs.current[nextIndex] as HTMLButtonElement
+    setTab(nextIndex === 0 ? 'config' : 'inventory')
+    nextTab.focus()
+  }
 
   return <section className={css.section}>
     <h2 className={css.heading}>{t('settingsPluginTitle')}</h2>
@@ -516,10 +576,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     <div className={css.tabs} role="tablist" aria-label={tTabs}>
       <button type="button" role="tab" aria-selected={tab === 'config'} aria-controls="plugins-config-panel"
         id="plugins-config-tab" data-active={tab === 'config' ? 'true' : undefined} className={css.tab}
-        tabIndex={tab === 'config' ? 0 : -1} onClick={() => { setTab('config') }}>{t('settingsPluginConfigTab')}</button>
+        ref={(element) => { tabRefs.current[0] = element }} tabIndex={tab === 'config' ? 0 : -1}
+        onClick={() => { setTab('config') }} onKeyDown={(event) => { moveTab(event, 0) }}>{t('settingsPluginConfigTab')}</button>
       <button type="button" role="tab" aria-selected={tab === 'inventory'} aria-controls="plugins-inventory-panel"
         id="plugins-inventory-tab" data-active={tab === 'inventory' ? 'true' : undefined} className={css.tab}
-        tabIndex={tab === 'inventory' ? 0 : -1} onClick={() => { setTab('inventory') }}>{t('settingsPluginInventoryTab')}</button>
+        ref={(element) => { tabRefs.current[1] = element }} tabIndex={tab === 'inventory' ? 0 : -1}
+        onClick={() => { setTab('inventory') }} onKeyDown={(event) => { moveTab(event, 1) }}>{t('settingsPluginInventoryTab')}</button>
     </div>
     <div id="plugins-config-panel" role="tabpanel" aria-labelledby="plugins-config-tab" hidden={tab !== 'config'} className={css.panel}>
       <ul className={css.cards}>

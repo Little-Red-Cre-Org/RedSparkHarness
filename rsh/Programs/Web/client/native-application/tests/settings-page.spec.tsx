@@ -149,6 +149,63 @@ it('shows the four native Plugins configuration cards', async () => {
   }
 })
 
+it('keeps a staged plugin write fenced to the descriptor revision where editing began', async () => {
+  const routeA = { provider: 'provider', model: 'model-a' }
+  const routeB = { provider: 'provider', model: 'model-b' }
+  const initial = pluginSettings('subagent-model-selection', 1, { enabled: true, allowedModels: [routeA] })
+  const updatedElsewhere = pluginSettings('subagent-model-selection', 2, { enabled: false, allowedModels: [{ provider: 'provider', model: 'model-c' }] })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [updatedElsewhere])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'subagent-model-selection', revision: 2 }
+  }
+  actions.modelCatalog = vi.fn(async () => ({
+    default: routeA, routableProviders: ['provider'], failures: [],
+    groups: [{ id: 'provider', name: 'Provider', models: [
+      { id: 'model-a', name: 'Model A' }, { id: 'model-b', name: 'Model B' }, { id: 'model-c', name: 'Model C' },
+    ] }],
+  }))
+  const conflict = Object.assign(new Error('conflict'), { code: 'native/settings-conflict' })
+  actions.settingsMutate = vi.fn(async () => { throw conflict })
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Subagent' }))
+  fireEvent.click(await screen.findByRole('checkbox', { name: /Model B/ }))
+  fireEvent.click(screen.getByRole('checkbox', { name: /Model A/ }))
+  releaseEvent()
+  await waitFor(() => { expect(screen.getByRole('checkbox', { name: en.settingsPluginSubagentToggle })).toHaveProperty('checked', false) })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(actions.settingsMutate).toHaveBeenCalledWith('subagent-model-selection', [
+    { op: 'set', path: ['allowedModels'], value: [routeB] },
+  ], 1)
+})
+
+it('supports arrow, Home, and End keyboard navigation across plugin tabs', async () => {
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+  const config = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
+  const inventory = screen.getByRole('tab', { name: en.settingsPluginInventoryTab })
+
+  fireEvent.keyDown(config, { key: 'ArrowRight' })
+  expect(document.activeElement).toBe(inventory)
+  expect(inventory.getAttribute('aria-selected')).toBe('true')
+  fireEvent.keyDown(inventory, { key: 'ArrowLeft' })
+  expect(document.activeElement).toBe(config)
+  fireEvent.keyDown(config, { key: 'End' })
+  expect(document.activeElement).toBe(inventory)
+  fireEvent.keyDown(inventory, { key: 'Home' })
+  expect(document.activeElement).toBe(config)
+})
+
 it('saves web-search settings and its write-only key through Native Host actions', async () => {
   const initial = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
