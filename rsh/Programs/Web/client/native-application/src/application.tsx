@@ -28,6 +28,7 @@ import { NativeOnboarding } from './onboarding.tsx'
 import { NativeTrajectoryInspector } from './trajectory.tsx'
 import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
+import { readPendingDefault } from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
 import css from './conversation.module.css'
 
@@ -100,12 +101,12 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     const scroll = scrollRef.current
     if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
   }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
-  const submit = (placement: 'queued' | 'steering' = 'queued'): void => {
+  const submit = (placement?: 'queued' | 'steering'): void => {
     if (!inputReady || snapshot.selected === undefined || draft.trim() === '' || snapshot.submissionBusy) return
     if (acceptsPending && files.length > 0) return
     const version = ++draftVersion.current
     if (acceptsPending) {
-      void submitPending(draft, placement).then((success) => {
+      void submitPending(draft, placement ?? readPendingDefault()).then((success) => {
         if (success && draftVersion.current === version) { setDraft(''); setFiles([]) }
       })
     } else {
@@ -149,7 +150,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
         <div className={css.toolbarActions}>
           <ModelPickerControl snapshot={snapshot} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />
           {acceptsPending ? <>
-            <Button type="submit" size="sm" disabled={snapshot.submissionBusy || draft.trim() === '' || files.length > 0}>{t('queueMessage')}</Button>
+            <Button type="button" size="sm" disabled={snapshot.submissionBusy || draft.trim() === '' || files.length > 0}
+              onClick={() => { submit('queued') }}>{t('queueMessage')}</Button>
             <Button type="button" size="sm" disabled={snapshot.submissionBusy || draft.trim() === '' || files.length > 0}
               onClick={() => { submit('steering') }}>{t('steerMessage')}</Button>
           </> : null}
@@ -160,7 +162,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
         </div>
       </ChatComposerToolbar>
     </ChatComposerCard>
-    {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly' : 'pendingInputHint')}</p> : null}
+    {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly'
+      : readPendingDefault() === 'steering' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
   </form>
   return <>
     <main className={css.page}>

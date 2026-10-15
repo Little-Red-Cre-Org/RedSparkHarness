@@ -10,8 +10,12 @@ import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepse
 import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
+import { PENDING_DEFAULT_KEY } from '../src/pending-default.ts'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.removeItem(PENDING_DEFAULT_KEY)
+})
 
 const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
 const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
@@ -787,6 +791,10 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     authorizationList: vi.fn(async () => []),
   } as unknown as NativeSettingsActions
   renderSettingsPage({ actions, t: localeKey => en[localeKey] })
+  const pendingDefault = screen.getByRole('combobox', { name: en.settingsPendingDefault }) as HTMLSelectElement
+  expect(pendingDefault.value).toBe('queued')
+  fireEvent.change(pendingDefault, { target: { value: 'steering' } })
+  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
   const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
   const pretty = (value: unknown) => JSON.stringify(value, null, 2)
 
