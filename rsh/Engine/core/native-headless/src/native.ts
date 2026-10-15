@@ -849,48 +849,6 @@ export class NativeHeadlessApplication implements NativeApplication {
         }
       }
       this.activeSessions.set(id, session)
-      const allowed = (name: string): boolean => (config.allowedTools === undefined || config.allowedTools.includes(name))
-        && (request.delegationContext === undefined || request.delegationContext.toolNames.includes(name))
-      const builtinSchemas = config.builtinTools
-        ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
-          .filter(schema => allowed(schema.name)
-            && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
-        : []
-      const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)
-      const programToolNames = this.tools === undefined || this.tools.modelMode === 'native'
-        || !modelTools.includes('run_code') ? []
-        : this.tools.sdkSchemas(agent.scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name)
-          .filter(name => allowed(name)
-            && (request.delegationContext === undefined || request.delegationContext.programToolNames.includes(name)))
-      const modelSnapshot = modelTools.length === 0 ? undefined : this.tools?.captureModelSnapshot(modelTools, agent.scope)
-      if (modelSnapshot !== undefined) {
-        toolSnapshots.push(modelSnapshot)
-        if (modelSnapshot.schemas.length !== modelTools.length) {
-          throw new Error('native-headless: a model Registry tool is no longer registered')
-        }
-      }
-      const modelSchemas = modelSnapshot?.schemas ?? []
-      const programSnapshot = this.tools === undefined || this.tools.modelMode === 'native' || !modelTools.includes('run_code')
-        ? undefined : this.tools.captureProgramSnapshot(programToolNames, agent.scope)
-      if (programSnapshot !== undefined) {
-        toolSnapshots.push(programSnapshot)
-        if (programSnapshot.programSchemas?.length !== programToolNames.length) {
-          throw new Error('native-headless: a program binding is no longer registered')
-        }
-      }
-      const builtinTools = builtinSchemas.map(schema => schema.name)
-      const resolvedSandbox = this.sandboxPolicy?.resolve({ session })
-      const toolNames = [...new Set([...builtinTools, ...modelTools])]
-      const delegationToolNames = resolvedSandbox?.mode === 'read-only'
-        ? toolNames.filter(name => name === 'read_file') : toolNames
-      if (resolvedSandbox?.mode === 'read-only') {
-        const readOnlyModelTools = new Set(['read_file', ...modelTools])
-        toolNames.splice(0, toolNames.length, ...toolNames.filter(name => readOnlyModelTools.has(name)))
-      }
-      const schemas = [...builtinSchemas, ...modelSchemas]
-        .filter(schema => toolNames.includes(schema.name)).map(schema => structuredClone(schema))
-      const builtinToolNames = resolvedSandbox?.mode === 'read-only'
-        ? builtinTools.filter(name => name === 'read_file') : [...builtinTools]
       const record = (event: SessionEvent): void => {
         this.timeContext?.record(session, event)
         this.tmuxContext?.record(session, event)
@@ -934,6 +892,48 @@ export class NativeHeadlessApplication implements NativeApplication {
       if (activeOwner === undefined && operation === undefined && this.requestContexts?.hasProviders(agent.scope) === true) {
         throw new Error('native-headless: request-context providers require the exact active Session owner')
       }
+      const allowed = (name: string): boolean => (config.allowedTools === undefined || config.allowedTools.includes(name))
+        && (request.delegationContext === undefined || request.delegationContext.toolNames.includes(name))
+      const builtinSchemas = config.builtinTools
+        ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
+          .filter(schema => allowed(schema.name)
+            && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
+        : []
+      const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)
+      const programToolNames = this.tools === undefined || this.tools.modelMode === 'native'
+        || !modelTools.includes('run_code') ? []
+        : this.tools.sdkSchemas(agent.scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name)
+          .filter(name => allowed(name)
+            && (request.delegationContext === undefined || request.delegationContext.programToolNames.includes(name)))
+      const modelSnapshot = modelTools.length === 0 ? undefined : this.tools?.captureModelSnapshot(modelTools, agent.scope)
+      if (modelSnapshot !== undefined) {
+        toolSnapshots.push(modelSnapshot)
+        if (modelSnapshot.schemas.length !== modelTools.length) {
+          throw new Error('native-headless: a model Registry tool is no longer registered')
+        }
+      }
+      const modelSchemas = modelSnapshot?.schemas ?? []
+      const programSnapshot = this.tools === undefined || this.tools.modelMode === 'native' || !modelTools.includes('run_code')
+        ? undefined : this.tools.captureProgramSnapshot(programToolNames, agent.scope)
+      if (programSnapshot !== undefined) {
+        toolSnapshots.push(programSnapshot)
+        if (programSnapshot.programSchemas?.length !== programToolNames.length) {
+          throw new Error('native-headless: a program binding is no longer registered')
+        }
+      }
+      const builtinTools = builtinSchemas.map(schema => schema.name)
+      const resolvedSandbox = this.sandboxPolicy?.resolve({ session })
+      const toolNames = [...new Set([...builtinTools, ...modelTools])]
+      const delegationToolNames = resolvedSandbox?.mode === 'read-only'
+        ? toolNames.filter(name => name === 'read_file') : toolNames
+      if (resolvedSandbox?.mode === 'read-only') {
+        const readOnlyModelTools = new Set(['read_file', ...modelTools])
+        toolNames.splice(0, toolNames.length, ...toolNames.filter(name => readOnlyModelTools.has(name)))
+      }
+      const schemas = [...builtinSchemas, ...modelSchemas]
+        .filter(schema => toolNames.includes(schema.name)).map(schema => structuredClone(schema))
+      const builtinToolNames = resolvedSandbox?.mode === 'read-only'
+        ? builtinTools.filter(name => name === 'read_file') : [...builtinTools]
       const ownerApproval = executionPolicy?.permission.mode === 'require-approval'
         && operation === undefined && invocation === 'root' && activeOwner !== undefined
         ? request.issueOwnerApproval?.(activeOwner) : undefined

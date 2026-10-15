@@ -27,7 +27,7 @@ dsh Web 客户端的侧边栏显示当前构建、启动会话、将导航折叠
 
 侧边栏是导航外壳：用户看到品牌、启动新会话、折叠轨道并到达 Settings。功能插件填充它的席位——ui-workspace 填充 `sidebar.workspaces`，ui-settings 在 `sidebar.settings` 注册触发行与设置面板。
 
-在 native-web profile 中，原生应用使用 Host 提供的 Session 列表和 Settings 面板填充这些席位。工作区分区按已注册的 `workspaceId` 分组，并跟随 Session 活动和 Workspace 变化；支持按最近活动/手动顺序排序、按 Workspace 分组或平铺、Session 搜索和归档，以及创建、选择、重命名和删除 Workspace。创建 Workspace 时使用共享的应用内目录浏览器。定时任务标题操作会打开只读列表；面板选中时会跟随 Host 变化。紧凑的语言和主题控件仍位于侧边栏页脚。
+在 native-web profile 中，原生应用使用 Host 提供的 Session 列表和 Settings 面板填充这些席位。工作区分区按已注册的 `workspaceId` 分组，并跟随 Session 活动和 Workspace 变化；支持按最近活动/手动顺序排序、按 Workspace 分组或平铺、Session 搜索和归档，以及创建、选择、重命名和删除 Workspace。按 Workspace 分组并选择手动排序时，上移/下移按钮通过 Host 持久化 Workspace 和组内会话顺序；写入期间控件禁用，失败时保留 follow 提供的顺序。创建 Workspace 时使用共享的应用内目录浏览器。定时任务标题操作会打开只读列表；面板选中时会跟随 Host 变化。紧凑的语言和主题控件仍位于侧边栏页脚。
 
 ### 品牌与 New Session
 
@@ -93,7 +93,7 @@ dsh Web 客户端的侧边栏显示当前构建、启动会话、将导航折叠
 这些限制定义外壳拥有什么、其占位方拥有什么；它们是当前包约束。
 
 - **旧版 Workspace 浏览器仍由 ui-workspace 持有**：Native sidebar 在此组合 Host 行为，共享 Workspace/Session 行与目录浏览器组件。
-- **Native Workspace 行不支持拖动排序或移动 Session**：Native Host 提供排序命令，但侧边栏没有对应手势。
+- **Native Workspace 行不支持拖动排序或移动 Session**：上移/下移按钮提供持久化排序；拖动手势与跨 Workspace 移动仍不可用。
 - **Native Session 搜索只显示 Host 的一个结果页**：侧边栏未展示更多结果页。
 - **Native Schedule 列表为只读**：列表显示任务名称、状态、计划时间和下次执行时间，不显示提示词或管理操作。
 - **「New task completed」未读标记是本地查看状态**：完成时间 > 上次查看时间这一事实永远不会到达宿主。

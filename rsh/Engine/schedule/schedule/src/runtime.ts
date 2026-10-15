@@ -6,67 +6,20 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { EveryScheduleRecord, OneShotScheduleRecord } from './types.ts'
 import {
+  decideDueSchedules,
   foldScheduleEvents,
   renderEveryReminderBatchFraming,
   renderReminderFraming,
-  resolveEveryOccurrence,
   ScheduleLogError,
 } from './domain.ts'
 import type { FoldedSchedules } from './domain.ts'
+import type { ScheduleDueDecision } from './domain.ts'
 import { flushSchedulePersistence } from './persistence.ts'
 import { runScheduleTransaction } from './transaction.ts'
 
 /** Largest delay that Node timers represent without clamping. */
 export const MAX_TIMER_DELAY_MS = 2_147_483_647
-
-interface EveryDue {
-  readonly record: EveryScheduleRecord
-  readonly occurrenceAt: string
-}
-
-type DueDecision =
-  | { readonly kind: 'one-shot'; readonly record: OneShotScheduleRecord }
-  | { readonly kind: 'every'; readonly reminders: readonly EveryDue[]; readonly acceptedAt: string }
-  | { readonly kind: 'wait'; readonly target?: number }
-
-/** Select one due one-shot, one complete fixed-rate batch, or the next wake. */
-function dueDecision(folded: FoldedSchedules, now: number): DueDecision {
-  const indexed = folded.active.map((record, index) => ({ record, index }))
-  const byTargetThenCreate = (
-    left: { readonly record: { readonly scheduledAt: string }; readonly index: number },
-    right: { readonly record: { readonly scheduledAt: string }; readonly index: number },
-  ): number => Date.parse(left.record.scheduledAt) - Date.parse(right.record.scheduledAt)
-    || left.index - right.index
-
-  const oneShot = indexed
-    .filter((entry): entry is { record: OneShotScheduleRecord; index: number } =>
-      entry.record.kind !== 'every' && Date.parse(entry.record.scheduledAt) <= now)
-    .sort(byTargetThenCreate)[0]?.record
-  if (oneShot !== undefined) return { kind: 'one-shot', record: oneShot }
-
-  const every = indexed
-    .filter((entry): entry is { record: EveryScheduleRecord; index: number } =>
-      entry.record.kind === 'every' && Date.parse(entry.record.scheduledAt) <= now)
-    .sort(byTargetThenCreate)
-  if (every.length > 0) {
-    return {
-      kind: 'every',
-      acceptedAt: new Date(now).toISOString(),
-      reminders: every.map(({ record }) => ({
-        record,
-        occurrenceAt: resolveEveryOccurrence(record, now).occurrenceAt,
-      })),
-    }
-  }
-
-  const target = folded.active.reduce<number | undefined>((selected, record) => {
-    const candidate = Date.parse(record.scheduledAt)
-    return candidate > now && (selected === undefined || candidate < selected) ? candidate : selected
-  }, undefined)
-  return { kind: 'wait', ...(target === undefined ? {} : { target }) }
-}
 
 /** Render an unknown value for process-local diagnostics only. */
 function renderThrown(value: unknown): string {
@@ -216,9 +169,9 @@ export class ScheduleRuntime {
   }
 
   /** Contain an invalid wall-clock decision without permanently faulting this runtime. */
-  private decide(folded: FoldedSchedules, now: number): DueDecision | undefined {
+  private decide(folded: FoldedSchedules, now: number): ScheduleDueDecision | undefined {
     try {
-      return dueDecision(folded, now)
+      return decideDueSchedules(folded, now)
     } catch (error: unknown) {
       this.ctx.logger.warn(`schedule: fixed-rate decision failed for agent "${this.agent.id}": ${renderThrown(error)}`)
       return undefined

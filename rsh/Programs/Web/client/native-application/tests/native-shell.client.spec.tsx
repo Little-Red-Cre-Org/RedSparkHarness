@@ -172,6 +172,30 @@ it('installs modular Native navigation, Session selection, details, locale and t
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
   }))
+  const reorderWorkspace = vi.fn(async (
+    id: NativeWorkspace['workspaceId'], before?: NativeWorkspace['workspaceId'],
+  ) => {
+    const moved = workspaces.find(item => item.workspaceId === id)!
+    const remaining = workspaces.filter(item => item.workspaceId !== id)
+    const index = before === undefined ? remaining.length : remaining.findIndex(item => item.workspaceId === before)
+    remaining.splice(index, 0, moved)
+    workspaces = remaining
+    const workspaceIds = remaining.map(item => item.workspaceId)
+    workspaceFrames.publish({ type: 'order', workspaceIds })
+    return workspaceIds
+  })
+  const reorderSession = vi.fn(async (
+    id: NativeWorkspace['workspaceId'], sessionId: SessionId, before?: SessionId,
+  ) => {
+    const workspace = workspaces.find(item => item.workspaceId === id)!
+    const sessionIds = workspace.sessionIds.filter(item => item !== sessionId)
+    const index = before === undefined ? sessionIds.length : sessionIds.indexOf(before)
+    sessionIds.splice(index, 0, sessionId)
+    const updated = { ...workspace, sessionIds }
+    workspaces = workspaces.map(item => item.workspaceId === id ? updated : item)
+    workspaceFrames.publish({ type: 'upsert', workspace: updated })
+    return updated
+  })
   const workspaceClient: NativeWorkspaceClient = {
     async list() { return workspaceBaseline() },
     async *follow(signal) {
@@ -194,7 +218,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
       workspaces = workspaces.filter(item => item.workspaceId !== id)
       workspaceFrames.publish({ type: 'remove', workspaceId: id })
     }),
-    reorder: vi.fn(async () => []), reorderSession: vi.fn(async id => workspaces.find(item => item.workspaceId === id)!),
+    reorder: reorderWorkspace,
+    reorderSession,
     archiveSession: vi.fn(async (id) => {
       archivedSessionIds = [...archivedSessionIds, id]
       workspaceFrames.publish({ type: 'archived', archivedSessionIds })
@@ -306,6 +331,21 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(within(alphaRow).getByText('Waiting for approval')).toBeTruthy()
     expect(clientMock.list).not.toHaveBeenCalled()
 
+    expect(screen.queryByRole('button', { name: 'Move session Alpha down' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'View options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sort by manual order' }))
+    expect(screen.getByRole('button', { name: 'Move session Alpha up' })).toHaveProperty('disabled', true)
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
+    await waitFor(() => { expect(reorderSession).toHaveBeenCalledWith(workspaceId, 'session-alpha', undefined, expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('treeitem', { name: /Beta/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Alpha/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha up' }))
+    await waitFor(() => { expect(reorderSession).toHaveBeenLastCalledWith(workspaceId, 'session-alpha', 'session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy() })
+    reorderSession.mockRejectedValueOnce(new Error('Order refused'))
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
+    expect(await screen.findByText('Order refused')).toBeTruthy()
+    expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
@@ -364,6 +404,12 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\New' }, expect.any(AbortSignal))
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-in-workspace', expect.any(AbortSignal)) })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
+    await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move workspace New up' })).toHaveProperty('disabled', true) })
+    fireEvent.click(screen.getByRole('button', { name: 'Move workspace New down' }))
+    await waitFor(() => { expect(reorderWorkspace).toHaveBeenLastCalledWith('workspace-new', undefined, expect.any(AbortSignal)) })
 
     fireEvent.click(screen.getByRole('button', { name: 'Switch language' }))
     expect(document.documentElement.lang).toBe('zh-CN')
