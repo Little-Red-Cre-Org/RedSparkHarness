@@ -284,7 +284,7 @@ it('keeps the web-search key draft when its credential reference changes during 
   let acknowledgeSave!: () => void
   const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
   const credentialsSet = vi.fn(async () => undefined)
-  const credentialsDescribe = vi.fn(async () => ({
+  const credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
     KEY_A: { configured: false, writable: true },
     KEY_B: { configured: false, writable: true },
   }))
