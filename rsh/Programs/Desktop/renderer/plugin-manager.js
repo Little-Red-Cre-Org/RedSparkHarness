@@ -408,8 +408,11 @@ async function main() {
   })
   document.querySelector('#retry').addEventListener('click', () => void run(() => api.backend.retry(), messages.retry))
   async function disableNativeEligible() {
-    for (const row of inventory.packages.flatMap(pkg => pkg.installations)) {
-      if (!row.canDisable || (row.target === 'client' && coreClientIds.has(row.id))) continue
+    while (inventory !== undefined) {
+      const row = inventory.packages.flatMap(pkg => pkg.installations).find(
+        candidate => candidate.canDisable && !(candidate.target === 'client' && coreClientIds.has(candidate.id)),
+      )
+      if (row === undefined) return
       const applied = await run(
         () => nativeApi.toggle({
           expectedRevision: inventory.revision, key: { target: row.target, id: row.id }, enabled: false,

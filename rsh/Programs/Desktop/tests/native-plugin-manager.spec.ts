@@ -26,19 +26,32 @@ function inventory(revision = 'revision-1') {
   }
 }
 
-function disableAllInventory(revision: string, optional = true) {
+function disableAllInventory(revision: string, options: {
+  optional?: boolean
+  disabledIds?: readonly string[]
+  blockedIds?: readonly string[]
+} = {}) {
+  const optional = options.optional !== false
+  const disabledIds = new Set(options.disabledIds ?? [])
+  const blockedIds = new Set(options.blockedIds ?? [])
   const details = { packageName: 'example-module', hasConfig: false, availableTargets: ['host', 'client'], nativeApiVersion: 1 }
+  const row = (id: string, target: 'host' | 'client') => {
+    const disabled = disabledIds.has(id)
+    const blocked = blockedIds.has(id)
+    return {
+      ...details, target, id, ...(target === 'host' ? { scope: 'root' } : {}),
+      enabled: !disabled, canEnable: disabled, canDisable: !disabled && !blocked,
+    }
+  }
   return {
     runtime: 'native', revision, scopes: [],
     packages: [{
       packageName: 'example-module', packageVersion: '1.0.0', managedBy: 'profile',
       packageCapabilities: { canUpdatePackage: true, canRemovePackage: true },
       installations: [
-        { ...details, target: 'client', id: 'layout', enabled: true, canEnable: false, canDisable: true },
-        { ...details, target: 'client', id: 'session-presentation', enabled: true, canEnable: false, canDisable: true },
-        ...(optional ? ['shared', 'optional'].map(id => ({
-          ...details, target: 'host', id, scope: 'root', enabled: true, canEnable: false, canDisable: true,
-        })) : []),
+        row('layout', 'client'),
+        row('session-presentation', 'client'),
+        ...(optional ? [row('shared', 'host'), row('optional', 'host')] : []),
       ],
     }],
   }
@@ -164,14 +177,14 @@ it('uses inline version input for Native and compatibility package updates', asy
 
 it('keeps core Client rows out of Native disable-all and refreshes revision between toggles', async () => {
   const p = page()
-  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1', false) })
+  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1', { optional: false }) })
   p.start()
   await p.settled()
   expect(p.button('#disable-all').disabled).toBe(true)
   expect(p.element('#disable-all-note').textContent).toContain('layout and session-presentation stay enabled')
   p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1') })
-    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-2') })
-    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3') })
+    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-2', { disabledIds: ['shared'] }) })
+    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3', { disabledIds: ['shared', 'optional'] }) })
   p.button('#refresh').click()
   await p.settled()
   expect(p.button('#disable-all').disabled).toBe(false)
@@ -185,10 +198,33 @@ it('keeps core Client rows out of Native disable-all and refreshes revision betw
     expectedRevision: 'revision-2', key: { target: 'host', id: 'optional' }, enabled: false,
   })
   expect(p.native.toggle).toHaveBeenCalledTimes(2)
+  expect(p.button('#disable-all').disabled).toBe(true)
+  // After disabling a consumer, a previously blocked provider becomes eligible on the next inventory.
+  p.native.list.mockResolvedValueOnce({
+    status: 'listed', inventory: disableAllInventory('revision-4', { blockedIds: ['optional'] }),
+  }).mockResolvedValueOnce({
+    status: 'listed', inventory: disableAllInventory('revision-5', { disabledIds: ['shared'] }),
+  }).mockResolvedValueOnce({
+    status: 'listed', inventory: disableAllInventory('revision-6', { disabledIds: ['shared', 'optional'] }),
+  })
+  p.button('#refresh').click()
+  await p.settled()
+  p.button('#disable-all').click()
+  await p.settled()
+  expect(p.native.toggle).toHaveBeenNthCalledWith(3, {
+    expectedRevision: 'revision-4', key: { target: 'host', id: 'shared' }, enabled: false,
+  })
+  expect(p.native.toggle).toHaveBeenNthCalledWith(4, {
+    expectedRevision: 'revision-5', key: { target: 'host', id: 'optional' }, enabled: false,
+  })
+  expect(p.native.toggle).toHaveBeenCalledTimes(4)
+  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-7') })
+  p.button('#refresh').click()
+  await p.settled()
   p.native.toggle.mockResolvedValueOnce(failure('busy'))
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.toggle).toHaveBeenCalledTimes(3)
+  expect(p.native.toggle).toHaveBeenCalledTimes(5)
 })
 
 it('re-reads stale inventory and waits for another user submission without optimistic changes', async () => {
