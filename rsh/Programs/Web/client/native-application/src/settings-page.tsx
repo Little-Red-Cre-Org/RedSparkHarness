@@ -18,7 +18,7 @@ import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import {
-  announcePendingDefaultChanged, readPendingDefault, writePendingDefault, type BusyEnterBehavior,
+  announcePendingDefaultChanged, readPendingDefault, type BusyEnterBehavior,
 } from './pending-default.ts'
 import css from './general-settings.module.css'
 
@@ -619,10 +619,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const conversation = namespaces.find(row => row.namespace === 'ui-conversation')
   const pet = namespaces.find(row => row.namespace === 'ui-pet')
   const selectBusyEnter = (value: BusyEnterBehavior): void => {
-    if (conversation === undefined) {
-      setPendingDefault(value)
-      writePendingDefault(value)
-    } else void mutateField(conversation, ['busyEnter'], value)
+    if (conversation === undefined) return
+    void mutateField(conversation, ['busyEnter'], value)
   }
   const selectPermission = (value: string): void => {
     if (value === FULL_ACCESS_PRESET) {
@@ -654,7 +652,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
           setLocale(value)
           if (localeSettings !== undefined) void mutateField(localeSettings, ['preference'], value)
         }}>
-        <option value="zh">中文</option><option value="en">English</option>
+        <option value="zh">{t('settingsLanguageZh')}</option><option value="en">{t('settingsLanguageEn')}</option>
       </select>
     </div>
     <div className={css.appearance}>
@@ -703,8 +701,10 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     </div>}
     <div className={css.row}>
       <div className={css.rowText}><div className={css.title}>{t('settingsBusyEnter')}</div>
-        <div className={css.description}>{t('settingsBusyEnterDescription')}</div></div>
-      <select aria-label={t('settingsBusyEnter')} value={pendingDefault} disabled={saving !== undefined}
+        <div className={css.description}>{t('settingsBusyEnterDescription')}</div>
+        {conversation === undefined ? <div className={css.description} role="status">{t('busySendPreferenceUnavailable')}</div> : null}</div>
+      <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
+        disabled={saving !== undefined || conversation === undefined}
         onChange={(event) => { selectBusyEnter(event.target.value as BusyEnterBehavior) }}>
         <option value="queue">{t('settingsBusyEnterQueue')}</option>
         <option value="steer">{t('settingsBusyEnterSteer')}</option>

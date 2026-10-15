@@ -18,5 +18,7 @@
   "alerts": [
     "Request failed: Settings arrays must keep their existing row count and order."
   ],
-  "notices": []
+  "notices": [
+    "Could not read the busy-send preference."
+  ]
 }

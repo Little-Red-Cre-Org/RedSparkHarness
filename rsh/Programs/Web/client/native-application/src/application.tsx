@@ -167,7 +167,12 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
-              submit()
+              if (acceptsPending && (event.metaKey || event.ctrlKey)) {
+                const alternate = composerPendingDefault(pendingDefault) === 'steering' ? 'queued' : 'steering'
+                submit(alternate)
+              } else {
+                submit()
+              }
             }
           }} />
       </label>

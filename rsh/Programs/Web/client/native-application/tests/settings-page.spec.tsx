@@ -7,7 +7,7 @@ import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsD
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor, NativeSettingsDescription } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
@@ -70,7 +70,11 @@ function renderSettingsPage(props: {
 }
 const settingsDescription = (
   namespaces: readonly (NativeSettingsDescriptor | ServiceNativeSettingsDescriptor)[], limits = defaultLimits,
-) => ({ hasDocument: false, namespaces, limits })
+): NativeSettingsDescription => ({
+  hasDocument: false,
+  namespaces: namespaces as readonly NativeSettingsDescriptor[],
+  limits,
+})
 
 const chatGptAccount: NativeAccountSummary = {
   key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
@@ -908,9 +912,10 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   })
   const fallbackBusyEnter = await screen.findByRole('combobox', { name: en.settingsBusyEnter })
   expect((fallbackBusyEnter as HTMLSelectElement).value).toBe('steer')
+  expect((fallbackBusyEnter as HTMLSelectElement).disabled).toBe(true)
+  expect(screen.getByText(en.busySendPreferenceUnavailable)).toBeTruthy()
   fireEvent.change(fallbackBusyEnter, { target: { value: 'queue' } })
-  fireEvent.change(fallbackBusyEnter, { target: { value: 'steer' } })
-  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steer')
+  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
   expect(fallbackMutate).not.toHaveBeenCalled()
 })
 it('resumes an in-flight login after leaving and returning to Models', async () => {
