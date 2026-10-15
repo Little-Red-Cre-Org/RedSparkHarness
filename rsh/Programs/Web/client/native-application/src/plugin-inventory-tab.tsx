@@ -61,7 +61,6 @@ export function PluginInventoryTab({ actions, t, active }: {
   }, [actions.pluginInventoryList, request, started])
 
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  const rootScope = inventory?.entries[0]?.scope
   const groups = useMemo(() => {
     const grouped = new Map<string, NativePluginInventoryEntry[]>()
     for (const entry of inventory?.entries ?? []) {
@@ -70,8 +69,8 @@ export function PluginInventoryTab({ actions, t, active }: {
       if (entries === undefined) grouped.set(entry.scope, [entry])
       else entries.push(entry)
     }
-    return [...grouped].sort(([left], [right]) => Number(right === rootScope) - Number(left === rootScope))
-  }, [inventory, normalizedQuery, rootScope])
+    return [...grouped]
+  }, [inventory, normalizedQuery])
 
   const retry = (): void => { setRequest(value => value + 1) }
   const hasEntries = (inventory?.entries.length ?? 0) > 0
@@ -95,7 +94,6 @@ export function PluginInventoryTab({ actions, t, active }: {
       {groups.map(([scope, entries]) => {
         const open = normalizedQuery.length > 0 || !collapsedScopes.has(scope)
         const groupId = `${id}-scope-${encodeURIComponent(scope)}`
-        const isRoot = scope === rootScope
         return <section className={css.group} data-plugin-scope={scope} key={scope}>
           <div className={css.groupTitleRow}>
             <button type="button" className={css.groupToggle} aria-expanded={open} aria-controls={groupId}
@@ -107,12 +105,12 @@ export function PluginInventoryTab({ actions, t, active }: {
               }) }}>
               <IconChevronDownOutline14 className={css.groupChevron} size={12} aria-hidden="true" />
               <span className={css.groupTitle}>
-                {t(isRoot ? 'settingsPluginListGlobalScope' : 'settingsPluginListNestedScope')}
+                {t('settingsPluginListScopePrefix')} {scope.slice(0, 8)}
               </span>
             </button>
           </div>
           <p className={css.groupSub}>
-            {isRoot ? t('settingsPluginListGlobalSubtitle') : `${t('settingsPluginListScopePrefix')} ${scope.slice(0, 8)}`}
+            {t('settingsPluginListScopeSubtitle')}
             <span> · {entries.length} {t('settingsPluginListCount')}</span>
           </p>
           {open ? <ul className={css.cards} id={groupId}>
