@@ -12,6 +12,7 @@ import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { en, zh } from '../src/locales.ts'
+import { AgentPresetsSection } from '../src/agent-presets-section.tsx'
 import { PluginsSection } from '../src/plugins-section.tsx'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 import { PENDING_DEFAULT_KEY, type BusyEnterBehavior } from '../src/pending-default.ts'
@@ -670,6 +671,26 @@ it('shows a Host gap for an absent plugin namespace without a save action', asyn
   expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
 })
 
+it('retries a failed plugin settings describe and renders plugin rows', async () => {
+  const shell = pluginSettings('shell', 1, { timeoutMs: 2500, maxOutputBytes: 4096 })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount === 1) throw new Error('first read failed')
+    return settingsDescription([shell])
+  })
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain(en.settingsPluginLoadFailed)
+  fireEvent.click(within(alert).getByRole('button', { name: en.retry }))
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByLabelText(en.settingsPluginShellTimeoutMs)).toHaveProperty('value', '2500')
+  expect(actions.settingsDescribe).toHaveBeenCalledTimes(2)
+})
+
 it('shows refresh pending for a missing namespace and blocks writes past its announced revision', async () => {
   const webSearch = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
@@ -1059,6 +1080,56 @@ it('distinguishes an absent Agent settings namespace from an unread revision', a
     expect(settingsMutate).toHaveBeenLastCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'standard' }], 10)
   })
   await waitFor(() => { expect(hostSettings.revision).toBe(11) })
+})
+
+it('retries a failed Agent preset settings describe', async () => {
+  const presetSettings = {
+    namespace: 'agent-presets', schema: {}, value: { default: 'standard', modeSelectionEnabled: true },
+    base: {}, user: {}, applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1,
+  }
+  const roster: NativeAgentPresetList = { default: 'standard', presets: [
+    { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
+    { id: 'alternate', name: 'Alternate', source: 'system', status: 'ready' },
+  ] }
+  let describeCount = 0
+  const settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount === 1) throw new Error('first read failed')
+    return settingsDescription([presetSettings])
+  })
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    settingsDescribe,
+    settingsEvents: (signal: AbortSignal) => emptyModelActions.settingsEvents(signal),
+    agentPresetsList: vi.fn(async (_signal?: AbortSignal) => roster),
+    agentPresetsCanOpenDirectory: vi.fn(async (_signal?: AbortSignal) => false),
+    agentPresetRead: vi.fn(), agentPresetCopy: vi.fn(), agentPresetDelete: vi.fn(),
+    agentPresetOpenDirectory: vi.fn(),
+  } as unknown as NativeSettingsActions
+  render(<AgentPresetsSection actions={actions} t={key => en[key]} />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain(en.agentPresetsSettingsReadFailed)
+  expect(alert.textContent).toContain('first read failed')
+  expect(screen.getAllByRole('alert')).toHaveLength(1)
+  expect(within(alert).getByRole('button', { name: en.retry })).toBeTruthy()
+  expect(screen.queryByText(en.agentPresetsSettingsRefreshing)).toBeNull()
+  expect(screen.queryByText(en.agentPresetsHostGap)).toBeNull()
+  expect(screen.queryByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` })).toBeNull()
+  const alternate = screen.getByRole('button', { name: `${en.agentPresetsSettingsReadFailed}: Alternate` })
+  expect((alternate as HTMLButtonElement).disabled).toBe(true)
+  expect(screen.getByRole<HTMLButtonElement>('switch', { name: en.agentPresetsShowPicker }).disabled).toBe(true)
+
+  fireEvent.click(within(alert).getByRole('button', { name: en.retry }))
+
+  await waitFor(() => {
+    expect(screen.getByRole<HTMLButtonElement>('switch', { name: en.agentPresetsShowPicker }).disabled).toBe(false)
+  })
+  expect(screen.queryByText(en.agentPresetsSettingsReadFailed)).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Alternate` })).toBeTruthy()
+  expect(screen.queryByText(en.agentPresetsHostGap)).toBeNull()
+  expect(settingsDescribe).toHaveBeenCalledTimes(2)
 })
 
 it('keeps the later Agent preset detail when an earlier read finishes last', async () => {
