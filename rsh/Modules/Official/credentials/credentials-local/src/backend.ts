@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { canonicalizeWatchPath } from '@deepseek-ai/dsh-home-paths'
 import type { LaunchEnvironmentEntry, LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
+import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialMetadataMigration, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
 import { assertJsonValue, assertOwnerOnly, assertStorableApiKey, DOCUMENT_LOCK_WAIT_MS, DOCUMENT_VERSION, isENOENT, parseCredentialsDocument, renderFlatLayoutMigration, renderRecord, renderRef, resolveSpec, sameJsonValue, type Config, type ResolvedSpec } from './document.ts'
 
 /** Host resources and notifications supplied by the selected application runtime. */
@@ -25,6 +25,11 @@ interface RecordUpdatedSubscription {
   readonly pending: Set<Promise<void>>
   active: boolean
   disposal?: Promise<void>
+}
+
+/** Render every owner-keyed metadata value into the versioned JSON sidecar. */
+function renderMetadataDocument(entries: ReadonlyMap<string, unknown>): string {
+  return `${JSON.stringify({ version: 1, entries: Object.fromEntries(entries) }, null, 2)}\n`
 }
 
 /** File-backed credentials provider (`$DSH_HOME/.credentials.yaml`). */
@@ -54,6 +59,48 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
   /** Opaque read of {@link closed}: control flow cannot narrow it across awaits. */
   private isClosed(): boolean {
     return this.closed
+  }
+
+  /** Versioned JSON sidecar stored apart from the enumerable credential document. */
+  private get metadataFilename(): string {
+    return `${this.spec.filename}.metadata.json`
+  }
+
+  /** Read and validate the versioned sidecar without quoting its contents in errors. */
+  private async readMetadataDocument(): Promise<Map<string, unknown>> {
+    const filename = this.metadataFilename
+    await assertOwnerOnly(filename)
+    let text: string
+    try {
+      text = await readFile(filename, 'utf8')
+    } catch (error) {
+      if (isENOENT(error)) return new Map()
+      throw error
+    }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      throw new Error(`credentials-local: metadata document ${filename} is invalid JSON`)
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error(`credentials-local: metadata document ${filename} must be an object`)
+    }
+    const document = parsed as { version?: unknown; entries?: unknown }
+    if (document.version !== 1 || document.entries === null || typeof document.entries !== 'object'
+      || Array.isArray(document.entries)) {
+      throw new Error(`credentials-local: metadata document ${filename} has an unsupported version or entries`)
+    }
+    if (Object.keys(document).some(key => key !== 'version' && key !== 'entries')) {
+      throw new Error(`credentials-local: metadata document ${filename} has unsupported fields`)
+    }
+    const entries = new Map<string, unknown>()
+    for (const [key, value] of Object.entries(document.entries)) {
+      parseCredentialKey(key)
+      assertJsonValue(`metadata "${key}"`, value, new Set())
+      entries.set(key, value)
+    }
+    return entries
   }
   /* jscpd:ignore-end */
 
@@ -161,6 +208,102 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
 
   readRecord(key: CredentialKey): Promise<CredentialRecord | undefined> {
     return Promise.resolve(this.records.get(key))
+  }
+
+  async readMetadata(key: CredentialKey): Promise<unknown> {
+    parseCredentialKey(key)
+    return this.enqueue(async () => {
+      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
+      return withFileLock(this.spec.filename, async () => {
+        const entries = await this.readMetadataDocument()
+        return entries.get(key)
+      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
+    })
+  }
+
+  async modifyMetadata(
+    key: CredentialKey,
+    mutate: (current: unknown) => Promise<unknown>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown> {
+    parseCredentialKey(key)
+    if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot modify metadata "${key}"`)
+    return this.enqueue(async () => {
+      options?.signal?.throwIfAborted()
+      if (this.isClosed()) {
+        throw new Error(`credentials-local was disposed before metadata modify "${key}" ran`)
+      }
+      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
+      return withFileLock(this.spec.filename, async () => {
+        const entries = await this.readMetadataDocument()
+        const current = entries.get(key)
+        const working = current === undefined ? undefined : structuredClone(current)
+        const next = await mutate(working)
+        if (next === undefined) return current
+        assertJsonValue(`metadata "${key}"`, next, new Set())
+        if (sameJsonValue(current, next)) return current
+        entries.set(key, next)
+        await writeFileAtomic(this.metadataFilename, renderMetadataDocument(entries), { mode: 0o600, dirMode: 0o700 })
+        const committed = (await this.readMetadataDocument()).get(key)
+        if (!sameJsonValue(committed, next)) {
+          throw new Error(`credentials-local: metadata "${key}" did not match after its atomic write`)
+        }
+        return committed
+      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
+    })
+  }
+
+  async migrateRecordToMetadata(
+    key: CredentialKey,
+    migrate: (
+      current: unknown,
+      legacy: CredentialRecord | undefined,
+      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
+    ) => Promise<CredentialMetadataMigration>,
+    options?: NativeCredentialWriteOptions,
+  ): Promise<unknown> {
+    parseCredentialKey(key)
+    if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot migrate "${key}"`)
+    return this.enqueue(async () => {
+      options?.signal?.throwIfAborted()
+      if (this.isClosed()) throw new Error(`credentials-local was disposed before migration "${key}" ran`)
+      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
+      return withFileLock(this.spec.filename, async () => {
+        await this.reconcileFromDisk()
+        if (this.isClosed()) throw new Error(`credentials-local was disposed before migration "${key}" ran`)
+        const entries = await this.readMetadataDocument()
+        const current = entries.get(key)
+        const legacy = this.records.get(key)
+        const workingCurrent = current === undefined ? undefined : structuredClone(current)
+        const workingLegacy = legacy === undefined ? undefined : structuredClone(legacy)
+        const decision = await migrate(workingCurrent, workingLegacy, (recordKey) => {
+          const record = this.records.get(recordKey)
+          return record === undefined ? undefined : structuredClone(record)
+        })
+        if (decision.retireRecord && decision.value === undefined) {
+          throw new Error(`credentials-local: migration "${key}" cannot retire a record without metadata`)
+        }
+        if (decision.value !== undefined) {
+          assertJsonValue(`metadata "${key}"`, decision.value, new Set())
+          if (!sameJsonValue(current, decision.value)) {
+            entries.set(key, decision.value)
+            await writeFileAtomic(this.metadataFilename, renderMetadataDocument(entries), { mode: 0o600, dirMode: 0o700 })
+          }
+          const verified = (await this.readMetadataDocument()).get(key)
+          if (!sameJsonValue(verified, decision.value)) {
+            throw new Error(`credentials-local: metadata "${key}" did not match after migration`)
+          }
+        }
+        if (decision.retireRecord && legacy !== undefined) {
+          const nextText = renderRecord(this.text, key, undefined)
+          await writeFileAtomic(this.spec.filename, nextText, { mode: 0o600, dirMode: 0o700 })
+          this.text = nextText
+          this.records.delete(key)
+          this.notifyRecordUpdated(key)
+        }
+        return decision.value
+      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
+    })
   }
 
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo> {

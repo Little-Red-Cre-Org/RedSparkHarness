@@ -80,6 +80,8 @@ await ctx.credentials.deleteRecord(key)                  // no-op when absent
 
 `modifyRecord` is the only write path: it hands your mutation the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Records have no empty-value rule — a record carrying neither a key nor environment values states that its owner confirmed ambient authentication — and a configuration UI can enumerate every record to show what you are authorized for and find records a removed plugin left behind.
 
+Credential providers expose owner-scoped JSON metadata through `readMetadata` and `modifyMetadata`, plus `migrateRecordToMetadata` for moving a legacy record under the same write lock. Its decision callback can inspect detached sibling records from that locked snapshot. Metadata is separate from credentials: it never appears in `listRecords`, record descriptions, or record-update events. The local provider verifies a sidecar write before migration removes the old record.
+
 ### Using a key in configuration
 
 A settings section or `cordis.yml` entry names a key instead of containing it — an LLM adapter, for example, takes `apiKeyEnv`:
@@ -125,6 +127,8 @@ Cordis emits `credentials/record-updated (key)` after a committed record write o
 ### Record write and read paths
 
 `modifyRecord` is the only record write path because a correct write depends on the current value: a token refresh is read-decide-replace, and the mutation sees the record as it stands at the moment the write is exclusive — returning `undefined` leaves the entry untouched. Exclusion holds across processes where the backing store supports it, which is what stops two processes rotating one refresh token from losing whichever wrote first. Reads mirror the reference half but never layer: nothing can shadow a record, and a `grant` payload is returned exactly as its owner wrote it, because only the owning plugin can interpret it.
+
+Metadata operations use the provider's owner-scoped write lock but do not create credential records or credential events. `migrateRecordToMetadata` reads current metadata, the legacy record, and any needed sibling records from one locked snapshot; it writes and reads back metadata before retiring the legacy record.
 
 ### Source map
 

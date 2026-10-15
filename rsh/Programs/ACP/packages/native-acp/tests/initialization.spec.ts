@@ -13,6 +13,11 @@ import { NATIVE_ACP_SUBAGENT_METADATA_KEY, nativeAcpSubagentPolicyMetadata, nati
   readNativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import { NativeAcpApplication, plugin as nativeAcpPlugin } from '../src/native.ts'
 
+it.each([null, Number.MAX_SAFE_INTEGER + 1])('rejects invalid sessionListPageSize %s', (pageSize) => {
+  expect(() => nativeAcpPlugin.resolve({ provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1,
+    sessionListPageSize: pageSize })).toThrow('native ACP: sessionListPageSize must be a positive safe integer')
+})
+
 const inactiveSessions: NativeActiveSessionOperations = {
   register: async () => async () => {}, owner: () => undefined, owners: () => [],
   onAttached: () => async () => {}, onDetached: () => async () => {},
@@ -146,7 +151,7 @@ it('drains model initialization after EOF before releasing its Provider', async 
     provides: ['application', 'rootExecution'],
     resolve: () => (context) => {
       app = new NativeAcpApplication(context, { provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1,
-        maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output)
+        maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000, sessionListPageSize: 100 }, input, output)
       context.provide('application', app)
       context.provide('rootExecution', app.rootExecution)
     },

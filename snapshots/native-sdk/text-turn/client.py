@@ -83,6 +83,7 @@ if scheduled_origin:
         endpoint("start-origin", "accepted")
         endpoint("await-origin-ready", "ready")
         initializing.start_session(session_id).run(first_task)
+    endpoint("await-schedule-seed", "ready")
     with DeepSeekHarness(config) as restored:
         result = restored.start_session(session_id).run(restored_task)
         print(json.dumps({"run": serialized(result)}))

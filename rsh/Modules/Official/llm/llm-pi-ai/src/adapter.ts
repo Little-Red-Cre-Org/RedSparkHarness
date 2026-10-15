@@ -154,6 +154,8 @@ export interface PiAiAuthInjection {
   credentials: CredentialStore
   /** Ambient lookups a provider performs while resolving its own auth. */
   authContext: AuthContext
+  /** Durable SIWC registration identity, stored separately from OAuth grants. */
+  siwcRegistration: import('./siwc.ts').SiwcRegistrationStore
 }
 
 /** Copy profile stream knobs into pi-ai's common option vocabulary. */
@@ -374,13 +376,13 @@ function asCodexRouteEvents(events: AssistantMessageEventStream): AssistantMessa
 /** Account-scoped SIWC catalog over the public OpenAI Responses API. */
 function codexSubscriptionProvider(
   base: Provider,
-  credentials: CredentialStore,
+  auth: PiAiAuthInjection,
   catalogIdentity: { value: CodexAccountIdentity | undefined; error?: unknown },
 ): Provider {
   const openai = catalogProvider('openai')
   if (openai === undefined) throw new Error('llm-pi-ai: installed pi-ai catalog has no OpenAI Responses provider')
 
-  const oauth = createSiwcOAuth(credentials)
+  const oauth = createSiwcOAuth(auth.siwcRegistration)
   let currentModels: readonly Model<Api>[] = []
 
   return {
@@ -545,7 +547,7 @@ export class PiAiAdapter extends LlmAdapter {
     for (const profile of profiles.values()) {
       if (profile.piProvider !== undefined) {
         models.setProvider(profile.provider === CODEX_SUBSCRIPTION_ROUTE
-          ? codexSubscriptionProvider(profile.piProvider, this.config.auth.credentials, codexIdentity)
+          ? codexSubscriptionProvider(profile.piProvider, this.config.auth, codexIdentity)
           : profile.piProvider)
       }
     }

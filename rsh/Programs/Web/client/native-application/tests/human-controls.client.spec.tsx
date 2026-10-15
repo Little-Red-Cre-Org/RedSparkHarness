@@ -38,6 +38,7 @@ function fixture() {
     async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
       planMode: { available: false, active: false } } },
     async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
     async history(id) { return { header: header(id), events: [
       { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
     ], inheritedEventCount: 0 } },

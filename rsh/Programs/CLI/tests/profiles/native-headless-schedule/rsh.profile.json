@@ -1,0 +1,77 @@
+{
+  "formatVersion": 1,
+  "scopes": [
+    {
+      "id": "root"
+    }
+  ],
+  "installations": [
+    {
+      "id": "app",
+      "plugin": "@deepseek-ai/dsh-native-headless",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED",
+        "provider": "fixture",
+        "model": "parent",
+        "systemPrompt": "Manage explicit session-local reminders and report durable results.",
+        "maxSteps": 4
+      }
+    },
+    {
+      "id": "agents",
+      "plugin": "@deepseek-ai/dsh-native-agent",
+      "scope": "root"
+    },
+    {
+      "id": "execution",
+      "plugin": "@deepseek-ai/dsh-native-session-execution",
+      "scope": "root"
+    },
+    {
+      "id": "model-execution",
+      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "scope": "root"
+    },
+    {
+      "id": "tools",
+      "plugin": "@deepseek-ai/dsh-native-tools",
+      "scope": "root",
+      "config": {
+        "mode": "native"
+      }
+    },
+    {
+      "id": "prompt",
+      "plugin": "@deepseek-ai/dsh-native-prompt",
+      "scope": "root"
+    },
+    {
+      "id": "schedules",
+      "plugin": "@deepseek-ai/dsh-schedule",
+      "scope": "root"
+    },
+    {
+      "id": "storage",
+      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "scope": "root",
+      "config": {
+        "root": "PROFILE_PATCH_REQUIRED",
+        "compression": "none"
+      }
+    },
+    {
+      "id": "fs",
+      "plugin": "@deepseek-ai/dsh-fs-local",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED"
+      }
+    },
+    {
+      "id": "model",
+      "plugin": "schedule-snapshot-model",
+      "scope": "root"
+    }
+  ]
+}

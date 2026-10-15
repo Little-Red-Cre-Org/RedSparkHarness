@@ -43,6 +43,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Native sidebar copy for legacy workspace and session rows. */
 const zh = {
+  moveWorkspaceUp: '上移工作区 {name}', moveWorkspaceDown: '下移工作区 {name}',
+  moveSessionUp: '上移会话 {name}', moveSessionDown: '下移会话 {name}',
   sessions: '会话', workspace: '工作区', empty: '暂无会话', loading: '正在读取会话…',
   scheduleAction: '定时任务', search: '搜索会话', searchAria: '搜索会话', searchPlaceholder: '搜索会话…',
   'schedule.loading': '正在读取定时任务…', 'schedule.empty': '暂无定时任务。', 'schedule.error': '无法读取定时任务。',
@@ -73,6 +75,8 @@ const zh = {
   'time.now': '刚刚', 'time.years': '{n}年',
 } as const
 const en = {
+  moveWorkspaceUp: 'Move workspace {name} up', moveWorkspaceDown: 'Move workspace {name} down',
+  moveSessionUp: 'Move session {name} up', moveSessionDown: 'Move session {name} down',
   sessions: 'Sessions', workspace: 'Workspaces', empty: 'No sessions yet', loading: 'Loading Sessions…',
   scheduleAction: 'Scheduled tasks', search: 'Search sessions', searchAria: 'Search sessions', searchPlaceholder: 'Search sessions…',
   'schedule.loading': 'Loading scheduled tasks…', 'schedule.empty': 'No scheduled tasks.', 'schedule.error': 'Could not load scheduled tasks.',
@@ -127,6 +131,8 @@ type NativeWorkspacesInjected = {
   createDirectory: NativeDirectoryPickerClient['createDirectory']
   createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
+  reorderWorkspace: NativeWorkspaceClient['reorder']
+  reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
   toggleSidebar: () => void
 }
@@ -218,7 +224,7 @@ const SEARCH_DEBOUNCE_MS = 250
 function NativeSessionBrowser({
   wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
-  renameWorkspace, deleteWorkspace, toggleSidebar, t,
+  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
@@ -235,6 +241,8 @@ function NativeSessionBrowser({
   createDirectory: NativeDirectoryPickerClient['createDirectory']
   createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
+  reorderWorkspace: NativeWorkspaceClient['reorder']
+  reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
   toggleSidebar: () => void
   t: NativeSidebarTranslate
@@ -252,6 +260,8 @@ function NativeSessionBrowser({
   const [workspaceDeleteError, setWorkspaceDeleteError] = useState<string>()
   const [searchExpanded, setSearchExpanded] = useState(false)
   const [query, setQuery] = useState('')
+  const ordering = useRef(false)
+  const [orderingPending, setOrderingPending] = useState(false)
   const [order, setOrder] = useState<'updated' | 'manual'>('updated')
   const [groupBy, setGroupBy] = useState<'workspace' | 'flat'>('workspace')
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
@@ -311,26 +321,54 @@ function NativeSessionBrowser({
       <IconProjectAddOutline16 size={wide ? 16 : 18} />
     </button>
   </Tooltip>
-  const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false) => {
+  const runOrdering = (action: () => Promise<unknown>): void => {
+    if (ordering.current || !registry.ready) return
+    ordering.current = true
+    setOrderingPending(true)
+    setActionError(undefined)
+    void action().catch((error: unknown) => { setActionError(errorMessage(error)) }).finally(() => {
+      ordering.current = false
+      setOrderingPending(false)
+    })
+  }
+  const orderControls = (kind: 'workspace' | 'session', name: string, index: number, count: number, move: (up: boolean) => void) => (
+    <div className={css.orderControls}>
+      <button type="button" aria-label={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })} title={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })}
+        disabled={orderingPending || !registry.ready || index === 0} onClick={() => { move(true) }}>↑</button>
+      <button type="button" aria-label={t(kind === 'workspace' ? 'moveWorkspaceDown' : 'moveSessionDown', { name })} title={t(kind === 'workspace' ? 'moveWorkspaceDown' : 'moveSessionDown', { name })}
+        disabled={orderingPending || !registry.ready || index === count - 1} onClick={() => { move(false) }}>↓</button>
+    </div>
+  )
+  const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false,
+    group?: NativeSessionGroup, index = 0) => {
     const item = sessionItems.get(session.id)
     return <div key={session.id}>
-      <SessionNodeItem
-        node={session}
-        currentId={snapshot.selected}
-        now={Date.now()}
-        onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
-        onRename={item?.titleActions?.rename === true
-          ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
-          : undefined}
-        onRefresh={item?.titleActions?.refresh === true
-          ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
-          : undefined}
-        onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
-        allowRemove={false}
-        flat={flat}
-        refreshTitleLabel={t('refreshTitle')}
-        t={t}
-      />
+      <div className={css.orderedRow}>
+        <SessionNodeItem
+          node={session}
+          currentId={snapshot.selected}
+          now={Date.now()}
+          onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
+          onRename={item?.titleActions?.rename === true
+            ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
+            : undefined}
+          onRefresh={item?.titleActions?.refresh === true
+            ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
+            : undefined}
+          onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
+          allowRemove={false}
+          flat={flat}
+          refreshTitleLabel={t('refreshTitle')}
+          t={t}
+        />
+        {order !== 'manual' || group?.workspaceId === undefined ? null
+          : orderControls('session', session.title, index, group.sessions.length, (up) => {
+            const workspaceId = group.workspaceId
+            if (workspaceId === undefined) return
+            const anchor = group.sessions[up ? index - 1 : index + 2]?.id
+            runOrdering(() => reorderSession(workspaceId, session.id, anchor))
+          })}
+      </div>
       {editingId === session.id && <form className={css.sessionRename} onSubmit={(event) => {
         event.preventDefault()
         void renameTitle(session.id, titleDraft).then((success) => { if (success) setEditingId(undefined) })
@@ -461,22 +499,31 @@ function NativeSessionBrowser({
               },
             }
             return <div className={css.workspaceGroup} key={group.key}>
-              <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
-                setCollapsedGroups((current) => {
-                  const next = new Set(current)
-                  if (next.has(group.key)) next.delete(group.key)
-                  else next.add(group.key)
-                  return next
-                })
-                if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
-              }} onCreate={workspaceId === undefined ? undefined : () => {
-                setCollapsedGroups((current) => {
-                  const next = new Set(current)
-                  next.delete(group.key)
-                  return next
-                })
-                if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
-              }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
+              <div className={css.orderedRow}>
+                <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
+                  setCollapsedGroups((current) => {
+                    const next = new Set(current)
+                    if (next.has(group.key)) next.delete(group.key)
+                    else next.add(group.key)
+                    return next
+                  })
+                  if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+                }} onCreate={workspaceId === undefined ? undefined : () => {
+                  setCollapsedGroups((current) => {
+                    const next = new Set(current)
+                    next.delete(group.key)
+                    return next
+                  })
+                  if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+                }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
+                {order !== 'manual' || workspaceId === undefined ? null
+                  : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
+                    registry.workspaces.length, (up) => {
+                      const index = registry.workspaces.findIndex(row => row.workspaceId === workspaceId)
+                      const anchor = registry.workspaces[up ? index - 1 : index + 2]?.workspaceId
+                      runOrdering(() => reorderWorkspace(workspaceId, anchor))
+                    })}
+              </div>
               {editingWorkspaceId === workspaceId && workspaceId !== undefined && <form className={css.sessionRename} onSubmit={(event) => {
                 event.preventDefault()
                 runAction(async () => { await renameWorkspace(workspaceId, workspaceTitleDraft.trim()); setEditingWorkspaceId(undefined) })
@@ -487,7 +534,7 @@ function NativeSessionBrowser({
                 <Button type="submit" variant="primary" size="sm">{t('saveTitle')}</Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingWorkspaceId(undefined) }}>{t('cancelTitle')}</Button>
               </form>}
-              {group.expanded && group.sessions.map(session => renderSession(session))}
+              {group.expanded && group.sessions.map((session, index) => renderSession(session, false, group, index))}
             </div>
           })}
       </>}
@@ -780,11 +827,13 @@ export const plugin: NativePlugin = {
         },
         renameWorkspace: (id, title) => workspaceClient.rename(id, title, context.signal),
         deleteWorkspace: id => workspaceClient.delete(id, context.signal),
+        reorderWorkspace: (id, before) => workspaceClient.reorder(id, before, context.signal),
+        reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
       }),
     }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle, selectSession, renameTitle, refreshTitle,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
-      renameWorkspace, deleteWorkspace, toggleSidebar,
+      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
@@ -792,6 +841,7 @@ export const plugin: NativePlugin = {
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
         renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
+        reorderWorkspace={reorderWorkspace} reorderSession={reorderSession}
         toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',

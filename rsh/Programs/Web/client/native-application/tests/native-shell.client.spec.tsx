@@ -2,9 +2,10 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
-  NativeScheduleClient, NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
+  NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
+  NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -172,6 +173,30 @@ it('installs modular Native navigation, Session selection, details, locale and t
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
   }))
+  const reorderWorkspace = vi.fn(async (
+    id: NativeWorkspace['workspaceId'], before?: NativeWorkspace['workspaceId'],
+  ) => {
+    const moved = workspaces.find(item => item.workspaceId === id)!
+    const remaining = workspaces.filter(item => item.workspaceId !== id)
+    const index = before === undefined ? remaining.length : remaining.findIndex(item => item.workspaceId === before)
+    remaining.splice(index, 0, moved)
+    workspaces = remaining
+    const workspaceIds = remaining.map(item => item.workspaceId)
+    workspaceFrames.publish({ type: 'order', workspaceIds })
+    return workspaceIds
+  })
+  const reorderSession = vi.fn(async (
+    id: NativeWorkspace['workspaceId'], sessionId: SessionId, before?: SessionId,
+  ) => {
+    const workspace = workspaces.find(item => item.workspaceId === id)!
+    const sessionIds = workspace.sessionIds.filter(item => item !== sessionId)
+    const index = before === undefined ? sessionIds.length : sessionIds.indexOf(before)
+    sessionIds.splice(index, 0, sessionId)
+    const updated = { ...workspace, sessionIds }
+    workspaces = workspaces.map(item => item.workspaceId === id ? updated : item)
+    workspaceFrames.publish({ type: 'upsert', workspace: updated })
+    return updated
+  })
   const workspaceClient: NativeWorkspaceClient = {
     async list() { return workspaceBaseline() },
     async *follow(signal) {
@@ -194,7 +219,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
       workspaces = workspaces.filter(item => item.workspaceId !== id)
       workspaceFrames.publish({ type: 'remove', workspaceId: id })
     }),
-    reorder: vi.fn(async () => []), reorderSession: vi.fn(async id => workspaces.find(item => item.workspaceId === id)!),
+    reorder: reorderWorkspace,
+    reorderSession,
     archiveSession: vi.fn(async (id) => {
       archivedSessionIds = [...archivedSessionIds, id]
       workspaceFrames.publish({ type: 'archived', archivedSessionIds })
@@ -208,6 +234,44 @@ it('installs modular Native navigation, Session selection, details, locale and t
     pick: vi.fn(), list: listDirectory, createDirectory: vi.fn(),
   }
   const close = vi.fn(async () => undefined)
+  const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal) => {
+    signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
+    return promptSettlement.promise
+  })
+  let pendingMessages: NativePendingSubmission[] = []
+  let inboxRevision = 0
+  const pendingSnapshot = (): NativeSubmissionsSnapshot => ({ throughSeq: SessionSeq(inboxRevision), submissions: pendingMessages })
+  const queue = vi.fn<NativeSessionClient['queue']>(async (_id, text, requestId) => {
+    pendingMessages = [...pendingMessages, { requestId, placement: 'queued', status: 'accepted', message: {
+      id: String(requestId) as NativePendingSubmission['message']['id'], role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text }],
+    } }]
+    inboxRevision++
+    return { requestId, placement: 'queued', status: 'accepted' }
+  })
+  const steer = vi.fn<NativeSessionClient['steer']>(async (_id, text, requestId) => {
+    pendingMessages = [...pendingMessages, { requestId, placement: 'steering', status: 'accepted', message: {
+      id: String(requestId) as NativePendingSubmission['message']['id'], role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text }],
+    } }]
+    inboxRevision++
+    return { requestId, placement: 'steering', status: 'accepted' }
+  })
+  const dequeue = vi.fn<NativeSessionClient['dequeue']>(async (_id, requestId) => {
+    pendingMessages = pendingMessages.filter(item => item.requestId !== requestId)
+    inboxRevision++
+  })
+  const promoteSubmission = vi.fn<NativeSessionClient['promoteSubmission']>(async (_id, requestId) => {
+    pendingMessages = pendingMessages.map(item => item.requestId === requestId ? { ...item, placement: 'steering' } : item)
+    inboxRevision++
+    return { requestId, outcome: 'promoted' }
+  })
+  const editSubmission = vi.fn<NativeSessionClient['editSubmission']>(async (_id, requestId, text) => {
+    pendingMessages = pendingMessages.map(item => item.requestId === requestId ? { ...item, message: {
+      ...item.message, content: [{ type: 'text', text }],
+    } } : item)
+    inboxRevision++
+    return { requestId, outcome: 'updated' }
+  })
   const clientMock = {
     close,
     settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [],
@@ -250,6 +314,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
     permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
     selectPermissionPreset: vi.fn(async () => undefined),
     selectPreset: vi.fn(async () => undefined),
+    submissions: vi.fn(async () => pendingSnapshot()),
+    prompt, queue, steer, dequeue, promoteSubmission, editSubmission,
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -306,9 +372,101 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(within(alphaRow).getByText('Waiting for approval')).toBeTruthy()
     expect(clientMock.list).not.toHaveBeenCalled()
 
+    expect(screen.queryByRole('button', { name: 'Move session Alpha down' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'View options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sort by manual order' }))
+    expect(screen.getByRole('button', { name: 'Move session Alpha up' })).toHaveProperty('disabled', true)
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
+    await waitFor(() => { expect(reorderSession).toHaveBeenCalledWith(workspaceId, 'session-alpha', undefined, expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('treeitem', { name: /Beta/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Alpha/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha up' }))
+    await waitFor(() => { expect(reorderSession).toHaveBeenLastCalledWith(workspaceId, 'session-alpha', 'session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy() })
+    reorderSession.mockRejectedValueOnce(new Error('Order refused'))
+    fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
+    expect(await screen.findByText('Order refused')).toBeTruthy()
+    expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
+
+    const messageInput = screen.getByRole('textbox', { name: 'Message' })
+    fireEvent.change(messageInput, { target: { value: 'Start work' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
+    expect(messageInput).toHaveProperty('disabled', false)
+    expect(messageInput).toHaveProperty('value', '')
+    const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
+    queue.mockRejectedValueOnce(new Error(validationJson))
+    fireEvent.change(messageInput, { target: { value: 'After this turn' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    expect(await screen.findByText('The pending-message request failed. Check the text length and session state, then retry.')).toBeTruthy()
+    expect(screen.queryByText(validationJson)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Refresh pending messages' })).toBeTruthy()
+    expect(messageInput).toHaveProperty('value', 'After this turn')
+    const refusedId = queue.mock.calls.at(-1)?.[2]
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    const pendingPanel = await screen.findByRole('region', { name: 'Pending messages' })
+    expect(await within(pendingPanel).findByText('After this turn')).toBeTruthy()
+    expect(pendingPanel.compareDocumentPosition(messageInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const row = within(pendingPanel).getByRole('listitem')
+    expect(within(row).getAllByRole('button').map(button => button.getAttribute('aria-label')))
+      .toEqual(['Expand message', 'Edit pending message', 'Steer instead', 'Delete'])
+    fireEvent.click(within(row).getByRole('button', { name: 'Expand message' }))
+    expect(within(row).getByRole('button', { name: 'Collapse message' }).getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(within(row).getByRole('button', { name: 'Collapse message' }))
+    expect(within(row).getByRole('button', { name: 'Expand message' }).getAttribute('aria-expanded')).toBe('false')
+    const editRequestId = pendingMessages[0]!.requestId
+    editSubmission.mockResolvedValueOnce({ requestId: editRequestId, outcome: 'stale' })
+    fireEvent.click(within(row).getByRole('button', { name: 'Edit pending message' }))
+    const editInput = within(row).getByRole('textbox', { name: 'Edit pending message' })
+    fireEvent.change(editInput, { target: { value: 'Edited pending text' } })
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    expect(await within(row).findByText('Could not edit this pending message. Your draft is still here; try again.')).toBeTruthy()
+    expect(editInput).toHaveProperty('value', 'Edited pending text')
+    expect(editSubmission).toHaveBeenNthCalledWith(1, 'session-alpha', editRequestId, 'Edited pending text', expect.any(AbortSignal))
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    expect(await within(row).findByText('Edited pending text')).toBeTruthy()
+    expect(within(row).queryByRole('textbox', { name: 'Edit pending message' })).toBeNull()
+    expect(editSubmission).toHaveBeenNthCalledWith(2, 'session-alpha', editRequestId, 'Edited pending text', expect.any(AbortSignal))
+    expect(queue.mock.calls.at(-1)?.[2]).toBe(refusedId)
+    expect(queue).toHaveBeenCalledWith('session-alpha', 'After this turn', expect.any(String), expect.any(AbortSignal))
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Steer instead' }))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Steer instead' })).toHaveProperty('disabled', true) })
+    expect(within(pendingPanel).queryByText('Next step')).toBeNull()
+    expect(promoteSubmission).toHaveBeenCalledWith('session-alpha', pendingMessages[0]!.requestId, expect.any(AbortSignal))
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => { expect(within(pendingPanel).queryByText('After this turn')).toBeNull() })
+    expect(dequeue).toHaveBeenCalledOnce()
+    fireEvent.change(messageInput, { target: { value: 'Use this direction' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Steer' }))
+    expect(await within(pendingPanel).findByText('Use this direction')).toBeTruthy()
+    expect(steer).toHaveBeenCalledWith('session-alpha', 'Use this direction', expect.any(String), expect.any(AbortSignal))
+    const claimedRequestId = pendingMessages[0]!.requestId
+    editSubmission.mockImplementationOnce(async (_id, requestId) => {
+      pendingMessages = pendingMessages.filter(item => item.requestId !== requestId)
+      inboxRevision++
+      return { requestId, outcome: 'stale' }
+    })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Edit pending message' }))
+    fireEvent.change(within(pendingPanel).getByRole('textbox', { name: 'Edit pending message' }),
+      { target: { value: 'Keep this claimed draft' } })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Save' }))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('status').textContent)
+      .toBe(`Request (${claimedRequestId}) is no longer in the inbox. Your draft is still here; cancel to dismiss it.`) })
+    expect(pendingMessages).toHaveLength(0)
+    expect(within(pendingPanel).getByRole('textbox', { name: 'Edit pending message' }))
+      .toHaveProperty('value', 'Keep this claimed draft')
+    expect(within(pendingPanel).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true)
+    expect(editSubmission).toHaveBeenNthCalledWith(3, 'session-alpha', claimedRequestId, 'Keep this claimed draft', expect.any(AbortSignal))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false) })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Cancel' }))
+    expect(within(pendingPanel).queryByRole('listitem')).toBeNull()
+    fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
+    promptSettlement.resolve({ exitCode: 0, answer: '' })
+    await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
+    expect(messageInput).toHaveProperty('value', 'Keep this next draft')
 
     fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))
     expect(await screen.findByRole('heading', { name: 'Scheduled tasks' })).toBeTruthy()
@@ -364,6 +522,12 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\New' }, expect.any(AbortSignal))
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-in-workspace', expect.any(AbortSignal)) })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
+    await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move workspace New up' })).toHaveProperty('disabled', true) })
+    fireEvent.click(screen.getByRole('button', { name: 'Move workspace New down' }))
+    await waitFor(() => { expect(reorderWorkspace).toHaveBeenLastCalledWith('workspace-new', undefined, expect.any(AbortSignal)) })
 
     fireEvent.click(screen.getByRole('button', { name: 'Switch language' }))
     expect(document.documentElement.lang).toBe('zh-CN')

@@ -2,6 +2,9 @@
 import type {
   NativeSessionClient, NativeSessionFollowFrame, NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
+import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
+import { nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
@@ -17,6 +20,9 @@ export interface ConversationSnapshot {
   readonly modeControls?: NativeModeControls | undefined
   /** Host-owned current permission policy and choices for this Session. */
   readonly permissionControls?: NativePermissionControls | undefined
+  readonly submissions?: NativeSubmissionsSnapshot | undefined
+  readonly submissionBusy?: boolean | undefined
+  readonly submissionError?: string | undefined
   readonly human?: NativeWebHumanPrompt | undefined
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
@@ -41,6 +47,16 @@ export class NativeConversationController {
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
+  private selectionEpoch = 0
+  private submissionRead = 0
+  private submissionFloor = -1
+  private submissionDraft: {
+    sessionId: SessionId
+    epoch: number
+    text: string
+    placement: 'queued' | 'steering'
+    requestId: NativeSubmissionRequestId
+  } | undefined
   private turn: AbortController | undefined
   private foregroundAdmission: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private followErrorOwner: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
@@ -94,7 +110,131 @@ export class NativeConversationController {
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
     const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
     const history = await this.client.history(id, this.lifetime.signal)
-    this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls })
+    this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls,
+      ...this.snapshot.selected === id ? {} : { submissions: undefined } })
+    await this.refreshSubmissions(id, this.selectionEpoch)
+  }
+
+  private beginSelection(): void {
+    this.selectionEpoch++
+    this.submissionFloor = -1
+    this.submissionDraft = undefined
+    this.publish({ submissionBusy: false, submissionError: undefined })
+  }
+
+  private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
+    if (this.selectionEpoch !== epoch || this.snapshot.selected !== id || this.lifetime.signal.aborted) return
+    const read = ++this.submissionRead
+    try {
+      const value = await this.client.submissions(id, this.lifetime.signal)
+      if (this.selectionEpoch !== epoch || this.snapshot.selected !== id || read !== this.submissionRead) return
+      if (value.throughSeq < this.submissionFloor
+        || value.throughSeq < (this.snapshot.submissions?.throughSeq ?? -1)) return
+      this.publish({ submissions: value })
+    } catch (error: unknown) {
+      if (this.selectionEpoch === epoch && this.snapshot.selected === id && read === this.submissionRead) {
+        this.publish({ submissionError: error instanceof Error ? error.message : String(error) })
+      }
+    }
+  }
+
+  /** Re-read the selected Host inbox without changing turn readiness.
+   * @returns completion after the Host snapshot or a visible read failure.
+   */
+  refreshPendingSubmissions(): Promise<void> {
+    const id = this.snapshot.selected
+    if (id === undefined) return Promise.resolve()
+    this.publish({ submissionError: undefined })
+    const work = this.refreshSubmissions(id, this.selectionEpoch)
+    this.pending.add(work)
+    void work.finally(() => { this.pending.delete(work) })
+    return work
+  }
+
+  /** Submit text to the current turn's next-turn or next-step inbox.
+   * @param text - nonempty human text; failed retries retain the same request identity.
+   * @param placement - requested inbox; Host acknowledgement decides acceptance.
+   * @returns true only after acceptance; false retains the composer's draft.
+   */
+  submitPending(text: string, placement: 'queued' | 'steering'): Promise<boolean> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
+    const epoch = this.selectionEpoch
+    const previous = this.submissionDraft
+    const draft = previous?.sessionId === id && previous.epoch === epoch && previous.text === text && previous.placement === placement
+      ? previous : { sessionId: id, epoch, text, placement, requestId: nativeSubmissionRequestId(randomUUID()) }
+    this.submissionDraft = draft
+    return this.mutateSubmission(id, epoch, async () => {
+      // A lost acknowledgement can leave an accepted or already-claimed request on the Host.
+      if (previous === draft) {
+        await this.refreshSubmissions(id, epoch)
+        if (this.snapshot.submissions?.submissions.some(item => item.requestId === draft.requestId)
+          || this.snapshot.events.some(event => event.type === 'user/message' && event.data.id === String(draft.requestId))) {
+          this.submissionDraft = undefined
+          return true
+        }
+      }
+      const result: NativeSubmissionAcknowledgement = placement === 'queued'
+        ? await this.client.queue(id, text, draft.requestId, this.lifetime.signal)
+        : await this.client.steer(id, text, draft.requestId, this.lifetime.signal)
+      if (result.requestId !== draft.requestId) throw new Error('native conversation: submission acknowledgement identity mismatch')
+      if (this.submissionDraft === draft) this.submissionDraft = undefined
+      return true
+    })
+  }
+
+  private mutateSubmission(id: SessionId, epoch: number, operation: () => Promise<boolean>): Promise<boolean> {
+    this.publish({ submissionBusy: true, submissionError: undefined })
+    const work = (async () => {
+      try { return await operation() }
+      catch (error: unknown) {
+        if (this.selectionEpoch === epoch && this.snapshot.selected === id) {
+          this.publish({ submissionError: error instanceof Error ? error.message : String(error) })
+        }
+        return false
+      } finally {
+        await this.refreshSubmissions(id, epoch)
+        if (this.selectionEpoch === epoch && this.snapshot.selected === id) this.publish({ submissionBusy: false })
+      }
+    })()
+    const pending = work.then(() => {})
+    this.pending.add(pending)
+    void pending.finally(() => { this.pending.delete(pending) })
+    return work
+  }
+
+  /** Remove or promote one displayed pending request using its Host identity.
+   * @param requestId - identity from the current Host snapshot.
+   * @param action - remove from the inbox, or promote queued text to next-step.
+   * @returns acknowledgement followed by a fresh Host inbox snapshot.
+   */
+  changePending(requestId: NativeSubmissionRequestId, action: 'remove' | 'promote'): Promise<boolean> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling'
+      || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
+    return this.mutateSubmission(id, this.selectionEpoch, async () => {
+      if (action === 'remove') await this.client.dequeue(id, requestId, this.lifetime.signal)
+      else await this.client.promoteSubmission(id, requestId, this.lifetime.signal)
+      return true
+    })
+  }
+
+  /** Replace one pending request's complete text while retaining its Host identity.
+   * @param requestId - identity from the current Host snapshot.
+   * @param text - complete replacement text.
+   * @returns true after the Host updates the request; false when it is stale or the edit fails.
+   */
+  editPending(requestId: NativeSubmissionRequestId, text: string): Promise<boolean> {
+    const id = this.snapshot.selected
+    if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || text.trim() === ''
+      || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
+    const epoch = this.selectionEpoch
+    return this.mutateSubmission(id, epoch, async () => {
+      const result = await this.client.editSubmission(id, requestId, text, this.lifetime.signal)
+      return result.outcome === 'updated'
+    })
   }
 
   private async refreshModeControls(id: SessionId): Promise<void> {
@@ -167,6 +307,7 @@ export class NativeConversationController {
   create(): Promise<void> {
     this.assertReady()
     this.followErrorOwner = undefined
+    this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
     return this.run(async () => {
       const { sessionId } = await this.client.create(this.lifetime.signal)
@@ -181,6 +322,7 @@ export class NativeConversationController {
   select(id: SessionId): Promise<void> {
     this.assertReady()
     this.followErrorOwner = undefined
+    this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
     return this.run(() => this.restore(id))
   }
@@ -322,6 +464,7 @@ export class NativeConversationController {
     this.assertReady()
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
+    this.submissionDraft = undefined
     const lastSeq = this.snapshot.events.at(-1)?.seq ?? -1
     const turn = new AbortController()
     const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
@@ -398,6 +541,13 @@ export class NativeConversationController {
     }
     if (frame.type === 'title-updated') {
       return
+    }
+    // The prompt reply can settle before its final inbox notifications drain.
+    if (this.followErrorOwner === admission && this.snapshot.selected === admission.sessionId) {
+      if (frame.type === 'event' && frame.event.type === 'user/message') {
+        this.submissionFloor = Math.max(this.submissionFloor, frame.event.seq)
+        void this.refreshPendingSubmissions()
+      } else if (frame.type === 'submission-update') void this.refreshPendingSubmissions()
     }
     if (this.foregroundAdmission !== admission || this.snapshot.selected !== admission.sessionId) return
     if (frame.type === 'human') this.publish({ human: frame.prompt, answeringHuman: false })
