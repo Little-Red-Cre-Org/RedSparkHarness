@@ -25,3 +25,7 @@ Status: implemented
 ## Consequences
 
 原生 profile 可消费选定旧 filesystem 实现，而不产生第二个持久 Session 写入者。兼容层仍限定于已声明包，并保留 Cordis 作为显式依赖。原生策略只有 profile 级 mode，更广的审批、attachment、UI 展示、reload 和 replacement 行为仍由后续迁移阶段负责。
+
+## Testing
+
+桥接的 filesystem 事件为 `fs/observed`（sync）以及 `fs/write-intent` 和 `fs/edit-intent` 两个 waterfall。这些就是 Native 与 Cordis filesystem 领域声明或分发的全部事件；两侧都没有 parallel 或 serial 模式的 filesystem 事件，因此 bridge 没有此类模式需要适配。`compat-tool-fs` 的 waterfall 用例对比原生发起和 Cordis 发起的分发，覆盖监听器顺序、经两侧 `next()` 委托到调用方终端、抛错、短路和异步拒绝。`compat-fs-policy` 用例覆盖原生到 Cordis 转发进入 observation policy；该策略按设计终止 waterfall，而不委托给后续原生监听器。`compat-fs-local` 用例让生产原生 `read` 和 `write` 工具使用 Cordis fs-local Provider，再用 `cwd` 不同的新实例替换该 Provider。它断言替换会以 `FS_ABORTED` 中止旧 backend 上已准入的写入，旧 backend 开始清理时 `fs` 服务尚未发布，清理在替换结算前完成且随后由替身服务下一次读取，保留的旧实例拒绝新 I/O，且移除后 live proxy 报告服务不可用。
