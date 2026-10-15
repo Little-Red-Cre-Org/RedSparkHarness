@@ -582,6 +582,56 @@ it('keeps the web-search key draft when its announced revision is still unread a
   expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
 })
 
+it('retries a failed web-search credential save from the committed settings revision', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  }, { maxUses: 5 })
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 })
+  let configured = false
+  let credentialAttempts = 0
+  const credentialsSet = vi.fn(async (_ref: string, _value: string): Promise<void> => {
+    credentialAttempts += 1
+    if (credentialAttempts === 1) throw new Error('Credential write failed.')
+    configured = true
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
+  actions.settingsMutate = vi.fn(async (
+    _namespace: string, _ops: readonly NativeSettingsPathOp[], _expectedRevision: number,
+  ) => updated)
+  actions.credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
+    DEEPSEEK_API_KEY: { configured, writable: true },
+  }))
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  expect(await screen.findByText(en.settingsPluginSaveFailed)).toBeTruthy()
+  expect(actions.settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
+    { op: 'set', path: ['maxUses'], value: 9 },
+  ], 1)
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  await waitFor(() => { expect(credentialsSet).toHaveBeenCalledTimes(2) })
+  expect(credentialsSet).toHaveBeenLastCalledWith('DEEPSEEK_API_KEY', 'plugin-secret')
+  expect(actions.settingsMutate).toHaveBeenCalledOnce()
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Show settings: Web search' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(en.settingsPluginSaveFailed)).toBeNull()
+    expect(screen.queryByText(en.settingsPluginConflict)).toBeNull()
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  expect(await screen.findByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', '')
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '9')
+})
+
 it('shows a Host gap for an absent plugin namespace without a save action', async () => {
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
   actions.settingsDescribe = vi.fn(async () => settingsDescription([]))

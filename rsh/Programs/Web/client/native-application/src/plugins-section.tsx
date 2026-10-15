@@ -567,6 +567,21 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       }
       if (plan.ops.length > 0) {
         updated = await actions.settingsMutate(plugin.namespace, plan.ops, expectedRevision)
+        if (hasApiKeyDraft) {
+          setDrafts((current) => {
+            const currentDraft = current[plugin.namespace] ?? draft
+            return {
+              ...current,
+              [plugin.namespace]: {
+                revision: updated.revision,
+                ...(apiKeyRef === undefined ? {} : { apiKeyRef }),
+                fields: {},
+                clears: new Set(),
+                apiKey: currentDraft.apiKey,
+              },
+            }
+          })
+        }
         if (hasApiKeyDraft && credentialRef(updated) !== apiKeyRef) {
           throw credentialReferenceConflict()
         }
