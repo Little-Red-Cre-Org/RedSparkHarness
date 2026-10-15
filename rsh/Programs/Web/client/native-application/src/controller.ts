@@ -119,7 +119,7 @@ export class NativeConversationController {
     this.selectionEpoch++
     this.submissionFloor = -1
     this.submissionDraft = undefined
-    this.publish({ submissionError: undefined })
+    this.publish({ submissionBusy: false, submissionError: undefined })
   }
 
   private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
@@ -194,7 +194,7 @@ export class NativeConversationController {
         return false
       } finally {
         await this.refreshSubmissions(id, epoch)
-        this.publish({ submissionBusy: false })
+        if (this.selectionEpoch === epoch && this.snapshot.selected === id) this.publish({ submissionBusy: false })
       }
     })()
     const pending = work.then(() => {})

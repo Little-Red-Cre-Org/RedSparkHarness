@@ -443,8 +443,26 @@ it('installs modular Native navigation, Session selection, details, locale and t
     fireEvent.click(screen.getByRole('button', { name: 'Steer' }))
     expect(await within(pendingPanel).findByText('Use this direction')).toBeTruthy()
     expect(steer).toHaveBeenCalledWith('session-alpha', 'Use this direction', expect.any(String), expect.any(AbortSignal))
-    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Delete' }))
-    await waitFor(() => { expect(within(pendingPanel).queryByText('Use this direction')).toBeNull() })
+    const claimedRequestId = pendingMessages[0]!.requestId
+    editSubmission.mockImplementationOnce(async (_id, requestId) => {
+      pendingMessages = pendingMessages.filter(item => item.requestId !== requestId)
+      inboxRevision++
+      return { requestId, outcome: 'stale' }
+    })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Edit pending message' }))
+    fireEvent.change(within(pendingPanel).getByRole('textbox', { name: 'Edit pending message' }),
+      { target: { value: 'Keep this claimed draft' } })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Save' }))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('status').textContent)
+      .toBe(`Request (${claimedRequestId}) is no longer in the inbox. Your draft is still here; cancel to dismiss it.`) })
+    expect(pendingMessages).toHaveLength(0)
+    expect(within(pendingPanel).getByRole('textbox', { name: 'Edit pending message' }))
+      .toHaveProperty('value', 'Keep this claimed draft')
+    expect(within(pendingPanel).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true)
+    expect(editSubmission).toHaveBeenNthCalledWith(3, 'session-alpha', claimedRequestId, 'Keep this claimed draft', expect.any(AbortSignal))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false) })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Cancel' }))
+    expect(within(pendingPanel).queryByRole('listitem')).toBeNull()
     fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
     promptSettlement.resolve({ exitCode: 0, answer: '' })
     await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
