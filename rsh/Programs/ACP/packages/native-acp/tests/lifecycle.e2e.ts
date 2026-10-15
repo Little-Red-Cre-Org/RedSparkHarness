@@ -628,7 +628,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
       data: { details: 'mcp-client(fixture): initial connection or tool synchronization failed' },
     })
     const stdioSession = await transport.request('session/new', { cwd: home, mcpServers: stdioServers }, requestSignal()) as { sessionId: string }
-    await vi.waitFor(async () => expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(1),
+    await vi.waitFor(async () => { expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(1) },
       { timeout: 5_000, interval: 10 })
     const [firstMcpStart] = await readMcpFixtureStarts(mcpLifecycleFile)
     if (firstMcpStart === undefined) throw new Error('ACP MCP server did not publish its PID')
@@ -689,7 +689,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     await mcpPrompt(httpSession.sessionId, 'mcp__fixture__ping', 'mcp__fixture__add')
     expect(http.authorization).toContain('Bearer native-acp-test')
     await transport.request('session/resume', { sessionId: stdioSession.sessionId, cwd: home, mcpServers: stdioServers }, requestSignal())
-    await vi.waitFor(async () => expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(2),
+    await vi.waitFor(async () => { expect(await readMcpFixtureStarts(mcpLifecycleFile)).toHaveLength(2) },
       { timeout: 5_000, interval: 10 })
     const [, resumedMcpStart] = await readMcpFixtureStarts(mcpLifecycleFile)
     if (resumedMcpStart === undefined) throw new Error('resumed ACP MCP server did not publish its PID')
@@ -830,7 +830,7 @@ it('admits ordered ACP images, rejects malformed data, restores history and drai
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => { resolve() }))
     for (const start of await readMcpFixtureStarts(mcpLifecycleFile)) {
-      await vi.waitFor(() => expect(isProcessAlive(start.pid)).toBe(false), { timeout: 5_000, interval: 10 })
+      await vi.waitFor(() => { expect(isProcessAlive(start.pid)).toBe(false) }, { timeout: 5_000, interval: 10 })
     }
     await rm(home, { recursive: true, force: true })
   }

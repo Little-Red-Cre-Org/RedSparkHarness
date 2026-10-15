@@ -109,7 +109,7 @@ function isFixtureProcessAlive(pid: number): boolean {
 }
 
 async function waitForFixtureProcessExit(pid: number): Promise<void> {
-  await vi.waitFor(() => expect(isFixtureProcessAlive(pid)).toBe(false), { timeout: 5_000, interval: 10 })
+  await vi.waitFor(() => { expect(isFixtureProcessAlive(pid)).toBe(false) }, { timeout: 5_000, interval: 10 })
 }
 
 /** Narrow a result content block to its text, failing the test on any other shape. */
@@ -266,7 +266,7 @@ describe('fixture server — disposal', () => {
         toolCallTimeoutMs: 15_000,
         failOnStartupError: false,
       })
-      await vi.waitFor(async () => expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(1),
+      await vi.waitFor(async () => { expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(1) },
         { timeout: 5_000, interval: 10 })
       const [started] = await readFixtureServerStarts(lifecycleFile)
       if (started === undefined) throw new Error('fixture server did not publish its PID')
@@ -308,7 +308,7 @@ describe('fixture server — crash recovery', () => {
     try {
       await apply(ctx, crashConfig('crashy', { initialDelayMs: 50, maxDelayMs: 500, maxAttempts: 40 },
         { MCP_FIXTURE_LIFECYCLE_FILE: lifecycleFile }))
-      await vi.waitFor(async () => expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(1),
+      await vi.waitFor(async () => { expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(1) },
         { timeout: 5_000, interval: 10 })
       const [firstStart] = await readFixtureServerStarts(lifecycleFile)
       if (firstStart === undefined) throw new Error('first fixture generation did not publish its PID')
@@ -336,7 +336,7 @@ describe('fixture server — crash recovery', () => {
         expect(textOf(after.content[0])).toBe('42')
       }, { timeout: 15_000, interval: 250 })
 
-      await vi.waitFor(async () => expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(2),
+      await vi.waitFor(async () => { expect(await readFixtureServerStarts(lifecycleFile)).toHaveLength(2) },
         { timeout: 15_000, interval: 10 })
       const [, recoveredStart] = await readFixtureServerStarts(lifecycleFile)
       if (recoveredStart === undefined) throw new Error('reconnected fixture generation did not publish its PID')
