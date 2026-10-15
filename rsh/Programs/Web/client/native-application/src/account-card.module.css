@@ -32,10 +32,14 @@
   line-height: 18px;
 }
 
-.balanceRow {
+.balanceRow,
+.balanceAmounts {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.balanceRow {
   justify-content: space-between;
 }
 
