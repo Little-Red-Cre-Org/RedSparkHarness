@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
@@ -114,6 +114,7 @@ async function fixture(
   let sessionExecution: NativeSessionExecutionOperations | undefined
   let subagents: NativeSubagentOperations | undefined
   let approval: NativeApprovalServiceDefinition | undefined
+  let codeRuntime: NativeCodeRuntime | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
@@ -148,7 +149,7 @@ async function fixture(
     resolve: () => (context) => { context.provide('shell', selectedShell) },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'], optional: ['approval', 'sessionExecution', 'subagents'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'], optional: ['approval', 'codeRuntime', 'sessionExecution', 'subagents'], provides: [],
     resolve: () => (context) => {
       app = context.require('application') as NativeHeadlessApplication
       const provided = context.require('fs')
@@ -161,11 +162,15 @@ async function fixture(
       sessionExecution = context.optional('sessionExecution')
       subagents = context.optional('subagents')
       approval = context.optional('approval')
+      codeRuntime = context.optional('codeRuntime')
     },
   }
   let host: NativeHost | undefined
+  let codeRuntimeRequest: InstallationRequest = { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
+    config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined }
+  let requests: InstallationRequest[]
   try {
-    host = new NativeHost(resolveInstallation([
+    requests = [
       ...(parentScope === undefined ? [] : [{ plugin: localFilesystemPlugin, scope: parentScope, config: { cwd: directory } }]),
       ...(parentScope === undefined || parentAttachmentProvider === undefined ? [] : [
         { plugin: parentAttachmentProvider, scope: parentScope, config: undefined },
@@ -184,8 +189,7 @@ async function fixture(
         { plugin: subagentPlugin, scope, config: { providerName: externalSubagentDriver.name } },
       ]),
       ...(options.toolSubagent ? [{ plugin: toolSubagentPlugin, scope, config: { toolName: 'subagent', maxDepth: 2 } }] : []),
-      { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
-        config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
+      codeRuntimeRequest,
       ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
       ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
       ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
@@ -203,7 +207,8 @@ async function fixture(
       { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
       { plugin: model, scope, config: undefined },
       ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
-    ], 'host'))
+    ]
+    host = new NativeHost(resolveInstallation(requests, 'host'))
     await host.start()
     if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined
       || rootExecution === undefined || persistence === undefined) {
@@ -224,8 +229,16 @@ async function fixture(
   }
   if (host === undefined) throw new Error('native-headless fixture has no Host')
   return {
-    host, scope, app, filesystem, agents, tools, rootExecution, persistence, sessionExecution, subagents, approval,
+    host, scope, get app() { return app! }, filesystem, agents, tools, rootExecution, persistence, sessionExecution, subagents, approval,
+    get codeRuntime() { return codeRuntime },
     adapter, directory, workspace, sessions,
+    async replaceCodeRuntime(provider: NativePlugin) {
+      const nextRequest: InstallationRequest = { plugin: provider, scope, config: undefined }
+      const nextRequests = requests.map(request => request === codeRuntimeRequest ? nextRequest : request)
+      await host.replace(resolveInstallation(nextRequests, 'host'))
+      codeRuntimeRequest = nextRequest
+      requests = nextRequests
+    },
   }
 }
 
@@ -1754,25 +1767,79 @@ it('projects a bounded worker-thread code result through the Session tool sequen
 
 it.each([false, true])('passes the current Session to builtin/PTC code runtime and rejects restricted worker execution (PTC %s)', async (ptc) => {
   const requests: NativeCodeRunRequest[] = []
-  const codeRuntime: NativeCodeRuntime = {
+  const initialRuntime: NativeCodeRuntime = {
     language: 'typescript', isolation: 'worker-thread',
     run: async (request) => { requests.push(request); return { logs: [], value: 42 } },
     dispose: async () => {},
   }
-  const codeRuntimeProvider: NativePlugin = {
+  const initialProvider: NativePlugin = {
     apiVersion: 1, name: 'test-code-runtime', targets: ['host'], requires: [], provides: ['codeRuntime'],
     resolve: () => (context) => {
-      context.own(() => codeRuntime.dispose())
-      context.provide('codeRuntime', codeRuntime)
+      context.own(() => initialRuntime.dispose())
+      context.provide('codeRuntime', initialRuntime)
     },
   }
   const args = ptc ? { code: 'return 6 * 7', description: 'Calculate six times seven.' } : { program: 'return 6 * 7' }
+  const waitingProgram = ptc ? 'await tools.headless_in_flight({}); return 0' : 'while (true) {}'
+  const waitingArgs = ptc ? { code: waitingProgram, description: 'Wait for the in-flight call to be cancelled.' }
+    : { program: waitingProgram }
   const safe = await fixture([
     toolCallResponse('code-safe', 'run_code', args), textResponse('calculation complete'),
-  ], { ptc, codeRuntimeProvider, ...ptc ? { allowedTools: ['run_code'] } : {} })
+    toolCallResponse('code-in-flight', 'run_code', waitingArgs),
+    toolCallResponse('code-after-replacement', 'run_code', args), textResponse('replacement calculation complete'),
+  ], { ptc, ...ptc ? { allowedTools: ['run_code', 'headless_in_flight'] } : { codeRuntimeProvider: initialProvider } })
   let removeBusiness: (() => Promise<void>) | undefined
+  let removeInFlightTool: (() => Promise<void>) | undefined
+  const handoff: string[] = []
+  const inFlightToolEntered = Promise.withResolvers<undefined>()
+  const inFlightRuntimeResult = Promise.withResolvers<Awaited<ReturnType<NativeCodeRuntime['run']>>>()
+  const cleanupEntered = Promise.withResolvers<undefined>()
+  const releaseCleanup = Promise.withResolvers<undefined>()
   try {
+    const previousRuntime = safe.codeRuntime
+    if (previousRuntime === undefined) throw new Error('missing production code-runtime Provider')
+    let staleRequest: NativeCodeRunRequest | undefined
+    let oldRuntimeDisposedAtActivation = false
     if (ptc) {
+      const realRun = previousRuntime.run.bind(previousRuntime)
+      previousRuntime.run = async (request) => {
+        requests.push(request)
+        if (request.program === waitingProgram) handoff.push('old runtime entered')
+        const result = await realRun(request)
+        if (request.program === waitingProgram) {
+          handoff.push('old runtime settled')
+          inFlightRuntimeResult.resolve(result)
+        }
+        return result
+      }
+      const realDispose = previousRuntime.dispose.bind(previousRuntime)
+      previousRuntime.dispose = async () => {
+        handoff.push('old cleanup entered')
+        await realDispose()
+        cleanupEntered.resolve(undefined)
+        await releaseCleanup.promise
+        handoff.push('old cleanup completed')
+      }
+    }
+    if (ptc) {
+      removeInFlightTool = safe.tools.registerValueTool({
+        schema: { name: 'headless_in_flight', description: 'Hold a code-runtime call until its signal aborts.',
+          parameters: { type: 'object', properties: {}, additionalProperties: false } },
+        output: { schema: { type: 'string' }, render: (_call, value) => {
+          if (typeof value !== 'string') throw new Error('in-flight fixture output must be text')
+          return { content: [{ type: 'text', text: value }], isError: false }
+        } },
+        async execute(call) {
+          handoff.push('old bound work entered')
+          inFlightToolEntered.resolve(undefined)
+          await new Promise<void>((resolve) => {
+            if (call.signal.aborted) resolve()
+            else call.signal.addEventListener('abort', () => { resolve() }, { once: true })
+          })
+          handoff.push('old bound work settled')
+          return 'cancelled'
+        },
+      }, safe.scope)
       removeBusiness = safe.tools.registerValueTool({
         schema: { name: 'headless_unallowed_business', description: 'Return an unallowed fixture value.',
           parameters: { type: 'object', properties: {}, additionalProperties: false } },
@@ -1786,15 +1853,89 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
     }
     await safe.host.run(safe.scope, { kind: 'code-runtime-session' }, invocation => safe.app.run(['calculate'], invocation.signal))
     expect(requests).toHaveLength(1)
-    if (ptc) expect(requests[0]?.bindings).toEqual([])
+    if (ptc) expect(requests[0]?.bindings.flatMap(binding => Object.keys(binding.functions))).toEqual(['headless_in_flight'])
     expect(requests[0]?.session.header.cwd).toBe(safe.workspace)
+
+    if (ptc) {
+      const before = JSON.stringify(safe.adapter.requests[1]?.messages)
+      expect(before).toContain('42')
+      const inFlight = safe.host.run(safe.scope, { kind: 'code-runtime-replacement' },
+        invocation => safe.app.run(['hold for replacement'], invocation.signal))
+      await inFlightToolEntered.promise
+      staleRequest = requests.find(request => request.program === waitingProgram)
+      if (staleRequest === undefined) throw new Error('old Provider did not receive the in-flight program')
+      const substituteRuntime: NativeCodeRuntime = {
+        language: 'typescript', isolation: 'worker-thread',
+        run: async (request) => { requests.push(request); handoff.push('substitute served'); return { logs: [], value: 7 } },
+        dispose: async () => {},
+      }
+      const substituteProvider: NativePlugin = {
+        apiVersion: 1, name: 'test-code-runtime-substitute', targets: ['host'], requires: [], provides: ['codeRuntime'],
+        resolve: () => async (context) => {
+          if (staleRequest === undefined) throw new Error('old Provider did not receive the in-flight program')
+          await expect(previousRuntime.run({ ...staleRequest, program: 'return 1' })).rejects.toThrow('run() after disposal')
+          oldRuntimeDisposedAtActivation = true
+          context.own(() => substituteRuntime.dispose())
+          context.provide('codeRuntime', substituteRuntime)
+          handoff.push('substitute provider active')
+        },
+      }
+      let replacementSettled = false
+      const replacing = safe.replaceCodeRuntime(substituteProvider).then(() => { replacementSettled = true })
+      await cleanupEntered.promise
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(replacementSettled).toBe(false)
+      expect(safe.codeRuntime).toBe(previousRuntime)
+      expect(handoff).toEqual([
+        'old runtime entered', 'old bound work entered', 'old bound work settled', 'old runtime settled',
+        'old cleanup entered',
+      ])
+      await expect(inFlightRuntimeResult.promise).resolves.toMatchObject({ error: { kind: 'abort' } })
+      releaseCleanup.resolve(undefined)
+      await replacing
+      await Promise.allSettled([inFlight])
+      expect(handoff).toEqual([
+        'old runtime entered', 'old bound work entered', 'old bound work settled', 'old runtime settled',
+        'old cleanup entered', 'old cleanup completed', 'substitute provider active',
+      ])
+      expect(oldRuntimeDisposedAtActivation).toBe(true)
+      expect(safe.codeRuntime).toBe(substituteRuntime)
+
+      await safe.host.run(safe.scope, { kind: 'code-runtime-replacement-result' },
+        invocation => safe.app.run(['calculate with replacement'], invocation.signal))
+      const modelToolOutput = (callId: string): string => {
+        const result = safe.adapter.requests.flatMap(request => request.messages).flatMap(message => message.content)
+          .find(block => block.type === 'tool-result' && block.toolCallId === ToolCallId(callId))
+        if (result?.type !== 'tool-result') throw new Error(`missing model-visible result for ${callId}`)
+        const output = result.content.find(block => block.type === 'text')
+        if (output?.type !== 'text') throw new Error(`missing text output for ${callId}`)
+        return output.text
+      }
+      expect(modelToolOutput('code-safe')).toBe('42')
+      expect(modelToolOutput('code-after-replacement')).toBe('7')
+      expect(handoff.at(-1)).toBe('substitute served')
+    }
   } finally {
-    await removeBusiness?.()
+    releaseCleanup.resolve(undefined)
     await safe.host.stop()
+    await removeBusiness?.()
+    await removeInFlightTool?.()
     await rm(safe.directory, { recursive: true, force: true })
   }
 
   requests.length = 0
+  const restrictedRuntime: NativeCodeRuntime = {
+    language: 'typescript', isolation: 'worker-thread',
+    run: async (request) => { requests.push(request); return { logs: [], value: 42 } },
+    dispose: async () => {},
+  }
+  const codeRuntimeProvider: NativePlugin = {
+    apiVersion: 1, name: 'test-restricted-code-runtime', targets: ['host'], requires: [], provides: ['codeRuntime'],
+    resolve: () => (context) => {
+      context.own(() => restrictedRuntime.dispose())
+      context.provide('codeRuntime', restrictedRuntime)
+    },
+  }
   const policy = new NativeSandboxPolicy({ mode: 'danger-full-access', workspaceRoot: process.cwd() })
   const resolvePolicy = vi.spyOn(policy, 'resolve').mockImplementation((request = {}) => ({
     mode: request.session === undefined ? 'danger-full-access' : 'read-only',

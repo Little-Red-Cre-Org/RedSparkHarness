@@ -1,6 +1,6 @@
 /** Cordis filesystem Provider serving the production Native file-tool Consumer. */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
@@ -66,6 +66,8 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
   const writeEntered = Promise.withResolvers<undefined>()
   const releaseWrite = Promise.withResolvers<undefined>()
   const cleanupEntered = Promise.withResolvers<undefined>()
+  let tempPaths: { stagingDir: string; tempPath: string } | undefined
+  let stagingRemovedAtSubstitutePublication: boolean | undefined
   let inFlight: Promise<unknown> | undefined
   let replacing: Promise<void> | undefined
   let unregister: (() => Promise<void>) | undefined
@@ -127,7 +129,8 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
     expect(before).toMatchObject({ lines: [{ number: 1, text: 'from real provider' }] })
     expect(servedBy).toEqual(['before:legacy'])
 
-    oldBackend.internals.inspectTemp = async () => {
+    oldBackend.internals.inspectTemp = async (paths) => {
+      tempPaths = paths
       writeEntered.resolve(undefined)
       await releaseWrite.promise
     }
@@ -146,6 +149,9 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
         name === 'fs' && value instanceof LocalFileSystem && value.config.cwd === substituteDirectory &&
         !order.includes('substitute published')
       ) {
+        if (tempPaths !== undefined) {
+          stagingRemovedAtSubstitutePublication = !existsSync(tempPaths.stagingDir) && !existsSync(tempPaths.tempPath)
+        }
         order.push('substitute published')
       }
     })
@@ -153,6 +159,9 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       replacing = compat.update('@deepseek-ai/dsh-fs-local', { cwd: substituteDirectory }).then(() => { replacementSettled = true })
       await cleanupEntered.promise
       expect(replacementSettled).toBe(false)
+      if (tempPaths === undefined) throw new Error('write did not expose its staging paths')
+      expect(existsSync(tempPaths.stagingDir)).toBe(true)
+      expect(existsSync(tempPaths.tempPath)).toBe(true)
       expect(compat.context.get('fs')).toBeUndefined()
       releaseWrite.resolve(undefined)
       await expect(inFlight).rejects.toMatchObject({ code: 'FS_ABORTED' })
@@ -172,6 +181,7 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       expect(after).toMatchObject({ lines: [{ number: 1, text: 'from substitute provider' }] })
       expect(after).not.toEqual(before)
       expect(servedBy).toEqual(['before:legacy', 'after:substitute'])
+      expect(stagingRemovedAtSubstitutePublication).toBe(true)
       expect(order).toEqual([
         'old cleanup entered', 'old cleanup completed', 'substitute published', 'substitute served',
       ])
