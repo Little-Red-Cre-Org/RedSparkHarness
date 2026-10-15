@@ -368,6 +368,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [descriptors, setDescriptors] = useState<readonly NativeSettingsDescriptor[]>([])
   const descriptorsRef = useRef<readonly NativeSettingsDescriptor[]>([])
   const [announcedRevisions, setAnnouncedRevisions] = useState<Readonly<Record<string, number>>>({})
+  const announcedRevisionsRef = useRef<Readonly<Record<string, number>>>({})
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -468,10 +469,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       if (signal?.aborted || request !== settingsRequest.current) return
       publishDescriptors(description.namespaces)
       setLoaded(true)
-      setAnnouncedRevisions(current => Object.fromEntries(Object.entries(current).filter(([namespace, revision]) => {
+      const nextAnnouncedRevisions = Object.fromEntries(Object.entries(announcedRevisionsRef.current).filter(([namespace, revision]) => {
         const row = descriptorsRef.current.find(candidate => candidate.namespace === namespace)
         return row !== undefined && row.revision < revision
-      })))
+      }))
+      announcedRevisionsRef.current = nextAnnouncedRevisions
+      setAnnouncedRevisions(nextAnnouncedRevisions)
       setLoadFailed(false)
       const webSearch = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
       if (webSearch === undefined) {
@@ -495,10 +498,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       try {
         for await (const event of actions.settingsEvents(controller.signal)) {
           if (event.type === 'settings/document-updated') {
-            setAnnouncedRevisions(current => ({
-              ...current,
-              [event.namespace]: Math.max(current[event.namespace] ?? 0, event.revision),
-            }))
+            const nextAnnouncedRevisions = {
+              ...announcedRevisionsRef.current,
+              [event.namespace]: Math.max(announcedRevisionsRef.current[event.namespace] ?? 0, event.revision),
+            }
+            announcedRevisionsRef.current = nextAnnouncedRevisions
+            setAnnouncedRevisions(nextAnnouncedRevisions)
             await refreshNamespace()
           } else if (event.type === 'credentials/reference-updated') {
             const row = descriptorsRef.current.find(candidate => candidate.namespace === 'web-search-deepseek')
@@ -546,14 +551,18 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       if (plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '') {
         const latestRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
         const ref = latestRow === undefined ? undefined : credentialRef(latestRow)
-        if (ref === undefined || ref !== credentialRef(row) || ref !== credentialRef(updated)) {
+        const announcedRevision = announcedRevisionsRef.current[plugin.namespace]
+        if (ref === undefined || latestRow === undefined || ref !== credentialRef(row) || ref !== credentialRef(updated)
+          || (announcedRevision !== undefined && latestRow.revision < announcedRevision)) {
           throw credentialReferenceConflict()
         }
         await actions.credentialsSet(ref, draft.apiKey.trim())
         const result = await readCredential(ref, lifetime.current?.signal)
         const latestRead = credentialRead.current
         const currentRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
-        if (latestRead?.ref !== ref || currentRow === undefined || credentialRef(currentRow) !== ref) {
+        const currentAnnouncedRevision = announcedRevisionsRef.current[plugin.namespace]
+        if (latestRead?.ref !== ref || currentRow === undefined || credentialRef(currentRow) !== ref
+          || (currentAnnouncedRevision !== undefined && currentRow.revision < currentAnnouncedRevision)) {
           throw credentialReferenceConflict()
         }
         if (result.kind === 'failed' || (result.kind === 'read' && !result.info.configured)) {

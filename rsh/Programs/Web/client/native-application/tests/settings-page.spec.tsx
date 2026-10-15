@@ -379,6 +379,60 @@ it('keeps the web-search key draft when its reference changes after credential v
   expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
 })
 
+it('keeps the web-search key draft when its announced revision is still unread after verification', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const newer = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  const refresh = new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  let finishVerification!: (result: Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>) => void
+  let keyAReads = 0
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async (refs: readonly string[]) => {
+    if (refs[0] === 'KEY_A') {
+      keyAReads += 1
+      if (keyAReads === 2) return await new Promise<Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>>((resolve) => {
+        finishVerification = resolve
+      })
+      return { KEY_A: { configured: false, writable: true } }
+    }
+    return { KEY_B: { configured: false, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    return describeCount === 1 ? settingsDescription([initial]) : await refresh
+  })
+  actions.settingsEvents = async function* (signal: AbortSignal) {
+    await event
+    if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(keyAReads).toBe(2) })
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await act(async () => { finishVerification({ KEY_A: { configured: true, writable: true } }) })
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(3) })
+  await act(async () => { finishRefresh(settingsDescription([newer])) })
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(credentialsSet).toHaveBeenCalledWith('KEY_A', 'plugin-secret')
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+})
+
 it('shows a Host gap for an absent plugin namespace without a save action', async () => {
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
   actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
