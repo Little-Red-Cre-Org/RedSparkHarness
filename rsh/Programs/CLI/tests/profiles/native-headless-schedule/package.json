@@ -1,0 +1,10 @@
+{
+  "name": "native-headless-schedule-profile",
+  "private": true,
+  "dsh": {
+    "profile": {
+      "runtime": "native",
+      "config": "rsh.profile.json"
+    }
+  }
+}
