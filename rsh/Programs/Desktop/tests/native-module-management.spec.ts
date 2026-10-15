@@ -1,5 +1,5 @@
 /** Native Desktop profile inventory, package operations, and lifecycle outcomes. */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -9,7 +9,10 @@ import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-
 import type { NativeDesktopInstallationId } from '../src/native-module-management.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { expandNativeProfilePresets, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
-import { runtimeFixture } from './runtime-fixture.ts'
+import { prepareNativeClientProfileBundle } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { runtimeFixture, writePackage } from './runtime-fixture.ts'
+
+(globalThis as Record<string, unknown>).__dshDesktopTestPrepareNativeClientProfileBundle = prepareNativeClientProfileBundle
 
 const roots: string[] = []
 
@@ -70,9 +73,10 @@ const initialClientRows: readonly NativeRow[] = [
 function prepareFixture(root: string): { manager: DesktopProjectManager; profile: string } {
   const runtime = join(root, 'resources', 'dsh')
   runtimeFixture(runtime)
-  const clientAssets = dirname(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-native-web-assets/package.json'))
-  symlinkSync(clientAssets, join(runtime, 'node_modules', '@deepseek-ai', 'dsh-native-web-assets'),
-    process.platform === 'win32' ? 'junction' : 'dir')
+  // The runtime's native import bypasses Vitest source aliases.
+  writePackage(join(runtime, 'node_modules'), '@deepseek-ai/dsh-native-web-assets',
+    { exports: { './native-client': './index.js' } },
+    'export const prepareNativeClientProfileBundle = (...args) => globalThis.__dshDesktopTestPrepareNativeClientProfileBundle(...args)')
   const paths = resolveDesktopPaths(join(root, '.dsh'))
   const manager = new DesktopProjectManager(paths, { node: process.execPath, pnpm: writeNativePnpm(root), dsh: runtime })
   return { manager, profile: paths.profile }
