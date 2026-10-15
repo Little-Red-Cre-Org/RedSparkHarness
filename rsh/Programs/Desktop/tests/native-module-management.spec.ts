@@ -11,6 +11,7 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import { expandNativeProfilePresets, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
 import { parseNativeClientProfile, prepareNativeClientProfileBundle } from '@deepseek-ai/dsh-native-web-assets/native-client'
 import { readDesktopRuntime, writeDesktopRuntime } from '../src/runtime-tree.ts'
+import type { DesktopBackendState } from '../src/backend-controller.ts'
 import { runtimeFixture, writePackage } from './runtime-fixture.ts'
 
 (globalThis as Record<string, unknown>).__dshDesktopTestPrepareNativeClientProfileBundle = prepareNativeClientProfileBundle
@@ -626,14 +627,22 @@ it('installs, updates, and removes exact Native packages without losing row conf
     client: readFileSync(join(profile, 'rsh.client.json'), 'utf8'),
   }
   const stopFailureLifecycle = { stop: 0, start: 0 }
+  // DesktopBackendController.stop() reports `starting` before its cleanup can reject.
+  let stopFailureBackend: DesktopBackendState = { phase: 'ready' }
   const stopFailure = await manager.mutateNativeModules({ type: 'toggle', request: {
     expectedRevision: toggled.revision,
     key: { target: 'client', id: brandString<NativeDesktopInstallationId>('optional-client') }, enabled: true,
   } }, {
-    beforeChange: async () => { stopFailureLifecycle.stop += 1; throw new Error('Host stop failed') },
+    beforeChange: async () => {
+      stopFailureLifecycle.stop += 1
+      stopFailureBackend = { phase: 'starting' }
+      throw new Error('Host stop failed')
+    },
     afterChange: async () => { stopFailureLifecycle.start += 1 },
-  }, ready)
-  expect(stopFailure).toMatchObject({ status: 'refused', error: { code: 'host-stop-failed' } })
+  }, () => stopFailureBackend)
+  expect(stopFailure).toMatchObject({
+    status: 'recovery-required', error: { code: 'host-stop-failed', backend: { phase: 'starting' } },
+  })
   expect(stopFailureLifecycle).toEqual({ stop: 1, start: 0 })
   expect(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')).toBe(stopFailureFiles.host)
   expect(readFileSync(join(profile, 'rsh.client.json'), 'utf8')).toBe(stopFailureFiles.client)

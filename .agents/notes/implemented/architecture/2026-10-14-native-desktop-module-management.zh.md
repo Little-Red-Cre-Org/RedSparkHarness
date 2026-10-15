@@ -34,4 +34,4 @@ Native 模块窗口可以管理包版本及 Host 或 Client 安装项，同时�
 
 定向 manager 测试覆盖通过 CLI `pluginInventory` Provider 保留必需项、child 路由可启用与缺少 model Provider 时在停止 Host 前拒绝、保存的 child 配置、preset 派生依赖保留且不写回生成行、过期和忙碌请求、精确包变更、部分包恢复、其他注入的 Host Provider、仅浏览器可用的 Client 入口、optional 依赖循环和更新后的 Host 入口。IPC 测试覆盖打包版管理窗口入口。Client bundle 测试覆盖禁用行的保留和从启用选择中排除。浏览器激活仍需打包版 GUI 验收。
 
-生命周期用例还断言：过期、忙碌、保留行和 fresh-worker 预检拒绝都不停止 Host，两份 profile 文件字节不变；profile 写入和包 pending marker 都等待被挂起的 Host 停止完成；Host 停止失败时不写入任何文件，也不启动替代 Host；`applied` 等待替代 Host 启动完成；启动失败会写回原始 profile 字节、重启之前的 Host，并以 `host-start-failed` 拒绝；重启失败返回 `recovery-required`；包操作失败会恢复 `package.json` 与 `pnpm-lock.yaml`。退出用例断言 Host 关闭会等待进行中的变更，之后的变更以 `busy` 拒绝。移除的证据覆盖已保存配置和生成的 Client bundle，不覆盖已挂载贡献的撤销。
+生命周期用例还断言：过期、忙碌、保留行和 fresh-worker 预检拒绝都不停止 Host，两份 profile 文件字节不变；profile 写入和包 pending marker 都等待被挂起的 Host 停止完成；Host 停止失败时不写入任何文件，也不启动替代 Host，并在后端仍处于 `starting` 时报告 `recovery-required`；`applied` 等待替代 Host 启动完成；启动失败会写回原始 profile 字节、重启之前的 Host，并以 `host-start-failed` 拒绝；重启失败返回 `recovery-required`；包操作失败会恢复 `package.json` 与 `pnpm-lock.yaml`。退出用例断言 Host 关闭会等待进行中的变更，之后的变更以 `busy` 拒绝。移除的证据覆盖已保存配置和生成的 Client bundle，不覆盖已挂载贡献的撤销。

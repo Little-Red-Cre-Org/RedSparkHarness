@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-14-native-desktop-module-management.md
-2026-10-14-native-desktop-module-management.md: ceb90d75afff677532b59de7927dc9c708b4758d
-2026-10-14-native-desktop-module-management.zh.md: 98a94b0fbb9df23c4bcc8e48c35a46621226610e
+2026-10-14-native-desktop-module-management.md: e5a4977f95e17799002d6d8f8c09c963c73c5f24
+2026-10-14-native-desktop-module-management.zh.md: d311bd26c7abc48ec15220246067c9cbc3d70189
