@@ -2,9 +2,10 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
-  NativeScheduleClient, NativeSessionClient, NativeSessionListFrame, NativeSessionListItem,
+  NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
+  NativeSessionListFrame, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -233,6 +234,37 @@ it('installs modular Native navigation, Session selection, details, locale and t
     pick: vi.fn(), list: listDirectory, createDirectory: vi.fn(),
   }
   const close = vi.fn(async () => undefined)
+  const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal) => {
+    signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
+    return promptSettlement.promise
+  })
+  let pendingMessages: NativePendingSubmission[] = []
+  let inboxRevision = 0
+  const pendingSnapshot = (): NativeSubmissionsSnapshot => ({ throughSeq: SessionSeq(inboxRevision), submissions: pendingMessages })
+  const queue = vi.fn<NativeSessionClient['queue']>(async (_id, text, requestId) => {
+    pendingMessages = [...pendingMessages, { requestId, placement: 'queued', status: 'accepted', message: {
+      id: String(requestId) as NativePendingSubmission['message']['id'], role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text }],
+    } }]
+    inboxRevision++
+    return { requestId, placement: 'queued', status: 'accepted' }
+  })
+  const steer = vi.fn<NativeSessionClient['steer']>(async (_id, text, requestId) => {
+    pendingMessages = [...pendingMessages, { requestId, placement: 'steering', status: 'accepted', message: {
+      id: String(requestId) as NativePendingSubmission['message']['id'], role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text }],
+    } }]
+    inboxRevision++
+    return { requestId, placement: 'steering', status: 'accepted' }
+  })
+  const dequeue = vi.fn<NativeSessionClient['dequeue']>(async (_id, requestId) => {
+    pendingMessages = pendingMessages.filter(item => item.requestId !== requestId)
+    inboxRevision++
+  })
+  const promoteSubmission = vi.fn<NativeSessionClient['promoteSubmission']>(async (_id, requestId) => {
+    pendingMessages = pendingMessages.map(item => item.requestId === requestId ? { ...item, placement: 'steering' } : item)
+    inboxRevision++
+    return { requestId, outcome: 'promoted' }
+  })
   const clientMock = {
     close,
     settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [],
@@ -275,6 +307,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
     permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
     selectPermissionPreset: vi.fn(async () => undefined),
     selectPreset: vi.fn(async () => undefined),
+    submissions: vi.fn(async () => pendingSnapshot()),
+    prompt, queue, steer, dequeue, promoteSubmission,
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -349,6 +383,34 @@ it('installs modular Native navigation, Session selection, details, locale and t
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
+
+    const messageInput = screen.getByRole('textbox', { name: 'Message' })
+    fireEvent.change(messageInput, { target: { value: 'Start work' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
+    expect(messageInput).toHaveProperty('disabled', false)
+    expect(messageInput).toHaveProperty('value', '')
+    fireEvent.change(messageInput, { target: { value: 'After this turn' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    const pendingPanel = await screen.findByRole('region', { name: 'Pending messages' })
+    expect(await within(pendingPanel).findByText('After this turn')).toBeTruthy()
+    expect(queue).toHaveBeenCalledWith('session-alpha', 'After this turn', expect.any(String), expect.any(AbortSignal))
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Steer instead' }))
+    expect(await within(pendingPanel).findByText('Next step')).toBeTruthy()
+    expect(promoteSubmission).toHaveBeenCalledWith('session-alpha', pendingMessages[0]!.requestId, expect.any(AbortSignal))
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Remove' }))
+    await waitFor(() => { expect(within(pendingPanel).queryByText('After this turn')).toBeNull() })
+    expect(dequeue).toHaveBeenCalledOnce()
+    fireEvent.change(messageInput, { target: { value: 'Use this direction' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Steer' }))
+    expect(await within(pendingPanel).findByText('Use this direction')).toBeTruthy()
+    expect(steer).toHaveBeenCalledWith('session-alpha', 'Use this direction', expect.any(String), expect.any(AbortSignal))
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Remove' }))
+    await waitFor(() => { expect(within(pendingPanel).queryByText('Use this direction')).toBeNull() })
+    fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
+    promptSettlement.resolve({ exitCode: 0, answer: '' })
+    await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
+    expect(messageInput).toHaveProperty('value', 'Keep this next draft')
 
     fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))
     expect(await screen.findByRole('heading', { name: 'Scheduled tasks' })).toBeTruthy()

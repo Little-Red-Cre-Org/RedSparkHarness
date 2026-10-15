@@ -76,6 +76,9 @@
     },
     {
       "path": "../ui-workflow-run"
+    },
+    {
+      "path": "../../../../Core/util/crypto"
     }
   ]
 }

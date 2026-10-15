@@ -252,3 +252,13 @@
   .composerArea { padding-right: 8px; padding-left: 8px; }
   .empty { padding-right: 12px; padding-left: 12px; }
 }
+
+.inputHint, .pending {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.pending h2 { font-size: 13px; }
+.pending ul { display: grid; gap: 8px; padding: 0; list-style: none; }
+.pending li { padding: 8px; border: 1px solid var(--dsw-alias-line-regular); border-radius: 8px; }
+.pendingText { white-space: pre-wrap; overflow-wrap: anywhere; }
