@@ -75,7 +75,8 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       try {
         const result = await actions.settingsDescribe(request.signal)
         if (lifetime.signal.aborted || request.signal.aborted) return
-        setSettings(result.namespaces.find(row => row.namespace === 'agent-presets') ?? null)
+        const found = result.namespaces.find(row => row.namespace === 'agent-presets') ?? null
+        setSettings(current => current != null && found !== null && current.revision > found.revision ? current : found)
       } catch (failure: unknown) {
         if (lifetime.signal.aborted || request.signal.aborted) return
         setSettingsError(failure instanceof Error ? failure.message : String(failure))
@@ -168,7 +169,8 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
     setSettingsError(null)
     try {
       const result = await actions.settingsMutate('agent-presets', [{ op: 'set', path, value }], settings.revision)
-      setSettings(result)
+      // A settings event may already have read a newer revision; never step back to this write's view.
+      setSettings(current => current != null && current.revision > result.revision ? current : result)
       await reloadRoster.current?.()
     } catch (failure: unknown) {
       setSettingsError(failure instanceof Error ? failure.message : String(failure))
