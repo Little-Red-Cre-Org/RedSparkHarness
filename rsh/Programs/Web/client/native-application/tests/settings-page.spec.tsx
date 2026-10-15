@@ -12,6 +12,7 @@ import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { en, zh } from '../src/locales.ts'
+import { PluginsSection } from '../src/plugins-section.tsx'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 import { PENDING_DEFAULT_KEY, type BusyEnterBehavior } from '../src/pending-default.ts'
 
@@ -149,6 +150,37 @@ it('shows the four native Plugins configuration cards', async () => {
   }
 })
 
+it('keeps every plugin descriptor when another namespace changes during the initial read', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const uiTheme = pluginSettings('ui-theme', 1, { preference: 'system' })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishInitial!: (description: NativeSettingsDescription) => void
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    if (describeCount === 1) return await new Promise<NativeSettingsDescription>((resolve) => { finishInitial = resolve })
+    return settingsDescription([uiTheme, webSearch])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'ui-theme', revision: 1 }
+  }
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(1) })
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+
+  expect(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+  await act(async () => { finishInitial(settingsDescription([uiTheme, webSearch])) })
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+})
+
 it('keeps a staged plugin write fenced to the descriptor revision where editing began', async () => {
   const routeA = { provider: 'provider', model: 'model-a' }
   const routeB = { provider: 'provider', model: 'model-b' }
@@ -249,6 +281,45 @@ it('shows a Host gap for an absent plugin namespace without a save action', asyn
   expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
 })
 
+it('shows refresh pending for a missing namespace and blocks writes past its announced revision', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    if (describeCount === 1) return settingsDescription([webSearch])
+    return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  const save = screen.getByRole('button', { name: en.settingsPluginSave }) as HTMLButtonElement
+  expect(save.disabled).toBe(false)
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  expect(screen.getAllByText(en.settingsPluginRefreshPending).length).toBeGreaterThan(0)
+  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
+  expect(save.disabled).toBe(true)
+
+  await act(async () => { finishRefresh(settingsDescription([pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })])) })
+  await waitFor(() => { expect(save.disabled).toBe(false) })
+})
+
 it('retains the last plugin settings, revision, and credential info when a refresh omits its namespace', async () => {
   const webSearch = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
@@ -269,7 +340,7 @@ it('retains the last plugin settings, revision, and credential info when a refre
   }))
   actions.settingsEvents = async function* () {
     await refresh
-    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 1 }
   }
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 

@@ -175,7 +175,7 @@ function cardDraftIsDirty(plugin: PluginDefinition, row: NativeSettingsDescripto
 }
 
 function PluginCard({
-  plugin, row, loaded, loading, draft, status, saving, credential, credentialLoading, credentialFailed,
+  plugin, row, loaded, loading, announcedRevision, draft, status, saving, credential, credentialLoading, credentialFailed,
   catalog, catalogStatus, catalogPartial,
   t, onDraft, onSave, onDiscard, onRetryCatalog,
 }: {
@@ -183,6 +183,7 @@ function PluginCard({
   row: NativeSettingsDescriptor | undefined
   loaded: boolean
   loading: boolean
+  announcedRevision: number | undefined
   draft: PluginDraft
   status: PluginStatus
   saving: boolean
@@ -217,7 +218,8 @@ function PluginCard({
     : credentialLoading ? 'settingsPluginCredentialLoading'
       : credentialFailed ? 'settingsPluginCredentialLoadFailed' : 'settingsPluginWebSearchApiKeyUnset'
   const keyInvalid = plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '' && !keyWritable
-  const blocked = !dirty || invalid || keyInvalid || saving || row === undefined
+  const revisionUnread = row !== undefined && announcedRevision !== undefined && row.revision < announcedRevision
+  const blocked = !dirty || invalid || keyInvalid || saving || row === undefined || revisionUnread
 
   useEffect(() => {
     if (saving) {
@@ -252,8 +254,11 @@ function PluginCard({
     </button>
     {open ? <div className={css.body}>
       {!loaded ? loading ? <p className={css.notice} role="status">{t('settingsPluginLoading')}</p> : null
-        : row === undefined ? <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
+        : row === undefined ? loading
+          ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p>
+          : <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
           : <>
+            {revisionUnread ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p> : null}
             {plugin.namespace === 'subagent-model-selection' ? <>
               <label className={css.toggleRow}>
                 <span>{t('settingsPluginSubagentToggle')}</span>
@@ -358,6 +363,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [tab, setTab] = useState<'config' | 'inventory'>('config')
   const [descriptors, setDescriptors] = useState<readonly NativeSettingsDescriptor[]>([])
   const descriptorsRef = useRef<readonly NativeSettingsDescriptor[]>([])
+  const [announcedRevisions, setAnnouncedRevisions] = useState<Readonly<Record<string, number>>>({})
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -448,7 +454,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     }
   }, [actions.modelCatalog])
 
-  const refreshNamespace = useCallback(async (namespace?: string): Promise<void> => {
+  const refreshNamespace = useCallback(async (): Promise<void> => {
     const signal = lifetime.current?.signal
     const request = ++settingsRequest.current
     setLoading(true)
@@ -456,14 +462,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     try {
       const description = await actions.settingsDescribe(signal)
       if (signal?.aborted || request !== settingsRequest.current) return
-      if (namespace === undefined) {
-        publishDescriptors(description.namespaces)
-        setLoaded(true)
-      } else {
-        const updated = description.namespaces.find(row => row.namespace === namespace)
-        if (updated !== undefined) publishDescriptors([updated])
-        setLoaded(true)
-      }
+      publishDescriptors(description.namespaces)
+      setLoaded(true)
+      setAnnouncedRevisions(current => Object.fromEntries(Object.entries(current).filter(([namespace, revision]) => {
+        const row = descriptorsRef.current.find(candidate => candidate.namespace === namespace)
+        return row !== undefined && row.revision < revision
+      })))
       setLoadFailed(false)
       const webSearch = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
       if (webSearch === undefined) {
@@ -487,7 +491,11 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       try {
         for await (const event of actions.settingsEvents(controller.signal)) {
           if (event.type === 'settings/document-updated') {
-            await refreshNamespace(event.namespace)
+            setAnnouncedRevisions(current => ({
+              ...current,
+              [event.namespace]: Math.max(current[event.namespace] ?? 0, event.revision),
+            }))
+            await refreshNamespace()
           } else if (event.type === 'credentials/reference-updated') {
             const row = descriptorsRef.current.find(candidate => candidate.namespace === 'web-search-deepseek')
             if (row !== undefined && credentialRef(row) === event.ref) await readCredential(event.ref, controller.signal)
@@ -542,7 +550,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       }
       setDrafts(current => ({ ...current, [plugin.namespace]: emptyDraft() }))
     } catch (cause: unknown) {
-      await refreshNamespace(plugin.namespace)
+      await refreshNamespace()
       setStatuses(current => ({ ...current, [plugin.namespace]: conflictError(cause) ? 'conflict' : 'failed' }))
     } finally {
       setSaving(undefined)
@@ -599,7 +607,8 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
           const row = descriptorByNamespace.get(plugin.namespace)
           const draft = drafts[plugin.namespace] ?? emptyDraft()
           const activeCredentialRef = row === undefined ? undefined : credentialRef(row)
-          return <PluginCard key={plugin.namespace} plugin={plugin} row={row} loaded={loaded} loading={loading} draft={draft}
+          return <PluginCard key={plugin.namespace} plugin={plugin} row={row} loaded={loaded} loading={loading}
+            announcedRevision={announcedRevisions[plugin.namespace]} draft={draft}
             status={statuses[plugin.namespace]} saving={saving === plugin.namespace} credential={credential}
             credentialLoading={activeCredentialRef !== undefined && credentialLoadingRef === activeCredentialRef}
             credentialFailed={credentialFailed}
