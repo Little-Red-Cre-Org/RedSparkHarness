@@ -151,7 +151,7 @@ No invalidation; no authorization state enters a request prefix.
 
 These limits define when this package is a poor fit or needs special care. They are current package constraints, not a task backlog.
 
-- **No flow is resumable** — an attempt lives in the process that started it, so a browser reload during a login abandons it and the human starts over; durable attempts need a store this seam does not have.
+- **Attempts live only in the Host process** — they do not survive a Host restart. On the Native Web path, a browser disconnect or reload leaves the attempt running; the client can rediscover its `attemptId` through the authorization list and resubscribe to replayable frames. The legacy Cordis Web Remote stream is tied to its initiating browser connection, so a disconnect or reload abandons that attempt; durable attempts need a store this seam does not have.
 - **Nothing revokes** — signing out is `ctx.credentials.deleteRecord(key)`, which forgets the local record without telling the issuer; a provider that needs a server-side revoke has no place to declare it.
 - **A key with no flow is inert** — the seam reports what is registered, so a record left by an uninstalled plugin can be deleted but not re-authorized; recognizing that orphan is the caller's job, as it is for `listRecords()`.
 
@@ -163,6 +163,6 @@ These limits define when this package is a poor fit or needs special care. They 
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior, limits, and accepted rationale live in the sections above, the package code, and the linked Agent Note.
 
-The limitations above name the open directions — resumable attempts, server-side revocation, orphaned-record discovery — each needing its own design and store before landing. The invariant companion is the one load-bearing runtime check: settlement must always find the key released, because a wedged key is indistinguishable from a busy one and only a restart frees it.
+The limitations above name the open directions — durable attempts, server-side revocation, orphaned-record discovery — each needing its own design and store before landing. The invariant companion is the one load-bearing runtime check: settlement must always find the key released, because a wedged key is indistinguishable from a busy one and only a restart frees it.
 
 </details>

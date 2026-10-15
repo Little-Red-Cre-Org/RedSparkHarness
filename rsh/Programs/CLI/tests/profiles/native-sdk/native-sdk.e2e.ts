@@ -76,7 +76,7 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 5, method: 'session/prompt',
       params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'audio' }] } })}\n`)
     expect(await receive(frame => frame.id === 5)).toMatchObject({ error: {
-      message: expect.stringContaining('text or encoded raster images') as unknown,
+      message: expect.stringContaining('text, encoded raster images, or staged file receipts') as unknown,
     } })
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt',
       params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'text', text: 'say hello' }] } })}\n`)

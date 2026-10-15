@@ -94,7 +94,7 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
-- 随附 native-web 模板没有常驻预设组合、plan-mode Provider 或 permission-preset Provider；自定义 profile 可以添加。没有可选预设时模式选择器保持禁用；只有 Host 提供相应能力时才显示 Plan 和权限控件。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
+- 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式选择器、Plan 切换和权限选择器。在其他 profile 中，没有可选预设时模式选择器保持禁用；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限选择器。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
 - 其他模型片段呈现仍属于独立工作。
 - 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。
