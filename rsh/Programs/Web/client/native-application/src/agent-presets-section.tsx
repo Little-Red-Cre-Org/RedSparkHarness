@@ -26,7 +26,9 @@ const PRESET_ID = /^[a-z0-9][a-z0-9-]*$/
  */
 export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): ReactNode {
   const [presets, setPresets] = useState<NativeAgentPresetList>()
-  const [settings, setSettings] = useState<NativeSettingsDescriptor | null>()
+  const [settings, setSettings] = useState<NativeSettingsDescriptor>()
+  const [announcedSettingsRevision, setAnnouncedSettingsRevision] = useState(0)
+  const [settingsLoadState, setSettingsLoadState] = useState<'loading' | 'absent' | 'failed' | 'loaded'>('loading')
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [canOpenDirectory, setCanOpenDirectory] = useState(false)
@@ -70,16 +72,21 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       settingsRequest?.abort()
       const request = new AbortController()
       settingsRequest = request
-      setSettings(undefined)
       setSettingsError(null)
       try {
         const result = await actions.settingsDescribe(request.signal)
         if (lifetime.signal.aborted || request.signal.aborted) return
         const found = result.namespaces.find(row => row.namespace === 'agent-presets') ?? null
-        setSettings(current => current != null && found !== null && current.revision > found.revision ? current : found)
+        if (found === null) {
+          setSettingsLoadState('absent')
+        } else {
+          setSettings(current => current === undefined || current.revision <= found.revision ? found : current)
+          setSettingsLoadState('loaded')
+        }
       } catch (failure: unknown) {
         if (lifetime.signal.aborted || request.signal.aborted) return
         setSettingsError(failure instanceof Error ? failure.message : String(failure))
+        setSettingsLoadState('failed')
       }
     }
     reloadRoster.current = loadRoster
@@ -96,6 +103,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
           for await (const event of events) {
             if (event.type === 'agent-presets/updated') void loadRoster()
             if (event.type === 'settings/document-updated' && event.namespace === 'agent-presets') {
+              setAnnouncedSettingsRevision(current => Math.max(current, event.revision))
               void loadSettings()
               void loadRoster()
             }
@@ -115,6 +123,10 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       reloadRoster.current = undefined
     }
   }, [actions.agentPresetsList, actions.agentPresetsCanOpenDirectory, actions.settingsDescribe, actions.settingsEvents])
+
+  const settingsAvailable = settingsLoadState === 'loaded' && settings !== undefined
+    && settings.revision >= announcedSettingsRevision
+  const modeSelectionEnabled = settings?.value.modeSelectionEnabled === true
 
   const openDetails = async (id: string): Promise<void> => {
     detailRequest.current = id
@@ -164,13 +176,13 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   }
 
   const writeSetting = async (path: string[], value: string | boolean): Promise<void> => {
-    if (settings === undefined || settings === null || settingsWriting) return
+    if (!settingsAvailable || settingsWriting) return
     setSettingsWriting(true)
     setSettingsError(null)
     try {
       const result = await actions.settingsMutate('agent-presets', [{ op: 'set', path, value }], settings.revision)
       // A settings event may already have read a newer revision; never step back to this write's view.
-      setSettings(current => current != null && current.revision > result.revision ? current : result)
+      setSettings(current => current === undefined || current.revision <= result.revision ? result : current)
       await reloadRoster.current?.()
     } catch (failure: unknown) {
       setSettingsError(failure instanceof Error ? failure.message : String(failure))
@@ -196,7 +208,6 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
 
   const statusText = (status: NativeAgentPresetList['presets'][number]['status']): string =>
     t(status === 'ready' ? 'agentPresetsReady' : status === 'needs-migration' ? 'agentPresetsNeedsMigration' : 'agentPresetsBroken')
-  const modeSelectionEnabled = settings?.value.modeSelectionEnabled === true
   const dialogProps = css.dialog === undefined ? {} : { className: css.dialog }
 
   return <section className={css.section}>
@@ -209,13 +220,13 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
           <Tag>{t('agentPresetsBeta')}</Tag>
         </span>
         <p className={css.pickerPreferenceDescription}>{t('agentPresetsShowPickerDescription')}</p>
-        {settings === null ? <p className={css.hostGap}>{t('agentPresetsHostGap')}</p> : null}
+        {settingsLoadState === 'absent' ? <p className={css.hostGap}>{t('agentPresetsHostGap')}</p> : null}
       </div>
       <Switch
         checked={modeSelectionEnabled}
         label={t('agentPresetsShowPicker')}
-        disabled={settings === undefined || settings === null || settingsWriting}
-        title={settings === null ? t('agentPresetsHostGap') : undefined}
+        disabled={!settingsAvailable || settingsWriting}
+        title={settingsLoadState === 'absent' ? t('agentPresetsHostGap') : undefined}
         onChange={(next) => { void writeSetting(['modeSelectionEnabled'], next) }}
       />
     </div>
@@ -237,10 +248,11 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
             {rows.map((preset) => {
               const isDefault = preset.id === presets.default
               const isReady = preset.status === 'ready'
-              const selectionDisabled = settings === undefined || settings === null || !modeSelectionEnabled || settingsWriting
+              const selectionDisabled = !settingsAvailable || !modeSelectionEnabled || settingsWriting
               const selectionLabel = !isReady ? statusText(preset.status)
                 : isDefault ? t('agentPresetsDefault')
-                  : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
+                  : !settingsAvailable ? t('agentPresetsSettingUnavailable')
+                    : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
               const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
               return <li key={preset.id} className={[
                 css.card,
@@ -275,9 +287,9 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
                   <code className={css.cardId}>{preset.id}</code>
                 </button>
                 <div className={css.cardFoot}>
-                  {preset.source !== 'user' && isReady ? <button type="button" className={css.iconButton}
+                  <button type="button" className={css.iconButton}
                     data-tip={t('agentPresetsView')} aria-label={`${t('agentPresetsView')}: ${preset.name}`}
-                    onClick={() => { void openDetails(preset.id) }}><IconBrowseOutline16 /></button> : null}
+                    onClick={() => { void openDetails(preset.id) }}><IconBrowseOutline16 /></button>
                   {preset.source !== 'profile' && isReady ? <button type="button" className={css.iconButton}
                     data-tip={t('agentPresetsDuplicate')} aria-label={`${t('agentPresetsDuplicate')}: ${preset.name}`}
                     onClick={() => { setCopy({ from: preset.id, id: '', name: '', saving: false, error: null }) }}>

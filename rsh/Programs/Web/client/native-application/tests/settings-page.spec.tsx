@@ -155,6 +155,9 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   const queued: NativeSettingsEvent[] = []
   let wake: ((event: NativeSettingsEvent | null) => void) | undefined
   const publish = (event: NativeSettingsEvent): void => {
+    if (event.type === 'settings/document-updated' && event.namespace === 'agent-presets') {
+      agentPresetSettings = { ...agentPresetSettings, revision: event.revision }
+    }
     if (wake === undefined) queued.push(event)
     else {
       const resolve = wake
@@ -174,6 +177,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   }
   const agentPresetsList = vi.fn(async () => roster)
   const settingsMutate = vi.fn(async (_namespace: string, ops: Parameters<NativeSessionClient['settingsMutate']>[1], expectedRevision: number) => {
+    if (expectedRevision !== agentPresetSettings.revision) throw new Error('native/settings-conflict')
     const operation = ops[0]
     if (operation?.op === 'set') {
       agentPresetSettings = {
@@ -216,6 +220,8 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   expect(screen.getByRole('heading', { name: en.agentPresetsBuiltInGroup })).toBeTruthy()
   expect(screen.getByRole('heading', { name: en.agentPresetsCustomGroup })).toBeTruthy()
   expect(screen.getByText('General purpose')).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsView}: Legacy` })).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsView}: Migrating` })).toBeTruthy()
   publish({ type: 'settings/document-updated', namespace: 'agent-presets', revision: 8 })
   await waitFor(() => {
     expect(settingsDescribe).toHaveBeenCalledTimes(3)
@@ -227,7 +233,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Legacy` }))
   await waitFor(() => {
-    expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'legacy' }], 7)
+    expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'legacy' }], 8)
   })
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Standard` }))
   expect(await screen.findByText('{"formatVersion":1,"installations":[]}')).toBeTruthy()
@@ -275,6 +281,7 @@ it.each([
   const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
   expect((modeSwitch as HTMLButtonElement).disabled).toBe(disabled)
   if (hasNamespace) {
+    expect(screen.getByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeTruthy()
     fireEvent.click(modeSwitch)
     await waitFor(() => {
       expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [
@@ -283,9 +290,112 @@ it.each([
     })
   } else {
     expect(screen.getByText(en.agentPresetsHostGap)).toBeTruthy()
-    expect(screen.getByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` }).hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeNull()
     expect(settingsMutate).not.toHaveBeenCalled()
   }
+})
+
+it('blocks Agent settings writes until an announced revision is refreshed', async () => {
+  const settingsAt = (revision: number, modeSelectionEnabled: boolean, defaultPreset: string): NativeSettingsDescriptor => ({
+    namespace: 'agent-presets', schema: {}, value: { default: defaultPreset, modeSelectionEnabled },
+    base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision,
+  })
+  let hostSettings = settingsAt(7, false, 'standard')
+  let releaseEvent: ((event: NativeSettingsEvent | null) => void) | undefined
+  const publish = (revision: number, modeSelectionEnabled: boolean, defaultPreset: string): void => {
+    hostSettings = settingsAt(revision, modeSelectionEnabled, defaultPreset)
+    const release = releaseEvent
+    releaseEvent = undefined
+    release?.({ type: 'settings/document-updated', namespace: 'agent-presets', revision })
+  }
+  const settingsEvents = async function* (signal: AbortSignal): AsyncIterable<NativeSettingsEvent> {
+    while (!signal.aborted) {
+      const event = await new Promise<NativeSettingsEvent | null>((resolve) => {
+        releaseEvent = resolve
+        signal.addEventListener('abort', () => { resolve(null) }, { once: true })
+      })
+      if (event === null) return
+      yield event
+    }
+  }
+  let finishRefresh: ((description: NativeSettingsDescription) => void) | undefined
+  const settingsDescribe = vi.fn(async () => {
+    if (settingsDescribe.mock.calls.length <= 2) return settingsDescription([settingsAt(7, false, 'standard')])
+    if (settingsDescribe.mock.calls.length === 3) return settingsDescription([hostSettings])
+    return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  let finishFirstMutation: (() => void) | undefined
+  const settingsMutate = vi.fn((
+    _namespace: string, ops: Parameters<NativeSessionClient['settingsMutate']>[1], revision: number,
+  ) => {
+    if (revision !== hostSettings.revision) return Promise.reject(new Error('native/settings-conflict'))
+    const operation = ops[0]
+    if (operation?.op === 'set') {
+      hostSettings = {
+        ...hostSettings,
+        value: { ...hostSettings.value, [operation.path[0]!]: operation.value },
+        revision: hostSettings.revision + 1,
+      }
+    }
+    const result = hostSettings
+    if (settingsMutate.mock.calls.length === 1) {
+      return new Promise<NativeSettingsDescriptor>((resolve) => { finishFirstMutation = () => { resolve(result) } })
+    }
+    return Promise.resolve(result)
+  })
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    settingsDescribe,
+    settingsMutate,
+    settingsEvents,
+    agentPresetsList: vi.fn(async () => ({ default: hostSettings.value.default, presets: [
+      { id: 'standard', name: 'Standard', source: 'system' as const, status: 'ready' as const },
+      { id: 'alternate', name: 'Alternate', source: 'system' as const, status: 'ready' as const },
+    ] })),
+    agentPresetRead: vi.fn(), agentPresetCopy: vi.fn(), agentPresetDelete: vi.fn(),
+    agentPresetsCanOpenDirectory: vi.fn(async () => false),
+    agentPresetOpenDirectory: vi.fn(async () => ({ opened: false as const, path: '/tmp' })),
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
+
+  const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
+  await waitFor(() => { expect((modeSwitch as HTMLButtonElement).disabled).toBe(false) })
+  fireEvent.click(modeSwitch)
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledTimes(1) })
+  expect(hostSettings.revision).toBe(8)
+
+  await waitFor(() => { expect(releaseEvent).toBeDefined() })
+  publish(9, false, 'alternate')
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
+  await waitFor(() => {
+    expect(modeSwitch.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('button', { name: `${en.agentPresetsDefault}: Alternate` })).toBeTruthy()
+  })
+
+  await waitFor(() => { expect(releaseEvent).toBeDefined() })
+  publish(10, true, 'alternate')
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(4) })
+  await waitFor(() => { expect(finishRefresh).toBeDefined() })
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+  const standardButton = screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Standard` })
+  expect((standardButton as HTMLButtonElement).disabled).toBe(true)
+
+  expect(finishFirstMutation).toBeDefined()
+  await act(async () => { finishFirstMutation!() })
+  expect(modeSwitch.getAttribute('aria-checked')).toBe('false')
+  expect(screen.getByRole('button', { name: `${en.agentPresetsDefault}: Alternate` })).toBeTruthy()
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+
+  expect(finishRefresh).toBeDefined()
+  await act(async () => { finishRefresh!(settingsDescription([settingsAt(10, true, 'alternate')])) })
+  await waitFor(() => { expect((modeSwitch as HTMLButtonElement).disabled).toBe(false) })
+  expect(modeSwitch.getAttribute('aria-checked')).toBe('true')
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Standard` }))
+  await waitFor(() => {
+    expect(settingsMutate).toHaveBeenLastCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'standard' }], 10)
+  })
+  await waitFor(() => { expect(hostSettings.revision).toBe(11) })
 })
 
 it('keeps the later Agent preset detail when an earlier read finishes last', async () => {
@@ -293,7 +403,7 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
     default: 'standard',
     presets: [
       { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
-      { id: 'legacy', name: 'Legacy', source: 'profile', status: 'ready' },
+      { id: 'legacy', name: 'Legacy', source: 'user', status: 'ready' },
     ],
   }
   const settingsEvents = async function* (signal: AbortSignal): AsyncIterable<NativeSettingsEvent> {
@@ -306,7 +416,7 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
         finishStandard = resolve
       })
     }
-    return { id: 'legacy', name: 'Legacy', source: 'profile' as const, status: 'ready' as const,
+    return { id: 'legacy', name: 'Legacy', source: 'user' as const, status: 'ready' as const,
       content: '{"formatVersion":1,"installations":[{"id":"legacy"}]}' }
   })
   const actions = {
