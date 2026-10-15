@@ -582,28 +582,39 @@ it('keeps the web-search key draft when its announced revision is still unread a
   expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
 })
 
-it('retries a failed web-search credential save from the committed settings revision', async () => {
+it('retries failed credential readback and keeps the draft after a later revision conflict', async () => {
   const initial = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
   }, { maxUses: 5 })
-  const updated = pluginSettings('web-search-deepseek', 2, {
-    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
-  }, { maxUses: 9 })
+  let current = initial
   let configured = false
-  let credentialAttempts = 0
+  let credentialWrites = 0
+  let failReadback = false
+  let settingsWrites = 0
   const credentialsSet = vi.fn(async (_ref: string, _value: string): Promise<void> => {
-    credentialAttempts += 1
-    if (credentialAttempts === 1) throw new Error('Credential write failed.')
+    credentialWrites += 1
     configured = true
+    failReadback = credentialWrites === 1 || credentialWrites === 3
   })
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
-  actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => settingsDescription([current]))
   actions.settingsMutate = vi.fn(async (
-    _namespace: string, _ops: readonly NativeSettingsPathOp[], _expectedRevision: number,
-  ) => updated)
-  actions.credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
-    DEEPSEEK_API_KEY: { configured, writable: true },
-  }))
+    _namespace: string, _ops: readonly NativeSettingsPathOp[], expectedRevision: number,
+  ) => {
+    expect(expectedRevision).toBe(current.revision)
+    settingsWrites += 1
+    const maxUses = settingsWrites === 1 ? 9 : 11
+    current = { ...current, value: { ...current.value, maxUses }, user: { maxUses }, revision: expectedRevision + 1 }
+    return current
+  })
+  actions.credentialsDescribe = vi.fn(async (_refs: readonly string[]) => {
+    if (failReadback) {
+      failReadback = false
+      if (credentialWrites === 3) current = { ...current, value: { ...current.value, maxUses: 12 }, revision: 4 }
+      throw new Error('Credential readback failed.')
+    }
+    return { DEEPSEEK_API_KEY: { configured, writable: true } }
+  })
   actions.credentialsSet = credentialsSet
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
@@ -616,6 +627,7 @@ it('retries a failed web-search credential save from the committed settings revi
   expect(actions.settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
     { op: 'set', path: ['maxUses'], value: 9 },
   ], 1)
+  expect(credentialsSet).toHaveBeenCalledTimes(1)
   expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
   fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
 
@@ -630,6 +642,20 @@ it('retries a failed web-search credential save from the committed settings revi
   fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
   expect(await screen.findByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', '')
   expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '9')
+
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '11' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'second-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  expect(await screen.findByText(en.settingsPluginSaveFailed)).toBeTruthy()
+  expect(current.revision).toBe(4)
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '12')
+  expect(actions.settingsMutate).toHaveBeenCalledTimes(2)
+
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'second-secret')
+  expect(credentialsSet).toHaveBeenCalledTimes(3)
+  expect(actions.settingsMutate).toHaveBeenCalledTimes(2)
 })
 
 it('shows a Host gap for an absent plugin namespace without a save action', async () => {
@@ -793,6 +819,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
       { id: 'legacy', name: 'Legacy', description: 'Older composition', source: 'user', status: 'ready' },
       { id: 'migrating', name: 'Migrating', description: 'Older folder format', source: 'user', status: 'needs-migration' },
       { id: 'damaged', name: 'Damaged', source: 'user', status: 'invalid', problem: 'Composition file is invalid.' },
+      { id: 'profile', name: 'Profile', source: 'profile', status: 'ready' },
     ],
   }
   let agentPresetSettings: NativeSettingsDescriptor = {
@@ -853,8 +880,12 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
     settingsDescribe,
     settingsMutate,
     agentPresetsList,
-    agentPresetRead: vi.fn(async () => ({ id: 'standard', name: 'Standard', source: 'system', status: 'ready',
-      description: 'General purpose', content: '{"formatVersion":1,"installations":[]}' })),
+    agentPresetRead: vi.fn<NativeSessionClient['agentPresetRead']>(async id => id === 'migrating'
+      ? { id, name: 'Migrating', source: 'user', status: 'needs-migration' }
+      : id === 'damaged' ? { id, name: 'Damaged', source: 'user', status: 'invalid' }
+        : id === 'profile' ? { id, name: 'Profile', source: 'profile', status: 'ready' }
+          : { id: 'standard', name: 'Standard', source: 'system', status: 'ready',
+            description: 'General purpose', content: '{"formatVersion":1,"installations":[]}' }),
     agentPresetCopy,
     agentPresetDelete,
     agentPresetsCanOpenDirectory: vi.fn(async () => false),
@@ -885,6 +916,15 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Standard` }))
   expect(await screen.findByText('{"formatVersion":1,"installations":[]}')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: en.close }))
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Migrating` }))
+  expect(await screen.findByText(en.agentPresetsCompositionNeedsMigration)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.close }))
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Damaged` }))
+  expect(await screen.findByText(en.agentPresetsCompositionNeedsRepair)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.close }))
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Profile` }))
+  expect(await screen.findByText(en.agentPresetsNoComposition)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.close }))
 
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsDuplicate}: Standard` }))
   fireEvent.change(screen.getByLabelText(en.agentPresetsIdentifier), { target: { value: 'custom-copy' } })
@@ -902,48 +942,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   expect(agentPresetsList).toHaveBeenCalledTimes(5)
 })
 
-it.each([
-  { hasNamespace: true, disabled: false },
-  { hasNamespace: false, disabled: true },
-])('uses the Host namespace for Agent mode selection when present ($hasNamespace)', async ({ hasNamespace, disabled }) => {
-  const namespace: NativeSettingsDescriptor = {
-    namespace: 'agent-presets', schema: {}, value: { default: 'standard', modeSelectionEnabled: false },
-    base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 12,
-  }
-  const settingsMutate = vi.fn(async () => namespace)
-  const actions = {
-    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
-    settingsDescribe: vi.fn(async () => settingsDescription(hasNamespace ? [namespace] : [])),
-    settingsMutate,
-    agentPresetsList: vi.fn(async () => ({ default: 'standard', presets: [
-      { id: 'standard', name: 'Standard', source: 'system' as const, status: 'ready' as const },
-      { id: 'alternate', name: 'Alternate', source: 'system' as const, status: 'ready' as const },
-    ] })),
-    agentPresetRead: vi.fn(), agentPresetCopy: vi.fn(), agentPresetDelete: vi.fn(),
-    agentPresetsCanOpenDirectory: vi.fn(async () => false),
-    agentPresetOpenDirectory: vi.fn(async () => ({ opened: false as const, path: '/tmp' })),
-  } as unknown as NativeSettingsActions
-  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
-
-  const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
-  expect((modeSwitch as HTMLButtonElement).disabled).toBe(disabled)
-  if (hasNamespace) {
-    expect(screen.getByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeTruthy()
-    fireEvent.click(modeSwitch)
-    await waitFor(() => {
-      expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [
-        { op: 'set', path: ['modeSelectionEnabled'], value: true },
-      ], 12)
-    })
-  } else {
-    expect(screen.getByText(en.agentPresetsHostGap)).toBeTruthy()
-    expect(screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` }).hasAttribute('disabled')).toBe(true)
-    expect(screen.queryByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeNull()
-    expect(settingsMutate).not.toHaveBeenCalled()
-  }
-})
-
-it('blocks Agent settings writes until an announced revision is refreshed', async () => {
+it('distinguishes an absent Agent settings namespace from an unread revision', async () => {
   const settingsAt = (revision: number, modeSelectionEnabled: boolean, defaultPreset: string): NativeSettingsDescriptor => ({
     namespace: 'agent-presets', schema: {}, value: { default: defaultPreset, modeSelectionEnabled },
     base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision,
@@ -966,10 +965,14 @@ it('blocks Agent settings writes until an announced revision is refreshed', asyn
       yield event
     }
   }
+  let finishInitial: ((description: NativeSettingsDescription) => void) | undefined
   let finishRefresh: ((description: NativeSettingsDescription) => void) | undefined
   const settingsDescribe = vi.fn(async () => {
-    if (settingsDescribe.mock.calls.length <= 2) return settingsDescription([settingsAt(7, false, 'standard')])
-    if (settingsDescribe.mock.calls.length === 3) return settingsDescription([hostSettings])
+    if (settingsDescribe.mock.calls.length <= 2) return settingsDescription([])
+    if (settingsDescribe.mock.calls.length === 3) {
+      return await new Promise<NativeSettingsDescription>((resolve) => { finishInitial = resolve })
+    }
+    if (settingsDescribe.mock.calls.length === 4) return settingsDescription([hostSettings])
     return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
   })
   let finishFirstMutation: (() => void) | undefined
@@ -1007,6 +1010,19 @@ it('blocks Agent settings writes until an announced revision is refreshed', asyn
   renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
 
   const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
+  expect(await screen.findByText(en.agentPresetsHostGap)).toBeTruthy()
+  const alternateButton = screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` })
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+  expect((alternateButton as HTMLButtonElement).disabled).toBe(true)
+
+  await waitFor(() => { expect(releaseEvent).toBeDefined() })
+  publish(7, false, 'standard')
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
+  expect(await screen.findByRole('button', { name: `${en.agentPresetsSettingsRefreshing}: Alternate` })).toBeTruthy()
+  expect(screen.queryByText(en.agentPresetsHostGap)).toBeNull()
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+  expect(finishInitial).toBeDefined()
+  await act(async () => { finishInitial!(settingsDescription([settingsAt(7, false, 'standard')])) })
   await waitFor(() => { expect((modeSwitch as HTMLButtonElement).disabled).toBe(false) })
   fireEvent.click(modeSwitch)
   await waitFor(() => { expect(settingsMutate).toHaveBeenCalledTimes(1) })
@@ -1014,7 +1030,7 @@ it('blocks Agent settings writes until an announced revision is refreshed', asyn
 
   await waitFor(() => { expect(releaseEvent).toBeDefined() })
   publish(9, false, 'alternate')
-  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(4) })
   await waitFor(() => {
     expect(modeSwitch.getAttribute('aria-checked')).toBe('false')
     expect(screen.getByRole('button', { name: `${en.agentPresetsDefault}: Alternate` })).toBeTruthy()
@@ -1022,10 +1038,10 @@ it('blocks Agent settings writes until an announced revision is refreshed', asyn
 
   await waitFor(() => { expect(releaseEvent).toBeDefined() })
   publish(10, true, 'alternate')
-  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(4) })
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(5) })
   await waitFor(() => { expect(finishRefresh).toBeDefined() })
   expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
-  const standardButton = screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Standard` })
+  const standardButton = screen.getByRole('button', { name: `${en.agentPresetsSettingsRefreshing}: Standard` })
   expect((standardButton as HTMLButtonElement).disabled).toBe(true)
 
   expect(finishFirstMutation).toBeDefined()

@@ -10,13 +10,13 @@ type PluginInventoryActions = Pick<NativeSessionClient, 'pluginInventoryList'>
 type PluginState = NativePluginInventoryEntry['state']
 
 const STATE_COPY = {
-  planned: { label: 'settingsPluginListPlanned', tone: 'warning' },
-  activating: { label: 'settingsPluginListActivating', tone: 'warning' },
-  ready: { label: 'settingsPluginListReady', tone: 'success' },
-  draining: { label: 'settingsPluginListDraining', tone: 'warning' },
-  failed: { label: 'settingsPluginListFailed', tone: 'danger' },
-  disposed: { label: 'settingsPluginListDisposed', tone: 'neutral' },
-} as const satisfies Record<PluginState, { label: ConversationLocaleKey; tone: TagTone }>
+  planned: { labelKey: 'settingsPluginListPlanned', tone: 'warning' },
+  activating: { labelKey: 'settingsPluginListActivating', tone: 'warning' },
+  ready: { labelKey: 'settingsPluginListReady', tone: 'success' },
+  draining: { labelKey: 'settingsPluginListDraining', tone: 'warning' },
+  failed: { labelKey: 'settingsPluginListFailed', tone: 'danger' },
+  disposed: { labelKey: 'settingsPluginListDisposed', tone: 'neutral' },
+} as const satisfies Record<PluginState, { labelKey: ConversationLocaleKey; tone: TagTone }>
 
 const FAILURE_COPY = {
   activation: 'settingsPluginListFailureActivation',
@@ -24,7 +24,7 @@ const FAILURE_COPY = {
 } as const satisfies Record<NonNullable<NativePluginInventoryEntry['failure']>, ConversationLocaleKey>
 
 function pluginStateLabel(state: PluginState, failure: NativePluginInventoryEntry['failure'], t: Translate): string {
-  const label = t(STATE_COPY[state].label)
+  const label = t(STATE_COPY[state].labelKey)
   return state === 'failed' && failure !== undefined ? `${label} · ${t(FAILURE_COPY[failure])}` : label
 }
 

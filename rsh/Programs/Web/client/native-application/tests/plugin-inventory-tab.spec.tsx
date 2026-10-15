@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { NativePluginInventory, NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import { en } from '../src/locales.ts'
@@ -19,14 +19,29 @@ function renderTab(pluginInventoryList: NativeSessionClient['pluginInventoryList
   return render(<PluginInventoryTab actions={actions} t={key => en[key]} active={active} />)
 }
 
-it('loads on first display and renders scope groups with lifecycle tags', async () => {
-  const pluginInventoryList = vi.fn<NativeSessionClient['pluginInventoryList']>(async () => inventory)
-  const view = renderTab(pluginInventoryList, false)
-  expect(pluginInventoryList).not.toHaveBeenCalled()
+it('loads and protects inventory responses while exposing scope and plugin details', async () => {
+  let finishFirst!: (value: NativePluginInventory) => void
+  const firstRequest = vi.fn<NativeSessionClient['pluginInventoryList']>(() => new Promise((resolve) => {
+    finishFirst = resolve
+  }))
+  const retryRequest = vi.fn<NativeSessionClient['pluginInventoryList']>()
+    .mockRejectedValueOnce(new Error('unavailable'))
+    .mockResolvedValueOnce(inventory)
+  const view = renderTab(firstRequest, false)
+  expect(firstRequest).not.toHaveBeenCalled()
 
-  view.rerender(<PluginInventoryTab actions={{ pluginInventoryList }} t={key => en[key]} active />)
+  view.rerender(<PluginInventoryTab actions={{ pluginInventoryList: firstRequest }} t={key => en[key]} active />)
+  expect(await screen.findByRole('status')).toHaveProperty('textContent', en.settingsPluginListLoading)
+  view.rerender(<PluginInventoryTab actions={{ pluginInventoryList: retryRequest }} t={key => en[key]} active />)
+  fireEvent.click(await screen.findByRole('button', { name: en.settingsPluginListRetry }))
 
   expect(await screen.findByText('alpha')).toBeTruthy()
+  await act(async () => {
+    finishFirst({ entries: [
+      { id: 'stale', name: 'stale-response', scope: 'stale-scope', state: 'ready' },
+    ] })
+  })
+  expect(screen.queryByText('stale-response')).toBeNull()
   expect(screen.getByText('Scope 05b294cc')).toBeTruthy()
   expect(screen.getAllByText(en.settingsPluginListScopeSubtitle, { exact: false })).toHaveLength(2)
   expect(screen.getByText('Scope 734a848e', { exact: false })).toBeTruthy()
@@ -37,6 +52,25 @@ it('loads on first display and renders scope groups with lifecycle tags', async 
   expect(screen.getByText(`${en.settingsPluginListFailed} · ${en.settingsPluginListFailureActivation}`)).toBeTruthy()
   expect(screen.getByText(`${en.settingsPluginListFailed} · ${en.settingsPluginListFailureCleanup}`)).toBeTruthy()
   expect(screen.getByText(en.settingsPluginListDisposed)).toBeTruthy()
+
+  const scopeButton = screen.getByRole('button', { name: /Scope 05b294cc/ })
+  fireEvent.click(scopeButton)
+  expect(scopeButton.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByText('alpha')).toBeNull()
+  fireEvent.click(scopeButton)
+  expect(scopeButton.getAttribute('aria-expanded')).toBe('true')
+  const failedCard = screen.getByText('dsh-client-tool-beta').closest('li')!
+  fireEvent.click(failedCard.querySelector('button')!)
+  expect(within(failedCard).getByText(en.settingsPluginListFailure)).toBeTruthy()
+  expect(within(failedCard).getByText(en.settingsPluginListFailureActivation)).toBeTruthy()
+
+  const emptyRequest = vi.fn<NativeSessionClient['pluginInventoryList']>(async () => ({ entries: [] }))
+  view.rerender(<PluginInventoryTab actions={{ pluginInventoryList: emptyRequest }} t={key => en[key]} active />)
+  expect(await screen.findByText(en.settingsPluginListEmpty)).toBeTruthy()
+  view.rerender(<PluginInventoryTab actions={{ pluginInventoryList: async () => inventory }} t={key => en[key]} active />)
+  expect(await screen.findByText('alpha')).toBeTruthy()
+  fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: 'no match' } })
+  expect(screen.getByText(en.settingsPluginListEmptySearch)).toBeTruthy()
 })
 
 it.each(['CC2EF3A5', 'DSh-CLIENT-TOOL-BETA'])('filters plugin names and ids without case sensitivity: %s', async (query) => {

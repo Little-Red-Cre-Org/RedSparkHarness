@@ -123,7 +123,7 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
     : { usable: false, setup }
 }
 
-function createModelOperations(client: NativeSessionClient): ModelSettingsOperations {
+function createModelOperations(client: NativeSessionClient, t: Translate): ModelSettingsOperations {
   return {
     async describeCredential(ref) {
       try { return (await client.credentialsDescribe([ref]))[ref] }
@@ -139,7 +139,7 @@ function createModelOperations(client: NativeSessionClient): ModelSettingsOperat
     },
     async writeSettings(namespace, ops, expectedRevision) {
       if (expectedRevision === undefined) {
-        return { kind: 'refused', message: `native onboarding: settings revision is unavailable for ${namespace}` }
+        return { kind: 'refused', message: t('onboardingSettingsUnavailable') }
       }
       try {
         const view = await client.settingsMutate(namespace, ops, expectedRevision)
@@ -179,7 +179,7 @@ export function NativeOnboarding({ client, localeService, themeService, children
     const dictionary = locale === 'zh' ? zh : en
     return key => dictionary[key]
   }, [locale])
-  const operations = useMemo(() => createModelOperations(client), [client])
+  const operations = useMemo(() => createModelOperations(client, t), [client, t])
 
   const loadModels = useCallback(async (signal: AbortSignal): Promise<void> => {
     setSetupState({ status: 'loading' })
