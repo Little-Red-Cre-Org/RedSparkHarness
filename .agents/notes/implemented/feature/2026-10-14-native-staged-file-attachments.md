@@ -32,4 +32,7 @@ Receipts are process-local, are cleared when the Program closes, and require reu
 
 ## Testing
 
+
+The installed Python wheel smoke replays the canonical staged-files input through public upload, prompt, steer, builtin read, write denial, and cold runtime recovery. It compares exact returned UTF-8 contents and the model-visible handle; its deterministic keyless fixture does not establish provider-backed behavior.
+
 The Native Headless lifecycle regression exercises receipt retention across idle detach and three controlled Session-generation races: initial stat, attachment save, and final stat while delete and same-header restoration occur. The file-read regression exercises root `tool-fs` and captured-external `read_file`, verifies the complete streamed text, and rejects unrelated outside reads and writes.

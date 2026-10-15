@@ -16,6 +16,8 @@ Both carriers execute the same `dsh` grammar and shipped profiles, including the
 
 The closure explicitly carries shared peer providers used by those profiles, including `dsh-plugin-host` for filesystem adapters and `dsh-errors` for the model error constructor.
 
+The executable builder keeps `dsh-tools` as one runtime module instance. It removes nested staged copies only when their package files and declared dependency and peer resolutions match the runtime-root copy; a conflicting copy fails packaging.
+
 ## Python module API
 
 - `bundled_package_dir() -> Path` returns the installed module-data root and verifies its release metadata.

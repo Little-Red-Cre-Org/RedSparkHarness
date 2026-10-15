@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import difflib
+import hashlib
 import importlib
 import importlib.metadata
 import json
@@ -19,6 +21,7 @@ import sysconfig
 import tempfile
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -51,6 +54,14 @@ NATIVE_INBOX_FIRST_TASK = "Start the Native SDK Inbox move fixture."
 NATIVE_INBOX_COLD_TASK = "Restore the Native SDK Inbox Session after a process restart."
 NATIVE_INBOX_FIRST_REPLY = "Native Inbox owner completed."
 NATIVE_INBOX_COLD_REPLY = "Native Inbox Session restored."
+NATIVE_STAGED_FILES_FIRST_TASK = "Read the staged first file and inspect the image."
+NATIVE_STAGED_FILES_SECOND_TASK = "Read the second staged file too."
+NATIVE_STAGED_FILES_COLD_TASK = "Cold-read the first staged file again."
+NATIVE_STAGED_FILES_WRITE_TASK = "Try to overwrite the staged first file using the saved path."
+NATIVE_STAGED_FILES_FIRST_REPLY = "Both uploaded files were read."
+NATIVE_STAGED_FILES_COLD_REPLY = "The restored first file is readable."
+NATIVE_STAGED_FILES_WRITE_REPLY = "The staged file stayed read-only."
+NATIVE_STAGED_FILES_GATE: tuple[threading.Event, threading.Event] | None = None
 NATIVE_SDK_REFERENCES = (
     Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "native-sdk" / "references.json"
 )
@@ -91,6 +102,7 @@ LEGACY_CUSTOM_DISABLED_ROWS = (
     "goal-round-driver",
     "command-goal",
     "plan-mode",
+    "archify",
     "skill",
     "skill-filesystem",
     "tool-fs",
@@ -316,6 +328,15 @@ class MockModelHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("content-length", "0"))
         body = json.loads(self.rfile.read(content_length))
         self.requests.append(body)
+        gate = NATIVE_STAGED_FILES_GATE
+        if gate is not None and any(
+            NATIVE_STAGED_FILES_FIRST_TASK in message_text(message.get("content"))
+            for message in body.get("messages", [])
+            if isinstance(message, dict) and message.get("role") == "user"
+        ):
+            gate[0].set()
+            if not gate[1].wait(timeout=60):
+                raise TimeoutError("installed staged-file turn was not released after upload and steer")
         self.send_response(200)
         self.send_header("content-type", "text/event-stream")
         self.end_headers()
@@ -342,6 +363,9 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
     if latest.get("role") == "tool":
         call_id, tool_name = latest_tool_call(messages)
         tool_text = message_text(latest.get("content"))
+        staged_followup = native_staged_files_tool_followup(call_id, tool_name, tool_text)
+        if staged_followup is not None:
+            return staged_followup
         if call_id == "native-sdk-external-child" and tool_name == "subagent":
             if "Child wrote created.txt." not in tool_text:
                 raise AssertionError(f"external SDK child returned no recorded file result: {tool_text}")
@@ -399,8 +423,22 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         NATIVE_EXTERNAL_OPERATION_COLD_PROMPT,
         NATIVE_INBOX_FIRST_TASK,
         NATIVE_INBOX_COLD_TASK,
+        NATIVE_STAGED_FILES_FIRST_TASK,
+        NATIVE_STAGED_FILES_SECOND_TASK,
+        NATIVE_STAGED_FILES_COLD_TASK,
+        NATIVE_STAGED_FILES_WRITE_TASK,
     }
-    prompt = next(
+    latest_user_prompt = user_prompts[0] if user_prompts else ""
+    staged_prompt = next(
+        (candidate for candidate in (
+            NATIVE_STAGED_FILES_FIRST_TASK,
+            NATIVE_STAGED_FILES_SECOND_TASK,
+            NATIVE_STAGED_FILES_COLD_TASK,
+            NATIVE_STAGED_FILES_WRITE_TASK,
+        ) if candidate in latest_user_prompt),
+        None,
+    )
+    prompt = staged_prompt or next(
         (candidate for candidate in user_prompts if candidate in scenario_prompts),
         message_text(latest.get("content")),
     )
@@ -493,7 +531,46 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         return text_chunks(NATIVE_INBOX_FIRST_REPLY)
     if prompt == NATIVE_INBOX_COLD_TASK:
         return text_chunks(NATIVE_INBOX_COLD_REPLY)
+    if prompt in {NATIVE_STAGED_FILES_FIRST_TASK, NATIVE_STAGED_FILES_SECOND_TASK,
+                  NATIVE_STAGED_FILES_COLD_TASK, NATIVE_STAGED_FILES_WRITE_TASK}:
+        filename = "second.txt" if prompt == NATIVE_STAGED_FILES_SECOND_TASK else "first.txt"
+        handle = native_staged_file_handle(body, filename)
+        if prompt == NATIVE_STAGED_FILES_WRITE_TASK:
+            assert_advertised_tool(body, "write_file")
+            return tool_call_chunks("installed-native-staged-write", "write_file",
+                                    {"path": handle, "content": "must remain denied"})
+        assert_advertised_tool(body, "read_file")
+        call_id = {
+            NATIVE_STAGED_FILES_FIRST_TASK: "installed-native-staged-first-read",
+            NATIVE_STAGED_FILES_SECOND_TASK: "installed-native-staged-second-read",
+            NATIVE_STAGED_FILES_COLD_TASK: "installed-native-staged-cold-read",
+        }[prompt]
+        return tool_call_chunks(call_id, "read_file", {"path": handle})
     return text_chunks(EXPECTED_TEXT)
+
+
+def native_staged_files_tool_followup(call_id: str, tool_name: str,
+                                      tool_text: str) -> list[dict[str, object]] | None:
+    """Verify real installed read_file results and the external-path write denial."""
+    expected_text = {
+        "installed-native-staged-first-read": "First staged attachment: alpha-attachment-bytes",
+        "installed-native-staged-second-read": "Second staged attachment: beta-attachment-bytes",
+        "installed-native-staged-cold-read": "First staged attachment: alpha-attachment-bytes",
+    }
+    expected = expected_text.get(call_id)
+    if expected is not None:
+        if tool_name != "read_file" or expected not in tool_text:
+            raise AssertionError(f"installed staged-file read returned unexpected content: {tool_name}: {tool_text}")
+        if call_id == "installed-native-staged-second-read":
+            return text_chunks(NATIVE_STAGED_FILES_FIRST_REPLY)
+        if call_id == "installed-native-staged-cold-read":
+            return text_chunks(NATIVE_STAGED_FILES_COLD_REPLY)
+        return text_chunks("The first staged file was read.")
+    if call_id == "installed-native-staged-write":
+        if tool_name != "write_file" or "path outside workspace:" not in tool_text:
+            raise AssertionError(f"installed staged-file write was not denied by Native workspace policy: {tool_name}: {tool_text}")
+        return text_chunks(NATIVE_STAGED_FILES_WRITE_REPLY)
+    return None
 
 
 def mcp_tool_followup(
@@ -1144,7 +1221,8 @@ def write_installed_profile_plugin(profile: Path, name: str, source: Path,
 
 
 def write_native_sdk_model_patch(path: Path, cwd: Path, sessions: Path, base_url: str,
-                                 system_prompt: str, extra: list[dict[str, object]] | None = None) -> None:
+                                 system_prompt: str, extra: list[dict[str, object]] | None = None,
+                                 input_modalities: tuple[str, ...] = ("text",)) -> None:
     """Point one shipped Native SDK composition at the keyless model and its isolated Session store."""
     installations: list[dict[str, object]] = [
         {"id": "app", "config": {"systemPrompt": system_prompt, "maxSteps": 4}},
@@ -1154,7 +1232,7 @@ def write_native_sdk_model_patch(path: Path, cwd: Path, sessions: Path, base_url
             "apiKeyEnv": "NATIVE_SDK_FIXTURE_KEY",
             "api": "openai-completions",
             "baseURL": f"{base_url}/v1",
-            "models": [{"id": "fixture-model", "input": ["text"]}],
+            "models": [{"id": "fixture-model", "input": list(input_modalities)}],
         }}}},
     ]
     installations.extend(extra or [])
@@ -1219,13 +1297,274 @@ def native_request_user_texts(request: dict[str, object]) -> list[str]:
             if isinstance(message, dict) and message.get("role") == "user"]
 
 
+def native_staged_file_handle(request: dict[str, object], name: str) -> str:
+    """Extract one file path from the installed runtime's actual model-visible input."""
+    messages = request.get("messages")
+    if not isinstance(messages, list):
+        raise AssertionError("installed Native SDK model request omitted messages")
+    pattern = re.compile(
+        rf'\[File "{re.escape(name)}" \(\d+ bytes, sha256:[0-9a-f]{{8}}\): '
+        r'verbatim read-only copy saved at "([^"]+)"\.'
+    )
+    for message in messages:
+        if not isinstance(message, dict) or message.get("role") != "user":
+            continue
+        match = pattern.search(message_text(message.get("content")))
+        if match is not None:
+            return match.group(1)
+    raise AssertionError(f"installed model input has no staged {name} path")
+
+
+def native_staged_file_refs(records: list[dict[str, object]]) -> dict[str, tuple[str, int]]:
+    """Read user FileBlock identities from one canonical or installed Session log."""
+    files: dict[str, tuple[str, int]] = {}
+    for event in records:
+        data = event.get("data")
+        if event.get("type") != "user/message" or not isinstance(data, dict):
+            continue
+        source = data.get("source")
+        content = data.get("content")
+        if not isinstance(source, dict) or source.get("kind") != "user" or not isinstance(content, list):
+            continue
+        for block in content:
+            attachment = block.get("attachment") if isinstance(block, dict) and block.get("type") == "file" else None
+            if not isinstance(attachment, dict):
+                continue
+            name = attachment.get("name")
+            attachment_id = attachment.get("attachmentId")
+            size = attachment.get("bytes")
+            if not isinstance(name, str) or not isinstance(attachment_id, str) or not isinstance(size, int):
+                raise AssertionError(f"installed Native SDK Session has an invalid FileBlock: {attachment}")
+            value = (attachment_id, size)
+            if name in files and files[name] != value:
+                raise AssertionError(f"Native SDK Session reused {name} with a different attachment identity")
+            files[name] = value
+    return files
+
+
+def native_staged_tool_event(records: list[dict[str, object]], call_id: str) -> dict[str, object]:
+    """Return one durable Native builtin tool-result event by call id."""
+    for event in records:
+        data = event.get("data")
+        if event.get("type") != "tool/result" or not isinstance(data, dict):
+            continue
+        message = data.get("message")
+        source = message.get("source") if isinstance(message, dict) else None
+        if isinstance(source, dict) and source.get("callId") == call_id:
+            return data
+    raise AssertionError(f"Native SDK Session log has no durable result for {call_id}")
+
+
+def native_staged_tool_result(records: list[dict[str, object]], call_id: str) -> dict[str, object]:
+    """Return the result block paired with one Native builtin tool call."""
+    data = native_staged_tool_event(records, call_id)
+    message = data.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    result = next((block for block in content if isinstance(block, dict)
+                   and block.get("type") == "tool-result" and block.get("toolCallId") == call_id), None)         if isinstance(content, list) else None
+    if isinstance(result, dict):
+        return result
+    raise AssertionError(f"Native SDK Session log has no result block for {call_id}")
+
 def smoke_sdk_native(base_url: str, executable: Path) -> None:
-    """Replay the two canonical Native SDK references through installed wheels and cold processes."""
+    """Replay canonical Native SDK references through installed wheels and cold processes."""
     external = read_native_sdk_reference("externalOperation")
     inbox = read_native_sdk_reference("inboxMoved")
+    staged_files = read_native_sdk_reference("stagedFiles")
     smoke_sdk_native_external(base_url, executable, external)
     smoke_sdk_native_inbox(base_url, executable, inbox)
+    smoke_sdk_native_staged_files(base_url, executable, staged_files)
 
+
+def smoke_sdk_native_staged_files(base_url: str, executable: Path,
+                                  reference: dict[str, object]) -> None:
+    """Exercise staged-file receipts, builtin access, denial, and cold recovery in installed wheels."""
+    from deepseek_harness import DeepSeekHarness
+
+    global NATIVE_STAGED_FILES_GATE
+    records = reference["records"]
+    session_path = reference.get("sessionPath")
+    if not isinstance(records, list) or not isinstance(session_path, Path):
+        raise AssertionError("staged-files reference omitted its canonical Session")
+    session_id = str(reference["sessionId"])
+    expected_files = native_staged_file_refs(records)
+    if set(expected_files) != {"first.txt", "second.txt"}:
+        raise AssertionError(f"staged-files canonical reference has unexpected FileBlocks: {expected_files}")
+    scene = session_path.parent
+    first_bytes = (scene / "first.txt").read_bytes()
+    second_bytes = (scene / "second.txt").read_bytes()
+    image_bytes = (scene / "image.png").read_bytes()
+    for name, data in (("first.txt", first_bytes), ("second.txt", second_bytes)):
+        if expected_files[name] != (f"sha256:{hashlib.sha256(data).hexdigest()}", len(data)):
+            raise AssertionError(f"staged-files canonical FileBlock differs from {name}")
+    image_attachments = [
+        block.get("attachment") for event in records if event.get("type") == "user/message"
+        and isinstance(event.get("data"), dict)
+        and isinstance(event["data"].get("source"), dict)
+        and event["data"]["source"].get("kind") == "user"
+        and isinstance(event["data"].get("content"), list)
+        for block in event["data"]["content"]
+        if isinstance(block, dict) and block.get("type") == "image"
+    ]
+    image_identity = f"sha256:{hashlib.sha256(image_bytes).hexdigest()}"
+    if len(image_attachments) != 1 or not isinstance(image_attachments[0], dict) \
+            or image_attachments[0].get("attachmentId") != image_identity \
+            or image_attachments[0].get("mediaType") != "image/png" \
+            or image_attachments[0].get("bytes") != len(image_bytes):
+        raise AssertionError("staged-files canonical Session image differs from image.png")
+    public_texts = [
+        part["text"] for event in records if event.get("type") == "user/message"
+        and isinstance(event.get("data"), dict)
+        and isinstance(event["data"].get("source"), dict)
+        and event["data"]["source"].get("kind") == "user"
+        and isinstance(event["data"].get("content"), list)
+        for part in event["data"]["content"]
+        if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str)
+    ]
+    prompts = (NATIVE_STAGED_FILES_FIRST_TASK, NATIVE_STAGED_FILES_SECOND_TASK,
+               NATIVE_STAGED_FILES_COLD_TASK)
+    if not all(prompt in public_texts for prompt in prompts):
+        raise AssertionError(f"staged-files canonical Session omitted its public prompts: {public_texts}")
+    canonical_paths: dict[str, str] = {}
+    for event in native_session_events(records, {"tool/call"}):
+        data = event.get("data")
+        if not isinstance(data, dict) or data.get("name") != "read_file":
+            continue
+        arguments = data.get("arguments")
+        call = json.loads(arguments) if isinstance(arguments, str) else {}
+        path = call.get("path") if isinstance(call, dict) else None
+        if isinstance(path, str) and path.startswith("{{home}}/"):
+            canonical_paths[Path(path).name] = path
+    if set(canonical_paths) != {"first.txt", "second.txt"}:
+        raise AssertionError(f"staged-files canonical Session omitted its read handles: {canonical_paths}")
+
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-staged-files-") as temporary:
+        root = Path(temporary).resolve()
+        home, cwd = root / "home", root / "work"
+        sessions = home / "sessions"
+        cwd.mkdir(parents=True)
+        initialize_installed_native_profile(executable, home, cwd, [])
+        patch = root / "native.patch.json"
+        write_native_sdk_model_patch(patch, cwd, sessions, base_url,
+                                     "Verify installed Native SDK staged-file access.",
+                                     input_modalities=("text", "image"))
+        request_offset = len(MockModelHandler.requests)
+        started, release = threading.Event(), threading.Event()
+        NATIVE_STAGED_FILES_GATE = (started, release)
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor, DeepSeekHarness(
+                provider="fixture", model="fixture-model", cwd=str(cwd), dsh_home=str(home),
+                profile="native-sdk", patches=(str(patch),), allowed_tools=("read_file", "write_file"),
+                workspace_write_root=str(cwd),
+                env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1",
+                     "DSH_PERMISSION_MODE": "workspace-write"},
+                request_timeout_seconds=90,
+            ) as harness:
+                try:
+                    session = harness.start_session(session_id)
+                    first_receipt = session.upload_file(first_bytes, "first.txt")
+                    first_run = executor.submit(session.run, [
+                        {"type": "text", "text": NATIVE_STAGED_FILES_FIRST_TASK},
+                        {"type": "image", "data": base64.b64encode(image_bytes).decode("ascii"),
+                         "mimeType": "image/png"},
+                        {"type": "file", "receiptId": first_receipt.receipt_id},
+                    ])
+                    if not started.wait(timeout=60):
+                        raise AssertionError("installed Native SDK made no model request for the staged first file")
+                    second_receipt = session.upload_file(second_bytes, "second.txt")
+                    if (first_receipt.name, first_receipt.bytes) != ("first.txt", len(first_bytes)) \
+                            or (second_receipt.name, second_receipt.bytes) != ("second.txt", len(second_bytes)):
+                        raise AssertionError("installed Native SDK upload receipts differ from the canonical files")
+                    if not session.steer([
+                        {"type": "text", "text": NATIVE_STAGED_FILES_SECOND_TASK},
+                        {"type": "file", "receiptId": second_receipt.receipt_id},
+                    ]):
+                        raise AssertionError("installed Native SDK returned no durable staged-file steer id")
+                    release.set()
+                    first_result = first_run.result(timeout=90)
+                    denied_result = session.run(NATIVE_STAGED_FILES_WRITE_TASK)
+                    process = harness.client._proc
+                    process_id = None if process is None else process.pid
+                    launch_args = None if process is None else process.args
+                finally:
+                    release.set()
+            if process is None or process.poll() != 0 or not isinstance(launch_args, (list, tuple)) \
+                    or not launch_args or Path(str(launch_args[0])).resolve() != executable.resolve():
+                raise AssertionError("installed staged-file SDK did not exit through the bundled runtime")
+            if first_result.final_response != NATIVE_STAGED_FILES_FIRST_REPLY \
+                    or denied_result.final_response != NATIVE_STAGED_FILES_WRITE_REPLY:
+                raise AssertionError("installed staged-file prompt or write-denial turn did not complete")
+        finally:
+            NATIVE_STAGED_FILES_GATE = None
+
+        cold_result, cold_process_id = run_installed_native_turn(
+            home, cwd, patch, session_id, NATIVE_STAGED_FILES_COLD_TASK, executable,
+        )
+        if cold_result.final_response != NATIVE_STAGED_FILES_COLD_REPLY or process_id == cold_process_id:
+            raise AssertionError("installed staged-file cold recovery did not use a new runtime process")
+        requests = MockModelHandler.requests[request_offset:]
+
+        def request_for(prompt: str) -> dict[str, object]:
+            request = next((body for body in requests if native_request_user_texts(body)
+                            and prompt in native_request_user_texts(body)[-1]), None)
+            if request is None:
+                raise AssertionError(f"installed staged-file model request omitted {prompt!r}")
+            return request
+
+        first_request = request_for(NATIVE_STAGED_FILES_FIRST_TASK)
+        image_data_url = f"data:image/png;base64,{base64.b64encode(image_bytes).decode('ascii')}"
+        if image_data_url not in json.dumps(first_request, ensure_ascii=False):
+            raise AssertionError("installed Native SDK first request omitted the canonical image bytes")
+        first_handle = native_staged_file_handle(first_request, "first.txt")
+        second_handle = native_staged_file_handle(request_for(NATIVE_STAGED_FILES_SECOND_TASK), "second.txt")
+        cold_handle = native_staged_file_handle(request_for(NATIVE_STAGED_FILES_COLD_TASK), "first.txt")
+        write_handle = native_staged_file_handle(request_for(NATIVE_STAGED_FILES_WRITE_TASK), "first.txt")
+        provider_root = (home / "attachments" / "v1" / "files").resolve()
+        if any(not Path(handle).resolve().is_relative_to(provider_root)
+               for handle in (first_handle, second_handle, cold_handle, write_handle)):
+            raise AssertionError("installed model-visible file path escaped the selected AttachmentProvider")
+        expected_first = Path(str(home) + canonical_paths["first.txt"][len("{{home}}"):]).resolve()
+        expected_second = Path(str(home) + canonical_paths["second.txt"][len("{{home}}"):]).resolve()
+        if Path(first_handle).resolve() != expected_first or Path(second_handle).resolve() != expected_second \
+                or cold_handle != first_handle or write_handle != first_handle:
+            raise AssertionError("installed model-visible file handles differ from the canonical Session")
+
+        stored = read_session_logs(sessions).get(session_id)
+        if stored is None or native_staged_file_refs(stored) != expected_files:
+            raise AssertionError("installed Python SDK FileBlocks differ from the staged-files canonical reference")
+        calls = {event["data"].get("callId"): event["data"]
+                 for event in native_session_events(stored, {"tool/call"})
+                 if isinstance(event.get("data"), dict)
+                 and event["data"].get("callId", "").startswith("installed-native-staged-")}
+        expected_calls = {
+            "installed-native-staged-first-read": ("read_file", first_handle),
+            "installed-native-staged-second-read": ("read_file", second_handle),
+            "installed-native-staged-cold-read": ("read_file", first_handle),
+            "installed-native-staged-write": ("write_file", first_handle),
+        }
+        if set(calls) != set(expected_calls):
+            raise AssertionError(f"installed staged-file tool call set differs: {set(calls)}")
+        for call_id, (name, handle) in expected_calls.items():
+            call = calls[call_id]
+            if call.get("name") != name or json.loads(str(call.get("arguments"))).get("path") != handle:
+                raise AssertionError(f"installed tool call did not use its model-visible file handle: {call}")
+        for call_id, expected_bytes in (
+            ("installed-native-staged-first-read", first_bytes),
+            ("installed-native-staged-second-read", second_bytes),
+            ("installed-native-staged-cold-read", first_bytes),
+        ):
+            result = native_staged_tool_result(stored, call_id)
+            if result.get("isError") is not False \
+                    or message_text(result.get("content")) != expected_bytes.decode("utf-8"):
+                raise AssertionError(f"installed read_file did not return exact uploaded bytes: {call_id}: {result}")
+        denied = native_staged_tool_result(stored, "installed-native-staged-write")
+        denial_event = native_staged_tool_event(stored, "installed-native-staged-write")
+        error = denial_event.get("error")
+        if denied.get("isError") is not True or not isinstance(error, dict) \
+                or error.get("code") != "FS_SANDBOX_DENIED" \
+                or "path outside workspace:" not in message_text(denied.get("content")) \
+                or Path(first_handle).read_bytes() != first_bytes:
+            raise AssertionError("installed Native builtin did not deny the outside-workspace staged-file write")
 
 def smoke_sdk_native_external(base_url: str, executable: Path, reference: dict[str, object]) -> None:
     """Drive canonical external-operation facts through the installed Python SDK and runtime."""
@@ -1449,12 +1788,105 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
             request_timeout_seconds=60,
         ) as harness:
             text_result = harness.run("reply with the smoke text", session_id="custom-smoke")
+            assert text_result.final_response == EXPECTED_TEXT, text_result.final_response
             code_result = harness.run(CODE_PROMPT, session_id="custom-smoke")
+            assert code_result.final_response == CODE_WORKER_TEXT, (
+                "custom SDK code-worker response mismatch: " + sdk_run_diagnostic(code_result)
+            )
             workflow_result = harness.run(WORKFLOW_PROMPT, session_id="custom-smoke")
-        assert text_result.final_response == EXPECTED_TEXT, text_result.final_response
-        assert code_result.final_response == CODE_WORKER_TEXT, code_result.final_response
-        assert workflow_result.final_response == WORKFLOW_WORKER_TEXT, workflow_result.final_response
+            assert workflow_result.final_response == WORKFLOW_WORKER_TEXT, workflow_result.final_response
         assert_session_log(sessions, root, EXPECTED_TEXT, CODE_WORKER_TEXT, WORKFLOW_WORKER_TEXT)
+
+
+def sdk_run_diagnostic(result: "RunResult") -> str:
+    """Summarize a failed smoke turn without logging model-provided arguments or content."""
+    def safe_text(value: object) -> str | None:
+        if not isinstance(value, str):
+            return None
+        text = value
+        for fixture_input in (CODE_PROMPT, "return 6 * 7", "Compute the smoke value"):
+            text = text.replace(fixture_input, "<smoke input>")
+        text = re.split(r"\nCaptured output:\n", text, maxsplit=1)[0]
+        text = re.sub(
+            r"(?i)(Bearer\s+|(?:api[_ -]?key|authorization|token|secret|password)\s*[:=]\s*)\S+",
+            r"\1<redacted>",
+            text,
+        )
+        text = re.sub(r"(?i)\bsk-[a-z0-9_-]+\b", "<redacted>", text)
+        return text[:1000]
+
+    def failure(value: object) -> dict[str, object] | None:
+        if not isinstance(value, dict):
+            return None
+        detail = {key: value[key] for key in ("name", "code", "status")
+                  if isinstance(value.get(key), (str, int))}
+        message = safe_text(value.get("message"))
+        if message is not None:
+            detail["message"] = message
+        return detail
+
+    calls: list[dict[str, object]] = []
+    results: list[dict[str, object]] = []
+    attempts: list[dict[str, object]] = []
+    endings: list[dict[str, object]] = []
+    for event in result.events:
+        kind = event.get("type")
+        data = event.get("data")
+        if not isinstance(data, dict):
+            continue
+        if kind == "tool/call":
+            calls.append({"seq": event.get("seq"), "call_id": data.get("callId"), "name": data.get("name")})
+        elif kind == "assistant/attempt":
+            stream = data.get("stream")
+            for record in stream if isinstance(stream, list) else []:
+                chunk = record.get("chunk") if isinstance(record, dict) else None
+                reason = chunk.get("reason") if isinstance(chunk, dict) and chunk.get("type") == "finish" else None
+                if isinstance(reason, dict):
+                    item = {"seq": event.get("seq"), "kind": reason.get("kind")}
+                    detail = failure(reason.get("failure"))
+                    if detail is not None:
+                        item["failure"] = detail
+                    attempts.append(item)
+        elif kind == "tool/result":
+            message = data.get("message")
+            blocks = message.get("content") if isinstance(message, dict) else None
+            block = next((part for part in blocks if isinstance(part, dict)
+                          and part.get("type") == "tool-result"), None) if isinstance(blocks, list) else None
+            is_error = block.get("isError") if isinstance(block, dict) else None
+            item: dict[str, object] = {"seq": event.get("seq"), "is_error": is_error}
+            identity = failure(data.get("error"))
+            if identity is not None:
+                item["error"] = identity
+            content = block.get("content") if isinstance(block, dict) else None
+            if is_error is True and isinstance(content, list):
+                detail = "\n".join(
+                    text for part in content
+                    if isinstance(part, dict) and part.get("type") == "text"
+                    and (text := safe_text(part.get("text"))) is not None
+                )
+                if detail:
+                    item["detail"] = detail[:1000]
+            results.append(item)
+        elif kind == "turn/end":
+            reason = data.get("reason")
+            if isinstance(reason, dict):
+                item = {"seq": event.get("seq"), "kind": reason.get("kind")}
+                detail = failure(reason.get("error"))
+                if detail is not None:
+                    item["error"] = detail
+                endings.append(item)
+    summary = {
+        "final_response": (
+            None if (response := safe_text(result.final_response)) is None else repr(response)
+        ),
+        "finish_reason": result.finish_reason,
+        "events": [{"seq": event.get("seq"), "type": event.get("type")} for event in result.events],
+        "tool_calls": calls,
+        "tool_results": results,
+        "assistant_attempts": attempts,
+        "turn_endings": endings,
+    }
+    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
 
 
 def smoke_sdk_minimal(
@@ -1718,7 +2150,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             {"id": "snapshot-message-feedback", "name": "@deepseek-ai/dsh-message-feedback",
              "config": {"maxNoteBytes": 1024}},
             {"id": "snapshot-feedback-producer", "name": (
-                Path(__file__).resolve().parent.parent / "snapshots/sdk/text-turn/feedback-producer.mjs"
+                Path(__file__).resolve().parents[2] / "snapshots/sdk/text-turn/feedback-producer.mjs"
             ).as_uri()},
         ]}])
         with DeepSeekHarness(

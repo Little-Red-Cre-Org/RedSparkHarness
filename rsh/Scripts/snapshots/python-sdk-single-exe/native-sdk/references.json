@@ -8,5 +8,9 @@
     "sessionId": "sdk-native-inbox-moved",
     "session": "../../../../../snapshots/native-sdk/inbox-moved/session.v3.jsonl",
     "owner": "../../../../../snapshots/native-sdk/inbox-moved/owner.mjs"
+  },
+  "stagedFiles": {
+    "sessionId": "sdk-staged-files",
+    "session": "../../../../../snapshots/native-sdk/staged-files/session.v3.jsonl"
   }
 }
