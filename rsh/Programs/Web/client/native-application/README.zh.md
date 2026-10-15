@@ -32,7 +32,9 @@ kind: "package-reference"
 
 所选 Session 的对话标题栏提供 Trajectory 操作。它使用 controller 当前的事件历史打开共享记录表和时间线，其中包括持久化轮次与消息。它不增加 Host 操作，也不请求更早的历史页面。
 
-Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、基于 Host 已安装 Agent 预设的模式选择器、权限选择器，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。模式选择器在 Host 不允许选择或首轮锁定后会禁用。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。空白 Session 上下文行显示所选 Session 的工作区标签或禁用占位符。切换工作区仍由侧边栏处理。Native 页面不提供命令补全、排队/引导操作或消息反馈。
+Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、基于 Host 已安装 Agent 预设的模式选择器、权限选择器，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。模式选择器在 Host 不允许选择或首轮锁定后会禁用。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。空白 Session 上下文行显示所选 Session 的工作区标签或禁用占位符。切换工作区仍由侧边栏处理。Native 页面不提供命令补全或消息反馈。
+
+本页面拥有运行中轮次时，Composer 可继续输入文字：Enter 或排队将消息加入下一轮，引导将消息加入下一模型步骤，Shift+Enter 换行。待处理消息来自 Host submissions 快照，位于输入框上方，使用紧凑单行预览。右侧依次提供全文展开/折叠、文字编辑、改为引导和删除操作。拖拽排序尚缺 Host 契约，当前不可用。修改保留 requestId，等待 Host 确认后刷新收件箱；失败保留草稿。刷新拒绝旧事件前缀和过期会话选择的响应。轮次结算会保留为后续提交输入的文字。排队和引导暂仅支持文字，使用前需移除所选附件；已提供行内文字编辑，含附件时禁用编辑；侧边栏仍沿用运行中禁止切换会话的限制。
 
 当所选 Session 的已加载历史包含当前 goal 时，composer 堆栈会显示其目标、持久 phase 和已准入轮次进度，包括已完成的 goal。此条带为只读，也不显示进程本地 activation。
 
@@ -92,7 +94,7 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
-- 随附 native-web 模板没有常驻预设组合、plan-mode Provider 或 permission-preset Provider；自定义 profile 可以添加。没有可选预设时模式选择器保持禁用；只有 Host 提供相应能力时才显示 Plan 和权限控件。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
+- 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式选择器、Plan 切换和权限选择器。在其他 profile 中，没有可选预设时模式选择器保持禁用；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限选择器。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
 - 其他模型片段呈现仍属于独立工作。
 - 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑，以及 API 模型以外的 plugin Settings 页面仍属于独立的原生 Client 工作。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

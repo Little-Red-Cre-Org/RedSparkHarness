@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { load as loadYaml } from 'js-yaml'
 import { pathToFileURL } from 'node:url'
 import { afterEach, expect, it } from 'vitest'
 import { createPluginProfile } from '../src/project-manager.ts'
@@ -20,6 +21,25 @@ function fixture() {
   return { root, dsh, runtime, profile }
 }
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
+
+it('keeps profile build approvals explicit while allowing esbuild', () => {
+  const { profile } = fixture()
+  const workspace = loadYaml(readFileSync(join(profile, 'pnpm-workspace.yaml'), 'utf8')) as {
+    readonly strictDepBuilds: boolean
+    readonly allowBuilds: Record<string, boolean>
+  }
+  expect(workspace.strictDepBuilds).toBe(true)
+  expect(workspace.allowBuilds).toEqual({
+    esbuild: true,
+    'node-pty': true,
+    koffi: true,
+    'fs-ext': true,
+    '@deepseek-ai/dsh-subprocess-local': true,
+    '@google/genai': false,
+    protobufjs: false,
+    'node-addon-require-builtin': false,
+  })
+})
 
 it('loads one shared ESM instance from both host and external plugin while keeping ordinary dependencies private', () => {
   const { dsh, runtime, profile } = fixture()

@@ -50,6 +50,147 @@ const nativeChildLaunchers = [
   { package: '@deepseek-ai/dsh-acp-child', service: 'acpChildRuntimeLauncher', plugin: nativeAcpChildRuntimeLauncher },
 ] as const
 
+/** One provider visible to the native CLI profile loader. */
+export interface NativeProfileServiceProvider {
+  /** Scope that owns this Provider. */
+  readonly scope: string
+  /** Services declared by the selected plugin entry. */
+  readonly provides: readonly string[]
+}
+
+/** One selected installation used to derive an SDK or ACP child route. */
+export interface NativeProfileChildRouteProvider {
+  /** Installation identity in the native profile. */
+  readonly id: string
+  /** Selected package name. */
+  readonly plugin: string
+  /** Scope that owns this Provider. */
+  readonly scope: string
+  /** Persisted installation configuration, when present. */
+  readonly config?: unknown
+  /** Services declared by the selected package entry. */
+  readonly provides: readonly string[]
+}
+
+/** One loader-owned Provider added beside selected profile installations. */
+export interface NativeProfileAuxiliaryProvider {
+  /** Stable key used by the loader to retain this request during reload. */
+  readonly key: string
+  /** Profile scope that owns this Provider. */
+  readonly scope: string
+  /** Actual Provider declaration used by native Host planning. */
+  readonly plugin: NativePlugin
+}
+
+/** One profile row that the CLI adds for an SDK or ACP child runtime. */
+export interface NativeProfileChildSupportInstallation {
+  /** Reserved identity assigned by the profile loader. */
+  readonly id: string
+  /** Scope that owns the child and its missing support Provider. */
+  readonly scope: string
+  /** Package selected by the profile loader for the missing service. */
+  readonly plugin: string
+  /** Service the package must provide. */
+  readonly service: 'childConnection' | 'sandbox'
+}
+
+/** Create the root-scoped Provider that exposes the retained Host's read-only inventory.
+ * @param getHost - returns the retained Host whose diagnostics back this inventory.
+ * @returns the exact Provider declaration used by native profile loading.
+ */
+export function createNativePluginInventoryProvider(getHost: () => NativeHost | undefined): NativePlugin {
+  return {
+    apiVersion: 1, name: 'dsh-native-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
+    resolve: () => (context) => {
+      const providerScope = context.scope
+      context.provide('pluginInventory', {
+        list: () => getHost()?.diagnostics() ?? [],
+        packages: (scope): readonly NativePackageInstallation[] => {
+          if (!providerScope.contains(scope)) throw new Error('native profile inventory cannot query an unrelated scope')
+          const ancestry = new Set<string>()
+          for (let current: NativeScope | undefined = scope; current !== undefined; current = current.parent) {
+            ancestry.add(current.id)
+          }
+          return (getHost()?.diagnostics() ?? []).flatMap((diagnostic) => {
+            if (diagnostic.state !== 'ready' || diagnostic.package === undefined || !ancestry.has(diagnostic.scope)) return []
+            return [{ id: diagnostic.id, scope: diagnostic.scope, package: diagnostic.package }]
+          })
+        },
+      })
+    },
+  }
+}
+
+/** Select the SDK or ACP child launcher Providers that native profile loading must add.
+ * @param profile - profile after preset and child-support installation expansion.
+ * @param selected - active Host Providers from selected package entries.
+ * @param disabledProvider - returns a disabled package that blocks the missing child service, if any.
+ * @returns one actual launcher Provider for each child runtime and scope.
+ */
+export function nativeProfileChildRuntimeProviders(profile: NativeProfileConfig,
+  selected: readonly NativeProfileServiceProvider[],
+  disabledProvider: (ancestry: readonly string[], service: string) => string | undefined,
+): readonly NativeProfileAuxiliaryProvider[] {
+  const providers = new Map<string, NativeProfileAuxiliaryProvider>()
+  for (const row of profile.installations) {
+    if (row.disabled === true) continue
+    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
+    if (child === undefined) continue
+    const ancestry = scopeAncestry(profile, row.scope)
+    if (ancestry.some(scope => selected.some(provider => provider.scope === scope && provider.provides.includes(child.service)))) continue
+    const disabledPlugin = disabledProvider(ancestry, child.service)
+    if (disabledPlugin !== undefined) {
+      throw new Error(`native profile disables ${disabledPlugin} in the child scope ancestry but no ${child.service} Provider is available`)
+    }
+    const key = `native-child-runtime-launcher:${child.service}:${row.scope}`
+    providers.set(key, { key, scope: row.scope, plugin: child.plugin })
+  }
+  return [...providers.values()]
+}
+
+/** Select the ordinary support package rows the CLI adds for child runtimes.
+ * @param profile - profile after preset expansion.
+ * @param selected - active Host Providers already selected by the profile.
+ * @param disabledProvider - returns a disabled package that blocks a missing service.
+ * @returns only the scoped support rows absent from each child's visible Provider ancestry.
+ */
+export function nativeProfileChildSupportInstallations(profile: NativeProfileConfig,
+  selected: readonly NativeProfileServiceProvider[],
+  disabledProvider: (ancestry: readonly string[], service: string) => string | undefined,
+): readonly NativeProfileChildSupportInstallation[] {
+  const childScopes = new Set(profile.installations.flatMap((row) => {
+    if (row.disabled === true) return []
+    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
+    if (child === undefined || scopeAncestry(profile, row.scope)
+      .some(scope => selected.some(provider => provider.scope === scope && provider.provides.includes(child.service)))) return []
+    return [row.scope]
+  }))
+  const additions = [
+    { service: 'childConnection', id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local' },
+    { service: 'sandbox', id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local' },
+  ] as const
+  const providers = [...selected]
+  const installations: NativeProfileChildSupportInstallation[] = []
+  for (const scope of childScopes) {
+    const ancestry = scopeAncestry(profile, scope)
+    for (const addition of additions) {
+      if (ancestry.some(parent => providers.some(provider => provider.scope === parent
+        && provider.provides.includes(addition.service)))) continue
+      const disabled = disabledProvider(ancestry, addition.service)
+      if (disabled !== undefined) {
+        throw new Error(`native profile disables ${disabled} in the child scope ancestry but no ${addition.service} Provider is available`)
+      }
+      const id = `native-child-runtime/${scope}/${addition.id}`
+      if (profile.installations.some(row => row.id === id)) {
+        throw new Error(`native profile installation id ${id} is reserved for child runtime support`)
+      }
+      installations.push({ id, scope, plugin: addition.plugin, service: addition.service })
+      providers.push({ scope, provides: [addition.service] })
+    }
+  }
+  return installations
+}
+
 function jsonFile(path: string): unknown {
   try { return JSON.parse(readFileSync(path, 'utf8')) as unknown }
   catch (error) { throw new Error(`native profile cannot read JSON ${path}`, { cause: error }) }
@@ -99,7 +240,14 @@ function scopeAncestry(profile: NativeProfileConfig, scopeId: string): string[] 
   return ancestry
 }
 
-function childProviderRoutes(profile: NativeProfileConfig, selected: SelectedPackage[]): NativeProfileConfig {
+/**
+ * Derive child routes from the nearest visible pi-ai model Provider and validate child admission.
+ * @param profile - selected native composition before child runtime activation.
+ * @param selected - active packages and their declared Provider services.
+ * @returns the profile with route catalogs copied into enabled child installations.
+ */
+export function nativeProfileChildProviderRoutes(profile: NativeProfileConfig,
+  selected: readonly NativeProfileChildRouteProvider[]): NativeProfileConfig {
   const installations = [...profile.installations]
   for (let index = 0; index < installations.length; index += 1) {
     const child = installations[index]
@@ -113,11 +261,11 @@ function childProviderRoutes(profile: NativeProfileConfig, selected: SelectedPac
     }
     const modelProvider = nearestSelectedProvider(selected, scopeAncestry(profile, child.scope), 'model')
     if (modelProvider === undefined) throw new Error(`native profile installation ${child.id} has no visible model Provider`)
-    if (modelProvider.row.plugin !== '@deepseek-ai/dsh-llm-pi-ai') {
-      throw new Error(`native profile installation ${child.id} cannot inherit route config from model Provider ${modelProvider.row.plugin}`)
+    if (modelProvider.plugin !== '@deepseek-ai/dsh-llm-pi-ai') {
+      throw new Error(`native profile installation ${child.id} cannot inherit route config from model Provider ${modelProvider.plugin}`)
     }
-    const providerConfig = typeof modelProvider.row.config === 'object' && modelProvider.row.config !== null && !Array.isArray(modelProvider.row.config)
-      ? modelProvider.row.config as Record<string, unknown> : undefined
+    const providerConfig = typeof modelProvider.config === 'object' && modelProvider.config !== null && !Array.isArray(modelProvider.config)
+      ? modelProvider.config as Record<string, unknown> : undefined
     const providers = typeof providerConfig?.providers === 'object' && providerConfig.providers !== null && !Array.isArray(providerConfig.providers)
       ? providerConfig.providers : undefined
     if (providers === undefined || Object.keys(providers).length === 0) {
@@ -125,54 +273,46 @@ function childProviderRoutes(profile: NativeProfileConfig, selected: SelectedPac
     }
     const updated = { ...child, config: { ...config, providers } }
     installations[index] = updated
-    const selectedChild = selected.find(item => item.row.id === child.id)
-    if (selectedChild !== undefined) selectedChild.row = updated
   }
   return { ...profile, installations }
 }
 
+function childProviderRoutes(profile: NativeProfileConfig, selected: SelectedPackage[]): NativeProfileConfig {
+  const routed = nativeProfileChildProviderRoutes(profile, selected.map(({ row, entry }) => ({
+    id: row.id, plugin: row.plugin, scope: row.scope,
+    ...Object.hasOwn(row, 'config') ? { config: row.config } : {},
+    provides: entry.provides,
+  })))
+  for (const item of selected) {
+    const row = routed.installations.find(installation => installation.id === item.row.id)
+    if (row !== undefined) item.row = row
+  }
+  return routed
+}
+
 function childRuntimeProviders(profile: NativeProfileConfig, selected: SelectedPackage[],
   target: 'host' | 'client', anchors: readonly ReturnType<typeof createRequire>[], roots: readonly string[] | undefined): NativeProfileConfig {
-  const childScopes = new Set(profile.installations.flatMap((row) => {
-    if (row.disabled === true) return []
-    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
-    if (child === undefined || nearestSelectedProvider(selected, scopeAncestry(profile, row.scope), child.service) !== undefined) return []
-    return [row.scope]
-  }))
-  if (childScopes.size === 0) return profile
-  const additions = [
-    { service: 'childConnection', id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local' },
-    { service: 'sandbox', id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local' },
-  ] as const
+  const additions = nativeProfileChildSupportInstallations(profile,
+    selected.map(item => ({ scope: item.row.scope, provides: item.entry.provides })),
+    (ancestry, service) => disabledNativeProvider(profile.installations, ancestry, service, anchors)?.plugin)
+  if (additions.length === 0) return profile
   const installations = [...profile.installations]
-  for (const scope of childScopes) {
-    const ancestry = scopeAncestry(profile, scope)
-    for (const { service, id, plugin } of additions) {
-      if (nearestSelectedProvider(selected, ancestry, service) !== undefined) continue
-      const disabledProvider = disabledNativeProvider(installations, ancestry, service, anchors)
-      if (disabledProvider !== undefined) {
-        throw new Error(`native profile disables ${disabledProvider.plugin} in the child scope ancestry but no ${service} Provider is available`)
-      }
-      const installationId = `native-child-runtime/${scope}/${id}`
-      if (installations.some(row => row.id === installationId)) {
-        throw new Error(`native profile installation id ${installationId} is reserved for child runtime support`)
-      }
-      const row = { id: installationId, plugin, scope }
-      const selectedPackage = selectNativePackage(row, target, anchors, roots)
-      if (!selectedPackage.entry.provides.includes(service)) {
-        throw new Error(`native child runtime package ${plugin} does not provide ${service}`)
-      }
-      installations.push(row)
-      selected.push(selectedPackage)
+  for (const addition of additions) {
+    const row = { id: addition.id, plugin: addition.plugin, scope: addition.scope }
+    const selectedPackage = selectNativePackage(row, target, anchors, roots)
+    if (!selectedPackage.entry.provides.includes(addition.service)) {
+      throw new Error(`native child runtime package ${addition.plugin} does not provide ${addition.service}`)
     }
+    installations.push(row)
+    selected.push(selectedPackage)
   }
   return { ...profile, installations }
 }
 
 function nearestSelectedProvider(
-  selected: readonly SelectedPackage[], ancestry: readonly string[], service: string,
-): SelectedPackage | undefined {
-  return ancestry.map(scope => selected.find(item => item.row.scope === scope && item.entry.provides.includes(service)))
+  selected: readonly NativeProfileChildRouteProvider[], ancestry: readonly string[], service: string,
+): NativeProfileChildRouteProvider | undefined {
+  return ancestry.map(scope => selected.find(item => item.scope === scope && item.provides.includes(service)))
     .find(item => item !== undefined)
 }
 
@@ -395,28 +535,17 @@ export async function loadNativeProfile(options: {
     auxiliaryRequests.set('carrier', request)
     planned.push(request)
   }
-  const childLaunches = new Map<string, { readonly scopeId: string; readonly service: string; readonly plugin: NativePlugin }>()
-  for (const row of profile.installations) {
-    if (row.disabled === true) continue
-    const child = nativeChildLaunchers.find(candidate => candidate.package === row.plugin)
-    if (child !== undefined) childLaunches.set(`${child.service}:${row.scope}`, {
-      scopeId: row.scope, service: child.service, plugin: child.plugin,
-    })
-  }
-  for (const [key, child] of childLaunches) {
-    const ancestry = scopeAncestry(profile, child.scopeId)
-    if (nearestSelectedProvider(selected, ancestry, child.service) !== undefined) continue
-    const disabledProvider = disabledNativeProvider(profile.installations, ancestry, child.service, anchors)
-    if (disabledProvider !== undefined) {
-      throw new Error(`native profile disables ${disabledProvider.plugin} in the child scope ancestry but no ${child.service} Provider is available`)
-    }
-    const scope = scopes.get(child.scopeId)
-    if (scope === undefined) throw new Error(`native profile lost child scope ${child.scopeId}`)
-    const auxiliaryKey = `native-child-runtime-launcher:${key}`
-    const prior = previousState?.auxiliaryRequests.get(auxiliaryKey)
+  const inventory = previousState?.inventory ?? { host: undefined as NativeHost | undefined }
+  const childProviders = nativeProfileChildRuntimeProviders(profile,
+    selected.map(item => ({ scope: item.row.scope, provides: item.entry.provides })),
+    (ancestry, service) => disabledNativeProvider(profile.installations, ancestry, service, anchors)?.plugin)
+  for (const child of childProviders) {
+    const scope = scopes.get(child.scope)
+    if (scope === undefined) throw new Error(`native profile lost child scope ${child.scope}`)
+    const prior = previousState?.auxiliaryRequests.get(child.key)
     const request = prior !== undefined && prior.plugin === child.plugin && prior.scope === scope
       ? prior : { plugin: child.plugin, scope, config: undefined }
-    auxiliaryRequests.set(auxiliaryKey, request)
+    auxiliaryRequests.set(child.key, request)
     planned.push(request)
   }
   if (environment !== undefined) for (const row of profile.scopes) {
@@ -430,7 +559,6 @@ export async function loadNativeProfile(options: {
     auxiliaryRequests.set(key, request)
     planned.push(request)
   }
-  const inventory = previousState?.inventory ?? { host: undefined as NativeHost | undefined }
   if (options.target === 'host') for (const row of profile.scopes) {
     if (row.parent !== undefined) continue
     const scope = scopes.get(row.id)
@@ -438,26 +566,7 @@ export async function loadNativeProfile(options: {
     const key = `plugin-inventory:${row.id}`
     const prior = previousState?.auxiliaryRequests.get(key)
     const request = prior !== undefined && prior.scope === scope ? prior : {
-      plugin: {
-        apiVersion: 1, name: 'dsh-native-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
-        resolve: () => (context) => {
-          const providerScope = context.scope
-          context.provide('pluginInventory', {
-            list: () => inventory.host?.diagnostics() ?? [],
-            packages: (scope): readonly NativePackageInstallation[] => {
-              if (!providerScope.contains(scope)) throw new Error('native profile inventory cannot query an unrelated scope')
-              const ancestry = new Set<string>()
-              for (let current: NativeScope | undefined = scope; current !== undefined; current = current.parent) {
-                ancestry.add(current.id)
-              }
-              return (inventory.host?.diagnostics() ?? []).flatMap((diagnostic) => {
-                if (diagnostic.state !== 'ready' || diagnostic.package === undefined || !ancestry.has(diagnostic.scope)) return []
-                return [{ id: diagnostic.id, scope: diagnostic.scope, package: diagnostic.package }]
-              })
-            },
-          })
-        },
-      } satisfies NativePlugin,
+      plugin: createNativePluginInventoryProvider(() => inventory.host),
       scope, config: undefined,
     }
     auxiliaryRequests.set(key, request)

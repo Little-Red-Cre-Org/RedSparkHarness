@@ -133,6 +133,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
       planMode: { available: false, active: false } } },
     async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
     async history(id) { return { header: makeHeader(id), events: [seedEvent], inheritedEventCount: 0 } },
   }
   const controller = new NativeConversationController(client, { maxLiveTextChars: 1_000, maxLiveEvents: 100 })
@@ -222,6 +223,188 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     firstSettlement.resolve({ exitCode: 130, answer: '' })
     secondSettlement.resolve({ exitCode: 130, answer: '' })
     thirdSettlement.resolve({ exitCode: 130, answer: '' })
+    await controller.close()
+    await transport.close()
+  }
+})
+
+it('keeps Host inbox acknowledgement and sequence ordering separate from turn settlement and selection', async () => {
+  type Inbox = Awaited<ReturnType<NativeSessionClient['submissions']>>
+  const alpha = 'alpha' as SessionId
+  const beta = 'beta' as SessionId
+  const turn = deferred<{ exitCode: number; answer: string }>()
+  const retryTurn = deferred<{ exitCode: number; answer: string }>()
+  let activeTurn = turn.promise
+  let promptCount = 0
+  let observe: Parameters<NativeSessionClient['prompt']>[4]
+  let inbox: Inbox = { throughSeq: -1, submissions: [] }
+  let durableHistory: SessionEvent[] = []
+  const reads: ReturnType<typeof deferred<Inbox>>[] = []
+  const calls: { id: string; text: string; placement: string }[] = []
+  let delayRead = false
+  let rejectNext = false
+  let holdQueue = false
+  let loseNextQueueAck = false
+  const lateAcknowledgement = deferred<Awaited<ReturnType<NativeSessionClient['queue']>>>()
+  let requestId: Parameters<NativeSessionClient['queue']>[2] | undefined
+  const transport = createNativeSessionClient({ async call() { throw new Error('unexpected transport') } },
+    { maxFollowBufferChars: 10_000 })
+  const client: NativeSessionClient = {
+    ...transport,
+    async *follow() { yield { type: 'baseline', items: [] } },
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async modeControls() { return { current: null, options: [], revision: null, locked: true, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(id) { return { header: makeHeader(id), events: durableHistory, inheritedEventCount: 0 } },
+    async submissions() {
+      if (!delayRead) return inbox
+      const read = deferred<Inbox>()
+      reads.push(read)
+      return read.promise
+    },
+    prompt(_id, text, _resume, signal, next) {
+      promptCount++; if (text === 'retry after settle') expect(controller.getSnapshot().events.at(-1)?.seq).toBe(SessionSeq(13))
+      observe = next
+      signal?.addEventListener('abort', () => { turn.resolve({ exitCode: 130, answer: '' }) }, { once: true })
+      return activeTurn
+    },
+    async queue(_id, text, id) {
+      calls.push({ id, text, placement: 'queued' })
+      requestId = id
+      if (loseNextQueueAck) {
+        loseNextQueueAck = false
+        inbox = { throughSeq: SessionSeq(12), submissions: [{ requestId: id, placement: 'queued', status: 'accepted', message: {
+          id: String(id) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },
+          content: [{ type: 'text', text }],
+        } }] }
+        throw new Error('lost acknowledgement')
+      }
+      if (rejectNext) { rejectNext = false; throw new Error('not accepted') }
+      if (holdQueue) return lateAcknowledgement.promise
+      return { requestId: id, placement: 'queued', status: 'accepted' }
+    },
+    async steer(_id, text, id) {
+      calls.push({ id, text, placement: 'steering' })
+      return { requestId: id, placement: 'steering', status: 'accepted' }
+    },
+  }
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 100 })
+  try {
+    await controller.load()
+    await controller.select(alpha)
+    const sending = controller.send('start')
+    expect(() => controller.create()).toThrow('operation already pending')
+    expect(controller.getSnapshot()).toMatchObject({ selected: alpha, state: 'sending' })
+    rejectNext = true
+    expect(await controller.submitPending('later', 'queued')).toBe(false)
+    expect(controller.getSnapshot()).toMatchObject({ state: 'sending', submissionError: 'not accepted' })
+    expect(await controller.submitPending('later', 'queued')).toBe(true)
+    expect(calls[0]?.id).toBe(calls[1]?.id)
+    expect(requestId).toBeDefined()
+    expect(await controller.submitPending('next step', 'steering')).toBe(true)
+    expect(calls[2]).toMatchObject({ text: 'next step', placement: 'steering' })
+    // The mutation reply never invents a pending message absent from the Host snapshot.
+    expect(controller.getSnapshot().submissions?.submissions).toEqual([])
+
+    delayRead = true
+    observe?.({ type: 'submission-update', requestId: requestId!, status: 'accepted' })
+    observe?.({ type: 'submission-update', requestId: requestId!, status: 'settled' })
+    expect(reads).toHaveLength(2)
+    reads[1]!.resolve({ throughSeq: SessionSeq(9), submissions: [] })
+    await reads[1]!.promise
+    await Promise.resolve()
+    reads[0]!.resolve({ throughSeq: SessionSeq(2), submissions: [] })
+    await reads[0]!.promise
+    await Promise.resolve()
+    expect(controller.getSnapshot().submissions?.throughSeq).toBe(9)
+
+    delayRead = false
+    const pendingId = requestId!
+    inbox = { throughSeq: SessionSeq(10), submissions: [{ requestId: pendingId, placement: 'queued', status: 'accepted', message: {
+      id: String(pendingId) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Still waiting in the last read' }],
+    } }] }
+    holdQueue = true
+    const lateSubmission = controller.submitPending('concurrent settlement', 'queued')
+    expect(controller.getSnapshot().submissionBusy).toBe(true)
+    expect(await controller.submitPending('duplicate click', 'queued')).toBe(false)
+    turn.resolve({ exitCode: 0, answer: '' })
+    await sending
+    expect(controller.getSnapshot().state).toBe('ready')
+    expect(controller.getSnapshot().submissions?.submissions).toHaveLength(1)
+    delayRead = true
+    observe?.({ type: 'submission-update', requestId: pendingId, status: 'settled' })
+    expect(reads).toHaveLength(3)
+    const updatedInbox = deferred<undefined>()
+    const stopObservingInbox = controller.subscribe(() => {
+      if (controller.getSnapshot().submissions?.throughSeq === 11) updatedInbox.resolve(undefined)
+    })
+    try {
+      reads[2]!.resolve({ throughSeq: SessionSeq(11), submissions: [] })
+      await updatedInbox.promise
+      expect(controller.getSnapshot().submissions).toEqual({ throughSeq: 11, submissions: [] })
+    } finally { stopObservingInbox() }
+    const oldRead = controller.refreshPendingSubmissions()
+    delayRead = false
+    inbox = { throughSeq: -1, submissions: [] }
+    await controller.select(beta)
+    lateAcknowledgement.resolve({ requestId: requestId!, placement: 'queued', status: 'accepted' })
+    expect(await lateSubmission).toBe(true)
+    expect(controller.getSnapshot()).toMatchObject({ selected: beta, state: 'ready', submissionBusy: false })
+    reads[3]!.resolve({ throughSeq: SessionSeq(20), submissions: [] })
+    await oldRead
+    const readCount = reads.length
+    observe?.({ type: 'submission-update', requestId: pendingId, status: 'settled' })
+    expect(reads).toHaveLength(readCount)
+    expect(controller.getSnapshot()).toMatchObject({ selected: beta, state: 'ready', submissions: { throughSeq: -1 } })
+
+    holdQueue = false
+    activeTurn = retryTurn.promise
+    const retryingTurn = controller.send('lost acknowledgement turn')
+    loseNextQueueAck = true
+    const callsBeforeLostAck = calls.length
+    expect(await controller.submitPending('retry after settle', 'queued')).toBe(false)
+    expect(calls).toHaveLength(callsBeforeLostAck + 1)
+    const lostAckRequestId = requestId!
+    retryTurn.resolve({ exitCode: 0, answer: '' })
+    await retryingTurn
+    expect(controller.getSnapshot().state).toBe('ready')
+
+    inbox = { throughSeq: SessionSeq(13), submissions: [] }
+    durableHistory = [{ type: 'user/message', seq: SessionSeq(13), time: 1,
+      data: { id: 'unrelated-request', role: 'user', source: { kind: 'user' },
+        content: [{ type: 'text', text: 'retry after settle' }] }, surfaceOp: 'append' } as unknown as SessionEvent]
+    const promptsBeforeRetry = promptCount
+    delayRead = true
+    const cancellingRetry = controller.send('retry after settle')
+    controller.cancel()
+    delayRead = false
+    reads[4]!.resolve(inbox)
+    await cancellingRetry
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: 'native conversation: user cancelled' })
+    expect(promptCount).toBe(promptsBeforeRetry)
+    const callsBeforeRetry = calls.length
+    delayRead = true
+    const retryingAbsent = controller.send('retry after settle')
+    observe?.({ type: 'submission-update', requestId: lostAckRequestId, status: 'settled' })
+    delayRead = false
+    reads[6]!.resolve(inbox)
+    reads[5]!.resolve(inbox)
+    await retryingAbsent
+    expect(promptCount).toBe(promptsBeforeRetry + 1)
+    expect(calls).toHaveLength(callsBeforeRetry)
+    expect(inbox.submissions).toEqual([])
+    expect(controller.getSnapshot()).toMatchObject({ submissions: { throughSeq: 13, submissions: [] }, submissionError: undefined })
+    expect(controller.getSnapshot().events.some(event => event.seq === SessionSeq(13))).toBe(true)
+    await controller.send('retry after settle')
+    expect(promptCount).toBe(promptsBeforeRetry + 2)
+    expect(calls).toHaveLength(callsBeforeRetry)
+  } finally {
+    lateAcknowledgement.resolve({ requestId: requestId!, placement: 'queued', status: 'accepted' })
+    for (const read of reads) read.resolve({ throughSeq: -1, submissions: [] })
+    turn.resolve({ exitCode: 130, answer: '' })
+    retryTurn.resolve({ exitCode: 130, answer: '' })
     await controller.close()
     await transport.close()
   }
