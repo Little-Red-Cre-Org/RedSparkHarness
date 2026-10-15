@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
+import { PluginInventoryTab } from './plugin-inventory-tab.tsx'
 import css from './plugins-section.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type PluginActions = Pick<NativeSessionClient,
-  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog'>
+  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog' | 'pluginInventoryList'>
 type PluginNamespace = 'shell' | 'agent-loop' | 'subagent-model-selection' | 'web-search-deepseek'
 type ModelRoute = { provider: string; model: string }
 type PluginDraft = {
@@ -566,6 +567,21 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       }
       if (plan.ops.length > 0) {
         updated = await actions.settingsMutate(plugin.namespace, plan.ops, expectedRevision)
+        if (hasApiKeyDraft) {
+          setDrafts((current) => {
+            const currentDraft = current[plugin.namespace] ?? draft
+            return {
+              ...current,
+              [plugin.namespace]: {
+                revision: updated.revision,
+                ...(apiKeyRef === undefined ? {} : { apiKeyRef }),
+                fields: {},
+                clears: new Set(),
+                apiKey: currentDraft.apiKey,
+              },
+            }
+          })
+        }
         if (hasApiKeyDraft && credentialRef(updated) !== apiKeyRef) {
           throw credentialReferenceConflict()
         }
@@ -679,7 +695,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       </ul>
     </div>
     <div id="plugins-inventory-panel" role="tabpanel" aria-labelledby="plugins-inventory-tab" hidden={tab !== 'inventory'} className={css.panel}>
-      <p className={css.notice}>{t('settingsComingSoon')}</p>
+      <PluginInventoryTab actions={actions} t={t} active={tab === 'inventory'} />
     </div>
   </section>
 }
