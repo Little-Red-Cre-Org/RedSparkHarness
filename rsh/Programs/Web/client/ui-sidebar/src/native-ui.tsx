@@ -33,6 +33,7 @@ import type { SidebarPanelMetadata, SidebarRootInjected } from './client/contrac
 import { SidebarRoot } from './client/SidebarRoot.tsx'
 import css from './client/SidebarRoot.module.css'
 import { en as sidebarEn, zh as sidebarZh, type SidebarKey } from './client/locales.ts'
+import { en as nativeSidebarEn, zh as nativeSidebarZh, type NativeSidebarKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -41,72 +42,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-/** Native sidebar copy for legacy workspace and session rows. */
-const zh = {
-  moveWorkspaceUp: '上移工作区 {name}', moveWorkspaceDown: '下移工作区 {name}',
-  moveSessionUp: '上移会话 {name}', moveSessionDown: '下移会话 {name}',
-  sessions: '会话', workspace: '工作区', empty: '暂无会话', loading: '正在读取会话…',
-  scheduleAction: '定时任务', search: '搜索会话', searchAria: '搜索会话', searchPlaceholder: '搜索会话…',
-  'schedule.loading': '正在读取定时任务…', 'schedule.empty': '暂无定时任务。', 'schedule.error': '无法读取定时任务。',
-  'schedule.close': '返回会话', 'schedule.nextRun': '下次执行', 'schedule.noNextRun': '暂无后续执行',
-  'schedule.once': '单次执行：{time}（{zone}）', 'schedule.every': '每 {interval} 执行一次，首次于 {time}（{zone}）',
-  'schedule.hours': '{n} 小时', 'schedule.minutes': '{n} 分钟', 'schedule.seconds': '{n} 秒',
-  'schedule.state.active': '计划中', 'schedule.state.paused': '已暂停', 'schedule.state.failed': '执行失败',
-  sortUpdated: '按最近活动排序', sortManual: '按手动顺序排序', addWorkspace: '新建工作区', workspaceTitle: '工作区名称',
-  viewOptions: '视图选项', groupBy: '分组方式', groupWorkspace: '按工作区', groupFlat: '平铺会话', orderBy: '排序方式',
-  'browser.title': '选择工作区目录', 'browser.home': '主目录', 'browser.newFolder': '新建文件夹', 'browser.folderName': '文件夹名称',
-  'browser.createIn': '在“{name}”中新建文件夹', 'browser.untitledFolder': '未命名文件夹', 'browser.create': '创建',
-  'browser.cancel': '取消', 'browser.open': '打开', 'browser.editPath': '编辑路径', 'browser.loading': '加载中…',
-  'browser.truncated': '文件夹过多，仅显示开头部分。', 'browser.showHidden': '显示隐藏文件',
-  'search.pending': '正在搜索…', 'search.noMatches': '没有匹配的会话', 'search.unavailable': '搜索不可用',
-  renameTitle: '重命名', refreshTitle: '重新生成标题', titleInput: '会话标题', saveTitle: '保存', cancelTitle: '取消',
-  'actions.newSession.aria': '在“{name}”中新建会话', 'actions.session.aria': '会话“{name}”的操作',
-  'actions.workspace.aria': '工作区“{name}”的操作', cancel: '取消', close: '关闭', copy: '复制',
-  'date.ymd': '{y}年{m}月{d}日',
-  'delete.sessionNote': '删除“{name}”？对应的执行历史和提醒会同步隐藏，定时计划不受影响。',
-  'delete.workspace': '删除工作区', 'delete.desc': '将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“未分组”下。',
-  'delete.pending': '正在删除工作区…', 'group.ungrouped': '未分组', 'hover.copied': '已复制',
-  'hover.created': '创建于 {time}', 'menu.archiveSession': '归档会话', 'menu.fork': '分叉会话',
-  'menu.removeSession': '删除会话', rename: '重命名', 'schedule.active': '有活动定时任务', 'session.new': '新会话',
-  'status.completed': '已完成', 'status.idle': '空闲', 'status.planReview': '计划待审', 'status.running': '进行中',
-  'status.subagentsRunning.one': '{n} 个子代理运行中', 'status.subagentsRunning.other': '{n} 个子代理运行中',
-  'status.waitingAnswer': '等待回答', 'status.waitingApproval': '等待审批', 'time.ago': '{t}前',
-  'time.days': '{n}天', 'time.hours': '{n}小时', 'time.minutes': '{n}分钟', 'time.months': '{n}个月',
-  'time.now': '刚刚', 'time.years': '{n}年',
-} as const
-const en = {
-  moveWorkspaceUp: 'Move workspace {name} up', moveWorkspaceDown: 'Move workspace {name} down',
-  moveSessionUp: 'Move session {name} up', moveSessionDown: 'Move session {name} down',
-  sessions: 'Sessions', workspace: 'Workspaces', empty: 'No sessions yet', loading: 'Loading Sessions…',
-  scheduleAction: 'Scheduled tasks', search: 'Search sessions', searchAria: 'Search sessions', searchPlaceholder: 'Search sessions…',
-  'schedule.loading': 'Loading scheduled tasks…', 'schedule.empty': 'No scheduled tasks.', 'schedule.error': 'Could not load scheduled tasks.',
-  'schedule.close': 'Back to conversation', 'schedule.nextRun': 'Next run', 'schedule.noNextRun': 'No upcoming run',
-  'schedule.once': 'Once · {time} ({zone})', 'schedule.every': 'Every {interval} from {time} ({zone})',
-  'schedule.hours': '{n}h', 'schedule.minutes': '{n} min', 'schedule.seconds': '{n}s',
-  'schedule.state.active': 'Scheduled', 'schedule.state.paused': 'Paused', 'schedule.state.failed': 'Failed',
-  sortUpdated: 'Sort by recent activity', sortManual: 'Sort by manual order', addWorkspace: 'New workspace', workspaceTitle: 'Workspace title',
-  viewOptions: 'View options', groupBy: 'Group by', groupWorkspace: 'Workspace', groupFlat: 'Flat list', orderBy: 'Order by',
-  'browser.title': 'Select Workspace Directory', 'browser.home': 'Home', 'browser.newFolder': 'New folder', 'browser.folderName': 'Folder name',
-  'browser.createIn': 'New folder in “{name}”', 'browser.untitledFolder': 'Untitled folder', 'browser.create': 'Create',
-  'browser.cancel': 'Cancel', 'browser.open': 'Open', 'browser.editPath': 'Edit path', 'browser.loading': 'Loading…',
-  'browser.truncated': 'Too many folders to list; only the beginning is shown.', 'browser.showHidden': 'Show hidden files',
-  'search.pending': 'Searching…', 'search.noMatches': 'No matching sessions', 'search.unavailable': 'Search is unavailable',
-  renameTitle: 'Rename', refreshTitle: 'Refresh title', titleInput: 'Session title', saveTitle: 'Save', cancelTitle: 'Cancel',
-  'actions.newSession.aria': 'New session in {name}', 'actions.session.aria': 'Session actions for {name}',
-  'actions.workspace.aria': 'Workspace actions for {name}', cancel: 'Cancel', close: 'Close', copy: 'Copy',
-  'date.ymd': '{y}-{m}-{d}',
-  'delete.sessionNote': 'Delete “{name}”? Its execution history and reminders will also be hidden. Schedules are unaffected.',
-  'delete.workspace': 'Delete workspace', 'delete.desc': 'This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Ungrouped.',
-  'delete.pending': 'Deleting workspace…', 'group.ungrouped': 'Ungrouped', 'hover.copied': 'Copied',
-  'hover.created': 'Created {time}', 'menu.archiveSession': 'Archive session', 'menu.fork': 'Fork session',
-  'menu.removeSession': 'Delete session', rename: 'Rename', 'schedule.active': 'Has active scheduled task', 'session.new': 'New Session',
-  'status.completed': 'Completed', 'status.idle': 'Idle', 'status.planReview': 'Plan awaiting review', 'status.running': 'Running',
-  'status.subagentsRunning.one': '{n} subagent running', 'status.subagentsRunning.other': '{n} subagents running',
-  'status.waitingAnswer': 'Waiting for answer', 'status.waitingApproval': 'Waiting for approval', 'time.ago': '{t} ago',
-  'time.days': '{n}d', 'time.hours': '{n}h', 'time.minutes': '{n}min', 'time.months': '{n}mo',
-  'time.now': 'now', 'time.years': '{n}y',
-} satisfies Record<keyof typeof zh, string>
-type NativeSidebarKey = keyof typeof zh
 type NativeSidebarTranslate = TranslateNS<'nativeSidebar'>
 type NativeSessionId = Parameters<NativeConversationService['select']>[0]
 type NativeWorkspaceId = NativeWorkspace['workspaceId']
@@ -754,7 +689,7 @@ export const plugin: NativePlugin = {
     })()
     context.own(async () => { await workspaceFollow })
     context.own(locale.register('sidebar', { en: sidebarEn, zh: sidebarZh }))
-    context.own(locale.register('nativeSidebar', { en, zh }))
+    context.own(locale.register('nativeSidebar', { en: nativeSidebarEn, zh: nativeSidebarZh }))
 
     const scheduledTasksPanelId = 'scheduled-tasks' as MainPanelId
     context.own(slots.inject('main', () => slots.register({

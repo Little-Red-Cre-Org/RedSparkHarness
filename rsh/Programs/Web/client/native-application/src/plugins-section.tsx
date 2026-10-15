@@ -22,14 +22,14 @@ type PluginDraft = {
 type PluginStatus = 'failed' | 'conflict' | undefined
 type PluginField = {
   name: string
-  label: ConversationLocaleKey
+  labelKey: ConversationLocaleKey
   hint: ConversationLocaleKey
   numeric: boolean
 }
 type PluginDefinition = {
   namespace: PluginNamespace
-  title: ConversationLocaleKey
-  description: ConversationLocaleKey
+  titleKey: ConversationLocaleKey
+  descriptionKey: ConversationLocaleKey
   fields: readonly PluginField[]
 }
 type CredentialInfo = { ref: string; configured: boolean; writable: boolean }
@@ -47,23 +47,23 @@ type Candidate = ModelRoute & {
 const DEFAULT_API_KEY_REF = 'DEEPSEEK_API_KEY'
 const PLUGINS: readonly PluginDefinition[] = [
   {
-    namespace: 'shell', title: 'settingsPluginShellTitle', description: 'settingsPluginShellDescription', fields: [
-      { name: 'timeoutMs', label: 'settingsPluginShellTimeoutMs', hint: 'settingsPluginShellTimeoutMsHint', numeric: true },
-      { name: 'maxOutputBytes', label: 'settingsPluginShellMaxOutputBytes', hint: 'settingsPluginShellMaxOutputBytesHint', numeric: true },
+    namespace: 'shell', titleKey: 'settingsPluginShellTitle', descriptionKey: 'settingsPluginShellDescription', fields: [
+      { name: 'timeoutMs', labelKey: 'settingsPluginShellTimeoutMs', hint: 'settingsPluginShellTimeoutMsHint', numeric: true },
+      { name: 'maxOutputBytes', labelKey: 'settingsPluginShellMaxOutputBytes', hint: 'settingsPluginShellMaxOutputBytesHint', numeric: true },
     ],
   },
   {
-    namespace: 'agent-loop', title: 'settingsPluginAgentLoopTitle', description: 'settingsPluginAgentLoopDescription', fields: [
-      { name: 'maxParallelToolCalls', label: 'settingsPluginAgentLoopMaxParallel', hint: 'settingsPluginAgentLoopMaxParallelHint', numeric: true },
+    namespace: 'agent-loop', titleKey: 'settingsPluginAgentLoopTitle', descriptionKey: 'settingsPluginAgentLoopDescription', fields: [
+      { name: 'maxParallelToolCalls', labelKey: 'settingsPluginAgentLoopMaxParallel', hint: 'settingsPluginAgentLoopMaxParallelHint', numeric: true },
     ],
   },
   {
-    namespace: 'subagent-model-selection', title: 'settingsPluginSubagentTitle', description: 'settingsPluginSubagentDescription', fields: [],
+    namespace: 'subagent-model-selection', titleKey: 'settingsPluginSubagentTitle', descriptionKey: 'settingsPluginSubagentDescription', fields: [],
   },
   {
-    namespace: 'web-search-deepseek', title: 'settingsPluginWebSearchTitle', description: 'settingsPluginWebSearchDescription', fields: [
-      { name: 'baseURL', label: 'settingsPluginWebSearchBaseUrl', hint: 'settingsPluginWebSearchBaseUrlHint', numeric: false },
-      { name: 'maxUses', label: 'settingsPluginWebSearchMaxUses', hint: 'settingsPluginWebSearchMaxUsesHint', numeric: true },
+    namespace: 'web-search-deepseek', titleKey: 'settingsPluginWebSearchTitle', descriptionKey: 'settingsPluginWebSearchDescription', fields: [
+      { name: 'baseURL', labelKey: 'settingsPluginWebSearchBaseUrl', hint: 'settingsPluginWebSearchBaseUrlHint', numeric: false },
+      { name: 'maxUses', labelKey: 'settingsPluginWebSearchMaxUses', hint: 'settingsPluginWebSearchMaxUsesHint', numeric: true },
     ],
   },
 ]
@@ -252,11 +252,11 @@ function PluginCard({
 
   return <li className={`${css.card} ${open ? css.cardOpen : ''}`}>
     <button type="button" className={css.header} aria-expanded={open}
-      aria-label={`${t(open ? 'settingsPluginCollapse' : 'settingsPluginExpand')}: ${t(plugin.title)}`}
+      aria-label={`${t(open ? 'settingsPluginCollapse' : 'settingsPluginExpand')}: ${t(plugin.titleKey)}`}
       onClick={() => { setOpen(!open) }}>
       <span className={css.headText}>
-        <span className={css.name}>{t(plugin.title)}</span>
-        <span className={css.description}>{t(plugin.description)}</span>
+        <span className={css.name}>{t(plugin.titleKey)}</span>
+        <span className={css.description}>{t(plugin.descriptionKey)}</span>
       </span>
       {dirty ? <span className={css.pending}>{t('settingsPluginUnsaved')}</span> : null}
       <span aria-hidden="true" className={`${css.chevron} ${open ? css.chevronOpen : ''}`} />
@@ -320,7 +320,7 @@ function PluginCard({
               const overridden = isClear ? false : hasDraft ? parsed?.kind === 'set' : Object.hasOwn(row.user, field.name)
               return <div key={field.name} className={css.field}>
                 <div className={css.fieldHead}>
-                  <label className={css.label} htmlFor={`${plugin.namespace}-${field.name}`}>{t(field.label)}</label>
+                  <label className={css.label} htmlFor={`${plugin.namespace}-${field.name}`}>{t(field.labelKey)}</label>
                   {overridden ? <span className={css.badges}>
                     <span className={css.override}>{t('settingsPluginOverridden')}</span>
                     <button type="button" className={css.reset} disabled={saving}

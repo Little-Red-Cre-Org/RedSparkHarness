@@ -73,6 +73,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       const request = new AbortController()
       settingsRequest = request
       setSettingsError(null)
+      setSettingsLoadState('loading')
       try {
         const result = await actions.settingsDescribe(request.signal)
         if (lifetime.signal.aborted || request.signal.aborted) return
@@ -251,8 +252,9 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
               const selectionDisabled = !settingsAvailable || !modeSelectionEnabled || settingsWriting
               const selectionLabel = !isReady ? statusText(preset.status)
                 : isDefault ? t('agentPresetsDefault')
-                  : !settingsAvailable ? t('agentPresetsSettingUnavailable')
-                    : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
+                  : settingsLoadState === 'absent' ? t('agentPresetsSettingUnavailable')
+                    : !settingsAvailable ? t('agentPresetsSettingsRefreshing')
+                      : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
               const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
               return <li key={preset.id} className={[
                 css.card,
@@ -327,7 +329,10 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         <p>{t('agentPresetsStatus')}: {statusText(detail.status)}</p>
         {detail.description === undefined ? null : <p>{detail.description}</p>}
         {detail.problem === undefined ? null : <p className={css.problem}>{detail.problem}</p>}
-        {detail.content === undefined ? <p>{t('agentPresetsNoComposition')}</p>
+        {detail.content === undefined ? <p>{t(detail.source === 'profile' && detail.status === 'ready'
+          ? 'agentPresetsNoComposition'
+          : detail.status === 'needs-migration' ? 'agentPresetsCompositionNeedsMigration'
+            : detail.status === 'invalid' ? 'agentPresetsCompositionNeedsRepair' : 'agentPresetsNoCompositionFile')}</p>
           : <pre className={css.composition}><code>{detail.content}</code></pre>}
       </div>}
     </Modal>
