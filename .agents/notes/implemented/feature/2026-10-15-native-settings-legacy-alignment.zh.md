@@ -16,7 +16,7 @@ Native Settings 窗口的「通用」页面显示原始命名空间 JSON，「�
 
 **模型。** 在「订阅模型」区域中，授权行、账户卡片和授权错误使用旧版的紧凑卡片、身份行、额度条和次要按钮样式。`account-card.module.css` 只保留账户特有的规则。「API 模型」区域此前已使用 [Models 页面决策](../architecture/2026-10-11-native-models-settings-page.zh.md) 中的共享提供方编辑器，本次未改动。
 
-**Agent 预设。** [预设列表](2026-10-11-native-web-agent-preset-roster.zh.md) 以旧版卡片呈现，分为内置和自定义两组。当前默认预设的卡片会高亮。损坏或需要迁移的预设显示红色边框和徽标；如果 Host 提供了 `problem` 文本，也会一并显示。模式选择开关写入 `agent-presets.modeSelectionEnabled`。点击一张就绪的卡片会写入 `agent-presets.default`，且仅在启用模式选择时允许。页面保留见到过的最高设置 revision，因此较晚返回的写入响应不会覆盖从设置事件读取到的更新值。预设查看器在其高层表面上重新绑定主题滚动条。
+**Agent 预设。** [预设列表](2026-10-11-native-web-agent-preset-roster.zh.md) 以旧版卡片呈现，分为内置和自定义两组。当前默认预设的卡片会高亮。损坏或需要迁移的预设显示红色边框和徽标；如果 Host 提供了 `problem` 文本，也会一并显示。模式选择开关写入 `agent-presets.modeSelectionEnabled`。点击一张就绪的卡片会写入 `agent-presets.default`，且仅在启用模式选择时允许。Host 未发布 `agent-presets` 时，两个控件都被禁用，卡片提示 Host 尚未开放此设置。刷新时页面继续显示最后收到的设置，只用 revision 相同或更新的结果替换，因此较晚返回的写入响应不会覆盖更新的值。设置事件已宣布页面尚未读取的 revision 时，两个控件保持禁用。无论来源或状态，每个预设都保留「查看」按钮。预设查看器在其高层表面上重新绑定主题滚动条。
 
 ## Alternatives considered
 
@@ -37,4 +37,4 @@ Native 页面在外观上与旧版一致，同时 Host 仍是唯一的持久化�
 
 ## Verification
 
-native-application 中的 `settings-page.spec.tsx` 覆盖：「通用」各行与仅经 Host 的繁忙发送写入、订阅账户卡片的位置，以及预设分组、默认高亮、损坏状态、设置写入和 revision 顺序。
+native-application 中的 `settings-page.spec.tsx` 覆盖：「通用」各行与仅经 Host 的繁忙发送写入、订阅账户卡片的位置，以及预设分组、默认高亮、损坏状态、每个预设的「查看」按钮、设置写入和 revision 顺序（包括在读到更新 revision 之后才到达的写入响应）。
