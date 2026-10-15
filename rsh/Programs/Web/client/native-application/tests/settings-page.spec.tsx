@@ -151,6 +151,25 @@ it('shows the four native Plugins configuration cards', async () => {
   }
 })
 
+it('describes a settings-file apiKey field without exposing its value', async () => {
+  const literal = {
+    ...pluginSettings('web-search-deepseek', 1, { apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5 }),
+    secrets: [{ path: ['apiKey'], set: true }],
+  }
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([literal]))
+  actions.credentialsDescribe = vi.fn(async () => ({ KEY_A: { configured: false, writable: true } }))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+
+  expect(await screen.findByText((_, element) => element?.textContent
+    === `${en.settingsPluginWebSearchApiKeyLiteralField} KEY_A`)).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeyStoredUnset)).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeyLiteralHint)).toBeTruthy()
+  expect(screen.queryByText(en.settingsPluginWebSearchApiKeyUnset)).toBeNull()
+})
+
 it('keeps every plugin descriptor when another namespace changes during the initial read', async () => {
   const webSearch = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
@@ -239,19 +258,21 @@ it('supports arrow, Home, and End keyboard navigation across plugin tabs', async
   expect(document.activeElement).toBe(config)
 })
 
-it('saves web-search settings and its write-only key through Native Host actions', async () => {
+it('saves a no-op web-search mutation and its write-only key through Native Host actions', async () => {
   const initial = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
-  })
+  }, { maxUses: 5 })
   let configured = false
-  const updated = pluginSettings('web-search-deepseek', 2, {
-    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
-  }, { maxUses: 9 })
+  const configuredReads: boolean[] = []
+  const updated = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  }, { maxUses: 5 })
   const settingsMutate = vi.fn(async () => updated)
   const credentialsSet = vi.fn(async () => { configured = true })
-  const credentialsDescribe = vi.fn(async () => ({
-    DEEPSEEK_API_KEY: { configured, writable: true },
-  }))
+  const credentialsDescribe = vi.fn(async () => {
+    configuredReads.push(configured)
+    return { DEEPSEEK_API_KEY: { configured, writable: true } }
+  })
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
   actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
   actions.settingsMutate = settingsMutate
@@ -260,14 +281,70 @@ it('saves web-search settings and its write-only key through Native Host actions
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
   fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
-  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '5.0' } })
   fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
   fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
 
   await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'plugin-secret') })
   expect(settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
-    { op: 'set', path: ['maxUses'], value: 9 },
+    { op: 'set', path: ['maxUses'], value: 5 },
   ], 1)
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Show settings: Web search' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(en.settingsPluginUnsaved)).toBeNull()
+    expect(screen.queryByText(en.settingsPluginSaveFailed)).toBeNull()
+    expect(screen.queryByText(en.settingsPluginConflict)).toBeNull()
+  })
+  expect(configuredReads).toContain(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  expect(await screen.findByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', '')
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+})
+
+it('uses the refreshed credential reference after clearing and retyping the key draft', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const refreshed = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
+    KEY_A: { configured: false, writable: true }, KEY_B: { configured: true, writable: true },
+  }))
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [refreshed])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await waitFor(() => {
+    expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B'])
+  })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: '' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('KEY_B', 'plugin-secret') })
+  expect(actions.settingsMutate).not.toHaveBeenCalled()
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Show settings: Web search' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(en.settingsPluginConflict)).toBeNull()
+  })
 })
 
 it('keeps the web-search key draft when its credential reference changes during save', async () => {
