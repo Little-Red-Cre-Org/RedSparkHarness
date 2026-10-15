@@ -233,13 +233,18 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
   const alpha = 'alpha' as SessionId
   const beta = 'beta' as SessionId
   const turn = deferred<{ exitCode: number; answer: string }>()
+  const retryTurn = deferred<{ exitCode: number; answer: string }>()
+  let activeTurn = turn.promise
+  let promptCount = 0
   let observe: Parameters<NativeSessionClient['prompt']>[4]
   let inbox: Inbox = { throughSeq: -1, submissions: [] }
+  let durableHistory: SessionEvent[] = []
   const reads: ReturnType<typeof deferred<Inbox>>[] = []
   const calls: { id: string; text: string; placement: string }[] = []
   let delayRead = false
   let rejectNext = false
   let holdQueue = false
+  let loseNextQueueAck = false
   const lateAcknowledgement = deferred<Awaited<ReturnType<NativeSessionClient['queue']>>>()
   let requestId: Parameters<NativeSessionClient['queue']>[2] | undefined
   const transport = createNativeSessionClient({ async call() { throw new Error('unexpected transport') } },
@@ -251,21 +256,30 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     async modeControls() { return { current: null, options: [], revision: null, locked: true, canSelect: false,
       planMode: { available: false, active: false } } },
     async permissionControls() { return { available: false, currentValue: null, options: [] } },
-    async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
+    async history(id) { return { header: makeHeader(id), events: durableHistory, inheritedEventCount: 0 } },
     async submissions() {
       if (!delayRead) return inbox
       const read = deferred<Inbox>()
       reads.push(read)
       return read.promise
     },
-    prompt(_id, _text, _resume, signal, next) {
+    prompt(_id, text, _resume, signal, next) {
+      promptCount++; if (text === 'retry after settle') expect(controller.getSnapshot().events.at(-1)?.seq).toBe(SessionSeq(13))
       observe = next
       signal?.addEventListener('abort', () => { turn.resolve({ exitCode: 130, answer: '' }) }, { once: true })
-      return turn.promise
+      return activeTurn
     },
     async queue(_id, text, id) {
       calls.push({ id, text, placement: 'queued' })
       requestId = id
+      if (loseNextQueueAck) {
+        loseNextQueueAck = false
+        inbox = { throughSeq: SessionSeq(12), submissions: [{ requestId: id, placement: 'queued', status: 'accepted', message: {
+          id: String(id) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },
+          content: [{ type: 'text', text }],
+        } }] }
+        throw new Error('lost acknowledgement')
+      }
       if (rejectNext) { rejectNext = false; throw new Error('not accepted') }
       if (holdQueue) return lateAcknowledgement.promise
       return { requestId: id, placement: 'queued', status: 'accepted' }
@@ -344,10 +358,53 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     observe?.({ type: 'submission-update', requestId: pendingId, status: 'settled' })
     expect(reads).toHaveLength(readCount)
     expect(controller.getSnapshot()).toMatchObject({ selected: beta, state: 'ready', submissions: { throughSeq: -1 } })
+
+    holdQueue = false
+    activeTurn = retryTurn.promise
+    const retryingTurn = controller.send('lost acknowledgement turn')
+    loseNextQueueAck = true
+    const callsBeforeLostAck = calls.length
+    expect(await controller.submitPending('retry after settle', 'queued')).toBe(false)
+    expect(calls).toHaveLength(callsBeforeLostAck + 1)
+    const lostAckRequestId = requestId!
+    retryTurn.resolve({ exitCode: 0, answer: '' })
+    await retryingTurn
+    expect(controller.getSnapshot().state).toBe('ready')
+
+    inbox = { throughSeq: SessionSeq(13), submissions: [] }
+    durableHistory = [{ type: 'user/message', seq: SessionSeq(13), time: 1,
+      data: { id: 'unrelated-request', role: 'user', source: { kind: 'user' },
+        content: [{ type: 'text', text: 'retry after settle' }] }, surfaceOp: 'append' } as unknown as SessionEvent]
+    const promptsBeforeRetry = promptCount
+    delayRead = true
+    const cancellingRetry = controller.send('retry after settle')
+    controller.cancel()
+    delayRead = false
+    reads[4]!.resolve(inbox)
+    await cancellingRetry
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: 'native conversation: user cancelled' })
+    expect(promptCount).toBe(promptsBeforeRetry)
+    const callsBeforeRetry = calls.length
+    delayRead = true
+    const retryingAbsent = controller.send('retry after settle')
+    observe?.({ type: 'submission-update', requestId: lostAckRequestId, status: 'settled' })
+    delayRead = false
+    reads[6]!.resolve(inbox)
+    reads[5]!.resolve(inbox)
+    await retryingAbsent
+    expect(promptCount).toBe(promptsBeforeRetry + 1)
+    expect(calls).toHaveLength(callsBeforeRetry)
+    expect(inbox.submissions).toEqual([])
+    expect(controller.getSnapshot()).toMatchObject({ submissions: { throughSeq: 13, submissions: [] }, submissionError: undefined })
+    expect(controller.getSnapshot().events.some(event => event.seq === SessionSeq(13))).toBe(true)
+    await controller.send('retry after settle')
+    expect(promptCount).toBe(promptsBeforeRetry + 2)
+    expect(calls).toHaveLength(callsBeforeRetry)
   } finally {
     lateAcknowledgement.resolve({ requestId: requestId!, placement: 'queued', status: 'accepted' })
     for (const read of reads) read.resolve({ throughSeq: -1, submissions: [] })
     turn.resolve({ exitCode: 130, answer: '' })
+    retryTurn.resolve({ exitCode: 130, answer: '' })
     await controller.close()
     await transport.close()
   }
