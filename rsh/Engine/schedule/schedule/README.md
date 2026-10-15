@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Schedule lets you ask the model for durable reminders that return as ordinary follow-up messages in the same conversation. Create one-time reminders for a delay or absolute time, repeat them at fixed intervals, list pending reminders, and cancel them. Reminders survive restarts, but delivery requires a live root agent: closed sessions keep reminders overdue until resumed. Delivery never uses email, SMS, push, or browser notifications. Enable the Schedule overlay to expose the reminder tools and active-reminder catalog; sidebar alarms are best-effort indicators of known active reminders, not proof that reminder delivery is currently running.
+Schedule delivers durable reminders as ordinary follow-up messages in the same conversation. Create one-time reminders by delay or absolute time, repeat at fixed intervals, list pending reminders, and cancel them. Reminders survive restarts, but delivery needs a live root agent; closed sessions keep reminders overdue until resumed. Schedule does not send email, SMS, push, or browser notifications. Enable the Cordis Schedule overlay to expose reminder tools and the active-reminder catalog, or opt a Native Host profile into its Native entry to expose reminder tools. Sidebar alarms indicate known active reminders but do not confirm that delivery is running.
 
 ## Table of Contents
 
@@ -33,15 +33,25 @@ Choose Schedule when you want reminders delivered as messages in the same live c
 
 ### Enable Schedule
 
-Add the Schedule overlay to a `dsh web` session; the reminder tools then appear in the conversation and the model can use them right away:
+For a Cordis `dsh web` session, add the Schedule overlay; the reminder tools then appear in the conversation:
 
 ```sh
 dsh web --patch rsh/Programs/CLI/config/examples/schedule/cordis.yml
 ```
 
-Success looks like this: ask the model "remind me in 10 minutes to review the PR", and it replies with the reminder's id, its target time, and a `scheduled` state. If storage cannot be confirmed at that moment, the tool reports `persistence_uncertain` and suggests re-listing instead of claiming success.
+Ask the model "remind me in 10 minutes to review the PR"; it replies with the reminder's id, target time, and `scheduled` state. If storage cannot be confirmed at that moment, the tool reports `persistence_uncertain` and suggests re-listing instead of claiming success.
 
-Enable the overlay before starting the session you want reminders in: a session that was already running when the overlay loaded does not have the reminder tools.
+The Cordis overlay installs on root Agents created after it loads. A Native profile can opt in to the separate Native Host entry by adding this installation to its `rsh.profile.json`:
+
+```json
+{
+  "id": "schedules",
+  "plugin": "@deepseek-ai/dsh-schedule",
+  "scope": "root"
+}
+```
+
+The Native profile must provide `activeSessions` and `tools`; omit `config` or use an empty object. Native Schedule attaches to existing and future exact root Session owners, not delegated Agents. Shipped Native profiles remain unchanged.
 
 ### Schedule a reminder
 
@@ -67,7 +77,7 @@ This section explains the design decisions behind the plugin and points at the c
 
 ### Scope and composition
 
-The plugin declares `inject = ['agents', 'sessions', 'tools', 'sessionPersistence']`, so a missing persistence service is a composition error. It observes only `agent/created` events published after it loads, installs on those root Agents, and registers all three tools through the exact `agent.ctx`; Agents already live at load time and runtime children never receive Schedule.
+The package has separate Cordis and Native Host entries. `src/index.ts` keeps the Cordis overlay, requiring its agent, session, tool, and persistence services and installing on root Agents created after it loads. `src/native.ts` requires `activeSessions` and `tools`, attaches to existing and future exact root Session owners, and rejects calls from delegated Agents or another Session. Both entries reuse the same durable event fold and serialized management operations. Neither entry installs on child Agents.
 
 Time-context is not a Schedule dependency. The official Web overlay mounts `@deepseek-ai/dsh-time-context` so the model can interpret natural language in the browser's request-local zone, but the model must still pass an explicit offset or `time_zone` to `schedule_create`; Schedule never imports or infers from model context.
 
@@ -86,10 +96,13 @@ The package rests on one separation and three commitments:
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `inject`, `agent/created` observation, per-root runtime and tool installation |
-| [`src/tools.ts`](src/tools.ts) | Tool definitions, preflight, serialized transactions, closed error union |
-| [`src/domain.ts`](src/domain.ts) | Strict decoding, fold, time validation, framing, occurrence arithmetic |
-| [`src/runtime.ts`](src/runtime.ts) | Live timer owner: maintenance claim, follow-up, dispatch barrier |
+| [`src/index.ts`](src/index.ts) | Cordis overlay entry and root-Agent installation |
+| [`src/native.ts`](src/native.ts) | Native Host entry, exact root-owner attachment, timer projection, and tool scope |
+| [`src/tools.ts`](src/tools.ts) | Cordis tool definitions and adapters to shared operations |
+| [`src/operations.ts`](src/operations.ts) | Shared tool validation, preflight, and durable mutations |
+| [`src/types.ts`](src/types.ts) | Public durable values and management result and error types |
+| [`src/domain.ts`](src/domain.ts) | Strict decoding, fold, due selection, time validation, framing, occurrence arithmetic |
+| [`src/runtime.ts`](src/runtime.ts) | Cordis live timer owner: maintenance claim, follow-up, dispatch barrier |
 | [`src/persistence.ts`](src/persistence.ts) | Schedule-owned use of the shared session durability barrier |
 | [`src/projection.ts`](src/projection.ts) | Optional seed-aware Session projection and strict checkpoint schema |
 | [`src/client.ts`](src/client.ts) | Browser-safe type-only `ScheduleRecord` export |
@@ -112,15 +125,15 @@ Calendar normalization is deterministic. Local times inside a daylight-saving ga
 
 ### Management pipeline
 
-One Agent-scoped queue serializes each accepted management transaction with the live owner's due transaction from preflight through any post-append barrier. `schedule_create` checkpoints, allocates a never-reused id, appends the create event, and checkpoints again; a cancelled caller stops before append. Every successful management preflight also asks the live owner to recompute, which recovers a retained create or delete batch after a previous post-append barrier returned `persistence_uncertain`.
+One Agent-scoped queue serializes each accepted management transaction with the live owner's due transaction from preflight through any post-append barrier. `schedule_create` checkpoints, allocates a never-reused id, appends the create event, and checkpoints again; a cancelled caller stops before append. Every successful management preflight also asks the live owner to recompute, which recovers a retained create or delete batch after a previous post-append barrier returned `persistence_uncertain`. Both Cordis tools and Native Host tools use [`src/operations.ts`](src/operations.ts) and [`src/transaction.ts`](src/transaction.ts).
 
-Every read or decision from the fold first awaits `ctx.sessions.flush(session)`; a missing, rejected, or detached persistence path returns `persistence_uncertain`, and create and an actual delete await a second barrier after append before confirming the mutation. Shape-only failures are validated before the serialized transaction. Input, time, and durability failures return a closed set of stable version-1 error codes; the closed union and each code's conditions live in [`src/tools.ts`](src/tools.ts).
+Every read or decision from the fold first awaits `ctx.sessions.flush(session)`; a missing, rejected, or detached persistence path returns `persistence_uncertain`, and create and an actual delete await a second barrier after append before confirming the mutation. Shape-only failures are validated before the serialized transaction. Input, time, and durability failures return a closed set of stable version-1 error codes; [`src/types.ts`](src/types.ts) defines the union and error descriptions, while [`src/operations.ts`](src/operations.ts) performs management validation.
 
 ### Live owner
 
-The owner splits long waits into bounded timer segments and rereads the wall clock after every wake. Due work claims the idle maintenance phase, samples one decision time, builds the complete escaped framing before `followup()`, appends dispatch only after synchronous enqueue returns, releases maintenance, and then awaits durability. Missed fixed-rate intervals are never enumerated: integer arithmetic selects each record's latest due creation-anchor-aligned occurrence and advances it directly to the first future target.
+The Cordis runtime splits long waits into bounded timer segments and rereads the wall clock after every wake. Due work claims the idle maintenance phase, samples one decision time, builds the complete escaped framing before `followup()`, appends dispatch only after synchronous enqueue returns, releases maintenance, and then awaits durability. Missed fixed-rate intervals are never enumerated: integer arithmetic selects each record's latest due creation-anchor-aligned occurrence and advances it directly to the first future target.
 
-An overdue reminder first checkpoints persistence, then claims the Agent's idle maintenance phase through `runMaintenance()`; if a turn or another maintenance task owns the Agent, the claim is rejected, the record stays active, and the owner retries after `whenIdle()`. A successful maintenance task refolds, samples one decision time, builds the fixed framing, synchronously queues `followup()`, and appends the dispatch before releasing the phase. Dispatch means the follow-up was queued and recorded, not that the model succeeded or the user read the answer. Framing or synchronous follow-up failure writes no dispatch; an append failure faults the owner because the message may already be queued; a barrier rejection leaves dispatch pending for a later ordinary preflight. Agent or plugin disposal cancels timers and stops new work without deleting durable records.
+The Native Host runtime keeps a timer projection for each exact live root owner. A due timer refolds committed history, then calls the owner's `runIdle`; when a Session turn is busy, the awaited terminal idle hook rechecks through the same per-Agent FIFO before the sole writer is released. It waits for `enqueue` to confirm durable admission before appending and flushing the dispatch event. Dispatch means the follow-up was queued and recorded, not that the model succeeded or the user read the answer. Cold Sessions are not woken; they process overdue reminders only after a root owner resumes them. Owner or plugin disposal cancels timers and drains accepted work without deleting durable records.
 
 </details>
 
@@ -134,6 +147,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Session-local Schedule subsystem](../../../Docs/subsystems/schedule.md) — durable record, transition, view, and delivery contracts with the exact type definitions.
 - [Generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) — the complete `schedule_create`, `schedule_list`, and `schedule_delete` schemas the model receives.
 - [Durable Web Schedule decision](../../../../.agents/notes/implemented/feature/2026-08-05-durable-web-schedule.md) — persistence and lifecycle decisions behind the package.
+- [Native Session Schedule decision](../../../../.agents/notes/implemented/feature/2026-10-15-native-session-schedule.md) — Native Host owner selection and idle-delivery semantics.
 - [Conversational delivery decision](../../../../.agents/notes/archived/simplification/2026-08-09-conversational-schedule-delivery.md) — the no-receipt boundary and follow-up delivery.
 - [Explicit time-zone boundary](../../../../.agents/notes/implemented/simplification/2026-08-09-explicit-schedule-time-zone.md) — why the model must always pass an explicit zone.
 - [Bounded fixed-rate Schedule](../../../../.agents/notes/archived/simplification/2026-08-09-bounded-fixed-rate-schedule.md) — recurrence scope: latest-only catch-up and batch delivery.
@@ -148,7 +162,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The model sees the three generated tool schemas only in a live root Agent created after this plugin loads; the [generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) owns the exact argument and result schemas. Tool results contain the canonical JSON values described above.
+The Cordis overlay exposes the three generated tool schemas to live root Agents created after it loads. For a Native profile, owner attachment completes before the first model request's tool snapshot, so that request includes the three schemas when its tool allowlist permits them. The [generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) owns the exact argument and result schemas. Tool results contain the canonical JSON values described above.
 
 #### Token effect
 
@@ -217,7 +231,7 @@ These limits describe when Schedule does not fit your use case or needs special 
 - **Fixed intervals, not calendar rules** — `every_seconds` is creation-anchor-aligned and cannot run more often than every five minutes; calendar or Cron expressions are not part of the protocol.
 - **Latest-only catch-up** — an overdue Every record contributes only its latest due occurrence, so Schedule never replays a missed backlog.
 - **Narrow crash duplicate window** — a crash after synchronous follow-up admission but before the dispatch checkpoint can repeat the reminder; the package does not claim model completion, user acknowledgement, or exactly-once effects.
-- **Load-order boundary** — the plugin does not scan or adopt Agents that were already live when it loaded.
+- **Cordis load-order boundary** — the compatibility overlay installs on root Agents created after it loads. The Native Host entry attaches to existing and future root owners, but remains an explicit profile installation and never attaches to delegated Agents.
 - **Catalog is read-only current state** — the optional Web surface has no history, mutation, retry, or acknowledgement semantics; terminal records disappear and delivery remains ordinary conversation output.
 
 <a id="dev-note"></a>

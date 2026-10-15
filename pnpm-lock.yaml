@@ -3583,12 +3583,33 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../../Core/util/brand
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/fs/fs-local
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/invariants
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
+      '@deepseek-ai/dsh-native-headless':
+        specifier: workspace:^
+        version: link:../../core/native-headless
+      '@deepseek-ai/dsh-native-model-execution':
+        specifier: workspace:^
+        version: link:../../core/native-model-execution
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../core/native-session-execution
+      '@deepseek-ai/dsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
