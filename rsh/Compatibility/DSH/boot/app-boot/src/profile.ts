@@ -28,7 +28,7 @@ import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync,
   symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs'
-import { basename, dirname, extname, join, relative, resolve } from 'node:path'
+import { basename, dirname, extname, join, posix, relative, resolve, win32 } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import type { EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
@@ -320,6 +320,34 @@ function isPackagedExecutable(): boolean {
   return (process as NodeJS.Process & { pkg?: unknown }).pkg !== undefined
 }
 
+/** Return one canonical URL for a file inside pkg's Windows snapshot. */
+function packageTargetURL(entry: string): string {
+  const pkg = (process as NodeJS.Process & {
+    pkg?: { defaultEntrypoint?: unknown; entrypoint?: unknown }
+  }).pkg
+  if (process.platform !== 'win32'
+    || typeof pkg?.entrypoint !== 'string'
+    || typeof pkg.defaultEntrypoint !== 'string'
+    || !win32.isAbsolute(pkg.entrypoint)) return pathToFileURL(entry).href
+
+  const defaultEntrypoint = posix.normalize(pkg.defaultEntrypoint)
+  if (!defaultEntrypoint.startsWith('/snapshot/')) return pathToFileURL(entry).href
+  const entryRelativeToSnapshot = defaultEntrypoint.slice('/snapshot/'.length)
+  const snapshotRoot = entryRelativeToSnapshot.split('/').reduce(
+    current => win32.dirname(current),
+    win32.resolve(pkg.entrypoint),
+  )
+  if (win32.relative(snapshotRoot, win32.resolve(pkg.entrypoint)).replace(/\\/gu, '/') !== entryRelativeToSnapshot) {
+    return pathToFileURL(entry).href
+  }
+
+  const targetRelativeToSnapshot = win32.relative(snapshotRoot, win32.resolve(entry))
+  if (targetRelativeToSnapshot === '..'
+    || targetRelativeToSnapshot.startsWith(`..${win32.sep}`)
+    || win32.isAbsolute(targetRelativeToSnapshot)) return pathToFileURL(entry).href
+  return pathToFileURL(win32.resolve('V:\\snapshot', targetRelativeToSnapshot)).href
+}
+
 /** Resolve one available explicit package export under Node ESM import conditions. */
 function packageEntryFromPackage(
   packageName: string,
@@ -342,7 +370,7 @@ function packageEntryFromPackage(
     if (!target.startsWith('./') || /^\.\.(?:[\\/]|$)/u.test(relativeEntry)) {
       throw new Error(`dsh: installed package ${packageName} export ${subpath} resolves outside its package: ${target}`)
     }
-    if (existsSync(entry) && statSync(entry).isFile()) return pathToFileURL(entry).href
+    if (existsSync(entry) && statSync(entry).isFile()) return packageTargetURL(entry)
   }
   return undefined
 }
@@ -406,7 +434,7 @@ function packageProxySource(
     const entry = join(packageDir, main ?? 'index')
     try {
       const resolved = createRequire(join(packageDir, 'package.json')).resolve(entry)
-      return { version: manifest.version, targets: { '.': pathToFileURL(resolved).href } }
+      return { version: manifest.version, targets: { '.': packageTargetURL(resolved) } }
     } catch (error) {
       if (main === undefined
         && (manifest.bin !== undefined || manifest.types !== undefined || manifest.typings !== undefined

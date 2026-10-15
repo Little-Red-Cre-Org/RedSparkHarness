@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-15-windows-pkg-profile-proxy-module-identity.md
+2026-10-15-windows-pkg-profile-proxy-module-identity.md: 7680270fa5b0bd609d983bf354fa91260e8575dd
+2026-10-15-windows-pkg-profile-proxy-module-identity.zh.md: d1f7bb2f5ed10d1ef51fbdbbf919c2ccaeb43696

@@ -10,6 +10,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -747,6 +748,39 @@ describe('healProfilesModuleFallback', () => {
       await expect(import(join(proxy, 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })
       await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ feature: 'proxied' })
       await healProfilesModuleFallback({ installAnchor: anchor, home })
+    } finally {
+      delete (process as NodeJS.Process & { pkg?: unknown }).pkg
+    }
+  })
+
+  it.skipIf(process.platform !== 'win32')('canonicalizes snapshot proxy URLs and preserves external entries', async () => {
+    const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' }, outside: {} })
+    const appDir = dirname(anchor)
+    const modulesDir = join(appDir, 'node_modules')
+    const outsideDir = join(modulesDir, 'outside')
+    const outsideManifest = JSON.parse(readFileSync(join(outsideDir, 'package.json'), 'utf8')) as Record<string, unknown>
+    outsideManifest.main = '../../outside.js'
+    writeFileSync(join(outsideDir, 'package.json'), JSON.stringify(outsideManifest))
+    writeFileSync(join(appDir, 'outside.js'), 'export const outside = true\n')
+    const home = tmp()
+    Object.defineProperty(process, 'pkg', {
+      configurable: true,
+      value: {
+        entrypoint: join(modulesDir, '__dsh-entry', 'main.js'),
+        defaultEntrypoint: '/snapshot/__dsh-entry/main.js',
+      },
+    })
+    try {
+      await healProfilesModuleFallback({ installAnchor: anchor, home })
+      const fallback = join(home, 'profiles', 'node_modules')
+      const bundleManifest = JSON.parse(readFileSync(join(fallback, 'bundle-a', 'package.json'), 'utf8')) as {
+        dsh: { moduleFallback: { targets: Record<string, string> } }
+      }
+      const outsideProxyManifest = JSON.parse(readFileSync(join(fallback, 'outside', 'package.json'), 'utf8')) as {
+        dsh: { moduleFallback: { targets: Record<string, string> } }
+      }
+      expect(bundleManifest.dsh.moduleFallback.targets['.']).toBe('file:///V:/snapshot/bundle-a/index.js')
+      expect(outsideProxyManifest.dsh.moduleFallback.targets['.']).toBe(pathToFileURL(join(appDir, 'outside.js')).href)
     } finally {
       delete (process as NodeJS.Process & { pkg?: unknown }).pkg
     }
