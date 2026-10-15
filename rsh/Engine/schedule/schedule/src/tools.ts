@@ -192,7 +192,7 @@ export function registerScheduleTools(
     inheritedEventCount: 0,
     isCurrent: () => true,
     flush: () => flushSchedulePersistence(rootCtx, agent.session),
-    readEvents: async () => {
+    readEvents: () => {
       // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
       return agent.session.ownEvents()
     },

@@ -239,7 +239,7 @@ class NativeScheduleService {
       flush: () => owner.flush(),
       readEvents: () => owner.readCommittedEvents(),
       append: (change) => { owner.append('schedule/change', change) },
-      onDurableChange: () => this.requestDrive(state),
+      onDurableChange: () => { this.requestDrive(state) },
     }
     return state
   }
@@ -265,7 +265,7 @@ class NativeScheduleService {
     if (state.run !== undefined) return
     const run = this.runRequested(state)
     state.run = run
-    void run.then(() => this.retire(state, run), (error) => {
+    void run.then(() => { this.retire(state, run) }, (error: unknown) => {
       if (this.isCurrent(state)) this.warn(`schedule: native runtime failed: ${this.renderThrown(error)}`)
       state.faulted = true
       this.retire(state, run)
@@ -353,7 +353,10 @@ class NativeScheduleService {
             dispatched = await this.processOwner(state, state.owner, AbortSignal.any([
               rootOperations.signal, state.controller.signal,
             ]))
-          } while ((dispatched || state.requested) && this.isCurrent(state))
+          }
+          // The awaited dispatch can re-enter onDurableChange and set requested.
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- Reentrant callback may set requested across await.
+          while ((dispatched || state.requested) && this.isCurrent(state))
         } finally {
           state.processingOwner = false
         }
@@ -450,7 +453,7 @@ class NativeScheduleService {
 
   private refreshBackground(state: OwnerState, folded?: FoldedSchedules): void {
     if (folded !== undefined) state.hasActiveSchedules = folded.active.length > 0
-    const needed = state.hasActiveSchedules === true || state.deliveryId !== undefined
+    const needed = state.hasActiveSchedules || state.deliveryId !== undefined
     if (needed && state.releaseBackground === undefined && this.isCurrent(state)) {
       state.releaseBackground = state.owner.retainBackground()
     } else if (!needed && state.releaseBackground !== undefined) {

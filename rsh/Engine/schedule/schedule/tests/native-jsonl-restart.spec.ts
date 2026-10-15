@@ -68,7 +68,7 @@ async function mount(root: string, model: NativeModel, observeOwner: (owner: Nat
       storage = context.require('sessionPersistence')
       agents = context.require('agents')
       tools = context.require('tools')
-      context.effect(context.require('activeSessions').onAttached(async owner => observeOwner(owner)))
+      context.effect(context.require('activeSessions').onAttached((owner) => { observeOwner(owner) }))
     },
   }
   const host = new NativeHost(resolveInstallation([
@@ -128,7 +128,7 @@ it('dispatches after busy idle admission and does not replay the durable dispatc
     first = await mount(root, model, (owner) => {
       if (owner.session.id !== id || exactOwner !== undefined || owner.rootOperations === undefined) return
       exactOwner = owner
-      const runIdle = owner.rootOperations.runIdle
+      const runIdle = owner.rootOperations.runIdle.bind(owner.rootOperations)
       vi.spyOn(owner.rootOperations, 'runIdle').mockImplementation((operation, signal) => {
         idleAttempts += 1
         if (idleAttempts === 1) firstIdleAttempt.resolve(undefined)
@@ -177,7 +177,7 @@ it('dispatches after busy idle admission and does not replay the durable dispatc
       await Promise.race([
         Promise.all([timerMaintenance, timerTurnStarted.promise]),
         new Promise<never>((_resolve, reject) => {
-          timeout = realSetTimeout(() => reject(new Error('native timer delivery timed out')), 5_000)
+          timeout = realSetTimeout(() => { reject(new Error('native timer delivery timed out')) }, 5_000)
         }),
       ])
     } finally {
