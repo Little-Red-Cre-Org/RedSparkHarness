@@ -141,12 +141,19 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
     })
     await writeEntered.promise
     let replacementSettled = false
-    replacing = compat.update('@deepseek-ai/dsh-fs-local', { cwd: substituteDirectory }).then(() => { replacementSettled = true })
+    const disposeServiceListener = compat.context.on('internal/service', (name, value) => {
+      if (
+        name === 'fs' && value instanceof LocalFileSystem && value.config.cwd === substituteDirectory &&
+        !order.includes('substitute published')
+      ) {
+        order.push('substitute published')
+      }
+    })
     try {
+      replacing = compat.update('@deepseek-ai/dsh-fs-local', { cwd: substituteDirectory }).then(() => { replacementSettled = true })
       await cleanupEntered.promise
       expect(replacementSettled).toBe(false)
       expect(compat.context.get('fs')).toBeUndefined()
-      expect(order).toEqual(['old cleanup entered'])
       releaseWrite.resolve(undefined)
       await expect(inFlight).rejects.toMatchObject({ code: 'FS_ABORTED' })
       await replacing
@@ -154,7 +161,6 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       if (!(substituteFilesystem instanceof LocalFileSystem)) throw new Error('missing substitute Cordis LocalFileSystem')
       expect(substituteFilesystem.config.cwd).toBe(substituteDirectory)
       await expect(oldFilesystem.readText(oldTarget)).rejects.toMatchObject({ code: 'FS_ABORTED' })
-      expect(order).toEqual(['old cleanup entered', 'old cleanup completed'])
       await writeFile(join(updatedDirectory, 'sample.txt'), 'from substitute provider\n'.repeat(5000))
       const substituteStreamText = substituteFilesystem.streamText.bind(substituteFilesystem)
       substituteFilesystem.streamText = async (target, signal) => {
@@ -166,10 +172,13 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       expect(after).toMatchObject({ lines: [{ number: 1, text: 'from substitute provider' }] })
       expect(after).not.toEqual(before)
       expect(servedBy).toEqual(['before:legacy', 'after:substitute'])
-      expect(order).toEqual(['old cleanup entered', 'old cleanup completed', 'substitute served'])
+      expect(order).toEqual([
+        'old cleanup entered', 'old cleanup completed', 'substitute published', 'substitute served',
+      ])
       await compat.remove('@deepseek-ai/dsh-fs-local')
       expect(() => liveFilesystem.resolve('after-remove.txt')).toThrow('Cordis service fs is unavailable')
     } finally {
+      disposeServiceListener()
       releaseWrite.resolve(undefined)
       await Promise.allSettled([inFlight, replacing])
     }
