@@ -225,6 +225,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/credentials/authorization', 'Cordis service and native Provider share authorization protocol and error types'],
   ['rsh/Modules/Official/settings/settings-file', 'Cordis and native settings Providers share the document format and atomic file owner'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
+  ['rsh/Engine/schedule/schedule', 'Native and Cordis reminder Consumers share the durable event fold and serialized management operations'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
   ['rsh/Modules/Official/fs/fs-observation-policy', 'Cordis event policy and native entry share a package'],
   ['rsh/Modules/Official/fs/fs-sandbox', 'Cordis and native filesystem Providers share per-call sandbox enforcement'],

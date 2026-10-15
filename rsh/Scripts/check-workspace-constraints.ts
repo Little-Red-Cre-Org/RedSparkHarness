@@ -222,6 +222,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-deepseek-account': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-schedule': ['lib/native.js'],
   '@deepseek-ai/dsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
   '@deepseek-ai/dsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
   '@deepseek-ai/dsh-agent-presets': [
