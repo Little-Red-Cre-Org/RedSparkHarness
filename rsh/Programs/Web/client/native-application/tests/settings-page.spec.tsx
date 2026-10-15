@@ -12,6 +12,7 @@ import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { en, zh } from '../src/locales.ts'
+import { PluginsSection } from '../src/plugins-section.tsx'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
 import { PENDING_DEFAULT_KEY, type BusyEnterBehavior } from '../src/pending-default.ts'
 
@@ -44,6 +45,7 @@ const emptyModelActions = {
   modelsListProviders: async () => [],
   modelsListConfigurableProviders: async () => [],
   modelsDiscover: async () => [],
+  modelCatalog: async () => null,
   settingsEvents: async function* (signal: AbortSignal) {
     await new Promise<void>((resolve) => {
       if (signal.aborted) resolve()
@@ -74,6 +76,13 @@ const settingsDescription = (
   hasDocument: false,
   namespaces: namespaces as readonly NativeSettingsDescriptor[],
   limits,
+})
+const pluginSettings = (
+  namespace: string, revision: number, value: Readonly<Record<string, unknown>>,
+  user: Readonly<Record<string, unknown>> = {},
+): NativeSettingsDescriptor => ({
+  namespace, schema: {}, value, base: value, user, applies: 'live', secrets: [],
+  credentialRefs: namespace === 'web-search-deepseek' ? ['DEEPSEEK_API_KEY'] : [], revision,
 })
 
 const chatGptAccount: NativeAccountSummary = {
@@ -124,6 +133,593 @@ it('renders ChatGPT plan and remaining quota', async () => {
   expect(await screen.findByText('Plan: Plus')).toBeTruthy()
   expect(screen.getByText('Remaining 65%')).toBeTruthy()
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
+})
+
+it('shows the four native Plugins configuration cards', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([webSearch]))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  expect(await screen.findByRole('tab', { name: en.settingsPluginConfigTab })).toBeTruthy()
+  expect(screen.getByRole('tab', { name: en.settingsPluginInventoryTab })).toBeTruthy()
+  for (const label of ['Shell', 'Agent loop', 'Subagent', 'Web search']) {
+    expect(screen.getByRole('button', { name: `Show settings: ${label}` })).toBeTruthy()
+  }
+})
+
+it('describes a settings-file apiKey field without exposing its value', async () => {
+  const literal = {
+    ...pluginSettings('web-search-deepseek', 1, { apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5 }),
+    secrets: [{ path: ['apiKey'], set: true }],
+  }
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([literal]))
+  actions.credentialsDescribe = vi.fn(async () => ({ KEY_A: { configured: false, writable: true } }))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+
+  expect(await screen.findByText((_, element) => element?.textContent
+    === `${en.settingsPluginWebSearchApiKeyLiteralField} KEY_A`)).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeyStoredUnset)).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeyLiteralHint)).toBeTruthy()
+  expect(screen.queryByText(en.settingsPluginWebSearchApiKeyUnset)).toBeNull()
+})
+
+it('keeps every plugin descriptor when another namespace changes during the initial read', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const uiTheme = pluginSettings('ui-theme', 1, { preference: 'system' })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishInitial!: (description: NativeSettingsDescription) => void
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    if (describeCount === 1) return await new Promise<NativeSettingsDescription>((resolve) => { finishInitial = resolve })
+    return settingsDescription([uiTheme, webSearch])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'ui-theme', revision: 1 }
+  }
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(1) })
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+
+  expect(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+  await act(async () => { finishInitial(settingsDescription([uiTheme, webSearch])) })
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+})
+
+it('keeps a staged plugin write fenced to the descriptor revision where editing began', async () => {
+  const routeA = { provider: 'provider', model: 'model-a' }
+  const routeB = { provider: 'provider', model: 'model-b' }
+  const initial = pluginSettings('subagent-model-selection', 1, { enabled: true, allowedModels: [routeA] })
+  const updatedElsewhere = pluginSettings('subagent-model-selection', 2, { enabled: false, allowedModels: [{ provider: 'provider', model: 'model-c' }] })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [updatedElsewhere])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'subagent-model-selection', revision: 2 }
+  }
+  actions.modelCatalog = vi.fn(async () => ({
+    default: routeA, routableProviders: ['provider'], failures: [],
+    groups: [{ id: 'provider', name: 'Provider', models: [
+      { id: 'model-a', name: 'Model A' }, { id: 'model-b', name: 'Model B' }, { id: 'model-c', name: 'Model C' },
+    ] }],
+  }))
+  const conflict = Object.assign(new Error('conflict'), { code: 'native/settings-conflict' })
+  actions.settingsMutate = vi.fn(async () => { throw conflict })
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Subagent' }))
+  fireEvent.click(await screen.findByRole('checkbox', { name: /Model B/ }))
+  fireEvent.click(screen.getByRole('checkbox', { name: /Model A/ }))
+  releaseEvent()
+  await waitFor(() => { expect(screen.getByRole('checkbox', { name: en.settingsPluginSubagentToggle })).toHaveProperty('checked', false) })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(actions.settingsMutate).toHaveBeenCalledWith('subagent-model-selection', [
+    { op: 'set', path: ['allowedModels'], value: [routeB] },
+  ], 1)
+})
+
+it('supports arrow, Home, and End keyboard navigation across plugin tabs', async () => {
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+  const config = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
+  const inventory = screen.getByRole('tab', { name: en.settingsPluginInventoryTab })
+
+  fireEvent.keyDown(config, { key: 'ArrowRight' })
+  expect(document.activeElement).toBe(inventory)
+  expect(inventory.getAttribute('aria-selected')).toBe('true')
+  fireEvent.keyDown(inventory, { key: 'ArrowLeft' })
+  expect(document.activeElement).toBe(config)
+  fireEvent.keyDown(config, { key: 'End' })
+  expect(document.activeElement).toBe(inventory)
+  fireEvent.keyDown(inventory, { key: 'Home' })
+  expect(document.activeElement).toBe(config)
+})
+
+it('saves a no-op web-search mutation and its write-only key through Native Host actions', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  }, { maxUses: 5 })
+  let configured = false
+  const configuredReads: boolean[] = []
+  const updated = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  }, { maxUses: 5 })
+  const settingsMutate = vi.fn(async () => updated)
+  const credentialsSet = vi.fn(async () => { configured = true })
+  const credentialsDescribe = vi.fn(async () => {
+    configuredReads.push(configured)
+    return { DEEPSEEK_API_KEY: { configured, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
+  actions.settingsMutate = settingsMutate
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '5.0' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'plugin-secret') })
+  expect(settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
+    { op: 'set', path: ['maxUses'], value: 5 },
+  ], 1)
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Show settings: Web search' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(en.settingsPluginUnsaved)).toBeNull()
+    expect(screen.queryByText(en.settingsPluginSaveFailed)).toBeNull()
+    expect(screen.queryByText(en.settingsPluginConflict)).toBeNull()
+  })
+  expect(configuredReads).toContain(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  expect(await screen.findByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', '')
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+})
+
+it('uses the refreshed credential reference after clearing and retyping the key draft', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const refreshed = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
+    KEY_A: { configured: false, writable: true }, KEY_B: { configured: true, writable: true },
+  }))
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [refreshed])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await waitFor(() => {
+    expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B'])
+  })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: '' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+
+  await waitFor(() => { expect(credentialsSet).toHaveBeenCalledWith('KEY_B', 'plugin-secret') })
+  expect(actions.settingsMutate).not.toHaveBeenCalled()
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Show settings: Web search' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(en.settingsPluginConflict)).toBeNull()
+  })
+})
+
+it('keeps the web-search key draft when its credential reference changes during save', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 })
+  const newer = pluginSettings('web-search-deepseek', 3, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let acknowledgeSave!: () => void
+  const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
+    KEY_A: { configured: false, writable: true },
+    KEY_B: { configured: false, writable: true },
+  }))
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [initial] : [newer])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 3 }
+  }
+  actions.settingsMutate = vi.fn(async () => {
+    await saveAcknowledged
+    return updated
+  })
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(actions.settingsMutate).toHaveBeenCalledOnce() })
+
+  releaseEvent()
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
+  expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B'])
+  await act(async () => { acknowledgeSave() })
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(credentialsSet).not.toHaveBeenCalled()
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+})
+
+it('keeps the web-search key draft when its reference changes after credential verification', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const newer = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  let finishVerification!: (result: Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>) => void
+  const credentialsSet = vi.fn(async () => undefined)
+  let keyAReads = 0
+  const credentialsDescribe = vi.fn(async (refs: readonly string[]) => {
+    if (refs[0] === 'KEY_A') {
+      keyAReads += 1
+      if (keyAReads === 2) return await new Promise<Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>>((resolve) => {
+        finishVerification = resolve
+      })
+      return { KEY_A: { configured: false, writable: true } }
+    }
+    return { KEY_B: { configured: false, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount === 1) return settingsDescription([initial])
+    if (describeCount === 2) return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+    return settingsDescription([newer])
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(2) })
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await act(async () => {
+    finishVerification({ KEY_A: { configured: true, writable: true } })
+    finishRefresh(settingsDescription([newer]))
+  })
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(credentialsSet).toHaveBeenCalledWith('KEY_A', 'plugin-secret')
+  expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B'])
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+})
+
+it('announces queued revisions while an earlier refresh reads credentials', async () => {
+  const uiTheme = pluginSettings('ui-theme', 1, { preference: 'system' })
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const updatedUiTheme = pluginSettings('ui-theme', 2, { preference: 'dark' })
+  const updatedWebSearch = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvents!: () => void
+  const eventsReady = new Promise<void>((resolve) => { releaseEvents = resolve })
+  let releaseSecondEvent!: () => void
+  const secondEventReady = new Promise<void>((resolve) => { releaseSecondEvent = resolve })
+  let finishKeyARead!: (result: Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>) => void
+  const keyARead = new Promise<Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>>((resolve) => {
+    finishKeyARead = resolve
+  })
+  let finishLatestRefresh!: (description: NativeSettingsDescription) => void
+  const latestRefresh = new Promise<NativeSettingsDescription>((resolve) => { finishLatestRefresh = resolve })
+  let keyAReads = 0
+  const credentialsDescribe = vi.fn(async (refs: readonly string[], _signal?: AbortSignal) => {
+    if (refs[0] === 'KEY_A') {
+      keyAReads += 1
+      if (keyAReads === 2) return await keyARead
+    }
+    return { KEY_B: { configured: false, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount === 1 || describeCount === 2) return settingsDescription([uiTheme, initial])
+    return await latestRefresh
+  })
+  actions.settingsEvents = async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
+    await eventsReady
+    if (signal.aborted) return
+    yield { type: 'settings/document-updated', namespace: 'ui-theme', revision: 2 }
+    await secondEventReady
+    if (signal.aborted) return
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  const credentialsSet = vi.fn(async () => undefined)
+  actions.credentialsSet = credentialsSet
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(1) })
+
+  releaseEvents()
+  await waitFor(() => { expect(keyAReads).toBe(2) })
+  releaseSecondEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(3) })
+  const save = screen.getByRole('button', { name: en.settingsPluginSave }) as HTMLButtonElement
+  expect(save.disabled).toBe(true)
+
+  await act(async () => {
+    finishLatestRefresh(settingsDescription([updatedUiTheme, updatedWebSearch]))
+  })
+  await waitFor(() => { expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B']) })
+  await act(async () => {
+    finishKeyARead({ KEY_A: { configured: false, writable: true } })
+  })
+
+  await waitFor(() => { expect(screen.queryByText(en.settingsPluginRefreshPending)).toBeNull() })
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+  expect(credentialsSet).not.toHaveBeenCalled()
+})
+
+it('keeps the web-search key draft when its announced revision is still unread after verification', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const newer = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  const refresh = new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  let finishVerification!: (result: Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>) => void
+  let keyAReads = 0
+  const credentialsSet = vi.fn(async () => undefined)
+  const credentialsDescribe = vi.fn(async (refs: readonly string[]) => {
+    if (refs[0] === 'KEY_A') {
+      keyAReads += 1
+      if (keyAReads === 2) return await new Promise<Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>>((resolve) => {
+        finishVerification = resolve
+      })
+      return { KEY_A: { configured: false, writable: true } }
+    }
+    return { KEY_B: { configured: false, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    return describeCount === 1 ? settingsDescription([initial]) : await refresh
+  })
+  actions.settingsEvents = async function* (signal: AbortSignal) {
+    await event
+    if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  actions.credentialsSet = credentialsSet
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(keyAReads).toBe(2) })
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await act(async () => { finishVerification({ KEY_A: { configured: true, writable: true } }) })
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(3) })
+  await act(async () => { finishRefresh(settingsDescription([newer])) })
+
+  expect(await screen.findByText(en.settingsPluginConflict)).toBeTruthy()
+  expect(credentialsSet).toHaveBeenCalledWith('KEY_A', 'plugin-secret')
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+})
+
+it('shows a Host gap for an absent plugin namespace without a save action', async () => {
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(zh.settingsPluginHostGap).toBe('当前 Host 尚未开放此插件的设置。')
+  expect(en.settingsPluginHostGap).toBe('The current Host has not opened settings for this plugin yet.')
+  expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
+})
+
+it('shows refresh pending for a missing namespace and blocks writes past its announced revision', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    if (describeCount === 1) return settingsDescription([webSearch])
+    return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  const save = screen.getByRole('button', { name: en.settingsPluginSave }) as HTMLButtonElement
+  expect(save.disabled).toBe(false)
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  expect(screen.getAllByText(en.settingsPluginRefreshPending).length).toBeGreaterThan(0)
+  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
+  expect(save.disabled).toBe(true)
+
+  await act(async () => { finishRefresh(settingsDescription([pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })])) })
+  await waitFor(() => { expect(save.disabled).toBe(false) })
+})
+
+it('settles an event refresh that started before a save acknowledgment', async () => {
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  const updated = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  })
+  let releaseEvent!: () => void
+  const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  let finishRefresh!: (description: NativeSettingsDescription) => void
+  let acknowledgeSave!: () => void
+  const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return describeCount === 1 ? settingsDescription([initial])
+      : await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  actions.settingsEvents = async function* () {
+    await event
+    yield { type: 'settings/document-updated', namespace: 'shell', revision: 1 }
+  }
+  actions.settingsMutate = vi.fn(async () => {
+    await saveAcknowledged
+    return updated
+  })
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
+  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+
+  releaseEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  expect(await screen.findByText(en.settingsPluginRefreshPending)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => { expect(actions.settingsMutate).toHaveBeenCalledOnce() })
+  await act(async () => { acknowledgeSave() })
+
+  await act(async () => { finishRefresh(settingsDescription([initial])) })
+  await waitFor(() => { expect(screen.queryByText(en.settingsPluginRefreshPending)).toBeNull() })
+  expect(screen.getByText(en.settingsPluginHostGap)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '9')
+})
+
+it('retains the last plugin settings, revision, and credential info when a refresh omits its namespace', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  let releaseRefresh!: () => void
+  const refresh = new Promise<void>((resolve) => { releaseRefresh = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [webSearch] : [])
+  })
+  actions.settingsMutate = vi.fn(async () => pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 }))
+  actions.credentialsDescribe = vi.fn(async () => ({
+    DEEPSEEK_API_KEY: { configured: true, writable: true },
+  }))
+  actions.settingsEvents = async function* () {
+    await refresh
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 1 }
+  }
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  expect(await screen.findByText(en.settingsPluginWebSearchApiKeySet)).toBeTruthy()
+  releaseRefresh()
+  await waitFor(() => { expect(actions.credentialsDescribe).toHaveBeenCalledTimes(2) })
+
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeySet)).toBeTruthy()
+  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
+
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => {
+    expect(actions.settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
+      { op: 'set', path: ['maxUses'], value: 9 },
+    ], 1)
+  })
 })
 
 it('renders the ChatGPT identity name before the email', async () => {

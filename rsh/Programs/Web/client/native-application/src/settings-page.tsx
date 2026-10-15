@@ -17,6 +17,7 @@ import type { ConversationLocaleKey } from './locales.ts'
 import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
+import { PluginsSection } from './plugins-section.tsx'
 import {
   announcePendingDefaultChanged, readPendingDefault, type BusyEnterBehavior,
 } from './pending-default.ts'
@@ -32,7 +33,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'settingsOpenDocument' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
   | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
-  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents'
+  | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'modelCatalog'
   | 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
   | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'>
 
@@ -608,6 +609,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
       {subscriptionContent}
     </ModelsSettingsPage>
   </div>
+  if (section === 'plugins') return <PluginsSection actions={actions} t={t} />
   if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
   if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   const permission = namespaces.find(row => row.namespace === 'permission')

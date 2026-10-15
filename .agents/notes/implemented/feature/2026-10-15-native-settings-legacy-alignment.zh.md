@@ -10,13 +10,15 @@ Native Settings 窗口的「通用」页面显示原始命名空间 JSON，「�
 
 ## Decision
 
-`native-application` 在共享的 [SettingsPanel](../architecture/2026-10-11-shared-settings-panel.zh.md) 中，按旧版的行和卡片结构呈现「通用」「模型」「Agent 预设」页面。它不导入任何 Cordis 或 legacy 插件运行时。所有持久化都通过 Host 带 revision 校验的 `settingsMutate` 完成；页面不保留本地设置存储。
+`native-application` 在共享的 [SettingsPanel](../architecture/2026-10-11-shared-settings-panel.zh.md) 中，按旧版的行和卡片结构呈现「通用」「模型」「Agent 预设」和「插件」页面。它不导入任何 Cordis 或 legacy 插件运行时。设置编辑都通过 Host 带 revision 校验的 `settingsMutate` 完成；Web search 密钥使用 Host 凭据操作。页面不保留本地设置存储。
 
 **通用。** 页面包含权限模式、语言、外观、字体大小、对话显示、繁忙时的发送行为（排队发送或插话发送）和桌面宠物等行。每一行写入对应命名空间中的一个字段：`permission`、`locale`、`ui-theme`、`ui-chat`、`ui-conversation.busyEnter` 或 `ui-pet`。语言、外观和字体大小还会立即作用于当前窗口。繁忙发送行使用旧版文案，只写入 `ui-conversation.busyEnter`；写入成功后通知已挂载的输入框，输入框把 `queue`/`steer` 映射为自己的 `queued`/`steering` 默认值。Host 未发布 `ui-conversation` 时，该行被禁用并显示提示，不会改为本地写入。只有 Host 发布了相应命名空间时，权限、对话显示和桌面宠物行才会出现。命名空间 JSON 编辑器和凭据字段移入默认折叠的「高级设置」区域。
 
 **模型。** 在「订阅模型」区域中，授权行、账户卡片和授权错误使用旧版的紧凑卡片、身份行、额度条和次要按钮样式。`account-card.module.css` 只保留账户特有的规则。「API 模型」区域此前已使用 [Models 页面决策](../architecture/2026-10-11-native-models-settings-page.zh.md) 中的共享提供方编辑器，本次未改动。
 
 **Agent 预设。** [预设列表](2026-10-11-native-web-agent-preset-roster.zh.md) 以旧版卡片呈现，分为内置和自定义两组。当前默认预设的卡片会高亮。损坏或需要迁移的预设显示红色边框和徽标；如果 Host 提供了 `problem` 文本，也会一并显示。模式选择开关写入 `agent-presets.modeSelectionEnabled`。点击一张就绪的卡片会写入 `agent-presets.default`，且仅在启用模式选择时允许。Host 未发布 `agent-presets` 时，两个控件都被禁用，卡片提示 Host 尚未开放此设置。刷新时页面继续显示最后收到的设置，只用 revision 相同或更新的结果替换，因此较晚返回的写入响应不会覆盖更新的值。设置事件已宣布页面尚未读取的 revision 时，两个控件保持禁用。无论来源或状态，每个预设都保留「查看」按钮。预设查看器在其高层表面上重新绑定主题滚动条。
+
+**插件。** 页面为 `shell`、`agent-loop`、`subagent-model-selection` 和 `web-search-deepseek` 命名空间显示四张固定配置卡片。每份草稿固定在开始编辑时的 descriptor revision 上，并通过 `settingsMutate` 按该 revision 写入；发生冲突时会保留草稿，并提示用户放弃修改后重试。刷新会保留最后收到的 descriptor，且仅由 revision 相同或更高的结果替换。事件宣布的新 revision 尚未读取时，保存会被禁用；describe 进行期间，缺失卡片会显示正在刷新的提示，只有成功完成的 describe 未包含该命名空间后才提示 Host 未注册此设置。Web search 密钥不会回显：`credentialsDescribe` 报告密钥是否已配置及是否可写，非空替换值通过 `credentialsSet` 写入设置文档之外。密钥草稿会记录开始输入时的凭据引用和 descriptor revision；若其中任一已变化，或有已宣布但尚未读取的更新 revision，保存会报告冲突、保留草稿且不写入凭据。提供方优先使用设置文件中非空的字面 `apiKey`，而不是存储凭据。设置脱敏只报告该字段是否存在，不报告是否为空，因此卡片会说明：非空的字面值会覆盖所指的凭据，届时保存的凭据不会生效。插件列表标签页仍是延后实现的占位页。Subagent 路由权限遵循[用户授权的 Subagent 模型路由](2026-08-24-user-authorized-subagent-model-routes.zh.md)。
 
 ## Alternatives considered
 
@@ -32,9 +34,10 @@ Native 页面在外观上与旧版一致，同时 Host 仍是唯一的持久化�
 
 - Native Host 尚未注册 `permission`、`locale`、`ui-theme`、`ui-chat`、`ui-conversation` 和 `ui-pet`。因此繁忙发送保持禁用，语言、外观和字体大小只对当前打开的窗口生效。
 - Native Host 尚未注册 `agent-presets`，因此在 native-web 中，模式选择开关和默认预设选择保持禁用。
+- native-web Host 注册了 `web-search-deepseek`，但未注册 `shell`、`agent-loop` 或 `subagent-model-selection`；插件列表标签页尚未移植。
 - native-web profile 未安装授权服务，因此 `authorizationList` 为空，「订阅模型」区域只显示标题。
 - `NativeAgentPresetList` 不提供 `authorable` 或 `modeSelectionEnabled`，旧版的创造模式草稿按钮也尚未移植。
 
 ## Verification
 
-native-application 中的 `settings-page.spec.tsx` 覆盖：「通用」各行与仅经 Host 的繁忙发送写入、订阅账户卡片的位置，以及预设分组、默认高亮、损坏状态、每个预设的「查看」按钮、设置写入和 revision 顺序（包括在读到更新 revision 之后才到达的写入响应）。
+native-application 中的 `settings-page.spec.tsx` 覆盖：「通用」各行与仅经 Host 的繁忙发送写入、订阅账户卡片的位置，以及预设分组、默认高亮、损坏状态、每个预设的「查看」按钮、设置写入和 revision 顺序（包括在读到更新 revision 之后才到达的写入响应）。还覆盖插件卡片：按起始 revision 写入、冲突提示、刷新待读与 Host 缺口的区分、初始读取期间的命名空间事件，只写的网页搜索密钥流程（包括完整保存成功和无变化的设置写入）、凭据引用从 A 变为 B 的密钥草稿、此后清空并重新输入，以及字面 `apiKey` 提示。
