@@ -4,11 +4,15 @@
     "llm-pi-ai"
   ],
   "buttons": [
+    "Light",
+    "Dark",
+    "Follow system",
+    "−",
+    "+",
     "Refresh settings",
     "Save settings"
   ],
   "labels": [
-    "Default send while running QueueSteer",
     "User overrides (JSON){ \"providers\": {} }"
   ],
   "alerts": [],
