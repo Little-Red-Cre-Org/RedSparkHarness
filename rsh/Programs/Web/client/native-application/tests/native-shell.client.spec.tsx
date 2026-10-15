@@ -275,8 +275,11 @@ it('installs modular Native navigation, Session selection, details, locale and t
   })
   const clientMock = {
     close,
-    settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [],
-      limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
+    settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [{
+      namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
+      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1,
+    }], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
+    settingsOpenDocument: vi.fn(),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(),
     authorizationList: vi.fn(async () => []), authorizationBegin: vi.fn(), authorizationFrames: vi.fn(),
@@ -359,6 +362,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
 
   const originalLanguage = document.documentElement.lang
   try {
+    localStorage.setItem(PENDING_DEFAULT_KEY, 'queue')
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
     const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
@@ -399,7 +403,6 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(messageInput).toHaveProperty('disabled', false)
     expect(messageInput).toHaveProperty('value', '')
     const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
-    localStorage.setItem(PENDING_DEFAULT_KEY, 'steering')
     queue.mockRejectedValueOnce(new Error(validationJson))
     fireEvent.change(messageInput, { target: { value: 'After this turn' } })
     fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
@@ -415,7 +418,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     const row = within(pendingPanel).getByRole('listitem')
     expect(within(row).getByText('Queued')).toBeTruthy()
     expect(within(row).getAllByRole('button').map(button => button.getAttribute('aria-label')))
-      .toEqual(['Expand message', 'Edit pending message', 'Steer instead', 'Delete'])
+      .toEqual(['Expand message', 'Edit pending message', 'Interject instead', 'Delete'])
     fireEvent.click(within(row).getByRole('button', { name: 'Expand message' }))
     expect(within(row).getByRole('button', { name: 'Collapse message' }).getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(within(row).getByRole('button', { name: 'Collapse message' }))
@@ -435,15 +438,15 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(editSubmission).toHaveBeenNthCalledWith(2, 'session-alpha', editRequestId, 'Edited pending text', expect.any(AbortSignal))
     expect(queue.mock.calls.at(-1)?.[2]).toBe(refusedId)
     expect(queue).toHaveBeenCalledWith('session-alpha', 'After this turn', expect.any(String), expect.any(AbortSignal))
-    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Steer instead' }))
-    await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Steer instead' })).toHaveProperty('disabled', true) })
+    fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Interject instead' }))
+    await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Interject instead' })).toHaveProperty('disabled', true) })
     expect(within(pendingPanel).queryByText('Next step')).toBeNull()
     expect(promoteSubmission).toHaveBeenCalledWith('session-alpha', pendingMessages[0]!.requestId, expect.any(AbortSignal))
     fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Delete' }))
     await waitFor(() => { expect(within(pendingPanel).queryByText('After this turn')).toBeNull() })
     expect(dequeue).toHaveBeenCalledOnce()
     fireEvent.change(messageInput, { target: { value: 'Use this direction' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Steer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Interject' }))
     expect(await within(pendingPanel).findByText('Use this direction')).toBeTruthy()
     expect(steer).toHaveBeenCalledWith('session-alpha', 'Use this direction', expect.any(String), expect.any(AbortSignal))
     const claimedRequestId = pendingMessages[0]!.requestId
@@ -474,7 +477,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     await waitFor(() => { expect(steer).toHaveBeenCalledTimes(steerCallsBeforeEnter + 1) })
     expect(queue).toHaveBeenCalledTimes(queueCallsBeforeEnter)
     expect(steer).toHaveBeenLastCalledWith('session-alpha', 'Default steer by Enter', expect.any(String), expect.any(AbortSignal))
-    expect(within(enterSubmission.closest('li')!).getByText('Steering')).toBeTruthy()
+    expect(within(enterSubmission.closest('li')!).getByText('Interjecting')).toBeTruthy()
     fireEvent.click(within(enterSubmission.closest('li')!).getByRole('button', { name: 'Delete' }))
     await waitFor(() => { expect(within(pendingPanel).queryByRole('listitem')).toBeNull() })
     fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })

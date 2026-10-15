@@ -35,6 +35,10 @@ kind: "package-reference"
 
 组合可以通过 `ctx.theme` 注册带别名 token 覆盖的第三方主题 id；覆盖层按注册顺序折入活动快照的 token 中。移除其中一个绝不会覆盖最后一个持久化的内置偏好。第三方主题 id 仍是进程内扩展，不会跨越内置 settings schema。
 
+### Native Client
+
+Native theme service 通过快照发布所选外观与会话字号。`setFontSize` 接受 12 至 17 px 的整数，并在 `document.documentElement` 上更新 `--dsh-content-font-size`；Native 通用设置会在 Host 提供 `ui-theme` namespace 时通过 `ui-theme.fontSize` 保存该值。
+
 ### 插件前调色板
 
 当主机组合包含 HTTP 服务器时，宿主侧会把已注册的 `ui-theme` 设置或 schema 默认值嵌入每份 index 响应。浏览器在加载页面渲染前设置 `color-scheme`、`body[data-ds-dark-theme]` 与 `--dsh-content-font-size`，因此首帧绘制就采用所选调色板与字号。

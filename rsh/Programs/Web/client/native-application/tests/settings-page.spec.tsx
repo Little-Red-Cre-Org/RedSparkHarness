@@ -7,10 +7,13 @@ import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsD
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
 import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor, NativeSettingsDescription } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
+import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { en, zh } from '../src/locales.ts'
 import { SettingsPage, nativeSettingsDiff, type NativeSettingsActions } from '../src/settings-page.tsx'
-import { PENDING_DEFAULT_KEY } from '../src/pending-default.ts'
+import { PENDING_DEFAULT_KEY, type BusyEnterBehavior } from '../src/pending-default.ts'
 
 afterEach(() => {
   cleanup()
@@ -19,6 +22,18 @@ afterEach(() => {
 
 const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
 const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
+const localeSnapshot: NativeLocaleSnapshot = { locale: 'en', revision: 0 }
+const themeSnapshot: ReturnType<NativeThemeService['getSnapshot']> = {
+  preference: 'system', fontSize: 14,
+  active: { id: 'light', colorScheme: 'light', tokens: {} },
+  themes: [
+    { id: 'light', colorScheme: 'light', tokens: {} },
+    { id: 'dark', colorScheme: 'dark', tokens: {} },
+  ],
+  revision: 0,
+}
+const useLocale: SnapshotSelectorHook<NativeLocaleSnapshot> = selector => selector(localeSnapshot)
+const useTheme: SnapshotSelectorHook<ReturnType<NativeThemeService['getSnapshot']>> = selector => selector(themeSnapshot)
 const emptyAccountActions = {
   accountsList: async () => [],
   accountsUsage: async () => ({ status: 'unsupported' as const }),
@@ -41,13 +56,25 @@ function renderSettingsPage(props: {
   t: (key: keyof typeof en) => string
   section?: string
   onAuthorized?: () => void
+  useLocale?: SnapshotSelectorHook<NativeLocaleSnapshot>
+  useTheme?: SnapshotSelectorHook<ReturnType<NativeThemeService['getSnapshot']>>
+  setLocale?: NativeLocaleService['setLocale']
+  setThemePreference?: NativeThemeService['setPreference']
+  setFontSize?: NativeThemeService['setFontSize']
+  onDocumentAvailabilityChange?: (available: boolean) => void
 }) {
   return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...emptyModelActions, ...props.actions }}
-    section={props.section ?? 'general'} />)
+    section={props.section ?? 'general'} useLocale={props.useLocale ?? useLocale}
+    useTheme={props.useTheme ?? useTheme} setLocale={props.setLocale ?? (() => {})}
+    setThemePreference={props.setThemePreference ?? (() => {})} setFontSize={props.setFontSize ?? (() => {})} />)
 }
 const settingsDescription = (
   namespaces: readonly (NativeSettingsDescriptor | ServiceNativeSettingsDescriptor)[], limits = defaultLimits,
-) => ({ hasDocument: false, namespaces, limits })
+): NativeSettingsDescription => ({
+  hasDocument: false,
+  namespaces: namespaces as readonly NativeSettingsDescriptor[],
+  limits,
+})
 
 const chatGptAccount: NativeAccountSummary = {
   key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
@@ -765,6 +792,8 @@ it.each([
 it('keeps settings drafts consistent across saves and refreshes', async () => {
   let user: Record<string, unknown> = { label: 'old' }
   let revision = 1
+  let conversationRevision = 1
+  let busyEnter: BusyEnterBehavior = 'queue'
   let failDescribe = false
   let releaseSave!: () => void
   const saveGate = new Promise<void>((resolve) => { releaseSave = resolve })
@@ -772,6 +801,28 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     namespace: 'llm-pi-ai', schema: {}, value: {}, base: {}, user, applies: 'live', secrets: [],
     credentialRefs: [], revision,
   })
+  const preferenceRows: NativeSettingsDescriptor[] = [
+    { namespace: 'permission', schema: { uid: 5, refs: {
+      1: { type: 'const', value: 'read-only' }, 2: { type: 'const', value: 'workspace-write' },
+      3: { type: 'const', value: 'danger-full-access' }, 4: { type: 'union', list: [1, 2, 3] },
+      5: { type: 'object', dict: { defaultPreset: 4 } },
+    } }, value: { defaultPreset: 'workspace-write' }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'locale', schema: {}, value: { preference: 'zh' }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'ui-theme', schema: {}, value: { preference: 'system', fontSize: 14 }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'ui-chat', schema: {}, value: { transcriptView: 'compact' }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'ui-conversation', schema: {}, value: { busyEnter }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: conversationRevision },
+    { namespace: 'ui-pet', schema: {}, value: { enabled: true }, base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 1 },
+  ]
+  const updatedRow = (namespace: string, field: string, value: unknown): NativeSettingsDescriptor => {
+    const current = preferenceRows.find(candidate => candidate.namespace === namespace)
+    if (current === undefined) throw new Error(`missing test settings row: ${namespace}`)
+    const updated = {
+      ...current, value: { ...current.value, [field]: value }, user: { ...current.user, [field]: value },
+      revision: current.revision + 1,
+    }
+    preferenceRows.splice(preferenceRows.indexOf(current), 1, updated)
+    return updated
+  }
   const settingsDescribe = vi.fn(async () => {
     const call = settingsDescribe.mock.calls.length
     if (call === 2) await saveGate
@@ -779,29 +830,64 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
       failDescribe = false
       throw new Error('describe failed')
     }
-    return settingsDescription([row()])
+    return settingsDescription([row(), ...preferenceRows], undefined)
   })
-  const settingsMutate = vi.fn(async (_namespace: string, ops: readonly { value?: unknown }[]) => {
-    user = { label: ops[0]?.value }
-    revision += 1
-    return row()
+  const settingsMutate = vi.fn(async (namespace: string, ops: readonly { path: string[]; value?: unknown }[]) => {
+    const operation = ops[0]
+    if (namespace === 'llm-pi-ai') {
+      user = { label: operation?.value }
+      revision += 1
+      return row()
+    }
+    const field = operation?.path[0] ?? ''
+    if (namespace === 'ui-conversation') {
+      busyEnter = operation?.value as BusyEnterBehavior
+      conversationRevision += 1
+    }
+    return updatedRow(namespace, field, operation?.value)
   })
   const actions = {
     settingsDescribe, settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
     authorizationList: vi.fn(async () => []),
   } as unknown as NativeSettingsActions
-  renderSettingsPage({ actions, t: localeKey => en[localeKey] })
-  const pendingDefault = screen.getByRole('combobox', { name: en.settingsPendingDefault }) as HTMLSelectElement
-  expect(pendingDefault.value).toBe('queued')
-  fireEvent.change(pendingDefault, { target: { value: 'steering' } })
-  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
+  const setLocale = vi.fn()
+  const setThemePreference = vi.fn()
+  const setFontSize = vi.fn()
+  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], setLocale, setThemePreference, setFontSize })
+  const permission = await screen.findByRole('combobox', { name: en.settingsPermission })
+  expect((permission as HTMLSelectElement).value).toBe('workspace-write')
+  fireEvent.change(permission, { target: { value: 'danger-full-access' } })
+  expect(settingsMutate).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('checkbox', { name: en.settingsPermissionAcknowledge }))
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPermissionConfirm }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('permission', [{ op: 'set', path: ['defaultPreset'], value: 'danger-full-access' }], 1) })
+  fireEvent.change(screen.getByRole('combobox', { name: en.settingsLanguage }), { target: { value: 'en' } })
+  expect(setLocale).toHaveBeenCalledWith('en')
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('locale', [{ op: 'set', path: ['preference'], value: 'en' }], 1) })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsDark }))
+  expect(setThemePreference).toHaveBeenCalledWith('dark')
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('ui-theme', [{ op: 'set', path: ['preference'], value: 'dark' }], 1) })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsFontSizeIncrease }))
+  expect(setFontSize).toHaveBeenCalledWith(15)
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('ui-theme', [{ op: 'set', path: ['fontSize'], value: 15 }], 2) })
+  fireEvent.change(screen.getByRole('combobox', { name: en.settingsTranscript }), { target: { value: 'normal' } })
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('ui-chat', [{ op: 'set', path: ['transcriptView'], value: 'normal' }], 1) })
+  fireEvent.change(screen.getByRole('combobox', { name: en.settingsBusyEnter }), { target: { value: 'steer' } })
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('ui-conversation', [{ op: 'set', path: ['busyEnter'], value: 'steer' }], 1) })
+  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBeNull()
+  fireEvent.click(screen.getByRole('switch', { name: en.settingsPetToggle }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledWith('ui-pet', [{ op: 'set', path: ['enabled'], value: false }], 1) })
+  const advanced = screen.getByText(en.settingsAdvanced).closest('details') as HTMLDetailsElement
+  expect(advanced.open).toBe(false)
+  expect(advanced.contains(screen.getByLabelText(`${en.userOverrides} llm-pi-ai`))).toBe(true)
+  fireEvent.click(screen.getByText(en.settingsAdvanced))
   const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
   const pretty = (value: unknown) => JSON.stringify(value, null, 2)
 
   // The post-save refresh reads back the value committed by the Host.
   fireEvent.change(editor, { target: { value: '{ "label": "canonical" }' } })
-  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  fireEvent.click(within(editor.closest('section') as HTMLElement).getByRole('button', { name: en.saveSettings }))
   await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(2) })
   releaseSave()
   await waitFor(() => { expect(editor.disabled).toBe(false) })
@@ -810,13 +896,28 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   // A failed post-save describe keeps a later unsaved edit through the next refresh.
   fireEvent.change(editor, { target: { value: '{ "label": "saved" }' } })
   failDescribe = true
-  fireEvent.click(screen.getByRole('button', { name: en.saveSettings }))
+  fireEvent.click(within(editor.closest('section') as HTMLElement).getByRole('button', { name: en.saveSettings }))
   expect(await screen.findByRole('alert')).toBeTruthy()
   const edited = '{ "label": "unsaved" }'
   fireEvent.change(editor, { target: { value: edited } })
   fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
   expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 3`)).toBeTruthy()
   expect(editor.value).toBe(edited)
+  page.unmount()
+
+  const fallbackMutate = vi.fn()
+  localStorage.setItem(PENDING_DEFAULT_KEY, 'steering')
+  renderSettingsPage({
+    actions: { ...actions, settingsDescribe: vi.fn(async () => settingsDescription([row()])), settingsMutate: fallbackMutate },
+    t: localeKey => en[localeKey],
+  })
+  const fallbackBusyEnter = await screen.findByRole('combobox', { name: en.settingsBusyEnter })
+  expect((fallbackBusyEnter as HTMLSelectElement).value).toBe('steer')
+  expect((fallbackBusyEnter as HTMLSelectElement).disabled).toBe(true)
+  expect(screen.getByText(en.busySendPreferenceUnavailable)).toBeTruthy()
+  fireEvent.change(fallbackBusyEnter, { target: { value: 'queue' } })
+  expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
+  expect(fallbackMutate).not.toHaveBeenCalled()
 })
 it('resumes an in-flight login after leaving and returning to Models', async () => {
   const key = credentialKey('llm-pi-ai', 'openai-codex')
@@ -836,11 +937,12 @@ it('resumes an in-flight login after leaving and returning to Models', async () 
   } as unknown as NativeSettingsActions
   const stable = { ...emptyAccountActions, ...emptyModelActions, ...actions }
   const t = (localeKey: keyof typeof en) => en[localeKey]
-  const page = render(<SettingsPage actions={stable} t={t} section="models" />)
+  const pageProps = { actions: stable, t, useLocale, useTheme, setLocale: () => {}, setThemePreference: () => {}, setFontSize: () => {} }
+  const page = render(<SettingsPage {...pageProps} section="models" />)
   fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-  page.rerender(<SettingsPage actions={stable} t={t} section="general" />)
-  page.rerender(<SettingsPage actions={stable} t={t} section="models" />)
+  page.rerender(<SettingsPage {...pageProps} section="general" />)
+  page.rerender(<SettingsPage {...pageProps} section="models" />)
   expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: en.authorizationLoginAdd })).toBeNull()
   page.unmount()

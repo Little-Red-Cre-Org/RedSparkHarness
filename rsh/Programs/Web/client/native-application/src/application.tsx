@@ -1,5 +1,5 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
@@ -28,8 +28,12 @@ import { NativeOnboarding } from './onboarding.tsx'
 import { NativeTrajectoryInspector } from './trajectory.tsx'
 import { ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
-import { readPendingDefault } from './pending-default.ts'
+import {
+  announcePendingDefaultChanged, composerPendingDefault, readPendingDefault, subscribePendingDefault,
+  type BusyEnterBehavior,
+} from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
+import type { NativeSettingsActions } from './settings-page.tsx'
 import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
@@ -45,11 +49,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
   refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
+  settingsActions: NativeSettingsActions
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
   send: (text: string, files: readonly File[]) => Promise<boolean>
   cancel: () => void
@@ -76,6 +81,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const [draft, setDraft] = useState('')
   const draftVersion = useRef(0)
   const [files, setFiles] = useState<readonly File[]>([])
+  const [pendingDefault, setPendingDefault] = useState<BusyEnterBehavior>(readPendingDefault)
+  const [pendingDefaultError, setPendingDefaultError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
@@ -90,6 +97,32 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
   const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
     : selectedTitle?.status === 'absent' ? t('untitledSession') : t('titleUnavailable')
+  useEffect(() => {
+    const lifetime = new AbortController()
+    const unsubscribe = subscribePendingDefault(setPendingDefault)
+    const refreshPreference = async (): Promise<void> => {
+      const description = await settingsActions.settingsDescribe(lifetime.signal)
+      if (lifetime.signal.aborted) return
+      const namespace = description.namespaces.find(row => row.namespace === 'ui-conversation')
+      const value = namespace === undefined ? readPendingDefault() : namespace.value.busyEnter as BusyEnterBehavior
+      setPendingDefault(value)
+      announcePendingDefaultChanged(value)
+      setPendingDefaultError(false)
+    }
+    void (async () => {
+      try {
+        await refreshPreference()
+        for await (const event of settingsActions.settingsEvents(lifetime.signal)) {
+          if (event.type === 'settings/document-updated' && event.namespace === 'ui-conversation') {
+            await refreshPreference()
+          }
+        }
+      } catch {
+        if (!lifetime.signal.aborted) setPendingDefaultError(true)
+      }
+    })()
+    return () => { lifetime.abort(); unsubscribe() }
+  }, [settingsActions])
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
       followedSession.current = snapshot.selected
@@ -106,7 +139,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
     if (acceptsPending && files.length > 0) return
     const version = ++draftVersion.current
     if (acceptsPending) {
-      void submitPending(draft, placement ?? readPendingDefault()).then((success) => {
+      void submitPending(draft, placement ?? composerPendingDefault(pendingDefault)).then((success) => {
         if (success && draftVersion.current === version) { setDraft(''); setFiles([]) }
       })
     } else {
@@ -134,7 +167,12 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
-              submit()
+              if (acceptsPending && (event.metaKey || event.ctrlKey)) {
+                const alternate = composerPendingDefault(pendingDefault) === 'steering' ? 'queued' : 'steering'
+                submit(alternate)
+              } else {
+                submit()
+              }
             }
           }} />
       </label>
@@ -163,7 +201,8 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
       </ChatComposerToolbar>
     </ChatComposerCard>
     {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly'
-      : readPendingDefault() === 'steering' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
+      : pendingDefaultError ? 'busySendPreferenceUnavailable'
+        : pendingDefault === 'steer' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
   </form>
   return <>
     <main className={css.page}>
@@ -258,6 +297,8 @@ export const plugin: NativePlugin = {
           refreshModelControls,
           setLocale: clientLocale.setLocale.bind(clientLocale),
           toggleTheme: clientTheme.toggle.bind(clientTheme),
+          setThemePreference: clientTheme.setPreference.bind(clientTheme),
+          setFontSize: clientTheme.setFontSize.bind(clientTheme),
         }),
       }, NativeSidebarSettings)))
       context.own(slots.inject('main', () => slots.register({
@@ -265,6 +306,7 @@ export const plugin: NativePlugin = {
         children: { 'native.conversation.actions': { kind: 'list', scope: 'root' } },
         inject: () => ({
           hooks: { conversation: controller, locale: clientLocale },
+          settingsActions,
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
             await controller.send(text, files)
@@ -282,11 +324,12 @@ export const plugin: NativePlugin = {
           selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
         }),
-      }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+      }, ({ useConversation, useLocale, settingsActions, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
         refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
+        settingsActions: NativeSettingsActions
         loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
         send: (text: string, files: readonly File[]) => Promise<boolean>
         cancel: () => void
@@ -302,7 +345,8 @@ export const plugin: NativePlugin = {
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
         renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
-      }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
+      }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale}
+        settingsActions={settingsActions} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         submitPending={submitPending} changePending={changePending} editPending={editPending}

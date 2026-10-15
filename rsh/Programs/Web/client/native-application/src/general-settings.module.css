@@ -1,0 +1,131 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 24px;
+}
+
+.title {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.description {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.row select {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.appearance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.cubes {
+  display: flex;
+  gap: 8px;
+}
+
+.cube,
+.selectedCube {
+  box-sizing: border-box;
+  flex: 1 1 160px;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l4);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.selectedCube {
+  background: var(--dsw-alias-bg-module-platform);
+  border-color: var(--dsw-static-neutral-bluish-400);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  corner-shape: round;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  color: var(--dsw-alias-label-caption);
+  cursor: default;
+}
+
+.pet h3 {
+  margin: 16px 0 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}
+
+.advanced {
+  margin-top: 20px;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  padding-top: 16px;
+}
+
+.advanced > summary {
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.advanced[open] > summary {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .cubes {
+    flex-wrap: wrap;
+  }
+}
