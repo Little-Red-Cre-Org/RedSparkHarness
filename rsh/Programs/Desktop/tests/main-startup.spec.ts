@@ -15,6 +15,7 @@ const harness = await vi.hoisted(async () => {
   const windows: FakeWindow[] = []
   const hosts: FakeHost[] = []
   const handlers = new Map<string, (event: { senderFrame: { url: string } }, ...args: unknown[]) => unknown>()
+  const quitPrevented: boolean[] = []
   let applicationMenu: unknown
   const desktopPetClose = vi.fn()
   const desktopPetUpdate = vi.fn()
@@ -22,6 +23,10 @@ const harness = await vi.hoisted(async () => {
   let nativeEnabled = false
   let nativeLists = 0
   let nativeMutationOutcome: unknown
+  let nativeMutationGate: { readonly promise: Promise<void>; resolve(): void } | undefined
+  let nativeMutationWaiting = deferred()
+  let updateRestartWaiting = deferred()
+  let updateBeforeRestart: (() => Promise<void>) | undefined
   const nativeMutations: unknown[] = []
   let preparing = deferred()
   let prepared = deferred()
@@ -29,6 +34,7 @@ const harness = await vi.hoisted(async () => {
   let navigated = deferred()
   let errorPublished = deferred()
   let quitCompleted = deferred()
+  let quitWasAllowed = false
   class FakeWindow extends EventEmitter {
     destroyed = false
     readonly urls: string[] = []
@@ -82,13 +88,22 @@ const harness = await vi.hoisted(async () => {
     exit: vi.fn(),
     relaunch: vi.fn(),
     quit: vi.fn(() => {
-      const event = { preventDefault: vi.fn() }
+      let prevented = false
+      const event = { preventDefault: () => { prevented = true } }
       app.emit('before-quit', event)
-      if (event.preventDefault.mock.calls.length === 0) quitCompleted.resolve()
+      quitPrevented.push(prevented)
+      if (!prevented) { quitWasAllowed = true; quitCompleted.resolve() }
     }),
+  })
+  const installUpdate = vi.fn(async () => {
+    const restart = updateBeforeRestart?.()
+    updateRestartWaiting.resolve()
+    await restart
+    app.quit()
   })
   return {
     windows, hosts, handlers, app, FakeWindow, FakeHost, desktopPetClose, desktopPetUpdate, nativeMutations,
+    quitPrevented, installUpdate,
     get applicationMenu() { return applicationMenu },
     setApplicationMenu(menu: unknown) { applicationMenu = menu },
     menuPopup: vi.fn(),
@@ -107,6 +122,12 @@ const harness = await vi.hoisted(async () => {
     set nativeEnabled(value: boolean) { nativeEnabled = value },
     get nativeMutationOutcome() { return nativeMutationOutcome },
     set nativeMutationOutcome(value: unknown) { nativeMutationOutcome = value },
+    get nativeMutationGate() { return nativeMutationGate },
+    set nativeMutationGate(value: { readonly promise: Promise<void>; resolve(): void } | undefined) { nativeMutationGate = value },
+    get nativeMutationWaiting() { return nativeMutationWaiting },
+    get updateRestartWaiting() { return updateRestartWaiting },
+    setUpdateBeforeRestart(value: () => Promise<void>) { updateBeforeRestart = value },
+    get quitWasAllowed() { return quitWasAllowed },
     get nativeLists() { return nativeLists },
     noteNativeList() { nativeLists += 1 },
     reset() {
@@ -114,6 +135,9 @@ const harness = await vi.hoisted(async () => {
       app.isPackaged = true
       pluginsEnabled = false
       nativeEnabled = false; nativeLists = 0; nativeMutationOutcome = undefined; nativeMutations.length = 0
+      nativeMutationGate = undefined; nativeMutationWaiting = deferred()
+      quitPrevented.length = 0; quitWasAllowed = false
+      updateBeforeRestart = undefined; updateRestartWaiting = deferred()
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
       navigated = deferred(); errorPublished = deferred(); quitCompleted = deferred()
     },
@@ -159,6 +183,10 @@ vi.mock('../src/project-manager.ts', () => ({
       }
       await hooks.beforeChange()
       await hooks.afterChange()
+      if (harness.nativeMutationGate !== undefined) {
+        harness.nativeMutationWaiting.resolve()
+        await harness.nativeMutationGate.promise
+      }
       return { status: 'applied', revision: 'b'.repeat(64), backend: { phase: 'ready' } }
     }
     async mutate(_mutation: unknown, hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
@@ -178,7 +206,15 @@ vi.mock('../src/pet-window.ts', () => ({
     readonly close = harness.desktopPetClose
   },
 }))
-vi.mock('../src/update-coordinator.ts', () => ({ DesktopUpdateCoordinator: vi.fn() }))
+vi.mock('../src/update-coordinator.ts', () => ({
+  DesktopUpdateCoordinator: class {
+    readonly check = vi.fn()
+    readonly install = harness.installUpdate
+    constructor(_publish: unknown, beforeRestart: () => Promise<void>) {
+      harness.setUpdateBeforeRestart(beforeRestart)
+    }
+  },
+}))
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   const handler = harness.handlers.get(channel)
@@ -601,23 +637,61 @@ describe('desktop main startup', () => {
     expect(harness.dialog.showErrorBox).not.toHaveBeenCalled()
   })
 
-  it('waits for a pending child to exit on quit without late window navigation', async () => {
+  it.each(['quit', 'update'] as const)('waits for pending Native changes before %s shutdown', async (exitPath) => {
+    harness.nativeEnabled = true
     await import('../src/main.ts')
     await harness.preparing.promise
     harness.prepared.resolve()
     await harness.hostStarted.promise
     const window = harness.windows[0]!
-    const host = harness.hosts[0]!
-    host.stop.mockImplementation(() => { host.stopping.resolve(); return host.exited.promise })
-    window.close()
+    const firstHost = harness.hosts[0]!
+    firstHost.ready.resolve()
+    await harness.navigated.promise
+    const nextHostStart = harness.nextHostStart()
+    let releaseMutation!: () => void
+    harness.nativeMutationGate = {
+      promise: new Promise<void>((resolve) => { releaseMutation = resolve }),
+      resolve: () => { releaseMutation() },
+    }
+    const mutation = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+      runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
+        installations: [{ target: 'client', id: 'client-fixture', enabled: false }] },
+    }))
+    await firstHost.stopping.promise
+    firstHost.exited.resolve()
+    await nextHostStart
+    const mutationHost = harness.hosts[1]!
+    mutationHost.ready.resolve()
+    await harness.nativeMutationWaiting.promise
+
+    if (exitPath === 'quit') window.close()
+    const installing = exitPath === 'update' ? Promise.resolve(invoke(DESKTOP_IPC.updatesInstall)) : undefined
+    if (exitPath === 'update') await harness.updateRestartWaiting.promise
     harness.app.quit()
-    await host.stopping.promise
-    expect(harness.app.quit).toHaveBeenCalledTimes(1)
-    host.ready.resolve()
-    host.exited.resolve()
+    harness.app.quit()
+    expect(harness.quitPrevented).toEqual([true, true])
+    expect(harness.quitWasAllowed).toBe(false)
+    await expect(Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+      runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
+        installations: [{ target: 'client', id: 'late-client', enabled: false }] },
+    }))).resolves.toMatchObject({ status: 'refused', error: { code: 'busy' } })
+    expect(harness.nativeMutations).toHaveLength(1)
+    expect(harness.hosts).toHaveLength(2)
+    expect(mutationHost.stop).not.toHaveBeenCalled()
+
+    releaseMutation()
+    await expect(mutation).resolves.toMatchObject({ status: 'applied' })
+    await mutationHost.stopping.promise
+    mutationHost.exited.resolve()
+    await installing
     await harness.quitCompleted.promise
-    expect(host.stop).toHaveBeenCalledTimes(1)
-    expect(window.urls).toEqual(['dsh-app://shell/startup.html'])
+    expect(harness.quitPrevented).toEqual([true, true, false])
+    expect(harness.quitWasAllowed).toBe(true)
+    expect(mutationHost.stop).toHaveBeenCalledTimes(1)
+    if (exitPath === 'quit') expect(window.urls).toEqual([
+      'dsh-app://shell/startup.html', 'dsh-app://app/index.html', 'dsh-app://shell/startup.html',
+    ])
     expect(harness.windows).toHaveLength(1)
+    expect(harness.installUpdate).toHaveBeenCalledTimes(exitPath === 'update' ? 1 : 0)
   })
 })

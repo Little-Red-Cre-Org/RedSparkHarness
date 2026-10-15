@@ -18,7 +18,7 @@ Windows 的一体化标题栏高 40 像素，保留原生窗口按钮。RedSpark
 | 共享模块 | 宿主 API 可能依赖模块实例身份。 | Desktop 用目录软链接或 Windows junction 把每个内置第一方包连接到 profile；普通插件依赖保留在本地。 |
 | 状态归属 | 共享可执行依赖图会让 CLI（命令行界面）与 Desktop 相互改变 dsh、Cordis、插件或原生模块版本，而两个桌面进程还可能争用同一个 profile。 | Electron 在访问任何 profile 前获取进程生命周期单实例锁，并独占 `$DSH_HOME/profiles/desktop` 及其包管理器状态。CLI 与 Desktop 共享 `$DSH_HOME` 下受支持的产品数据，但绝不共享可执行包、插件激活、锁文件或 `node_modules`。 |
 | 通信 | 监听 Web 服务会引入端口归属、认证、CORS 与暴露风险；Electron 与上游 Node.js 之间也需要明确的跨进程协议。 | 应用不打开 Web 端口。`dsh-app://` 承载 Web 资源和 Fetch 流量；分帧字节管道以背压传输有界请求与响应分块，Node IPC 只承载子进程生命周期控制。 |
-| 插件变更 | 包安装和 Host 启动可能失败。 | Desktop 停止 Host 后直接修改当前 profile。失败保留部分修改供用户修复，不自动回滚 profile。 |
+| 兼容插件变更 | 包安装和 Host 启动可能失败。 | Desktop 停止 Host 后直接修改当前 profile。失败保留部分修改供用户修复；兼容 profile 不会自动回滚。 |
 | 更新 | 桌面壳与 dsh 独立更新会重新产生版本分裂，而桌面壳未变化的数据块不应强制完整传输。 | Electron 壳、匹配的 dsh 运行时、Node.js 与 pnpm 组成一个已签名更新单元。平台更新产物可以复用未变化的数据块，但运行时版本选择绝不脱离 Desktop 发布。 |
 
 [Electron 打包与更新 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-25-electron-desktop-packaging-and-updates.zh.md) 记录了这些决策背后的理由、替代方案、安全约束和发布验证要求。
@@ -35,7 +35,7 @@ Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，
 
 Native Host 在应用根路径和 `/native.html` 提供所选原生 Client。桌面项目根目录可选的 `rsh.client.json` 使用 `formatVersion: 1` 和 `installations` 数组；每项包含唯一 `id`、已安装包名 `plugin`、可选 JSON `config` 和可选布尔值 `disabled`。禁用项及其配置会继续保存，但不会进入浏览器 bundle 或启动选择。Native Host 只从项目或内置运行时解析包，校验每个已导出 `package.json.dsh.native` 入口是否支持 `client`，并拒绝包含 Cordis 的浏览器依赖图。它会将启用的入口合并打包，并通过 `/.dsh/native-client/` 提供 JavaScript、样式和生成的资源。
 
-现有 profile 默认保留 Cordis Host。profile 在自己的 `package.json` 中设置 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"` 后选择唯一原生 Host；`rsh.profile.json` 保存组合配置。此模式要求指定时的 `configReload` 为 `"startup"`，一个原生 Session controller 及其 Provider，并提供 `rsh.client.json`；根页面随后提供所选原生 Client。Host 与 Client 包必须解析到 profile 或内置运行时内，其导出文件必须位于各自包内。配置非法、Cordis patch 非空、Client 组合缺失以及另一个 application 或 Connection Provider 均阻止激活。Electron 持有私有传输；profile 不能通过它启动另一应用或 HTTP 监听器。共享 Session execution Provider 持有轮次与恢复。启用的 SDK 或 ACP child 安装项要求可见的 model Provider，并从最近的 pi-ai Provider 继承路由配置。Desktop 通过 CLI profile loader 展开启用的 Native preset；派生 scope、安装项和配置参与依赖检查与 `disableAll`，但不会写回 `rsh.profile.json`。Inventory 根据所选包元数据计算启动闭包，不为当前启用的 child 安装项派生路由。启用/禁用候选与变更后的组合仍通过 CLI loader 派生并校验路由，因此配置错误的可选 child 仍可列出和关闭，而保留的错误配置会在 Host 停止前阻止变更。变更前，Desktop 会在新的 worker 中解析选定的 Host 入口，并注入 CLI loader 每个根作用域提供的 launch-environment 与 `pluginInventory` Provider、私有 carrier、SDK 或 ACP child-runtime launcher，以及启用 child module 缺少可见 Provider 时 loader 补入的子作用域 subprocess 或 sandbox 支持行；Client 入口只检查 metadata 并通过浏览器目标 bundle 构建验证，不会在 Electron 主进程导入执行。已选择的 optional 依赖参与排序和循环检查。`disableAll` 保留 Desktop 启动的必需 Provider 闭包；若该闭包保留了 preset manager 或派生 preset 安装项，也会保留该 manager 当前激活的派生安装项及其必需 Provider。否则，可选 preset manager 和其 Provider 可以一起禁用。Native 模块变更共用现有 Desktop 包操作锁和 Host 重启流程。仅安装、更新和移除包会写入 pending marker。变更不承诺回滚。`applied` 仅表示 Host 已就绪且 Client bundle 已生成。由于 manager 没有浏览器健康通道，浏览器激活和挂载错误仍由实际 GUI 验收。
+现有 profile 默认保留 Cordis Host。profile 在自己的 `package.json` 中设置 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"` 后选择唯一原生 Host；`rsh.profile.json` 保存组合配置。此模式要求指定时的 `configReload` 为 `"startup"`，一个原生 Session controller 及其 Provider，并提供 `rsh.client.json`；根页面随后提供所选原生 Client。Host 与 Client 包必须解析到 profile 或内置运行时内，其导出文件必须位于各自包内。配置非法、Cordis patch 非空、Client 组合缺失以及另一个 application 或 Connection Provider 均阻止激活。Electron 持有私有传输；profile 不能通过它启动另一应用或 HTTP 监听器。共享 Session execution Provider 持有轮次与恢复。启用的 SDK 或 ACP child 安装项要求可见的 model Provider，并从最近的 pi-ai Provider 继承路由配置。Desktop 通过 CLI profile loader 展开启用的 Native preset；派生 scope、安装项和配置参与依赖检查与 `disableAll`，但不会写回 `rsh.profile.json`。Inventory 根据所选包元数据计算启动闭包，不为当前启用的 child 安装项派生路由。启用/禁用候选与变更后的组合仍通过 CLI loader 派生并校验路由，因此配置错误的可选 child 仍可列出和关闭，而保留的错误配置会在 Host 停止前阻止变更。变更前，Desktop 会在新的 worker 中解析选定的 Host 入口，并注入 CLI loader 每个根作用域提供的 launch-environment 与 `pluginInventory` Provider、私有 carrier、SDK 或 ACP child-runtime launcher，以及启用 child module 缺少可见 Provider 时 loader 补入的子作用域 subprocess 或 sandbox 支持行；Client 入口只检查 metadata 并通过浏览器目标 bundle 构建验证，不会在 Electron 主进程导入执行。已选择的 optional 依赖参与排序和循环检查。`disableAll` 保留 Desktop 启动的必需 Provider 闭包；若该闭包保留了 preset manager 或派生 preset 安装项，也会保留该 manager 当前激活的派生安装项及其必需 Provider。否则，可选 preset manager 和其 Provider 可以一起禁用。Native 模块变更共用现有 Desktop 包操作锁和 Host 重启流程。Host 交接后的任何失败都会按字节恢复原始 `rsh.profile.json` 与 `rsh.client.json`；包操作还会恢复 `package.json` 与 `pnpm-lock.yaml`，按恢复后的锁文件重新安装依赖图，并重启旧 Host。恢复或重启失败时，profile 需要显式修复。安装、更新和移除包也会写入 pending marker。`applied` 仅表示 Host 已就绪且 Client bundle 已生成。由于 manager 没有浏览器健康通道，浏览器激活和挂载错误仍由实际 GUI 验收。
 
 兼容 Host 只提供现有应用。如果 profile 中包含 `rsh.client.json`，Host 会在启动时失败并提示配置 `dsh.profile.runtime: "native"`；兼容 Typert Session endpoint 不实现 Native Session 的响应、follow 和 image 路由。没有 `rsh.client.json` 时，`/native.html` 返回 404，`/` 保留现有应用。原生模式支持所选 Session Client 的能力。原生 profile 不支持旧版兼容插件列表与变更操作，并显示本地化提示；它使用 `dshDesktop.plugins.native`。
 
@@ -49,9 +49,9 @@ Native Host 在应用根路径和 `/native.html` 提供所选原生 Client。桌
 2. 兼容的应用升级在当前 profile 中刷新共享链接，并检查已启用插件的 peer 要求。插件文件、配置、版本和锁文件留在原处；不运行 pnpm。
 3. 内置 Node 版本、平台或架构变化时，禁用脚本重新安装锁定的插件依赖图，验证并链接宿主包，然后运行已批准的待执行构建并再次验证。
 4. 插件添加、更新和删除使用内置 pnpm 及 Desktop 独有的包管理器状态。保留的宿主包必须声明为 peer；共享包的嵌套副本和别名会被验证拒绝。普通插件依赖必须解析到 profile 内部。
-5. 插件变更在直接修改当前 profile 前停止后端。准备成功后启动 Host。包操作或 Host 启动失败会保留已修改文件并报告错误。未完成的包操作保留标记，使下次启动重试锁定依赖的安装和待执行构建。Desktop 不创建 staging 目录、激活日志或回滚副本。
+5. 兼容插件变更在直接修改当前 profile 前停止后端。准备成功后启动 Host。包操作或 Host 启动失败会保留已修改文件并报告错误。未完成的包操作保留标记，使下次启动重试锁定依赖的安装和待执行构建。Desktop 不创建 staging 目录、激活日志或回滚副本。
 
-加载页不依赖 Host。错误页提供重启和重装指导。只有已打包应用的资源支持 profile 恢复时，才提供禁用插件和重置 Desktop；开发模式和早期初始化失败只提供重启。应用菜单仍提供插件管理器入口。每次后端启动前都会检查运行时标识；插件修改不自动回滚。
+加载页不依赖 Host。错误页提供重启和重装指导。只有已打包应用的资源支持 profile 恢复时，才提供禁用插件和重置 Desktop；开发模式和早期初始化失败只提供重启。应用菜单仍提供插件管理器入口。每次后端启动前都会检查运行时标识；兼容插件修改不自动回滚。
 
 重置删除 `$DSH_HOME/profiles/desktop` 中除所持事务锁外的所有条目，然后初始化内置 profile。它删除 Desktop 配置和已安装第三方包，不保留备份。共享任务、设置和 Harness-home `.env` 保持不变。壳资源和 preload 失败时使用独立文档显示可用恢复操作和诊断；其控件不依赖 preload。
 

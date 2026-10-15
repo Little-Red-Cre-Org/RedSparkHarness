@@ -12,7 +12,7 @@ Staging preserves an old plugin installation but adds profile copying, directory
 
 Desktop stops the Host and modifies the current profile directly. Shared host links are detached for package changes and restored when the operation settles. Package locking, dependency validation, and approved native builds remain. Compatible upgrades refresh links without copying plugin files.
 
-Package or Host failures retain partial changes for repair and retry. There is no staging profile, activation journal, directory-swap recovery, or automatic rollback. Existing scratch directories are not interpreted or deleted.
+Package or Host failures retain partial changes for repair and retry. There is no staging profile, activation journal, directory-swap recovery, or automatic rollback. Existing scratch directories are not interpreted or deleted. Native module mutations are the exception: they restore the files they changed and restart the previous Host, as recorded in [2026-10-14-native-desktop-module-management](2026-10-14-native-desktop-module-management.md).
 
 This supersedes staging and rollback in [2026-08-25-electron-desktop-packaging-and-updates](2026-08-25-electron-desktop-packaging-and-updates.md), [2026-09-08-desktop-bundled-runtime-and-external-plugins](2026-09-08-desktop-bundled-runtime-and-external-plugins.md), [2026-09-09-desktop-immediate-window-and-direct-start](2026-09-09-desktop-immediate-window-and-direct-start.md). Other release, module-identity, and window-lifecycle decisions remain active.
 

@@ -144,7 +144,7 @@ NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录�
 - 后端与浏览器应用不能修改桌面包。
 - npm/CLI dsh 与 Electron 绝不从对方的 `node_modules` 解析或安装插件。
 - 在产品 UI 加载前，活跃后端与 Web UI 报告相同 dsh 版本和兼容壳 API。
-- 包操作或 Host 失败后保留部分 profile 修改，并提供恢复控件；不承诺自动回滚 profile。
+- 兼容插件的包操作或 Host 失败后保留部分 profile 修改，并提供恢复控件；不承诺自动回滚 profile。Native 模块变更会恢复自身修改的文件并重启之前的 Host，见 [2026-10-14-native-desktop-module-management](2026-10-14-native-desktop-module-management.zh.md)。
 - 一个 Desktop 版本绑定 Electron 与 dsh；每次 dsh 更新都通过一个 Electron 更新弹窗交付，并产生一次用户可见的重启。
 - 共享 `.dsh` 数据在迁移或修改前拒绝不兼容的读取方。
 - 不打开回环监听端口，沙箱渲染进程不能访问任意文件系统或 Electron API。
