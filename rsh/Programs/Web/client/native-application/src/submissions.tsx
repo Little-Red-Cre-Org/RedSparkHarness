@@ -35,6 +35,9 @@ function PendingRow({ requestId, item, edit, setEdit, save, disabled, canPromote
   const isExpanded = expanded || editing
   const expandLabel = t(isExpanded ? 'pendingCollapse' : 'pendingExpand')
   return <li className={css.pendingRow} data-expanded={isExpanded}>
+    {item === undefined ? null : <span className={css.pendingTag} data-placement={item.placement}>
+      {t(item.placement === 'queued' ? 'pendingQueuedTag' : 'pendingSteeringTag')}
+    </span>}
     {editing
       ? <div className={css.pendingEditorWrap}>
         <textarea id={textId} className={css.pendingEditor} aria-label={t('pendingEdit')} rows={2}

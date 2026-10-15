@@ -18,6 +18,7 @@ import { plugin as sessionPresentation } from '../../ui-session/src/native.ts'
 import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
+import { PENDING_DEFAULT_KEY } from '../src/pending-default.ts'
 
 const makeHeader = (id: string, cwd?: string): SessionHeader => ({
   version: SESSION_FORMAT_VERSION,
@@ -398,6 +399,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(messageInput).toHaveProperty('disabled', false)
     expect(messageInput).toHaveProperty('value', '')
     const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
+    localStorage.setItem(PENDING_DEFAULT_KEY, 'steering')
     queue.mockRejectedValueOnce(new Error(validationJson))
     fireEvent.change(messageInput, { target: { value: 'After this turn' } })
     fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
@@ -411,6 +413,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(await within(pendingPanel).findByText('After this turn')).toBeTruthy()
     expect(pendingPanel.compareDocumentPosition(messageInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const row = within(pendingPanel).getByRole('listitem')
+    expect(within(row).getByText('Queued')).toBeTruthy()
     expect(within(row).getAllByRole('button').map(button => button.getAttribute('aria-label')))
       .toEqual(['Expand message', 'Edit pending message', 'Steer instead', 'Delete'])
     fireEvent.click(within(row).getByRole('button', { name: 'Expand message' }))
@@ -463,6 +466,17 @@ it('installs modular Native navigation, Session selection, details, locale and t
     await waitFor(() => { expect(within(pendingPanel).getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false) })
     fireEvent.click(within(pendingPanel).getByRole('button', { name: 'Cancel' }))
     expect(within(pendingPanel).queryByRole('listitem')).toBeNull()
+    const queueCallsBeforeEnter = queue.mock.calls.length
+    const steerCallsBeforeEnter = steer.mock.calls.length
+    fireEvent.change(messageInput, { target: { value: 'Default steer by Enter' } })
+    fireEvent.keyDown(messageInput, { key: 'Enter' })
+    const enterSubmission = await within(pendingPanel).findByText('Default steer by Enter')
+    await waitFor(() => { expect(steer).toHaveBeenCalledTimes(steerCallsBeforeEnter + 1) })
+    expect(queue).toHaveBeenCalledTimes(queueCallsBeforeEnter)
+    expect(steer).toHaveBeenLastCalledWith('session-alpha', 'Default steer by Enter', expect.any(String), expect.any(AbortSignal))
+    expect(within(enterSubmission.closest('li')!).getByText('Steering')).toBeTruthy()
+    fireEvent.click(within(enterSubmission.closest('li')!).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => { expect(within(pendingPanel).queryByRole('listitem')).toBeNull() })
     fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
     promptSettlement.resolve({ exitCode: 0, answer: '' })
     await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
@@ -565,6 +579,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     expect(close).toHaveBeenCalledOnce()
     expect(host.diagnostics().every(item => item.state === 'disposed' && item.cleanup === 'complete')).toBe(true)
   } finally {
+    localStorage.removeItem(PENDING_DEFAULT_KEY)
     await host.stop()
   }
 })

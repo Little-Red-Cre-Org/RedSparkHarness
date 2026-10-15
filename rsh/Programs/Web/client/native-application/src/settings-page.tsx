@@ -11,6 +11,7 @@ import type { ConversationLocaleKey } from './locales.ts'
 import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
+import { readPendingDefault, writePendingDefault } from './pending-default.ts'
 
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
@@ -325,6 +326,7 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   section: string
   onAuthorized?: () => void
 }) {
+  const [pendingDefault, setPendingDefault] = useState(readPendingDefault)
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
   const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
@@ -535,6 +537,14 @@ export function SettingsPage({ actions, t, section, onAuthorized }: {
   if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   return <div>
     <h2>{t('settingsGeneral')}</h2>
+    <p><label>{t('settingsPendingDefault')} <select value={pendingDefault} onChange={(event) => {
+      const value = event.target.value as 'queued' | 'steering'
+      setPendingDefault(value)
+      writePendingDefault(value)
+    }}>
+      <option value="queued">{t('queueMessage')}</option>
+      <option value="steering">{t('steerMessage')}</option>
+    </select></label></p>
     {refreshButton}
     {loading ? <p role="status">{t('loadingSettings')}</p> : null}
     {notice === undefined ? null : <p role="status">{notice}</p>}
