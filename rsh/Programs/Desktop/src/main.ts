@@ -194,6 +194,8 @@ async function main(): Promise<void> {
   let pageError: Extract<DesktopBackendState, { phase: 'error' }> | undefined
   let quitting = false
   let startup: Promise<void> | undefined
+  let nativeMutationPromise: Promise<unknown> | undefined
+  let quitReady = false
   let mainWindow: BrowserWindow | undefined
   let pluginWindow: BrowserWindow | undefined
   let shellInstallerOwnsQuit = false
@@ -273,7 +275,10 @@ async function main(): Promise<void> {
 
   const hooks: DesktopProjectHooks = {
     beforeChange: () => backend.stop(),
-    afterChange: () => backend.start(async () => {}),
+    afterChange: async () => {
+      if (quitting || shellInstallerOwnsQuit) throw new Error('desktop backend shutdown has started')
+      await backend.start(async () => {})
+    },
   }
 
   recoverApplication = async (action): Promise<void> => {
@@ -324,7 +329,14 @@ async function main(): Promise<void> {
     publishUpdate,
     async () => {
       shellInstallerOwnsQuit = true
-      await backend.stop()
+      try {
+        await backend.stop()
+        await nativeMutationPromise?.catch(() => undefined)
+        quitReady = true
+      } catch (error) {
+        shellInstallerOwnsQuit = false
+        throw error
+      }
     },
   )
 
@@ -370,34 +382,51 @@ async function main(): Promise<void> {
     if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeList('wrong-profile', backendState())
     return manager.listNativeModules(backendState)
   }
-  const nativeMutation = async (
+  const nativeMutation = (
     event: IpcMainInvokeEvent,
     parse: () => Parameters<DesktopProjectManager['mutateNativeModules']>[0],
-  ) => {
+  ): Promise<unknown> => {
     assertDesktopSender(event, ['shell'])
+    if (quitting || shellInstallerOwnsQuit) return Promise.resolve(manager.refuseNativeMutation('busy', backendState()))
     if (development !== undefined) {
-      return manager.refuseNativeMutation('wrong-profile', backendState())
+      return Promise.resolve(manager.refuseNativeMutation('wrong-profile', backendState()))
     }
     let mutation: Parameters<DesktopProjectManager['mutateNativeModules']>[0]
     try { mutation = parse() }
-    catch { return manager.refuseNativeMutation('invalid-request', backendState()) }
-    await startup?.catch(() => undefined)
-    if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeMutation('wrong-profile', backendState())
-    const nativeHooks: DesktopProjectHooks = {
-      beforeChange: async () => {
-        await navigateMain(startupUrl)
-        await hooks.beforeChange()
-      },
-      afterChange: () => hooks.afterChange(),
+    catch { return Promise.resolve(manager.refuseNativeMutation('invalid-request', backendState())) }
+    if (nativeMutationPromise !== undefined) {
+      return Promise.resolve(manager.refuseNativeMutation('busy', backendState()))
     }
-    const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
-    if (outcome.status === 'recovery-required' && backendState().phase !== 'error') {
-      await showStartupError(new Error(messages.nativeRecoveryError))
-    } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
-      try { await navigateMain(applicationUrl) }
-      catch (error) { await showStartupError(error) }
+    const operation = (async () => {
+      await startup?.catch(() => undefined)
+      // A quit or update can begin while the initial backend startup is pending.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (quitting || shellInstallerOwnsQuit) return manager.refuseNativeMutation('busy', backendState())
+      if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeMutation('wrong-profile', backendState())
+      const nativeHooks: DesktopProjectHooks = {
+        beforeChange: async () => {
+          await navigateMain(startupUrl)
+          await hooks.beforeChange()
+        },
+        afterChange: () => hooks.afterChange(),
+      }
+      const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
+      // The updater can claim quit while this manager promise is pending.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (outcome.status === 'recovery-required' && backendState().phase !== 'error' && !shellInstallerOwnsQuit) {
+        await showStartupError(new Error(messages.nativeRecoveryError))
+      } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
+        try { await navigateMain(applicationUrl) }
+        catch (error) { await showStartupError(error) }
+      }
+      return outcome
+    })()
+    nativeMutationPromise = operation
+    const clearMutation = (): void => {
+      if (nativeMutationPromise === operation) nativeMutationPromise = undefined
     }
-    return outcome
+    void operation.then(clearMutation, clearMutation)
+    return operation
   }
   ipcMain.handle(DESKTOP_IPC.localeGet, (event) => {
     assertDesktopSender(event, ['shell'])
@@ -641,11 +670,18 @@ async function main(): Promise<void> {
     if (process.platform !== 'darwin') app.quit()
   })
   app.on('before-quit', (event) => {
-    if (shellInstallerOwnsQuit || quitting) return
+    if (quitReady) return
     event.preventDefault()
+    if (shellInstallerOwnsQuit || quitting) return
     quitting = true
     desktopPet.close()
-    void backend.close().catch((error: unknown) => { console.error(error) }).finally(() => { app.quit() })
+    void (async () => {
+      try { await backend.close() }
+      finally { await nativeMutationPromise?.catch(() => undefined) }
+    })().catch((error: unknown) => { console.error(error) }).finally(() => {
+      quitReady = true
+      app.quit()
+    })
   })
 
   mainWindow = createMainWindow()

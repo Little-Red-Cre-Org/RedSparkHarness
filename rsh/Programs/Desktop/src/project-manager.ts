@@ -912,7 +912,7 @@ function toggleDisabled<Row extends { readonly disabled?: boolean }>(row: Row, e
 }
 
 
-/** Desktop npm project manager with direct writes and no rollback. */
+/** Desktop project manager for compatibility plugin changes and Native module mutations. */
 export class DesktopProjectManager {
   private lockDescriptor: number | undefined
   private descriptor: DesktopRuntimeDescriptor | undefined
@@ -1065,6 +1065,9 @@ export class DesktopProjectManager {
         this.assertNativePackageState(plan.rows, manifest.dependencies, lock)
         const next = this.nativeCandidate(files, rows, mutation, manifest.dependencies, plan.retained)
         if (!next.changed) return currentRevision
+        if (next.packageOperation !== undefined && lock === undefined && Object.keys(manifest.dependencies).length > 0) {
+          throw new NativeDesktopOperationFailure('profile-invalid')
+        }
         if (next.validateBeforeStop) {
           try { await validateNativeComposition(next.files, this.paths.profile, this.runtime.dsh,
             this.currentRuntime(), dirname(this.paths.root)) }
@@ -1074,6 +1077,11 @@ export class DesktopProjectManager {
             this.currentRuntime(), dirname(this.paths.root)) }
           catch { throw new NativeDesktopOperationFailure('profile-invalid') }
         }
+        const profilePath = join(this.paths.profile, 'rsh.profile.json')
+        const clientPath = join(this.paths.profile, 'rsh.client.json')
+        const backupPaths = [profilePath, clientPath,
+          ...(next.packageOperation === undefined ? [] : [join(this.paths.profile, 'package.json'), lockPath])]
+        const backups = backupPaths.map(path => [path, existsSync(path) ? readFileSync(path) : undefined] as const)
         try { await hooks.beforeChange() }
         catch { throw new NativeDesktopOperationFailure('host-stop-failed') }
         afterHandoff = true
@@ -1105,17 +1113,45 @@ export class DesktopProjectManager {
           } else {
             this.writeNativeFiles(next.files)
           }
+          const committedFiles = this.readNativeFiles()
+          const committedRows = selectedRows(committedFiles, this.paths.profile, this.runtime.dsh, this.currentRuntime())
+          const committedRevision = this.nativeRevision(committedFiles, committedRows)
+          try { await hooks.afterChange() }
+          catch { throw new NativeDesktopOperationFailure('host-start-failed', true) }
+          return committedRevision
         } catch (error) {
-          if (error instanceof NativeDesktopOperationFailure) throw error
-          const code: NativeDesktopErrorCode = existsSync(this.pendingPackages)
-            ? 'package-operation-failed' : 'recovery-required'
-          throw new NativeDesktopOperationFailure(code, true)
+          let failure = error
+          if (!(failure instanceof NativeDesktopOperationFailure)) {
+            failure = new NativeDesktopOperationFailure(existsSync(this.pendingPackages)
+              ? 'package-operation-failed' : 'profile-invalid', true)
+          }
+          const originalFailure = this.nativeFailure(failure, true)
+          try {
+            if (next.packageOperation !== undefined) writeFileSync(this.pendingPackages, '')
+            for (const [path, bytes] of backups) {
+              const current = lstatSync(path, { throwIfNoEntry: false })
+              if (current?.isDirectory() || current?.isSymbolicLink()) removeOwnedDirectory(path)
+              else if (bytes === undefined && current !== undefined) unlinkSync(path)
+              if (bytes !== undefined) writeFileSync(path, bytes)
+            }
+            if (next.packageOperation !== undefined) {
+              removeOwnedDirectory(join(this.paths.profile, 'node_modules'))
+              try {
+                if (lock !== undefined) {
+                  await this.runPnpm(this.paths.profile, ['install', '--frozen-lockfile', '--ignore-scripts'])
+                }
+                await this.finishPackageOperation(this.paths.profile)
+              } finally {
+                linkDesktopHostPackages(this.paths.profile, this.runtime.dsh, this.currentRuntime())
+              }
+            }
+            await hooks.afterChange()
+          } catch {
+            throw new NativeDesktopOperationFailure('recovery-required', true)
+          }
+          throw new NativeDesktopOperationFailure(originalFailure.code, false,
+            originalFailure.currentRevision, originalFailure.blockedBy)
         }
-        try { await hooks.afterChange() }
-        catch { throw new NativeDesktopOperationFailure('host-start-failed', true) }
-        const committedFiles = this.readNativeFiles()
-        const committedRows = selectedRows(committedFiles, this.paths.profile, this.runtime.dsh, this.currentRuntime())
-        return this.nativeRevision(committedFiles, committedRows)
       })
       return { status: 'applied', revision, backend: backendProjection(currentBackend()) }
     } catch (error) {

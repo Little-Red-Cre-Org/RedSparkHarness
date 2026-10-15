@@ -144,7 +144,7 @@ The bundled upstream Node.js and pnpm are expected to add about 35–50 MB compr
 - The backend and browser application cannot mutate desktop packages.
 - npm/CLI dsh and Electron never resolve or install plugins from each other's `node_modules`.
 - The active backend and Web UI report the same dsh version and a compatible shell API before the product UI loads.
-- Package or Host failures retain partial profile changes and expose recovery controls; no automatic profile rollback is promised.
+- Compatibility plugin package or Host failures retain partial profile changes and expose recovery controls; no automatic profile rollback is promised. Native module mutations restore the files they changed and restart the previous Host, as recorded in [2026-10-14-native-desktop-module-management](2026-10-14-native-desktop-module-management.md).
 - One Desktop version binds Electron and dsh; every dsh update arrives through one Electron update dialog and one user-visible restart.
 - Shared `.dsh` data rejects incompatible readers before migration or mutation.
 - No loopback listener is opened, and the sandboxed renderer cannot access arbitrary filesystem or Electron APIs.
