@@ -244,7 +244,51 @@ it('shows a Host gap for an absent plugin namespace without a save action', asyn
 
   fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
   expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(zh.settingsPluginHostGap).toBe('当前 Host 尚未开放此插件的设置。')
+  expect(en.settingsPluginHostGap).toBe('The current Host has not opened settings for this plugin yet.')
   expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
+})
+
+it('retains the last plugin settings, revision, and credential info when a refresh omits its namespace', async () => {
+  const webSearch = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
+  })
+  let releaseRefresh!: () => void
+  const refresh = new Promise<void>((resolve) => { releaseRefresh = resolve })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async () => {
+    describeCount += 1
+    return settingsDescription(describeCount === 1 ? [webSearch] : [])
+  })
+  actions.settingsMutate = vi.fn(async () => pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 9,
+  }, { maxUses: 9 }))
+  actions.credentialsDescribe = vi.fn(async () => ({
+    DEEPSEEK_API_KEY: { configured: true, writable: true },
+  }))
+  actions.settingsEvents = async function* () {
+    await refresh
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  expect(await screen.findByText(en.settingsPluginWebSearchApiKeySet)).toBeTruthy()
+  releaseRefresh()
+  await waitFor(() => { expect(actions.credentialsDescribe).toHaveBeenCalledTimes(2) })
+
+  expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
+  expect(screen.getByText(en.settingsPluginWebSearchApiKeySet)).toBeTruthy()
+  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
+
+  fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
+  await waitFor(() => {
+    expect(actions.settingsMutate).toHaveBeenCalledWith('web-search-deepseek', [
+      { op: 'set', path: ['maxUses'], value: 9 },
+    ], 1)
+  })
 })
 
 it('renders the ChatGPT identity name before the email', async () => {

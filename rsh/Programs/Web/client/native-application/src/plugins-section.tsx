@@ -175,16 +175,20 @@ function cardDraftIsDirty(plugin: PluginDefinition, row: NativeSettingsDescripto
 }
 
 function PluginCard({
-  plugin, row, loaded, draft, status, saving, credential, catalog, catalogStatus, catalogPartial,
+  plugin, row, loaded, loading, draft, status, saving, credential, credentialLoading, credentialFailed,
+  catalog, catalogStatus, catalogPartial,
   t, onDraft, onSave, onDiscard, onRetryCatalog,
 }: {
   plugin: PluginDefinition
   row: NativeSettingsDescriptor | undefined
   loaded: boolean
+  loading: boolean
   draft: PluginDraft
   status: PluginStatus
   saving: boolean
   credential: CredentialInfo | undefined
+  credentialLoading: boolean
+  credentialFailed: boolean
   catalog: ModelCatalog
   catalogStatus: 'idle' | 'loading' | 'ready' | 'error'
   catalogPartial: boolean
@@ -208,6 +212,10 @@ function PluginCard({
   const credentialMatches = activeCredentialRef !== undefined && credential?.ref === activeCredentialRef
   const keyConfigured = credentialMatches ? credential.configured : false
   const keyWritable = credentialMatches ? credential.writable : true
+  const keyStatus = credentialMatches
+    ? keyConfigured ? 'settingsPluginWebSearchApiKeySet' : 'settingsPluginWebSearchApiKeyUnset'
+    : credentialLoading ? 'settingsPluginCredentialLoading'
+      : credentialFailed ? 'settingsPluginCredentialLoadFailed' : 'settingsPluginWebSearchApiKeyUnset'
   const keyInvalid = plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '' && !keyWritable
   const blocked = !dirty || invalid || keyInvalid || saving || row === undefined
 
@@ -243,7 +251,7 @@ function PluginCard({
       <span aria-hidden="true" className={`${css.chevron} ${open ? css.chevronOpen : ''}`} />
     </button>
     {open ? <div className={css.body}>
-      {!loaded ? <p className={css.notice} role="status">{t('settingsPluginLoading')}</p>
+      {!loaded ? loading ? <p className={css.notice} role="status">{t('settingsPluginLoading')}</p> : null
         : row === undefined ? <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
           : <>
             {plugin.namespace === 'subagent-model-selection' ? <>
@@ -321,7 +329,7 @@ function PluginCard({
             {plugin.namespace === 'web-search-deepseek' ? <div className={css.field}>
               <div className={css.fieldHead}>
                 <label className={css.label} htmlFor="web-search-api-key">{t('settingsPluginWebSearchApiKey')}</label>
-                <span className={css.override}>{t(keyConfigured ? 'settingsPluginWebSearchApiKeySet' : 'settingsPluginWebSearchApiKeyUnset')}</span>
+                <span className={css.override}>{t(keyStatus)}</span>
               </div>
               <input id="web-search-api-key" className={css.input} type="password" autoComplete="off"
                 value={draft.apiKey} disabled={saving || !keyWritable}
@@ -351,9 +359,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const [descriptors, setDescriptors] = useState<readonly NativeSettingsDescriptor[]>([])
   const descriptorsRef = useRef<readonly NativeSettingsDescriptor[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [credential, setCredential] = useState<CredentialInfo>()
-  const credentialInfo = useRef<CredentialInfo>()
+  const [credentialLoadingRef, setCredentialLoadingRef] = useState<string>()
   const [credentialFailed, setCredentialFailed] = useState(false)
   const [catalog, setCatalog] = useState<ModelCatalog>(null)
   const [catalogStatus, setCatalogStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
@@ -370,11 +379,12 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   catalogStatusRef.current = catalogStatus
 
   const publishDescriptors = useCallback((rows: readonly NativeSettingsDescriptor[]): void => {
-    const current = new Map(descriptorsRef.current.map(row => [row.namespace, row]))
-    const next = rows.map((row) => {
-      const previous = current.get(row.namespace)
-      return previous !== undefined && previous.revision > row.revision ? previous : row
-    })
+    const nextByNamespace = new Map(descriptorsRef.current.map(row => [row.namespace, row]))
+    for (const row of rows) {
+      const previous = nextByNamespace.get(row.namespace)
+      nextByNamespace.set(row.namespace, previous !== undefined && previous.revision > row.revision ? previous : row)
+    }
+    const next = [...nextByNamespace.values()]
     descriptorsRef.current = next
     setDescriptors(next)
   }, [])
@@ -382,11 +392,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const readCredential = useCallback((ref: string, signal?: AbortSignal): Promise<CredentialRead> => {
     const request = ++credentialRequest.current
     setCredentialFailed(false)
-    if (credentialInfo.current?.ref !== ref) {
-      const pending = { ref, configured: false, writable: true }
-      credentialInfo.current = pending
-      setCredential(pending)
-    }
+    setCredentialLoadingRef(ref)
     const pending = (async (): Promise<CredentialRead> => {
       try {
         const result = await actions.credentialsDescribe([ref], signal)
@@ -400,8 +406,8 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         if (currentRow === undefined || credentialRef(currentRow) !== ref) return { kind: 'superseded' }
         const view = result[ref]
         const info = { ref, configured: view?.configured ?? false, writable: view?.writable ?? true }
-        credentialInfo.current = info
         setCredential(info)
+        setCredentialLoadingRef(undefined)
         return { kind: 'read', info }
       } catch {
         if (signal?.aborted) return { kind: 'superseded' }
@@ -412,6 +418,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         }
         const currentRow = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
         if (currentRow === undefined || credentialRef(currentRow) !== ref) return { kind: 'superseded' }
+        setCredentialLoadingRef(undefined)
         setCredentialFailed(true)
         return { kind: 'failed' }
       }
@@ -428,8 +435,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     try {
       const result = await actions.modelCatalog(lifetime.current?.signal)
       if (lifetime.current?.signal.aborted || request !== catalogRequest.current) return
-      setCatalog(result)
-      setCatalogPartial((result?.failures.length ?? 0) > 0)
+      if (result !== null) {
+        setCatalog(result)
+        setCatalogPartial(result.failures.length > 0)
+      }
       catalogStatusRef.current = 'ready'
       setCatalogStatus('ready')
     } catch {
@@ -442,6 +451,8 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const refreshNamespace = useCallback(async (namespace?: string): Promise<void> => {
     const signal = lifetime.current?.signal
     const request = ++settingsRequest.current
+    setLoading(true)
+    setLoadFailed(false)
     try {
       const description = await actions.settingsDescribe(signal)
       if (signal?.aborted || request !== settingsRequest.current) return
@@ -449,23 +460,22 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         publishDescriptors(description.namespaces)
         setLoaded(true)
       } else {
-        const next = descriptorsRef.current.filter(row => row.namespace !== namespace)
         const updated = description.namespaces.find(row => row.namespace === namespace)
-        if (updated !== undefined) next.push(updated)
-        publishDescriptors(next)
+        if (updated !== undefined) publishDescriptors([updated])
         setLoaded(true)
       }
       setLoadFailed(false)
       const webSearch = descriptorsRef.current.find(row => row.namespace === 'web-search-deepseek')
       if (webSearch === undefined) {
         credentialRequest.current += 1
-        credentialInfo.current = undefined
-        setCredential(undefined)
+        setCredentialLoadingRef(undefined)
       } else {
         await readCredential(credentialRef(webSearch), signal)
       }
     } catch {
       if (!signal?.aborted && request === settingsRequest.current) setLoadFailed(true)
+    } finally {
+      if (!signal?.aborted && request === settingsRequest.current) setLoading(false)
     }
   }, [actions.settingsDescribe, publishDescriptors, readCredential])
 
@@ -588,8 +598,11 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         {PLUGINS.map((plugin) => {
           const row = descriptorByNamespace.get(plugin.namespace)
           const draft = drafts[plugin.namespace] ?? emptyDraft()
-          return <PluginCard key={plugin.namespace} plugin={plugin} row={row} loaded={loaded} draft={draft}
+          const activeCredentialRef = row === undefined ? undefined : credentialRef(row)
+          return <PluginCard key={plugin.namespace} plugin={plugin} row={row} loaded={loaded} loading={loading} draft={draft}
             status={statuses[plugin.namespace]} saving={saving === plugin.namespace} credential={credential}
+            credentialLoading={activeCredentialRef !== undefined && credentialLoadingRef === activeCredentialRef}
+            credentialFailed={credentialFailed}
             catalog={catalog} catalogStatus={catalogStatus} catalogPartial={catalogPartial} t={t}
             onDraft={(next) => { updateDraft(plugin.namespace, next) }}
             onSave={() => { if (row !== undefined) void save(plugin, row, draft) }}
