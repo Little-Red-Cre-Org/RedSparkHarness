@@ -26,6 +26,24 @@ function inventory(revision = 'revision-1') {
   }
 }
 
+function disableAllInventory(revision: string, optional = true) {
+  const details = { packageName: 'example-module', hasConfig: false, availableTargets: ['host', 'client'], nativeApiVersion: 1 }
+  return {
+    runtime: 'native', revision, scopes: [],
+    packages: [{
+      packageName: 'example-module', packageVersion: '1.0.0', managedBy: 'profile',
+      packageCapabilities: { canUpdatePackage: true, canRemovePackage: true },
+      installations: [
+        { ...details, target: 'client', id: 'layout', enabled: true, canEnable: false, canDisable: true },
+        { ...details, target: 'client', id: 'session-presentation', enabled: true, canEnable: false, canDisable: true },
+        ...(optional ? ['shared', 'optional'].map(id => ({
+          ...details, target: 'host', id, scope: 'root', enabled: true, canEnable: false, canDisable: true,
+        })) : []),
+      ],
+    }],
+  }
+}
+
 function applied() { return { status: 'applied', revision: 'revision-2', backend: { phase: 'ready' } } }
 function failure(code: string, status = 'refused') {
   return { status, error: { code, messageKey: 'backend.key.not.finalized', backend: { phase: 'error', profileRecovery: true } } }
@@ -112,21 +130,65 @@ it('submits explicit multi-target install intents and distinguishes absent confi
   expect(p.legacy.add).not.toHaveBeenCalled()
 })
 
-it('updates and removes packages and disables eligible installations using the read revision', async () => {
+it('uses inline version input for Native and compatibility package updates', async () => {
   const p = page()
-  p.dom.window.prompt = vi.fn(() => '1.2.3')
   p.start()
   await p.settled()
   p.button('.native-package .package-actions button').click()
+  expect(p.input('.version-editor input').value).toBe('1.0.0')
+  p.input('.version-editor input').value = '  '
+  p.form('.version-editor').requestSubmit()
+  expect(p.native.update).not.toHaveBeenCalled()
+  p.input('.version-editor input').value = '1.0.0'
+  p.form('.version-editor').requestSubmit()
+  expect(p.native.update).not.toHaveBeenCalled()
+  p.button('.version-editor button:last-child').click()
+  expect(p.dom.window.document.querySelector('.version-editor')).toBeNull()
+  p.button('.native-package .package-actions button').click()
+  p.input('.version-editor input').value = ' 1.2.3 '
+  p.form('.version-editor').requestSubmit()
   await p.settled()
   expect(p.native.update).toHaveBeenCalledWith({ expectedRevision: 'revision-1', packageName: 'example-module', version: '1.2.3' })
   p.button('.native-package .package-actions button:nth-child(2)').click()
   await p.settled()
   expect(p.native.remove).toHaveBeenCalledWith({ expectedRevision: 'revision-1', packageName: 'example-module' })
+  p.native.list.mockResolvedValue(failure('wrong-profile'))
+  p.button('#refresh').click()
+  await p.settled()
+  p.button('#plugins button:nth-child(2)').click()
+  p.input('.version-editor input').value = ' 1.2.3 '
+  p.form('.version-editor').requestSubmit()
+  await p.settled()
+  expect(p.legacy.update).toHaveBeenCalledWith('legacy-plugin', '1.2.3')
+})
+
+it('keeps core Client rows out of Native disable-all and refreshes revision between toggles', async () => {
+  const p = page()
+  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1', false) })
+  p.start()
+  await p.settled()
+  expect(p.button('#disable-all').disabled).toBe(true)
+  expect(p.element('#disable-all-note').textContent).toContain('layout and session-presentation stay enabled')
+  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1') })
+    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-2') })
+    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3') })
+  p.button('#refresh').click()
+  await p.settled()
+  expect(p.button('#disable-all').disabled).toBe(false)
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.disableAll).toHaveBeenCalledWith({ expectedRevision: 'revision-1' })
-  expect(p.native.list).toHaveBeenCalledTimes(4)
+  expect(p.native.disableAll).not.toHaveBeenCalled()
+  expect(p.native.toggle).toHaveBeenNthCalledWith(1, {
+    expectedRevision: 'revision-1', key: { target: 'host', id: 'shared' }, enabled: false,
+  })
+  expect(p.native.toggle).toHaveBeenNthCalledWith(2, {
+    expectedRevision: 'revision-2', key: { target: 'host', id: 'optional' }, enabled: false,
+  })
+  expect(p.native.toggle).toHaveBeenCalledTimes(2)
+  p.native.toggle.mockResolvedValueOnce(failure('busy'))
+  p.button('#disable-all').click()
+  await p.settled()
+  expect(p.native.toggle).toHaveBeenCalledTimes(3)
 })
 
 it('re-reads stale inventory and waits for another user submission without optimistic changes', async () => {
@@ -161,20 +223,21 @@ it('falls back only on wrong-profile and preserves legacy writes', async () => {
   expect(p.native.toggle).not.toHaveBeenCalled()
 })
 
-it.each(['busy', 'recovery-required', 'ipc'])('keeps %s failures in Native mode without resubmitting or legacy fallback', async (kind) => {
+it.each(['recovery-required', 'ipc'])('keeps %s failures in Native mode without resubmitting or legacy fallback', async (kind) => {
   const p = page()
   p.start()
   await p.settled()
-  if (kind === 'ipc') p.native.disableAll.mockRejectedValueOnce(new Error('private transport diagnostic'))
-  else p.native.disableAll.mockResolvedValueOnce(failure(kind, kind === 'busy' ? 'refused' : 'recovery-required'))
+  if (kind === 'ipc') p.native.toggle.mockRejectedValueOnce(new Error('private transport diagnostic'))
+  else p.native.toggle.mockResolvedValueOnce(failure(kind, 'recovery-required'))
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.disableAll).toHaveBeenCalledOnce()
+  expect(p.native.toggle).toHaveBeenCalledOnce()
+  expect(p.native.disableAll).not.toHaveBeenCalled()
   expect(p.legacy.list).not.toHaveBeenCalled()
   expect(p.legacy.disableAll).not.toHaveBeenCalled()
   expect(p.backend.retry).not.toHaveBeenCalled()
   expect(p.element('#status').textContent).not.toContain('private transport diagnostic')
-  expect(p.element('#status').textContent).toContain(kind === 'busy' ? 'Refused' : kind === 'ipc' ? 'could not be confirmed' : 'Recovery required')
+  expect(p.element('#status').textContent).toContain(kind === 'ipc' ? 'could not be confirmed' : 'Recovery required')
 })
 
 it('keeps Native list failures from falling back and invalidates writes after a failed refresh', async () => {

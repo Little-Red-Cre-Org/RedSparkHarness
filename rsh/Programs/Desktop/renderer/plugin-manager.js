@@ -1,5 +1,7 @@
 // Native consumers follow the reviewed facade; the backend owns package and composition admission.
 const api = window.dshDesktop
+// The Host disableAll required closure omits these Client shell registrations.
+const coreClientIds = new Set(['layout', 'session-presentation'])
 
 async function main() {
   let closed = false
@@ -22,6 +24,7 @@ async function main() {
   document.querySelector('#recovery-description').textContent = messages.recoveryDescription
   document.querySelector('#retry').textContent = messages.retry
   document.querySelector('#disable-all').textContent = messages.disableAll
+  document.querySelector('#disable-all-note').textContent = messages.nativeDisableAllKeepsCore
 
   const list = document.querySelector('#plugins')
   const empty = document.querySelector('#empty')
@@ -36,6 +39,7 @@ async function main() {
   let backendChanges = 0
   let backendReads = 0
   const disableAll = document.querySelector('#disable-all')
+  const disableAllNote = document.querySelector('#disable-all-note')
   const retry = document.querySelector('#retry')
   const editors = document.querySelector('#installations')
   const versionInput = document.querySelector('#package-version')
@@ -57,10 +61,13 @@ async function main() {
     retry.hidden = nativeMode
     disableAll.textContent = nativeMode ? messages.nativeDisableAll : messages.disableAll
     disableAll.hidden = !nativeMode && document.querySelector('#recovery').hidden
+    disableAllNote.hidden = !nativeMode
     if (nativeMode) {
       document.querySelector('#startup-error').textContent = ''
       for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, inventory !== undefined)
-      available(disableAll, inventory !== undefined && inventory.packages.some(pkg => pkg.installations.some(row => row.canDisable)))
+      available(disableAll, inventory !== undefined && inventory.packages.some(pkg => pkg.installations.some(
+        row => row.canDisable && !(row.target === 'client' && coreClientIds.has(row.id)),
+      )))
       if (inventory === undefined) for (const control of list.querySelectorAll('button')) available(control, false)
       updateEditorRemoval()
     } else {
@@ -100,6 +107,32 @@ async function main() {
 
   function targetLabel(target) {
     return target === 'host' ? messages.nativeHost : messages.nativeClient
+  }
+
+  function versionEditor(name, currentVersion, submit, parent) {
+    return () => {
+      const editor = document.createElement('form')
+      editor.className = 'version-editor'
+      const version = document.createElement('input')
+      version.value = currentVersion
+      version.setAttribute('aria-label', message('targetVersion', { name }))
+      const apply = document.createElement('button')
+      apply.type = 'submit'
+      apply.textContent = messages.apply
+      const cancel = document.createElement('button')
+      cancel.type = 'button'
+      cancel.textContent = messages.cancel
+      cancel.addEventListener('click', () => { version.value = ''; editor.remove() })
+      editor.addEventListener('submit', event => {
+        event.preventDefault()
+        const nextVersion = version.value.trim()
+        if (nextVersion === '' || nextVersion === currentVersion) return
+        submit(nextVersion)
+      })
+      editor.append(version, apply, cancel)
+      parent.append(editor)
+      version.focus()
+    }
   }
 
   function addInstallation() {
@@ -163,7 +196,7 @@ async function main() {
       version.className = 'package-version'
       version.textContent = `${pkg.packageVersion} · ${pkg.managedBy === 'profile' ? messages.nativeProfilePackage : messages.nativeSignedPackage}`
       identity.append(version)
-      const actions = document.createElement('span')
+      const actions = document.createElement('div')
       actions.className = 'package-actions'
       function action(key, allowed, handler, parent = actions) {
         const control = document.createElement('button')
@@ -173,11 +206,9 @@ async function main() {
         control.addEventListener('click', handler)
         parent.append(control)
       }
-      action('update', pkg.packageCapabilities.canUpdatePackage, () => {
-        const version = window.prompt(message('targetVersion', { name: pkg.packageName }), pkg.packageVersion)?.trim()
-        if (version === undefined || version === '' || version === pkg.packageVersion) return
-        void run(() => nativeApi.update({ expectedRevision: inventory.revision, packageName: pkg.packageName, version }), message('updating', { name: pkg.packageName }))
-      })
+      action('update', pkg.packageCapabilities.canUpdatePackage, versionEditor(pkg.packageName, pkg.packageVersion, version => void run(
+        () => nativeApi.update({ expectedRevision: inventory.revision, packageName: pkg.packageName, version }), message('updating', { name: pkg.packageName }),
+      ), actions))
       action('remove', pkg.packageCapabilities.canRemovePackage, () => void run(
         () => nativeApi.remove({ expectedRevision: inventory.revision, packageName: pkg.packageName }), message('removing', { name: pkg.packageName }),
       ))
@@ -281,16 +312,14 @@ async function main() {
         () => api.plugins.remove(plugin.name),
         message('removing', { name: plugin.name }),
       ))
+      const actions = document.createElement('div')
+      actions.className = 'package-actions'
       const update = document.createElement('button')
       update.type = 'button'
       update.textContent = messages.update
-      update.addEventListener('click', () => {
-        const next = window.prompt(message('targetVersion', { name: plugin.name }), plugin.version)?.trim()
-        if (next === undefined || next === '' || next === plugin.version) return
-        void run(() => api.plugins.update(plugin.name, next), message('updating', { name: plugin.name }))
-      })
-      const actions = document.createElement('span')
-      actions.className = 'package-actions'
+      update.addEventListener('click', versionEditor(plugin.name, plugin.version, next => void run(
+        () => api.plugins.update(plugin.name, next), message('updating', { name: plugin.name }),
+      ), actions))
       const toggle = document.createElement('button')
       toggle.type = 'button'
       toggle.textContent = plugin.enabled ? messages.disable : messages.enable
@@ -305,16 +334,16 @@ async function main() {
   }
 
   async function run(operation, statusMessage) {
-    if (busy || closed) return
+    if (busy || closed) return false
     setBusy(true, statusMessage)
     const observed = backendChanges
     try {
       const outcome = await operation()
-      if (closed) return
+      if (closed) return false
       if (!nativeMode) {
         await render()
         if (!closed) status.textContent = messages.operationComplete
-        return
+        return !closed
       }
       if (observed === backendChanges) renderBackend(outcome.status === 'applied' ? outcome.backend : outcome.error.backend)
       let resultMessage = nativeOutcome(outcome)
@@ -326,8 +355,9 @@ async function main() {
       }
       await readBackend()
       if (!closed) status.textContent = resultMessage
+      return outcome.status === 'applied' && !closed && inventory !== undefined
     } catch (error) {
-      if (closed) return
+      if (closed) return false
       if (nativeMode) {
         inventory = undefined
         configureMode()
@@ -335,6 +365,7 @@ async function main() {
         try { await readBackend() } catch { /* Transport loss also prevents a fresh backend read. */ }
         if (!closed) status.textContent = messages.nativeIpcUncertain
       } else status.textContent = error instanceof Error ? error.message : String(error)
+      return false
     } finally {
       if (!closed) setBusy(false, status.textContent)
     }
@@ -376,9 +407,23 @@ async function main() {
     }, message('installing', { spec }))
   })
   document.querySelector('#retry').addEventListener('click', () => void run(() => api.backend.retry(), messages.retry))
-  disableAll.addEventListener('click', () => void run(
-    () => nativeMode ? nativeApi.disableAll({ expectedRevision: inventory.revision }) : api.plugins.disableAll(), messages.changingActivation,
-  ))
+  async function disableNativeEligible() {
+    for (const row of inventory.packages.flatMap(pkg => pkg.installations)) {
+      if (!row.canDisable || (row.target === 'client' && coreClientIds.has(row.id))) continue
+      const applied = await run(
+        () => nativeApi.toggle({
+          expectedRevision: inventory.revision, key: { target: row.target, id: row.id }, enabled: false,
+        }),
+        messages.changingActivation,
+      )
+      if (!applied) return
+    }
+  }
+
+  disableAll.addEventListener('click', () => {
+    if (nativeMode) void disableNativeEligible()
+    else void run(() => api.plugins.disableAll(), messages.changingActivation)
+  })
   refresh.addEventListener('click', () => void load(messages.refreshing, messages.refreshed))
 
   await load(messages.loadingPlugins, '')
