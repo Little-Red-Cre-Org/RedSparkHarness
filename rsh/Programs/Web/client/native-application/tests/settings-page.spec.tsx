@@ -135,7 +135,7 @@ it('renders the ChatGPT identity name before the email', async () => {
 
   const name = await screen.findByText('Ada Lovelace')
   const email = screen.getByText('account@example.com')
-  expect(name.nextElementSibling).toBe(email)
+  expect(name.compareDocumentPosition(email)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 })
 
 it('reads, copies, opens and deletes native Agent presets through Host actions', async () => {
@@ -367,7 +367,8 @@ it('renders a subscription account inside its authorization row', async () => {
   } as unknown as NativeSettingsActions
   renderSettingsPage({ actions, t: key => en[key], section: 'models' })
 
-  const row = await screen.findByRole('group', { name: entry.label })
+  const subscription = screen.getByRole('region', { name: en.subscriptionModels })
+  const row = await within(subscription).findByRole('group', { name: entry.label })
   expect(within(row).getByText(en.authorizationConnected)).toBeTruthy()
   expect(within(row).getByRole('button', { name: en.authorizationReconnect })).toBeTruthy()
   expect(within(row).getByRole('heading', { name: en.chatGptAccount })).toBeTruthy()
