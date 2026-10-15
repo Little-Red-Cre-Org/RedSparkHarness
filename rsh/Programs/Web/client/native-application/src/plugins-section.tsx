@@ -11,6 +11,7 @@ type PluginNamespace = 'shell' | 'agent-loop' | 'subagent-model-selection' | 'we
 type ModelRoute = { provider: string; model: string }
 type PluginDraft = {
   revision?: number
+  apiKeyRef?: string
   fields: Readonly<Record<string, string>>
   clears: ReadonlySet<string>
   enabled?: boolean
@@ -217,10 +218,13 @@ function PluginCard({
   const credentialMatches = activeCredentialRef !== undefined && credential?.ref === activeCredentialRef
   const keyConfigured = credentialMatches ? credential.configured : false
   const keyWritable = credentialMatches ? credential.writable : true
-  const keyStatus = credentialMatches
-    ? keyConfigured ? 'settingsPluginWebSearchApiKeySet' : 'settingsPluginWebSearchApiKeyUnset'
-    : credentialLoading ? 'settingsPluginCredentialLoading'
-      : credentialFailed ? 'settingsPluginCredentialLoadFailed' : 'settingsPluginWebSearchApiKeyUnset'
+  const literalApiKeyPresent = row?.secrets.some(secret => secret.path.length === 1
+    && secret.path[0] === 'apiKey' && secret.set) ?? false
+  const keyStatus = literalApiKeyPresent ? 'settingsPluginWebSearchApiKeyLiteralField'
+    : credentialMatches
+      ? keyConfigured ? 'settingsPluginWebSearchApiKeySet' : 'settingsPluginWebSearchApiKeyUnset'
+      : credentialLoading ? 'settingsPluginCredentialLoading'
+        : credentialFailed ? 'settingsPluginCredentialLoadFailed' : 'settingsPluginWebSearchApiKeyUnset'
   const keyInvalid = plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '' && !keyWritable
   const revisionUnread = row !== undefined && announcedRevision !== undefined && row.revision < announcedRevision
   const blocked = !dirty || invalid || keyInvalid || saving || row === undefined || revisionUnread
@@ -338,12 +342,18 @@ function PluginCard({
             {plugin.namespace === 'web-search-deepseek' ? <div className={css.field}>
               <div className={css.fieldHead}>
                 <label className={css.label} htmlFor="web-search-api-key">{t('settingsPluginWebSearchApiKey')}</label>
-                <span className={css.override}>{t(keyStatus)}</span>
+                <span className={css.override}>{t(keyStatus)}{literalApiKeyPresent && activeCredentialRef !== undefined
+                  ? <> <code>{activeCredentialRef}</code></> : null}</span>
               </div>
+              {literalApiKeyPresent ? <p className={css.hint}>{t(credentialMatches
+                ? keyConfigured ? 'settingsPluginWebSearchApiKeyStoredSet' : 'settingsPluginWebSearchApiKeyStoredUnset'
+                : credentialLoading ? 'settingsPluginCredentialLoading'
+                  : credentialFailed ? 'settingsPluginCredentialLoadFailed' : 'settingsPluginWebSearchApiKeyStoredUnset')}</p> : null}
               <input id="web-search-api-key" className={css.input} type="password" autoComplete="off"
                 value={draft.apiKey} disabled={saving || !keyWritable}
                 onChange={(event) => { onDraft({ ...draft, apiKey: event.target.value }) }} />
-              <p className={css.hint}>{t('settingsPluginWebSearchApiKeyHint')}</p>
+              <p className={css.hint}>{t(literalApiKeyPresent
+                ? 'settingsPluginWebSearchApiKeyLiteralHint' : 'settingsPluginWebSearchApiKeyHint')}</p>
             </div> : null}
           </>}
       {row === undefined || !loaded ? null : <div className={css.footer}>
@@ -538,21 +548,37 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const save = async (plugin: PluginDefinition, row: NativeSettingsDescriptor, draft: PluginDraft): Promise<void> => {
     const plan = settingsOps(plugin, row, draft)
     if (plan.invalid || saving !== undefined) return
+    const hasApiKeyDraft = plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== ''
+    const apiKeyRef = hasApiKeyDraft ? draft.apiKeyRef : undefined
+    const expectedRevision = draft.revision ?? row.revision
     setSaving(plugin.namespace)
     setStatuses(current => ({ ...current, [plugin.namespace]: undefined }))
     try {
       let updated = row
+      if (hasApiKeyDraft) {
+        const currentRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
+        const announcedRevision = announcedRevisionsRef.current[plugin.namespace]
+        if (apiKeyRef === undefined || currentRow === undefined || credentialRef(currentRow) !== apiKeyRef
+          || currentRow.revision !== expectedRevision
+          || (announcedRevision !== undefined && currentRow.revision < announcedRevision)) {
+          throw credentialReferenceConflict()
+        }
+      }
       if (plan.ops.length > 0) {
-        updated = await actions.settingsMutate(plugin.namespace, plan.ops, draft.revision ?? row.revision)
+        updated = await actions.settingsMutate(plugin.namespace, plan.ops, expectedRevision)
+        if (hasApiKeyDraft && credentialRef(updated) !== apiKeyRef) {
+          throw credentialReferenceConflict()
+        }
         const next = descriptorsRef.current.filter(candidate => candidate.namespace !== plugin.namespace)
         next.push(updated)
         publishDescriptors(next)
       }
-      if (plugin.namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '') {
+      if (hasApiKeyDraft) {
         const latestRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
-        const ref = latestRow === undefined ? undefined : credentialRef(latestRow)
+        const ref = apiKeyRef
         const announcedRevision = announcedRevisionsRef.current[plugin.namespace]
-        if (ref === undefined || latestRow === undefined || ref !== credentialRef(row) || ref !== credentialRef(updated)
+        if (ref === undefined || latestRow === undefined || credentialRef(latestRow) !== ref
+          || latestRow.revision !== updated.revision
           || (announcedRevision !== undefined && latestRow.revision < announcedRevision)) {
           throw credentialReferenceConflict()
         }
@@ -581,11 +607,19 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   const updateDraft = (namespace: PluginNamespace, draft: PluginDraft): void => {
     const row = descriptorsRef.current.find(candidate => candidate.namespace === namespace)
     setDrafts((current) => {
-      const revision = draft.revision ?? current[namespace]?.revision
-        ?? (draftHasValues(draft) ? row?.revision : undefined)
+      const revision = draftHasValues(draft)
+        ? draft.revision ?? current[namespace]?.revision ?? row?.revision : undefined
       const nextDraft = { ...draft }
       if (revision === undefined) delete nextDraft.revision
       else nextDraft.revision = revision
+      if (namespace === 'web-search-deepseek' && draft.apiKey.trim() !== '') {
+        const apiKeyRef = draft.apiKeyRef ?? (current[namespace]?.apiKey.trim() !== ''
+          ? current[namespace]?.apiKeyRef : undefined) ?? (row === undefined ? undefined : credentialRef(row))
+        if (apiKeyRef === undefined) delete nextDraft.apiKeyRef
+        else nextDraft.apiKeyRef = apiKeyRef
+      } else {
+        delete nextDraft.apiKeyRef
+      }
       return { ...current, [namespace]: nextDraft }
     })
     setStatuses(current => ({ ...current, [namespace]: undefined }))
