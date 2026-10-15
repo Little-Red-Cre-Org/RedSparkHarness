@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-Schedule 让你向模型请求持久提醒；提醒会作为普通 follow-up 消息返回同一会话。你可以创建延时或绝对时间的一次性提醒、按固定间隔重复提醒、列出待处理提醒，也可以取消提醒。提醒在重启后仍然存在，但交付需要 live 根 agent（智能体）：已关闭的会话会让提醒保持逾期，直到恢复。交付绝不会使用电子邮件、短信、推送或浏览器通知。启用 Schedule overlay 即可提供提醒工具和活动提醒目录；侧边栏闹钟只是已知活动提醒的尽力而为指示，不证明提醒交付当前正在运行。
+Schedule 会把持久提醒作为普通后续消息发送到同一会话。你可以按延迟或绝对时间创建一次性提醒，按固定间隔重复提醒，列出待处理提醒，也可以取消提醒。提醒会在重启后保留，但交付需要 live 根 agent；会话关闭时，提醒会保持逾期，直到会话恢复。Schedule 不发送电子邮件、短信、推送或浏览器通知。启用 Cordis Schedule overlay 可提供提醒工具和活动提醒目录；在 Native Host profile 中选择 Native 入口则提供提醒工具。侧边栏闹钟显示已知的活动提醒，但不能证明提醒交付当前正在运行。
 
 ## 目录
 
@@ -25,7 +25,7 @@ Schedule 让你向模型请求持久提醒；提醒会作为普通 follow-up 消
 <a id="use-this-package"></a>
 ## 使用本包
 
-当你希望提醒作为消息出现在同一会话中时使用 Schedule——例如「30 分钟后提醒我跟进迁移」或「构建运行期间每小时检查一次」。agent 会通过它的普通工具为你创建、列出和取消提醒；你只需启用一次 overlay。
+当你希望提醒作为消息出现在同一会话中时使用 Schedule——例如「30 分钟后提醒我跟进迁移」或「构建运行期间每小时检查一次」。agent 会通过它的普通工具为你创建、列出和取消提醒；根据宿主启用 Cordis overlay 或 Native profile 插件。
 
 ### 何时选择
 
@@ -39,9 +39,19 @@ Schedule 让你向模型请求持久提醒；提醒会作为普通 follow-up 消
 dsh web --patch rsh/Programs/CLI/config/examples/schedule/cordis.yml
 ```
 
-成功的样子如下：让模型「10 分钟后提醒我审阅 PR」，它会回复提醒的 id、目标时间与 `scheduled` 状态。如果那一刻存储无法确认，工具会报告 `persistence_uncertain` 并建议重新列出，而不是声称成功。
+让模型「10 分钟后提醒我审阅 PR」，它会回复提醒的 id、目标时间与 `scheduled` 状态。如果那一刻存储无法确认，工具会报告 `persistence_uncertain` 并建议重新列出，而不是声称成功。
 
-请在你想要提醒的会话开始前启用 overlay：overlay 加载时已在运行的会话没有提醒工具。
+Cordis overlay 安装在加载后创建的根 Agent 上。Native profile 可以通过在 `rsh.profile.json` 中添加以下安装项，显式启用独立的 Native Host 入口：
+
+```json
+{
+  "id": "schedules",
+  "plugin": "@deepseek-ai/dsh-schedule",
+  "scope": "root"
+}
+```
+
+Native profile 必须提供 `activeSessions` 和 `tools`；省略 `config` 或使用空对象。Native Schedule 附加到现有和未来的确切根 Session owner，不附加到委托 Agent。随附 Native profile 不会自动启用 Schedule。
 
 ### 安排提醒
 
@@ -67,7 +77,7 @@ dsh web --patch rsh/Programs/CLI/config/examples/schedule/cordis.yml
 
 ### 作用域与组合
 
-插件声明 `inject = ['agents', 'sessions', 'tools', 'sessionPersistence']`，因此缺少持久化服务会直接构成组合错误。它只观察加载后发布的 `agent/created` 事件，在这些根 agent 上安装，并通过完全相同的 `agent.ctx` 注册全部三个工具；加载时已经 live 的 agent 与运行时子 agent 永远不会获得 Schedule。
+包有独立的 Cordis 与 Native Host 入口。`src/index.ts` 保留 Cordis overlay，要求 agent、session、tool 和 persistence 服务，并安装在插件加载后创建的根 Agent 上。`src/native.ts` 要求 `activeSessions` 和 `tools`，附加到现有和未来的确切根 Session owner，并拒绝来自委托 Agent 或其他 Session 的调用。两个入口复用同一持久事件 fold 与串行管理操作；任何入口都不会安装到 child Agent。
 
 Time-context 不是 Schedule 的依赖。官方 Web overlay 挂载 `@deepseek-ai/dsh-time-context`，让模型能够按浏览器请求本地时区解释自然语言；但模型仍必须向 `schedule_create` 传入显式偏移量或 `time_zone`；Schedule 绝不会从模型上下文导入或推断该值。
 
@@ -87,9 +97,12 @@ Session projection 是可选能力。`ctx.sessionProjections` 存在时，插件
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`inject`、`agent/created` 观察、按根的 runtime 与工具安装 |
-| [`src/tools.ts`](src/tools.ts) | 工具定义、preflight、序列化事务、封闭错误联合 |
+| [`src/native.ts`](src/native.ts) | Native Host 入口：精确根 owner 附加、timer projection 与工具 scope |
+| [`src/tools.ts`](src/tools.ts) | Cordis 工具定义及共享操作适配器 |
+| [`src/operations.ts`](src/operations.ts) | 共享管理校验、preflight 与持久变更 |
+| [`src/types.ts`](src/types.ts) | 持久值与管理结果、错误的公共类型 |
 | [`src/domain.ts`](src/domain.ts) | 严格解码、折叠、时间校验、framing、occurrence 算术 |
-| [`src/runtime.ts`](src/runtime.ts) | live timer owner：maintenance 认领、follow-up、dispatch barrier |
+| [`src/runtime.ts`](src/runtime.ts) | Cordis live timer owner：maintenance 认领、follow-up、dispatch barrier |
 | [`src/persistence.ts`](src/persistence.ts) | Schedule 对共享会话持久化 barrier 的使用 |
 | [`src/projection.ts`](src/projection.ts) | 可选的 seed-aware Session projection 与严格检查点 schema |
 | [`src/client.ts`](src/client.ts) | 浏览器安全的纯类型 `ScheduleRecord` 导出 |
@@ -112,15 +125,15 @@ projection 只携带持久记录。它不持久化或传输 scheduled／overdue 
 
 ### 管理流水线
 
-一条 agent 范围的队列把每项已接纳的管理事务与 live owner 的到期事务从 preflight 到任何 post-append barrier 全程串行化。`schedule_create` 建立检查点、分配永不复用的 id、追加 create 事件，再次建立检查点；被取消的调用方在追加前停止。每次成功的管理 preflight 还会要求 live owner 重新计算，这会在先前的 post-append barrier 返回 `persistence_uncertain` 后恢复所保留的 create 或 delete 批次。
+一条 Agent 范围的队列把每项已接纳的管理事务与 live owner 的到期事务从 preflight 到任何 post-append barrier 全程串行化。`schedule_create` 建立检查点、分配永不复用的 id、追加 create 事件，再次建立检查点；被取消的调用方在追加前停止。每次成功的管理 preflight 还会要求 live owner 重新计算，这会在先前的 post-append barrier 返回 `persistence_uncertain` 后恢复所保留的 create 或 delete 批次。Cordis 与 Native Host 工具共同使用 [`src/operations.ts`](src/operations.ts) 和 [`src/transaction.ts`](src/transaction.ts)。
 
-每项从折叠结果读取或作出判断的操作都会先等待 `ctx.sessions.flush(session)`；持久化路径缺失、被拒绝或已分离时返回 `persistence_uncertain`，create 与实际 delete 在追加后还会等待第二个 barrier 再确认变更。只依赖输入形状的失败会在序列化事务之前被验证。输入、时间与持久化失败会返回一组封闭的稳定版本 1 错误代码；该封闭联合及各代码的触发条件位于 [`src/tools.ts`](src/tools.ts)。
+Cordis 中每项从折叠结果读取或作出判断的操作都会先等待 `ctx.sessions.flush(session)`；Native Host 使用同一确切 owner 的 flush 与事件读取。持久化路径缺失、被拒绝或已分离时返回 `persistence_uncertain`，create 与实际 delete 在追加后还会等待第二个 barrier 再确认变更。只依赖输入形状的失败会在序列化事务之前被验证。输入、时间与持久化失败会返回一组封闭的稳定版本 1 错误代码；[`src/types.ts`](src/types.ts) 定义错误联合及各错误说明，而 [`src/operations.ts`](src/operations.ts) 执行管理校验。
 
 ### live owner
 
-owner 把长等待拆分为有界的 timer 段，并在每次唤醒后重新读取墙钟。到期工作认领 idle maintenance phase、采样一个决策时点、在 `followup()` 之前构造完整的转义 framing、只在同步入队返回后追加 dispatch、释放 maintenance，然后等待持久化。错过的固定速率间隔永远不会被枚举：整数运算选择每条记录最新一个已到期且与创建锚点对齐的发生时点，并直接推进到第一个未来目标。
+Cordis runtime 将长等待拆分为有界 timer 段，每次唤醒后重新读取墙钟。到期工作认领 idle maintenance phase，采样一个决策时点，在 `followup()` 前构造完整转义 framing，只在同步入队返回后追加 dispatch，释放 maintenance 后等待持久化。错过的固定速率间隔不会逐项枚举：整数运算选择每条记录最新的到期且与创建锚点对齐的发生时点，并直接推进到第一个未来目标。
 
-逾期提醒首先为持久化建立检查点，然后通过 `runMaintenance()` 认领 agent 的 idle maintenance phase；如果某个轮次或另一项 maintenance task 已占用 agent，认领会失败，记录保持活动，owner 在 `whenIdle()` 后重试。获准的 maintenance task 会重新折叠、采样一个决策时点、构造固定 framing、同步将 `followup()` 入队，并在释放 phase 前追加 dispatch。dispatch 表示 follow-up 已入队并被记录，不表示模型成功或用户已读取回答。framing 构造或同步 follow-up 失败不会写入 dispatch；追加失败会使 owner 进入故障状态，因为消息可能已经入队；barrier 拒绝则把 dispatch 留给后续普通 preflight。agent 或插件执行资源释放时取消 timer 并停止新工作，但不删除持久记录。
+Native Host runtime 为每个确切的 live 根 owner 保持 timer projection。到期 timer 会重新折叠已提交历史，再调用 owner 的 `runIdle`；若 Session 轮次正忙，等待中的终结 idle hook 会在唯一 writer 释放前，通过同一 Agent FIFO 再次检查。Native runtime 等待 `enqueue` 确认持久准入后才追加并 flush dispatch 事件。dispatch 表示 follow-up 已入队并被记录，不表示模型成功或用户已读取回答。cold Session 不会被唤醒；根 owner 恢复后才处理逾期提醒。owner 或插件释放时会取消 timer 并 drain 已接纳工作，但不会删除持久记录。
 
 </details>
 
@@ -134,6 +147,7 @@ owner 把长等待拆分为有界的 timer 段，并在每次唤醒后重新读�
 - [仅限会话内的 Schedule 子系统](../../../Docs/subsystems/schedule.zh.md)——带精确类型定义的持久记录、转换、视图与交付约定。
 - [生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)——模型接收的 `schedule_create`、`schedule_list` 与 `schedule_delete` 完整 schema。
 - [持久 Web Schedule 决策](../../../../.agents/notes/implemented/feature/2026-08-05-durable-web-schedule.zh.md)——本包背后的持久化与生命周期决策。
+- [Native Session Schedule 决策](../../../../.agents/notes/implemented/feature/2026-10-15-native-session-schedule.zh.md)——Native Host 入口的 owner 选择与 idle 交付语义。
 - [对话式交付决策](../../../../.agents/notes/archived/simplification/2026-08-09-conversational-schedule-delivery.md)——无回执边界与 follow-up 交付。
 - [显式时区边界](../../../../.agents/notes/implemented/simplification/2026-08-09-explicit-schedule-time-zone.zh.md)——为什么模型必须始终传入显式时区。
 - [有界固定速率 Schedule](../../../../.agents/notes/archived/simplification/2026-08-09-bounded-fixed-rate-schedule.md)——重复调度范围：只追赶最新一次与批次交付。
@@ -148,7 +162,7 @@ owner 把长等待拆分为有界的 timer 段，并在每次唤醒后重新读�
 
 #### 模型看到什么
 
-只有在此插件加载后创建的 live 根 agent 中，模型才会看到三个生成的工具 schema；[生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)拥有精确的参数与结果 schema。工具结果包含上文所述的规范 JSON 值。
+Cordis overlay 会向其加载后创建的 live 根 Agent 提供三个生成的工具 schema。对于 Native profile，owner 附加会在首个模型请求捕获工具快照前完成；若 profile 的工具 allowlist 允许，这个请求就会包含三个 schema。[生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)拥有精确的参数与结果 schema。工具结果包含上文所述的规范 JSON 值。
 
 #### Token 影响
 
@@ -217,7 +231,7 @@ reminders_json: <JSON.stringify(reminders)>
 - **固定间隔，而非日历规则**——`every_seconds` 与创建锚点对齐，且运行频率不能高于每 5 分钟一次；协议不包含日历表达式或 Cron 表达式。
 - **只追赶最新一次**——逾期 Every 记录只贡献其最新一个到期发生时点，因此 Schedule 绝不会回放因错过间隔而形成的积压。
 - **存在狭窄的崩溃重复窗口**——同步 follow-up 获得准入后、dispatch 检查点完成前发生崩溃，可能使提醒重复；本包不承诺模型完成、用户确认或副作用恰好执行一次。
-- **加载顺序边界**——插件不会扫描或接管加载时已经 live 的 agent。
+- **Cordis 加载顺序边界**——兼容 overlay 安装在加载后创建的根 Agent 上。Native Host 入口会附加到现有和未来的根 owner，但必须由 profile 显式安装，且不会附加到委托 Agent。
 - **目录只是只读当前状态**——可选 Web 界面没有历史记录，也不具备变更、重试或确认语义；终结记录会消失，交付仍然是普通对话输出。
 
 <a id="dev-note"></a>
