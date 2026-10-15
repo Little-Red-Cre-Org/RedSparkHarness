@@ -11807,6 +11807,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../../../Modules/Official/todo/tool-todo
+      '@deepseek-ai/dsh-util-crypto':
+        specifier: workspace:^
+        version: link:../../../../Core/util/crypto
       '@deepseek-ai/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery

@@ -44,6 +44,7 @@ async function renderControls() {
     selectPlanMode,
     selectPermissionPreset,
     async *follow() { yield { type: 'baseline' as const, items: [] } },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
     async history(id: SessionId) {
       return { header: { version: SESSION_FORMAT_VERSION, id, createdAt: 1, isSeeded: false },
         events: [], inheritedEventCount: 0 }

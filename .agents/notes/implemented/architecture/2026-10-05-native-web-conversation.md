@@ -16,6 +16,8 @@ Restoration reads mode and permission controls before its final durable history 
 
 Cancellation changes the view to stopping without declaring readiness. The send operation remains pending through Host writer cleanup and durable history refresh. Application release aborts owned calls and awaits their settlement; removing React does not release execution ownership early.
 
+The running composer submits identified next-turn and next-step messages through the existing queue and steer Client methods. Only acknowledged Host snapshots populate pending rows; read generations, durable throughSeq cursors, and selection epochs prevent late responses from restoring removed requests or overwriting another Session. Pending mutations have an independent presentation busy flag and never settle the active turn. A failed text submission retains its request identity for an explicit retry of the same text and placement; a previously accepted or claimed identity is reconciled before retry. Removal and promotion refresh the authoritative snapshot, including stale mutation outcomes. The composer clears an initial send immediately and uses a draft generation so its late settlement cannot erase subsequently typed text.
+
 ## Transcript and composition
 
 Human transcript rows use append-origin Session events and the shared message projection. Model-only replacements cannot erase conversation the user already saw. Raw durable records preserve tool and permission facts that the minimal page does not yet present as feature cards or interactive decisions.
