@@ -16,6 +16,8 @@ wheel 包会安装 `dsh` 控制台命令和 `deepseek_harness_runtime` Python �
 
 闭包显式携带这些 profile 使用的共享 peer Provider，包括用于文件系统适配器的 `dsh-plugin-host` 和用于模型错误构造函数的 `dsh-errors`。
 
+可执行文件构建会让 `dsh-tools` 保持为单一运行时模块实例。只有在暂存副本的包文件及其声明的依赖与 peer 解析都和运行时根目录副本一致时，构建器才会移除嵌套副本；遇到冲突副本会让打包失败。
+
 ## Python 模块 API
 
 - `bundled_package_dir() -> Path` 返回已安装模块数据根目录，并校验发布元数据。

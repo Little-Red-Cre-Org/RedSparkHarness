@@ -32,4 +32,7 @@ Receipt 仅存在于进程内，Program 关闭时会清除，进程重启后需�
 
 ## 测试
 
+
+已安装 Python wheel 冒烟测试通过公开 upload、prompt、steer、内建读取、写入拒绝和冷启动恢复重放规范 staged-files 输入，比较精确的 UTF-8 返回内容与模型可见路径。该确定性 keyless fixture 不代表 provider 实际行为已通过验证。
+
 Native Headless lifecycle 回归测试覆盖 idle detach 后 receipt 仍保留，并在 delete 与 same-header restore 发生于 initial stat、attachment save、final stat 三个受控窗口时验证 Session generation 竞争。文件读取回归测试覆盖 root `tool-fs` 和 captured-external `read_file`，验证完整流式文本，并拒绝无关 workspace 外部读写。

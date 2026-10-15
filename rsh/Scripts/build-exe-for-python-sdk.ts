@@ -12,6 +12,7 @@ import { existsSync, statSync } from 'node:fs'
 import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { parseArgs } from 'node:util'
+import { coalesceStagedDshToolsPeer } from './coalesce-staged-dsh-tools.ts'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
 import { preservePnpmWorkspaceState } from './preserve-pnpm-workspace-state.ts'
 
@@ -57,6 +58,9 @@ const ASSET_GLOBS = [
   'node_modules/**/*.wasm',
   'node_modules/**/*.yaml',
   'node_modules/**/*.yml',
+  // Keep platform-only package payloads visible to profile fallback classification.
+  'node_modules/**/*.exe',
+  'node_modules/**/bin/*',
   // web-app builds this path dynamically, so pkg cannot discover the static frontend.
   'node_modules/@deepseek-ai/dsh-web-frontend/dist/**/*',
   // skill-badge resolves both Markdown and image resources through import.meta.url.
@@ -305,6 +309,14 @@ class SingleExeBuild {
     else await preservePnpmWorkspaceState(root, deploy)
     await this.restoreLegacyHoists()
     await this.materializeStagedLinks()
+    if (this.cli.dryRun) {
+      console.log('build-exe-for-python-sdk: [dry-run] coalesce identical nested @deepseek-ai/dsh-tools peer copies')
+    } else {
+      const coalescedToolsCopies = await coalesceStagedDshToolsPeer(this.staging)
+      if (coalescedToolsCopies > 0) {
+        console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @deepseek-ai/dsh-tools peer copies.`)
+      }
+    }
     if (this.cli.dryRun) {
       for (const name of DEPLOY_ONLY_DOCS) console.log(`build-exe-for-python-sdk: [dry-run] rm -f ${join(this.staging, name)}`)
     } else {

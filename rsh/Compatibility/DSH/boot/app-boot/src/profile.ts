@@ -28,7 +28,7 @@ import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync,
   symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, extname, join, posix, relative, resolve, win32 } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import type { EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
@@ -320,6 +320,34 @@ function isPackagedExecutable(): boolean {
   return (process as NodeJS.Process & { pkg?: unknown }).pkg !== undefined
 }
 
+/** Return a snapshot file URL under the drive root of pkg's Windows entrypoint module graph. */
+function packageTargetURL(entry: string): string {
+  const pkg = (process as NodeJS.Process & {
+    pkg?: { defaultEntrypoint?: unknown; entrypoint?: unknown }
+  }).pkg
+  if (process.platform !== 'win32'
+    || typeof pkg?.entrypoint !== 'string'
+    || typeof pkg.defaultEntrypoint !== 'string'
+    || !win32.isAbsolute(pkg.entrypoint)) return pathToFileURL(entry).href
+
+  const defaultEntrypoint = posix.normalize(pkg.defaultEntrypoint)
+  if (!defaultEntrypoint.startsWith('/snapshot/')) return pathToFileURL(entry).href
+  const entryRelativeToSnapshot = defaultEntrypoint.slice('/snapshot/'.length)
+  const snapshotRoot = entryRelativeToSnapshot.split('/').reduce(
+    current => win32.dirname(current),
+    win32.resolve(pkg.entrypoint),
+  )
+  if (win32.relative(snapshotRoot, win32.resolve(pkg.entrypoint)).replace(/\\/gu, '/') !== entryRelativeToSnapshot) {
+    return pathToFileURL(entry).href
+  }
+
+  const targetRelativeToSnapshot = win32.relative(snapshotRoot, win32.resolve(entry))
+  if (targetRelativeToSnapshot === '..'
+    || targetRelativeToSnapshot.startsWith(`..${win32.sep}`)
+    || win32.isAbsolute(targetRelativeToSnapshot)) return pathToFileURL(entry).href
+  return pathToFileURL(win32.resolve(snapshotRoot, targetRelativeToSnapshot)).href
+}
+
 /** Resolve one available explicit package export under Node ESM import conditions. */
 function packageEntryFromPackage(
   packageName: string,
@@ -342,9 +370,42 @@ function packageEntryFromPackage(
     if (!target.startsWith('./') || /^\.\.(?:[\\/]|$)/u.test(relativeEntry)) {
       throw new Error(`dsh: installed package ${packageName} export ${subpath} resolves outside its package: ${target}`)
     }
-    if (existsSync(entry) && statSync(entry).isFile()) return pathToFileURL(entry).href
+    if (existsSync(entry) && statSync(entry).isFile()) return packageTargetURL(entry)
   }
   return undefined
+}
+
+/** Return whether the manifest and installed files identify a platform asset package with no JavaScript entry. */
+function isPlatformAssetPackage(
+  packageDir: string,
+  manifest: { cpu?: unknown; dsh?: unknown; files?: unknown; os?: unknown },
+): boolean {
+  const isTargetList = (value: unknown): boolean => {
+    if (!Array.isArray(value) || value.length === 0
+      || !value.every((target): target is string => typeof target === 'string' && target.length > 0)) return false
+    return value.some(target => !target.startsWith('!') && target !== 'any') && !value.includes('any')
+  }
+  if (manifest.dsh !== undefined || !isTargetList(manifest.os) || !isTargetList(manifest.cpu)) return false
+  if (manifest.files !== undefined && (!Array.isArray(manifest.files)
+    || !manifest.files.every(file => typeof file === 'string')
+    || manifest.files.some(file => /\b(?:js|mjs|cjs|jsx|ts|mts|cts|tsx)\b/iu.test(file)))) return false
+
+  let hasPayload = false
+  const inspectFiles = (dir: string): boolean => {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules') continue
+      const entry = lstatSync(join(dir, name))
+      if (entry.isDirectory()) {
+        if (!inspectFiles(join(dir, name))) return false
+      } else if (entry.isFile()) {
+        if (/\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/iu.test(extname(name))) return false
+        if (!/^(?:package\.json|readme|license|notice|copying|changelog|changes)(?:\.|$)/iu.test(name)
+          && !/\.(?:md|mdx|txt|rst)$/iu.test(name)) hasPayload = true
+      } else return false
+    }
+    return true
+  }
+  return inspectFiles(packageDir) && hasPayload
 }
 
 /** Resolve every explicit ESM runtime export that an out-of-tree plugin can import. */
@@ -354,8 +415,12 @@ function packageProxySource(
 ): { version: string; targets: Record<string, string> } {
   const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as {
     bin?: unknown
+    cpu?: unknown
+    dsh?: unknown
     exports?: unknown
+    files?: unknown
     main?: unknown
+    os?: unknown
     types?: unknown
     typings?: unknown
     version?: unknown
@@ -369,10 +434,11 @@ function packageProxySource(
     const entry = join(packageDir, main ?? 'index')
     try {
       const resolved = createRequire(join(packageDir, 'package.json')).resolve(entry)
-      return { version: manifest.version, targets: { '.': pathToFileURL(resolved).href } }
+      return { version: manifest.version, targets: { '.': packageTargetURL(resolved) } }
     } catch (error) {
       if (main === undefined
-        && (manifest.bin !== undefined || manifest.types !== undefined || manifest.typings !== undefined)) {
+        && (manifest.bin !== undefined || manifest.types !== undefined || manifest.typings !== undefined
+          || (manifest.main === undefined && isPlatformAssetPackage(packageDir, manifest)))) {
         return { version: manifest.version, targets: {} }
       }
       throw new Error(`dsh: installed package ${packageName} main entry is missing at ${entry}`, { cause: error })
