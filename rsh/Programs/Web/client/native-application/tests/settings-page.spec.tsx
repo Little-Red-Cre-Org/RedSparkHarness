@@ -696,12 +696,20 @@ it('retries a failed plugin settings describe and renders plugin rows', async ()
 it('restarts a failed settings subscription when retrying and refreshes on its next event', async () => {
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
+  const route = { provider: 'provider', model: 'model-a' }
+  const catalog = {
+    default: route, routableProviders: ['provider'], failures: [],
+    groups: [{ id: 'provider', name: 'Provider', models: [{ id: 'model-a', name: 'Model A' }] }],
+  }
   let subscriptionCount = 0
   let describeCount = 0
   const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
-    return settingsDescription([pluginSettings('shell', describeCount, { timeoutMs: 1500 + describeCount * 1000 })])
+    return settingsDescription([
+      pluginSettings('shell', describeCount, { timeoutMs: 1500 + describeCount * 1000 }),
+      pluginSettings('subagent-model-selection', describeCount, { enabled: true, allowedModels: [route] }),
+    ])
   })
   actions.settingsEvents = vi.fn(async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
     subscriptionCount += 1
@@ -709,11 +717,17 @@ it('restarts a failed settings subscription when retrying and refreshes on its n
     await event
     if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'shell', revision: 3 }
   })
+  const modelCatalog = vi.fn(async (_signal?: AbortSignal) => catalog)
+  actions.modelCatalog = modelCatalog
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
   const alert = await screen.findByRole('alert')
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Subagent' }))
+  expect(await screen.findByRole('checkbox', { name: /Model A/ })).toBeTruthy()
+  await waitFor(() => { expect(modelCatalog).toHaveBeenCalledTimes(1) })
   fireEvent.click(within(alert).getByRole('button', { name: en.retry }))
   await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
+  await waitFor(() => { expect(modelCatalog).toHaveBeenCalledTimes(2) })
   await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
   expect(subscriptionCount).toBe(2)
 

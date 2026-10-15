@@ -673,7 +673,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
     {loadFailed || subscriptionFailed ? <div className={css.error} role="alert">
       <span>{t('settingsPluginLoadFailed')}</span>
       <Button type="button" size="sm" variant="outline" onClick={() => {
-        if (subscriptionFailed) restartSubscription.current?.()
+        if (subscriptionFailed) {
+          restartSubscription.current?.()
+          if (catalogStatusRef.current !== 'idle') void loadCatalog(true)
+        }
         void refreshNamespace()
       }}>{t('retry')}</Button>
     </div> : null}
