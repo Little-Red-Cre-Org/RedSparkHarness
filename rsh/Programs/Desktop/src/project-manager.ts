@@ -1083,6 +1083,7 @@ export class DesktopProjectManager {
             unlinkDesktopHostPackages(this.paths.profile)
             try {
               await this.runPnpm(this.paths.profile, operation.args)
+              linkDesktopHostPackages(this.paths.profile, this.runtime.dsh, this.currentRuntime())
               const afterInstallFiles = operation.filesAfterInstall ?? next.files
               let afterInstallPlan: NativePlanningResult
               try { afterInstallPlan = await planNativeComposition(afterInstallFiles, this.paths.profile,

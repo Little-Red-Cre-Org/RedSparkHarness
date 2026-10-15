@@ -24,11 +24,12 @@ function fixtureRoot(): string {
 
 function writeNativePackage(profile: string, name: string, targets: readonly ('host' | 'client')[],
   requires: readonly string[], provides: readonly string[], version = '1.0.0', optional: readonly string[] = [],
-  sourcePrefix = ''): void {
+  sourcePrefix = '', peerDependencies: Record<string, string> = {}): void {
   const directory = join(profile, 'node_modules', ...name.split('/'))
   mkdirSync(directory, { recursive: true })
   const entry = { apiVersion: 1, entry: './native', targets, requires, optional, provides }
   writeFileSync(join(directory, 'package.json'), JSON.stringify({ name, version, type: 'module',
+    ...Object.keys(peerDependencies).length === 0 ? {} : { peerDependencies },
     exports: { './native': './native.js' }, dsh: { native: entry } }))
   writeFileSync(join(directory, 'native.js'), `${sourcePrefix}export const plugin = ${JSON.stringify({ apiVersion: 1, name,
     targets, requires, optional, provides })}; plugin.resolve = () => () => {}\n`)
@@ -486,4 +487,26 @@ it('installs, updates, and removes exact Native packages without losing row conf
   } })
   expect(existsSync(join(profile, 'desktop-packages-pending'))).toBe(true)
   expect(lifecycle).toEqual({ stop: 4, start: 3 })
+}, 15_000)
+
+it('restores reserved Host peer links before validating package mutations', async () => {
+  const root = fixtureRoot()
+  const { manager, profile } = prepareFixture(root)
+  await manager.applyRelease()
+  writeNativeProfile(profile, [...initialHostRows,
+    { id: 'shared-peer-host', plugin: '@fixture/shared-peer-host' },
+  ], initialClientRows)
+  prepareNativePackages(profile)
+  writeNativePackage(profile, '@fixture/shared-peer-host', ['host'], [], [], '1.0.0', [],
+    "import '@deepseek-ai/cordis'\n", { '@deepseek-ai/cordis': '*' })
+
+  const initial = await manager.listNativeModules(ready)
+  expect(initial.status).toBe('listed')
+  if (initial.status !== 'listed') return
+  const installed = await manager.mutateNativeModules({ type: 'install', request: {
+    expectedRevision: initial.inventory.revision, packageName: '@fixture/new-client', version: '1.0.0',
+    installations: [{ target: 'client', id: brandString<NativeDesktopInstallationId>('new-client'),
+      config: undefined, enabled: false }],
+  } }, hooks({ stop: 0, start: 0 }), ready)
+  expect(installed.status).toBe('applied')
 }, 15_000)

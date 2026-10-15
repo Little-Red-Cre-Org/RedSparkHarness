@@ -391,7 +391,9 @@ async function main(): Promise<void> {
       afterChange: () => hooks.afterChange(),
     }
     const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
-    if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
+    if (outcome.status === 'recovery-required' && backendState().phase !== 'error') {
+      await showStartupError(new Error(messages.nativeRecoveryError))
+    } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
       try { await navigateMain(applicationUrl) }
       catch (error) { await showStartupError(error) }
     }

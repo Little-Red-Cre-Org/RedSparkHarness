@@ -21,6 +21,7 @@ const harness = await vi.hoisted(async () => {
   let pluginsEnabled = false
   let nativeEnabled = false
   let nativeLists = 0
+  let nativeMutationOutcome: unknown
   const nativeMutations: unknown[] = []
   let preparing = deferred()
   let prepared = deferred()
@@ -104,13 +105,15 @@ const harness = await vi.hoisted(async () => {
     set pluginsEnabled(value: boolean) { pluginsEnabled = value },
     get nativeEnabled() { return nativeEnabled },
     set nativeEnabled(value: boolean) { nativeEnabled = value },
+    get nativeMutationOutcome() { return nativeMutationOutcome },
+    set nativeMutationOutcome(value: unknown) { nativeMutationOutcome = value },
     get nativeLists() { return nativeLists },
     noteNativeList() { nativeLists += 1 },
     reset() {
       windows.length = 0; hosts.length = 0; handlers.clear(); app.removeAllListeners(); applicationMenu = undefined
       app.isPackaged = true
       pluginsEnabled = false
-      nativeEnabled = false; nativeLists = 0; nativeMutations.length = 0
+      nativeEnabled = false; nativeLists = 0; nativeMutationOutcome = undefined; nativeMutations.length = 0
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
       navigated = deferred(); errorPublished = deferred(); quitCompleted = deferred()
     },
@@ -148,8 +151,12 @@ vi.mock('../src/project-manager.ts', () => ({
       harness.noteNativeList()
       return { status: 'listed', inventory: { runtime: 'native', revision: 'a'.repeat(64), scopes: [], packages: [] } }
     }
-    async mutateNativeModules(mutation: unknown) {
+    async mutateNativeModules(mutation: unknown, hooks: { beforeChange(): Promise<void> }) {
       harness.nativeMutations.push(mutation)
+      if (harness.nativeMutationOutcome !== undefined) {
+        await hooks.beforeChange()
+        return harness.nativeMutationOutcome
+      }
       return { status: 'applied', revision: 'b'.repeat(64), backend: { phase: 'ready' } }
     }
     async mutate(_mutation: unknown, hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
@@ -518,6 +525,31 @@ describe('desktop main startup', () => {
     expect(harness.dialog.showMessageBox).not.toHaveBeenCalled()
     await expect(Promise.resolve().then(() => invokeFrom(DESKTOP_IPC.pluginsList, 'dsh-app://app/index.html', { runtime: 'native' })))
       .rejects.toThrow('rejected IPC')
+  })
+
+  it('shows recovery UI when a Native package mutation requires recovery after stopping Host', async () => {
+    harness.nativeEnabled = true
+    harness.nativeMutationOutcome = { status: 'recovery-required', error: {
+      code: 'unsupported-module', messageKey: 'nativeRecoveryError', backend: { phase: 'starting' },
+    } }
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.resolve()
+    await harness.hostStarted.promise
+    harness.hosts[0]!.ready.resolve()
+    await harness.navigated.promise
+
+    const result = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
+      runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
+        installations: [{ target: 'client', id: 'client-fixture', enabled: false }] },
+    }))
+    await harness.hosts[0]!.stopping.promise
+    harness.hosts[0]!.exited.resolve()
+    await expect(result).resolves.toMatchObject({ status: 'recovery-required' })
+    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({
+      phase: 'error', message: 'The backend or package state requires recovery.', profileRecovery: true,
+    })
+    expect(harness.windows[0]!.urls.at(-1)).toBe('dsh-app://shell/startup.html')
   })
 
   it('starts the unpackaged Host from the application development directory', async () => {
