@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
-  ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
+  Button, ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
   ChatMascotHero, ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderOpen16, Pill,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -20,6 +20,7 @@ import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
+import { NativePendingSubmissions } from './submissions.tsx'
 import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
@@ -44,7 +45,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-  selectPlanMode, selectPermissionPreset,
+  selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
   refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -55,6 +56,10 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   selectModel: NativeConversationController['selectModel']
   selectPreset: NativeConversationController['selectPreset']
   selectPlanMode: NativeConversationController['selectPlanMode']
+  submitPending: NativeConversationController['submitPending']
+  changePending: NativeConversationController['changePending']
+  editPending: NativeConversationController['editPending']
+  refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
   selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
   t: Translate
@@ -68,11 +73,14 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
+  const draftVersion = useRef(0)
   const [files, setFiles] = useState<readonly File[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
   const ready = snapshot.state === 'ready'
+  const acceptsPending = snapshot.state === 'sending'
+  const inputReady = ready || acceptsPending
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
   const hasConversation = snapshot.events.some(event => event.type === 'tool-workflow/run-start'
     || (isAppendSurfaceEvent(event) && deriveEventMessage(event)?.role !== 'system'))
@@ -84,27 +92,44 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
       followedSession.current = snapshot.selected
+      draftVersion.current++
+      setDraft('')
+      setFiles([])
       followsTranscript.current = true
     }
     const scroll = scrollRef.current
     if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
   }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
-  const submit = (): void => {
-    if (!ready || snapshot.selected === undefined || draft.trim().length === 0) return
-    void send(draft, files).then((success) => {
-      if (success) { setDraft(''); setFiles([]) }
-    })
+  const submit = (placement: 'queued' | 'steering' = 'queued'): void => {
+    if (!inputReady || snapshot.selected === undefined || draft.trim() === '' || snapshot.submissionBusy) return
+    if (acceptsPending && files.length > 0) return
+    const version = ++draftVersion.current
+    if (acceptsPending) {
+      void submitPending(draft, placement).then((success) => {
+        if (success && draftVersion.current === version) { setDraft(''); setFiles([]) }
+      })
+    } else {
+      const text = draft
+      const attachments = files
+      setDraft('')
+      setFiles([])
+      void send(text, attachments).then((success) => {
+        if (!success && draftVersion.current === version) { setDraft(text); setFiles(attachments) }
+      })
+    }
   }
   const composer = <form className={css.composerForm} onSubmit={(event) => {
     event.preventDefault()
     submit()
   }}>
+    <NativePendingSubmissions snapshot={snapshot} changePending={changePending} editPending={editPending}
+      refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
         <textarea className={css.editor} aria-label={t('prompt')} placeholder={t('composerPlaceholder')}
-          value={draft} disabled={!ready || snapshot.selected === undefined}
-          onChange={(event) => { setDraft(event.target.value) }} rows={1}
+          value={draft} disabled={!inputReady || snapshot.selected === undefined || snapshot.submissionBusy}
+          onChange={(event) => { draftVersion.current++; setDraft(event.target.value) }} rows={1}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
@@ -123,6 +148,11 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
         </div>
         <div className={css.toolbarActions}>
           <ModelPickerControl snapshot={snapshot} selectModel={selectModel} refreshModelControls={refreshModelControls} t={t} />
+          {acceptsPending ? <>
+            <Button type="submit" size="sm" disabled={snapshot.submissionBusy || draft.trim() === '' || files.length > 0}>{t('queueMessage')}</Button>
+            <Button type="button" size="sm" disabled={snapshot.submissionBusy || draft.trim() === '' || files.length > 0}
+              onClick={() => { submit('steering') }}>{t('steerMessage')}</Button>
+          </> : null}
           {sending
             ? <ChatComposerButton kind="stop" label={t('cancel')} disabled={snapshot.state === 'cancelling'} onClick={cancel} />
             : <ChatComposerButton kind="send" label={t('send')} type="submit"
@@ -130,6 +160,7 @@ function Conversation({ snapshot, useLocale, loadImage, send, cancel, answerHuma
         </div>
       </ChatComposerToolbar>
     </ChatComposerCard>
+    {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly' : 'pendingInputHint')}</p> : null}
   </form>
   return <>
     <main className={css.page}>
@@ -236,6 +267,10 @@ export const plugin: NativePlugin = {
             await controller.send(text, files)
             return controller.getSnapshot().error === undefined
           },
+          submitPending: controller.submitPending.bind(controller),
+          changePending: controller.changePending.bind(controller),
+          editPending: controller.editPending.bind(controller),
+          refreshPendingSubmissions: controller.refreshPendingSubmissions.bind(controller),
           cancel: () => { controller.cancel() },
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
@@ -245,7 +280,7 @@ export const plugin: NativePlugin = {
           refreshModelControls,
         }),
       }, ({ useConversation, useLocale, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
-        selectPlanMode, selectPermissionPreset,
+        selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
         refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
@@ -256,6 +291,10 @@ export const plugin: NativePlugin = {
         selectModel: NativeConversationController['selectModel']
         selectPreset: NativeConversationController['selectPreset']
         selectPlanMode: NativeConversationController['selectPlanMode']
+        submitPending: NativeConversationController['submitPending']
+        changePending: NativeConversationController['changePending']
+        editPending: NativeConversationController['editPending']
+        refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
@@ -263,6 +302,8 @@ export const plugin: NativePlugin = {
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale} loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
+        submitPending={submitPending} changePending={changePending} editPending={editPending}
+        refreshPendingSubmissions={refreshPendingSubmissions}
         refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
         themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
