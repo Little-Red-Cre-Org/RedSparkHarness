@@ -1,44 +1,18 @@
-.card {
-  display: grid;
-  gap: 16px;
-  padding: 16px;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-2);
-}
-
-.header,
-.identity,
-.actions,
-.quotaHeading {
-  display: flex;
-  align-items: center;
-}
-
-.header {
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.identity {
+.identityText {
   min-width: 0;
-  gap: 12px;
 }
 
-.identity h3,
-.identity p,
-.quotaWindow p {
+.identityTitle {
   margin: 0;
 }
 
-.identity p {
+.accountDetails {
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-label-secondary);
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   flex: none;
   border-radius: 50%;
   corner-shape: round;
@@ -46,30 +20,22 @@
   object-fit: cover;
 }
 
-.actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .quotas {
-  display: grid;
-  gap: 14px;
-}
-
-.balances {
   display: grid;
   gap: 10px;
 }
 
-.balanceRow,
-.balanceAmounts {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.balances {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .balanceRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   justify-content: space-between;
 }
 
@@ -80,20 +46,57 @@
 
 .quotaWindow {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .quotaHeading {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
 .quotaWindow progress {
+  box-sizing: border-box;
   width: 100%;
-  accent-color: var(--dsw-alias-brand-primary);
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 2px;
+  corner-shape: round;
+  background-color: var(--dsw-alias-bg-layer-1);
 }
 
-.quotaWindow p,
+.quotaWindow progress::-webkit-progress-bar {
+  border-radius: 2px;
+  corner-shape: round;
+  background-color: var(--dsw-alias-bg-layer-1);
+}
+
+.quotaWindow progress::-webkit-progress-value {
+  border-radius: 2px;
+  corner-shape: round;
+  background-color: var(--dsw-alias-brand-primary);
+}
+
+.quotaWindow progress::-moz-progress-bar {
+  border-radius: 2px;
+  corner-shape: round;
+  background-color: var(--dsw-alias-brand-primary);
+}
+
+.quotaWindow p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
 .credits {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
   color: var(--dsw-alias-label-secondary);
 }
