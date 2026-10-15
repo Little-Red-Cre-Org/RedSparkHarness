@@ -135,7 +135,7 @@ it('renders the ChatGPT identity name before the email', async () => {
 
   const name = await screen.findByText('Ada Lovelace')
   const email = screen.getByText('account@example.com')
-  expect(name.compareDocumentPosition(email)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  expect(name.nextElementSibling).toBe(email)
 })
 
 it('reads, copies, opens and deletes native Agent presets through Host actions', async () => {
@@ -148,9 +148,16 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
       { id: 'damaged', name: 'Damaged', source: 'user', status: 'invalid', problem: 'Composition file is invalid.' },
     ],
   }
+  let agentPresetSettings: NativeSettingsDescriptor = {
+    namespace: 'agent-presets', schema: {}, value: { default: 'standard', modeSelectionEnabled: true },
+    base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 7,
+  }
   const queued: NativeSettingsEvent[] = []
   let wake: ((event: NativeSettingsEvent | null) => void) | undefined
   const publish = (event: NativeSettingsEvent): void => {
+    if (event.type === 'settings/document-updated' && event.namespace === 'agent-presets') {
+      agentPresetSettings = { ...agentPresetSettings, revision: event.revision }
+    }
     if (wake === undefined) queued.push(event)
     else {
       const resolve = wake
@@ -169,6 +176,21 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
     }
   }
   const agentPresetsList = vi.fn(async () => roster)
+  const settingsMutate = vi.fn(async (_namespace: string, ops: Parameters<NativeSessionClient['settingsMutate']>[1], expectedRevision: number) => {
+    if (expectedRevision !== agentPresetSettings.revision) throw new Error('native/settings-conflict')
+    const operation = ops[0]
+    if (operation?.op === 'set') {
+      agentPresetSettings = {
+        ...agentPresetSettings,
+        value: { ...agentPresetSettings.value, [operation.path[0]!]: operation.value },
+        revision: expectedRevision + 1,
+      }
+      if (operation.path[0] === 'default' && typeof operation.value === 'string') {
+        roster = { ...roster, default: operation.value }
+      }
+    }
+    return agentPresetSettings
+  })
   const agentPresetCopy = vi.fn(async (from: string, id: string, name?: string) => {
     expect(from).toBe('standard')
     roster = { ...roster, presets: [...roster.presets, { id, name: name ?? id, source: 'user', status: 'ready' }] }
@@ -178,8 +200,11 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
     roster = { ...roster, presets: roster.presets.filter(preset => preset.id !== id) }
     publish({ type: 'agent-presets/updated' })
   })
+  const settingsDescribe = vi.fn(async () => settingsDescription([agentPresetSettings]))
   const actions = {
     ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    settingsDescribe,
+    settingsMutate,
     agentPresetsList,
     agentPresetRead: vi.fn(async () => ({ id: 'standard', name: 'Standard', source: 'system', status: 'ready',
       description: 'General purpose', content: '{"formatVersion":1,"installations":[]}' })),
@@ -192,29 +217,185 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
 
   expect(await screen.findByRole('heading', { name: en.settingsAgentPresets })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: en.agentPresetsBuiltInGroup })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: en.agentPresetsCustomGroup })).toBeTruthy()
   expect(screen.getByText('General purpose')).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsView}: Legacy` })).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsView}: Migrating` })).toBeTruthy()
+  publish({ type: 'settings/document-updated', namespace: 'agent-presets', revision: 8 })
+  await waitFor(() => {
+    expect(settingsDescribe).toHaveBeenCalledTimes(3)
+    expect(agentPresetsList).toHaveBeenCalledTimes(2)
+  })
   expect(screen.getByText(en.agentPresetsDefault)).toBeTruthy()
-  expect(screen.getByText(en.agentPresetsNeedsMigration)).toBeTruthy()
-  expect(screen.getByText(en.agentPresetsBroken)).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${en.agentPresetsNeedsMigration}: Migrating` })).toBeTruthy()
+  expect(screen.getByText(en.agentPresetsBrokenBadge)).toBeTruthy()
   expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
-  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsView })[0]!)
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Legacy` }))
+  await waitFor(() => {
+    expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'legacy' }], 8)
+  })
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Standard` }))
   expect(await screen.findByText('{"formatVersion":1,"installations":[]}')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: en.close }))
 
-  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsDuplicate })[0]!)
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsDuplicate}: Standard` }))
   fireEvent.change(screen.getByLabelText(en.agentPresetsIdentifier), { target: { value: 'custom-copy' } })
   fireEvent.change(screen.getByLabelText(en.agentPresetsName), { target: { value: '' } })
   fireEvent.click(screen.getByRole('button', { name: en.agentPresetsCreate }))
   expect(agentPresetCopy).toHaveBeenCalledWith('standard', 'custom-copy', undefined)
-  expect(await screen.findByRole('heading', { name: 'custom-copy' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: `${en.agentPresetsSetDefault}: custom-copy` })).toBeTruthy()
   expect(await screen.findByText('/home/test/.agent-presets/custom-copy')).toBeTruthy()
 
-  const legacyRow = screen.getByRole('heading', { name: 'Legacy' }).closest('li')!
-  fireEvent.click(within(legacyRow).getByRole('button', { name: en.agentPresetsDelete }))
+  const legacyRow = screen.getByText('Legacy').closest('li')!
+  fireEvent.click(within(legacyRow).getByRole('button', { name: `${en.agentPresetsDelete}: Legacy` }))
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.agentPresetsDeleteConfirm }))
   await waitFor(() => { expect(screen.queryByText('Legacy')).toBeNull() })
   expect(agentPresetDelete).toHaveBeenCalledWith('legacy')
-  expect(agentPresetsList).toHaveBeenCalledTimes(3)
+  expect(agentPresetsList).toHaveBeenCalledTimes(5)
+})
+
+it.each([
+  { hasNamespace: true, disabled: false },
+  { hasNamespace: false, disabled: true },
+])('uses the Host namespace for Agent mode selection when present ($hasNamespace)', async ({ hasNamespace, disabled }) => {
+  const namespace: NativeSettingsDescriptor = {
+    namespace: 'agent-presets', schema: {}, value: { default: 'standard', modeSelectionEnabled: false },
+    base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision: 12,
+  }
+  const settingsMutate = vi.fn(async () => namespace)
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    settingsDescribe: vi.fn(async () => settingsDescription(hasNamespace ? [namespace] : [])),
+    settingsMutate,
+    agentPresetsList: vi.fn(async () => ({ default: 'standard', presets: [
+      { id: 'standard', name: 'Standard', source: 'system' as const, status: 'ready' as const },
+      { id: 'alternate', name: 'Alternate', source: 'system' as const, status: 'ready' as const },
+    ] })),
+    agentPresetRead: vi.fn(), agentPresetCopy: vi.fn(), agentPresetDelete: vi.fn(),
+    agentPresetsCanOpenDirectory: vi.fn(async () => false),
+    agentPresetOpenDirectory: vi.fn(async () => ({ opened: false as const, path: '/tmp' })),
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
+
+  const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(disabled)
+  if (hasNamespace) {
+    expect(screen.getByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeTruthy()
+    fireEvent.click(modeSwitch)
+    await waitFor(() => {
+      expect(settingsMutate).toHaveBeenCalledWith('agent-presets', [
+        { op: 'set', path: ['modeSelectionEnabled'], value: true },
+      ], 12)
+    })
+  } else {
+    expect(screen.getByText(en.agentPresetsHostGap)).toBeTruthy()
+    expect(screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` }).hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: `${en.agentPresetsEnablePickerToSetDefault}: Alternate` })).toBeNull()
+    expect(settingsMutate).not.toHaveBeenCalled()
+  }
+})
+
+it('blocks Agent settings writes until an announced revision is refreshed', async () => {
+  const settingsAt = (revision: number, modeSelectionEnabled: boolean, defaultPreset: string): NativeSettingsDescriptor => ({
+    namespace: 'agent-presets', schema: {}, value: { default: defaultPreset, modeSelectionEnabled },
+    base: {}, user: {}, applies: 'live', secrets: [], credentialRefs: [], revision,
+  })
+  let hostSettings = settingsAt(7, false, 'standard')
+  let releaseEvent: ((event: NativeSettingsEvent | null) => void) | undefined
+  const publish = (revision: number, modeSelectionEnabled: boolean, defaultPreset: string): void => {
+    hostSettings = settingsAt(revision, modeSelectionEnabled, defaultPreset)
+    const release = releaseEvent
+    releaseEvent = undefined
+    release?.({ type: 'settings/document-updated', namespace: 'agent-presets', revision })
+  }
+  const settingsEvents = async function* (signal: AbortSignal): AsyncIterable<NativeSettingsEvent> {
+    while (!signal.aborted) {
+      const event = await new Promise<NativeSettingsEvent | null>((resolve) => {
+        releaseEvent = resolve
+        signal.addEventListener('abort', () => { resolve(null) }, { once: true })
+      })
+      if (event === null) return
+      yield event
+    }
+  }
+  let finishRefresh: ((description: NativeSettingsDescription) => void) | undefined
+  const settingsDescribe = vi.fn(async () => {
+    if (settingsDescribe.mock.calls.length <= 2) return settingsDescription([settingsAt(7, false, 'standard')])
+    if (settingsDescribe.mock.calls.length === 3) return settingsDescription([hostSettings])
+    return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
+  })
+  let finishFirstMutation: (() => void) | undefined
+  const settingsMutate = vi.fn((
+    _namespace: string, ops: Parameters<NativeSessionClient['settingsMutate']>[1], revision: number,
+  ) => {
+    if (revision !== hostSettings.revision) return Promise.reject(new Error('native/settings-conflict'))
+    const operation = ops[0]
+    if (operation?.op === 'set') {
+      hostSettings = {
+        ...hostSettings,
+        value: { ...hostSettings.value, [operation.path[0]!]: operation.value },
+        revision: hostSettings.revision + 1,
+      }
+    }
+    const result = hostSettings
+    if (settingsMutate.mock.calls.length === 1) {
+      return new Promise<NativeSettingsDescriptor>((resolve) => { finishFirstMutation = () => { resolve(result) } })
+    }
+    return Promise.resolve(result)
+  })
+  const actions = {
+    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    settingsDescribe,
+    settingsMutate,
+    settingsEvents,
+    agentPresetsList: vi.fn(async () => ({ default: hostSettings.value.default, presets: [
+      { id: 'standard', name: 'Standard', source: 'system' as const, status: 'ready' as const },
+      { id: 'alternate', name: 'Alternate', source: 'system' as const, status: 'ready' as const },
+    ] })),
+    agentPresetRead: vi.fn(), agentPresetCopy: vi.fn(), agentPresetDelete: vi.fn(),
+    agentPresetsCanOpenDirectory: vi.fn(async () => false),
+    agentPresetOpenDirectory: vi.fn(async () => ({ opened: false as const, path: '/tmp' })),
+  } as unknown as NativeSettingsActions
+  renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
+
+  const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
+  await waitFor(() => { expect((modeSwitch as HTMLButtonElement).disabled).toBe(false) })
+  fireEvent.click(modeSwitch)
+  await waitFor(() => { expect(settingsMutate).toHaveBeenCalledTimes(1) })
+  expect(hostSettings.revision).toBe(8)
+
+  await waitFor(() => { expect(releaseEvent).toBeDefined() })
+  publish(9, false, 'alternate')
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
+  await waitFor(() => {
+    expect(modeSwitch.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('button', { name: `${en.agentPresetsDefault}: Alternate` })).toBeTruthy()
+  })
+
+  await waitFor(() => { expect(releaseEvent).toBeDefined() })
+  publish(10, true, 'alternate')
+  await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(4) })
+  await waitFor(() => { expect(finishRefresh).toBeDefined() })
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+  const standardButton = screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Standard` })
+  expect((standardButton as HTMLButtonElement).disabled).toBe(true)
+
+  expect(finishFirstMutation).toBeDefined()
+  await act(async () => { finishFirstMutation!() })
+  expect(modeSwitch.getAttribute('aria-checked')).toBe('false')
+  expect(screen.getByRole('button', { name: `${en.agentPresetsDefault}: Alternate` })).toBeTruthy()
+  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
+
+  expect(finishRefresh).toBeDefined()
+  await act(async () => { finishRefresh!(settingsDescription([settingsAt(10, true, 'alternate')])) })
+  await waitFor(() => { expect((modeSwitch as HTMLButtonElement).disabled).toBe(false) })
+  expect(modeSwitch.getAttribute('aria-checked')).toBe('true')
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Standard` }))
+  await waitFor(() => {
+    expect(settingsMutate).toHaveBeenLastCalledWith('agent-presets', [{ op: 'set', path: ['default'], value: 'standard' }], 10)
+  })
+  await waitFor(() => { expect(hostSettings.revision).toBe(11) })
 })
 
 it('keeps the later Agent preset detail when an earlier read finishes last', async () => {
@@ -250,8 +431,8 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
   } as unknown as NativeSettingsActions
   renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
   expect(await screen.findByRole('heading', { name: en.settingsAgentPresets })).toBeTruthy()
-  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsView })[0]!)
-  fireEvent.click(screen.getAllByRole('button', { name: en.agentPresetsView })[1]!)
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Standard` }))
+  fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsView}: Legacy` }))
   expect(await screen.findByText('{"formatVersion":1,"installations":[{"id":"legacy"}]}')).toBeTruthy()
   await act(async () => {
     finishStandard?.({ id: 'standard', name: 'Standard', source: 'system', status: 'ready',
