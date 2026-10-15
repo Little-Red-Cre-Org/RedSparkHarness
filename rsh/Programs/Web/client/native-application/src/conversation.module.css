@@ -288,6 +288,7 @@
   padding: 1px 5px;
   border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 999px;
+  corner-shape: round;
   color: var(--dsw-alias-label-secondary);
   font-size: 11px;
   line-height: 16px;
