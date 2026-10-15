@@ -30,7 +30,7 @@
 .failed,
 .conflict,
 .invalid {
-  color: var(--dsw-alias-label-error);
+  color: var(--dsw-alias-state-error-primary);
 }
 
 .tabs {
@@ -255,7 +255,7 @@
 
 .inputInvalid {
   composes: input;
-  border-color: var(--dsw-alias-label-error);
+  border-color: var(--dsw-alias-state-error-primary);
 }
 
 .hint,
@@ -293,7 +293,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: var(--dsw-alias-label-error);
+  color: var(--dsw-alias-state-error-primary);
   font-size: 12px;
 }
 
