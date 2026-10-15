@@ -23,31 +23,9 @@ const FAILURE_COPY = {
   cleanup: 'settingsPluginListFailureCleanup',
 } as const satisfies Record<NonNullable<NativePluginInventoryEntry['failure']>, ConversationLocaleKey>
 
-const SCOPE_COPY = {
-  root: ['settingsPluginListHostScope', 'settingsPluginListHostSubtitle'],
-  host: ['settingsPluginListHostScope', 'settingsPluginListHostSubtitle'],
-  global: ['settingsPluginListGlobalScope', 'settingsPluginListGlobalSubtitle'],
-  session: ['settingsPluginListSessionScope', 'settingsPluginListSessionSubtitle'],
-} as const satisfies Record<string, readonly [ConversationLocaleKey, ConversationLocaleKey]>
-
-function scopeOrder(scope: string): number {
-  switch (scope) {
-    case 'root': return 0
-    case 'host': return 1
-    case 'global': return 2
-    case 'session': return 3
-    default: return 4
-  }
-}
-
 function pluginStateLabel(state: PluginState, failure: NativePluginInventoryEntry['failure'], t: Translate): string {
   const label = t(STATE_COPY[state].label)
   return state === 'failed' && failure !== undefined ? `${label} · ${t(FAILURE_COPY[failure])}` : label
-}
-
-function scopeLabel(scope: string, t: Translate, part: 0 | 1): string {
-  if (Object.hasOwn(SCOPE_COPY, scope)) return t(SCOPE_COPY[scope as keyof typeof SCOPE_COPY][part])
-  return part === 0 ? scope : t('settingsPluginListOtherScopeSubtitle')
 }
 
 /** Native plugin list, loaded on first display from the selected Host. */
@@ -83,6 +61,7 @@ export function PluginInventoryTab({ actions, t, active }: {
   }, [actions.pluginInventoryList, request, started])
 
   const normalizedQuery = query.trim().toLocaleLowerCase()
+  const rootScope = inventory?.entries[0]?.scope
   const groups = useMemo(() => {
     const grouped = new Map<string, NativePluginInventoryEntry[]>()
     for (const entry of inventory?.entries ?? []) {
@@ -91,10 +70,8 @@ export function PluginInventoryTab({ actions, t, active }: {
       if (entries === undefined) grouped.set(entry.scope, [entry])
       else entries.push(entry)
     }
-    return [...grouped].sort(([left], [right]) =>
-      scopeOrder(left) - scopeOrder(right) || left.localeCompare(right),
-    )
-  }, [inventory, normalizedQuery])
+    return [...grouped].sort(([left], [right]) => Number(right === rootScope) - Number(left === rootScope))
+  }, [inventory, normalizedQuery, rootScope])
 
   const retry = (): void => { setRequest(value => value + 1) }
   const hasEntries = (inventory?.entries.length ?? 0) > 0
@@ -118,6 +95,7 @@ export function PluginInventoryTab({ actions, t, active }: {
       {groups.map(([scope, entries]) => {
         const open = normalizedQuery.length > 0 || !collapsedScopes.has(scope)
         const groupId = `${id}-scope-${encodeURIComponent(scope)}`
+        const isRoot = scope === rootScope
         return <section className={css.group} data-plugin-scope={scope} key={scope}>
           <div className={css.groupTitleRow}>
             <button type="button" className={css.groupToggle} aria-expanded={open} aria-controls={groupId}
@@ -128,10 +106,15 @@ export function PluginInventoryTab({ actions, t, active }: {
                 return next
               }) }}>
               <IconChevronDownOutline14 className={css.groupChevron} size={12} aria-hidden="true" />
-              <span className={css.groupTitle}>{scopeLabel(scope, t, 0)}</span>
+              <span className={css.groupTitle}>
+                {t(isRoot ? 'settingsPluginListGlobalScope' : 'settingsPluginListNestedScope')}
+              </span>
             </button>
           </div>
-          <p className={css.groupSub}>{scopeLabel(scope, t, 1)}<span> · {entries.length} {t('settingsPluginListCount')}</span></p>
+          <p className={css.groupSub}>
+            {isRoot ? t('settingsPluginListGlobalSubtitle') : `${t('settingsPluginListScopePrefix')} ${scope.slice(0, 8)}`}
+            <span> · {entries.length} {t('settingsPluginListCount')}</span>
+          </p>
           {open ? <ul className={css.cards} id={groupId}>
             {entries.map((entry) => {
               const detailId = `${id}-plugin-${encodeURIComponent(entry.id)}`
@@ -148,7 +131,7 @@ export function PluginInventoryTab({ actions, t, active }: {
                       <IconChevronDownOutline14 className={css.cardChevron} size={12} aria-hidden="true" />
                     </span>
                   </span>
-                  <code className={css.cardIdentity} title={entry.id}>{entry.id}</code>
+                  <code className={css.cardIdentity} title={entry.name}>{entry.name}</code>
                 </button>
                 {entryOpen ? <div className={css.cardDetails} id={detailId}>
                   <dl className={css.details}>

@@ -8,9 +8,9 @@ import { PluginInventoryTab } from '../src/plugin-inventory-tab.tsx'
 afterEach(cleanup)
 
 const inventory: NativePluginInventory = { entries: [
-  { id: 'plugin.alpha', name: 'cordis-plugin-alpha', scope: 'root', state: 'ready' },
-  { id: 'plugin.beta', name: 'dsh-client-tool-beta', scope: 'root', state: 'failed', failure: 'activation' },
-  { id: 'plugin.gamma', name: 'gamma', scope: 'global', state: 'disposed' },
+  { id: '8cbde858-aadc-4a3f-b4f0-1276c0ce066d', name: 'cordis-plugin-alpha', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'ready' },
+  { id: 'cc2ef3a5-110c-4f67-8b89-2a945cd5f2fc', name: 'dsh-client-tool-beta', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'failed', failure: 'activation' },
+  { id: 'cd247758-bbba-4355-bef2-e1f3b5be0a1c', name: 'gamma', scope: '734a848e-ff23-48a3-8dc4-780ff89393de', state: 'disposed' },
 ] }
 
 function renderTab(pluginInventoryList: NativeSessionClient['pluginInventoryList'], active = true) {
@@ -26,18 +26,23 @@ it('loads on first display and renders scope groups with lifecycle tags', async 
   view.rerender(<PluginInventoryTab actions={{ pluginInventoryList }} t={key => en[key]} active />)
 
   expect(await screen.findByText('alpha')).toBeTruthy()
-  expect(screen.getByText(en.settingsPluginListHostScope)).toBeTruthy()
   expect(screen.getByText(en.settingsPluginListGlobalScope)).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginListGlobalSubtitle, { exact: false })).toBeTruthy()
+  expect(screen.getByText(en.settingsPluginListNestedScope)).toBeTruthy()
+  expect(screen.getByText('Scope 734a848e', { exact: false })).toBeTruthy()
+  expect(screen.getByText('cordis-plugin-alpha')).toBeTruthy()
+  expect([...view.container.querySelectorAll('[data-plugin-scope]')].map(group => group.getAttribute('data-plugin-scope')))
+    .toEqual(['05b294cc-89d7-494b-b1aa-ebb945ab3443', '734a848e-ff23-48a3-8dc4-780ff89393de'])
   expect(screen.getByText(en.settingsPluginListReady)).toBeTruthy()
   expect(screen.getByText(`${en.settingsPluginListFailed} · ${en.settingsPluginListFailureActivation}`)).toBeTruthy()
   expect(screen.getByText(en.settingsPluginListDisposed)).toBeTruthy()
 })
 
-it('filters plugin names and ids without case sensitivity', async () => {
+it.each(['CC2EF3A5', 'DSh-CLIENT-TOOL-BETA'])('filters plugin names and ids without case sensitivity: %s', async (query) => {
   renderTab(vi.fn<NativeSessionClient['pluginInventoryList']>(async () => inventory))
 
   await screen.findByText('alpha')
-  fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: 'PLUGIN.BETA' } })
+  fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: query } })
 
   expect(screen.getByText('tool-beta')).toBeTruthy()
   expect(screen.queryByText('alpha')).toBeNull()
