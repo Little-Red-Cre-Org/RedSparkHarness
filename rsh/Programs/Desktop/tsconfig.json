@@ -6,6 +6,10 @@
   },
   "include": ["src"],
   "references": [
+    { "path": "../../Core/util/brand" },
+    { "path": "../../Core/util/launch-environment" },
+    { "path": "../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../Web/host/native-web-assets" },
     { "path": "../../Core/util/home-paths" },
     { "path": "../CLI" }
   ]

@@ -19,6 +19,14 @@ import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'
 import { DesktopBackendController, type DesktopBackendState } from './backend-controller.ts'
 import { DESKTOP_IPC, type DesktopUpdateState } from './ipc.ts'
+import {
+  parseNativeDesktopInstallRequest,
+  parseNativeDesktopListRequest,
+  parseNativeDesktopMutationRequest,
+  parseNativeDesktopPackageRequest,
+  parseNativeDesktopToggleRequest,
+  parseNativeDesktopUpdateRequest,
+} from './native-module-management.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
@@ -149,6 +157,11 @@ function assertDesktopSender(event: IpcMainInvokeEvent, hostnames: readonly stri
   if (url.protocol !== `${SCHEME}:` || !hostnames.includes(url.hostname)) {
     throw new Error('dsh desktop: rejected IPC from an unowned renderer')
   }
+}
+
+function isNativeDesktopPayload(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && Object.hasOwn(value, 'runtime')
 }
 
 async function serveShellAsset(request: Request): Promise<Response> {
@@ -348,6 +361,44 @@ async function main(): Promise<void> {
       throw error
     }
   }
+  const nativeList = async (event: IpcMainInvokeEvent, payload: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (development !== undefined) return manager.refuseNativeList('wrong-profile', backendState())
+    try { parseNativeDesktopListRequest(payload) }
+    catch { return manager.refuseNativeList('invalid-request', backendState()) }
+    await startup?.catch(() => undefined)
+    if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeList('wrong-profile', backendState())
+    return manager.listNativeModules(backendState)
+  }
+  const nativeMutation = async (
+    event: IpcMainInvokeEvent,
+    parse: () => Parameters<DesktopProjectManager['mutateNativeModules']>[0],
+  ) => {
+    assertDesktopSender(event, ['shell'])
+    if (development !== undefined) {
+      return manager.refuseNativeMutation('wrong-profile', backendState())
+    }
+    let mutation: Parameters<DesktopProjectManager['mutateNativeModules']>[0]
+    try { mutation = parse() }
+    catch { return manager.refuseNativeMutation('invalid-request', backendState()) }
+    await startup?.catch(() => undefined)
+    if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeMutation('wrong-profile', backendState())
+    const nativeHooks: DesktopProjectHooks = {
+      beforeChange: async () => {
+        await navigateMain(startupUrl)
+        await hooks.beforeChange()
+      },
+      afterChange: () => hooks.afterChange(),
+    }
+    const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
+    if (outcome.status === 'recovery-required' && backendState().phase !== 'error') {
+      await showStartupError(new Error(messages.nativeRecoveryError))
+    } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
+      try { await navigateMain(applicationUrl) }
+      catch (error) { await showStartupError(error) }
+    }
+    return outcome
+  }
   ipcMain.handle(DESKTOP_IPC.localeGet, (event) => {
     assertDesktopSender(event, ['shell'])
     return locale
@@ -381,31 +432,54 @@ async function main(): Promise<void> {
       BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({ color: background, symbolColor: foreground })
     }
   })
-  ipcMain.handle(DESKTOP_IPC.pluginsList, (event) => {
+  ipcMain.handle(DESKTOP_IPC.pluginsList, (event, payload?: unknown) => {
     assertDesktopSender(event, ['shell'])
+    if (payload !== undefined) return nativeList(event, payload)
     if (development !== undefined) return []
     if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     return manager.listPlugins()
   })
   ipcMain.handle(DESKTOP_IPC.pluginsAdd, (event, spec: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (isNativeDesktopPayload(spec)) {
+      return nativeMutation(event, () => ({ type: 'install', request: parseNativeDesktopInstallRequest(spec) }))
+    }
     if (typeof spec !== 'string') throw new Error('dsh desktop: plugin spec must be a string')
     return mutate(event, { type: 'plugin-add', spec })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsRemove, (event, name: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (isNativeDesktopPayload(name)) {
+      return nativeMutation(event, () => ({ type: 'remove', request: parseNativeDesktopPackageRequest(name) }))
+    }
     if (typeof name !== 'string') throw new Error('dsh desktop: plugin name must be a string')
     return mutate(event, { type: 'plugin-remove', name })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsUpdate, (event, name: unknown, version: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (isNativeDesktopPayload(name)) {
+      return nativeMutation(event, () => ({ type: 'update', request: parseNativeDesktopUpdateRequest(name) }))
+    }
     if (typeof name !== 'string' || typeof version !== 'string') {
       throw new Error('dsh desktop: plugin name and version must be strings')
     }
     return mutate(event, { type: 'plugin-update', name, version })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsToggle, (event, name: unknown, enabled: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (enabled === undefined && isNativeDesktopPayload(name)) {
+      return nativeMutation(event, () => ({ type: 'toggle', request: parseNativeDesktopToggleRequest(name) }))
+    }
     if (typeof name !== 'string' || typeof enabled !== 'boolean') throw new Error('dsh desktop: invalid plugin activation request')
     return mutate(event, { type: 'plugin-toggle', name, enabled })
   })
-  ipcMain.handle(DESKTOP_IPC.pluginsDisableAll, event => mutate(event, { type: 'plugins-disable-all' }))
+  ipcMain.handle(DESKTOP_IPC.pluginsDisableAll, (event, payload?: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (payload !== undefined) {
+      return nativeMutation(event, () => ({ type: 'disable-all', request: parseNativeDesktopMutationRequest(payload) }))
+    }
+    return mutate(event, { type: 'plugins-disable-all' })
+  })
   ipcMain.handle(DESKTOP_IPC.backendStatus, (event) => {
     assertDesktopSender(event, ['shell'])
     return backendState()
@@ -489,7 +563,7 @@ async function main(): Promise<void> {
   }
 
   const openPluginWindow = (): void => {
-    if (!manager.supportsLegacyPluginManagement()) {
+    if (!manager.supportsLegacyPluginManagement() && !manager.supportsNativeModuleManagement()) {
       void dialog.showMessageBox({ type: 'info', title: messages.pluginWindowTitle, message: messages.nativePluginManagementUnavailable })
         .catch((error: unknown) => { console.error(error) })
       return

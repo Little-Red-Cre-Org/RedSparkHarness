@@ -106,3 +106,73 @@ li {
   display: flex;
   gap: 8px;
 }
+
+[hidden] {
+  display: none !important;
+}
+
+.native-package {
+  display: block;
+}
+
+.package-heading,
+.installation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.installation {
+  margin-top: 12px;
+  padding-left: 16px;
+}
+
+.installation-details {
+  color: GrayText;
+  display: block;
+}
+
+.installation-editor {
+  border: 1px solid ButtonBorder;
+  border-radius: 7px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+select,
+textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+  background: Field;
+  color: FieldText;
+  border: 1px solid ButtonBorder;
+  border-radius: 7px;
+  padding: 9px 11px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+}
+
+#native-install label,
+#version-label {
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  main {
+    padding: 20px;
+  }
+
+  .package-heading,
+  .installation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .package-actions {
+    flex-wrap: wrap;
+  }
+}
