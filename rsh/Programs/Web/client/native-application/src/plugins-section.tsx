@@ -551,12 +551,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
         }
         await actions.credentialsSet(ref, draft.apiKey.trim())
         const result = await readCredential(ref, lifetime.current?.signal)
-        if (result.kind === 'superseded') {
-          const latestRead = credentialRead.current
-          const currentRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
-          if (latestRead?.ref !== ref || currentRow === undefined || credentialRef(currentRow) !== ref) {
-            throw credentialReferenceConflict()
-          }
+        const latestRead = credentialRead.current
+        const currentRow = descriptorsRef.current.find(candidate => candidate.namespace === plugin.namespace)
+        if (latestRead?.ref !== ref || currentRow === undefined || credentialRef(currentRow) !== ref) {
+          throw credentialReferenceConflict()
         }
         if (result.kind === 'failed' || (result.kind === 'read' && !result.info.configured)) {
           throw new Error('Credential was not reported as configured after saving.')
