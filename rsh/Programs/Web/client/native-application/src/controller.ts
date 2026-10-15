@@ -539,7 +539,7 @@ export class NativeConversationController {
             images.push({ mediaType, data, name: file.name })
           }
         }
-        if (reconcileDraft !== undefined) takeOwnership()
+        if (reconcileDraft !== undefined) { takeOwnership(); this.publish({ error: undefined }) }
         const result = await this.client.prompt(id, text, true, signal,
           (frame) => { this.observe(frame, admission) }, images,
           (error) => {
