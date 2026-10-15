@@ -2,8 +2,9 @@ import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { dump as stringifyYaml } from 'js-yaml'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..', '..')
@@ -17,19 +18,27 @@ afterEach(() => {
 })
 
 describe('staged Python runtime dsh-tools peer', () => {
-  it('coalesces every identical nested copy and preserves one scheduler module instance', () => {
+  it('coalesces identical nested workspace peer components and preserves one scheduler module instance', () => {
     const fixture = createStagedToolsFixture()
     const result = runStagedToolsProbe(fixture)
 
     expect(result.status).toBe(0)
     const observation = JSON.parse(result.stdout) as ToolsProbeObservation
     if (observation.kind !== 'coalesced') throw new Error(observation.refusal)
-    expect(observation.removed).toBe(2)
-    expect(new Set(observation.resolvedToolsUrls).size).toBe(1)
+    expect(observation.removed).toBe(8)
+    expect(Object.values(observation.resolvedModuleUrls).every(urls => new Set(urls).size === 1)).toBe(true)
     expect(observation.schedulerKeysMatch).toBe(true)
     expect(observation.prepareResolvesToOwnerFunction).toBe(true)
+    expect(observation.nativeToolsInstancesMatch).toBe(true)
+    expect(observation.sessionSchedulerKeysMatch).toBe(true)
     expect(existsSync(fixture.agentLoopTools)).toBe(false)
     expect(existsSync(fixture.minimalTools)).toBe(false)
+    expect(existsSync(fixture.agentLoopNativeTools)).toBe(false)
+    expect(existsSync(fixture.minimalNativeTools)).toBe(false)
+    expect(existsSync(fixture.agentLoopSession)).toBe(false)
+    expect(existsSync(fixture.minimalSession)).toBe(false)
+    expect(existsSync(fixture.agentLoopContext)).toBe(false)
+    expect(existsSync(fixture.minimalContext)).toBe(false)
     expect(existsSync(fixture.aliasTools)).toBe(true)
   })
 
@@ -174,9 +183,11 @@ type ToolsProbeObservation =
   | {
     kind: 'coalesced'
     removed: number
-    resolvedToolsUrls: string[]
+    resolvedModuleUrls: Record<string, string[]>
     schedulerKeysMatch: boolean
     prepareResolvesToOwnerFunction: boolean
+    nativeToolsInstancesMatch: boolean
+    sessionSchedulerKeysMatch: boolean
   }
   | { kind: 'refused'; refusal: string }
 
@@ -190,26 +201,38 @@ import { pathToFileURL } from 'node:url'
 
 const staging = process.argv[2]
 try {
-  const removed = await coalesceStagedDshToolsPeer(staging)
+  const removed = await coalesceStagedDshToolsPeer(staging, process.argv[3])
   const rootTools = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-tools/lib/index.js')).href)
-  const base = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/lib/index.js')).href)
-  const agentLoop = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js')).href)
-  const minimal = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-sdk-minimal/lib/index.js')).href)
+  const rootNative = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-native-tools/lib/index.js')).href)
+  const rootSession = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-session/lib/index.js')).href)
+  const rootContext = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-context/lib/index.js')).href)
+  const consumers = await Promise.all([
+    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/lib/index.js')).href),
+    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js')).href),
+    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-sdk-minimal/lib/index.js')).href),
+  ])
   const prepare = () => undefined
   const tools = { [rootTools.scheduler]: { prepare } }
   process.stdout.write(JSON.stringify({
     kind: 'coalesced',
     removed,
-    resolvedToolsUrls: [rootTools.resolvedToolsUrl, base.resolvedToolsUrl, agentLoop.resolvedToolsUrl, minimal.resolvedToolsUrl],
-    schedulerKeysMatch: [base.scheduler, agentLoop.scheduler, minimal.scheduler].every(key => key === rootTools.scheduler),
-    prepareResolvesToOwnerFunction: [base, agentLoop, minimal].every(consumer => consumer.resolvePrepare(tools) === prepare),
+    resolvedModuleUrls: {
+      tools: [rootTools.resolvedToolsUrl, ...consumers.map(consumer => consumer.resolvedModuleUrls[0])],
+      nativeTools: [rootNative.resolvedNativeToolsUrl, ...consumers.map(consumer => consumer.resolvedModuleUrls[1])],
+      session: [rootSession.resolvedSessionUrl, ...consumers.map(consumer => consumer.resolvedModuleUrls[2])],
+      context: [rootContext.resolvedContextUrl, ...consumers.map(consumer => consumer.resolvedModuleUrls[3])],
+    },
+    schedulerKeysMatch: consumers.every(consumer => consumer.scheduler === rootTools.scheduler),
+    prepareResolvesToOwnerFunction: consumers.every(consumer => consumer.resolvePrepare(tools) === prepare),
+    nativeToolsInstancesMatch: consumers.every(consumer => consumer.sharedInstances[0] === rootNative.nativeTools && consumer.sharedInstances[1] === rootContext.context),
+    sessionSchedulerKeysMatch: consumers.every(consumer => consumer.sessionScheduler === rootTools.scheduler && rootNative.nativeTools.getSessionScheduler() === rootSession.getSessionScheduler()),
   }))
 } catch (error) {
   process.stdout.write(JSON.stringify({ kind: 'refused', refusal: error instanceof Error ? error.message : String(error) }))
 }
 `)
   const environment = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'NODE_OPTIONS'))
-  return spawnSync(process.execPath, ['--import', 'tsx/esm', probe, fixture.staging], {
+  return spawnSync(process.execPath, ['--import', 'tsx/esm', probe, fixture.staging, fixture.workspaceRoot], {
     cwd: root,
     encoding: 'utf8',
     env: environment,
@@ -219,6 +242,7 @@ try {
 function createStagedToolsFixture(mismatch?: ToolsFixtureMismatch) {
   const staging = mkdtempSync(join(tmpdir(), 'dsh-staged-tools-'))
   temporaryDirectories.push(staging)
+  const workspaceRoot = join(staging, 'workspace')
   const nodeModules = join(staging, 'node_modules')
   const rootTools = join(nodeModules, '@deepseek-ai', 'dsh-tools')
   const base = join(nodeModules, '@deepseek-ai', 'dsh-base')
@@ -226,58 +250,173 @@ function createStagedToolsFixture(mismatch?: ToolsFixtureMismatch) {
   const minimal = join(nodeModules, '@deepseek-ai', 'dsh-sdk-minimal')
   const agentLoopTools = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-tools')
   const minimalTools = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-tools')
+  const agentLoopNativeTools = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-native-tools')
+  const minimalNativeTools = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-native-tools')
+  const agentLoopSession = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-session')
+  const minimalSession = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-session')
+  const agentLoopContext = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-context')
+  const minimalContext = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-context')
+  const rootNativeTools = join(nodeModules, '@deepseek-ai', 'dsh-native-tools')
+  const rootSession = join(nodeModules, '@deepseek-ai', 'dsh-session')
+  const rootContext = join(nodeModules, '@deepseek-ai', 'dsh-context')
+  const rootExternalPeer = join(nodeModules, '@fixture', 'runtime-peer')
+  const minimalExternalPeer = join(minimalSession, 'node_modules', '@fixture', 'runtime-peer')
   const aliasTools = join(nodeModules, '@fixture', 'dsh-tools')
+  const toolsSource = join(workspaceRoot, 'rsh/Engine/core/tools')
+  const nativeToolsSource = join(workspaceRoot, 'rsh/Engine/core/native-tools')
+  const sessionSource = join(workspaceRoot, 'rsh/Engine/core/session')
+  const contextSource = join(workspaceRoot, 'rsh/Engine/core/context')
+  const closureSource = join(workspaceRoot, 'rsh/Programs/SDK/python/sdk-runtime')
+  const toolsCode = "import { nativeTools } from '@deepseek-ai/dsh-native-tools'; export const scheduler = Symbol('scheduler'); export const resolvedToolsUrl = import.meta.url; export const resolvedNativeToolsUrl = import.meta.resolve('@deepseek-ai/dsh-native-tools'); export const attachedNativeTools = nativeTools\n"
+  const nativeToolsCode = "import { getSessionScheduler } from '@deepseek-ai/dsh-session'; export const nativeTools = { getSessionScheduler }; export const resolvedNativeToolsUrl = import.meta.url\n"
+  const sessionCode = "import { scheduler } from '@deepseek-ai/dsh-tools'; import { context } from '@deepseek-ai/dsh-context'; export const getSessionScheduler = () => scheduler; export { context }; export const resolvedSessionUrl = import.meta.url; export const resolvedContextUrl = import.meta.resolve('@deepseek-ai/dsh-context')\n"
+  const contextCode = "export const context = Symbol('context'); export const resolvedContextUrl = import.meta.url\n"
   const toolsManifest = {
     name: '@deepseek-ai/dsh-tools',
-    version: '0.1.5',
+    version: '0.1.5-rc.2',
     type: 'module',
     exports: { '.': './lib/index.js' },
-    peerDependencies: mismatch === 'peer' ? { '@deepseek-ai/dsh-context': 'workspace:^' } : {},
+    dependencies: { '@deepseek-ai/dsh-native-tools': 'workspace:^' },
+    peerDependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
   }
+  const nativeToolsManifest = {
+    name: '@deepseek-ai/dsh-native-tools',
+    version: '0.1.5-rc.2',
+    type: 'module',
+    exports: { '.': './lib/index.js' },
+    dependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
+  }
+  const sessionManifest = {
+    name: '@deepseek-ai/dsh-session',
+    version: '0.1.5-rc.2',
+    type: 'module',
+    exports: { '.': './lib/index.js' },
+    peerDependencies: {
+      '@deepseek-ai/dsh-tools': 'workspace:^',
+      '@deepseek-ai/dsh-context': 'workspace:^',
+      '@fixture/runtime-peer': '^1.0.0',
+    },
+  }
+  const contextManifest = {
+    name: '@deepseek-ai/dsh-context',
+    version: '1.0.0',
+    type: 'module',
+    exports: { '.': './lib/index.js' },
+  }
+  const closureDependencies = { '@deepseek-ai/dsh-tools': 'workspace:^' }
   writePackage(staging, {
     name: 'dsh-python-runtime-closure',
-    dependencies: { '@deepseek-ai/dsh-tools': 'workspace:^' },
+    dependencies: closureDependencies,
   })
   writeFileSync(join(staging, 'runtime-bootstrap.mjs'), "import '@deepseek-ai/dsh-tools'\n")
-  writePackage(rootTools, toolsManifest, { 'lib/index.js': "export const scheduler = Symbol('scheduler'); export const resolvedToolsUrl = import.meta.url\n" })
+  writePackage(rootTools, toolsManifest, { 'lib/index.js': toolsCode })
+  writePackage(rootNativeTools, nativeToolsManifest, { 'lib/index.js': nativeToolsCode })
+  writePackage(rootSession, sessionManifest, { 'lib/index.js': sessionCode })
+  writePackage(rootContext, contextManifest, { 'lib/index.js': contextCode })
+  writePackage(rootExternalPeer, {
+    name: '@fixture/runtime-peer',
+    version: '1.0.0',
+    type: 'module',
+    exports: { '.': './index.js' },
+  }, { 'index.js': 'export const peer = true\n' })
 
-  const consumerEntry = "import { scheduler } from '@deepseek-ai/dsh-tools'; export { scheduler }; export const resolvedToolsUrl = import.meta.resolve('@deepseek-ai/dsh-tools'); export const resolvePrepare = tools => tools[scheduler]?.prepare\n"
-  writeConsumer(base, '@deepseek-ai/dsh-base', consumerEntry)
-  writeConsumer(agentLoop, '@deepseek-ai/dsh-agent-loop', consumerEntry, true)
-  writeConsumer(minimal, '@deepseek-ai/dsh-sdk-minimal', consumerEntry)
+  const consumerEntry = "import { scheduler, attachedNativeTools, resolvedToolsUrl, resolvedNativeToolsUrl } from '@deepseek-ai/dsh-tools'; import { getSessionScheduler, context, resolvedSessionUrl, resolvedContextUrl } from '@deepseek-ai/dsh-session'; export { scheduler }; export const resolvedModuleUrls = [resolvedToolsUrl, resolvedNativeToolsUrl, resolvedSessionUrl, resolvedContextUrl]; export const resolvePrepare = tools => tools[scheduler]?.prepare; export const sharedInstances = [attachedNativeTools, context]; export const sessionScheduler = getSessionScheduler()\n"
+  writeConsumer(base, '@deepseek-ai/dsh-base', consumerEntry, {
+    '@deepseek-ai/dsh-tools': 'workspace:^',
+    '@deepseek-ai/dsh-session': 'workspace:^',
+  })
+  writeConsumer(agentLoop, '@deepseek-ai/dsh-agent-loop', consumerEntry, {}, {
+    '@deepseek-ai/dsh-tools': 'workspace:^',
+    '@deepseek-ai/dsh-session': 'workspace:^',
+  })
+  writeConsumer(minimal, '@deepseek-ai/dsh-sdk-minimal', consumerEntry, {
+    '@deepseek-ai/dsh-tools': 'workspace:^',
+    '@deepseek-ai/dsh-session': 'workspace:^',
+  })
 
   const nestedManifest = { ...toolsManifest, exports: mismatch === 'manifest' ? { '.': './lib/missing.js' } : toolsManifest.exports }
-  const nestedCode = "export const scheduler = Symbol('scheduler'); export const resolvedToolsUrl = import.meta.url\n"
-  writePackage(agentLoopTools, toolsManifest, { 'lib/index.js': nestedCode })
-  writePackage(minimalTools, nestedManifest, {
-    'lib/index.js': mismatch === 'file' ? "export const scheduler = Symbol('other')\n" : nestedCode,
-  })
-  writePackage(aliasTools, toolsManifest, { 'lib/index.js': "export const scheduler = Symbol('alias')\n" })
+  const toolsNestedCode = mismatch === 'file' ? "export const scheduler = Symbol('other')\n" : toolsCode
+  for (const directory of [agentLoopTools, minimalTools]) writePackage(directory, directory === minimalTools ? nestedManifest : toolsManifest, { 'lib/index.js': toolsNestedCode })
+  for (const directory of [agentLoopNativeTools, minimalNativeTools]) writePackage(directory, nativeToolsManifest, { 'lib/index.js': nativeToolsCode })
+  for (const directory of [agentLoopSession, minimalSession]) writePackage(directory, sessionManifest, { 'lib/index.js': sessionCode })
+  for (const directory of [agentLoopContext, minimalContext]) {
+    writePackage(directory, contextManifest, { 'lib/index.js': contextCode })
+  }
   if (mismatch === 'peer') {
-    writePackage(join(nodeModules, '@deepseek-ai', 'dsh-context'), {
-      name: '@deepseek-ai/dsh-context',
-      version: '1.0.0',
-      type: 'module',
-      exports: { '.': './index.js' },
-    }, { 'index.js': 'export {}\n' })
-    writePackage(join(minimal, 'node_modules', '@deepseek-ai', 'dsh-context'), {
-      name: '@deepseek-ai/dsh-context',
+    writePackage(minimalExternalPeer, {
+      name: '@fixture/runtime-peer',
       version: '2.0.0',
       type: 'module',
       exports: { '.': './index.js' },
-    }, { 'index.js': 'export {}\n' })
+    }, { 'index.js': 'export const peer = true\n' })
   }
+  writePackage(aliasTools, toolsManifest, { 'lib/index.js': "export const scheduler = Symbol('alias')\n" })
 
-  return { staging, agentLoopTools, minimalTools, aliasTools }
+  writePackage(workspaceRoot, { name: 'dsh-fixture-workspace', private: true })
+  writePackage(toolsSource, toolsManifest, { 'lib/index.js': toolsCode })
+  writePackage(nativeToolsSource, nativeToolsManifest, { 'lib/index.js': nativeToolsCode })
+  writePackage(sessionSource, sessionManifest, { 'lib/index.js': sessionCode })
+  writePackage(contextSource, contextManifest, { 'lib/index.js': contextCode })
+  writePackage(closureSource, { name: 'dsh-python-runtime-closure', dependencies: closureDependencies })
+  writeFileSync(join(workspaceRoot, 'pnpm-lock.yaml'), stringifyYaml({
+    lockfileVersion: '9.0',
+    importers: {
+      '.': {},
+      'rsh/Programs/SDK/python/sdk-runtime': {
+        dependencies: linkEntries(workspaceRoot, 'rsh/Programs/SDK/python/sdk-runtime', closureDependencies),
+      },
+      'rsh/Engine/core/tools': {
+        dependencies: linkEntries(workspaceRoot, 'rsh/Engine/core/tools', toolsManifest.dependencies),
+      },
+      'rsh/Engine/core/native-tools': {
+        dependencies: linkEntries(workspaceRoot, 'rsh/Engine/core/native-tools', nativeToolsManifest.dependencies),
+      },
+      'rsh/Engine/core/session': {},
+      'rsh/Engine/core/context': {},
+    },
+  }))
+
+  return {
+    staging,
+    workspaceRoot,
+    agentLoopTools,
+    minimalTools,
+    agentLoopNativeTools,
+    minimalNativeTools,
+    agentLoopSession,
+    minimalSession,
+    agentLoopContext,
+    minimalContext,
+    aliasTools,
+  }
 }
 
-function writeConsumer(directory: string, name: string, entry: string, peer = false): void {
+function linkEntries(workspaceRoot: string, importer: string, dependencies: Record<string, string>) {
+  const importerDirectory = resolve(workspaceRoot, importer)
+  return Object.fromEntries(Object.entries(dependencies).map(([name, specifier]) => {
+    const sourceDirectory = resolve(workspaceRoot, {
+      '@deepseek-ai/dsh-tools': 'rsh/Engine/core/tools',
+      '@deepseek-ai/dsh-native-tools': 'rsh/Engine/core/native-tools',
+      '@deepseek-ai/dsh-session': 'rsh/Engine/core/session',
+      '@deepseek-ai/dsh-context': 'rsh/Engine/core/context',
+    }[name]!)
+    return [name, { specifier, version: `link:${relative(importerDirectory, sourceDirectory).replaceAll('\\', '/')}` }]
+  }))
+}
+
+function writeConsumer(
+  directory: string,
+  name: string,
+  entry: string,
+  dependencies: Record<string, string>,
+  peerDependencies: Record<string, string> = {},
+): void {
   writePackage(directory, {
     name,
-    version: '0.1.5',
+    version: '0.1.5-rc.2',
     type: 'module',
-    dependencies: peer ? {} : { '@deepseek-ai/dsh-tools': 'workspace:^' },
-    peerDependencies: peer ? { '@deepseek-ai/dsh-tools': 'workspace:^' } : {},
+    dependencies,
+    peerDependencies,
     exports: { '.': './lib/index.js' },
   }, { 'lib/index.js': entry })
 }
