@@ -1,5 +1,6 @@
 /** Native plugin settings cards backed by the selected Host's Settings and Credentials actions. */
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import { PluginInventoryTab } from './plugin-inventory-tab.tsx'
@@ -660,7 +661,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
   return <section className={css.section}>
     <h2 className={css.heading}>{t('settingsPluginTitle')}</h2>
     <p className={css.intro}>{t('settingsPluginIntro')}</p>
-    {loadFailed ? <p className={css.error} role="alert">{t('settingsPluginLoadFailed')}</p> : null}
+    {loadFailed ? <div className={css.error} role="alert">
+      <span>{t('settingsPluginLoadFailed')}</span>
+      <Button type="button" size="sm" variant="outline" onClick={() => { void refreshNamespace() }}>{t('retry')}</Button>
+    </div> : null}
     {credentialFailed ? <p className={css.error} role="alert">{t('settingsPluginCredentialLoadFailed')}</p> : null}
     <div className={css.tabs} role="tablist" aria-label={tTabs}>
       <button type="button" role="tab" aria-selected={tab === 'config'} aria-controls="plugins-config-panel"

@@ -45,6 +45,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   const [revealedPaths, setRevealedPaths] = useState<Readonly<Record<string, string>>>({})
   const detailRequest = useRef<string | null>(null)
   const reloadRoster = useRef<(() => Promise<void>) | undefined>(undefined)
+  const reloadSettings = useRef<(() => Promise<void>) | undefined>(undefined)
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -91,6 +92,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       }
     }
     reloadRoster.current = loadRoster
+    reloadSettings.current = loadSettings
     void actions.agentPresetsCanOpenDirectory(lifetime.signal).then((canOpen) => {
       if (!lifetime.signal.aborted) setCanOpenDirectory(canOpen)
     }, () => {
@@ -122,6 +124,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
       rosterRequest?.abort()
       settingsRequest?.abort()
       reloadRoster.current = undefined
+      reloadSettings.current = undefined
     }
   }, [actions.agentPresetsList, actions.agentPresetsCanOpenDirectory, actions.settingsDescribe, actions.settingsEvents])
 
@@ -222,6 +225,13 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         </span>
         <p className={css.pickerPreferenceDescription}>{t('agentPresetsShowPickerDescription')}</p>
         {settingsLoadState === 'absent' ? <p className={css.hostGap}>{t('agentPresetsHostGap')}</p> : null}
+        {settingsLoadState === 'failed' ? <div className={css.settingsReadFailure} role="alert">
+          <span>{t('agentPresetsSettingsReadFailed')}</span>
+          {settingsError === null ? null : <span>{settingsError}</span>}
+          <Button type="button" size="sm" variant="outline" onClick={() => { void reloadSettings.current?.() }}>
+            {t('retry')}
+          </Button>
+        </div> : null}
       </div>
       <Switch
         checked={modeSelectionEnabled}
@@ -234,7 +244,7 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
     {loading ? <p role="status">{t('agentPresetsLoading')}</p> : null}
     {failed ? <p className={css.error} role="alert">{t('agentPresetsLoadFailed')}</p> : null}
     {error === null ? null : <p className={css.error} role="alert">{error}</p>}
-    {settingsError === null ? null : <p className={css.error} role="alert">{settingsError}</p>}
+    {settingsError === null || settingsLoadState === 'failed' ? null : <p className={css.error} role="alert">{settingsError}</p>}
     {!loading && !failed && presets?.presets.length === 0 ? <p>{t('agentPresetsEmpty')}</p> : null}
     {!loading && !failed && presets !== undefined && presets.presets.length > 0 ? <>
       {([
@@ -253,8 +263,9 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
               const selectionLabel = !isReady ? statusText(preset.status)
                 : isDefault ? t('agentPresetsDefault')
                   : settingsLoadState === 'absent' ? t('agentPresetsSettingUnavailable')
-                    : !settingsAvailable ? t('agentPresetsSettingsRefreshing')
-                      : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
+                    : settingsLoadState === 'failed' ? t('agentPresetsSettingsReadFailed')
+                      : !settingsAvailable ? t('agentPresetsSettingsRefreshing')
+                        : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
               const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
               return <li key={preset.id} className={[
                 css.card,
