@@ -379,6 +379,77 @@ it('keeps the web-search key draft when its reference changes after credential v
   expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
 })
 
+it('announces queued revisions while an earlier refresh reads credentials', async () => {
+  const uiTheme = pluginSettings('ui-theme', 1, { preference: 'system' })
+  const initial = pluginSettings('web-search-deepseek', 1, {
+    apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,
+  })
+  const updatedUiTheme = pluginSettings('ui-theme', 2, { preference: 'dark' })
+  const updatedWebSearch = pluginSettings('web-search-deepseek', 2, {
+    apiKeyEnv: 'KEY_B', baseURL: '', maxUses: 5,
+  })
+  let releaseEvents!: () => void
+  const eventsReady = new Promise<void>((resolve) => { releaseEvents = resolve })
+  let releaseSecondEvent!: () => void
+  const secondEventReady = new Promise<void>((resolve) => { releaseSecondEvent = resolve })
+  let finishKeyARead!: (result: Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>) => void
+  const keyARead = new Promise<Awaited<ReturnType<NativeSettingsActions['credentialsDescribe']>>>((resolve) => {
+    finishKeyARead = resolve
+  })
+  let finishLatestRefresh!: (description: NativeSettingsDescription) => void
+  const latestRefresh = new Promise<NativeSettingsDescription>((resolve) => { finishLatestRefresh = resolve })
+  let keyAReads = 0
+  const credentialsDescribe = vi.fn(async (refs: readonly string[], _signal?: AbortSignal) => {
+    if (refs[0] === 'KEY_A') {
+      keyAReads += 1
+      if (keyAReads === 2) return await keyARead
+    }
+    return { KEY_B: { configured: false, writable: true } }
+  })
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  let describeCount = 0
+  actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
+    describeCount += 1
+    if (describeCount === 1 || describeCount === 2) return settingsDescription([uiTheme, initial])
+    return await latestRefresh
+  })
+  actions.settingsEvents = async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
+    await eventsReady
+    if (signal.aborted) return
+    yield { type: 'settings/document-updated', namespace: 'ui-theme', revision: 2 }
+    await secondEventReady
+    if (signal.aborted) return
+    yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+  }
+  actions.credentialsDescribe = credentialsDescribe
+  const credentialsSet = vi.fn(async () => undefined)
+  actions.credentialsSet = credentialsSet
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Web search' }))
+  fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchApiKey), { target: { value: 'plugin-secret' } })
+  await waitFor(() => { expect(credentialsDescribe).toHaveBeenCalledTimes(1) })
+
+  releaseEvents()
+  await waitFor(() => { expect(keyAReads).toBe(2) })
+  releaseSecondEvent()
+  await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(3) })
+  const save = screen.getByRole('button', { name: en.settingsPluginSave }) as HTMLButtonElement
+  expect(save.disabled).toBe(true)
+
+  await act(async () => {
+    finishLatestRefresh(settingsDescription([updatedUiTheme, updatedWebSearch]))
+  })
+  await waitFor(() => { expect(credentialsDescribe.mock.calls.map(([refs]) => refs)).toContainEqual(['KEY_B']) })
+  await act(async () => {
+    finishKeyARead({ KEY_A: { configured: false, writable: true } })
+  })
+
+  await waitFor(() => { expect(screen.queryByText(en.settingsPluginRefreshPending)).toBeNull() })
+  expect(screen.getByLabelText(en.settingsPluginWebSearchApiKey)).toHaveProperty('value', 'plugin-secret')
+  expect(credentialsSet).not.toHaveBeenCalled()
+})
+
 it('keeps the web-search key draft when its announced revision is still unread after verification', async () => {
   const initial = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5,

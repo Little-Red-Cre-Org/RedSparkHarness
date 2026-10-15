@@ -504,10 +504,10 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
             }
             announcedRevisionsRef.current = nextAnnouncedRevisions
             setAnnouncedRevisions(nextAnnouncedRevisions)
-            await refreshNamespace()
+            void refreshNamespace()
           } else if (event.type === 'credentials/reference-updated') {
             const row = descriptorsRef.current.find(candidate => candidate.namespace === 'web-search-deepseek')
-            if (row !== undefined && credentialRef(row) === event.ref) await readCredential(event.ref, controller.signal)
+            if (row !== undefined && credentialRef(row) === event.ref) void readCredential(event.ref, controller.signal)
           } else if (event.type === 'llm/adapters-updated') {
             if (catalogStatusRef.current !== 'idle') void loadCatalog(true)
           }
