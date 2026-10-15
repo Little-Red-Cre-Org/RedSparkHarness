@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Schedule delivers durable reminders as ordinary follow-up messages in the same conversation. Create one-time reminders by delay or absolute time, repeat at fixed intervals, list pending reminders, and cancel them. Reminders survive restarts, but delivery needs a live root agent; closed sessions keep reminders overdue until resumed. Schedule does not send email, SMS, push, or browser notifications. Enable the Cordis overlay or opt a Native Host profile into its Native entry to expose reminder tools and the active-reminder catalog. Sidebar alarms indicate known active reminders but do not confirm that delivery is running.
+Schedule delivers durable reminders as ordinary follow-up messages in the same conversation. Create one-time reminders by delay or absolute time, repeat at fixed intervals, list pending reminders, and cancel them. Reminders survive restarts, but delivery needs a live root agent; closed sessions keep reminders overdue until resumed. Schedule does not send email, SMS, push, or browser notifications. Enable the Cordis Schedule overlay to expose reminder tools and the active-reminder catalog, or opt a Native Host profile into its Native entry to expose reminder tools. Sidebar alarms indicate known active reminders but do not confirm that delivery is running.
 
 ## Table of Contents
 
