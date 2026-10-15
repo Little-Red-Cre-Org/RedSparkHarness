@@ -275,7 +275,10 @@ async function main(): Promise<void> {
 
   const hooks: DesktopProjectHooks = {
     beforeChange: () => backend.stop(),
-    afterChange: () => backend.start(async () => {}),
+    afterChange: async () => {
+      if (quitting || shellInstallerOwnsQuit) throw new Error('desktop backend shutdown has started')
+      await backend.start(async () => {})
+    },
   }
 
   recoverApplication = async (action): Promise<void> => {
@@ -327,8 +330,8 @@ async function main(): Promise<void> {
     async () => {
       shellInstallerOwnsQuit = true
       try {
-        await nativeMutationPromise?.catch(() => undefined)
         await backend.stop()
+        await nativeMutationPromise?.catch(() => undefined)
         quitReady = true
       } catch (error) {
         shellInstallerOwnsQuit = false
@@ -408,7 +411,9 @@ async function main(): Promise<void> {
         afterChange: () => hooks.afterChange(),
       }
       const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
-      if (outcome.status === 'recovery-required' && backendState().phase !== 'error') {
+      // The updater can claim quit while this manager promise is pending.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (outcome.status === 'recovery-required' && backendState().phase !== 'error' && !shellInstallerOwnsQuit) {
         await showStartupError(new Error(messages.nativeRecoveryError))
       } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
         try { await navigateMain(applicationUrl) }
@@ -671,8 +676,8 @@ async function main(): Promise<void> {
     quitting = true
     desktopPet.close()
     void (async () => {
-      await nativeMutationPromise?.catch(() => undefined)
-      await backend.close()
+      try { await backend.close() }
+      finally { await nativeMutationPromise?.catch(() => undefined) }
     })().catch((error: unknown) => { console.error(error) }).finally(() => {
       quitReady = true
       app.quit()

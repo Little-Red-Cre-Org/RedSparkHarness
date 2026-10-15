@@ -25,6 +25,11 @@ const harness = await vi.hoisted(async () => {
   let nativeMutationOutcome: unknown
   let nativeMutationGate: { readonly promise: Promise<void>; resolve(): void } | undefined
   let nativeMutationWaiting = deferred()
+  let nativeMutationRecoveryComplete = false
+  let nativeMutationRecoveryRestartError = ''
+  let nativeMutationRecoveryGate: { readonly promise: Promise<void>; resolve(): void } | undefined
+  let nativeMutationRecoveryWaiting = deferred()
+  let autoReadyRecoveryHost = false
   let updateRestartWaiting = deferred()
   let updateBeforeRestart: (() => Promise<void>) | undefined
   const nativeMutations: unknown[] = []
@@ -35,6 +40,7 @@ const harness = await vi.hoisted(async () => {
   let errorPublished = deferred()
   let quitCompleted = deferred()
   let quitWasAllowed = false
+  let quitWasAllowedAfterNativeRecovery = false
   class FakeWindow extends EventEmitter {
     destroyed = false
     readonly urls: string[] = []
@@ -69,7 +75,11 @@ const harness = await vi.hoisted(async () => {
     readonly ready = deferred()
     readonly exited = deferred()
     readonly stopping = deferred()
-    readonly start = vi.fn(() => { hostStarted.resolve(); return this.ready.promise })
+    readonly start = vi.fn(() => {
+      hostStarted.resolve()
+      if (autoReadyRecoveryHost) this.ready.resolve()
+      return this.ready.promise
+    })
     readonly stop = vi.fn(() => {
       this.stopping.resolve()
       this.ready.reject(new Error('child stopped'))
@@ -92,15 +102,14 @@ const harness = await vi.hoisted(async () => {
       const event = { preventDefault: () => { prevented = true } }
       app.emit('before-quit', event)
       quitPrevented.push(prevented)
-      if (!prevented) { quitWasAllowed = true; quitCompleted.resolve() }
+      if (!prevented) {
+        quitWasAllowed = true
+        quitWasAllowedAfterNativeRecovery = nativeMutationRecoveryComplete
+        quitCompleted.resolve()
+      }
     }),
   })
-  const installUpdate = vi.fn(async () => {
-    const restart = updateBeforeRestart?.()
-    updateRestartWaiting.resolve()
-    await restart
-    app.quit()
-  })
+  const installUpdate = vi.fn(async () => { app.quit() })
   return {
     windows, hosts, handlers, app, FakeWindow, FakeHost, desktopPetClose, desktopPetUpdate, nativeMutations,
     quitPrevented, installUpdate,
@@ -125,9 +134,25 @@ const harness = await vi.hoisted(async () => {
     get nativeMutationGate() { return nativeMutationGate },
     set nativeMutationGate(value: { readonly promise: Promise<void>; resolve(): void } | undefined) { nativeMutationGate = value },
     get nativeMutationWaiting() { return nativeMutationWaiting },
+    get nativeMutationRecoveryComplete() { return nativeMutationRecoveryComplete },
+    set nativeMutationRecoveryComplete(value: boolean) { nativeMutationRecoveryComplete = value },
+    get nativeMutationRecoveryRestartError() { return nativeMutationRecoveryRestartError },
+    set nativeMutationRecoveryRestartError(value: string) { nativeMutationRecoveryRestartError = value },
+    get nativeMutationRecoveryWaiting() { return nativeMutationRecoveryWaiting },
+    get nativeMutationRecoveryGate() { return nativeMutationRecoveryGate },
+    set nativeMutationRecoveryGate(value: { readonly promise: Promise<void>; resolve(): void } | undefined) {
+      nativeMutationRecoveryGate = value
+    },
+    set autoReadyRecoveryHost(value: boolean) { autoReadyRecoveryHost = value },
     get updateRestartWaiting() { return updateRestartWaiting },
     setUpdateBeforeRestart(value: () => Promise<void>) { updateBeforeRestart = value },
+    async prepareUpdateRestart() {
+      const restart = updateBeforeRestart?.()
+      updateRestartWaiting.resolve()
+      await restart
+    },
     get quitWasAllowed() { return quitWasAllowed },
+    get quitWasAllowedAfterNativeRecovery() { return quitWasAllowedAfterNativeRecovery },
     get nativeLists() { return nativeLists },
     noteNativeList() { nativeLists += 1 },
     reset() {
@@ -136,7 +161,10 @@ const harness = await vi.hoisted(async () => {
       pluginsEnabled = false
       nativeEnabled = false; nativeLists = 0; nativeMutationOutcome = undefined; nativeMutations.length = 0
       nativeMutationGate = undefined; nativeMutationWaiting = deferred()
-      quitPrevented.length = 0; quitWasAllowed = false
+      nativeMutationRecoveryComplete = false; nativeMutationRecoveryRestartError = ''
+      nativeMutationRecoveryGate = undefined; nativeMutationRecoveryWaiting = deferred()
+      autoReadyRecoveryHost = false
+      quitPrevented.length = 0; quitWasAllowed = false; quitWasAllowedAfterNativeRecovery = false
       updateBeforeRestart = undefined; updateRestartWaiting = deferred()
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
       navigated = deferred(); errorPublished = deferred(); quitCompleted = deferred()
@@ -182,6 +210,21 @@ vi.mock('../src/project-manager.ts', () => ({
         return harness.nativeMutationOutcome
       }
       await hooks.beforeChange()
+      if (harness.nativeMutationRecoveryGate !== undefined) {
+        try {
+          await hooks.afterChange()
+        } catch {
+          harness.nativeMutationRecoveryComplete = true
+          harness.autoReadyRecoveryHost = true
+          try { await hooks.afterChange() }
+          catch (error) {
+            harness.nativeMutationRecoveryRestartError = error instanceof Error ? error.message : String(error)
+          }
+          harness.nativeMutationRecoveryWaiting.resolve()
+          await harness.nativeMutationRecoveryGate?.promise
+          return { status: 'recovery-required', error: { code: 'recovery-required', backend: { phase: 'starting' } } }
+        }
+      }
       await hooks.afterChange()
       if (harness.nativeMutationGate !== undefined) {
         harness.nativeMutationWaiting.resolve()
@@ -209,7 +252,10 @@ vi.mock('../src/pet-window.ts', () => ({
 vi.mock('../src/update-coordinator.ts', () => ({
   DesktopUpdateCoordinator: class {
     readonly check = vi.fn()
-    readonly install = harness.installUpdate
+    readonly install = async () => {
+      await harness.prepareUpdateRestart()
+      await harness.installUpdate()
+    }
     constructor(_publish: unknown, beforeRestart: () => Promise<void>) {
       harness.setUpdateBeforeRestart(beforeRestart)
     }
@@ -258,6 +304,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   harness.prepared.resolve()
+  harness.nativeMutationRecoveryGate?.resolve()
   for (const host of harness.hosts) { host.ready.resolve(); host.exited.resolve() }
   harness.app.quit()
   await harness.quitCompleted.promise
@@ -637,7 +684,9 @@ describe('desktop main startup', () => {
     expect(harness.dialog.showErrorBox).not.toHaveBeenCalled()
   })
 
-  it.each(['quit', 'update'] as const)('waits for pending Native changes before %s shutdown', async (exitPath) => {
+  it.each([
+    ['quit', 'ready'], ['update', 'ready'], ['quit', 'never-ready'], ['update', 'never-ready'],
+  ] as const)('settles a pending Native change when %s starts with Host %s', async (exitPath, hostReadiness) => {
     harness.nativeEnabled = true
     await import('../src/main.ts')
     await harness.preparing.promise
@@ -648,10 +697,18 @@ describe('desktop main startup', () => {
     firstHost.ready.resolve()
     await harness.navigated.promise
     const nextHostStart = harness.nextHostStart()
-    let releaseMutation!: () => void
-    harness.nativeMutationGate = {
-      promise: new Promise<void>((resolve) => { releaseMutation = resolve }),
-      resolve: () => { releaseMutation() },
+    let releaseMutation: (() => void) | undefined
+    let releaseRecovery: (() => void) | undefined
+    if (hostReadiness === 'ready') {
+      harness.nativeMutationGate = {
+        promise: new Promise<void>((resolve) => { releaseMutation = resolve }),
+        resolve: () => { releaseMutation?.() },
+      }
+    } else {
+      harness.nativeMutationRecoveryGate = {
+        promise: new Promise<void>((resolve) => { releaseRecovery = resolve }),
+        resolve: () => { releaseRecovery?.() },
+      }
     }
     const mutation = Promise.resolve(invoke(DESKTOP_IPC.pluginsAdd, {
       runtime: 'native', request: { expectedRevision: 'a'.repeat(64), packageName: 'fixture-client', version: '1.0.0',
@@ -661,8 +718,10 @@ describe('desktop main startup', () => {
     firstHost.exited.resolve()
     await nextHostStart
     const mutationHost = harness.hosts[1]!
-    mutationHost.ready.resolve()
-    await harness.nativeMutationWaiting.promise
+    if (hostReadiness === 'ready') {
+      mutationHost.ready.resolve()
+      await harness.nativeMutationWaiting.promise
+    }
 
     if (exitPath === 'quit') window.close()
     const installing = exitPath === 'update' ? Promise.resolve(invoke(DESKTOP_IPC.updatesInstall)) : undefined
@@ -677,21 +736,38 @@ describe('desktop main startup', () => {
     }))).resolves.toMatchObject({ status: 'refused', error: { code: 'busy' } })
     expect(harness.nativeMutations).toHaveLength(1)
     expect(harness.hosts).toHaveLength(2)
-    expect(mutationHost.stop).not.toHaveBeenCalled()
-
-    releaseMutation()
-    await expect(mutation).resolves.toMatchObject({ status: 'applied' })
     await mutationHost.stopping.promise
     mutationHost.exited.resolve()
+    if (hostReadiness === 'ready') {
+      releaseMutation?.()
+      await expect(mutation).resolves.toMatchObject({ status: 'applied' })
+    } else {
+      await harness.nativeMutationRecoveryWaiting.promise
+      // Let the stopped Host and quit or install continuations settle while the manager is still held.
+      await vi.advanceTimersByTimeAsync(0)
+      expect(harness.nativeMutationRecoveryComplete).toBe(true)
+      expect(harness.nativeMutationRecoveryRestartError).toBe('desktop backend shutdown has started')
+      expect(harness.hosts).toHaveLength(2)
+      expect(mutationHost.start).toHaveBeenCalledTimes(1)
+      expect(harness.quitWasAllowed).toBe(false)
+      if (exitPath === 'update') expect(harness.installUpdate).not.toHaveBeenCalled()
+      releaseRecovery?.()
+      await expect(mutation).resolves.toMatchObject({ status: 'recovery-required' })
+      expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'starting' })
+      expect(window.webContents.send).not.toHaveBeenCalledWith(
+        DESKTOP_IPC.backendState, expect.objectContaining({ phase: 'error' }),
+      )
+    }
     await installing
     await harness.quitCompleted.promise
     expect(harness.quitPrevented).toEqual([true, true, false])
     expect(harness.quitWasAllowed).toBe(true)
-    expect(mutationHost.stop).toHaveBeenCalledTimes(1)
+    if (hostReadiness === 'never-ready') expect(harness.quitWasAllowedAfterNativeRecovery).toBe(true)
     if (exitPath === 'quit') expect(window.urls).toEqual([
       'dsh-app://shell/startup.html', 'dsh-app://app/index.html', 'dsh-app://shell/startup.html',
     ])
     expect(harness.windows).toHaveLength(1)
+    expect(mutationHost.stop).toHaveBeenCalledTimes(1)
     expect(harness.installUpdate).toHaveBeenCalledTimes(exitPath === 'update' ? 1 : 0)
   })
 })

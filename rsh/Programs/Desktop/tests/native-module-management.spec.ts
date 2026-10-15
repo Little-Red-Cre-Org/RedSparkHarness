@@ -1,5 +1,5 @@
 /** Native Desktop profile inventory, package operations, and lifecycle outcomes. */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -101,8 +101,9 @@ function writeNativePnpm(root: string): string {
   const log = join(root, 'native-pnpm.jsonl')
   const recoveryPackages = join(root, 'native-pnpm-recovery-packages')
   const failRecoveryInstall = join(root, 'native-pnpm-fail-recovery-install')
+  const failReservedInstall = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(script, `
-import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 const args = process.argv.slice(2)
 const command = args.find(value => ['add', 'remove', 'rebuild', 'install'].includes(value))
@@ -148,6 +149,17 @@ if (command === 'add' || command === 'remove') {
   const dependencies = Object.fromEntries(Object.entries(manifest.dependencies).map(([packageName, version]) => [packageName,
     { specifier: version, version }]))
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
+  if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
+    rmSync(${JSON.stringify(failReservedInstall)})
+    const reserved = join(modules, '@deepseek-ai', 'cordis')
+    if (existsSync(reserved)) {
+      if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
+      else rmSync(reserved, { recursive: true, force: true })
+    }
+    mkdirSync(reserved, { recursive: true })
+    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '1.0.0' }))
+    process.exitCode = 1
+  }
 } else if (command === 'install') {
   if (existsSync(modules)) throw new Error('recovery install expected an empty node_modules directory')
   if (existsSync(${JSON.stringify(failRecoveryInstall)})) {
@@ -777,7 +789,86 @@ it('installs, updates, and removes exact Native packages without losing row conf
   expect(stoppedForMissingLock).toBe(false)
   expect(existsSync(emptyLock)).toBe(false)
 
-  const callsBeforeFailedRecovery = successfulRecoveryCalls.length
+  const hostProfilePath = join(profile, 'rsh.profile.json')
+  const clientProfilePath = join(profile, 'rsh.client.json')
+  const beforePartialWrite = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
+  let oldHostRestarted = false
+  const partialWrite = await manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: beforeUnsupported.inventory.revision,
+    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('optional-host') }, enabled: false,
+  } }, {
+    beforeChange: async () => {
+      rmSync(clientProfilePath)
+      mkdirSync(clientProfilePath)
+    },
+    afterChange: async () => { oldHostRestarted = readFileSync(hostProfilePath).equals(beforePartialWrite.host) },
+  }, ready)
+  expect(partialWrite).toMatchObject({ status: 'refused', error: { code: 'profile-invalid' } })
+  expect(readFileSync(hostProfilePath)).toEqual(beforePartialWrite.host)
+  expect(readFileSync(clientProfilePath)).toEqual(beforePartialWrite.client)
+  expect(oldHostRestarted).toBe(true)
+
+  const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
+  const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
+  writeFileSync(reservedMarker, '')
+  const profileCordis = join(profile, 'node_modules', '@deepseek-ai', 'cordis')
+  const bundledCordis = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai', 'cordis')
+  let oldHostRestartedAfterReservedFailure = false
+  const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
+  const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {
+    expectedRevision: beforeUnsupported.inventory.revision, packageName: '@fixture/new-client', version: '1.0.0',
+    installations: [{ target: 'client', id: brandString<NativeDesktopInstallationId>('reserved-client'),
+      config: undefined, enabled: false }],
+  } }, {
+    beforeChange: async () => {},
+    afterChange: async () => {
+      oldHostRestartedAfterReservedFailure = existsSync(profileCordis) && lstatSync(profileCordis).isSymbolicLink()
+        && existsSync(join(bundledCordis, 'package.json'))
+        && !existsSync(join(profile, 'node_modules/@fixture/new-client'))
+        && !existsSync(join(profile, 'desktop-packages-pending'))
+    },
+  }, ready)
+  expect(reservedFailure.status).toBe('refused')
+  expect(readFileSync(hostProfilePath)).toEqual(beforeReservedFailure.host)
+  expect(readFileSync(clientProfilePath)).toEqual(beforeReservedFailure.client)
+  expect(oldHostRestartedAfterReservedFailure).toBe(true)
+  expect(existsSync(join(bundledCordis, 'package.json'))).toBe(true)
+  const reservedFailureCalls = readFileSync(pnpmLog, 'utf8').trim().split('\n').slice(callsBeforeReservedFailure)
+    .map(line => JSON.parse(line) as string[])
+  expect(reservedFailureCalls.some(args => args.slice(args.indexOf('install')).join(' ')
+    === 'install --frozen-lockfile --ignore-scripts')).toBe(true)
+  expect(reservedFailureCalls.some(args => args.slice(args.indexOf('rebuild')).join(' ') === 'rebuild --pending')).toBe(true)
+
+  const beforeRestartFailure = {
+    host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath),
+    manifest: readFileSync(join(profile, 'package.json')), lock: readFileSync(join(profile, 'pnpm-lock.yaml')),
+  }
+  const callsBeforeRestartFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
+  let restartFailureCalls = 0
+  const restoredHostRestartFailure = await manager.mutateNativeModules({ type: 'update', request: {
+    expectedRevision: beforeUnsupported.inventory.revision, packageName: '@fixture/host-update', version: '1.2.0',
+  } }, {
+    beforeChange: async () => {},
+    afterChange: async () => {
+      restartFailureCalls += 1
+      throw new Error(restartFailureCalls === 1 ? 'Updated Host start failed' : 'Restored Host start failed')
+    },
+  }, ready)
+  expect(restoredHostRestartFailure).toMatchObject({ status: 'recovery-required', error: { code: 'recovery-required' } })
+  expect(restartFailureCalls).toBe(2)
+  expect(readFileSync(hostProfilePath)).toEqual(beforeRestartFailure.host)
+  expect(readFileSync(clientProfilePath)).toEqual(beforeRestartFailure.client)
+  expect(readFileSync(join(profile, 'package.json'))).toEqual(beforeRestartFailure.manifest)
+  expect(readFileSync(join(profile, 'pnpm-lock.yaml'))).toEqual(beforeRestartFailure.lock)
+  expect(existsSync(join(profile, 'desktop-packages-pending'))).toBe(false)
+  const restartFailureCallsLog = readFileSync(pnpmLog, 'utf8').trim().split('\n').slice(callsBeforeRestartFailure)
+    .map(line => JSON.parse(line) as string[])
+  expect(restartFailureCallsLog.some(args => args.slice(args.indexOf('install')).join(' ')
+    === 'install --frozen-lockfile --ignore-scripts')).toBe(true)
+  expect(restartFailureCallsLog.some(args => args.slice(args.indexOf('rebuild')).join(' ')
+    === 'rebuild --pending')).toBe(true)
+
+  const callsBeforeFailedRecovery = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   writeFileSync(join(root, 'native-pnpm-fail-recovery-install'), '')
   const failedRecovery = await manager.mutateNativeModules({ type: 'update', request: {
     expectedRevision: beforeUnsupported.inventory.revision, packageName: '@fixture/host-update', version: '1.2.0',

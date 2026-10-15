@@ -1129,12 +1129,12 @@ export class DesktopProjectManager {
           try {
             if (next.packageOperation !== undefined) writeFileSync(this.pendingPackages, '')
             for (const [path, bytes] of backups) {
-              if (bytes === undefined) {
-                if (existsSync(path)) unlinkSync(path)
-              } else writeFileSync(path, bytes)
+              const current = lstatSync(path, { throwIfNoEntry: false })
+              if (current?.isDirectory() || current?.isSymbolicLink()) removeOwnedDirectory(path)
+              else if (bytes === undefined && current !== undefined) unlinkSync(path)
+              if (bytes !== undefined) writeFileSync(path, bytes)
             }
             if (next.packageOperation !== undefined) {
-              unlinkDesktopHostPackages(this.paths.profile)
               removeOwnedDirectory(join(this.paths.profile, 'node_modules'))
               try {
                 if (lock !== undefined) {
