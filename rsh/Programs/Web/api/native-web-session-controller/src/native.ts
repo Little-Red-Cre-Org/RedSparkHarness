@@ -442,7 +442,7 @@ export function resolveNativeWebSessionConfig(input: unknown): Config {
     maxPendingHumanRequests: positive(maxPendingHumanRequests, 'maxPendingHumanRequests'), ...settingsLimits, workspaceFiles: fileLimits }
 }
 
-const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/model-controls',
+const endpoints = new Set(['session/list', 'session/history', 'session/create', 'session/prompt', 'session/cancel', 'session/status', 'session/start', 'session/await', 'session/attach', 'session/model-controls',
   'session/mode-controls', 'session/select-model', 'session/select-preset', 'session/select-plan-mode', 'session/permission-controls', 'session/select-permission',
   'session/answer-human', 'session/rename-title', 'session/refresh-title', 'session/search', 'session/archive', 'session/commands', 'session/command', 'settings/describe', 'settings/mutate', 'settings/open-document',
   'session/queue', 'session/steer', 'session/dequeue', 'session/submissions', 'session/submission/edit', 'session/submission/promote',
@@ -522,6 +522,21 @@ interface NativeSessionListContext {
   readonly archived: ReadonlySet<SessionId>
 }
 
+interface NativeWebSessionTurn {
+  readonly admissionId: NativeSessionAdmissionId
+  readonly controller: AbortController
+  readonly done: Promise<unknown>
+  waiting: boolean
+  settled: boolean
+  orphaned: boolean
+  feed: NativeSessionFeed | undefined
+  following: boolean
+  lastSeq: number
+  baselineThroughSeq: number | undefined
+  feedFailure: Error | undefined
+  readonly submissions: Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>
+}
+
 interface NativeDefaultModelSettings {
   readonly provider?: string
   readonly model?: string
@@ -547,16 +562,7 @@ function defaultModelSelection(settings: NativeSettingsScope<NativeDefaultModelS
 
 /** Browser transport Consumer; the executor retains the sole Agent and Session writer. */
 export class NativeWebSessionService {
-  private readonly turns = new Map<SessionId, {
-    admissionId: NativeSessionAdmissionId
-    controller: AbortController
-    done: Promise<unknown>
-    waiting: boolean
-    settled: boolean
-    feed: NativeSessionFeed | undefined
-    following: boolean
-    submissions: Map<NativeSubmissionRequestId, 'submitting' | 'accepted' | 'claimed'>
-  }>()
+  private readonly turns = new Map<SessionId, NativeWebSessionTurn>()
   private readonly human: NativeWebHumanInteraction
   private followers = 0
   private readonly shutdown = new AbortController()
@@ -717,12 +723,23 @@ export class NativeWebSessionService {
       if (attachments === undefined || directory === undefined) throw new Error('native web session: image input is unavailable')
       return { attachments, directory }
     })()
-    if (this.turns.has(id)) throw new Error('native web session: Session already has a pending turn')
+    const existing = this.turns.get(id)
+    if (existing !== undefined) {
+      if (existing.settled && !existing.waiting) this.turns.delete(id)
+      else throw new Error('native web session: Session already has a pending turn')
+    }
     if (this.turns.size >= this.config.maxPendingRequests) throw new Error('native web session: turn settlement capacity reached')
     const controller = new AbortController()
     const admissionId = randomUUID() as NativeSessionAdmissionId
-    const feed = fields.follow === true
-      ? new NativeSessionFeed(this.config.maxFollowBufferBytes, (error) => { controller.abort(error) }) : undefined
+    const turn: { current: NativeWebSessionTurn | undefined } = { current: undefined }
+    let feed: NativeSessionFeed | undefined
+    if (fields.follow === true) feed = new NativeSessionFeed(this.config.maxFollowBufferBytes, (error) => {
+      const activeTurn = turn.current
+      if (activeTurn !== undefined && activeTurn.feed === feed && activeTurn.following) {
+        activeTurn.feedFailure = error
+        controller.abort(error)
+      }
+    })
     let admitted!: () => void
     let refused!: (error: unknown) => void
     const acknowledgement = new Promise<void>((resolve, reject) => { admitted = resolve; refused = reject })
@@ -741,7 +758,7 @@ export class NativeWebSessionService {
           const requestId = brandString<NativeSubmissionRequestId>(message.id)
           if (submissions.get(requestId) === 'submitting') {
             submissions.set(requestId, 'accepted')
-            feed?.push({ type: 'submission-update', requestId, status: 'accepted' })
+            turn.current?.feed?.push({ type: 'submission-update', requestId, status: 'accepted' })
           }
         }
         if (event.data.outcome === 'canceled') {
@@ -751,7 +768,7 @@ export class NativeWebSessionService {
             const requestId = brandString<NativeSubmissionRequestId>(message.id)
             if (submissions.get(requestId) === 'accepted') {
               submissions.delete(requestId)
-              feed?.push({ type: 'submission-update', requestId, status: 'rejected' })
+              turn.current?.feed?.push({ type: 'submission-update', requestId, status: 'rejected' })
             }
           }
         }
@@ -764,7 +781,7 @@ export class NativeWebSessionService {
         for (const [requestId, status] of submissions) {
           if (status === 'claimed') {
             submissions.delete(requestId)
-            feed?.push({ type: 'submission-update', requestId, status: 'settled' })
+            turn.current?.feed?.push({ type: 'submission-update', requestId, status: 'settled' })
           }
         }
       }
@@ -803,7 +820,7 @@ export class NativeWebSessionService {
               })
             } },
           ...feed === undefined ? {} : { onEvent: (event) => {
-            feed.push({ type: 'event', event })
+            turn.current?.feed?.push({ type: 'event', event })
             observeTurnEvent(event)
           }, onBaseline: async (owner, baselineSignal) => {
             if (owner.session.id !== id || owner.invocation !== 'root' || !owner.writerAvailable
@@ -819,25 +836,30 @@ export class NativeWebSessionService {
               else inbox = foldNativeInboxEvent(inbox, event)
             }
             inboxThroughSeq = events.at(-1)?.seq ?? -1
+            const activeTurn = turn.current
+            if (activeTurn === undefined) throw new Error('native web session: baseline has no admitted turn')
+            activeTurn.baselineThroughSeq = inboxThroughSeq
             for (const event of eventsBeforeBaseline.splice(0)) {
               if (event.seq <= inboxThroughSeq) continue
               processTurnEvent(event)
               inboxThroughSeq = event.seq
             }
-            const cursor = fields.lastSeq as number
+            const cursor = activeTurn.lastSeq
             if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
               throw new Error('native web session: follow cursor is outside the exact Session history')
             }
-            feed.setBaseline(id, cursor, events.slice(cursor + 1))
+            const activeFeed = activeTurn.feed
+            if (activeFeed === undefined) throw new Error('native web session: baseline has no active follow feed')
+            activeFeed.setBaseline(id, cursor, events.slice(cursor + 1))
           }, onChunk: (chunk) => {
-            if (chunk.type === 'block-start' && chunk.blockType === 'text') feed.push({ type: 'text-start' })
-            if (chunk.type === 'text-delta') feed.push({ type: 'text', text: chunk.text })
+            if (chunk.type === 'block-start' && chunk.blockType === 'text') turn.current?.feed?.push({ type: 'text-start' })
+            if (chunk.type === 'text-delta') turn.current?.feed?.push({ type: 'text', text: chunk.text })
           } } }, turnSignal)
-        const failure = feed?.failure()
+        const failure = turn.current?.feedFailure
         if (failure !== undefined) throw failure
         return result
       } catch (error: unknown) {
-        const failure = feed?.failure()
+        const failure = turn.current?.feedFailure
         if (failure !== undefined) {
           if (error === failure) throw failure
           throw new AggregateError([failure, error], `${failure.message}; execution failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -848,7 +870,7 @@ export class NativeWebSessionService {
       }
     })
     const done = execution.then((result) => {
-      const failure = feed?.failure()
+      const failure = turn.current?.feedFailure
       if (failure !== undefined) throw failure
       return result
     }, (error: unknown) => {
@@ -856,21 +878,69 @@ export class NativeWebSessionService {
       throw new Error(String(error), { cause: error })
     })
     const followTask = done.then(
-      () => this.finishFollow(id, feed),
-      () => this.finishFollow(id, feed),
+      () => turn.current?.feed === undefined ? undefined : this.finishFollow(id, turn.current.feed),
+      () => turn.current?.feed === undefined ? undefined : this.finishFollow(id, turn.current.feed),
     ).catch((error: unknown) => {
-      feed?.fail(error instanceof Error ? error : new Error(String(error), { cause: error }))
+      turn.current?.feed?.fail(error instanceof Error ? error : new Error(String(error), { cause: error }))
       this.requests.recordCleanupFailure(error)
-    }).finally(() => { feed?.finish() })
+    }).finally(() => { turn.current?.feed?.finish() })
     this.followTasks.add(followTask)
     void followTask.then(() => { this.followTasks.delete(followTask) })
-    const turn = { admissionId, controller, done, waiting: false, settled: false, feed, following: false, submissions }
-    this.turns.set(id, turn)
+    turn.current = { admissionId, controller, done, waiting: false, settled: false, orphaned: false, feed, following: false,
+      lastSeq: fields.follow === true ? fields.lastSeq as number : -1, baselineThroughSeq: undefined, feedFailure: undefined, submissions }
+    const admittedTurn = turn.current
+    this.turns.set(id, admittedTurn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
-    const markSettled = (): void => { turn.settled = true; this.publishListChange(id) }
+    const markSettled = (): void => {
+      admittedTurn.settled = true
+      if (admittedTurn.orphaned && !admittedTurn.waiting && this.turns.get(id) === admittedTurn) this.turns.delete(id)
+      this.publishListChange(id)
+    }
     void done.then(markSettled, (error: unknown) => { markSettled(); refused(error) })
     try { await acknowledgement } catch (error: unknown) { this.turns.delete(id); throw error }
     return { admissionId }
+  }
+
+  private async attach(payload: unknown, signal: AbortSignal): Promise<{ admissionId: NativeSessionAdmissionId | null }> {
+    const fields = object(payload)
+    for (const key of Object.keys(fields)) if (!['sessionId', 'lastSeq'].includes(key)) throw new Error('native web session: unexpected attach field')
+    const id = sessionId(fields.sessionId)
+    if (typeof fields.lastSeq !== 'number' || !Number.isSafeInteger(fields.lastSeq) || fields.lastSeq < -1) {
+      throw new TypeError('native web session: follow cursor must be an integer at least -1')
+    }
+    const turn = this.turns.get(id)
+    if (turn === undefined || turn.settled || turn.controller.signal.aborted) return { admissionId: null }
+    const feed = new NativeSessionFeed(this.config.maxFollowBufferBytes, (error) => {
+      if (turn.feed === feed && turn.following) {
+        turn.feedFailure = error
+        turn.controller.abort(error)
+      }
+    })
+    turn.feed?.detach()
+    turn.feed = feed
+    turn.following = false
+    turn.lastSeq = fields.lastSeq
+    const owner = this.active.owners().find(candidate => candidate.session.id === id
+      && candidate.invocation === 'root' && candidate.writerAvailable)
+    if (owner !== undefined) {
+      if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach lost its exact root owner')
+      this.executor.rootExecution.capture(owner)
+      if (turn.baselineThroughSeq !== undefined) {
+        const events = await owner.readEvents({ maxEvents: this.config.maxHistoryEvents + 1, signal })
+        signal.throwIfAborted()
+        if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach root owner was released')
+        if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
+        const cursor = fields.lastSeq
+        if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
+          throw new Error('native web session: follow cursor is outside the exact Session history')
+        }
+        feed.setBaseline(id, cursor, events.slice(cursor + 1))
+      }
+      this.human.rebind(owner.agent, feed)
+    } else if (turn.baselineThroughSeq !== undefined) {
+      throw new Error('native web session: attach has no exact active root owner')
+    }
+    return { admissionId: turn.admissionId }
   }
 
   /**
@@ -891,8 +961,9 @@ export class NativeWebSessionService {
       return new Response('native Session follow: capacity reached', { status: 429 })
     }
     turn.following = true
+    const feed = turn.feed
     this.followers++
-    return turn.feed.response(signal, () => { this.followers-- })
+    return feed.response(signal, () => { this.followers-- })
   }
 
   /** Follow the complete Session list through the selected authenticated Fetch carrier.
@@ -1537,16 +1608,27 @@ export class NativeWebSessionService {
     const turn = this.turns.get(id)
     if (turn === undefined || fields.admissionId !== turn.admissionId || turn.waiting) throw new Error('native web session: unavailable turn settlement')
     turn.waiting = true
-    try { return await this.settlements.run(signal, async (accepted) => {
-      const abort = (): void => { turn.controller.abort(accepted.reason) }
-      accepted.addEventListener('abort', abort, { once: true })
-      try { return await turn.done } finally {
-        accepted.removeEventListener('abort', abort)
-        if (this.turns.get(id) === turn) this.turns.delete(id)
+    try {
+      return await this.settlements.run(signal, async (accepted) => {
+        let abort!: () => void
+        const disconnected = new Promise<never>((_resolve, reject) => {
+          abort = (): void => { reject(accepted.reason instanceof Error ? accepted.reason
+            : new Error(String(accepted.reason), { cause: accepted.reason })) }
+          accepted.addEventListener('abort', abort, { once: true })
+          if (accepted.aborted) abort()
+        })
+        try { return await Promise.race([turn.done, disconnected]) }
+        finally {
+          accepted.removeEventListener('abort', abort)
+          if (accepted.aborted) turn.orphaned = true
+        }
+      })
+    } finally {
+      if (signal.aborted) turn.orphaned = true
+      if (this.turns.get(id) === turn) {
+        turn.waiting = false
+        if (turn.settled) this.turns.delete(id)
       }
-    }) } catch (error: unknown) {
-      if (this.turns.get(id) === turn) turn.waiting = false
-      throw error
     }
   }
 
@@ -1606,6 +1688,9 @@ export class NativeWebSessionService {
       }
       if (endpoint === 'session/start') return { ok: true, value: await this.start(payload, signal) }
       if (endpoint === 'session/await') return { ok: true, value: await this.settle(payload, signal) }
+      if (endpoint === 'session/attach') {
+        return { ok: true, value: await this.requests.run(signal, accepted => this.attach(payload, accepted)) }
+      }
       if (endpoint === 'session/command') return { ok: true, value: await this.requests.run(signal, accepted => this.command(payload, accepted)) }
       if (endpoint === 'session/queue' || endpoint === 'session/steer') {
         const target = endpoint === 'session/queue' ? 'next-turn' : 'next-step'

@@ -81,6 +81,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const rosterFrames = frameQueue<NativeSessionListFrame>()
   const rpc = {
     async call(_channel: string, endpoint: string, payload: unknown) {
+      if (endpoint === 'session/attach') return { ok: true as const, value: { admissionId: null } }
       if (endpoint === 'session/start') {
         const admissionId = `a${++admissionCount}`
         cursorByAdmission.set(admissionId, (payload as { lastSeq: number }).lastSeq)
@@ -113,12 +114,12 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const followFailures = [firstFollowFailure, secondFollowFailure, thirdFollowFailure]
   const client: NativeSessionClient = {
     ...transport,
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach) {
       const failure = followFailures[promptCount++]!
       return transport.prompt(sessionId, text, resume, signal, observe, images, (error) => {
         onFollowError?.(error)
         failure.resolve(error)
-      }, lastSeq)
+      }, lastSeq, detach)
     },
     async list() { return rows },
     async *follow(signal: AbortSignal) {
