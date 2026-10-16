@@ -402,7 +402,7 @@ it.each([
     localStorage.setItem(PENDING_DEFAULT_KEY, 'queue')
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
-    expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3)
+    await waitFor(() => { expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3) })
     if (interleaveStartup) {
       fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
       expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
