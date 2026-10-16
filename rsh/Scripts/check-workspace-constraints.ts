@@ -15,6 +15,7 @@ import {
   applicationDistributionDirectories,
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
+  nativeCompatibilityOnlyPeers,
   nativePackageDirectories,
   nativeSafeSourceSubpaths,
 } from './native-package-policy.ts'
@@ -539,6 +540,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   const mixed = mixedNativeEntryDirectories.has(dir)
     || mixedNativeLibraryDirectories.has(dir)
     || nativeSafeSourceSubpaths.has(dir)
+  const compatibilityOnlyPeer = nativeCompatibilityOnlyPeers.get(dir)?.includes('@deepseek-ai/cordis') === true
   const errors: string[] = []
 
   if (native) {
@@ -555,7 +557,9 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   } else {
     if (peer === undefined) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
     if (dev === undefined) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
-    if (optionalPeer === true) errors.push(`${label}: compatibility package must keep the Cordis peer required`)
+    if (optionalPeer === true && !compatibilityOnlyPeer) {
+      errors.push(`${label}: compatibility package must keep the Cordis peer required`)
+    }
   }
 
   if (direct !== undefined) errors.push(`${label}: @deepseek-ai/cordis must not be a direct dependency`)

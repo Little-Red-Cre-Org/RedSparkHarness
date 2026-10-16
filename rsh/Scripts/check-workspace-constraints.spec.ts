@@ -322,6 +322,18 @@ describe('Cordis peer classification', () => {
       },
     })).toContain('@deepseek-ai/dsh-fs-local: mixed native package must mark the Cordis peer as optional')
   })
+
+  it('permits an explicitly compatibility-only optional Cordis peer', () => {
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Core/typert/protocol',
+      manifest: {
+        name: '@deepseek-ai/dsh-typert-protocol',
+        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      },
+    })).toEqual([])
+  })
 })
 
 describe('package payload constraints', () => {

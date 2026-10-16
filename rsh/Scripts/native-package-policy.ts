@@ -270,7 +270,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Engine/session/session-title-llm', ['host']],
 ])
 
-/** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
+/** Optional peers whose imports are restricted to package compatibility entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Core/typert/protocol', ['@deepseek-ai/cordis']],
   ['rsh/Programs/Web/host/directory-picker', ['@deepseek-ai/cordis']],
@@ -343,7 +343,6 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Cordis-free source subpaths exposed beside compatibility package exports. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
-  ['rsh/Core/typert/protocol', ['./types']],
   ['rsh/Programs/Web/api/session-controller', ['./client-event-types']],
   ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
