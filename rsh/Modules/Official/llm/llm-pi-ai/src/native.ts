@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-deepseek-account/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
 import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
 import { credentialKey, credentialKeyId, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
+import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
@@ -39,6 +40,44 @@ const DEEPSEEK_ACCOUNT_PROFILE: PiAiProviderProfile = {
   ],
 }
 
+const dictionaryFields = new Set([
+  'providers', 'headers', 'modelOverrides', 'chatTemplateKwargs', 'chatTemplateArgs', 'reasoningEfforts',
+])
+
+function safeConfigPath(input: unknown, path: readonly (string | number | symbol)[] | undefined): (string | number)[] | undefined {
+  if (path === undefined || path.length === 0) return undefined
+  const safePath: (string | number)[] = []
+  let value = input
+  for (const [index, segment] of path.entries()) {
+    if (typeof segment !== 'string' && typeof segment !== 'number') return undefined
+    const parent = path[index - 1]
+    let safeSegment = segment
+    if (typeof segment === 'string' && typeof parent === 'string' && dictionaryFields.has(parent)
+      && typeof safePath[index - 1] === 'string') {
+      if (typeof value !== 'object' || value === null) return undefined
+      safeSegment = Object.keys(value).indexOf(segment)
+      if (safeSegment < 0) return undefined
+    }
+    safePath.push(safeSegment)
+    value = typeof value === 'object' && value !== null
+      ? (value as Record<string, unknown>)[String(segment)]
+      : undefined
+  }
+  return safePath
+}
+
+/** Validate pi-ai configuration and attach a safe issue to schema failures without replacing them. */
+function validateConfig(input: Parameters<typeof Config>[0]): Config {
+  try {
+    return Config(input)
+  } catch (error) {
+    if (!z.ValidationError.is(error)) throw error
+    const path = safeConfigPath(input, error.options.path)
+    if (path !== undefined) Object.assign(error, { issues: [{ path, rule: 'schema' }] })
+    throw error
+  }
+}
+
 function profilesWithAccountRoutes(
   providers: NonNullable<Config['providers']>, codex: boolean, deepseekAccount: boolean,
 ): ReturnType<typeof resolveProfiles> {
@@ -67,7 +106,7 @@ export const plugin: NativePlugin = {
     for (const key of Object.keys(input)) {
       if (key !== 'providers') throw new Error(`llm-pi-ai: unknown native configuration field ${key}`)
     }
-    const base = Config(input)
+    const base = validateConfig(input)
     resolveProfiles(base.providers, 'deferred')
     return async (context) => {
       const credentials = context.require('credentials')
@@ -89,7 +128,7 @@ export const plugin: NativePlugin = {
       let settingsSelection: NativeSettingsScope<Config> | undefined
       if (settings !== undefined) {
         const selection = settings.register<'llm-pi-ai', Config>('llm-pi-ai', { providers: base.providers ?? {} }, (value) => {
-          const config = Config(value)
+          const config = validateConfig(value)
           resolveProfiles(config.providers, 'deferred')
           return config
         }, assertServiceable, { schema: Config, applies: 'live' })

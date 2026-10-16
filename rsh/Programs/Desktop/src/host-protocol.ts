@@ -1,7 +1,7 @@
 /** Versioned control messages and framed byte transport for the Desktop Host child. */
 
 /** Protocol version implemented by the Electron shell and installed dsh Host. */
-export const DESKTOP_HOST_PROTOCOL_VERSION = 3 as const
+export const DESKTOP_HOST_PROTOCOL_VERSION = 4 as const
 
 /** Child descriptor Electron writes request frames to. */
 export const DESKTOP_REQUEST_PIPE_FD = 3
@@ -51,7 +51,9 @@ export type DesktopHostEvent = {
   readonly dshVersion: string
 } | {
   readonly type: 'fatal'
-  readonly message: string
+  readonly errorType: 'AggregateError' | 'Error' | 'RangeError' | 'SyntaxError' | 'TypeError' | 'UnknownError' | 'ValidationError'
+  readonly path?: readonly (string | number)[]
+  readonly rule?: string
 }
 
 /** One decoded response-pipe frame. */

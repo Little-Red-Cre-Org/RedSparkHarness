@@ -77,19 +77,23 @@ afterEach(() => {
 describe('desktop host process', () => {
   it('reports a fatal event after readiness once and stops the child', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: '1.0.0' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: '1.0.0' })
 function onRequestFrame(frame) {
-  if (frame.type === 1) process.send({ type: 'fatal', message: 'plugin unavailable' })
+  if (frame.type === 1) process.send({ type: 'fatal', errorType: 'ValidationError', path: ['providers', 0, 'headers', 0], rule: 'schema' })
 }
 `)
     const failure = vi.fn()
     const host = new DesktopHostProcess(process.execPath, runtime, runtime, undefined, process.env, failure)
     try {
       await host.start()
-      await expect(host.fetch(new Request('dsh-app://app/'))).rejects.toThrow('plugin unavailable')
+      await expect(host.fetch(new Request('dsh-app://app/'))).rejects.toMatchObject({
+        name: 'ValidationError', issues: [{ path: ['providers', 0, 'headers', 0], rule: 'schema' }],
+      })
       await host.stop()
       expect(failure).toHaveBeenCalledTimes(1)
-      expect(failure).toHaveBeenCalledWith(new Error('plugin unavailable'))
+      expect(failure.mock.calls[0]?.[0]).toMatchObject({
+        name: 'ValidationError', issues: [{ path: ['providers', 0, 'headers', 0], rule: 'schema' }],
+      })
     } finally { await host.stop() }
   })
 
@@ -101,7 +105,7 @@ function onRequestFrame(frame) {
 
   it('loads the resource entry with a separate profile and scrubs Node resolution overrides', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'split-runtime' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'split-runtime' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -123,7 +127,7 @@ function onRequestFrame(frame) {
   it('carries raw request and response bytes and shuts the child down cleanly', async () => {
     const project = projectWithHost(`
 const bodies = new Map()
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: process.env.NODE_OPTIONS ?? 'clean' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: process.env.NODE_OPTIONS ?? 'clean' })
 function onRequestFrame(frame) {
   if (frame.type === 1) {
     const request = JSON.parse(frame.payload)
@@ -160,7 +164,7 @@ function answer(streamId) {
   it('streams a large binary response in bounded raw frames', async () => {
     const size = 2 * 1024 * 1024
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'large-response' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'large-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -183,7 +187,7 @@ function onRequestFrame(frame) {
 
   it('stops an unfinished upload when the Host completes its response early', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'early-response' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'early-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 2) return
   responseStart(frame.streamId)
@@ -213,7 +217,7 @@ function onRequestFrame(frame) {
 
   it('ignores a response end that arrives after the renderer cancels its stream', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'cancel-race' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'cancel-race' })
 const urls = new Map()
 function onRequestFrame(frame) {
   if (frame.type === 1) {
@@ -243,7 +247,7 @@ function onRequestFrame(frame) {
 
   it('rejects invalid response framing and a clean exit before readiness', async () => {
     const invalid = new DesktopHostProcess(process.execPath, projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'invalid-frame' })
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'invalid-frame' })
 function onRequestFrame(frame) {
   if (frame.type === 1) responsePipe.write(Buffer.alloc(13))
 }

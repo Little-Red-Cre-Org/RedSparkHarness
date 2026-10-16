@@ -59,7 +59,7 @@ function disableAllInventory(revision: string, options: {
 
 function applied() { return { status: 'applied', revision: 'revision-2', backend: { phase: 'ready' } } }
 function failure(code: string, status = 'refused') {
-  return { status, error: { code, messageKey: 'backend.key.not.finalized', backend: { phase: 'error', profileRecovery: true } } }
+  return { status, error: { code, messageKey: 'backend.key.not.finalized', backend: { phase: 'error', errorType: 'Error', profileRecovery: true } } }
 }
 
 function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.resolve({ phase: 'ready' })) {
@@ -312,12 +312,12 @@ it('keeps subscribed state over a late status response and detaches once on page
   const p = page('en', initial.promise)
   p.start()
   await expect.poll(() => p.backend.status.mock.calls.length).toBe(1)
-  p.publish({ phase: 'error', message: '<img src=x>', profileRecovery: true })
+  p.publish({ phase: 'error', errorType: 'Error', profileRecovery: true })
   initial.resolve({ phase: 'starting' })
   await p.settled()
   expect(p.element('#backend-state').textContent).toBe('Backend: error')
   expect(p.element('#profile-recovery').hidden).toBe(false)
-  expect(p.element('#startup-error').textContent).toBe('Backend: error')
+  expect(p.element('#startup-error').textContent).toBe('Error type: Application error\nDetailed information is available in the local Desktop log.')
   expect(p.element('#startup-error').childElementCount).toBe(0)
   const pending = Promise.withResolvers<unknown>()
   p.native.toggle.mockImplementationOnce(() => pending.promise)
@@ -348,19 +348,18 @@ it('does not subscribe or read inventory when locale arrives after pagehide', as
 })
 
 it('keeps raw backend diagnostics out of Native initial status and subscriptions', async () => {
-  const diagnostic = 'config apiKey=SECRET; /private/profile/rsh.client.json; pnpm stderr: private output'
-  const p = page('en', Promise.resolve({ phase: 'error', profileRecovery: true, message: diagnostic }))
+  const p = page('en', Promise.resolve({ phase: 'error', profileRecovery: true, errorType: 'Error' }))
   p.start()
   await p.settled()
   const expectSafe = () => {
-    expect(p.element('#startup-error').textContent).toBe('Backend: error')
+    expect(p.element('#startup-error').textContent).toBe('Error type: Application error\nDetailed information is available in the local Desktop log.')
     for (const fragment of ['apiKey=SECRET', '/private/profile/', 'pnpm stderr', 'private output']) {
       expect(p.dom.window.document.body.textContent).not.toContain(fragment)
     }
     expect(p.element('#backend-state').textContent).toBe('Backend: error')
   }
   expectSafe()
-  p.publish({ phase: 'error', profileRecovery: false, message: diagnostic })
+  p.publish({ phase: 'error', profileRecovery: false, errorType: 'Error' })
   expectSafe()
   expect(p.element('#profile-recovery').hidden).toBe(true)
 })
