@@ -10,7 +10,7 @@ Native Trajectory derives its ledger from the current event window. Message-only
 
 ## Decision
 
-The Native projection retains `turn/start`, `turn/end`, step boundaries and assistant attempts in its event locations and request records. Assistant message timing uses the matching persisted `step/start` timestamp. Failed turns without assistant messages remain separate turn rows and preserve their failed request record. The shared layout places user and context input in the durable turn recorded in its event location, falling back to the following assistant only when no location exists, so a failed turn keeps its own prompt instead of lending it to the next turn.
+The Native projection retains `turn/start`, `turn/end`, step boundaries and assistant attempts in its event locations and request records. Assistant message timing uses the matching persisted `step/start` timestamp. Failed turns without assistant messages remain separate turn rows and preserve their failed request record. The shared layout places user and context input in the durable turn recorded in its event location, falling back to the following assistant only when no location exists, so a failed turn keeps its own prompt instead of lending it to the next turn. System prompt cells likewise use the turn recorded by their `system/message` event, so an initial prompt recorded in a failed turn no longer opens the next successful turn and reverses the order.
 
 ## Alternatives considered
 
@@ -20,4 +20,4 @@ The Native projection retains `turn/start`, `turn/end`, step boundaries and assi
 
 ## Consequences
 
-The Native view can display empty failed turns and accurate assistant step start times from the events already loaded by its controller. Two focused regression cases cover persisted assistant timing and a failed turn followed by a successful turn, including each turn's prompt placement.
+The Native view can display empty failed turns and accurate assistant step start times from the events already loaded by its controller. Two focused regression cases cover persisted assistant timing and a failed turn followed by a successful turn, including each turn's prompt and system prompt placement.
