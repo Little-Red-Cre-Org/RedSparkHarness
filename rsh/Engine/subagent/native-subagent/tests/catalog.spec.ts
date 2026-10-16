@@ -5,7 +5,11 @@ import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import { NativeSessionExecutionRegistry, type NativeSessionContinuations, type NativeSessionDelegation } from '@deepseek-ai/dsh-native-session-execution'
 import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { snapshotSubagentDescriptor, type SubagentDelegationContext } from '@deepseek-ai/dsh-subagent-protocol'
+import {
+  SUBAGENT_DESCRIPTOR_VERSION,
+  snapshotSubagentDescriptor,
+  type SubagentDelegationContext,
+} from '@deepseek-ai/dsh-subagent-protocol'
 import { NativeSubagentContinuations } from '../src/continuation.ts'
 import { NativeSpawnSubagents, type NativeSubagentRequest } from '../src/index.ts'
 
@@ -63,8 +67,8 @@ it('lists only selected continuable descriptors and preserves per-item diagnosti
       const id = path[path.length - 1]
       if (id === unsupported) return { kind: 'diagnostic', id, reason: 'unsupported' }
       const data = id === oneShot ? snapshotSubagentDescriptor({ mode: 'one-shot', provider: 'spawn' })
-        : id === child ? { version: 3, mode: 'continuable', provider: 'spawn', label: 'Nested' }
-          : { version: 3, mode: 'continuable', provider: 'spawn', label: 1 }
+        : id === child ? { version: SUBAGENT_DESCRIPTOR_VERSION, mode: 'continuable', provider: 'spawn', label: 'Nested' }
+          : { version: SUBAGENT_DESCRIPTOR_VERSION, mode: 'continuable', provider: 'spawn', label: 1 }
       return { kind: 'child', observation: descriptor(path, data), parentDepth: 2 + path.length - 1 }
     },
   } as unknown as NativeSessionContinuations

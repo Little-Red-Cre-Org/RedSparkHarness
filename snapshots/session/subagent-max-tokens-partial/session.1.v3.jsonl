@@ -5,7 +5,7 @@
 {"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"inserted":[{"content":[{"type":"text","text":"Write the words 'partial one', call todo_write once, then keep going until you are cut off."}],"source":{"kind":"user"},"role":"user","id":"{{message:7}}"}]}}
 {"type":"turn/start","data":{"turn":1}}
 {"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"removedCount":1,"inserted":[]}}
-{"type":"subagent/descriptor","data":{"version":3,"mode":"one-shot","provider":"spawn","label":"Truncated child"}}
+{"type":"subagent/descriptor","data":{"version":4,"mode":"one-shot","provider":"spawn","label":"Truncated child"}}
 {"type":"step/start","data":{"turn":1,"step":1}}
 {"type":"system/message","data":{"turn":1,"step":1,"message":{"role":"system","content":[{"type":"text","text":"{{system}}"}],"source":{"kind":"plugin","plugin":"@deepseek-ai/dsh-system-prompt"},"id":"{{message:8}}"}},"surfaceOp":"append"}
 {"type":"user/message","data":{"content":[{"type":"text","text":"Write the words 'partial one', call todo_write once, then keep going until you are cut off."}],"source":{"kind":"user"},"role":"user","id":"{{message:7}}"},"surfaceOp":"append"}

@@ -17,7 +17,7 @@
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"turn/start","seq":3,"time":0,"data":{"turn":1}}}}
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"agent/inbox/spliced","seq":4,"time":0,"data":{"target":"next-turn","start":0,"removedCount":1,"inserted":[]}}}}
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"subagent/catalog","seq":15,"time":0,"data":{"version":0,"childId":"{{sessionId}}","childCreatedAt":0,"mode":"one-shot","label":"echo probe"}}}}
-{"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"subagent/descriptor","seq":5,"time":0,"data":{"version":3,"mode":"one-shot","provider":"spawn","label":"echo probe"}}}}
+{"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"subagent/descriptor","seq":5,"time":0,"data":{"version":4,"mode":"one-shot","provider":"spawn","label":"echo probe"}}}}
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"step/start","seq":6,"time":0,"data":{"turn":1,"step":1}}}}
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"system/message","seq":7,"time":0,"data":{"turn":1,"step":1,"message":{"role":"system","content":[{"type":"text","text":"{{system}}"}],"source":{"kind":"plugin","plugin":"@deepseek-ai/dsh-system-prompt"},"id":"{{sessionId}}"}},"surfaceOp":"append"}}}
 {"method":"session.event","params":{"sessionId":"{{sessionId}}","event":{"type":"user/message","seq":8,"time":0,"data":{"content":[{"type":"text","text":"Reply with exactly: child answer 42."}],"source":{"kind":"user"},"role":"user","id":"{{sessionId}}"},"surfaceOp":"append"}}}
