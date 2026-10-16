@@ -369,7 +369,8 @@ async function validateHostInFreshWorker(profile: NativeProfileConfig, rows: rea
     worker.once('message', (reply: NativeHostPreflightReply) => {
       received = true
       if (reply.valid) resolve()
-      else reject(new Error(reply.message ?? 'Native Host preflight failed'))
+      else reject(new Error(reply.message ?? 'Native Host preflight failed',
+        reply.cause === undefined ? undefined : { cause: new Error(reply.cause) }))
     })
     worker.once('error', (reason) => {
       if (received) return
@@ -1071,11 +1072,15 @@ export class DesktopProjectManager {
         if (next.validateBeforeStop) {
           try { await validateNativeComposition(next.files, this.paths.profile, this.runtime.dsh,
             this.currentRuntime(), dirname(this.paths.root)) }
-          catch { throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, next.blockedBy) }
+          catch (error: unknown) {
+            throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, next.blockedBy, error)
+          }
         } else {
           try { await validateNativeComposition(files, this.paths.profile, this.runtime.dsh,
             this.currentRuntime(), dirname(this.paths.root)) }
-          catch { throw new NativeDesktopOperationFailure('profile-invalid') }
+          catch (error: unknown) {
+            throw new NativeDesktopOperationFailure('profile-invalid', false, undefined, undefined, error)
+          }
         }
         const profilePath = join(this.paths.profile, 'rsh.profile.json')
         const clientPath = join(this.paths.profile, 'rsh.client.json')
@@ -1241,12 +1246,20 @@ export class DesktopProjectManager {
 
   private nativeError(failure: NativeDesktopOperationFailure, state: DesktopBackendState) {
     const profileRecovery = existsSync(this.pendingPackages) || (state.phase === 'error' && state.profileRecovery)
+    const original = failure.cause
+    const detail = original instanceof Error ? original.message : undefined
+    const cause = original instanceof Error && original.cause !== undefined
+      ? original.cause instanceof Error ? original.cause.message
+        : typeof original.cause === 'string' ? original.cause : undefined
+      : undefined
     return {
       code: failure.code,
       messageKey: nativeErrorMessageKeys[failure.code],
       backend: backendProjection(state, profileRecovery),
       ...failure.currentRevision === undefined ? {} : { currentRevision: failure.currentRevision },
       ...failure.blockedBy === undefined ? {} : { blockedBy: failure.blockedBy },
+      ...detail === undefined ? {} : { detail },
+      ...cause === undefined ? {} : { cause },
     }
   }
 

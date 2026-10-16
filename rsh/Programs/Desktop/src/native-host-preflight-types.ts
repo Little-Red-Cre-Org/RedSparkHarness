@@ -38,4 +38,5 @@ export interface NativeHostPreflightInput {
 export interface NativeHostPreflightReply {
   readonly valid: boolean
   readonly message?: string
+  readonly cause?: string
 }

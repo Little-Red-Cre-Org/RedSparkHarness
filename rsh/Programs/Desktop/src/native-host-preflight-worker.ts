@@ -11,9 +11,11 @@ if (port === null) throw new Error('desktop native Host preflight requires a wor
 void validate().then(
   () => { port.postMessage({ valid: true } satisfies NativeHostPreflightReply) },
   (reason: unknown) => {
+    const cause = reason instanceof Error ? reason.cause : undefined
     port.postMessage({
       valid: false,
       message: reason instanceof Error ? reason.message : 'native Host preflight failed',
+      ...cause instanceof Error ? { cause: cause.message } : typeof cause === 'string' ? { cause } : {},
     } satisfies NativeHostPreflightReply)
   },
 )

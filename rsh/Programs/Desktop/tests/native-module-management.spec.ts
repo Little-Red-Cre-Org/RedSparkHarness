@@ -294,7 +294,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   prepareNativePackages(preflightFixture.profile)
   writeNativePackage(preflightFixture.profile, '@fixture/throwing-host', ['host'], [], [])
   writeFileSync(join(preflightFixture.profile, 'node_modules/@fixture/throwing-host/native.js'),
-    'export const plugin = { apiVersion: 1, name: "@fixture/throwing-host", targets: ["host"], requires: [], provides: [], resolve() { throw new Error("preflight failed") } }\n')
+    'export const plugin = { apiVersion: 1, name: "@fixture/throwing-host", targets: ["host"], requires: [], provides: [], resolve() { throw new Error("preflight failed", { cause: new Error("fixture cause") }) } }\n')
   const preflightInventory = await preflightFixture.manager.listNativeModules(ready)
   expect(preflightInventory.status).toBe('listed')
   if (preflightInventory.status !== 'listed') return
@@ -307,7 +307,9 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
     expectedRevision: preflightInventory.inventory.revision,
     key: { target: 'host', id: brandString<NativeDesktopInstallationId>('throwing-host') }, enabled: true,
   } }, hooks(preflightLifecycle), ready)
-  expect(preflightRefusal).toMatchObject({ status: 'refused', error: { code: 'dependency-conflict' } })
+  expect(preflightRefusal).toMatchObject({ status: 'refused', error: {
+    code: 'dependency-conflict', detail: 'preflight failed', cause: 'fixture cause',
+  } })
   expect(preflightLifecycle).toEqual({ stop: 0, start: 0 })
   expect(readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')).toBe(preflightHostBefore)
   expect(readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')).toBe(preflightClientBefore)
