@@ -35,6 +35,7 @@ async function main() {
   const nativeApi = api.plugins.native
   let nativeMode = nativeApi !== undefined
   let inventory
+  let shownBackend
   let busy = false
   let backendChanges = 0
   let backendReads = 0
@@ -78,6 +79,7 @@ async function main() {
   }
 
   function renderBackend(backend) {
+    shownBackend = backend
     document.querySelector('#backend-state').textContent = messages[{
       starting: 'nativeBackendStarting', ready: 'nativeBackendReady', error: 'nativeBackendError',
     }[backend.phase]]
@@ -86,9 +88,25 @@ async function main() {
     document.querySelector('#recovery').hidden = backend.phase !== 'error'
     document.querySelector('#recovery-description').textContent = nativeMode ? messages.nativeRecoveryAdvice : messages.recoveryDescription
     configureMode()
-    // Native status uses only localized state; legacy diagnostics retain their existing presentation.
     document.querySelector('#startup-error').textContent = backend.phase === 'error'
-      ? (nativeMode ? messages.nativeBackendError : (backend.message ?? '')) : ''
+      ? startupErrorDetails(backend) : ''
+  }
+
+  function startupErrorDetails(backend) {
+    const types = {
+      AggregateError: messages.startupTypeAggregateError,
+      Error: messages.startupTypeError,
+      RangeError: messages.startupTypeRangeError,
+      SyntaxError: messages.startupTypeSyntaxError,
+      TypeError: messages.startupTypeTypeError,
+      ValidationError: messages.startupTypeValidationError,
+    }
+    return [
+      messages.startupErrorType.replace('{type}', types[backend.errorType] || messages.startupTypeUnknownError),
+      backend.path === undefined ? '' : messages.startupErrorPath.replace('{path}', backend.path),
+      backend.rule === undefined ? '' : messages.startupErrorRule.replace('{rule}', backend.rule),
+      backend.logPath === undefined ? messages.startupErrorLogAdvice : messages.startupErrorLogWritten.replace('{path}', backend.logPath),
+    ].filter(Boolean).join('\n')
   }
 
   unsubscribe = api.backend.subscribe(backend => {
@@ -103,6 +121,7 @@ async function main() {
     const read = ++backendReads
     const backend = await api.backend.status()
     if (!closed && observed === backendChanges && read === backendReads) renderBackend(backend)
+    return shownBackend ?? backend
   }
 
   function targetLabel(target) {
@@ -345,9 +364,12 @@ async function main() {
       const outcome = await operation()
       if (closed) return false
       if (!nativeMode) {
-        await render()
-        if (!closed) status.textContent = messages.operationComplete
-        return !closed
+        if (await render() === false || closed) return false
+        const backend = await readBackend()
+        if (closed) return false
+        status.textContent = backend.phase === 'ready' ? messages.operationComplete
+          : messages[backend.phase === 'error' ? 'nativeBackendError' : 'nativeBackendStarting']
+        return backend.phase === 'ready' && !closed
       }
       if (observed === backendChanges) renderBackend(outcome.status === 'applied' ? outcome.backend : outcome.error.backend)
       let resultMessage = nativeOutcome(outcome)

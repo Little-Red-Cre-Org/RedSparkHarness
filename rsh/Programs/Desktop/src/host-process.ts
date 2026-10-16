@@ -38,7 +38,11 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'ready':
       return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
     case 'fatal':
-      return typeof candidate.message === 'string'
+      return ['AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'UnknownError', 'ValidationError']
+        .includes(candidate.errorType as string)
+        && (candidate.path === undefined || Array.isArray(candidate.path)
+          && candidate.path.every((part: unknown) => typeof part === 'string' || typeof part === 'number'))
+        && (candidate.rule === undefined || typeof candidate.rule === 'string')
     default:
       return false
   }
@@ -94,6 +98,7 @@ export class DesktopHostProcess {
    * @param inspectPort - optional loopback inspector port for workspace development.
    * @param environment - Child environment; runtime and package-manager overrides are removed.
    * @param onFailure - Receives the first fatal child or transport failure, including after readiness.
+   * @param logError - Persists stderr and child failure details.
    */
   constructor(
     private readonly node: string,
@@ -102,6 +107,7 @@ export class DesktopHostProcess {
     private readonly inspectPort?: number,
     private readonly environment: NodeJS.ProcessEnv = process.env,
     private readonly onFailure?: (error: Error) => void,
+    private readonly logError: (label: string, error: unknown) => void = (label, error) => { console.error(label, error) },
   ) {}
 
   /** Start the child once and resolve only after its complete composition is active. */
@@ -156,6 +162,7 @@ export class DesktopHostProcess {
     this.exitPromise = new Promise<void>((resolve) => {
       child.once('close', (code) => {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
+        if (suffix !== '') this.logError('Desktop Host stderr', this.stderr.trim())
         if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
         else this.fail(new Error(`dsh desktop host stopped${suffix}`))
         resolve()
@@ -401,7 +408,12 @@ export class DesktopHostProcess {
         this.readyResolve(message)
         return
       case 'fatal':
-        this.fail(new Error(message.message))
+        const error = new Error()
+        error.name = message.errorType
+        if (message.path !== undefined) Object.assign(error, {
+          issues: [{ path: message.path, ...message.rule === undefined ? {} : { rule: message.rule } }],
+        })
+        this.fail(error)
         return
       default:
         message satisfies never
@@ -413,7 +425,7 @@ export class DesktopHostProcess {
     if (!this.failureReported) {
       this.failureReported = true
       try { this.onFailure?.(error) } catch (listenerError) {
-        console.error('desktop host failure listener failed', listenerError)
+        this.logError('desktop host failure listener failed', listenerError)
       }
     }
     for (const pending of this.pending.values()) {

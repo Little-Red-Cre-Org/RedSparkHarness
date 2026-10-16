@@ -45,7 +45,56 @@ export type DesktopHostEvent = {
   readonly dshVersion: string
 } | {
   readonly type: 'fatal'
-  readonly message: string
+  readonly errorType: 'AggregateError' | 'Error' | 'RangeError' | 'SyntaxError' | 'TypeError' | 'UnknownError' | 'ValidationError'
+  readonly path?: readonly (string | number)[]
+  readonly rule?: string
+}
+
+type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
+
+const errorTypes = new Set<DesktopHostFailure['errorType']>([
+  'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
+])
+function failureEvent(error: unknown): DesktopHostFailure {
+  const errors = errorChain(error)
+  // Only producer-sanitized issues carry a rule; raw validator issues may name user dictionary keys.
+  const issueOf = (candidate: Error): unknown => {
+    const issues = (candidate as Error & { issues?: unknown }).issues
+    const issue: unknown = Array.isArray(issues) ? (issues as unknown[])[0] : undefined
+    return typeof issue === 'object' && issue !== null && 'rule' in issue && typeof issue.rule === 'string' ? issue : undefined
+  }
+  const source = errors.find(candidate => issueOf(candidate) !== undefined) ?? errors[0]
+  const issue = source === undefined ? undefined : issueOf(source)
+  const path: (string | number)[] | undefined = typeof issue === 'object' && issue !== null && 'path' in issue && Array.isArray(issue.path)
+    ? (issue.path as unknown[]).filter((part: unknown): part is string | number => typeof part === 'string' || typeof part === 'number')
+    : undefined
+  const rule = typeof issue === 'object' && issue !== null && 'rule' in issue && typeof issue.rule === 'string'
+    ? issue.rule
+    : undefined
+  return {
+    type: 'fatal',
+    errorType: source === undefined ? 'Error'
+      : errorTypes.has(source.name as DesktopHostFailure['errorType']) ? source.name as DesktopHostFailure['errorType'] : 'Error',
+    ...path === undefined ? {} : { path },
+    ...rule === undefined ? {} : { rule },
+  }
+}
+
+function errorChain(error: unknown): Error[] {
+  const pending = [error]
+  const seen = new Set<Error>()
+  const errors: Error[] = []
+  for (let cursor = 0; cursor < pending.length; cursor += 1) {
+    const value = pending[cursor]
+    if (!(value instanceof Error) || seen.has(value)) continue
+    seen.add(value)
+    errors.push(value)
+    if ('cause' in value) pending.push(value.cause)
+    if (value instanceof AggregateError) {
+      for (const nested of value.errors as unknown[]) pending.push(nested)
+    }
+  }
+  return errors
 }
 
 /** Controller returned to tests and the self-executing process entry. */
@@ -241,8 +290,8 @@ async function main(): Promise<void> {
   }
 
   const failTransport = (error: unknown): void => {
-    const message = error instanceof Error ? error.message : String(error)
-    send({ type: 'fatal', message })
+    console.error('Desktop Host transport failed', error)
+    send(failureEvent(error))
     void stop(1)
   }
 
@@ -358,7 +407,7 @@ async function main(): Promise<void> {
   responsePipe.once('error', failTransport)
   process.on('message', (message: unknown) => {
     if (!isDesktopHostCommand(message)) {
-      send({ type: 'fatal', message: 'dsh desktop: invalid Electron IPC command' })
+      send({ type: 'fatal', errorType: 'Error' })
       void stop(1)
       return
     }
@@ -372,7 +421,8 @@ async function main(): Promise<void> {
 if (import.meta.main) {
   main().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
-    if (process.send !== undefined) process.send({ type: 'fatal', message } satisfies DesktopHostEvent)
+    console.error('Desktop Host startup failed', error)
+    if (process.send !== undefined) process.send(failureEvent(error))
     else process.stderr.write(`dsh desktop: ${message}\n`)
     process.exitCode = 1
   })
