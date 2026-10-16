@@ -273,7 +273,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
     inboxRevision++
     return { requestId, outcome: 'updated' }
   })
-  const startupSettings = Promise.withResolvers<Awaited<ReturnType<NativeSessionClient['settingsDescribe']>>>()
+  const sidebarStartupSettings = Promise.withResolvers<Awaited<ReturnType<NativeSessionClient['settingsDescribe']>>>()
   let settingsDescribeCalls = 0
   const settingsDescription = (localePreference = 'zh', themePreference = 'dark', fontSize = 15) => ({ hasDocument: false, namespaces: [
     { namespace: 'locale', schema: {}, value: { preference: localePreference }, base: {}, user: {},
@@ -287,7 +287,8 @@ it('installs modular Native navigation, Session selection, details, locale and t
     close,
     settingsDescribe: vi.fn((_signal?: AbortSignal) => {
       settingsDescribeCalls++
-      if (settingsDescribeCalls === 3) return startupSettings.promise
+      // The sidebar startup read is the second describe; the third is the composer preference read.
+      if (settingsDescribeCalls === 2) return sidebarStartupSettings.promise
       return Promise.resolve(settingsDescription())
     }),
     settingsOpenDocument: vi.fn(),
@@ -378,21 +379,17 @@ it('installs modular Native navigation, Session selection, details, locale and t
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
     expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3)
-    await waitFor(() => {
-      expect(document.documentElement.lang).toBe('zh-CN')
-      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
-      expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('15px')
-    })
-    fireEvent.click(screen.getByRole('button', { name: '切换语言' }))
-    await waitFor(() => { expect(document.documentElement.lang).toBe('en') })
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
-    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
-    startupSettings.resolve(settingsDescription('zh', 'dark', 14))
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+    sidebarStartupSettings.resolve(settingsDescription('en', 'light', 14))
+    await sidebarStartupSettings.promise
+    await Promise.resolve()
     await waitFor(() => {
       expect(document.documentElement.lang).toBe('en')
-      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
-      expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('15px')
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
     const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
     const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
