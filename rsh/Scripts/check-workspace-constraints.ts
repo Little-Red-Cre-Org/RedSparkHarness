@@ -293,7 +293,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
   '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/*.css'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],

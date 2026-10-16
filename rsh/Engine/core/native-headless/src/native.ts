@@ -519,11 +519,15 @@ export class NativeHeadlessApplication implements NativeApplication {
       }),
       resolve: resolveRoute,
       workspaceRoutes: () => this.workspaceRoutes.list(),
-      selectWorkspace: (request, signal) => this.workspaceRoutes.select(request.baseRoute, request.workspaceId, signal),
+      selectWorkspace: (request, signal) => this.workspaceRoutes.select(request.baseRoute, request.workspaceId, signal, request.trusted),
       ...config.workspaceRoutes === undefined ? {} : {
-        createWorkspaceRoute: (request: { readonly baseRoute: NativeRootRouteId; readonly path: string }, signal: AbortSignal) => {
+        createWorkspaceRoute: (request: {
+          readonly baseRoute: NativeRootRouteId
+          readonly path: string
+          readonly trusted?: boolean
+        }, signal: AbortSignal) => {
           resolveRoute(request.baseRoute)
-          return this.workspaceRoutes.createWorkspace(request.baseRoute, request.path, signal)
+          return this.workspaceRoutes.createWorkspace(request.baseRoute, request.path, signal, request.trusted)
         },
       },
       releaseWorkspace: async (id, signal) => {

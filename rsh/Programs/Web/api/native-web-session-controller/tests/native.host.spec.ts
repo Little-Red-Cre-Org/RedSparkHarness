@@ -1251,6 +1251,24 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       const clients = createNativeWorkspaceClients(rpc, 1000000)
       const workspacePath = join(cwd, 'native-workspace')
       await mkdir(workspacePath)
+      const registeredBeforeDeniedCreate = workspaceRegistryService?.list().map(workspace => workspace.id)
+      const deniedCreate = await rpc.call('/api', 'workspaces/create', { path: process.cwd() }, new AbortController().signal)
+      expect(deniedCreate).toMatchObject({ ok: false, error: {
+        code: 'native/workspace-untrusted', message: 'Workspace is outside the configured allowed roots',
+        details: { path: process.cwd() },
+      } })
+      expect(workspaceRegistryService?.list().map(workspace => workspace.id)).toEqual(registeredBeforeDeniedCreate)
+      const trustedWorkspace = await clients.workspace.create({ path: process.cwd(), trust: true })
+      expect(trustedWorkspace.created).toBe(true)
+      expect(settingsDocument['workspace-trust']).toEqual({ paths: [trustedWorkspace.workspace.path] })
+      const trustedSession = await clients.workspace.connectWorkspace(trustedWorkspace.workspace.workspaceId)
+      const trustedRoute = rootExecutionService?.workspaceRoutes()
+        .find(route => route.workspaceId === trustedWorkspace.workspace.workspaceId)
+      if (rootExecutionService === undefined || trustedRoute === undefined) throw new Error('missing trusted Workspace route')
+      await rootExecutionService.releaseWorkspace(trustedRoute.id, new AbortController().signal)
+      expect(await rpc.call('/api', 'session/mode-controls', { sessionId: trustedSession.sessionId }, new AbortController().signal))
+        .toMatchObject({ ok: true })
+      await clients.workspace.delete(trustedWorkspace.workspace.workspaceId)
       const directoryListing = await clients.directoryPicker.list(cwd)
       expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
       if (process.platform !== 'win32') {

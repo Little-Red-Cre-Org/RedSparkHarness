@@ -1,5 +1,7 @@
 /** Authenticated native Workspace operations over the existing registry and Session executor. */
 import { randomUUID } from 'node:crypto'
+import { realpath } from 'node:fs/promises'
+import { isAbsolute, relative } from 'node:path'
 import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import type { ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
 import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
@@ -14,10 +16,11 @@ import type { Workspace, WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-works
 import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
 import type { NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceFrame } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain/native'
+import type { NativeSettingsScope, NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
 import { z } from 'zod'
 
 const empty = z.strictObject({})
-const createRequest = z.strictObject({ path: z.string().min(1) })
+const createRequest = z.strictObject({ path: z.string().min(1), trust: z.boolean().optional() })
 const renameRequest = z.strictObject({ workspaceId: z.string().min(1), title: z.string().trim().min(1) })
 const deleteRequest = z.strictObject({ workspaceId: z.string().min(1) })
 const reorderRequest = z.strictObject({ workspaceId: z.string().min(1), beforeWorkspaceId: z.string().min(1).optional() })
@@ -26,7 +29,41 @@ const reorderSessionRequest = z.strictObject({
 })
 const archiveRequest = z.strictObject({ sessionId: z.string().min(1) })
 const searchRequest = z.strictObject({ query: z.string() })
-const connectRequest = z.strictObject({ workspaceId: z.string().min(1) })
+const connectRequest = z.strictObject({ workspaceId: z.string().min(1), trust: z.boolean().optional() })
+const userVisibleErrors = new Set([
+  'Workspace path must be absolute',
+  'Workspace path must be an existing absolute directory',
+  'Workspace title is already in use',
+  'Workspace was not found',
+  'Workspace route capacity is exhausted',
+  'Workspace directory is unavailable',
+])
+
+/** Persisted canonical paths approved for dynamic Workspace routes. */
+export interface NativeWorkspaceTrustSettings {
+  readonly paths: readonly string[]
+}
+
+/** Validate absolute Workspace paths stored in the native Settings namespace.
+ * @param value - merged namespace values.
+ * @returns resolved trust paths, empty when none are configured.
+ */
+export function resolveNativeWorkspaceTrustSettings(value: NativeSettingsSection): NativeWorkspaceTrustSettings {
+  for (const key of Object.keys(value)) {
+    if (key !== 'paths') throw new TypeError(`workspace-trust: unknown field "${key}"`)
+  }
+  const paths: unknown = value.paths ?? []
+  if (!Array.isArray(paths) || paths.some(path => typeof path !== 'string' || !isAbsolute(path))) {
+    throw new TypeError('workspace-trust: paths must contain absolute directories')
+  }
+  return { paths: paths as string[] }
+}
+
+const within = (root: string, path: string): boolean => {
+  const difference = relative(root, path)
+  return difference === '' || !isAbsolute(difference) && difference !== '..'
+    && !difference.startsWith('../') && !difference.startsWith('..\\')
+}
 
 /** Mirror the legacy list rule for a reusable blank Session. */
 function blank(events: readonly SessionEvent[]): boolean {
@@ -97,6 +134,7 @@ export class NativeWebWorkspaceService {
    * @param executor - existing Program Session executor and route authority.
    * @param persistence - selected Session history authority.
    * @param active - exact live Session ownership authority.
+   * @param trustSettings - persisted operator-approved Workspace paths.
    * @param maxHistoryEvents - limit for blank Session reuse checks.
    * @param maxFollowers - maximum concurrent Workspace follow requests.
    */
@@ -107,6 +145,7 @@ export class NativeWebWorkspaceService {
     private readonly persistence: NativeSessionPersistenceOperations,
     private readonly active: NativeActiveSessionOperations,
     private readonly baseRouteId: NativeRootRouteId,
+    private readonly trustSettings: NativeSettingsScope<NativeWorkspaceTrustSettings> | undefined,
     private readonly maxHistoryEvents: number,
     private readonly maxFollowers: number,
   ) {
@@ -129,9 +168,10 @@ export class NativeWebWorkspaceService {
    * @param endpoint - Workspace RPC endpoint.
    * @param payload - decoded but untrusted request fields.
    * @param signal - carrier cancellation.
-   * @returns Host result with a stable native Workspace failure code.
+   * @returns Host result with stable trust and system-directory codes, or the existing Workspace error code and allowlisted message.
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    let requestPath: string | undefined
     try {
       signal.throwIfAborted()
       if (endpoint === 'workspaces/list') {
@@ -140,11 +180,22 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/create') {
         const request = createRequest.parse(payload)
+        requestPath = request.path
         return { ok: true, value: await this.enqueue(signal, async () => {
-          const existing = await this.registry.resolveByPath(request.path)
-          if (existing !== undefined) return { workspace: workspaceView(existing), created: false }
-          const created = await this.registry.create(request.path)
-          return { workspace: workspaceView(created), created: true }
+          const path = await realpath(request.path)
+          requestPath = path
+          // Trust applies only to the exact canonical path the user confirmed; a changed target asks again.
+          if (request.trust === true && path !== request.path) throw new Error('Workspace is outside the configured allowed roots')
+          const existing = await this.registry.resolveByPath(path)
+          const trusted = request.trust === true || this.trusted(path)
+          const rootExecution = this.executor.rootExecution
+          if (rootExecution.createWorkspaceRoute === undefined) throw new Error('Workspace route creation is unavailable')
+          const route = await rootExecution.createWorkspaceRoute({ baseRoute: this.baseRouteId, path, trusted }, signal)
+          if (route.workspaceId === undefined) throw new Error('Workspace was not found')
+          const created = this.registry.get(route.workspaceId)
+          if (created === undefined) throw new Error('Workspace was not found')
+          if (request.trust === true) await this.rememberTrust(path)
+          return { workspace: workspaceView(created), created: existing === undefined }
         }) }
       }
       if (endpoint === 'workspaces/rename') {
@@ -204,11 +255,23 @@ export class NativeWebWorkspaceService {
       }
       if (endpoint === 'workspaces/connect') {
         const request = connectRequest.parse(payload)
-        return { ok: true, value: await this.enqueue(signal, () => this.connectWorkspace(workspaceId(request.workspaceId), signal)) }
+        return { ok: true, value: await this.enqueue(signal, () => {
+          const workspace = this.requireWorkspace(workspaceId(request.workspaceId))
+          requestPath = workspace.path
+          return this.connectWorkspace(workspace, request.trust === true, signal)
+        }) }
       }
       throw new Error('Unsupported Workspace request')
-    } catch {
-      return { ok: false, error: { code: 'native/workspaces', message: 'Workspace request failed.', details: {} } }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'Workspace is outside the configured allowed roots') {
+        return { ok: false, error: { code: 'native/workspace-untrusted', message: error.message, details: { path: requestPath } } }
+      }
+      if (error instanceof Error && error.message === 'Workspace is a protected system directory') {
+        return { ok: false, error: { code: 'native/workspace-forbidden', message: error.message, details: {} } }
+      }
+      const message = error instanceof Error && userVisibleErrors.has(error.message)
+        ? error.message : 'Workspace request failed.'
+      return { ok: false, error: { code: 'native/workspaces', message, details: {} } }
     }
   }
 
@@ -255,9 +318,9 @@ export class NativeWebWorkspaceService {
     await this.unsubscribe()
   }
 
-  private async connectWorkspace(id: WorkspaceId, signal: AbortSignal): Promise<{ sessionId: SessionId }> {
-    const workspace = this.requireWorkspace(id)
-    const routeId = await this.workspaceRouteId(id, signal)
+  private async connectWorkspace(workspace: Workspace, trust: boolean, signal: AbortSignal): Promise<{ sessionId: SessionId }> {
+    const routeId = await this.workspaceRouteId(workspace.id, trust || this.trusted(workspace.path), signal)
+    if (trust) await this.rememberTrust(workspace.path)
     for (const candidate of workspace.sessionIds) {
       if (this.registry.archivedSessionIds.includes(candidate)) continue
       const history = await readNativeSessionHistory(candidate, {
@@ -281,10 +344,24 @@ export class NativeWebWorkspaceService {
     return { sessionId: idForSession }
   }
 
-  private async workspaceRouteId(id: WorkspaceId, signal: AbortSignal) {
+  private async workspaceRouteId(id: WorkspaceId, trusted: boolean, signal: AbortSignal) {
     const route = this.executor.rootExecution.workspaceRoutes().find(candidate => candidate.workspaceId === id)
     if (route !== undefined) return route.id
-    return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.baseRouteId, workspaceId: id }, signal)).id
+    return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.baseRouteId, workspaceId: id, trusted }, signal)).id
+  }
+
+  /** @param path - canonical Workspace path.
+   * @returns whether a persisted trust path covers it.
+   */
+  trusted(path: string): boolean {
+    return this.trustSettings?.get().paths.some(root => within(root, path)) ?? false
+  }
+
+  /** Persist a confirmed path only after route admission accepted it, so forbidden paths never become trusted. */
+  private async rememberTrust(path: string): Promise<void> {
+    const settings = this.trustSettings
+    if (settings === undefined || settings.get().paths.includes(path)) return
+    await settings.replace({ paths: [...settings.get().paths, path] }, settings.revision)
   }
 
   private changed(change: DomainChanged): void {
