@@ -10,9 +10,8 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem,
+  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem, NativeSessionRpcError,
 } from '@deepseek-ai/dsh-client-native-session/native'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
 }
@@ -60,6 +59,7 @@ type NativeWorkspacesInjected = {
     homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
@@ -159,10 +159,16 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** Match native RPC refusals by code: a source run can load a second NativeSessionRpcError class, so instanceof is unreliable. */
+function rpcRefusal(error: unknown, code: string): Partial<NativeSessionRpcError> | undefined {
+  const refusal = error as Partial<NativeSessionRpcError> | null | undefined
+  return refusal?.code === code ? refusal : undefined
+}
+
 const SEARCH_DEBOUNCE_MS = 250
 
 function NativeSessionBrowser({
-  wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, deselectSession,
+  wide, useConversation, useWorkspaceRegistry, displayTitle, admitSession, selectSession, deselectSession,
   renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
   renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
@@ -171,6 +177,7 @@ function NativeSessionBrowser({
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
   displayTitle: NativeSessionPresentation['displayTitle']
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
@@ -224,27 +231,32 @@ function NativeSessionBrowser({
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
+  const openRequest = useRef<{ id: NativeSessionId; settled: boolean }>()
+  // Admission completes asynchronously, so it reads the conversation as of now rather than as of the click.
+  const live = useRef(snapshot)
+  live.current = snapshot
   const selectionOrder = useRef<{ id: NativeSessionId; ids: readonly NativeSessionId[] }>()
   const searchQuery = query.trim()
   useEffect(() => {
     if (snapshot.state === 'loading' || snapshot.state === 'closed') return
-    if (pendingSessionId !== undefined) {
-      setPendingSessionId(undefined)
-      if (pendingSessionId !== snapshot.selected) {
-        void selectSession(pendingSessionId)
-        return
-      }
+    const pending = pendingSessionId
+    if (pending !== undefined) setPendingSessionId(undefined)
+    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) {
+      if (pending !== undefined && pending !== snapshot.selected) admitAndSelect(pending)
+      return
     }
-    if (snapshot.state !== 'ready' || snapshot.selected === undefined || !archived.has(snapshot.selected)) return
+    // A generating or approval-waiting Session is detached, not awaited: its Host turn keeps running.
+    // A queued click or an open still in admission wins over the neighbouring row.
     const lastOrder = selectionOrder.current
-    let nextId: NativeSessionId | undefined
-    if (lastOrder?.id === snapshot.selected) {
+    let nextId = pending ?? (openRequest.current?.settled === false ? openRequest.current.id : undefined)
+    if (nextId === undefined && lastOrder?.id === snapshot.selected) {
       const index = lastOrder.ids.indexOf(snapshot.selected)
       nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
         ?? lastOrder.ids.slice(0, index).reverse().find(id => visibleIds.includes(id))
     }
-    deselectSession()
-    if (nextId !== undefined) void selectSession(nextId)
+    void deselectSession().then(() => {
+      if (nextId !== undefined) admitAndSelect(nextId)
+    }, (error: unknown) => { setActionError(errorMessage(error)) })
   }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession, deselectSession,
     archived, visibleIds])
   useEffect(() => {
@@ -290,17 +302,39 @@ function NativeSessionBrowser({
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
+  const workspaceError = (error: unknown): string =>
+    rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
+  const admitAndSelect = (id: NativeSessionId): void => {
+    const request = { id, settled: false }
+    openRequest.current = request
+    const from = live.current.selected
+    // A later open or any other navigation during admission makes this request stale.
+    const current = (): boolean => openRequest.current === request && live.current.selected === from
+    const open = async (trust?: boolean): Promise<void> => {
+      await admitSession(id, trust)
+      if (!current()) return
+      request.settled = true
+      if (live.current.state === 'loading') setPendingSessionId(id)
+      else await selectSession(id)
+    }
+    setActionError(undefined)
+    void open().catch((error: unknown) => {
+      if (!current()) return
+      if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
+    })
+  }
   const openSession = (id: NativeSessionId): void => {
+    openRequest.current = undefined
     if (snapshot.state === 'loading') {
       setPendingSessionId(id)
       return
     }
     if (id === snapshot.selected) return
-    void selectSession(id)
+    admitAndSelect(id)
   }
   const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
-    if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
-    const path = 'path' in error.details ? error.details.path : undefined
+    const details = rpcRefusal(error, 'native/workspace-untrusted')?.details
+    const path = details !== undefined && 'path' in details ? details.path : undefined
     if (typeof path !== 'string') return false
     setDirectoryPickerOpen(false)
     setWorkspaceTrustPrompt({ path, retry: () => retry(path) })
@@ -309,7 +343,7 @@ function NativeSessionBrowser({
   const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
     setActionError(undefined)
     void action().catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(errorMessage(error))
+      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(workspaceError(error))
     })
   }
   const confirmWorkspaceTrust = (): void => {
@@ -319,7 +353,7 @@ function NativeSessionBrowser({
       setWorkspaceTrustPrompt(undefined)
     }).catch((error: unknown) => {
       setWorkspaceTrustPrompt(undefined)
-      setActionError(errorMessage(error))
+      setActionError(workspaceError(error))
     }).finally(() => { setWorkspaceTrustPending(false) })
   }
   const addWorkspaceAction = <Tooltip label={t('addWorkspace')} delayMs={500} disabled={wide}>
@@ -419,7 +453,11 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true))) setDirectoryPickerError(errorMessage(error))
+      // A failed trusted retry reopens the browser with its reason, which both sidebar layouts render.
+      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true).catch((retryError: unknown) => {
+        setDirectoryPickerError(workspaceError(retryError))
+        setDirectoryPickerOpen(true)
+      }))) setDirectoryPickerError(workspaceError(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {
@@ -452,6 +490,16 @@ function NativeSessionBrowser({
   >
     <code>{workspaceTrustPrompt.path}</code>
   </Modal>
+  const directoryBrowser = <DirectoryBrowser
+    open={directoryPickerOpen}
+    listDirectory={listDirectory}
+    createDirectory={createDirectory}
+    onOpen={adoptWorkspaceDirectory}
+    onClose={() => { setDirectoryPickerOpen(false) }}
+    busy={directoryPickerBusy}
+    ownerError={directoryPickerError}
+    t={t}
+  />
   if (!wide) return <>
     <WorkspaceSectionHeader
       wide={false}
@@ -466,6 +514,7 @@ function NativeSessionBrowser({
       actions={addWorkspaceAction}
       onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
     />
+    {directoryBrowser}
     {workspaceTrustDialog}
   </>
   return <div className={css.workspaceBrowser}>
@@ -637,16 +686,7 @@ function NativeSessionBrowser({
       {workspaceDeletePending && <div role="status">{t('delete.pending')}</div>}
       {workspaceDeleteError !== undefined && <div role="alert">{workspaceDeleteError}</div>}
     </Modal>
-    <DirectoryBrowser
-      open={directoryPickerOpen}
-      listDirectory={listDirectory}
-      createDirectory={createDirectory}
-      onOpen={adoptWorkspaceDirectory}
-      onClose={() => { setDirectoryPickerOpen(false) }}
-      busy={directoryPickerBusy}
-      ownerError={directoryPickerError}
-      t={t}
-    />
+    {directoryBrowser}
     {workspaceTrustDialog}
   </div>
 }
@@ -885,6 +925,14 @@ export const plugin: NativePlugin = {
       inject: (): NativeWorkspacesInjected => ({
         hooks: { conversation: controller, workspaceRegistry, homeDirectory },
         displayTitle: item => presentation.displayTitle(item),
+        // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
+        admitSession: async (id, trust) => {
+          const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
+          const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
+          if (workspace !== undefined) {
+            await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
+          }
+        },
         selectSession: controller.select.bind(controller),
         deselectSession: controller.deselect.bind(controller),
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
@@ -916,13 +964,13 @@ export const plugin: NativePlugin = {
         toggleSidebar: layout.toggleSidebar.bind(layout),
       }),
     }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
-      selectSession, deselectSession, renameTitle, refreshTitle,
+      admitSession, selectSession, deselectSession, renameTitle, refreshTitle,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
       renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
-        displayTitle={displayTitle} selectSession={selectSession} deselectSession={deselectSession}
+        displayTitle={displayTitle} admitSession={admitSession} selectSession={selectSession} deselectSession={deselectSession}
         renameTitle={renameTitle} refreshTitle={refreshTitle}
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
