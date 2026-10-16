@@ -1,10 +1,25 @@
 /** Native model picker and Session mode controls for the composer. */
 import { useState } from 'react'
-import { ChatComposerSelect, IconCloseFill14, ModelPicker, type ModelPickerState } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ChatComposerSelect, IconCloseFill14, ModelPicker, Pill, type ModelPickerState } from '@deepseek-ai/dsh-client-ui-primitives'
 import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 import css from './model-controls.module.css'
+
+/** Label the selected Session's mode and active plan mode in the header. */
+export function ConversationModeLabel({ snapshot, t }: {
+  snapshot: ConversationSnapshot
+  t: (key: ConversationLocaleKey) => string
+}) {
+  const controls = snapshot.modeControls
+  const current = controls?.current
+  const name = current === null || current === undefined ? t('chatMode')
+    : controls?.options.find(option => option.id === current)?.name ?? current
+  return <>
+    <Pill active>{name}</Pill>
+    {controls?.planMode.active === true ? <Pill active>{t('planLabel')}</Pill> : null}
+  </>
+}
 
 /** Render the catalog-backed model and reasoning picker. */
 export function ModelPickerControl({ snapshot, selectModel, refreshModelControls, t }: {

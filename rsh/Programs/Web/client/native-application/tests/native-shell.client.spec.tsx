@@ -2,7 +2,8 @@
 import { cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
   NativeSessionListFrame, NativeSessionListItem, NativeSettingsEvent,
@@ -14,7 +15,7 @@ import { plugin as application } from '../src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
 import { plugin as layout } from '../../ui-layout/src/native.ts'
-import { plugin as sessionPresentation } from '../../ui-session/src/native.ts'
+import { plugin as sessionPresentation, type NativeConversationService } from '../../ui-session/src/native.ts'
 import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
@@ -79,13 +80,14 @@ const sessionProvider = (
   },
 })
 
-const mountApplication = (container: HTMLElement): NativePlugin => ({
+const mountApplication = (container: HTMLElement, observeConversation: (service: NativeConversationService) => void): NativePlugin => ({
   apiVersion: 1,
   name: 'test-native-application-mount',
   targets: ['client'],
-  requires: ['clientApplication', 'clientRenderer'],
+  requires: ['clientApplication', 'clientRenderer', 'clientNativeConversation'],
   provides: [],
   resolve: () => (context) => {
+    observeConversation(context.require('clientNativeConversation'))
     context.own(context.require('clientRenderer').mount(
       container, context.require('clientApplication'), context.signal,
     ))
@@ -164,6 +166,7 @@ it.each([
     workspaceFrames.publish({ type: 'upsert', workspace })
     return { workspace, created: true }
   })
+  let pendingWorkspaceConnection: ReturnType<typeof Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>> | undefined
   const connectWorkspace = vi.fn(async (id: Parameters<NativeWorkspaceClient['connectWorkspace']>[0]) => {
     const sessionId = id === 'workspace-new' ? 'session-in-workspace' : 'session-alpha'
     if (!rows.some(row => row.header.id === sessionId)) {
@@ -175,10 +178,12 @@ it.each([
       rows = [...rows, row]
       listFrames.publish({ type: 'upsert', item: row })
     }
-    return { sessionId: sessionId as NativeSessionListItem['header']['id'] }
+    const pending = pendingWorkspaceConnection
+    pendingWorkspaceConnection = undefined
+    return pending?.promise ?? { sessionId: sessionId as NativeSessionListItem['header']['id'] }
   })
   const listDirectory = vi.fn(async () => ({
-    path: 'C:\\Work\\New', entries: [], crumbs: [
+    path: 'C:\\Work\\New', home: 'C:\\Work\\New', entries: [], crumbs: [
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
   }))
@@ -303,11 +308,16 @@ it.each([
     { namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
       applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
   ], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })
+  let betaHasConversation = true
+  const betaMessage = {
+    type: 'user/message', seq: SessionSeq(1), time: 1, surfaceOp: 'append',
+    data: { id: 'beta-message', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Beta task' }] },
+  } as unknown as SessionEvent
   const clientMock = {
     close,
     settingsDescribe: vi.fn((_signal?: AbortSignal) => {
       settingsDescribeCalls++
-      // The sidebar startup read is the second describe; the third is the composer preference read.
+      // The sidebar startup read is second and the composer preference read is third.
       if (settingsDescribeCalls === 2) return sidebarStartupSettings.promise
       return Promise.resolve(settingsDescription())
     }),
@@ -326,7 +336,12 @@ it.each([
         yield event
       }
     },
-    agentPresetsList: vi.fn(async () => ({ default: null, presets: [] })),
+    agentPresetsList: vi.fn(async () => ({ default: 'standard', presets: [
+      { id: 'standard', name: 'Standard', source: 'profile' as const, status: 'ready' as const },
+      { id: 'minimal', name: 'Minimal', source: 'profile' as const, status: 'ready' as const },
+      { id: 'legacy', name: 'Legacy', source: 'user' as const, status: 'needs-migration' as const },
+      { id: 'damaged', name: 'Damaged', source: 'user' as const, status: 'invalid' as const },
+    ] })),
     agentPresetRead: vi.fn(async (id: string) => ({ id, source: 'profile' as const, status: 'ready' as const, name: id })),
     agentPresetCopy: vi.fn(async () => ({ updated: true as const })),
     agentPresetDelete: vi.fn(async () => ({ updated: true as const })),
@@ -351,8 +366,10 @@ it.each([
       await workspaceClient.archiveSession(id)
     }),
     modelControls: vi.fn(async () => ({ catalog: null, canSelectModel: false, presets: [] })),
-    modeControls: vi.fn(async () => ({ current: null, options: [], revision: null, locked: false, canSelect: false,
-      planMode: { available: false, active: false } })),
+    modeControls: vi.fn(async () => ({ current: 'standard', options: [
+      { id: 'standard', name: 'Standard' }, { id: 'minimal', name: 'Minimal' },
+    ], revision: null, locked: false, canSelect: true,
+    planMode: { available: false, active: false } })),
     selectPlanMode: vi.fn(async () => ({ active: false, outcome: 'noop' as const })),
     permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
     selectPermissionPreset: vi.fn(async () => undefined),
@@ -362,7 +379,7 @@ it.each([
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
-      return { header: row.header, events: [], inheritedEventCount: 0 }
+      return { header: row.header, events: id === 'session-beta' && betaHasConversation ? [betaMessage] : [], inheritedEventCount: 0 }
     }),
     create: vi.fn(async () => {
       const header = makeHeader('session-created')
@@ -385,6 +402,7 @@ it.each([
 
   const container = document.createElement('div')
   document.body.append(container)
+  let conversation: NativeConversationService | undefined
   const scope = new NativeScope()
   const host = new NativeHost(resolveInstallation([
     { plugin: sessionProvider(client, workspaceClient, directoryPicker), scope, config: undefined },
@@ -396,7 +414,7 @@ it.each([
     { plugin: layout, scope, config: undefined },
     { plugin: sidebar, scope, config: undefined },
     { plugin: rightbar, scope, config: undefined },
-    { plugin: mountApplication(container), scope, config: undefined },
+    { plugin: mountApplication(container, (service) => { conversation = service }), scope, config: undefined },
   ], 'client'))
 
   const originalLanguage = document.documentElement.lang
@@ -422,6 +440,78 @@ it.each([
       settingsEventFrames.publish({ type: 'llm/adapters-updated' })
       await waitFor(() => { expect(clientMock.modelControls).toHaveBeenCalledTimes(modelReads + 1) })
     }
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('placeholder', 'Choose a workspace to start')
+    expect(screen.queryByRole('button', { name: 'Session details' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Choose workspace' })).toHaveProperty('disabled', false)
+    fireEvent.click(await screen.findByRole('button', { name: 'Standard' }))
+    expect(await screen.findByRole('menuitem', { name: 'Minimal' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'Legacy' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Damaged' })).toBeNull()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Minimal' }))
+    const presetReads = clientMock.agentPresetsList.mock.calls.length
+    settingsEventFrames.publish({ type: 'agent-presets/updated' })
+    await waitFor(() => { expect(clientMock.agentPresetsList).toHaveBeenCalledTimes(presetReads + 1) })
+    expect(screen.getByRole('button', { name: 'Minimal' })).toBeTruthy()
+    // The launch directory is not Home: Home stays the Host's home, so the trail reads Home › New.
+    listDirectory.mockResolvedValueOnce({ path: 'C:\\Work\\New', home: 'C:\\Work', entries: [], crumbs: [
+      { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
+    ] })
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Add workspace…' }))
+    const browser = await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    expect(await within(browser).findByRole('button', { name: 'Home' })).toBeTruthy()
+    expect(within(browser).getByRole('button', { name: 'New' })).toBeTruthy()
+    fireEvent.click(within(browser).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Select Workspace Directory' })).toBeNull() })
+    const delayedConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = delayedConnection
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(1) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(document.title).toBe('Beta — Product') })
+    expect(clientMock.selectPreset).not.toHaveBeenCalled()
+    const pendingStart = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = pendingStart
+    const pendingMessageInput = screen.getByRole('textbox', { name: 'Message' })
+    fireEvent.change(pendingMessageInput, { target: { value: 'Do not send to Beta' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(2) })
+    expect(pendingMessageInput).toHaveProperty('disabled', true)
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true)
+    fireEvent.submit(pendingMessageInput.closest('form')!)
+    expect(prompt).not.toHaveBeenCalled()
+    pendingStart.resolve({ sessionId: 'session-alpha' as SessionId })
+    await waitFor(() => {
+      expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal))
+      expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    })
+    connectWorkspace.mockRejectedValueOnce(new Error('Workspace unavailable'))
+    fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    expect((await screen.findByRole('alert')).textContent).toContain('Workspace unavailable')
+    const untrustedConnect = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = untrustedConnect
+    const controlsRefresh = Promise.withResolvers<Awaited<ReturnType<typeof clientMock.modelControls>>>()
+    const modelReads = clientMock.modelControls.mock.calls.length
+    clientMock.modelControls.mockImplementationOnce(() => controlsRefresh.promise)
+    const connectionCalls = connectWorkspace.mock.calls.length
+    fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(connectionCalls + 1) })
+    settingsEventFrames.publish({ type: 'llm/adapters-updated' })
+    await waitFor(() => { expect(clientMock.modelControls).toHaveBeenCalledTimes(modelReads + 1) })
+    untrustedConnect.reject(new NativeSessionRpcError('native/workspace-untrusted', 'Workspace is untrusted', {
+      path: 'C:\\Work\\Shared',
+    }))
+    await waitFor(() => {
+      expect(conversation?.getSnapshot().state).toBe('loading')
+      expect(conversation?.getSnapshot().navigationPending).toBe(true)
+    })
+    controlsRefresh.resolve({ catalog: null, canSelectModel: false, presets: [] })
+    await waitFor(() => {
+      expect(conversation?.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, navigationPending: false })
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('disabled', true)
+    })
+    expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -449,6 +539,7 @@ it.each([
     fireEvent.click(alphaRow)
     fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    betaHasConversation = false
     expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
     clientMock.history.mockClear()
     const betaHistory = Promise.withResolvers<undefined>()
@@ -630,12 +721,36 @@ it.each([
     await screen.findByTitle('C:\\Work\\Shared')
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
 
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Alpha/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-alpha') })
     const createButton = screen.getByText('New Session').closest('button')
     expect(createButton).not.toBeNull()
+    const admission = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['create']>>>()
+    const admissionCalls = createWorkspace.mock.calls.length
+    createWorkspace.mockImplementationOnce(() => admission.promise)
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    const newSessionConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = newSessionConnection
+    const connections = connectWorkspace.mock.calls.length
     fireEvent.click(createButton!)
-    await screen.findByRole('treeitem', { name: /New Session/ })
-    expect(clientMock.create).toHaveBeenCalledOnce()
-    expect(clientMock.history).toHaveBeenLastCalledWith('session-created', expect.any(AbortSignal))
+    await waitFor(() => {
+      expect(connectWorkspace).toHaveBeenCalledTimes(connections + 1)
+    })
+    expect(conversation?.getSnapshot().navigationPending).toBe(true)
+    newSessionConnection.resolve({ sessionId: 'session-alpha' as SessionId })
+    await waitFor(() => {
+      expect(conversation?.getSnapshot().selected).toBe('session-alpha')
+      expect(conversation?.getSnapshot().state).toBe('ready')
+    })
+    admission.resolve({ workspace: workspaces[0]!, created: false })
+    await admission.promise
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    await conversation?.idle()
+    expect(conversation?.getSnapshot().selected).toBe('session-alpha')
+    expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    expect(createWorkspace).toHaveBeenCalledTimes(admissionCalls + 1)
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-beta') })
 
     fireEvent.click(screen.getByRole('button', { name: 'Search sessions' }))
     const search = screen.getByPlaceholderText('Search sessions…')
@@ -665,6 +780,22 @@ it.each([
     expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
     expect(runningTurn?.aborted).toBe(false)
 
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Beta/ }))
+      .getByRole('button', { name: 'Session actions for Beta' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete session' }))
+    const betaDeleteDialog = await screen.findByRole('dialog', { name: 'Delete session' })
+    fireEvent.click(within(betaDeleteDialog).getByRole('button', { name: 'Delete session' }))
+    await waitFor(() => { expect(clientMock.archive).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Beta/ })).toBeNull() })
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Choose workspace' })).toHaveProperty('disabled', false) })
+    const connectionCountBeforeHeroStart = connectWorkspace.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(connectionCountBeforeHeroStart + 1) })
+    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal)) })
+    expect(clientMock.selectPreset).not.toHaveBeenCalled()
+    delayedConnection.resolve({ sessionId: 'session-alpha' as SessionId })
+
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
     createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is a protected system directory'),
@@ -676,6 +807,18 @@ it.each([
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\New' }, expect.any(AbortSignal))
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-in-workspace', expect.any(AbortSignal)) })
+
+    const composerConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = composerConnection
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Wait for workspace' } })
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false)
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal)) })
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true)
+    composerConnection.reject(new Error('Workspace unavailable'))
+    await screen.findByRole('alert')
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false) })
 
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
@@ -693,7 +836,7 @@ it.each([
     const settingsDialog = screen.getByRole('dialog', { name: '设置' })
     const settingsNav = within(settingsDialog).getByRole('navigation')
     expect(within(settingsNav).getAllByRole('button').map(button => button.textContent?.trim())).toEqual([
-      '通用设置', '任务中心', '模型', '插件', 'Agent 预设',
+      '通用设置', '模型', '插件', 'Agent 预设',
     ])
     fireEvent.click(within(settingsDialog).getByRole('button', { name: '模型' }))
     expect(within(settingsDialog).getByRole('heading', { name: '模型' })).toBeTruthy()

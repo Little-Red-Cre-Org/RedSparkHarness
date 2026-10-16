@@ -44,6 +44,7 @@ it('renders the empty baseline and updates the list from an upsert frame', async
 
   const view = render(<NativeScheduledTasksPanel client={client} close={() => {}} useLocale={useLocale} t={t} />)
   expect(await screen.findByText('No scheduled tasks.')).toBeTruthy()
+  expect(screen.getByText('schedule.emptyHint')).toBeTruthy()
   act(() => { publish({ type: 'upsert', job }) })
   expect(await screen.findByText('Check workspace')).toBeTruthy()
   expect(screen.getByText('Scheduled')).toBeTruthy()
