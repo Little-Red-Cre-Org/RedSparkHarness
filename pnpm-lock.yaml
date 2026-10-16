@@ -2718,6 +2718,9 @@ importers:
       '@deepseek-ai/dsh-native-subagent':
         specifier: workspace:^
         version: link:../../subagent/native-subagent
+      '@deepseek-ai/dsh-request-context':
+        specifier: workspace:^
+        version: link:../../context/request-context
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../../Modules/Official/guard/repeat-tool-reminder
@@ -2727,6 +2730,12 @@ importers:
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../../session/session-projection
+      '@deepseek-ai/dsh-skill':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/skill/skill
+      '@deepseek-ai/dsh-skill-filesystem':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/skill/skill-filesystem
       '@deepseek-ai/dsh-token-meter':
         specifier: workspace:^
         version: link:../../llm/token-meter
@@ -2739,6 +2748,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs':
         specifier: workspace:^
         version: link:../../../Modules/Official/fs/tool-fs
+      '@deepseek-ai/dsh-tool-skill':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/skill/tool-skill
       '@deepseek-ai/dsh-tool-subagent':
         specifier: workspace:^
         version: link:../../subagent/tool-subagent

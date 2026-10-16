@@ -25,6 +25,7 @@ import { plugin as sandboxFsPlugin } from '@deepseek-ai/dsh-compat-fs-sandbox/na
 import { plugin as sandboxPolicyPlugin } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import { plugin as compatPolicyPlugin } from '@deepseek-ai/dsh-compat-fs-policy/native'
 import { plugin as compatFsLocalPlugin } from '@deepseek-ai/dsh-compat-fs-local/native'
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
@@ -185,6 +186,79 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
       apiVersion: 1, role: 'adapter', capability: 'dsh-compatibility',
     })
     expect((await prompt.render())).toContain('Use the read tool')
+
+    const assemblyTrace: string[] = []
+    const firstAssemblyListener = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
+      assemblyTrace.push('first:before')
+      const result = await next()
+      assemblyTrace.push('first:after')
+      return result
+    })
+    const secondAssemblyListener = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
+      assemblyTrace.push('second:before')
+      const result = await next()
+      assemblyTrace.push('second:after')
+      return result
+    })
+    const expectedAssemblyTrace = ['first:before', 'second:before', 'second:after', 'first:after']
+    const expectedLegacyPrompt = [
+      'Use the read tool — not shell commands like cat — to inspect text files. Results include line numbers. Use offset and limit to continue reading large files.',
+      'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it) and prefer edit for targeted changes.',
+      'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first (the default fs-observation-policy requires it), unless you just created or edited it in this session.',
+    ].join('\n\n')
+    assemblyTrace.length = 0
+    expect(await prompt.render()).toBe(expectedLegacyPrompt)
+    expect(assemblyTrace).toEqual(expectedAssemblyTrace)
+    assemblyTrace.length = 0
+    const cordisAssembly = await activeRuntime.context.systemPrompt.assemble()
+    expect(cordisAssembly.sections.filter(section => section.name.startsWith('tool:')).map(section => section.text))
+      .toEqual(expectedLegacyPrompt.split('\n\n'))
+    expect(assemblyTrace).toEqual(expectedAssemblyTrace)
+    firstAssemblyListener()
+    secondAssemblyListener()
+
+    const shortCircuitTrace: string[] = []
+    const beforeShortCircuit = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
+      shortCircuitTrace.push('before')
+      const result = await next()
+      shortCircuitTrace.push('after')
+      return result
+    })
+    const shortCircuit = activeRuntime.context.on('system-prompt/assemble', async (assembly) => {
+      shortCircuitTrace.push('short-circuit')
+      return { ...assembly, sections: [{ name: 'tool:short-circuit', text: 'short-circuit result' }] }
+    })
+    const skippedAfterShortCircuit = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
+      shortCircuitTrace.push('skipped')
+      return await next()
+    })
+    shortCircuitTrace.length = 0
+    expect(await prompt.render()).toBe('short-circuit result')
+    expect(shortCircuitTrace).toEqual(['before', 'short-circuit', 'after'])
+    shortCircuitTrace.length = 0
+    const shortCircuitedCordis = await activeRuntime.context.systemPrompt.assemble()
+    expect(shortCircuitedCordis.sections).toEqual([{ name: 'tool:short-circuit', text: 'short-circuit result' }])
+    expect(shortCircuitTrace).toEqual(['before', 'short-circuit', 'after'])
+    beforeShortCircuit()
+    shortCircuit()
+    skippedAfterShortCircuit()
+
+    const synchronousAssemblyFailure = new Error('system-prompt assembly threw')
+    const throwAssembly = activeRuntime.context.on('system-prompt/assemble', () => {
+      throw synchronousAssemblyFailure
+    })
+    await expect(prompt.render()).rejects.toBe(synchronousAssemblyFailure)
+    await expect(activeRuntime.context.systemPrompt.assemble()).rejects.toBe(synchronousAssemblyFailure)
+    throwAssembly()
+
+    const asynchronousAssemblyFailure = new Error('system-prompt assembly rejected')
+    const rejectAssembly = activeRuntime.context.on('system-prompt/assemble', async () => {
+      throw asynchronousAssemblyFailure
+    })
+    await expect(prompt.render()).rejects.toBe(asynchronousAssemblyFailure)
+    await expect(activeRuntime.context.systemPrompt.assemble()).rejects.toBe(asynchronousAssemblyFailure)
+    rejectAssembly()
+
     await host.run(scope, { kind: 'test' }, invocation => activeApp.run(['read', 'sample.txt'], invocation.signal))
     expect(model.requests).toHaveLength(2)
     const firstRequest = model.requests[0]
@@ -346,6 +420,7 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
   let unregister: (() => Promise<void>) | undefined
   const disposers: (() => boolean)[] = []
   const eventDisposers: (() => Promise<void>)[] = []
+  const policyDisposers: (() => Promise<void>)[] = []
   try {
     await host.start()
     if (runtime === undefined || filesystem === undefined || tools === undefined || agents === undefined) {
@@ -407,13 +482,15 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     legacy.emit('fs/observed', target, { kind: 'absent' }, actor)
     expect(observed).toEqual(['native', 'cordis'])
     const observedFailure = new Error('observation listener failed')
-    eventDisposers.push(host.events.on(scope, 'fs/observed', () => { throw observedFailure }))
+    const removeNativeObservationFailure = host.events.on(scope, 'fs/observed', () => { throw observedFailure })
+    eventDisposers.push(removeNativeObservationFailure)
     observed.length = 0
     expect(() => { host.events.emit(scope, 'fs/observed', target, { kind: 'absent' }, actor) }).toThrow(observedFailure)
     expect(observed).toEqual(['native'])
     observed.length = 0
     expect(() => { legacy.emit('fs/observed', target, { kind: 'absent' }, actor) }).toThrow(observedFailure)
     expect(observed).toEqual(['native'])
+    await removeNativeObservationFailure()
 
     let shortCircuit = false
     let rejectListener = false
@@ -522,7 +599,69 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
       expect(terminalCalls).toBe(0)
       expect(sequence).toEqual([outcome.listener])
     }
+
+    const nativeToolTrace: string[] = []
+    const cordisToolTrace: string[] = []
+    policyDisposers.push(tools.aroundExecution(async (call, _declaration, next) => {
+      nativeToolTrace.push(`around:enter:${call.callId}`)
+      const result = await next(call.signal)
+      nativeToolTrace.push(`around:return:${call.callId}`)
+      return result
+    }))
+    policyDisposers.push(tools.postResult(async (call, _original, next) => {
+      nativeToolTrace.push(`post:enter:${call.callId}`)
+      const result = await next()
+      nativeToolTrace.push(`post:return:${call.callId}`)
+      return result
+    }))
+    disposers.push(legacy.on('tools/pre-execute', async (call, next) => {
+      cordisToolTrace.push(`pre:enter:${call.callId}`)
+      const result = await next()
+      cordisToolTrace.push(`pre:return:${call.callId}`)
+      return result
+    }))
+    disposers.push(legacy.on('tools/execute', async (call, next) => {
+      cordisToolTrace.push(`execute:enter:${call.callId}`)
+      const result = await next()
+      cordisToolTrace.push(`execute:return:${call.callId}`)
+      return result
+    }))
+    disposers.push(legacy.on('tools/post-execute', async (call, _result, next) => {
+      cordisToolTrace.push(`post:enter:${call.callId}`)
+      const result = await next()
+      cordisToolTrace.push(`post:return:${call.callId}`)
+      return result
+    }))
+    disposers.push(legacy.on('tools/result', (call) => { cordisToolTrace.push(`result:${call.callId}`) }))
+    const executeCordis = (callId: string, filePath: string) => legacy.tools.execute({
+      callId: ToolCallId(callId), name: 'read', arguments: { file_path: filePath }, agent: { session } as Agent, signal,
+    })
+    const nativeRead = await execute('native-read', 'read', { file_path: 'sample.txt' })
+    const cordisRead = await executeCordis('cordis-read', 'sample.txt')
+    const nativeMissing = await execute('native-missing', 'read', { file_path: 'missing.txt' })
+    const cordisMissing = await executeCordis('cordis-missing', 'missing.txt')
+    expect(nativeRead).toMatchObject({ isError: false })
+    expect(nativeRead?.content).toEqual(cordisRead.content)
+    expect(nativeMissing?.isError).toBe(true)
+    expect(nativeMissing?.content).toEqual(cordisMissing.content)
+    expect(cordisMissing.isError).toBe(true)
+    expect(nativeMissing?.error).toEqual(cordisMissing.isError ? cordisMissing.error.info : undefined)
+    expect(cordisToolTrace).toEqual([
+      'pre:enter:native-read', 'pre:return:native-read', 'execute:enter:native-read', 'execute:return:native-read',
+      'post:enter:native-read', 'post:return:native-read', 'result:native-read',
+      'pre:enter:cordis-read', 'pre:return:cordis-read', 'execute:enter:cordis-read', 'execute:return:cordis-read',
+      'post:enter:cordis-read', 'post:return:cordis-read', 'result:cordis-read',
+      'pre:enter:native-missing', 'pre:return:native-missing', 'execute:enter:native-missing', 'execute:return:native-missing',
+      'post:enter:native-missing', 'post:return:native-missing', 'result:native-missing',
+      'pre:enter:cordis-missing', 'pre:return:cordis-missing', 'execute:enter:cordis-missing', 'execute:return:cordis-missing',
+      'post:enter:cordis-missing', 'post:return:cordis-missing', 'result:cordis-missing',
+    ])
+    expect(nativeToolTrace).toEqual([
+      'around:enter:native-read', 'around:return:native-read', 'post:enter:native-read', 'post:return:native-read',
+      'around:enter:native-missing', 'around:return:native-missing', 'post:enter:native-missing', 'post:return:native-missing',
+    ])
   } finally {
+    for (const dispose of policyDisposers) await dispose()
     for (const dispose of eventDisposers) await dispose()
     for (const dispose of disposers) dispose()
     if (unregister !== undefined) await unregister()

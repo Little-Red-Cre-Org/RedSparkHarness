@@ -159,7 +159,6 @@ it('persists human answers and replaces the broker after draining its pending pr
       'old request entered', 'old request settled', 'old cleanup entered', 'old cleanup completed',
       'substitute provider active', 'substitute served',
     ])
-    expect(JSON.stringify(adapter.requests[7]?.messages)).toContain('No')
     const stored = await storage.list()
     expect(stored).toHaveLength(4)
     const results = []
@@ -172,6 +171,12 @@ it('persists human answers and replaces the broker after draining its pending pr
     expect(results.filter(event => event.data.error?.code === 'ASK_ABORTED')).toHaveLength(2)
     expect(results.find(event => event.data.message.source.kind === 'tool'
       && event.data.message.source.callId === ToolCallId('delegate-cancel'))).toMatchObject({ data: { error: { code: 'ASK_ABORTED' } } })
+    expect(results.find(event => event.data.message.source.kind === 'tool'
+      && event.data.message.source.callId === ToolCallId('replacement-answer'))).toMatchObject({
+      data: { message: { content: [{ type: 'tool-result', content: [
+        { type: 'text', text: '{"answers":[{"id":"decision","selected":["No"]}]}' },
+      ] }] } },
+    })
     expect(JSON.stringify(results)).toContain('Yes')
     expect(JSON.stringify(results)).toContain('No')
   } finally {
