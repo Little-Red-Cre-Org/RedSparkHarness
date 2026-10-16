@@ -17,7 +17,7 @@ native-web 侧栏遇到配置根目录以外的 Workspace 路径时，会询问�
 
 [`dsh-client-ui-sidebar`](../../../../rsh/Programs/Web/client/ui-sidebar/README.zh.md) 按 `code`（`native/workspace-untrusted`、`native/workspace-forbidden`）识别原生 RPC 拒绝，并从 `details.path` 读取未受信任的路径，不再使用 `instanceof NativeSessionRpcError`。
 
-Session 行和搜索结果与 Workspace 行一样，通过 `runWorkspaceAction` 打开。注入的 `admitSession(id, trust?)` 找到 Session 所属的已注册 Workspace，用其路径调用 `workspaces/create`（批准后带上 `trust`）；之后只有在准入期间没有更晚的点击或其他导航取而代之时，sidebar 才调用 `controller.select(id)`；若控制器正在加载，则将其排队。被取代的请求不会显示信任提示或错误。在 Workspace 中新建 Session 或采用 Workspace 目录时，会丢弃仍在准入中的打开请求。所选 Session 被归档时，已排队的点击或仍在准入中的打开请求优先于相邻行；已显示信任提示（无论是否取消）或已失败的打开请求不再计入。`workspaces/create` 会把已有路径解析为对应 Workspace 并为其路由完成准入，因此未受信任的 Workspace 会返回带路径的 `native/workspace-untrusted`，批准后经由现有 Host 路径持久化信任。`admitSession` 会等到 Workspace 基线到达后才判断 Session 没有已注册的 Workspace；没有 Workspace 的 Session 仍像以前一样直接选择。
+Session 行和搜索结果与 Workspace 行一样，通过 `runWorkspaceAction` 打开。注入的 `admitSession(id, trust?)` 找到 Session 所属的已注册 Workspace，用其路径调用 `workspaces/create`（批准后带上 `trust`）；之后只有在准入期间没有更晚的点击或其他导航取而代之时，sidebar 才调用 `controller.select(id)`；若控制器正在加载，则将其排队。被取代的请求不会显示信任提示或错误。在 Workspace 中新建 Session 或采用 Workspace 目录时，会丢弃仍在准入中的打开请求。所选 Session 被归档时，已排队的点击或仍在准入中的打开请求优先于相邻行；已显示信任提示（无论是否取消）或已失败的打开请求不再计入。`workspaces/create` 会把已有路径解析为对应 Workspace 并为其路由完成准入，因此未受信任的 Workspace 会返回带路径的 `native/workspace-untrusted`，批准后经由现有 Host 路径持久化信任。`admitSession` 会等到 Workspace 基线到达后才判断 Session 没有已注册的 Workspace，若 Workspace 订阅在基线到达前结束则报错；没有 Workspace 的 Session 仍像以前一样直接选择。
 
 折叠布局渲染与展开布局相同的 `DirectoryBrowser`。目录采用在信任后重试仍失败时，目录浏览器会重新打开并显示原因，因此折叠布局也能看到。遇到 `native/workspace-forbidden` 拒绝时，目录浏览器或侧栏提示显示 `workspaceForbidden` 本地化文本（英文和中文），说明该目录是受系统保护的目录，代理在其中运行可能修改或损坏系统文件。
 

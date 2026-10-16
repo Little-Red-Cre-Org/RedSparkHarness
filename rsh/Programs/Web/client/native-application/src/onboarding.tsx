@@ -77,11 +77,10 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
   readonly usable: boolean
   readonly setup?: ModelSetup
 }> {
-  const [activeProviders, configurableProviders, description, catalog] = await Promise.all([
+  const [activeProviders, configurableProviders, description] = await Promise.all([
     client.modelsListProviders(signal),
     client.modelsListConfigurableProviders(signal),
     client.settingsDescribe(signal),
-    client.modelCatalog(signal),
   ])
   const namespaces = new Map(description.namespaces.map(descriptor => [descriptor.namespace, asNamespace(descriptor)]))
   const refs = [...new Set(configurableProviders.flatMap((entry) => {
@@ -115,7 +114,8 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
     }]
   })
   // The Host's default Session route leads, so the form opens on the provider new Sessions use.
-  const defaultProvider = catalog?.default.provider
+  // Read only once the form is needed: a catalog refresh can wait on remote model discovery.
+  const defaultProvider = (await client.modelCatalog(signal))?.default.provider
   const defaultIndex = providers.findIndex(entry => entry.provider === defaultProvider)
   if (defaultIndex > 0) providers.unshift(...providers.splice(defaultIndex, 1))
   const customNamespace = namespaces.get('llm-pi-ai')

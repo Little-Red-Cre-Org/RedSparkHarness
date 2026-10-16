@@ -2358,7 +2358,7 @@ export const plugin: NativePlugin = {
         config.rootRouteId ?? brandString<NativeRootRouteId>('root'), workspaceTrustSettings,
         config.maxHistoryEvents, config.maxFollowers)
       context.own(() => workspaceService.close())
-      const directoryService = new NativeWebDirectoryService(context.signal, config.cwd)
+      const directoryService = new NativeWebDirectoryService(context.signal)
       let defaultModelInitialization: Promise<void> | undefined
       const initializeDefaultModel = (): Promise<void> => {
         if (defaultSettings === undefined || modelSettings === undefined) return Promise.resolve()

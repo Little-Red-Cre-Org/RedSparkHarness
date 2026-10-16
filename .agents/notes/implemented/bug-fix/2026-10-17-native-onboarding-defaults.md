@@ -10,10 +10,10 @@ The native-web first-run model step opened on whichever provider the Host listed
 
 ## Decision
 
-- `readModelSetup` in `rsh/Programs/Web/client/native-application/src/onboarding.tsx` also reads `modelCatalog()` and moves the provider named by `catalog.default.provider` to the top of the list, so `ModelOnboardingView` opens on the Host's default Session route.
+- `readModelSetup` in `rsh/Programs/Web/client/native-application/src/onboarding.tsx` reads `modelCatalog()` once no provider is usable (so a slow catalog refresh never delays a configured start) and moves the provider named by `catalog.default.provider` to the top of the list, so `ModelOnboardingView` opens on the Host's default Session route.
 - `ProviderEditor` in `ui-primitives` shows `keyPlaceholder` ("Enter your API key") whenever `credentialRequired` is set. The optional settings editor keeps `keyStored` and the pi-ai `keyPlaceholderNative` text.
 - Configure later writes `dsh.native.onboarding.models` = `2026-10-17.1` to `localStorage`. With that value and the welcome acknowledgement present, `NativeOnboarding` starts at `done`. Settings > Models stays the way to configure a provider later. If `localStorage` refuses the write, the step is skipped for this page only.
-- `directories/list` without a path lists the native-web session controller's `cwd` (the launch directory) and every listing now carries `home`. The sidebar uses `listing.home` to shorten paths and as the browser's home crumb, so the start directory no longer replaces the home directory.
+- `directories/list` without a path lists the Host process working directory (`process.cwd()`, where it was launched) and every listing now carries `home`. The sidebar uses `listing.home` to shorten paths and as the browser's home crumb, so the start directory no longer replaces the home directory.
 
 ## Alternatives considered
 

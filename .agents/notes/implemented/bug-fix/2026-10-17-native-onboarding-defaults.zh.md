@@ -10,10 +10,10 @@ native-web 首次运行的模型步骤默认选中 Host 列出的第一个服务
 
 ## Decision
 
-- `rsh/Programs/Web/client/native-application/src/onboarding.tsx` 中的 `readModelSetup` 同时读取 `modelCatalog()`，并把 `catalog.default.provider` 指定的服务商移到列表最前，因此 `ModelOnboardingView` 默认打开 Host 的默认会话路由。
+- `rsh/Programs/Web/client/native-application/src/onboarding.tsx` 中的 `readModelSetup` 在没有可用服务商时才读取 `modelCatalog()`（因此较慢的目录刷新不会拖慢已配置好的启动），并把 `catalog.default.provider` 指定的服务商移到列表最前，因此 `ModelOnboardingView` 默认打开 Host 的默认会话路由。
 - `ui-primitives` 中的 `ProviderEditor` 在设置了 `credentialRequired` 时一律显示 `keyPlaceholder`（“输入 API 密钥”）。可选填写的设置页编辑器仍保留 `keyStored` 和 pi-ai 的 `keyPlaceholderNative` 文案。
 - “稍后配置”会向 `localStorage` 写入 `dsh.native.onboarding.models` = `2026-10-17.1`。该值与欢迎确认同时存在时，`NativeOnboarding` 直接从 `done` 开始。之后仍可在“设置 > 模型”中配置服务商。如果 `localStorage` 拒绝写入，只在当前页面跳过这一步。
-- 不带路径的 `directories/list` 会列出 native-web 会话控制器的 `cwd`（启动目录），并且每次列目录都附带 `home`。侧边栏用 `listing.home` 缩写路径并作为目录选择器的主目录面包屑，因此起始目录不会顶替主目录。
+- 不带路径的 `directories/list` 会列出 Host 进程的工作目录（`process.cwd()`，即启动所在目录），并且每次列目录都附带 `home`。侧边栏用 `listing.home` 缩写路径并作为目录选择器的主目录面包屑，因此起始目录不会顶替主目录。
 
 ## Alternatives considered
 

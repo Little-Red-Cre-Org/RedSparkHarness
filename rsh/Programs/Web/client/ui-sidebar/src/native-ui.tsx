@@ -865,12 +865,18 @@ export const plugin: NativePlugin = {
         truncated: false,
       }
     }
+    // Settles once: resolved by the first baseline, rejected if the follow ends before one arrives.
+    const workspaceBaseline = Promise.withResolvers<void>()
+    workspaceBaseline.promise.catch(() => {})
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
           workspaceRegistry.set(nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame))
+          if (workspaceRegistry.getSnapshot().ready) workspaceBaseline.resolve()
         }
+        workspaceBaseline.reject(new Error('Workspace list unavailable'))
       } catch (error: unknown) {
+        workspaceBaseline.reject(error)
         if (!context.signal.aborted) console.error('native sidebar Workspace follow failed:', error)
       }
     })()
@@ -932,13 +938,7 @@ export const plugin: NativePlugin = {
         admitSession: async (id, trust) => {
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
           // Sessions can load before the Workspace baseline; an unknown Workspace is only "unregistered" once it arrives.
-          if (workspaceId !== undefined && !workspaceRegistry.getSnapshot().ready) {
-            await new Promise<void>((resolve) => {
-              const stop = workspaceRegistry.subscribe(() => {
-                if (workspaceRegistry.getSnapshot().ready) { stop(); resolve() }
-              })
-            })
-          }
+          if (workspaceId !== undefined) await workspaceBaseline.promise
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)

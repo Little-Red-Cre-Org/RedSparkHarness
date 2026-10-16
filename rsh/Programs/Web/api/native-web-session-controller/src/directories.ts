@@ -45,10 +45,8 @@ async function entry(parent: string, item: Dirent): Promise<NativeDirectoryEntry
 
 /** Native Web RPC owner for the Host's OS folder chooser and directory browser. */
 export class NativeWebDirectoryService {
-  /** @param lifetime - Host installation cancellation.
-   * @param startDirectory - launch directory listed when a request names no path.
-   */
-  constructor(private readonly lifetime: AbortSignal, private readonly startDirectory: string) {}
+  /** @param lifetime - Host installation cancellation. */
+  constructor(private readonly lifetime: AbortSignal) {}
 
   /** Handle one authenticated directory request.
    * @param endpoint - directory RPC endpoint.
@@ -69,7 +67,8 @@ export class NativeWebDirectoryService {
       if (endpoint === 'directories/list') {
         const request = listRequest.parse(payload)
         if (request.path !== undefined && !fullyQualified(request.path)) throw new Error('Directory path must be fully qualified')
-        const path = resolve(request.path ?? this.startDirectory)
+        // No path opens where the Host was launched; `home` still shortens displayed paths.
+        const path = resolve(request.path ?? process.cwd())
         const items = await readdir(path, { withFileTypes: true })
         accepted.throwIfAborted()
         const entries = (await Promise.all(items.map(item => entry(path, item))))
