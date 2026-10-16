@@ -108,6 +108,10 @@ it('deselects a Session with a running turn by detaching without cancelling the 
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, events: [] })
     expect(turnSignal?.aborted).toBe(false)
     await selection
+    const reselect = controller.select('session-running' as SessionId)
+    await expect(controller.deselect()).rejects.toThrow('operation already pending')
+    await controller.close()
+    await reselect
   } finally {
     await controller.close()
   }

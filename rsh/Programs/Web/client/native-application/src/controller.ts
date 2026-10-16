@@ -395,6 +395,8 @@ export class NativeConversationController {
   private async detachTurn(): Promise<void> {
     if (this.snapshot.state !== 'sending' && this.snapshot.state !== 'cancelling') {
       this.assertReady()
+      // Claim the controller before yielding so a concurrent select or deselect is refused.
+      this.publish({ state: 'loading', error: undefined })
       return
     }
     // Stay loading while the detached turn settles so no other operation starts in between.

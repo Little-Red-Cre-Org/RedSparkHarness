@@ -231,23 +231,25 @@ function NativeSessionBrowser({
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
-  const openTarget = useRef<NativeSessionId>()
+  const openRequest = useRef<{ id: NativeSessionId; settled: boolean }>()
+  // Admission completes asynchronously, so it reads the conversation as of now rather than as of the click.
+  const live = useRef(snapshot)
+  live.current = snapshot
   const selectionOrder = useRef<{ id: NativeSessionId; ids: readonly NativeSessionId[] }>()
   const searchQuery = query.trim()
   useEffect(() => {
     if (snapshot.state === 'loading' || snapshot.state === 'closed') return
-    if (pendingSessionId !== undefined) {
-      setPendingSessionId(undefined)
-      if (pendingSessionId !== snapshot.selected) {
-        admitAndSelect(pendingSessionId)
-        return
-      }
+    const pending = pendingSessionId
+    if (pending !== undefined) setPendingSessionId(undefined)
+    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) {
+      if (pending !== undefined && pending !== snapshot.selected) admitAndSelect(pending)
+      return
     }
     // A generating or approval-waiting Session is detached, not awaited: its Host turn keeps running.
-    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) return
+    // A queued click or an open still in admission wins over the neighbouring row.
     const lastOrder = selectionOrder.current
-    let nextId: NativeSessionId | undefined
-    if (lastOrder?.id === snapshot.selected) {
+    let nextId = pending ?? (openRequest.current?.settled === false ? openRequest.current.id : undefined)
+    if (nextId === undefined && lastOrder?.id === snapshot.selected) {
       const index = lastOrder.ids.indexOf(snapshot.selected)
       nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
         ?? lastOrder.ids.slice(0, index).reverse().find(id => visibleIds.includes(id))
@@ -303,15 +305,26 @@ function NativeSessionBrowser({
   const workspaceError = (error: unknown): string =>
     rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
   const admitAndSelect = (id: NativeSessionId): void => {
-    openTarget.current = id
-    runWorkspaceAction(async (trust) => {
+    const request = { id, settled: false }
+    openRequest.current = request
+    const from = live.current.selected
+    // A later open or any other navigation during admission makes this request stale.
+    const current = (): boolean => openRequest.current === request && live.current.selected === from
+    const open = async (trust?: boolean): Promise<void> => {
       await admitSession(id, trust)
-      // Admission is asynchronous, so a later click may already have superseded this one.
-      if (openTarget.current === id) await selectSession(id)
+      if (!current()) return
+      request.settled = true
+      if (live.current.state === 'loading') setPendingSessionId(id)
+      else await selectSession(id)
+    }
+    setActionError(undefined)
+    void open().catch((error: unknown) => {
+      if (!current()) return
+      if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
     })
   }
   const openSession = (id: NativeSessionId): void => {
-    openTarget.current = id
+    openRequest.current = undefined
     if (snapshot.state === 'loading') {
       setPendingSessionId(id)
       return
@@ -440,7 +453,11 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true))) setDirectoryPickerError(workspaceError(error))
+      // A failed trusted retry reopens the browser with its reason, which both sidebar layouts render.
+      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true).catch((retryError: unknown) => {
+        setDirectoryPickerError(workspaceError(retryError))
+        setDirectoryPickerOpen(true)
+      }))) setDirectoryPickerError(workspaceError(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {
