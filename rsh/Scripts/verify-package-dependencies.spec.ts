@@ -6,6 +6,7 @@ import {
   PACKAGE_DEPENDENCY_POLICY,
   type PackageDependencyPolicy,
 } from './package-dependency-policy.ts'
+import { applicationDistributionDirectories } from './native-package-policy.ts'
 import {
   collectHostDependencyExportPolicyViolations,
   collectClientRuntimeDependencyPolicyViolations,
@@ -50,6 +51,7 @@ function pkg(
 function policy(fields: Partial<PackageDependencyPolicy> = {}): PackageDependencyPolicy {
   return {
     cordisFreePackageDirectories: new Set(),
+    applicationDistributionDirectories: new Map(),
     clientFaceInclude: [],
     clientFaceExclude: [],
     hostPackages: [],
@@ -492,6 +494,14 @@ describe('package dependency scope', () => {
       ['@f/dynamic-client', 'client-host'],
       ['@f/static', 'client-only'],
     ])
+  })
+
+  it('keeps application distributions out of library dependency discovery', () => {
+    const found = discoverPackageDependencyScope([
+      pkg('@deepseek-ai/dsh', 'rsh/Programs/CLI/package.json', { dsh: { client: {} } }),
+    ], policy({ applicationDistributionDirectories }))
+
+    expect(found).toEqual({ selected: [], violations: [] })
   })
 
   it('rejects stale, redundant, overlapping, and unknown configuration', () => {

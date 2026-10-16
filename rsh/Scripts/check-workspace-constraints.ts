@@ -11,7 +11,13 @@ import { pathToFileURL } from 'node:url'
 import { isPublicExperimentalPackageDirectory } from './experimental-package-policy.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
-import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, nativeSafeSourceSubpaths } from './native-package-policy.ts'
+import {
+  applicationDistributionDirectories,
+  mixedNativeEntryDirectories,
+  mixedNativeLibraryDirectories,
+  nativePackageDirectories,
+  nativeSafeSourceSubpaths,
+} from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 /** pnpm workspace manifests after the physical RSH migration. */
@@ -502,7 +508,7 @@ function isReleaseMemberDirectory(dir: string): boolean {
 
 /** Whether a package belongs to the product library policy rather than an application root. */
 function isDshLibraryDirectory(dir: string): boolean {
-  return [
+  return !applicationDistributionDirectories.has(dir) && [
     'rsh/Core/',
     'rsh/Engine/',
     'rsh/Modules/Official/',

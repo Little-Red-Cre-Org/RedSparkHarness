@@ -1,5 +1,17 @@
 /** Explicit Cordis-free source owners in the native production graph. */
 
+/** Application outputs whose dependency rules are not library peer rules. */
+export type ApplicationDistributionKind = 'native-cli' | 'desktop-app' | 'desktop-host' | 'web-frontend' | 'python-runtime'
+
+/** Application and distribution roots classified by their shipped runtime. */
+export const applicationDistributionDirectories: ReadonlyMap<string, ApplicationDistributionKind> = new Map([
+  ['rsh/Programs/CLI', 'native-cli'],
+  ['rsh/Programs/Desktop', 'desktop-app'],
+  ['rsh/Programs/DesktopHost', 'desktop-host'],
+  ['rsh/Programs/Web/application', 'web-frontend'],
+  ['rsh/Programs/SDK/python/sdk-runtime', 'python-runtime'],
+])
+
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/TUI/native-tui',

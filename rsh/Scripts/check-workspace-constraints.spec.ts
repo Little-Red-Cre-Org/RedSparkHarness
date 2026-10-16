@@ -10,6 +10,7 @@ import {
   expectedDshPackageFiles,
   type WorkspaceManifest,
 } from './check-workspace-constraints.ts'
+import { applicationDistributionDirectories } from './native-package-policy.ts'
 
 const experimental: WorkspaceManifest = {
   dir: 'rsh/Modules/Community/experimental/prototype',
@@ -217,6 +218,21 @@ describe('dsh family version coherence', () => {
 })
 
 describe('Cordis peer classification', () => {
+  it('keeps application assemblies outside library Cordis rules and accepts ordinary schemastery runtime dependencies', () => {
+    expect(applicationDistributionDirectories.get('rsh/Programs/CLI')).toBe('native-cli')
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Programs/CLI',
+      manifest: { name: '@deepseek-ai/dsh' },
+    })).toEqual([])
+    expect(checkCordisPeerPolicy({
+      dir: 'rsh/Programs/Web/api/native-web-session-controller',
+      manifest: {
+        name: '@deepseek-ai/dsh-native-web-session-controller',
+        dependencies: { '@deepseek-ai/schemastery': 'workspace:^' },
+      },
+    })).toEqual([])
+  })
+
   it('requires Cordis for compatibility-only packages', () => {
     expect(checkCordisPeerPolicy({
       dir: 'rsh/Engine/core/agent-loop',
