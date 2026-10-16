@@ -24,7 +24,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
+在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、attach、cancel 与 status。提示要求显式 resume 布尔值；attach 会从调用方最后的持久事件序号恢复活动轮次，并重放待处理的人类展示。两种操作都会等待 Host 结算。prompt 或 attach 的轮次信号会显式取消执行；detach 信号只停止本地跟随和结算等待，不会取消 Host 轮次。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
@@ -115,7 +115,7 @@ interface NativeSettingsDescription {
 
 已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets、workspace-files 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
-提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；轮次信号会使用该身份请求 Host 排空。detach 信号只停止本地等待，Host 执行会继续。断开轮次结算后会退休其无人接收的结果，之后可准入下一次提示。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭取消并排空所有轮次。
 
 `queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`queueContent(sessionId, content, requestId, signal?)` 与 `steerContent(...)` 接受有序文本、编码图片和暂存文件回执，并提交到相同 inbox。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求。`submissions(sessionId, signal?)` 返回 `{ throughSeq, submissions }`，其中包含完整的持久化待处理消息。`editSubmission(sessionId, requestId, text, signal?)` 会通过精确的 root owner 替换消息全部 content，同时保留身份与位置，也支持 idle maintenance；`promoteSubmission(sessionId, requestId, signal?)` 会将 queued 输入移到 `next-step`，并要求活动浏览器轮次。其结果分别区分 `updated`/`stale` 与 `promoted`/`stale`/`not-promotable`。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
 
