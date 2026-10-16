@@ -9,7 +9,7 @@
  * fixtures and rewrites expected outputs.
  */
 
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, delimiter, join } from 'node:path'
@@ -314,12 +314,15 @@ function assembledRuntimeContexts(log: PersistedLog): string[] {
   })
 }
 
-function contextOf(logs: readonly { content: string; header: Record<string, unknown> }[], cwd: string): NormalizeContext {
+function contextOf(
+  logs: readonly { content: string; header: Record<string, unknown> }[],
+  cwd: string,
+  cwdAliases: string[],
+): NormalizeContext {
   return {
     sessionIds: logs.flatMap(log => typeof log.header.id === 'string' ? [log.header.id] : []),
     cwd,
-    // Sandbox policy text embeds the allocated workspace as a JSON string.
-    cwdAliases: [JSON.stringify(cwd).slice(1, -1), ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : [])],
+    cwdAliases,
   }
 }
 
@@ -530,8 +533,15 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   initialWorkspace: WorkspaceSnapshotEntry[]
   finalWorkspace: WorkspaceSnapshotEntry[]
   cwd: string
+  cwdAliases: string[]
 }> {
   const cwd = await mkdtemp(join(tmpdir(), `sdk-snapshot-${scenario.name}-`))
+  // Sandbox policy text embeds the allocated workspace as a JSON string.
+  const cwdAliases = [...new Set([
+    ...[cwd, realpathSync(cwd), realpathSync.native(cwd)]
+      .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]),
+    ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : []),
+  ])]
   const dshHome = join(cwd, '.dsh')
   const sessionsRoot = join(dshHome, 'sessions')
   const replayFixtures = recording ? [] : await hydrateReplayFixtures(scenario, cwd)
@@ -658,7 +668,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     const finalWorkspace = await captureWorkspaceSnapshot(cwd, {
       ignoredRootEntries: RUNTIME_WORKSPACE_ENTRIES,
     })
-    return { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd }
+    return { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd, cwdAliases }
   } finally {
     await harness.close()
     await rm(cwd, { recursive: true, force: true })
@@ -785,8 +795,10 @@ async function verifyHeaders(
 
 describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
   for (const scenario of sdkScenarios) {
-    const scenarioTest = recording
-      && (scenario.manifest.recording === 'authored' || scenario.manifest.sessionFormat !== undefined)
+    // Stock Git Bash (MSYS) cannot start under the Windows restricted-token sandbox.
+    const scenarioTest = (recording
+      && (scenario.manifest.recording === 'authored' || scenario.manifest.sessionFormat !== undefined))
+      || (process.platform === 'win32' && scenario.manifest.platform === 'posix')
       ? it.skip
       : it
     scenarioTest(`${mode}s ${scenario.name} through dsh --profile sdk`, async () => {
@@ -805,13 +817,13 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         expect(writerFiles, 'native writer oracle inventory').toEqual(retained
           ? files.map((_, index) => writerSnapshotName(index)).sort() : [])
       }
-      const { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd } = await runScenario(scenario)
+      const { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd, cwdAliases } = await runScenario(scenario)
       const ordered = orderLogs(
         logs,
         recording ? logs.length : files.length,
         assertions.dshSdkChild !== undefined,
       )
-      const actualContext = contextOf(ordered, cwd)
+      const actualContext = contextOf(ordered, cwd, cwdAliases)
       if (assertions.expectedFinalResponse !== undefined) {
         expect(results.at(-1)?.finalResponse, `${scenario.name}: final response`).toBe(assertions.expectedFinalResponse)
         const parent = ordered[0]
