@@ -350,7 +350,10 @@ export class NativeWebWorkspaceService {
     return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.baseRouteId, workspaceId: id, trusted }, signal)).id
   }
 
-  private trusted(path: string): boolean {
+  /** @param path - canonical Workspace path.
+   * @returns whether a persisted trust path covers it.
+   */
+  trusted(path: string): boolean {
     return this.trustSettings?.get().paths.some(root => within(root, path)) ?? false
   }
 
