@@ -452,6 +452,17 @@ it.each([
     settingsEventFrames.publish({ type: 'agent-presets/updated' })
     await waitFor(() => { expect(clientMock.agentPresetsList).toHaveBeenCalledTimes(presetReads + 1) })
     expect(screen.getByRole('button', { name: 'Minimal' })).toBeTruthy()
+    // The launch directory is not Home: Home stays the Host's home, so the trail reads Home › New.
+    listDirectory.mockResolvedValueOnce({ path: 'C:\\Work\\New', home: 'C:\\Work', entries: [], crumbs: [
+      { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
+    ] })
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Add workspace…' }))
+    const browser = await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    expect(await within(browser).findByRole('button', { name: 'Home' })).toBeTruthy()
+    expect(within(browser).getByRole('button', { name: 'New' })).toBeTruthy()
+    fireEvent.click(within(browser).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => { expect(screen.queryByRole('dialog', { name: 'Select Workspace Directory' })).toBeNull() })
     const delayedConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
     pendingWorkspaceConnection = delayedConnection
     fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))

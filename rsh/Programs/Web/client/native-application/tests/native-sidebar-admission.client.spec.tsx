@@ -17,6 +17,7 @@ import { plugin as renderer } from '../../ui-renderer/src/native.ts'
 import { plugin as layout } from '../../ui-layout/src/native.ts'
 import { plugin as sessionPresentation } from '../../ui-session/src/native.ts'
 import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
+import { en } from '../../ui-sidebar/src/locales.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
 
@@ -442,4 +443,19 @@ it('waits for the Workspace baseline before admitting a Session so an untrusted 
     expect(await screen.findByRole('button', { name: 'Trust' })).toBeTruthy()
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\Shared' }, expect.any(AbortSignal))
   } finally { await host.stop() }
+}, 20_000)
+
+it('reports a stalled Workspace baseline instead of waiting forever, and a later open still waits for it', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const baseline = Promise.withResolvers<undefined>()
+  const { host, clientMock } = await harness(baseline.promise)
+  try {
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Alpha/ }))
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(await screen.findByText(en.workspaceListTimeout)).toBeTruthy()
+    expect(clientMock.history).not.toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
+    baseline.resolve(undefined)
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
+    await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal)) })
+  } finally { vi.useRealTimers(); await host.stop() }
 }, 20_000)

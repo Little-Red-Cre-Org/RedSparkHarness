@@ -29,6 +29,8 @@ The 2026-10-16 UX audit (N25–N28) found several native-web Settings pages that
 
 Settings shows four sections. Pages no longer use error colors for Host capability gaps. The infrastructure filter is a name heuristic; plugins outside those prefixes stay visible. Developer options does not persist an open state.
 
+This change also carries two fixes from the #286 review. Opening a sidebar Session waits at most 15 seconds for the first Workspace list; after that it shows a retry message and a later open waits again. The empty-state Add workspace browser uses the Host's `home` for its Home crumb instead of treating the launch directory as Home.
+
 ## Testing
 
-`native-application/tests/settings-page.spec.tsx` covers the absent `agent-presets` note without a switch, the unavailable presets group, the read-only busy-send fallback, and static Host-gap plugin cards. `plugin-inventory-tab.spec.tsx` covers folding, search and Show for infrastructure plugins. `native-shell.client.spec.tsx` checks the four-item Settings navigation, and `ui-sidebar/tests/native-scheduled-tasks.client.spec.tsx` checks the empty-state hint.
+`native-application/tests/settings-page.spec.tsx` covers the absent `agent-presets` note without a switch, the unavailable presets group, the read-only busy-send fallback, and static Host-gap plugin cards. `plugin-inventory-tab.spec.tsx` covers folding, search and Show for infrastructure plugins. `native-shell.client.spec.tsx` checks the four-item Settings navigation, and `ui-sidebar/tests/native-scheduled-tasks.client.spec.tsx` checks the empty-state hint. `native-sidebar-admission.client.spec.tsx` covers the stalled-baseline timeout and a later open, and `native-shell.client.spec.tsx` checks the Home crumb in the empty-state browser.

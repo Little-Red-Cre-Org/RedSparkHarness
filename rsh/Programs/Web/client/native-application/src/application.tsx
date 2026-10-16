@@ -353,13 +353,11 @@ export const plugin: NativePlugin = {
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
-      let homeDirectory: string | undefined
       const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
         const listing = await directoryPicker.list(path, signal ?? context.signal)
-        if (path === undefined) homeDirectory = listing.path
         return {
           path: listing.path,
-          home: homeDirectory ?? listing.path,
+          home: listing.home,
           crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
           entries: listing.entries.filter(entry => entry.kind === 'directory')
             .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),

@@ -29,6 +29,8 @@ Status: implemented
 
 设置页显示四个分区。Host 能力缺失不再使用错误配色。基础设施过滤基于名称规则；不符合这些前缀的插件仍会显示。开发者选项不保存展开状态。
 
+本改动还包含 #286 评审中的两项修复。从侧栏打开会话时，最多等待首个工作区列表 15 秒，超时后显示重试提示，之后再次打开会重新等待。空状态“添加工作区”目录浏览器的“主目录”路径节点改用 Host 返回的 `home`，不再把启动目录当作主目录。
+
 ## Testing
 
-`native-application/tests/settings-page.spec.tsx` 覆盖 `agent-presets` 缺失时只显示说明、不显示开关，暂不可用预设分组，只读的繁忙发送回退值，以及静态的 Host 缺失插件卡片。`plugin-inventory-tab.spec.tsx` 覆盖基础设施插件的折叠、搜索和显示。`native-shell.client.spec.tsx` 检查四项设置导航，`ui-sidebar/tests/native-scheduled-tasks.client.spec.tsx` 检查空状态提示。
+`native-application/tests/settings-page.spec.tsx` 覆盖 `agent-presets` 缺失时只显示说明、不显示开关，暂不可用预设分组，只读的繁忙发送回退值，以及静态的 Host 缺失插件卡片。`plugin-inventory-tab.spec.tsx` 覆盖基础设施插件的折叠、搜索和显示。`native-shell.client.spec.tsx` 检查四项设置导航，`ui-sidebar/tests/native-scheduled-tasks.client.spec.tsx` 检查空状态提示。`native-sidebar-admission.client.spec.tsx` 覆盖工作区列表停滞时的超时以及之后的再次打开，`native-shell.client.spec.tsx` 检查空状态浏览器的主目录节点。

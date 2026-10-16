@@ -168,6 +168,8 @@ function rpcRefusal(error: unknown, code: string): Partial<NativeSessionRpcError
 }
 
 const SEARCH_DEBOUNCE_MS = 250
+// The first Workspace baseline normally arrives at once; past this, admission reports instead of waiting forever.
+const WORKSPACE_BASELINE_TIMEOUT_MS = 15_000
 
 function NativeSessionBrowser({
   wide, useConversation, useWorkspaceRegistry, displayTitle, admitSession, selectSession, deselectSession,
@@ -309,7 +311,8 @@ function NativeSessionBrowser({
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
   const workspaceError = (error: unknown): string =>
-    rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
+    error instanceof DOMException && error.name === 'TimeoutError' ? t('workspaceListTimeout')
+      : rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
   const admitAndSelect = (id: NativeSessionId): void => {
     const navigation = beginNavigation()
     const request = { id, settled: false, navigation }
@@ -978,7 +981,13 @@ export const plugin: NativePlugin = {
         admitSession: async (id, trust) => {
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
           // Sessions can load before the Workspace baseline; an unknown Workspace is only "unregistered" once it arrives.
-          if (workspaceId !== undefined) await workspaceBaseline.promise
+          // A follow that stalls without closing must not hang the open; a later open waits again.
+          if (workspaceId !== undefined) {
+            let timer: ReturnType<typeof setTimeout> | undefined
+            await Promise.race([workspaceBaseline.promise, new Promise<never>((_, reject) => {
+              timer = setTimeout(() => { reject(new DOMException('Workspace list timed out', 'TimeoutError')) }, WORKSPACE_BASELINE_TIMEOUT_MS)
+            })]).finally(() => { clearTimeout(timer) })
+          }
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
