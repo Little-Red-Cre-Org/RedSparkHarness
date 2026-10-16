@@ -148,9 +148,9 @@ it('shows the four native Plugins configuration cards', async () => {
 
   expect(await screen.findByRole('tab', { name: en.settingsPluginConfigTab })).toBeTruthy()
   expect(screen.getByRole('tab', { name: en.settingsPluginInventoryTab })).toBeTruthy()
-  for (const label of ['Shell', 'Agent loop', 'Subagent', 'Web search']) {
-    expect(screen.getByRole('button', { name: `Show settings: ${label}` })).toBeTruthy()
-  }
+  expect(screen.getByRole('button', { name: 'Show settings: Web search' })).toBeTruthy()
+  expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(3)
+  for (const label of ['Shell', 'Agent loop', 'Subagent']) expect(screen.getByText(label)).toBeTruthy()
 })
 
 it('describes a settings-file apiKey field without exposing its value', async () => {
@@ -672,10 +672,8 @@ it('shows a Host gap for an absent plugin namespace without a save action', asyn
   actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
-  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
-  expect(zh.settingsPluginHostGap).toBe('当前 Host 尚未开放此插件的设置。')
-  expect(en.settingsPluginHostGap).toBe('The current Host has not opened settings for this plugin yet.')
+  expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(4)
+  expect(screen.queryByRole('button', { name: 'Show settings: Shell' })).toBeNull()
   expect(screen.queryByRole('button', { name: en.settingsPluginSave })).toBeNull()
 })
 
@@ -782,8 +780,7 @@ it('does not show a Host gap for a missing namespace after a failed refresh', as
   }
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Agent loop' }))
-  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(3)
   releaseEvent()
   expect(await screen.findByRole('alert')).toBeTruthy()
   expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
@@ -810,8 +807,7 @@ it('shows refresh pending for a missing namespace and blocks writes past its ann
   }
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
-  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(3)
   fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
   fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
   const save = screen.getByRole('button', { name: en.settingsPluginSave }) as HTMLButtonElement
@@ -859,21 +855,19 @@ it('settles an event refresh that started before a save acknowledgment', async (
   })
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Show settings: Shell' }))
-  expect(await screen.findByText(en.settingsPluginHostGap)).toBeTruthy()
+  expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(3)
   fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
   fireEvent.change(await screen.findByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
 
   releaseEvent()
   await waitFor(() => { expect(actions.settingsDescribe).toHaveBeenCalledTimes(2) })
-  expect(await screen.findByText(en.settingsPluginRefreshPending)).toBeTruthy()
+  await waitFor(() => { expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull() })
   fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
   await waitFor(() => { expect(actions.settingsMutate).toHaveBeenCalledOnce() })
   await act(async () => { acknowledgeSave() })
 
   await act(async () => { finishRefresh(settingsDescription([initial])) })
-  await waitFor(() => { expect(screen.queryByText(en.settingsPluginRefreshPending)).toBeNull() })
-  expect(screen.getByText(en.settingsPluginHostGap)).toBeTruthy()
+  await waitFor(() => { expect(screen.getAllByText(en.settingsPluginHostGap)).toHaveLength(3) })
   fireEvent.click(screen.getByRole('button', { name: 'Show settings: Web search' }))
   expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '9')
 })
@@ -910,7 +904,7 @@ it('retains the last plugin settings, revision, and credential info when a refre
 
   expect(screen.getByLabelText(en.settingsPluginWebSearchMaxUses)).toHaveProperty('value', '5')
   expect(screen.getByText(en.settingsPluginWebSearchApiKeySet)).toBeTruthy()
-  expect(screen.queryByText(en.settingsPluginHostGap)).toBeNull()
+  expect(screen.getAllByText(en.settingsPluginHostGap)).toHaveLength(3)
 
   fireEvent.change(screen.getByLabelText(en.settingsPluginWebSearchMaxUses), { target: { value: '9' } })
   fireEvent.click(screen.getByRole('button', { name: en.settingsPluginSave }))
@@ -1030,6 +1024,8 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   expect(screen.getByText(en.agentPresetsDefault)).toBeTruthy()
   expect(screen.getByRole('button', { name: `${en.agentPresetsNeedsMigration}: Migrating` })).toBeTruthy()
   expect(screen.getByText(en.agentPresetsBrokenBadge)).toBeTruthy()
+  expect(screen.getByText('Migrating').closest('details')?.textContent).toContain(en.agentPresetsUnavailableGroup)
+  expect(screen.getByText('Legacy').closest('details')).toBeNull()
   expect(screen.getByText('Composition file is invalid.')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: `${en.agentPresetsSetDefault}: Legacy` }))
   await waitFor(() => {
@@ -1131,10 +1127,9 @@ it('distinguishes an absent Agent settings namespace from an unread revision', a
   } as unknown as NativeSettingsActions
   renderSettingsPage({ actions, t: key => en[key], section: 'agent-presets' })
 
-  const modeSwitch = await screen.findByRole('switch', { name: en.agentPresetsShowPicker })
   expect(await screen.findByText(en.agentPresetsHostGap)).toBeTruthy()
+  expect(screen.queryByRole('switch', { name: en.agentPresetsShowPicker })).toBeNull()
   const alternateButton = screen.getByRole('button', { name: `${en.agentPresetsSettingUnavailable}: Alternate` })
-  expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
   expect((alternateButton as HTMLButtonElement).disabled).toBe(true)
 
   await waitFor(() => { expect(releaseEvent).toBeDefined() })
@@ -1142,6 +1137,7 @@ it('distinguishes an absent Agent settings namespace from an unread revision', a
   await waitFor(() => { expect(settingsDescribe).toHaveBeenCalledTimes(3) })
   expect(await screen.findByRole('button', { name: `${en.agentPresetsSettingsRefreshing}: Alternate` })).toBeTruthy()
   expect(screen.queryByText(en.agentPresetsHostGap)).toBeNull()
+  const modeSwitch = screen.getByRole('switch', { name: en.agentPresetsShowPicker })
   expect((modeSwitch as HTMLButtonElement).disabled).toBe(true)
   expect(finishInitial).toBeDefined()
   await act(async () => { finishInitial!(settingsDescription([settingsAt(7, false, 'standard')])) })
@@ -1953,11 +1949,9 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     actions: { ...actions, settingsDescribe: vi.fn(async () => settingsDescription([row()])), settingsMutate: fallbackMutate },
     t: localeKey => en[localeKey],
   })
-  const fallbackBusyEnter = await screen.findByRole('combobox', { name: en.settingsBusyEnter })
-  expect((fallbackBusyEnter as HTMLSelectElement).value).toBe('steer')
-  expect((fallbackBusyEnter as HTMLSelectElement).disabled).toBe(true)
-  expect(screen.getByText(en.busySendPreferenceUnavailable)).toBeTruthy()
-  fireEvent.change(fallbackBusyEnter, { target: { value: 'queue' } })
+  expect(await screen.findByText(en.busySendPreferenceHostGap)).toBeTruthy()
+  expect(screen.getByText(en.settingsBusyEnterSteer)).toBeTruthy()
+  expect(screen.queryByRole('combobox', { name: en.settingsBusyEnter })).toBeNull()
   expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
   expect(fallbackMutate).not.toHaveBeenCalled()
 })

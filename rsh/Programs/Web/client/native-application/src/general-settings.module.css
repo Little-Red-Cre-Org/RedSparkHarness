@@ -120,8 +120,18 @@
   cursor: pointer;
 }
 
+.advanced > summary > .description {
+  display: block;
+  margin-top: 4px;
+}
+
 .advanced[open] > summary {
   margin-bottom: 16px;
+}
+
+.fixedValue {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
 }
 
 @media (max-width: 640px) {
