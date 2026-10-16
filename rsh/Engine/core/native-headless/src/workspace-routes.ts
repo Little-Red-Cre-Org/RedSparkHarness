@@ -1,5 +1,7 @@
 /** Program-owned immutable Workspace routes; directory choice never changes filesystem or policy Providers. */
+import { realpathSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { isAbsolute, relative, resolve, parse } from 'node:path'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
@@ -39,9 +41,8 @@ const within = (root: string, path: string): boolean => {
   return difference === '' || !isAbsolute(difference) && difference !== '..' && !difference.startsWith('../') && !difference.startsWith('..\\')
 }
 
-const posixSystemDirectories = ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/usr', '/System', '/Library', '/private/etc']
-// Parents of user temp/data trees: reject the directory itself only.
-const posixSystemParents = ['/var', '/private', '/private/var']
+const posixSystemDirectories = ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/usr', '/var',
+  '/System', '/Library', '/private/etc', '/private/var']
 const windowsSystemDirectories = ['windows', 'program files', 'program files (x86)', 'programdata']
 
 function isProtectedSystemDirectory(path: string): boolean {
@@ -51,7 +52,9 @@ function isProtectedSystemDirectory(path: string): boolean {
     const root = parse(path).root
     return windowsSystemDirectories.some(name => within(resolve(root, name).toLowerCase(), path.toLowerCase()))
   }
-  return posixSystemDirectories.some(root => within(root, path)) || posixSystemParents.includes(path)
+  // The user temp tree (macOS keeps it under /private/var/folders) stays usable; /private itself is a parent only.
+  if (within(realpathSync(tmpdir()), path)) return false
+  return path === '/private' || posixSystemDirectories.some(root => within(root, path))
 }
 
 interface WorkspaceRouteRegistry {
@@ -156,6 +159,8 @@ export class NativeWorkspaceRoutes {
     operation: Promise<Readonly<NativeRootRoute>>, trusted: boolean): Promise<Readonly<NativeRootRoute>> {
     if (!isAbsolute(path)) throw new Error('Workspace path must be absolute')
     const canonical = await realpath(path)
+    // Trust was confirmed for this exact canonical path; a target that changed since must be confirmed again.
+    if (trusted && canonical !== path) throw new Error('Workspace is outside the configured allowed roots')
     const configuration = this.configuration
     if (configuration === undefined) throw new Error('Workspace route creation is unavailable')
     await this.validatePath(canonical, configuration, signal, trusted)
