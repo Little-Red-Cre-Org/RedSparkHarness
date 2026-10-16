@@ -195,7 +195,6 @@ function NativeSessionBrowser({
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
   const [pendingSessionId, setPendingSessionId] = useState<NativeSessionId>()
-  const [pendingArchive, setPendingArchive] = useState<{ id: NativeSessionId; nextId: NativeSessionId | undefined }>()
   const [switchNotice, setSwitchNotice] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<NativeWorkspaceId>()
@@ -229,14 +228,28 @@ function NativeSessionBrowser({
     setSwitchNotice(false)
     if (pendingSessionId !== undefined) {
       setPendingSessionId(undefined)
-      if (pendingSessionId !== snapshot.selected) void selectSession(pendingSessionId)
+      if (pendingSessionId !== snapshot.selected) {
+        void selectSession(pendingSessionId)
+        return
+      }
     }
-    if (pendingArchive === undefined) return
-    setPendingArchive(undefined)
-    if (snapshot.selected !== pendingArchive.id) return
-    if (pendingArchive.nextId === undefined) deselectSession()
-    else void selectSession(pendingArchive.nextId)
-  }, [snapshot.state, snapshot.selected, pendingSessionId, pendingArchive, selectSession, deselectSession])
+    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) return
+    const visibleIds = groupNativeSessions(
+      snapshot.sessions,
+      { ...registry, archivedSessionIds: registry.archivedSessionIds.filter(id => id !== snapshot.selected) },
+      snapshot.selected,
+      displayTitle,
+      collapsedGroups,
+      order,
+      groupBy,
+      t,
+    ).flatMap(group => group.expanded ? group.sessions.map(session => session.id) : [])
+    const index = visibleIds.indexOf(snapshot.selected)
+    const nextId = visibleIds[index + 1] ?? visibleIds[index - 1]
+    if (nextId === undefined) deselectSession()
+    else void selectSession(nextId)
+  }, [snapshot.state, snapshot.selected, snapshot.sessions, pendingSessionId, selectSession, deselectSession,
+    archived, registry, displayTitle, collapsedGroups, order, groupBy, t])
   useEffect(() => {
     if (wide && searchExpanded) searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded])
@@ -374,18 +387,7 @@ function NativeSessionBrowser({
           onRefresh={item?.titleActions?.refresh === true
             ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
             : undefined}
-          onArchive={async (id) => {
-            try {
-              await archiveSession(id)
-              if (snapshot.selected !== id) return
-              const visibleIds = groups.flatMap(group => group.expanded ? group.sessions.map(row => row.id) : [])
-              const index = visibleIds.indexOf(id)
-              const nextId = visibleIds[index + 1] ?? visibleIds[index - 1]
-              setPendingArchive({ id, nextId })
-            } catch (error: unknown) {
-              setActionError(errorMessage(error))
-            }
-          }}
+          onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
           drag={dragProps}
           flat={flat}
           refreshTitleLabel={t('refreshTitle')}
