@@ -685,6 +685,8 @@ function nativeRequiredClosure(
   include(rowKey(credentialProvider.target, credentialProvider.id), 'desktop-private-carrier-provider')
   for (const service of ['clientApplication', 'clientRenderer', 'clientNativeLayout']) {
     const providers = composition.rows.filter(row => row.target === 'client' && row.metadata.entry.provides.includes(service))
+    // A profile saved with layout disabled must stay listable so the page can re-enable it.
+    if (service === 'clientNativeLayout' && providers.length === 0) continue
     const provider = providers[0]
     if (providers.length !== 1 || provider === undefined) throw new Error(`desktop native Client requires exactly one ${service} Provider`)
     include(rowKey(provider.target, provider.id), 'client-boot-requirement')

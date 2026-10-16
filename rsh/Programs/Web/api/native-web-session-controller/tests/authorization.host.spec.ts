@@ -100,16 +100,16 @@ it.each([
   let settingsDocument: Record<string, unknown> = defaultSelection === undefined ? {} : { 'agent-default-model': defaultSelection }
   const updatedNamespaces: string[] = []
   let nativeRpcHandler: ConnectionRpcHandler | undefined
-  const hostConnection: HostConnectionHandle = {
+  const hostConnection = {
     rpc: {
       handle: () => () => Promise.resolve(),
-      intercept: (_channel, _matches, handler) => {
+      intercept: (_channel: string, _matches: unknown, handler: ConnectionRpcHandler) => {
         nativeRpcHandler = handler
         return () => Promise.resolve()
       },
     },
     fetch: { register: () => () => Promise.resolve() },
-  }
+  } as unknown as HostConnectionHandle
   const firstAvailableAccountModel = vi.fn(async () => ({ provider: 'openai-codex', model: 'fixture-account-model' }))
   const modelSettings = {
     firstAvailableAccountModel,
