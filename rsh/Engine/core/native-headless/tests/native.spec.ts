@@ -1499,6 +1499,25 @@ it.each([
         await replacing
         await inFlight
         expect(inFlightOutcome).toMatchObject({ status: 'rejected' })
+        const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+        try {
+          let heldResult: SessionEvent | undefined
+          for (const snapshot of await storage.list()) {
+            const reader = await storage.open(SessionId(snapshot.header.id), 'read')
+            try {
+              heldResult ??= (await reader.read()).events.find(event => event.type === 'tool/result'
+                && event.data.message.source.kind === 'tool'
+                && event.data.message.source.callId === ToolCallId('provider-held-result'))
+            } finally { await reader.close() }
+          }
+          expect(heldResult).toMatchObject({
+            type: 'tool/result',
+            data: {
+              error: { name: 'ToolOutcomeUnknownError', code: 'TOOL_OUTCOME_UNKNOWN' },
+              message: { content: [{ type: 'tool-result', toolCallId: ToolCallId('provider-held-result'), isError: true }] },
+            },
+          })
+        } finally { await storage.close() }
         expect(state.tools).toBe(replacementRegistry)
         expect(oldTools.schemas()).toEqual([])
         const capturedAgent: NativeAgent = { id: NativeAgentId('captured-old-tools-agent'), scope: state.scope }
@@ -2685,9 +2704,10 @@ it.each([false, true])('projects nested instruction discovery and removal after 
   }
 })
 
-it('replaces the filesystem skill Provider after its captured ToolSkill work and persists both model results', async () => {
+it.each(['read-first', 'cleanup-first'] as const)('replaces the filesystem skill Provider after pending work (%s)', async (releaseOrder) => {
   const cleanupEntered = Promise.withResolvers<undefined>()
   const releaseCleanup = Promise.withResolvers<undefined>()
+  const cleanupCompleted = Promise.withResolvers<undefined>()
   let capturedFilesystemProvider: (SkillProvider & { dispose(): Promise<void> }) | undefined
   let oldProviderCalls = 0
   let oldProviderCallsAtReplacement = 0
@@ -2717,6 +2737,7 @@ it('replaces the filesystem skill Provider after its captured ToolSkill work and
         await releaseCleanup.promise
         await originalDispose()
         oldResourcesCleaned = true
+        cleanupCompleted.resolve(undefined)
       })(),
     })
     capturedFilesystemProvider = disposable
@@ -2732,6 +2753,7 @@ it('replaces the filesystem skill Provider after its captured ToolSkill work and
   const readEntered = Promise.withResolvers<undefined>()
   const releaseRead = Promise.withResolvers<undefined>()
   const readAborted = Promise.withResolvers<undefined>()
+  const readFinished = Promise.withResolvers<undefined>()
   const originalReadText = state.filesystem.readText.bind(state.filesystem)
   state.filesystem.readText = async (target, signal) => {
     if (holdSkillRead && state.filesystem.processPath(target) === skillFile) {
@@ -2739,7 +2761,7 @@ it('replaces the filesystem skill Provider after its captured ToolSkill work and
       readEntered.resolve(undefined)
       signal?.addEventListener('abort', () => { readAborted.resolve(undefined) }, { once: true })
       await releaseRead.promise
-      signal?.throwIfAborted()
+      try { signal?.throwIfAborted() } finally { readFinished.resolve(undefined) }
     }
     return await originalReadText(target, signal)
   }
@@ -2799,18 +2821,26 @@ it('replaces the filesystem skill Provider after its captured ToolSkill work and
     replacing = state.replaceSkillProvider(controlledPlugin).then(() => { replacementSettled = true })
     await readAborted.promise
     await cleanupEntered.promise
+    if (releaseOrder === 'read-first') {
+      releaseRead.resolve(undefined)
+      await readFinished.promise
+    } else {
+      releaseCleanup.resolve(undefined)
+      await cleanupCompleted.promise
+    }
     await new Promise<void>(resolve => setImmediate(resolve))
     expect(replacementSettled).toBe(false)
     expect(controlledActive).toBe(false)
     expect(controlledGetCalls).toBe(0)
-    expect(oldResourcesCleaned).toBe(false)
-    releaseRead.resolve(undefined)
+    if (releaseOrder === 'read-first') {
+      releaseCleanup.resolve(undefined)
+      await cleanupCompleted.promise
+    } else {
+      releaseRead.resolve(undefined)
+      await readFinished.promise
+    }
     const inFlightOutcome = await inFlight
     expect(inFlightOutcome).toMatchObject({ error: new Error('skill "handoff-skill" is unknown or no longer available') })
-    await new Promise<void>(resolve => setImmediate(resolve))
-    expect(replacementSettled).toBe(false)
-    expect(controlledActive).toBe(false)
-    releaseCleanup.resolve(undefined)
     await replacing
     expect(oldResourcesCleaned).toBe(true)
     await unregisterAgent()

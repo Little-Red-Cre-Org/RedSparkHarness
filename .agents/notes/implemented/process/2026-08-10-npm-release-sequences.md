@@ -107,7 +107,7 @@ The entity in this domain is a **release family**: a set of packages sharing one
 | `publishOrder` | hard topological order over `dependencies` and `optionalDependencies`, then stable peer-order preferences where acyclic; omitted preferences are named, while peer declarations and optionality metadata stay unchanged; install-edge cycles fail |
 | `pack` | packs a whole family into one directory and records the upload order |
 | `verify` | the family's version baseline, the publish order it prints in full, and — when publishing — that the run comes from that family's tag and its members are publishable |
-| `verify-packed-install` | installs the tarballs of one or more pack directories into a throwaway consumer and drives the installed executable |
+| `verify-packed-install` | installs the tarballs of one or more pack directories into a throwaway consumer and drives the installed executable; with `--packed-e2e`, which the dsh rehearsal in `release.yml` passes, it also runs the packed Jobs and Workflow e2e against that installed executable and consumer before the consumer is removed |
 | `publish` | the three registry states above |
 | `process` / `tarball` | the one home for spawning commands and for reading a packed tarball, including the entry guard that keeps every script importable |
 

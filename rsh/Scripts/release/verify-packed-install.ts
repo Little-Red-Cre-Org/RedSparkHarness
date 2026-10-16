@@ -67,19 +67,24 @@ function packedDependencies(directories: readonly string[]): Map<string, { url: 
   return dependencies
 }
 
-/** Install every tarball under `--from` and drive the `--family` entry. */
+/** Install every tarball under `--from`, drive the `--family` entry, and optionally run packed e2e. */
 function main(): void {
   const { values } = parseArgs({
-    options: { family: { type: 'string' }, from: { type: 'string', multiple: true } },
+    options: {
+      family: { type: 'string' },
+      from: { type: 'string', multiple: true },
+      'packed-e2e': { type: 'boolean', default: false },
+    },
     allowPositionals: false,
   })
   if (values.family === undefined || values.from === undefined || values.from.length === 0) {
-    throw new Error('usage: verify-packed-install.ts --family <dsh|vendor> --from <packed directory> [--from ...]')
+    throw new Error('usage: verify-packed-install.ts --family <dsh|vendor> --from <packed directory> [--from ...] [--packed-e2e]')
   }
 
   const family = releaseFamily(values.family)
   const entry = family.installedEntry
   if (entry === undefined) {
+    if (values['packed-e2e']) throw new Error(`--packed-e2e requires a family with an installed executable; ${family.id} has none`)
     console.log(`release verify-packed-install: family ${family.id} publishes no executable, nothing to drive`)
     return
   }
@@ -127,6 +132,29 @@ function main(): void {
       throw new Error(`installed ${entry.packageName} --version reported ${JSON.stringify(version)}, expected ${expected.version}`)
     }
     console.log(`release verify-packed-install: installed ${entry.packageName} reports ${version}`)
+
+    if (values['packed-e2e']) {
+      const args = [
+        'exec',
+        'vitest',
+        'run',
+        '--config',
+        'vitest.e2e.config.ts',
+        '--reporter=verbose',
+        '--no-file-parallelism',
+        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-jobs.e2e.ts',
+        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-workflow.e2e.ts',
+      ]
+      console.log('release verify-packed-install: running packed Jobs and Workflow e2e against the installed consumer')
+      execaSync('pnpm', args, {
+        cwd: root,
+        env: {
+          DSH_PACKED_DSH_BIN: bin,
+          DSH_PACKED_CONSUMER_ROOT: consumerRoot,
+        },
+        stdio: 'inherit',
+      })
+    }
   } finally {
     rmSync(consumerRoot, { recursive: true, force: true })
   }

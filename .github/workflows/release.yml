@@ -170,7 +170,7 @@ jobs:
           pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
 
       - name: Verify packed install
-        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock
+        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
 
       - uses: actions/upload-artifact@v4
         with:

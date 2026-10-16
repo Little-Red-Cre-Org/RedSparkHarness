@@ -9,7 +9,7 @@ import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runti
 import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { SUPPORT_RECORD, validateSupportManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import type { FileSystemOperations, FsVersion, FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
+import { FsError, type FileSystemOperations, type FsVersion, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-fs'
 import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
@@ -20,6 +20,7 @@ import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as nativeToolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
+import { plugin as nativePolicyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
 import { plugin as sandboxFsPlugin } from '@deepseek-ai/dsh-compat-fs-sandbox/native'
 import { plugin as sandboxPolicyPlugin } from '@deepseek-ai/dsh-native-sandbox-policy/native'
@@ -115,12 +116,12 @@ it('passes per-session policy to a legacy write and preserves the denied file', 
   }
 })
 
-it('exposes the legacy read tool and prompt, records one result, then unloads contributions', async () => {
+it('bridges legacy tool results and prompt into Native registries, records one result, then unloads contributions', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-'))
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
   await mkdir(workspace)
-  await writeFile(join(workspace, 'sample.txt'), 'first\nsecond\n')
+  await writeFile(join(workspace, 'sample.txt'), 'first\nsecond\nthird\n')
   const scope = new NativeScope()
   const model = new MockAdapter([
     toolCallResponse('read-1', 'read', { file_path: 'sample.txt' }),
@@ -216,6 +217,108 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
     expect(assemblyTrace).toEqual(expectedAssemblyTrace)
     firstAssemblyListener()
     secondAssemblyListener()
+
+    let nativeTools: NativeToolRegistry | undefined
+    let nativePrompt: NativePromptRegistry | undefined
+    let nativeAgents: NativeAgentRegistry | undefined
+    const nativeCapture: NativePlugin = {
+      apiVersion: 1, name: 'native-read-comparison-capture', targets: ['host'],
+      requires: ['tools', 'promptSections', 'agents'], provides: [],
+      resolve: () => (context) => {
+        nativeTools = context.require('tools')
+        nativePrompt = context.require('promptSections')
+        nativeAgents = context.require('agents')
+      },
+    }
+    const nativeHost = new NativeHost(resolveInstallation([
+      { plugin: nativeCapture, scope, config: undefined },
+      { plugin: agentPlugin, scope, config: undefined },
+      { plugin: toolsPlugin, scope, config: undefined },
+      { plugin: promptPlugin, scope, config: undefined },
+      { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
+      { plugin: nativePolicyPlugin, scope, config: undefined },
+      { plugin: nativeToolFsPlugin, scope, config: { readLimit: 2 } },
+    ], 'host'))
+    await nativeHost.start()
+    try {
+      if (nativeTools === undefined || nativePrompt === undefined || nativeAgents === undefined) {
+        throw new Error('missing pure Native tool and prompt registries')
+      }
+      expect(nativeTools.schemas(scope).map(schema => schema.name).sort()).toEqual(tools.schemas().map(schema => schema.name).sort())
+      const nativePromptText = await nativePrompt.render(scope)
+      const cordisToolSections = cordisAssembly.sections.filter(section => section.name.startsWith('tool:'))
+      expect(cordisToolSections.map(section => section.name)).toEqual(['tool:read', 'tool:write', 'tool:edit'])
+      expect(nativePromptText).toBe(cordisToolSections.map(section => section.text).join('\n\n'))
+
+      const nativeSessionId = SessionId('native-read-comparison-session')
+      const bridgeSessionId = SessionId('bridge-read-comparison-session')
+      const nativeSession = Session.create(nativeSessionId, undefined, {
+        version: SESSION_FORMAT_VERSION, id: nativeSessionId, createdAt: 3, cwd: workspace, isSeeded: false, delegationDepth: 0,
+      })
+      const bridgeSession = Session.create(bridgeSessionId, undefined, {
+        version: SESSION_FORMAT_VERSION, id: bridgeSessionId, createdAt: 3, cwd: workspace, isSeeded: false, delegationDepth: 0,
+      })
+      const nativeAgent: NativeAgent = { id: NativeAgentId('native-read-comparison-agent'), scope }
+      const bridgeAgent: NativeAgent = { id: NativeAgentId('bridge-read-comparison-agent'), scope }
+      const unregisterNativeAgent = nativeAgents.register(nativeAgent)
+      const unregisterBridgeAgent = agents.register(bridgeAgent)
+      const signal = new AbortController().signal
+      try {
+        for (const [caseName, args] of [
+          ['successful read', { file_path: 'sample.txt' }],
+          ['missing file', { file_path: 'missing.txt' }],
+          ['paged window', { file_path: 'sample.txt', offset: 2, limit: 1 }],
+        ] as const) {
+          let nativeText: string
+          let nativeIsError: boolean
+          let nativeErrorText: string | undefined
+          let nativeErrorInfo: { name: string; code: string } | undefined
+          try {
+            const result = await nativeTools.execute({
+              agent: nativeAgent, callId: ToolCallId(`native-${caseName}`), name: 'read', arguments: args,
+              session: nativeSession, signal,
+              appendEvent: async (type, data, ...opts) => nativeSession.append(type, data, ...opts),
+            })
+            expect(result.content.every(block => block.type === 'text')).toBe(true)
+            nativeText = result.content.map(block => block.type === 'text' ? block.text : '').join('\n')
+            nativeIsError = result.isError
+            nativeErrorText = result.isError ? nativeText : undefined
+          } catch (failure) {
+            if (!(failure instanceof FsError)) throw failure
+            nativeText = failure.message
+            nativeIsError = true
+            nativeErrorText = failure.message
+            nativeErrorInfo = { name: failure.name, code: failure.code }
+          }
+          const bridgeResult = await tools.execute({
+            agent: bridgeAgent, callId: ToolCallId(`bridge-${caseName}`), name: 'read', arguments: args,
+            session: bridgeSession, signal,
+            appendEvent: async (type, data, ...opts) => bridgeSession.append(type, data, ...opts),
+          })
+          expect(bridgeResult.content.every(block => block.type === 'text')).toBe(true)
+          const bridgeText = bridgeResult.content.map(block => block.type === 'text' ? block.text : '').join('\n')
+          const nativeOutcome = { text: nativeText, isError: nativeIsError, errorText: nativeErrorText }
+          const bridgeOutcome = {
+            text: bridgeText, isError: bridgeResult.isError,
+            errorText: bridgeResult.isError ? bridgeText : undefined,
+          }
+          expect(nativeOutcome.isError).toBe(bridgeOutcome.isError)
+          if (caseName === 'missing file') {
+            // Native Headless records the thrown message verbatim; Cordis ToolRuntime adds the Error: prefix.
+            expect(nativeOutcome.errorText).toContain('cannot read')
+            expect(bridgeOutcome.errorText).toBe(`Error: ${nativeOutcome.errorText}`)
+            expect(bridgeResult.error).toEqual(nativeErrorInfo)
+          } else {
+            expect(nativeOutcome).toEqual(bridgeOutcome)
+          }
+        }
+      } finally {
+        await unregisterBridgeAgent()
+        await unregisterNativeAgent()
+      }
+    } finally {
+      await nativeHost.stop()
+    }
 
     const shortCircuitTrace: string[] = []
     const beforeShortCircuit = activeRuntime.context.on('system-prompt/assemble', async (_assembly, _context, next) => {
@@ -391,7 +494,7 @@ it('exposes the legacy read tool and prompt, records one result, then unloads co
   }
 })
 
-it('delegates legacy write and edit waterfalls through native next callbacks', async () => {
+it('bridges legacy tool execution and write/edit waterfalls through native callbacks', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-waterfall-'))
   const scope = new NativeScope()
   let runtime: CompatDshRuntime | undefined
@@ -600,18 +703,18 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
       expect(sequence).toEqual([outcome.listener])
     }
 
-    const nativeToolTrace: string[] = []
+    const bridgeToolTrace: string[] = []
     const cordisToolTrace: string[] = []
     policyDisposers.push(tools.aroundExecution(async (call, _declaration, next) => {
-      nativeToolTrace.push(`around:enter:${call.callId}`)
+      bridgeToolTrace.push(`around:enter:${call.callId}`)
       const result = await next(call.signal)
-      nativeToolTrace.push(`around:return:${call.callId}`)
+      bridgeToolTrace.push(`around:return:${call.callId}`)
       return result
     }))
     policyDisposers.push(tools.postResult(async (call, _original, next) => {
-      nativeToolTrace.push(`post:enter:${call.callId}`)
+      bridgeToolTrace.push(`post:enter:${call.callId}`)
       const result = await next()
-      nativeToolTrace.push(`post:return:${call.callId}`)
+      bridgeToolTrace.push(`post:return:${call.callId}`)
       return result
     }))
     disposers.push(legacy.on('tools/pre-execute', async (call, next) => {
@@ -636,29 +739,29 @@ it('delegates legacy write and edit waterfalls through native next callbacks', a
     const executeCordis = (callId: string, filePath: string) => legacy.tools.execute({
       callId: ToolCallId(callId), name: 'read', arguments: { file_path: filePath }, agent: { session } as Agent, signal,
     })
-    const nativeRead = await execute('native-read', 'read', { file_path: 'sample.txt' })
+    const bridgeRead = await execute('bridge-read', 'read', { file_path: 'sample.txt' })
     const cordisRead = await executeCordis('cordis-read', 'sample.txt')
-    const nativeMissing = await execute('native-missing', 'read', { file_path: 'missing.txt' })
+    const bridgeMissing = await execute('bridge-missing', 'read', { file_path: 'missing.txt' })
     const cordisMissing = await executeCordis('cordis-missing', 'missing.txt')
-    expect(nativeRead).toMatchObject({ isError: false })
-    expect(nativeRead?.content).toEqual(cordisRead.content)
-    expect(nativeMissing?.isError).toBe(true)
-    expect(nativeMissing?.content).toEqual(cordisMissing.content)
+    expect(bridgeRead).toMatchObject({ isError: false })
+    expect(bridgeRead?.content).toEqual(cordisRead.content)
+    expect(bridgeMissing?.isError).toBe(true)
+    expect(bridgeMissing?.content).toEqual(cordisMissing.content)
     expect(cordisMissing.isError).toBe(true)
-    expect(nativeMissing?.error).toEqual(cordisMissing.isError ? cordisMissing.error.info : undefined)
+    expect(bridgeMissing?.error).toEqual(cordisMissing.isError ? cordisMissing.error.info : undefined)
     expect(cordisToolTrace).toEqual([
-      'pre:enter:native-read', 'pre:return:native-read', 'execute:enter:native-read', 'execute:return:native-read',
-      'post:enter:native-read', 'post:return:native-read', 'result:native-read',
+      'pre:enter:bridge-read', 'pre:return:bridge-read', 'execute:enter:bridge-read', 'execute:return:bridge-read',
+      'post:enter:bridge-read', 'post:return:bridge-read', 'result:bridge-read',
       'pre:enter:cordis-read', 'pre:return:cordis-read', 'execute:enter:cordis-read', 'execute:return:cordis-read',
       'post:enter:cordis-read', 'post:return:cordis-read', 'result:cordis-read',
-      'pre:enter:native-missing', 'pre:return:native-missing', 'execute:enter:native-missing', 'execute:return:native-missing',
-      'post:enter:native-missing', 'post:return:native-missing', 'result:native-missing',
+      'pre:enter:bridge-missing', 'pre:return:bridge-missing', 'execute:enter:bridge-missing', 'execute:return:bridge-missing',
+      'post:enter:bridge-missing', 'post:return:bridge-missing', 'result:bridge-missing',
       'pre:enter:cordis-missing', 'pre:return:cordis-missing', 'execute:enter:cordis-missing', 'execute:return:cordis-missing',
       'post:enter:cordis-missing', 'post:return:cordis-missing', 'result:cordis-missing',
     ])
-    expect(nativeToolTrace).toEqual([
-      'around:enter:native-read', 'around:return:native-read', 'post:enter:native-read', 'post:return:native-read',
-      'around:enter:native-missing', 'around:return:native-missing', 'post:enter:native-missing', 'post:return:native-missing',
+    expect(bridgeToolTrace).toEqual([
+      'around:enter:bridge-read', 'around:return:bridge-read', 'post:enter:bridge-read', 'post:return:bridge-read',
+      'around:enter:bridge-missing', 'around:return:bridge-missing', 'post:enter:bridge-missing', 'post:return:bridge-missing',
     ])
   } finally {
     for (const dispose of policyDisposers) await dispose()
