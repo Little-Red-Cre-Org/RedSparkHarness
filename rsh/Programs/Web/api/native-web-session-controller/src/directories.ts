@@ -67,13 +67,14 @@ export class NativeWebDirectoryService {
       if (endpoint === 'directories/list') {
         const request = listRequest.parse(payload)
         if (request.path !== undefined && !fullyQualified(request.path)) throw new Error('Directory path must be fully qualified')
-        const path = resolve(request.path ?? homedir())
+        // No path opens where the Host was launched; `home` still shortens displayed paths.
+        const path = resolve(request.path ?? process.cwd())
         const items = await readdir(path, { withFileTypes: true })
         accepted.throwIfAborted()
         const entries = (await Promise.all(items.map(item => entry(path, item))))
           .filter((item): item is NativeDirectoryEntry => item !== undefined)
           .sort((left, right) => left.name.localeCompare(right.name))
-        return { ok: true, value: { path, entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
+        return { ok: true, value: { path, home: homedir(), entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
       }
       if (endpoint === 'directories/create-directory') {
         const request = createRequest.parse(payload)
