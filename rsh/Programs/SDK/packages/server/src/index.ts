@@ -37,6 +37,69 @@ export const Config: Schema<JsonRpcConfig> = Schema.object({
   maxTokensAsSuccess: Schema.boolean().default(false),
 })
 
+const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (.+) \((.*)\)$/s
+const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
+
+/** Loader tree methods used for startup settlement; this package does not depend on the Loader. */
+interface StartupLoader {
+  getTasks(): Promise<unknown>[]
+  await(): Promise<void>
+}
+
+/**
+ * Wait until the Loader tree settles and return the first startup failure. A
+ * failed entry rejects its task before rollback removes it, so the tasks are
+ * observed directly; the final `await()` reports fibers that failed after
+ * their entry task resolved (for example after a delayed injection).
+ * @param loader - the Loader whose current tree is starting.
+ * @returns the first rejection, or `undefined` when the tree started.
+ */
+async function startupFailure(loader: StartupLoader): Promise<unknown> {
+  let failure: unknown
+  for (let tasks = loader.getTasks(); tasks.length > 0; tasks = loader.getTasks()) {
+    for (const outcome of await Promise.allSettled(tasks)) {
+      if (outcome.status === 'rejected') failure ??= outcome.reason
+    }
+  }
+  try {
+    await loader.await()
+  } catch (reason) {
+    failure ??= reason
+  }
+  return failure
+}
+
+/**
+ * Describe a Loader startup failure for SDK clients. The Loader wraps each
+ * entry failure as `failed to <stage> loader entry <id> (<name>): <detail>`
+ * with the inner error as `cause`; the deepest wrapper names the failing
+ * entry. Only that entry, the plugin error type, and the Cordis
+ * duplicate-service rule are reported: plugin messages can carry
+ * configuration values and stay in the runtime stderr log.
+ * @param failure - a rejection from {@link startupFailure}.
+ * @returns the error returned to `initialize` and later requests.
+ */
+function bootFailureError(failure: unknown): Error {
+  let entry = ''
+  let error = failure
+  for (;;) {
+    if (error instanceof AggregateError) error = error.errors[0]
+    if (!(error instanceof Error) || error.cause === undefined) break
+    // Strip the wrapped `: <detail>` suffix first: entry ids may contain parentheses.
+    const cause = error.cause
+    // oxlint-disable-next-line typescript/no-base-to-string -- mirrors the Loader's own String(cause) detail
+    const detail = `: ${cause instanceof Error ? cause.message : String(cause)}`
+    const wrapper = LOADER_ENTRY_FAILURE.exec(error.message.slice(0, error.message.length - detail.length))
+    if (wrapper === null) break
+    entry = ` "${wrapper[1]}" (${wrapper[2]})`
+    error = cause
+  }
+  const type = error instanceof Error ? error.name : typeof error
+  const service = error instanceof Error ? DUPLICATE_SERVICE.exec(error.message)?.[1] : undefined
+  const rule = service === undefined ? '' : `: service "${service}" is already provided by another plugin`
+  return new Error(`SDK runtime failed to start: loader entry${entry} failed: ${type}${rule}; see the runtime stderr log for details`)
+}
+
 /**
  * Serve SDK requests over the configured streams. Effect disposal shuts down
  * SDK-created agents and closes the transport. A `shutdown` response is flushed
@@ -61,6 +124,8 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
   })
 
+  let bootFailure: Error | undefined
+
   // Share one exit task so racing shutdown requests cannot dispose the root or
   // exit the process more than once.
   let exitTask: Promise<void> | undefined
@@ -81,9 +146,12 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     // lifecycle work, and synchronous effect registration; no scheduler delay
     // is part of readiness. A hand-built context without Loader remains
     // immediately usable.
-    if (method === 'initialize') {
-      await ctx.get('loader')?.await()
+    const loader = method === 'initialize' ? ctx.get('loader') as StartupLoader | undefined : undefined
+    if (loader !== undefined) {
+      const failure = await startupFailure(loader)
+      if (failure !== undefined) bootFailure = bootFailureError(failure)
     }
+    if (bootFailure !== undefined) throw bootFailure
     const result = await server.handleRequest(method, params)
     if (method === 'shutdown') {
       // Run after the handler result is written; the task then flushes, disposes, and exits.
