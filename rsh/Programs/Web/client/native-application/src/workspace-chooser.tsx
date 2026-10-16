@@ -9,7 +9,6 @@ import type {
   NativeAgentPresetList, NativeDirectoryPickerClient, NativeWorkspace,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './workspace-chooser.module.css'
 
@@ -41,8 +40,9 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
   const [trustPending, setTrustPending] = useState(false)
 
   const requestWorkspaceTrust = (reason: unknown, retry: (path: string) => Promise<unknown>): boolean => {
-    if (!(reason instanceof NativeSessionRpcError) || reason.code !== 'native/workspace-untrusted') return false
-    const path = 'path' in reason.details ? reason.details.path : undefined
+    const refusal = reason as { code?: unknown; details?: { path?: unknown } } | null | undefined
+    if (refusal?.code !== 'native/workspace-untrusted') return false
+    const path = refusal.details?.path
     if (typeof path !== 'string') return false
     setDirectoryOpen(false)
     setTrustPrompt({ path, retry: () => retry(path) })

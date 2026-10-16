@@ -156,6 +156,8 @@ it.each([
   const workspaceBaseline = (): NativeWorkspaceBaseline => ({ workspaces, archivedSessionIds })
   const createWorkspace = vi.fn(async (input: Parameters<NativeWorkspaceClient['create']>[0]) => {
     const { path } = input
+    const existing = workspaces.find(item => item.path === path)
+    if (existing !== undefined) return { workspace: existing, created: false }
     const workspace: NativeWorkspace = {
       workspaceId: 'workspace-new' as NativeWorkspace['workspaceId'], path, title: 'New',
       createdAt: '2026-10-11T00:00:00.000Z', updatedAt: '2026-10-11T00:00:00.000Z', sessionIds: [],
@@ -518,9 +520,13 @@ it.each([
     expect(connectWorkspace).not.toHaveBeenCalled()
     expect(document.title).toBe('Beta — Product')
     alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is outside the configured allowed roots'),
+      { code: 'native/workspace-untrusted', details: { path: 'C:\\Work\\Shared' } }))
     fireEvent.click(alphaRow)
+    fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
     betaHasConversation = false
+    expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
     clientMock.history.mockClear()
     const betaHistory = Promise.withResolvers<undefined>()
     clientMock.history.mockImplementationOnce(async (id) => {
@@ -581,8 +587,8 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
     await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
     expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
     await waitFor(() => { expect(attach).toHaveBeenCalledWith('session-alpha', -1, expect.any(Function),
       expect.any(AbortSignal), expect.any(Function), expect.any(AbortSignal)) })
@@ -701,21 +707,49 @@ it.each([
     await screen.findByTitle('C:\\Work\\Shared')
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
 
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Alpha/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-alpha') })
     const createButton = screen.getByText('New Session').closest('button')
     expect(createButton).not.toBeNull()
+    const admission = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['create']>>>()
+    const admissionCalls = createWorkspace.mock.calls.length
+    createWorkspace.mockImplementationOnce(() => admission.promise)
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    const newSessionConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = newSessionConnection
+    const connections = connectWorkspace.mock.calls.length
     fireEvent.click(createButton!)
     await waitFor(() => {
-      expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal))
-      expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+      expect(connectWorkspace).toHaveBeenCalledTimes(connections + 1)
     })
+    admission.resolve({ workspace: workspaces[0]!, created: false })
+    await admission.promise
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(conversation?.getSnapshot().navigationPending).toBe(true)
+    newSessionConnection.resolve({ sessionId: 'session-alpha' as SessionId })
+    await waitFor(() => {
+      expect(conversation?.getSnapshot().selected).toBe('session-alpha')
+      expect(conversation?.getSnapshot().state).toBe('ready')
+    })
+    expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    expect(createWorkspace).toHaveBeenCalledTimes(admissionCalls + 1)
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-beta') })
 
     fireEvent.click(screen.getByRole('button', { name: 'Search sessions' }))
     const search = screen.getByPlaceholderText('Search sessions…')
     fireEvent.change(search, { target: { value: 'Needle' } })
     const searchResult = await screen.findByRole('treeitem', { name: /Needle in transcript/ })
     expect(clientMock.search).toHaveBeenCalledWith('Needle', undefined, expect.any(AbortSignal))
+    let runningTurn: AbortSignal | undefined
+    attach.mockImplementationOnce((_id, _lastSeq, _observe, signal, _onFollowError, detach) => {
+      runningTurn = signal
+      return new Promise((resolve) => { detach?.addEventListener('abort', () => { resolve(undefined) }, { once: true }) })
+    })
     fireEvent.click(searchResult)
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal)) })
+    await screen.findByRole('button', { name: 'Stop' })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Needle in transcript/ })).toBeNull() })
 
     const refreshedRow = await screen.findByRole('treeitem', { name: /Refreshed Alpha/ })
@@ -729,6 +763,7 @@ it.each([
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
     await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
     expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
+    expect(runningTurn?.aborted).toBe(false)
 
     fireEvent.click(within(screen.getByRole('treeitem', { name: /Beta/ }))
       .getByRole('button', { name: 'Session actions for Beta' }))
@@ -748,6 +783,10 @@ it.each([
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is a protected system directory'),
+      { code: 'native/workspace-forbidden', details: {} }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+    expect(await screen.findByText(/^System directories cannot be added/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledWith('workspace-new', expect.any(AbortSignal)) })
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))

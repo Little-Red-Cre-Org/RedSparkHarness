@@ -119,6 +119,45 @@ it('waits for controller operations before selecting a connected Session', async
   }
 })
 
+it('deselects a Session with a running turn by detaching without cancelling the Host turn', async () => {
+  let turnSignal: AbortSignal | undefined
+  const attached = deferred<undefined>()
+  const client = {
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) { return { header: makeHeader(sessionId), events: [], inheritedEventCount: 0 } },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    attach(_id: SessionId, _lastSeq: number, _observe: unknown, signal: AbortSignal, _onFollowError: unknown, detach: AbortSignal) {
+      turnSignal = signal
+      attached.resolve(undefined)
+      return new Promise((resolve) => { detach.addEventListener('abort', () => { resolve(undefined) }, { once: true }) })
+    },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    const selection = controller.select('session-running' as SessionId)
+    await attached.promise
+    expect(controller.getSnapshot().state).toBe('sending')
+    await controller.deselect()
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, events: [] })
+    expect(turnSignal?.aborted).toBe(false)
+    await selection
+    const reselect = controller.select('session-running' as SessionId)
+    await expect(controller.deselect()).rejects.toThrow('operation already pending')
+    await controller.close()
+    await reselect
+  } finally {
+    await controller.close()
+  }
+})
+
 it('isolates delayed frames and late carrier errors while retaining title roster refresh', async () => {
   const streams = new Map<string, ReadableStreamDefaultController<Uint8Array>>()
   const firstFollowStarted = deferred<undefined>()
@@ -291,7 +330,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     fail('a3', new Error('late beta carrier failure'))
     expect(await thirdFollowFailure.promise).toMatchObject({ message: 'late beta carrier failure' })
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: 'session-beta', error: 'late beta carrier failure' })
-    controller.deselect()
+    await controller.deselect()
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, header: undefined, events: [],
       modeControls: undefined, permissionControls: undefined, submissions: undefined, error: undefined })
   } finally {

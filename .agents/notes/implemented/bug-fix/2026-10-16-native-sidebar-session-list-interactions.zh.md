@@ -16,7 +16,7 @@ native-web 侧边栏与旧版 Cordis 侧边栏存在差异，会丢失用户上�
 - 回复生成期间打开其他会话会立即切换。`NativeConversationController.select()` 中止当前回合的 detach 信号——这只会停止跟随和等待，不会取消 Host 上的回合——在进行中的操作结束前保持 `loading`，之后再选中目标会话。回到仍在运行的会话时，通过现有的 `session/attach` 恢复路径重新接入。只有“停止”会取消回合。处于短暂的 `loading` 状态时的点击会被记住，并在加载结束后立即打开，即使刚打开的会话接入了正在运行的回合。搜索结果遵循相同规则。
 - 会话菜单在“归档会话”旁显示“删除会话”，与 Cordis 一致。Host 没有真正的删除，因此“删除”先用现有的 `delete.sessionNote` 对话框确认，然后归档。
 - 重命名输入框（会话与工作区）打开时获得焦点并选中文本；Esc 取消。
-- 归档或删除当前选中的会话后，侧边栏按渲染顺序选中下一条可见行，没有则选中上一条。没有剩余行时调用新增的 `NativeConversationService.deselect()` 清空选择，应用显示空态。
+- 归档或删除当前选中的会话后，侧边栏按渲染顺序选中下一条可见行，没有则选中上一条。没有剩余行时调用新增的 `NativeConversationService.deselect()` 清空选择，应用显示空态。这不会等待被归档会话的回合结束：该会话正在生成或等待审批时，`deselect()` 与 `select()` 一样先断开视图，Host 上的回合继续运行。
 - 手动排序时，工作区内的会话和工作区行可以拖拽排序，通过现有 Host `reorderSession` / `reorder` 调用写入。箭头按钮保留在 DOM 中作为键盘兜底，只在行悬停或获得焦点时显示。
 
 ## Alternatives considered
@@ -31,4 +31,4 @@ native-web 侧边栏与旧版 Cordis 侧边栏存在差异，会丢失用户上�
 
 ## Testing
 
-`native-application/tests/native-shell.client.spec.tsx` 覆盖：折叠/展开工作区行不调用 `connectWorkspace`、从运行中的回合切走不会取消回合、回来后重新接入、重命名的焦点与 Esc、删除确认后选中相邻会话，以及一次会话拖拽排序。`native-controller-follow.spec.ts` 覆盖 `deselect()`。
+`native-application/tests/native-shell.client.spec.tsx` 覆盖：折叠/展开工作区行不调用 `connectWorkspace`、从运行中的回合切走不会取消回合、回来后重新接入、重命名的焦点与 Esc、在被删除会话的回合仍处于接入状态时删除确认后选中相邻会话，以及一次会话拖拽排序。`native-controller-follow.spec.ts` 覆盖 `deselect()`，包括断开运行中的回合而不取消它。
