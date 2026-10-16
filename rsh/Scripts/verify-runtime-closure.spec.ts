@@ -297,6 +297,13 @@ describe('verifyRuntimeClosure', () => {
     cli.optionalDependencies['@deepseek-ai/dsh-task-scheduler'] = 'workspace:^'
     writeFileSync(cliPath, `${JSON.stringify(cli, null, 2)}\n`)
 
+    const missingPlugin = plugins.find(plugin =>
+      plugin !== '@deepseek-ai/dsh-task-scheduler' && plugin !== '@deepseek-ai/dsh-native-agent')
+    if (missingPlugin === undefined) throw new Error('native CLI fixture has no other shipped plugin')
+    const missingPluginPath = workspacePaths.get(missingPlugin)
+    if (missingPluginPath === undefined) throw new Error(`${missingPlugin} fixture is missing`)
+    rmSync(missingPluginPath)
+
     const nativeAgentPath = workspacePaths.get('@deepseek-ai/dsh-native-agent')
     if (nativeAgentPath === undefined) throw new Error('native-agent fixture is missing')
     writeFileSync(nativeAgentPath, `${JSON.stringify({
@@ -331,31 +338,11 @@ describe('verifyRuntimeClosure', () => {
 
     expect(result.failures).toEqual(expect.arrayContaining([
       expect.stringContaining('@deepseek-ai/dsh-task-scheduler'),
+      expect.stringContaining(`${missingPlugin} [workspace package not found]`),
       expect.stringContaining('required Cordis peer @deepseek-ai/cordis'),
       expect.stringContaining('@scope/required'),
       expect.stringContaining('rsh/Programs/CLI/src/bin.ts: import @deepseek-ai/dsh-app-boot'),
       expect.stringContaining('rsh/Compatibility/DSH/bundle/web-app/src/index.ts: import @deepseek-ai/dsh-subprocess'),
-    ]))
-  })
-
-  it('reports shipped native CLI plugins that no longer have a workspace package', async () => {
-    const plugins = nativeCliPlugins()
-    const missingPlugin = '@deepseek-ai/dsh-task-scheduler'
-    const root = fixture({
-      'rsh/Programs/CLI/package.json': {
-        name: '@deepseek-ai/dsh',
-        dependencies: Object.fromEntries(plugins.map(plugin => [plugin, 'workspace:^'])),
-      },
-      'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
-      'rsh/Programs/CLI/src/bin.ts': "import('@deepseek-ai/dsh-launch-environment/layers')\n",
-      'rsh/Compatibility/DSH/bundle/web-app/src/index.ts': "import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'\n",
-    })
-    workspacePackages(root, plugins.filter(plugin => plugin !== missingPlugin))
-
-    const result = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
-
-    expect(result.failures).toEqual(expect.arrayContaining([
-      expect.stringContaining(`${missingPlugin} [workspace package not found]`),
     ]))
   })
 })
