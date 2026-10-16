@@ -131,7 +131,7 @@ jobs:
         run: pnpm run check:ci:package-publication
 
   packed:
-    name: Packed consumer / ${{ matrix.os }}
+    name: SPH packed / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -158,6 +158,7 @@ jobs:
         run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
       - name: Build official Web and desktop sources
         run: pnpm run build:official
+      # Packed consumer verification starts here; keep shared setup above.
       - name: Pack dsh release tarballs for consumer verification
         run: pnpm run release:pack --family dsh --out dist/npm
       - name: Pack vendored framework for consumer verification

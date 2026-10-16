@@ -228,6 +228,8 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       expect(modelSuccessText).toContain('"answer":42')
       const deniedMessage = modelToolMessage(requests, DENIED_ID)
       expect(deniedMessage).toBeDefined()
+      const modelDeniedText = deniedMessage?.content
+      if (typeof modelDeniedText !== 'string') throw new Error('packed-code-runtime: model omitted denied tool content')
 
       // The process has exited before reading JSONL, so these assertions use only durable Session facts.
       const sessions = await readSessions(sessionsRoot)
@@ -246,6 +248,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
         message: { content: [{ type: 'tool-result', isError: true }] },
       } })
       // The denial must come from the write itself, not from an earlier failure such as the fs import.
+      expect(persistedToolText(deniedResult!)).toBe(modelDeniedText)
       expect(persistedToolText(deniedResult!)).toMatch(/(EACCES|EPERM|EROFS)[^]*outside-workspace\.txt/)
       expect(existsSync(outsideTarget)).toBe(false)
     } finally {
