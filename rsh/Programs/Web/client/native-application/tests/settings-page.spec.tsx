@@ -1848,7 +1848,7 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     }
     return settingsDescription([row(), ...preferenceRows], undefined)
   })
-  const settingsMutate = vi.fn(async (namespace: string, ops: readonly { path: string[]; value?: unknown }[]) => {
+  const settingsMutate = vi.fn(async (namespace: string, ops: readonly { path: string[]; value?: unknown }[], _revision: number) => {
     const operation = ops[0]
     if (namespace === 'llm-pi-ai') {
       user = { label: operation?.value }
@@ -1900,6 +1900,16 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   fireEvent.click(screen.getByText(en.settingsAdvanced))
   const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
   const pretty = (value: unknown) => JSON.stringify(value, null, 2)
+  const themeEditor = screen.getByLabelText(`${en.userOverrides} ui-theme`) as HTMLTextAreaElement
+  expect(themeEditor.value).toBe(pretty({ preference: 'dark', fontSize: 15 }))
+  fireEvent.click(screen.getByRole('button', { name: en.settingsSystem }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['preference'], value: 'system' }], 3) })
+  expect(themeEditor.value).toBe(pretty({ preference: 'system', fontSize: 15 }))
+  const dirtyThemeDraft = '{ "preference": "dark", "fontSize": 12 }'
+  fireEvent.change(themeEditor, { target: { value: dirtyThemeDraft } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsDark }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['preference'], value: 'dark' }], 4) })
+  expect(themeEditor.value).toBe(dirtyThemeDraft)
 
   // The post-save refresh reads back the value committed by the Host.
   fireEvent.change(editor, { target: { value: '{ "label": "canonical" }' } })
@@ -1908,6 +1918,11 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   releaseSave()
   await waitFor(() => { expect(editor.disabled).toBe(false) })
   expect(editor.value).toBe(pretty({ label: 'canonical' }))
+
+  fireEvent.change(themeEditor, { target: { value: dirtyThemeDraft } })
+  fireEvent.click(within(themeEditor.closest('section') as HTMLElement).getByRole('button', { name: en.saveSettings }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['fontSize'], value: 12 }], 5) })
+  await waitFor(() => { expect(themeEditor.value).toBe(pretty({ preference: 'dark', fontSize: 12 })) })
 
   // A failed post-save describe keeps a later unsaved edit through the next refresh.
   fireEvent.change(editor, { target: { value: '{ "label": "saved" }' } })

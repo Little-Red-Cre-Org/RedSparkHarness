@@ -1,5 +1,5 @@
 /** Native sidebar Settings entry and compact appearance controls. */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   IconDarkOutline16, IconGlobeOutline14, IconLightOutline16, IconSettingsOutline16, SettingsPanel, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -10,6 +10,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
+import { applyNativeSettingsPreferences } from './settings-preferences.ts'
 import css from './NativeSidebarSettings.module.css'
 
 /** Bind Settings page operations to the selected Native Session Consumer.
@@ -74,6 +75,15 @@ export function NativeSidebarSettings({
   const [settingsSection, setSettingsSection] = useState('general')
   const [hasSettingsDocument, setHasSettingsDocument] = useState(false)
   const [settingsDocumentError, setSettingsDocumentError] = useState(false)
+  useEffect(() => {
+    const lifetime = new AbortController()
+    void settingsActions.settingsDescribe(lifetime.signal).then((description) => {
+      if (!lifetime.signal.aborted) applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
+    }).catch(() => {
+      /* Startup preferences are optional; retain the locale and theme already selected. */
+    })
+    return () => { lifetime.abort() }
+  }, [settingsActions, setFontSize, setLocale, setThemePreference])
   const openSettingsDocument = async (): Promise<void> => {
     try {
       await settingsActions.settingsOpenDocument()

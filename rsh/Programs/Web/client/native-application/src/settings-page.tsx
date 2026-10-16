@@ -18,6 +18,7 @@ import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
+import { applyNativeSettingsPreferences } from './settings-preferences.ts'
 import {
   announcePendingDefaultChanged, readPendingDefault, type BusyEnterBehavior,
 } from './pending-default.ts'
@@ -434,13 +435,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
         setLimits(description.limits)
         setNamespaces(rows)
         onDocumentAvailabilityChange?.(description.hasDocument)
-        const localePreference = rows.find(row => row.namespace === 'locale')?.value.preference
-        if (localePreference === 'en' || localePreference === 'zh') setLocale(localePreference)
-        const themeSettings = rows.find(row => row.namespace === 'ui-theme')
-        const preference = themeSettings?.value.preference
-        if (preference === 'light' || preference === 'dark' || preference === 'system') setThemePreference(preference)
-        const fontSize = themeSettings?.value.fontSize
-        if (typeof fontSize === 'number') setFontSize(fontSize)
+        applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
         const conversation = rows.find(row => row.namespace === 'ui-conversation')
         const busyEnter = conversation === undefined
           ? readPendingDefault() : conversation.value.busyEnter as BusyEnterBehavior
@@ -566,7 +561,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     try {
       const updated = await actions.settingsMutate(row.namespace, [{ op: 'set', path, value }], row.revision)
       setNamespaces(current => current.map(candidate => candidate.namespace === row.namespace ? updated : candidate))
-      setDrafts(current => ({ ...current, [row.namespace]: pretty(updated.user) }))
+      setDrafts(current => current[row.namespace] === pretty(row.user)
+        ? { ...current, [row.namespace]: pretty(updated.user) } : current)
       if (row.namespace === 'ui-conversation' && path[0] === 'busyEnter') {
         announcePendingDefaultChanged(value as BusyEnterBehavior)
         setPendingDefault(value as BusyEnterBehavior)

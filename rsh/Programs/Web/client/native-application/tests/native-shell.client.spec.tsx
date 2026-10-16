@@ -275,10 +275,14 @@ it('installs modular Native navigation, Session selection, details, locale and t
   })
   const clientMock = {
     close,
-    settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [{
-      namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
-      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1,
-    }], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
+    settingsDescribe: vi.fn(async (_signal?: AbortSignal) => ({ hasDocument: false, namespaces: [
+      { namespace: 'locale', schema: {}, value: { preference: 'zh' }, base: {}, user: {},
+        applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+      { namespace: 'ui-theme', schema: {}, value: { preference: 'dark', fontSize: 15 }, base: {}, user: {},
+        applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+      { namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
+        applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+    ], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
     settingsOpenDocument: vi.fn(),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(),
@@ -366,6 +370,16 @@ it('installs modular Native navigation, Session selection, details, locale and t
     localStorage.setItem(PENDING_DEFAULT_KEY, 'queue')
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe('zh-CN')
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+      expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe('15px')
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '切换语言' }))
+    await waitFor(() => { expect(document.documentElement.lang).toBe('en') })
+    fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
     const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
     expect(workspaceRows.getByRole('treeitem', { name: /Beta/ })).toBeTruthy()
