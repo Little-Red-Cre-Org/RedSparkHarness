@@ -113,7 +113,12 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-it('installs modular Native navigation, Session selection, details, locale and theme, then drains them', async () => {
+it.each([
+  { scenario: 'without user action', initialLocale: 'zh', interleaveStartup: false, preferences: ['en', 'dark', 16] as const },
+  { scenario: 'after a theme toggle', initialLocale: 'en', interleaveStartup: true, preferences: ['en', 'light', 14] as const },
+])('installs modular Native navigation and applies startup preferences $scenario', async ({
+  initialLocale, interleaveStartup, preferences,
+}) => {
   localStorage.setItem('dsh.native.onboarding.welcome', '2026-08-13.1')
   vi.stubEnv('DSH_CLIENT_TITLE', 'Product')
   vi.stubGlobal('innerWidth', 1280)
@@ -273,12 +278,24 @@ it('installs modular Native navigation, Session selection, details, locale and t
     inboxRevision++
     return { requestId, outcome: 'updated' }
   })
+  const sidebarStartupSettings = Promise.withResolvers<Awaited<ReturnType<NativeSessionClient['settingsDescribe']>>>()
+  let settingsDescribeCalls = 0
+  const settingsDescription = (localePreference = 'zh', themePreference = 'dark', fontSize = 15) => ({ hasDocument: false, namespaces: [
+    { namespace: 'locale', schema: {}, value: { preference: localePreference }, base: {}, user: {},
+      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'ui-theme', schema: {}, value: { preference: themePreference, fontSize }, base: {}, user: {},
+      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+    { namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
+      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
+  ], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })
   const clientMock = {
     close,
-    settingsDescribe: vi.fn(async () => ({ hasDocument: false, namespaces: [{
-      namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
-      applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1,
-    }], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })),
+    settingsDescribe: vi.fn((_signal?: AbortSignal) => {
+      settingsDescribeCalls++
+      // The sidebar startup read is the second describe; the third is the composer preference read.
+      if (settingsDescribeCalls === 2) return sidebarStartupSettings.promise
+      return Promise.resolve(settingsDescription())
+    }),
     settingsOpenDocument: vi.fn(),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(),
@@ -351,7 +368,7 @@ it('installs modular Native navigation, Session selection, details, locale and t
   const host = new NativeHost(resolveInstallation([
     { plugin: sessionProvider(client, workspaceClient, directoryPicker), scope, config: undefined },
     { plugin: renderer, scope, config: undefined },
-    { plugin: locale, scope, config: { locale: 'en' } },
+    { plugin: locale, scope, config: { locale: initialLocale } },
     { plugin: theme, scope, config: undefined },
     { plugin: application, scope, config: { maxLiveTextChars: 1024, maxLiveEvents: 128 } },
     { plugin: sessionPresentation, scope, config: undefined },
@@ -366,6 +383,22 @@ it('installs modular Native navigation, Session selection, details, locale and t
     localStorage.setItem(PENDING_DEFAULT_KEY, 'queue')
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
+    expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3)
+    if (interleaveStartup) {
+      fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+    }
+    sidebarStartupSettings.resolve(settingsDescription(preferences[0], preferences[1], preferences[2]))
+    await sidebarStartupSettings.promise
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe('en')
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+      expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe(interleaveStartup ? '14px' : '16px')
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+    expect(screen.queryByRole('dialog')).toBeNull()
     const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
     const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
     expect(workspaceRows.getByRole('treeitem', { name: /Beta/ })).toBeTruthy()

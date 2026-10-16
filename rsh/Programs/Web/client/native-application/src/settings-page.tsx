@@ -18,6 +18,7 @@ import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
+import { applyNativeSettingsPreferences } from './settings-preferences.ts'
 import {
   announcePendingDefaultChanged, readPendingDefault, type BusyEnterBehavior,
 } from './pending-default.ts'
@@ -393,6 +394,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const refreshes = useRef(0)
   const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
+  const translate = useRef(t)
+  translate.current = t
 
   const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
     const request = ++accountRefreshes.current
@@ -434,13 +437,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
         setLimits(description.limits)
         setNamespaces(rows)
         onDocumentAvailabilityChange?.(description.hasDocument)
-        const localePreference = rows.find(row => row.namespace === 'locale')?.value.preference
-        if (localePreference === 'en' || localePreference === 'zh') setLocale(localePreference)
-        const themeSettings = rows.find(row => row.namespace === 'ui-theme')
-        const preference = themeSettings?.value.preference
-        if (preference === 'light' || preference === 'dark' || preference === 'system') setThemePreference(preference)
-        const fontSize = themeSettings?.value.fontSize
-        if (typeof fontSize === 'number') setFontSize(fontSize)
+        applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
         const conversation = rows.find(row => row.namespace === 'ui-conversation')
         const busyEnter = conversation === undefined
           ? readPendingDefault() : conversation.value.busyEnter as BusyEnterBehavior
@@ -462,18 +459,18 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
           if (latest()) setCredentials(aggregate)
         }
         catch (cause: unknown) {
-          if (latest()) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+          if (latest()) { setCredentialError(requestError(cause, translate.current, 'native/credentials')); setCredentials({}) }
         }
       }
       return true
     } catch (cause: unknown) {
       if (latest()) {
         resetDrafts.current = false
-        setError(requestError(cause, t, 'native/settings'))
+        setError(requestError(cause, translate.current, 'native/settings'))
       }
       return false
     } finally { if (latest()) setLoading(false) }
-  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference, t])
+  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference])
 
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
@@ -566,7 +563,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     try {
       const updated = await actions.settingsMutate(row.namespace, [{ op: 'set', path, value }], row.revision)
       setNamespaces(current => current.map(candidate => candidate.namespace === row.namespace ? updated : candidate))
-      setDrafts(current => ({ ...current, [row.namespace]: pretty(updated.user) }))
+      setDrafts(current => current[row.namespace] === pretty(row.user)
+        ? { ...current, [row.namespace]: pretty(updated.user) } : current)
       if (row.namespace === 'ui-conversation' && path[0] === 'busyEnter') {
         announcePendingDefaultChanged(value as BusyEnterBehavior)
         setPendingDefault(value as BusyEnterBehavior)

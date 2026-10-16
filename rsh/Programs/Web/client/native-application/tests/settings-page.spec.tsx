@@ -1848,7 +1848,7 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     }
     return settingsDescription([row(), ...preferenceRows], undefined)
   })
-  const settingsMutate = vi.fn(async (namespace: string, ops: readonly { path: string[]; value?: unknown }[]) => {
+  const settingsMutate = vi.fn(async (namespace: string, ops: readonly { path: string[]; value?: unknown }[], _revision: number) => {
     const operation = ops[0]
     if (namespace === 'llm-pi-ai') {
       user = { label: operation?.value }
@@ -1862,15 +1862,19 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     }
     return updatedRow(namespace, field, operation?.value)
   })
+  const authorizationList = vi.fn(async (_signal?: AbortSignal) => [])
   const actions = {
     settingsDescribe, settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
-    authorizationList: vi.fn(async () => []),
+    authorizationList,
   } as unknown as NativeSettingsActions
-  const setLocale = vi.fn()
+  const setLocale = vi.fn((_locale: NativeLocaleSnapshot['locale']) => undefined)
   const setThemePreference = vi.fn()
   const setFontSize = vi.fn()
-  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], setLocale, setThemePreference, setFontSize })
+  const nativeActions = { ...emptyAccountActions, ...emptyModelActions, ...actions }
+  const page = render(<SettingsPage actions={nativeActions} t={(localeKey: keyof typeof en) => en[localeKey]}
+    section="general" useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
+    setThemePreference={setThemePreference} setFontSize={setFontSize} />)
   const permission = await screen.findByRole('combobox', { name: en.settingsPermission })
   expect((permission as HTMLSelectElement).value).toBe('workspace-write')
   fireEvent.change(permission, { target: { value: 'danger-full-access' } })
@@ -1900,6 +1904,16 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   fireEvent.click(screen.getByText(en.settingsAdvanced))
   const editor = await screen.findByLabelText(`${en.userOverrides} llm-pi-ai`) as HTMLTextAreaElement
   const pretty = (value: unknown) => JSON.stringify(value, null, 2)
+  const themeEditor = screen.getByLabelText(`${en.userOverrides} ui-theme`) as HTMLTextAreaElement
+  expect(themeEditor.value).toBe(pretty({ preference: 'dark', fontSize: 15 }))
+  fireEvent.click(screen.getByRole('button', { name: en.settingsSystem }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['preference'], value: 'system' }], 3) })
+  expect(themeEditor.value).toBe(pretty({ preference: 'system', fontSize: 15 }))
+  const dirtyThemeDraft = '{ "preference": "dark", "fontSize": 12 }'
+  fireEvent.change(themeEditor, { target: { value: dirtyThemeDraft } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsDark }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['preference'], value: 'dark' }], 4) })
+  expect(themeEditor.value).toBe(dirtyThemeDraft)
 
   // The post-save refresh reads back the value committed by the Host.
   fireEvent.change(editor, { target: { value: '{ "label": "canonical" }' } })
@@ -1908,6 +1922,11 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   releaseSave()
   await waitFor(() => { expect(editor.disabled).toBe(false) })
   expect(editor.value).toBe(pretty({ label: 'canonical' }))
+
+  fireEvent.change(themeEditor, { target: { value: dirtyThemeDraft } })
+  fireEvent.click(within(themeEditor.closest('section') as HTMLElement).getByRole('button', { name: en.saveSettings }))
+  await waitFor(() => { expect(settingsMutate).toHaveBeenLastCalledWith('ui-theme', [{ op: 'set', path: ['fontSize'], value: 12 }], 5) })
+  await waitFor(() => { expect(themeEditor.value).toBe(pretty({ preference: 'dark', fontSize: 12 })) })
 
   // A failed post-save describe keeps a later unsaved edit through the next refresh.
   fireEvent.change(editor, { target: { value: '{ "label": "saved" }' } })
@@ -1918,6 +1937,13 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   fireEvent.change(editor, { target: { value: edited } })
   fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
   expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 3`)).toBeTruthy()
+  expect(editor.value).toBe(edited)
+
+  const authorizationReadsBeforeLocaleChange = authorizationList.mock.calls.length
+  page.rerender(<SettingsPage actions={nativeActions}
+    t={(localeKey: keyof typeof en) => zh[localeKey]} section="general" useLocale={useLocale} useTheme={useTheme}
+    setLocale={setLocale} setThemePreference={setThemePreference} setFontSize={setFontSize} />)
+  expect(authorizationList).toHaveBeenCalledTimes(authorizationReadsBeforeLocaleChange)
   expect(editor.value).toBe(edited)
   page.unmount()
 
