@@ -635,7 +635,7 @@ it.each([
     await waitFor(() => { expect(clientMock.archive).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal)) })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
     await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
-    expect(clientMock.history.mock.calls.at(-1)?.[0]).not.toBe('session-alpha')
+    expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })

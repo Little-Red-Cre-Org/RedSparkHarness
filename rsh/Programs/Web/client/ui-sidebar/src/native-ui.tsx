@@ -218,10 +218,14 @@ function NativeSessionBrowser({
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
   const searchInput = useRef<HTMLInputElement>(null)
-  const groups = groupNativeSessions(snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t)
+  const groups = useMemo(() => groupNativeSessions(
+    snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t,
+  ), [snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t])
+  const visibleIds = useMemo(() => groups.flatMap(group => group.expanded ? group.sessions.map(session => session.id) : []), [groups])
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
+  const selectionOrder = useRef<{ id: NativeSessionId; ids: readonly NativeSessionId[] }>()
   const searchQuery = query.trim()
   useEffect(() => {
     if (snapshot.state !== 'ready') return
@@ -234,22 +238,22 @@ function NativeSessionBrowser({
       }
     }
     if (snapshot.selected === undefined || !archived.has(snapshot.selected)) return
-    const visibleIds = groupNativeSessions(
-      snapshot.sessions,
-      { ...registry, archivedSessionIds: registry.archivedSessionIds.filter(id => id !== snapshot.selected) },
-      snapshot.selected,
-      displayTitle,
-      collapsedGroups,
-      order,
-      groupBy,
-      t,
-    ).flatMap(group => group.expanded ? group.sessions.map(session => session.id) : [])
-    const index = visibleIds.indexOf(snapshot.selected)
-    const nextId = visibleIds[index + 1] ?? visibleIds[index - 1]
-    if (nextId === undefined) deselectSession()
-    else void selectSession(nextId)
-  }, [snapshot.state, snapshot.selected, snapshot.sessions, pendingSessionId, selectSession, deselectSession,
-    archived, registry, displayTitle, collapsedGroups, order, groupBy, t])
+    const lastOrder = selectionOrder.current
+    let nextId: NativeSessionId | undefined
+    if (lastOrder?.id === snapshot.selected) {
+      const index = lastOrder.ids.indexOf(snapshot.selected)
+      nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
+        ?? lastOrder.ids.slice(0, index).reverse().find(id => visibleIds.includes(id))
+    }
+    deselectSession()
+    if (nextId !== undefined) void selectSession(nextId)
+  }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession, deselectSession,
+    archived, visibleIds])
+  useEffect(() => {
+    if (snapshot.selected !== undefined && visibleIds.includes(snapshot.selected)) {
+      selectionOrder.current = { id: snapshot.selected, ids: visibleIds }
+    }
+  }, [snapshot.selected, visibleIds])
   useEffect(() => {
     if (wide && searchExpanded) searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded])
