@@ -305,9 +305,24 @@ it('bridges legacy tool results and prompt into Native registries, records one r
           expect(nativeOutcome.isError).toBe(bridgeOutcome.isError)
           if (caseName === 'missing file') {
             // Native Headless records the thrown message verbatim; Cordis ToolRuntime adds the Error: prefix.
+            expect(nativeErrorInfo).toEqual({ name: 'FsError', code: 'FS_NOT_FOUND' })
             expect(nativeOutcome.errorText).toContain('cannot read')
             expect(bridgeOutcome.errorText).toBe(`Error: ${nativeOutcome.errorText}`)
-            expect(bridgeResult.error).toEqual(nativeErrorInfo)
+            expect(bridgeResult.error).toEqual({ name: 'FsError', code: 'FS_NOT_FOUND' })
+          } else if (caseName === 'paged window') {
+            const expectedPagedOutcome = {
+              text: `<path>${join(workspace, 'sample.txt')}</path>
+<type>file</type>
+<content>
+2: second
+
+(Showing lines 2-2 of 3. Use offset=3 to continue.)
+</content>`,
+              isError: false,
+              errorText: undefined,
+            }
+            expect(nativeOutcome).toEqual(expectedPagedOutcome)
+            expect(bridgeOutcome).toEqual(expectedPagedOutcome)
           } else {
             expect(nativeOutcome).toEqual(bridgeOutcome)
           }

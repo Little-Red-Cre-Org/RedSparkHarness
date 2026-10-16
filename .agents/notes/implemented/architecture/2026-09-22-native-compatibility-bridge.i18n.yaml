@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-22-native-compatibility-bridge.md
-2026-09-22-native-compatibility-bridge.md: f0490b46ffd4352080c2d35efe1397a1ae21bc12
-2026-09-22-native-compatibility-bridge.zh.md: e87c24f488234f30cfe76834171688e06a9769be
+2026-09-22-native-compatibility-bridge.md: 0c3da9071512059ad7a14d6b949a7b11cd9d2a35
+2026-09-22-native-compatibility-bridge.zh.md: 8dd47923046f856d39b982a061e30b7a654ff745
