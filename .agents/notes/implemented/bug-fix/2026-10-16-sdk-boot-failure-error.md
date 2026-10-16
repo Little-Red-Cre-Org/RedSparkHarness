@@ -10,7 +10,7 @@ The SDK JSON-RPC server plugin runs inside the profile's Loader tree. When anoth
 
 ## Decision
 
-On apply, [`dsh-sdk-jsonrpc-server`](../../../../rsh/Programs/SDK/packages/server/README.md) watches the pending Loader entry tasks until the tree settles and keeps the last rejected entry; `entries()` yields parents before children, so this is the failing leaf entry. `initialize` waits for this watch. After a failure, `initialize` and any request handled later reject with `SDK runtime failed to start: loader entry "<id>" (<plugin>) failed: <ErrorType>[: service "<name>" is already provided by another plugin]; see the runtime stderr log for details`.
+Before `initialize` replies, [`dsh-sdk-jsonrpc-server`](../../../../rsh/Programs/SDK/packages/server/README.md) waits on the pending Loader tasks itself and keeps the first rejection, because a failed entry rejects its task before rollback removes it; a final `loader.await()` reports fibers that failed after their entry task resolved, such as after a delayed injection. The Loader wraps each entry failure as `failed to <stage> loader entry <id> (<name>): ...` with the inner error as `cause`; the server follows that chain, taking the first error of an aggregate, to the deepest wrapper. After a failure, `initialize` and any request handled later reject with `SDK runtime failed to start: loader entry "<id>" (<plugin>) failed: <ErrorType>[: service "<name>" is already provided by another plugin]; see the runtime stderr log for details`.
 
 The message carries only the entry id, plugin name, error type, and the recognized Cordis duplicate-service rule. It never includes the plugin's message, stack, or cause, because those can contain configuration values; app-boot still prints the full error to stderr.
 
@@ -26,4 +26,4 @@ A misconfigured SDK profile now fails the SDK start call with the failing entry 
 
 ## Verification
 
-`rsh/Programs/SDK/packages/server/tests/plugin-apply.spec.ts` boots a Loader group containing the server and two `fs` providers, sends `initialize` during startup, and checks the duplicate-service error. A second case throws an error whose message contains a fake secret and checks that only the error type reaches the client.
+`rsh/Programs/SDK/packages/server/tests/plugin-apply.spec.ts` boots a Loader group containing the server and two `fs` providers, sends `initialize` during startup, and checks the duplicate-service error. Two more cases cover a failing child of a nested group and a fiber that fails after a delayed injection; their errors carry a fake secret, and the tests check that only the error type reaches the client.

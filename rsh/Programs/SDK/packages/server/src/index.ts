@@ -37,6 +37,58 @@ export const Config: Schema<JsonRpcConfig> = Schema.object({
   maxTokensAsSuccess: Schema.boolean().default(false),
 })
 
+const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (\S+) \((.*?)\): /
+const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
+
+/**
+ * Wait until the Loader tree settles and return the first startup failure. A
+ * failed entry rejects its task before rollback removes it, so the tasks are
+ * observed directly; the final `await()` reports fibers that failed after
+ * their entry task resolved (for example after a delayed injection).
+ * @param loader - the Loader whose current tree is starting.
+ * @returns the first rejection, or `undefined` when the tree started.
+ */
+async function startupFailure(loader: Context['loader']): Promise<unknown> {
+  let failure: unknown
+  for (let tasks = loader.getTasks(); tasks.length > 0; tasks = loader.getTasks()) {
+    for (const outcome of await Promise.allSettled(tasks)) {
+      if (outcome.status === 'rejected') failure ??= outcome.reason
+    }
+  }
+  try {
+    await loader.await()
+  } catch (reason) {
+    failure ??= reason
+  }
+  return failure
+}
+
+/**
+ * Describe a Loader startup failure for SDK clients. The Loader wraps each
+ * entry failure as `failed to <stage> loader entry <id> (<name>): <detail>`
+ * with the inner error as `cause`; the deepest wrapper names the failing
+ * entry. Only that entry, the plugin error type, and the Cordis
+ * duplicate-service rule are reported: plugin messages can carry
+ * configuration values and stay in the runtime stderr log.
+ * @param failure - a rejection from {@link startupFailure}.
+ * @returns the error returned to `initialize` and later requests.
+ */
+function bootFailureError(failure: unknown): Error {
+  let entry = ''
+  // The Loader rejects with Error wrappers, and plugin startup errors are Error instances.
+  let error = failure as Error
+  for (;;) {
+    if (error instanceof AggregateError) error = error.errors[0] as Error
+    const wrapper = LOADER_ENTRY_FAILURE.exec(error.message)
+    if (wrapper === null) break
+    entry = ` "${wrapper[1]}" (${wrapper[2]})`
+    error = error.cause as Error
+  }
+  const service = DUPLICATE_SERVICE.exec(error.message)?.[1]
+  const rule = service === undefined ? '' : `: service "${service}" is already provided by another plugin`
+  return new Error(`SDK runtime failed to start: loader entry${entry} failed: ${error.name}${rule}; see the runtime stderr log for details`)
+}
+
 /**
  * Serve SDK requests over the configured streams. Effect disposal shuts down
  * SDK-created agents and closes the transport. A `shutdown` response is flushed
@@ -63,35 +115,6 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
 
   const loader = ctx.get('loader')
   let bootFailure: Error | undefined
-  const startupWatcher = loader === undefined ? undefined : (async () => {
-    let lastFailure: { id: string; name: string; reason: unknown } | undefined
-    for (;;) {
-      // Read entry tasks before rollback can remove the failed subtree.
-      const pending = [...loader.entries()].flatMap((entry) => {
-        const task = entry._initTask ?? entry.fiber?.inertia
-        return task === undefined ? [] : [{ id: entry.id, name: entry.options.name, task }]
-      })
-      if (!pending.length) break
-      const failures = await Promise.all(pending.map(({ task, ...entry }) =>
-        task.then(() => undefined, (reason: unknown) => ({ ...entry, reason }))))
-      // `entries()` yields a parent before its children, so the last failure is the failing leaf entry.
-      lastFailure = failures.findLast(failure => failure !== undefined) ?? lastFailure
-    }
-    if (lastFailure === undefined) return
-
-    // Entry tasks reject with the Loader's `failed to <stage> loader entry` wrapper;
-    // its cause is the plugin's own error. Only the error type and the Cordis
-    // duplicate-service rule reach the client: raw messages can carry config values.
-    const { id, name, reason } = lastFailure
-    const original = (reason as Error).cause
-    /* v8 ignore next -- plugins throw Error instances; a thrown non-Error still gets a generic type */
-    const error = original instanceof Error ? original : new Error()
-    const service = /^service "([^"]+)" has been registered/.exec(error.message)?.[1]
-    const rule = service === undefined ? '' : `: service "${service}" is already provided by another plugin`
-    bootFailure = new Error(
-      `SDK runtime failed to start: loader entry "${id}" (${name}) failed: ${error.name}${rule}; see the runtime stderr log for details`,
-    )
-  })()
 
   // Share one exit task so racing shutdown requests cannot dispose the root or
   // exit the process more than once.
@@ -113,9 +136,9 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     // lifecycle work, and synchronous effect registration; no scheduler delay
     // is part of readiness. A hand-built context without Loader remains
     // immediately usable.
-    if (method === 'initialize') {
-      await startupWatcher
-      if (bootFailure === undefined) await loader?.await()
+    if (method === 'initialize' && loader !== undefined) {
+      const failure = await startupFailure(loader)
+      if (failure !== undefined) bootFailure = bootFailureError(failure)
     }
     if (bootFailure !== undefined) throw bootFailure
     const result = await server.handleRequest(method, params)

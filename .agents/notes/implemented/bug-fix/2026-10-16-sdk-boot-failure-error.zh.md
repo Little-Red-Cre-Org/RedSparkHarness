@@ -10,7 +10,7 @@ SDK JSON-RPC 服务器插件运行在 profile 的 Loader 插件树中。当另�
 
 ## 决策
 
-[`dsh-sdk-jsonrpc-server`](../../../../rsh/Programs/SDK/packages/server/README.zh.md) 在 apply 时监视待处理的 Loader 配置项任务，直到插件树稳定，并保留最后一个失败的配置项；`entries()` 先产出父项再产出子项，因此它就是失败的叶子配置项。`initialize` 会等待这一监视结束。失败之后，`initialize` 以及之后处理的任何请求都会以 `SDK runtime failed to start: loader entry "<id>" (<plugin>) failed: <ErrorType>[: service "<name>" is already provided by another plugin]; see the runtime stderr log for details` 拒绝。
+在 `initialize` 响应之前，[`dsh-sdk-jsonrpc-server`](../../../../rsh/Programs/SDK/packages/server/README.zh.md) 会自行等待待处理的 Loader 任务并保留第一个拒绝，因为失败的配置项会在回滚将其移除之前拒绝自己的任务；最后的 `loader.await()` 会报告在配置项任务完成之后才失败的 fiber，例如延迟注入之后的失败。Loader 把每个配置项失败包装为 `failed to <stage> loader entry <id> (<name>): ...`，并以内部错误作为 `cause`；服务器沿这条链（遇到聚合错误时取其第一个错误）找到最深的包装错误。失败之后，`initialize` 以及之后处理的任何请求都会以 `SDK runtime failed to start: loader entry "<id>" (<plugin>) failed: <ErrorType>[: service "<name>" is already provided by another plugin]; see the runtime stderr log for details` 拒绝。
 
 该消息只包含配置项 id、插件名、错误类型以及可识别的 Cordis 重复服务注册规则。它从不包含插件的错误消息、堆栈或 cause，因为这些内容可能带有配置值；app-boot 仍会把完整错误打印到 stderr。
 
@@ -26,4 +26,4 @@ SDK JSON-RPC 服务器插件运行在 profile 的 Loader 插件树中。当另�
 
 ## 验证
 
-`rsh/Programs/SDK/packages/server/tests/plugin-apply.spec.ts` 启动一个包含服务器与两个 `fs` 提供方的 Loader group，在启动期间发送 `initialize`，并检查重复服务错误。第二个用例抛出一条消息中含有伪造密钥的错误，并检查只有错误类型到达客户端。
+`rsh/Programs/SDK/packages/server/tests/plugin-apply.spec.ts` 启动一个包含服务器与两个 `fs` 提供方的 Loader group，在启动期间发送 `initialize`，并检查重复服务错误。另外两个用例覆盖嵌套 group 中失败的子项，以及在延迟注入之后失败的 fiber；它们的错误带有伪造密钥，测试检查只有错误类型到达客户端。
