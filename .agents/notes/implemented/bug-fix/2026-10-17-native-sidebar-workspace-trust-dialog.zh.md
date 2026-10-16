@@ -17,7 +17,7 @@ native-web 侧栏遇到配置根目录以外的 Workspace 路径时，会询问�
 
 [`dsh-client-ui-sidebar`](../../../../rsh/Programs/Web/client/ui-sidebar/README.zh.md) 按 `code`（`native/workspace-untrusted`、`native/workspace-forbidden`）识别原生 RPC 拒绝，并从 `details.path` 读取未受信任的路径，不再使用 `instanceof NativeSessionRpcError`。
 
-Session 行和搜索结果与 Workspace 行一样，通过 `runWorkspaceAction` 打开。注入的 `selectSession(id, trust?)` 找到 Session 所属的已注册 Workspace，在 `controller.select(id)` 之前用其路径调用 `workspaces/create`（批准后带上 `trust`）。`workspaces/create` 会把已有路径解析为对应 Workspace 并为其路由完成准入，因此未受信任的 Workspace 会返回带路径的 `native/workspace-untrusted`，批准后经由现有 Host 路径持久化信任。没有已注册 Workspace 的 Session 仍像以前一样直接选择。
+Session 行和搜索结果与 Workspace 行一样，通过 `runWorkspaceAction` 打开。注入的 `admitSession(id, trust?)` 找到 Session 所属的已注册 Workspace，用其路径调用 `workspaces/create`（批准后带上 `trust`）；之后只有在准入期间没有更晚的 Session 点击取而代之时，sidebar 才调用 `controller.select(id)`。`workspaces/create` 会把已有路径解析为对应 Workspace 并为其路由完成准入，因此未受信任的 Workspace 会返回带路径的 `native/workspace-untrusted`，批准后经由现有 Host 路径持久化信任。没有已注册 Workspace 的 Session 仍像以前一样直接选择。
 
 折叠布局渲染与展开布局相同的 `DirectoryBrowser`。遇到 `native/workspace-forbidden` 拒绝时，目录浏览器或侧栏提示显示 `workspaceForbidden` 本地化文本（英文和中文），说明该目录是受系统保护的目录，代理在其中运行可能修改或损坏系统文件。
 

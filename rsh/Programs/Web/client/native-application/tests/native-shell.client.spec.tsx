@@ -444,8 +444,12 @@ it.each([
     expect(connectWorkspace).not.toHaveBeenCalled()
     expect(document.title).toBe('Beta — Product')
     alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is outside the configured allowed roots'),
+      { code: 'native/workspace-untrusted', details: { path: 'C:\\Work\\Shared' } }))
     fireEvent.click(alphaRow)
+    fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
     clientMock.history.mockClear()
     const betaHistory = Promise.withResolvers<undefined>()
     clientMock.history.mockImplementationOnce(async (id) => {
@@ -496,12 +500,8 @@ it.each([
     fireEvent(alphaDropRow, drop)
     await waitFor(() => { expect(reorderSession).toHaveBeenLastCalledWith(workspaceId, 'session-beta', 'session-alpha', expect.any(AbortSignal)) })
 
-    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is outside the configured allowed roots'),
-      { code: 'native/workspace-untrusted', details: { path: 'C:\\Work\\Shared' } }))
     fireEvent.click(alphaRow)
-    fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
-    expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
 
     const messageInput = screen.getByRole('textbox', { name: 'Message' })
@@ -510,8 +510,8 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
     await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
     expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
     await waitFor(() => { expect(attach).toHaveBeenCalledWith('session-alpha', -1, expect.any(Function),
       expect.any(AbortSignal), expect.any(Function), expect.any(AbortSignal)) })
