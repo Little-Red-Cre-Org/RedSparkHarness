@@ -1,6 +1,6 @@
 /** Packed-consumer coverage for scheduled reminders across a cold SDK restore. */
 import { createRequire } from 'node:module'
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -57,21 +57,53 @@ function respondWithScheduleCreate(response: ServerResponse): void {
   response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
   writeSse(response, { choices: [{ index: 0, delta: { role: 'assistant', content: null }, finish_reason: null }] })
   writeSse(response, { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: TOOL_CALL_ID, type: 'function',
-    function: { name: 'schedule_create', arguments: JSON.stringify({ prompt: REMINDER_PROMPT, after_seconds: 15 }) } }] },
+    function: { name: 'schedule_create', arguments: JSON.stringify({ prompt: REMINDER_PROMPT, after_seconds: 45 }) } }] },
   finish_reason: null }] })
   writeSse(response, { choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 10, completion_tokens: 5 } })
   response.end('data: [DONE]\n\n')
 }
 
-function requestUserText(request: JsonObject): string {
+function requestLastUserText(request: JsonObject): string {
   if (!Array.isArray(request.messages)) return ''
-  return request.messages.filter(message => isRecord(message) && message.role === 'user').map((message) => {
-    if (!isRecord(message)) return ''
-    if (typeof message.content === 'string') return message.content
-    if (!Array.isArray(message.content)) return ''
-    return message.content.filter(isRecord).filter(block => block.type === 'text' && typeof block.text === 'string')
-      .map(block => block.text as string).join('\n')
-  }).join('\n')
+  const last: unknown = request.messages.filter(message => isRecord(message) && message.role === 'user').at(-1)
+  if (!isRecord(last)) return ''
+  if (typeof last.content === 'string') return last.content
+  if (!Array.isArray(last.content)) return ''
+  return last.content.filter(isRecord).filter(block => block.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text as string).join('\n')
+}
+
+function isScheduleReminder(event: JsonObject): boolean {
+  return event.type === 'user/message' && isRecord(event.data)
+    && isRecord(event.data.source) && event.data.source.kind === 'plugin' && event.data.source.plugin === 'schedule'
+    && Array.isArray(event.data.content) && event.data.content.some(block => isRecord(block)
+      && typeof block.text === 'string' && block.text.includes(REMINDER_PROMPT))
+}
+
+async function readSessionEvents(root: string, sessionId: string): Promise<JsonObject[]> {
+  let current: { readonly version: number; readonly events: JsonObject[] } | undefined
+  const visit = async (directory: string): Promise<void> => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) {
+        await visit(path)
+        continue
+      }
+      if (!entry.isFile() || !entry.name.endsWith('.jsonl')) continue
+      const [header, ...events] = (await readFile(path, 'utf8')).split(/\r?\n/).filter(Boolean)
+        .map(line => JSON.parse(line) as unknown)
+      if (!isRecord(header) || header.type !== 'session' || header.id !== sessionId) continue
+      if (typeof header.version !== 'number' || events.some(event => !isRecord(event))) {
+        throw new Error(`packed-scheduled-reminder: invalid Session JSONL in ${path}`)
+      }
+      if (current === undefined || header.version > current.version) {
+        current = { version: header.version, events: events as JsonObject[] }
+      }
+    }
+  }
+  await visit(root)
+  if (current === undefined) throw new Error(`packed-scheduled-reminder: Session ${sessionId} was not persisted`)
+  return current.events
 }
 
 async function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
@@ -194,22 +226,36 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       const requestsBeforeRestore = requests.length
       const coldHarness = new DeepSeekHarness(options)
       let recovery: RunResult
-      try { recovery = await coldHarness.session(SESSION_ID).run(COLD_TASK) }
+      try {
+        recovery = await coldHarness.session(SESSION_ID).run(COLD_TASK)
+        await new Promise<void>(resolve => setTimeout(resolve, 3_000))
+      }
       finally { await coldHarness.close() }
 
-      expect(recovery.events.some(event => event.type === 'schedule/change' && isRecord(event.data)
-        && event.data.operation === 'dispatch' && event.data.id === scheduleId)).toBe(true)
-      expect(recovery.events.some(event => event.type === 'user/message' && isRecord(event.data)
-        && isRecord(event.data.source) && event.data.source.kind === 'plugin' && event.data.source.plugin === 'schedule'
-        && Array.isArray(event.data.content) && event.data.content.some(block => isRecord(block)
-          && typeof block.text === 'string' && block.text.includes(REMINDER_PROMPT)))).toBe(true)
-      const restoredRequest = requests.slice(requestsBeforeRestore)
-        .find(request => requestUserText(request).includes(REMINDER_PROMPT))
-      expect(restoredRequest).toBeDefined()
-      expect(requestUserText(restoredRequest ?? {}).split(REMINDER_PROMPT).length - 1).toBe(1)
+      const recoveryDispatches = recovery.events.filter(event => event.type === 'schedule/change' && isRecord(event.data)
+        && event.data.operation === 'dispatch' && event.data.id === scheduleId)
+      expect(recoveryDispatches.length).toBe(1)
+      const recoveryReminders = recovery.events.filter(isScheduleReminder)
+      expect(recoveryReminders.length).toBe(1)
+
+      const reminderRequests = requests.slice(requestsBeforeRestore)
+        .filter(request => requestLastUserText(request).includes(REMINDER_PROMPT))
+      expect(reminderRequests.length).toBe(1)
+
+      const durableEvents = await readSessionEvents(sessionsRoot, SESSION_ID)
+      const durableDispatches = durableEvents.filter(event => event.type === 'schedule/change' && isRecord(event.data)
+        && event.data.operation === 'dispatch' && event.data.id === scheduleId)
+      expect(durableDispatches.length).toBe(1)
+      const durableReminders = durableEvents.filter(isScheduleReminder)
+      expect(durableReminders.length).toBe(1)
+      const runReminderId = isRecord(recoveryReminders[0]!.data) ? recoveryReminders[0]!.data.id : undefined
+      const durableReminderId = isRecord(durableReminders[0]!.data) ? durableReminders[0]!.data.id : undefined
+      expect(runReminderId).toEqual(expect.any(String))
+      expect(durableReminderId).toBe(runReminderId)
     } finally {
       try { if (server !== undefined) await closeServer(server) }
       finally { await rm(root, { recursive: true, force: true }) }
     }
   },
+  180_000,
 )

@@ -32,7 +32,7 @@ kind: "package-reference"
 
 所选 Session 的对话标题栏提供 Trajectory 操作。它使用 controller 当前的事件历史打开共享记录表和时间线，其中包括持久化轮次与消息。它不增加 Host 操作，也不请求更早的历史页面。
 
-Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、基于 Host 已安装 Agent 预设的模式选择器、权限选择器，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。模式选择器在 Host 不允许选择或首轮锁定后会禁用。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。空白 Session 上下文行显示所选 Session 的工作区标签或禁用占位符。切换工作区仍由侧边栏处理。Native 页面不提供命令补全或消息反馈。
+Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、基于 Host 已安装 Agent 预设的模式选择器、权限选择器，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。模式选择器在 Host 不允许选择或首轮锁定后会禁用。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。主页工作区选择器会列出已注册的工作区；列表为空时打开目录浏览器。选择工作区会连接其空白 Session；添加工作区会采用选定目录并连接。列表或连接失败会显示在选择器旁，采用目录失败会显示在目录浏览器中。只要存在可用的 Agent 预设，无 Session 的主页就会显示 Agent 预设选择器；每次 Workspace 启动操作都会捕获暂存选择，并在该操作的信任确认重试中保留；操作失败或被取代时会丢弃选择。只有该操作返回的 Session 加载出匹配且未锁定的模式控件后，才会应用预设。未选 Session 时，输入框会提示先选择工作区。标题会显示所选 Session 的模式，计划模式激活时还会显示 Plan 标签。仅选中 Session 时才会显示 Session details。Native 页面不提供命令补全或消息反馈。
 
 恢复所选 Session 时，控制器会携带最近加载的事件序号调用 `session/attach`。如果 Host 轮次仍在运行，控制器会保留发送中和停止状态，恢复实时跟随，并接收待处理的审批或问题。之后控制器会重新读取持久历史；没有活动轮次时也会如此，这样在 attach 之前已结算的轮次仍会显示其最终事件。停止会取消轮次；页面卸载只会断开本地流和结算等待。
 
@@ -52,7 +52,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 
 首次启动时，页面显示版本化欢迎声明，并将确认状态保存在当前 origin 的 `localStorage`。之后页面读取选定 Host 的活动与可配置模型提供方、Settings namespace 和凭据状态；当没有可用的活动提供方时，共享提供方编辑器通过 `settingsMutate` 和 `credentialsSet` 写入。欢迎确认使用浏览器本地持久化；只要尚无可用提供方或用户尚未关闭本次引导，重载后就会再次出现模型配置步骤。应用根节点 inert 期间，引导页顶部仍提供原生语言与主题控件。
 
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。归档或删除当前选中的 Session 会将其从侧边栏隐藏，并切换到下一条可见行；如果没有下一条，则切换到上一条；没有其他行时会清空选择。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
+可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。Sidebar 的 New Session 会在连接期间锁定 composer；连接完成后会等待 controller 正在执行的操作结束，再选择已连接的 Session；即使 controller 正在刷新，连接被拒绝时也会释放该锁。Composer 的 Workspace 选择器和添加操作会在连接期间锁定 Send；操作失败时会释放该锁，包括因 Workspace 不受信任而打开信任确认框的拒绝。Sidebar 的 New Session 遇到不受信任的 Workspace 拒绝时不会显示错误；controller 就绪后会清除选择。归档或删除当前选中的 Session 会将其从侧边栏隐藏，并切换到下一条可见行；如果没有下一条，则切换到上一条；没有其他行时会清空选择。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
 
 <a id="invariants"></a>
 
