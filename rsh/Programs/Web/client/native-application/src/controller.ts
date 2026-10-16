@@ -27,6 +27,8 @@ export interface ConversationSnapshot {
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
   readonly selected?: SessionId | undefined
+  /** Whether a pending navigation blocks composer submissions. */
+  readonly navigationPending?: boolean | undefined
   readonly events: readonly SessionEvent[]
   readonly liveText?: string | undefined
   readonly liveTruncated?: boolean | undefined
@@ -42,12 +44,13 @@ export interface NativeConversationLimits {
 
 /** Own one interactive Session view; closing or switching away detaches its waiter without cancelling Host work. */
 export class NativeConversationController {
-  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading' }
+  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading', navigationPending: false }
   private readonly listeners = new Set<() => void>()
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
   private selectionEpoch = 0
+  private navigation = 0
   private submissionRead = 0
   private submissionFloor = -1
   private submissionDraft: {
@@ -73,6 +76,48 @@ export class NativeConversationController {
   /** Read the current conversation view.
    * @returns immutable view snapshot, stable until an operation publishes a change. */
   readonly getSnapshot = (): ConversationSnapshot => this.snapshot
+
+  /** Reserve the next navigation token.
+   * @param disableSending - whether to block submissions while navigation resolves.
+   * @returns next navigation token.
+   */
+  beginNavigation(disableSending = false): number {
+    const token = ++this.navigation
+    this.publish({ navigationPending: disableSending })
+    return token
+  }
+
+  /** Check whether a navigation token is still current.
+   * @param token - navigation token to check.
+   * @returns whether the token is current.
+   */
+  isCurrentNavigation(token: number): boolean { return token === this.navigation }
+
+  /** Wait for controller operations already in flight to settle.
+   * @returns completion after no tracked operations remain pending.
+   */
+  async idle(): Promise<void> {
+    while (this.pending.size > 0) await Promise.allSettled([...this.pending])
+  }
+
+  /** Release a current navigation's composer lock without exposing an error.
+   * @param token - navigation token whose composer lock should be released.
+   * @returns no value.
+   */
+  releaseNavigation(token: number): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false })
+  }
+
+  /** Clear a current navigation's sending lock and expose its failure.
+   * @param token - navigation token that failed.
+   * @param error - failure returned by the navigation operation.
+   * @returns no value.
+   */
+  failNavigation(token: number, error: unknown): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false, error: error instanceof Error ? error.message : String(error) })
+  }
 
   /** Observe view changes.
    * @param listener - render notification.
@@ -123,9 +168,10 @@ export class NativeConversationController {
 
   private beginSelection(): void {
     this.selectionEpoch++
+    this.navigation++
     this.submissionFloor = -1
     this.submissionDraft = undefined
-    this.publish({ submissionBusy: false, submissionError: undefined })
+    this.publish({ navigationPending: false, submissionBusy: false, submissionError: undefined })
   }
 
   private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
@@ -210,7 +256,8 @@ export class NativeConversationController {
    */
   submitPending(text: string, placement: 'queued' | 'steering'): Promise<boolean> {
     const id = this.snapshot.selected
-    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
+    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.navigationPending === true
+      || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
     const epoch = this.selectionEpoch
     const previous = this.submissionDraft
     const draft = previous?.sessionId === id && previous.epoch === epoch && previous.text === text && previous.placement === placement
@@ -263,7 +310,7 @@ export class NativeConversationController {
   changePending(requestId: NativeSubmissionRequestId, action: 'remove' | 'promote'): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     return this.mutateSubmission(id, this.selectionEpoch, async () => {
       if (action === 'remove') await this.client.dequeue(id, requestId, this.lifetime.signal)
@@ -280,7 +327,8 @@ export class NativeConversationController {
   editPending(requestId: NativeSubmissionRequestId, text: string): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || text.trim() === ''
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
+      || text.trim() === ''
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     const epoch = this.selectionEpoch
     return this.mutateSubmission(id, epoch, async () => {
@@ -405,6 +453,16 @@ export class NativeConversationController {
     this.handingOff = true
     this.publish({ state: 'loading', error: undefined })
     try { await Promise.allSettled([...this.pending]) } finally { this.handingOff = false }
+  }
+
+  /** Clear the selected Session and return the conversation to its empty state. */
+  clear(): void {
+    this.assertReady()
+    this.followErrorOwner = undefined
+    this.beginSelection()
+    this.publish({ selected: undefined, header: undefined, modeControls: undefined, permissionControls: undefined,
+      submissions: undefined, human: undefined, answeringHuman: undefined, submissionBusy: false, submissionError: undefined,
+      events: [], liveText: undefined, liveTruncated: undefined, error: undefined, state: 'ready' })
   }
 
   /** Pin an edited title through the selected Host's existing Session writer.
@@ -542,6 +600,7 @@ export class NativeConversationController {
    */
   send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
+    if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const retainedDraft = this.submissionDraft
