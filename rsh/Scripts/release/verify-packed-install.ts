@@ -2,8 +2,9 @@
  * Install packed tarballs into a throwaway consumer outside the repository and
  * drive the installed executable with plain Node.
  *
- * Every tarball the installed tree needs comes from `--from`, so the only
- * registry traffic is for external dependencies. That matters beyond hermetic
+ * Every repository tarball the installed tree needs comes from `--from`, except
+ * the optional native platform packages, which npm takes from the registry with
+ * the external dependencies, as a normal install does. That matters beyond hermetic
  * verification: the harness packages declare the vendored framework as a peer,
  * those packages live in another release sequence, and this job must not depend
  * on the registry already carrying versions that match — one pull request may
@@ -106,17 +107,18 @@ function main(): void {
 
     const environment = consumerEnvironment(consumerRoot)
     console.log(`release verify-packed-install: installing ${String(packed.size)} tarball(s) into ${consumerRoot}`)
-    // Optional dependencies are omitted: the Landlock platform packages behind
-    // them need a musl toolchain and one build per architecture, and a consumer
-    // that cannot install them must still start — which is what optional means
-    // here. Their entry package is a plain dependency of dsh-sandbox-local, so
-    // its tarball is supplied through --from.
+    // Install optional platform packages as a consumer does: npm resolves
+    // node-addon-system-<platform> and sharp's @img/* packages from the public
+    // registry at versions selected by the packed entry and sharp. The
+    // node-addon-system family publishes independently through
+    // .github/workflows/node-addon-system-release.yml. The Landlock entry
+    // remains a plain dsh-sandbox-local dependency, so its tarball is supplied
+    // through --from.
     const installArgs = [
       'install',
       '--no-audit',
       '--no-fund',
       '--package-lock=false',
-      '--omit=optional',
       '--loglevel=http',
     ]
     // execa resolves npm.cmd on Windows without re-adding host-only environment variables.

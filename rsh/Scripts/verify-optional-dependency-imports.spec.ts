@@ -214,6 +214,32 @@ describe('optional dependency loads', () => {
     }
   })
 
+  it('allows an explicitly compatibility-only package to load its optional peer', () => {
+    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-compatibility-only-peer-'))
+    try {
+      const files = {
+        'tsconfig.host.json': FIXTURE['tsconfig.host.json'],
+        'tsconfig.client.json': FIXTURE['tsconfig.host.json'],
+        'rsh/f/compatibility/package.json': JSON.stringify({
+          name: '@f/compatibility', version: '0.0.1',
+          peerDependencies: { '@deepseek-ai/cordis': '*' },
+          peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        }),
+        'rsh/f/compatibility/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+        'rsh/f/cordis/package.json': FIXTURE['rsh/f/cordis/package.json'],
+        'rsh/f/cordis/src/index.ts': FIXTURE['rsh/f/cordis/src/index.ts'],
+      }
+      for (const [path, content] of Object.entries(files)) {
+        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
+        writeFileSync(join(caseRoot, path), content)
+      }
+      const peers = new Map([['rsh/f/compatibility', ['@deepseek-ai/cordis']]])
+      expect(collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'host'), new Map(), peers)).toEqual([])
+    } finally {
+      rmSync(caseRoot, { recursive: true, force: true })
+    }
+  })
+
   it('reports every form the compiler keeps, and nothing else', () => {
     expect(violations.map(violation => violation.split(' loads ')[0])).toEqual([
       'rsh/f/cli-static-violation/src/startup.ts:1',

@@ -182,6 +182,7 @@ export function discoverPackageDependencyScope(
 
   const selected: Array<WorkspacePackageManifest & { role: PackageDependencyRole }> = []
   for (const pkg of packages) {
+    if (policy.applicationDistributionDirectories.has(normalizePath(pkg.dir))) continue
     const clientDirectory = pkg.manifestPath.startsWith('rsh/Programs/Web/client/')
     const clientHost = (hasClientDeclaration(pkg.manifest.dsh) || include.has(pkg.name)) && !exclude.has(pkg.name)
     const clientOnly = clientDirectory && !clientHost

@@ -248,7 +248,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       // Start from the profile composition returned by the packed CLI, then enable its optional model-facing
       // Subagent Consumer. The consumer process still resolves all selected plugins from the independent install.
       const profileDump = await execa(process.execPath, [installedBin, '--profile', 'native-headless', '--dump-config'], {
-        cwd: installedRoot, env: childEnv, reject: false, timeout: 30_000,
+        cwd: installedRoot, env: childEnv, extendEnv: false, reject: false, timeout: 30_000,
       })
       expect(profileDump.timedOut, profileDump.stderr).toBe(false)
       expect(profileDump.exitCode, profileDump.stderr).toBe(0)
@@ -403,7 +403,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       ] }))
 
       const child = execa(process.execPath, [installedBin, '--profile', 'native-headless', '--patch', patch, PARENT_TASK], {
-        cwd: installedRoot, env: childEnv, reject: false, timeout: 100_000,
+        cwd: installedRoot, env: childEnv, extendEnv: false, reject: false, timeout: 100_000,
       })
       terminateInvocation = (signal) => { child.kill(signal) }
       const processResult: Promise<CliProcessExit> = child.then(result => ({

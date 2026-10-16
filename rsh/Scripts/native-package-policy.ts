@@ -1,5 +1,17 @@
 /** Explicit Cordis-free source owners in the native production graph. */
 
+/** Application outputs whose dependency rules are not library peer rules. */
+export type ApplicationDistributionKind = 'native-cli' | 'desktop-app' | 'desktop-host' | 'web-frontend' | 'python-runtime'
+
+/** Application and distribution roots classified by their shipped runtime. */
+export const applicationDistributionDirectories: ReadonlyMap<string, ApplicationDistributionKind> = new Map([
+  ['rsh/Programs/CLI', 'native-cli'],
+  ['rsh/Programs/Desktop', 'desktop-app'],
+  ['rsh/Programs/DesktopHost', 'desktop-host'],
+  ['rsh/Programs/Web/application', 'web-frontend'],
+  ['rsh/Programs/SDK/python/sdk-runtime', 'python-runtime'],
+])
+
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/TUI/native-tui',
@@ -258,8 +270,10 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Engine/session/session-title-llm', ['host']],
 ])
 
-/** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
+/** Optional peers whose imports are restricted to package compatibility entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/typert/protocol', ['@deepseek-ai/cordis']],
+  ['rsh/Programs/Web/host/directory-picker', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', [
     '@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-agent',
@@ -274,6 +288,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
     '@deepseek-ai/dsh-sandbox-policy', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-projection',
     '@deepseek-ai/dsh-user-approval', '@deepseek-ai/dsh-settings',
   ]],
+  ['rsh/Engine/context/session-reference', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
@@ -287,6 +302,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/compaction/compaction-tool-result-pruner', ['@deepseek-ai/cordis']],
   ['rsh/Engine/compaction/command-compact', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/interaction/commands', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Modules/Official/feedback/command-feedback', ['@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Modules/Official/feedback/message-feedback', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Engine/session-query/tool-session-query', ['@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session']],
   ['rsh/Engine/workflow/workflow-worker-thread', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
@@ -310,6 +327,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/subagent/subagent-claude-code', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/shell/tool-pwsh', ['@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/shell/tool-bash', ['@deepseek-ai/dsh-tools']],
+  ['rsh/Modules/Official/skill/skill', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-local', ['@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-observation-policy', ['@deepseek-ai/dsh-plugin-host']],
@@ -352,6 +371,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
   ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
+  ['rsh/Programs/Web/host/directory-picker', ['./types']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory', './responses-transport']],
