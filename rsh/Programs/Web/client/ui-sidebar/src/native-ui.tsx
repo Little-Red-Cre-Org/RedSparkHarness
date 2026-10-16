@@ -56,8 +56,10 @@ type NativeWorkspacesInjected = {
     workspaceRegistry: HostObservable<NativeWorkspaceSnapshot>
     homeDirectory: HostObservable<string | undefined>
   }
+  getConversationSnapshot: NativeConversationService['getSnapshot']
   displayTitle: NativeSessionPresentation['displayTitle']
   selectSession: NativeConversationService['select']
+  deselectSession: NativeConversationService['deselect']
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -158,15 +160,18 @@ function errorMessage(error: unknown): string {
 const SEARCH_DEBOUNCE_MS = 250
 
 function NativeSessionBrowser({
-  wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, renameTitle, refreshTitle,
+  wide, useConversation, useWorkspaceRegistry, getConversationSnapshot, displayTitle, selectSession, deselectSession,
+  renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
   renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
+  getConversationSnapshot: NativeConversationService['getSnapshot']
   displayTitle: NativeSessionPresentation['displayTitle']
   selectSession: NativeConversationService['select']
+  deselectSession: NativeConversationService['deselect']
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -188,6 +193,8 @@ function NativeSessionBrowser({
   const homeDirectory = useHomeDirectory(value => value)
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
+  const [pendingSessionId, setPendingSessionId] = useState<NativeSessionId>()
+  const [switchNotice, setSwitchNotice] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<NativeWorkspaceId>()
   const [workspaceTitleDraft, setWorkspaceTitleDraft] = useState('')
@@ -214,6 +221,13 @@ function NativeSessionBrowser({
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
   const searchQuery = query.trim()
+  useEffect(() => {
+    if (snapshot.state !== 'ready') return
+    setSwitchNotice(false)
+    if (pendingSessionId === undefined) return
+    setPendingSessionId(undefined)
+    if (pendingSessionId !== snapshot.selected) void selectSession(pendingSessionId)
+  }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession])
   useEffect(() => {
     if (wide && searchExpanded) searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded])
@@ -251,6 +265,21 @@ function NativeSessionBrowser({
   }, [searchExpanded, searchQuery, searchSessions, archived, sessionItems, workspaceItems, t])
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
+  }
+  const openSession = (id: NativeSessionId): void => {
+    if (id === snapshot.selected) return
+    if (snapshot.state === 'sending' || snapshot.state === 'cancelling') {
+      setSwitchNotice(true)
+      return
+    }
+    if (snapshot.state === 'loading') {
+      setPendingSessionId(id)
+      return
+    }
+    if (snapshot.state === 'ready') {
+      setSwitchNotice(false)
+      void selectSession(id)
+    }
   }
   const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
     if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
@@ -310,15 +339,27 @@ function NativeSessionBrowser({
           node={session}
           currentId={snapshot.selected}
           now={Date.now()}
-          onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
+          onOpen={openSession}
           onRename={item?.titleActions?.rename === true
             ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
             : undefined}
           onRefresh={item?.titleActions?.refresh === true
             ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
             : undefined}
-          onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
-          allowRemove={false}
+          onArchive={async (id) => {
+            try {
+              await archiveSession(id)
+              const current = getConversationSnapshot()
+              if (current.selected !== id || current.state !== 'ready') return
+              const visibleIds = groups.flatMap(group => group.expanded ? group.sessions.map(row => row.id) : [])
+              const index = visibleIds.indexOf(id)
+              const nextId = visibleIds[index + 1] ?? visibleIds[index - 1]
+              if (nextId === undefined) deselectSession()
+              else await selectSession(nextId)
+            } catch (error: unknown) {
+              setActionError(errorMessage(error))
+            }
+          }}
           flat={flat}
           refreshTitleLabel={t('refreshTitle')}
           t={t}
@@ -336,7 +377,10 @@ function NativeSessionBrowser({
         void renameTitle(session.id, titleDraft).then((success) => { if (success) setEditingId(undefined) })
       }}>
         <label>{t('titleInput')}
-          <input aria-label={t('titleInput')} value={titleDraft} onChange={(event) => { setTitleDraft(event.target.value) }} />
+          <input autoFocus aria-label={t('titleInput')} value={titleDraft}
+            onFocus={(event) => { event.currentTarget.select() }}
+            onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setEditingId(undefined) } }}
+            onChange={(event) => { setTitleDraft(event.target.value) }} />
         </label>
         <Button type="submit" variant="primary" size="sm" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</Button>
         <Button type="button" variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>
@@ -450,6 +494,8 @@ function NativeSessionBrowser({
       </>}
     />
     {actionError !== undefined && <div role="alert">{actionError}</div>}
+    {switchNotice && (snapshot.state === 'sending' || snapshot.state === 'cancelling')
+      && <div role="status">{t('session.switchPending')}</div>}
     <nav className={css.workspaceList} aria-label={t('workspace')} role="tree">
       {searchExpanded && searchQuery !== '' ? <>
         {currentSearch.status === 'loading' && <WorkspaceSectionEmpty label={t('search.pending')} />}
@@ -458,10 +504,9 @@ function NativeSessionBrowser({
         {currentSearch.items.map(result => <SearchResultItem
           key={result.id} result={result} currentId={snapshot.selected}
           onOpen={(id) => {
-            if (snapshot.state !== 'ready') return
             setSearchExpanded(false)
             setQuery('')
-            void selectSession(id)
+            openSession(id)
           }} t={t}
         />)}
       </> : <>
@@ -510,7 +555,10 @@ function NativeSessionBrowser({
                 runAction(async () => { await renameWorkspace(workspaceId, workspaceTitleDraft.trim()); setEditingWorkspaceId(undefined) })
               }}>
                 <label>{t('workspaceTitle')}
-                  <input aria-label={t('workspaceTitle')} required value={workspaceTitleDraft} onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
+                  <input autoFocus aria-label={t('workspaceTitle')} required value={workspaceTitleDraft}
+                    onFocus={(event) => { event.currentTarget.select() }}
+                    onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setEditingWorkspaceId(undefined) } }}
+                    onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
                 </label>
                 <Button type="submit" variant="primary" size="sm">{t('saveTitle')}</Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingWorkspaceId(undefined) }}>{t('cancelTitle')}</Button>
@@ -787,8 +835,10 @@ export const plugin: NativePlugin = {
       name: 'sidebar.workspaces', locale: 'nativeSidebar',
       inject: (): NativeWorkspacesInjected => ({
         hooks: { conversation: controller, workspaceRegistry, homeDirectory },
+        getConversationSnapshot: controller.getSnapshot.bind(controller),
         displayTitle: item => presentation.displayTitle(item),
         selectSession: controller.select.bind(controller),
+        deselectSession: controller.deselect.bind(controller),
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
           await controller.renameTitle(id, title)
           return controller.getSnapshot().error === undefined
@@ -817,13 +867,16 @@ export const plugin: NativePlugin = {
         reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
       }),
-    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle, selectSession, renameTitle, refreshTitle,
+    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, getConversationSnapshot, displayTitle,
+      selectSession, deselectSession, renameTitle, refreshTitle,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
       renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
+        getConversationSnapshot={getConversationSnapshot}
         useHomeDirectory={useHomeDirectory}
-        displayTitle={displayTitle} selectSession={selectSession} renameTitle={renameTitle} refreshTitle={refreshTitle}
+        displayTitle={displayTitle} selectSession={selectSession} deselectSession={deselectSession}
+        renameTitle={renameTitle} refreshTitle={refreshTitle}
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
         renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}

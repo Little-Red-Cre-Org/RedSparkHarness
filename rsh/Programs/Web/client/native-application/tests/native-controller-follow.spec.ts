@@ -218,6 +218,9 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     fail('a3', new Error('late beta carrier failure'))
     expect(await thirdFollowFailure.promise).toMatchObject({ message: 'late beta carrier failure' })
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: 'session-beta', error: 'late beta carrier failure' })
+    controller.deselect()
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, header: undefined, events: [],
+      modeControls: undefined, permissionControls: undefined, submissions: undefined, error: undefined })
   } finally {
     unsubscribe()
     firstSettlement.resolve({ exitCode: 130, answer: '' })

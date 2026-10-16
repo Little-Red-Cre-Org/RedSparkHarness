@@ -50,7 +50,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 
 首次启动时，页面显示版本化欢迎声明，并将确认状态保存在当前 origin 的 `localStorage`。之后页面读取选定 Host 的活动与可配置模型提供方、Settings namespace 和凭据状态；当没有可用的活动提供方时，共享提供方编辑器通过 `settingsMutate` 和 `credentialsSet` 写入。欢迎确认使用浏览器本地持久化；只要尚无可用提供方或用户尚未关闭本次引导，重载后就会再次出现模型配置步骤。应用根节点 inert 期间，引导页顶部仍提供原生语言与主题控件。
 
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
+可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。归档或删除当前选中的 Session 会将其从侧边栏隐藏，并切换到下一条可见行；如果没有下一条，则切换到上一条；没有其他行时会清空选择。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
 
 <a id="invariants"></a>
 

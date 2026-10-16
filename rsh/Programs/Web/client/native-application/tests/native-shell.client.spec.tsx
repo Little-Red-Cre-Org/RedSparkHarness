@@ -463,6 +463,10 @@ it.each([
     fireEvent.change(messageInput, { target: { value: 'Start work' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
+    const historyCallsBeforeBlockedSwitch = clientMock.history.mock.calls.length
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    expect(screen.getByText('This session is still generating a reply. Stop it or wait for it to finish before switching sessions.')).toBeTruthy()
+    expect(clientMock.history).toHaveBeenCalledTimes(historyCallsBeforeBlockedSwitch)
     expect(messageInput).toHaveProperty('disabled', false)
     expect(messageInput).toHaveProperty('value', '')
     const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
@@ -546,6 +550,7 @@ it.each([
     fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
     promptSettlement.resolve({ exitCode: 0, answer: '' })
     await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
+    await waitFor(() => { expect(screen.queryByText('This session is still generating a reply. Stop it or wait for it to finish before switching sessions.')).toBeNull() })
     expect(messageInput).toHaveProperty('value', 'Keep this next draft')
 
     fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))
@@ -553,7 +558,13 @@ it.each([
     expect(screen.getByText('No scheduled tasks.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Back to conversation' }))
 
-    fireEvent.click(within(alphaRow).getByRole('button', { name: 'Session actions for Alpha' }))
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Alpha/ })).getByRole('button', { name: 'Session actions for Alpha' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
+    const titleInput = screen.getByRole('textbox', { name: 'Session title' })
+    expect(document.activeElement).toBe(titleInput)
+    fireEvent.keyDown(titleInput, { key: 'Escape' })
+    expect(screen.queryByRole('textbox', { name: 'Session title' })).toBeNull()
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Alpha/ })).getByRole('button', { name: 'Session actions for Alpha' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Session title' }), { target: { value: 'Renamed Alpha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -590,10 +601,15 @@ it.each([
 
     const refreshedRow = await screen.findByRole('treeitem', { name: /Refreshed Alpha/ })
     fireEvent.click(within(refreshedRow).getByRole('button', { name: 'Session actions for Refreshed Alpha' }))
-    expect(screen.queryByRole('menuitem', { name: 'Delete session' })).toBeNull()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Archive session' }))
+    expect(screen.getByRole('menuitem', { name: 'Archive session' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete session' }))
+    const deleteDialog = await screen.findByRole('dialog', { name: 'Delete session' })
+    const historyCallsBeforeArchive = clientMock.history.mock.calls.length
+    fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete session' }))
     await waitFor(() => { expect(clientMock.archive).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal)) })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
+    await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
+    expect(clientMock.history.mock.calls.at(-1)?.[0]).not.toBe('session-alpha')
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })

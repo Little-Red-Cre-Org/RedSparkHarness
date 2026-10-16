@@ -26,7 +26,7 @@ export interface ConversationSnapshot {
   readonly human?: NativeWebHumanPrompt | undefined
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
-  readonly selected?: SessionId
+  readonly selected?: SessionId | undefined
   readonly events: readonly SessionEvent[]
   readonly liveText?: string | undefined
   readonly liveTruncated?: boolean | undefined
@@ -325,6 +325,17 @@ export class NativeConversationController {
     this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
     return this.run(() => this.restore(id))
+  }
+
+  /** Clear the selected Session and its conversation projection.
+   * @throws If the controller is not ready.
+   */
+  deselect(): void {
+    this.assertReady()
+    this.followErrorOwner = undefined
+    this.beginSelection()
+    this.publish({ selected: undefined, header: undefined, events: [], modeControls: undefined, permissionControls: undefined,
+      submissions: undefined, error: undefined })
   }
 
   /** Pin an edited title through the selected Host's existing Session writer.
