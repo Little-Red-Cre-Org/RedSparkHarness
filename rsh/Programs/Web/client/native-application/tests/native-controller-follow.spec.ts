@@ -55,7 +55,7 @@ it('refreshes durable history when restore finds no active turn', async () => {
     async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
     async *follow(signal: AbortSignal) {
       yield { type: 'baseline' as const, items: [] }
-      await new Promise<void>(resolve => signal.addEventListener('abort', () => resolve(), { once: true }))
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
     },
     async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
       planMode: { available: false, active: false } } },

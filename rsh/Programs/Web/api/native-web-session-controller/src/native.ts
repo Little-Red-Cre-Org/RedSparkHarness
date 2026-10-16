@@ -940,6 +940,7 @@ export class NativeWebSessionService {
     turn.feed = feed
     const settlement = turn.settlement
     turn.settlement = undefined
+    turn.orphaned = false
     settlement?.abort(new Error('native web session: settlement waiter detached by attach'))
     turn.following = false
     turn.lastSeq = fields.lastSeq
@@ -1646,7 +1647,8 @@ export class NativeWebSessionService {
         })
         let detach!: () => void
         const detached = new Promise<never>((_resolve, reject) => {
-          detach = (): void => { reject(settlement.signal.reason) }
+          detach = (): void => { reject(settlement.signal.reason instanceof Error ? settlement.signal.reason
+            : new Error(String(settlement.signal.reason), { cause: settlement.signal.reason })) }
           settlement.signal.addEventListener('abort', detach, { once: true })
           if (settlement.signal.aborted) detach()
         })
@@ -1654,11 +1656,11 @@ export class NativeWebSessionService {
         finally {
           accepted.removeEventListener('abort', abort)
           settlement.signal.removeEventListener('abort', detach)
-          if (accepted.aborted) turn.orphaned = true
+          if (accepted.aborted && turn.settlement === settlement) turn.orphaned = true
         }
       })
     } finally {
-      if (signal.aborted) turn.orphaned = true
+      if (signal.aborted && turn.settlement === settlement) turn.orphaned = true
       if (this.turns.get(id) === turn && turn.settlement === settlement) {
         turn.settlement = undefined
         if (turn.settled) this.turns.delete(id)

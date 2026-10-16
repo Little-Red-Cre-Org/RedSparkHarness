@@ -109,7 +109,7 @@ function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: Abo
   }
   const clients = [0, 1].map(() => createNativeSessionClient(rpc, { maxFollowBufferChars: 100_000 }))
   return {
-    id, owner, answerers, clients,
+    id, owner, answerers, clients, service,
     async close() {
       await Promise.all(clients.map(client => client.close()))
       for (const dispose of disposers) dispose()
@@ -147,6 +147,33 @@ it('keeps a detached turn running and accepts the next prompt after it settles',
     expect(executionCount).toBe(2)
   } finally {
     firstCompletion.resolve({ exitCode: 130, answer: '' })
+    await fixture.close()
+  }
+})
+
+it('keeps settlement for an attach after a page disconnect when the turn settles before the new await', async () => {
+  const started = Promise.withResolvers<undefined>()
+  const completion = Promise.withResolvers<DetachedTurnResult>()
+  const fixture = detachedTurnFixture(async () => {
+    started.resolve(undefined)
+    return completion.promise
+  })
+  const detach = new AbortController()
+  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
+    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
+  try {
+    await started.promise
+    detach.abort()
+    await expect(firstPrompt).rejects.toBeDefined()
+    const attached = await fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, new AbortController().signal)
+    if (!attached.ok) throw new Error(attached.error.message)
+    const { admissionId } = attached.value as { admissionId: string }
+    completion.resolve({ exitCode: 0, answer: 'settled before await' })
+    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'idle' }) })
+    await expect(fixture.service.handle('session/await', { sessionId: fixture.id, admissionId }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { exitCode: 0, answer: 'settled before await' } })
+  } finally {
+    completion.resolve({ exitCode: 130, answer: '' })
     await fixture.close()
   }
 })
