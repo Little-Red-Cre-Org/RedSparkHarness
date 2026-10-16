@@ -155,6 +155,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
         label: effort.name,
       })),
     ], [reasoning, t])
+  const hasReasoningChoices = effortChoices.length > 0
   const busy = state.status === 'selecting'
 
   const reload = (): void => {
@@ -212,7 +213,13 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
       window.removeEventListener('resize', place)
     }
   }, [open, pane, state])
+
   /* jscpd:ignore-end */
+  useLayoutEffect(() => {
+    if (!open || pane !== 'model') return
+    const selected = itemRefs.current.find(item => item?.getAttribute('aria-checked') === 'true')
+    if (typeof selected?.scrollIntoView === 'function') selected.scrollIntoView({ block: 'nearest' })
+  }, [open, pane, state])
 
   // Keep keyboard focus inside the open card (keyboard open, pane drill, the
   // open-time reload re-rendering the rows): land on the checked row or the first.
@@ -226,7 +233,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   if (!available) return null
 
   const show = (): void => {
-    setPane('root')
+    setPane(hasReasoningChoices ? 'root' : 'model')
     setOpen(true)
     reload()
   }
@@ -249,7 +256,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
-      if (pane !== 'root') setPane('root')
+      if (pane !== 'root' && hasReasoningChoices) setPane('root')
       else close(true)
       return
     }
@@ -324,6 +331,10 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   const itemRef = () => {
     const at = itemIndex++
     return (node: HTMLButtonElement | null) => { itemRefs.current[at] = node }
+  }
+  const duplicateNames = new Map<string, number>()
+  for (const group of state.groups) for (const model of group.models) {
+    duplicateNames.set(model.name, (duplicateNames.get(model.name) ?? 0) + 1)
   }
 
   return (
@@ -421,6 +432,8 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
                           >
                             <span className={css.optionCopy}>
                               <span className={css.modelName}>{model.name}</span>
+                              {(duplicateNames.get(model.name) ?? 0) > 1
+                                ? <span className={css.providerName}>{group.name}</span> : null}
                             </span>
                             <span className={css.check}>
                               {selected ? <IconCheckOutline16 /> : null}

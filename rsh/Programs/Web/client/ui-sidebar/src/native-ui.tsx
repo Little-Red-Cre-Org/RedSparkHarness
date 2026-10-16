@@ -778,7 +778,30 @@ export const plugin: NativePlugin = {
         'sidebar.header.action': { kind: 'list', scope: 'root' },
       },
       inject: (): SidebarRootInjected => ({
-        startSession: () => { if (controller.getSnapshot().state === 'ready') void controller.create() },
+        startSession: () => {
+          const current = controller.getSnapshot()
+          if (current.state !== 'ready') return
+          const navigation = controller.beginNavigation()
+          const selectedWorkspace = current.sessions.find(session => session.header.id === current.selected)?.workspaceId
+          const recentSession = current.sessions.reduce<NativeSessionListItem | undefined>((recent, session) =>
+            session.workspaceId !== undefined && (recent === undefined || session.updatedAt > recent.updatedAt)
+              ? session : recent, undefined)
+          const target = selectedWorkspace ?? recentSession?.workspaceId
+          if (target === undefined) {
+            if (controller.isCurrentNavigation(navigation)) controller.clear()
+            return
+          }
+          void workspaceClient.connectWorkspace(target, context.signal)
+            .then(({ sessionId }) => {
+              if (controller.isCurrentNavigation(navigation)) return controller.select(sessionId)
+            })
+            .catch((error: unknown) => {
+              if (error instanceof NativeSessionRpcError && error.code === 'native/workspace-untrusted') {
+                const latest = controller.getSnapshot()
+                if (latest.state === 'ready' && controller.isCurrentNavigation(navigation)) controller.clear()
+              } else console.warn('native sidebar start session failed:', error)
+            })
+        },
         toggleSidebar: () => { layout.toggleSidebar() },
         selectPanel: (id) => { layout.selectPanel(id) },
         hooks: { panels },
@@ -798,19 +821,21 @@ export const plugin: NativePlugin = {
         searchSessions: nativeSession.search.bind(nativeSession),
         archiveSession: id => nativeSession.archive(id, context.signal),
         selectWorkspace: async (id, trust) => {
+          const navigation = controller.beginNavigation()
           const { sessionId } = trust === undefined
             ? await workspaceClient.connectWorkspace(id, context.signal)
             : await workspaceClient.connectWorkspace(id, context.signal, trust)
-          await controller.select(sessionId)
+          if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
         },
         listDirectory,
         createDirectory: (path, name) => directoryPicker.createDirectory(path, name, context.signal),
         createWorkspace: async (path, trust) => {
+          const navigation = controller.beginNavigation()
           const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
           const { sessionId } = trust === undefined
             ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
             : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
-          await controller.select(sessionId)
+          if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
         },
         renameWorkspace: (id, title) => workspaceClient.rename(id, title, context.signal),
         deleteWorkspace: id => workspaceClient.delete(id, context.signal),

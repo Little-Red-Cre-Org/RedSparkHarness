@@ -57,6 +57,12 @@ export interface NativeConversationService {
   subscribe(listener: () => void): () => void
   /** Create and select a Host-owned Session. */
   create(): Promise<void>
+  /** Clear the selected Session and return to the empty conversation state. */
+  clear(): void
+  /** Reserve the next navigation token. */
+  beginNavigation(): number
+  /** Check whether a navigation token is still current. */
+  isCurrentNavigation(token: number): boolean
   /** Select an identity from the Host-owned Session index. */
   select(id: SessionId): Promise<void>
   /** Pin a durable title through the selected Host owner. */

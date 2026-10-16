@@ -162,6 +162,7 @@ it.each([
     workspaceFrames.publish({ type: 'upsert', workspace })
     return { workspace, created: true }
   })
+  let pendingWorkspaceConnection: ReturnType<typeof Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>> | undefined
   const connectWorkspace = vi.fn(async (id: Parameters<NativeWorkspaceClient['connectWorkspace']>[0]) => {
     const sessionId = id === 'workspace-new' ? 'session-in-workspace' : 'session-alpha'
     if (!rows.some(row => row.header.id === sessionId)) {
@@ -173,7 +174,9 @@ it.each([
       rows = [...rows, row]
       listFrames.publish({ type: 'upsert', item: row })
     }
-    return { sessionId: sessionId as NativeSessionListItem['header']['id'] }
+    const pending = pendingWorkspaceConnection
+    pendingWorkspaceConnection = undefined
+    return pending?.promise ?? { sessionId: sessionId as NativeSessionListItem['header']['id'] }
   })
   const listDirectory = vi.fn(async () => ({
     path: 'C:\\Work\\New', entries: [], crumbs: [
@@ -293,7 +296,7 @@ it.each([
     close,
     settingsDescribe: vi.fn((_signal?: AbortSignal) => {
       settingsDescribeCalls++
-      // The sidebar startup read is the second describe; the third is the composer preference read.
+      // The sidebar startup read is second and the composer preference read is third.
       if (settingsDescribeCalls === 2) return sidebarStartupSettings.promise
       return Promise.resolve(settingsDescription())
     }),
@@ -312,7 +315,12 @@ it.each([
         yield event
       }
     },
-    agentPresetsList: vi.fn(async () => ({ default: null, presets: [] })),
+    agentPresetsList: vi.fn(async () => ({ default: 'standard', presets: [
+      { id: 'standard', name: 'Standard', source: 'profile' as const, status: 'ready' as const },
+      { id: 'minimal', name: 'Minimal', source: 'profile' as const, status: 'ready' as const },
+      { id: 'legacy', name: 'Legacy', source: 'user' as const, status: 'needs-migration' as const },
+      { id: 'damaged', name: 'Damaged', source: 'user' as const, status: 'invalid' as const },
+    ] })),
     agentPresetRead: vi.fn(async (id: string) => ({ id, source: 'profile' as const, status: 'ready' as const, name: id })),
     agentPresetCopy: vi.fn(async () => ({ updated: true as const })),
     agentPresetDelete: vi.fn(async () => ({ updated: true as const })),
@@ -337,8 +345,10 @@ it.each([
       await workspaceClient.archiveSession(id)
     }),
     modelControls: vi.fn(async () => ({ catalog: null, canSelectModel: false, presets: [] })),
-    modeControls: vi.fn(async () => ({ current: null, options: [], revision: null, locked: false, canSelect: false,
-      planMode: { available: false, active: false } })),
+    modeControls: vi.fn(async () => ({ current: 'standard', options: [
+      { id: 'standard', name: 'Standard' }, { id: 'minimal', name: 'Minimal' },
+    ], revision: null, locked: false, canSelect: true,
+    planMode: { available: false, active: false } })),
     selectPlanMode: vi.fn(async () => ({ active: false, outcome: 'noop' as const })),
     permissionControls: vi.fn(async () => ({ available: false, currentValue: null, options: [] })),
     selectPermissionPreset: vi.fn(async () => undefined),
@@ -408,6 +418,35 @@ it.each([
       settingsEventFrames.publish({ type: 'llm/adapters-updated' })
       await waitFor(() => { expect(clientMock.modelControls).toHaveBeenCalledTimes(modelReads + 1) })
     }
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('placeholder', 'Choose a workspace to start')
+    expect(screen.queryByRole('button', { name: 'Session details' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Choose workspace' })).toHaveProperty('disabled', false)
+    fireEvent.click(await screen.findByRole('button', { name: 'Standard' }))
+    expect(await screen.findByRole('menuitem', { name: 'Minimal' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'Legacy' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Damaged' })).toBeNull()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Minimal' }))
+    const presetReads = clientMock.agentPresetsList.mock.calls.length
+    settingsEventFrames.publish({ type: 'agent-presets/updated' })
+    await waitFor(() => { expect(clientMock.agentPresetsList).toHaveBeenCalledTimes(presetReads + 1) })
+    expect(screen.getByRole('button', { name: 'Minimal' })).toBeTruthy()
+    const delayedConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = delayedConnection
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(1) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(document.title).toBe('Beta — Product') })
+    delayedConnection.resolve({ sessionId: 'session-alpha' as SessionId })
+    await waitFor(() => {
+      expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal))
+      expect(clientMock.selectPreset).toHaveBeenCalledWith({ id: 'session-beta', preset: 'minimal', expectedRevision: null }, expect.any(AbortSignal))
+      expect(document.title).toBe('Beta — Product')
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    await waitFor(() => {
+      expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal))
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -558,9 +597,10 @@ it.each([
     const createButton = screen.getByText('New Session').closest('button')
     expect(createButton).not.toBeNull()
     fireEvent.click(createButton!)
-    await screen.findByRole('treeitem', { name: /New Session/ })
-    expect(clientMock.create).toHaveBeenCalledOnce()
-    expect(clientMock.history).toHaveBeenLastCalledWith('session-created', expect.any(AbortSignal))
+    await waitFor(() => {
+      expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal))
+      expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Search sessions' }))
     const search = screen.getByPlaceholderText('Search sessions…')
