@@ -178,6 +178,37 @@ it('keeps settlement for an attach after a page disconnect when the turn settles
   }
 })
 
+it('retires a detached turn when a replacement attach disconnects while reading history', async () => {
+  const started = Promise.withResolvers<undefined>()
+  const completion = Promise.withResolvers<DetachedTurnResult>()
+  const fixture = detachedTurnFixture(async () => {
+    started.resolve(undefined)
+    return completion.promise
+  })
+  const detach = new AbortController()
+  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
+    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
+  const history = Promise.withResolvers<readonly SessionEvent[]>()
+  try {
+    await started.promise
+    detach.abort()
+    await expect(firstPrompt).rejects.toBeDefined()
+    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => history.promise)
+    const disconnect = new AbortController()
+    const attached = fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, disconnect.signal)
+    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
+    disconnect.abort()
+    completion.resolve({ exitCode: 0, answer: 'settled while attaching' })
+    history.resolve(await fixture.owner.readEvents())
+    await expect(attached).resolves.toMatchObject({ ok: false })
+    await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' })
+  } finally {
+    completion.resolve({ exitCode: 130, answer: '' })
+    history.resolve([])
+    await fixture.close()
+  }
+})
+
 it('replays a pending approval onto an attached turn feed', async () => {
   const approvalStarted = Promise.withResolvers<undefined>()
   let turnSignal: AbortSignal | undefined

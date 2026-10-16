@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
@@ -154,6 +154,8 @@ it.each([
   const workspaceBaseline = (): NativeWorkspaceBaseline => ({ workspaces, archivedSessionIds })
   const createWorkspace = vi.fn(async (input: Parameters<NativeWorkspaceClient['create']>[0]) => {
     const { path } = input
+    const existing = workspaces.find(item => item.path === path)
+    if (existing !== undefined) return { workspace: existing, created: false }
     const workspace: NativeWorkspace = {
       workspaceId: 'workspace-new' as NativeWorkspace['workspaceId'], path, title: 'New',
       createdAt: '2026-10-11T00:00:00.000Z', updatedAt: '2026-10-11T00:00:00.000Z', sessionIds: [],
@@ -242,9 +244,21 @@ it.each([
   }
   const close = vi.fn(async () => undefined)
   const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
-  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal) => {
+  let turnStarted = false
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach) => {
+    turnStarted = true
     signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
-    return promptSettlement.promise
+    const detached = new Promise<never>((_resolve, reject) => {
+      detach?.addEventListener('abort', () => { reject(new Error('detached')) }, { once: true })
+    })
+    return Promise.race([promptSettlement.promise, detached])
+  })
+  const attach = vi.fn<NativeSessionClient['attach']>((id, _lastSeq, _observe, _signal, _onFollowError, detach) => {
+    if (id !== 'session-alpha' || !turnStarted) return Promise.resolve(undefined)
+    const detached = new Promise<never>((_resolve, reject) => {
+      detach?.addEventListener('abort', () => { reject(new Error('detached')) }, { once: true })
+    })
+    return Promise.race([promptSettlement.promise, detached])
   })
   let pendingMessages: NativePendingSubmission[] = []
   let inboxRevision = 0
@@ -344,7 +358,7 @@ it.each([
     selectPermissionPreset: vi.fn(async () => undefined),
     selectPreset: vi.fn(async () => undefined),
     submissions: vi.fn(async () => pendingSnapshot()),
-    prompt, queue, steer, dequeue, promoteSubmission, editSubmission,
+    prompt, attach, queue, steer, dequeue, promoteSubmission, editSubmission,
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -390,7 +404,7 @@ it.each([
     localStorage.setItem(PENDING_DEFAULT_KEY, 'queue')
     await host.start()
     await screen.findByRole('treeitem', { name: 'Shared' })
-    expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3)
+    await waitFor(() => { expect(clientMock.settingsDescribe).toHaveBeenCalledTimes(3) })
     if (interleaveStartup) {
       fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
       expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
@@ -412,9 +426,44 @@ it.each([
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
     const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
-    const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
-    expect(workspaceRows.getByRole('treeitem', { name: /Beta/ })).toBeTruthy()
+    let alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    const betaRow = workspaceRows.getByRole('treeitem', { name: /Beta/ })
+    expect(betaRow).toBeTruthy()
     expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(7)
+    fireEvent.click(betaRow)
+    await waitFor(() => { expect(document.title).toBe('Beta — Product') })
+    connectWorkspace.mockClear()
+    const sharedRow = workspaceRows.getByRole('treeitem', { name: 'Shared' })
+    expect(sharedRow.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(sharedRow)
+    expect(sharedRow.getAttribute('aria-expanded')).toBe('false')
+    expect(connectWorkspace).not.toHaveBeenCalled()
+    expect(document.title).toBe('Beta — Product')
+    fireEvent.click(sharedRow)
+    expect(sharedRow.getAttribute('aria-expanded')).toBe('true')
+    expect(connectWorkspace).not.toHaveBeenCalled()
+    expect(document.title).toBe('Beta — Product')
+    alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is outside the configured allowed roots'),
+      { code: 'native/workspace-untrusted', details: { path: 'C:\\Work\\Shared' } }))
+    fireEvent.click(alphaRow)
+    fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
+    await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
+    clientMock.history.mockClear()
+    const betaHistory = Promise.withResolvers<undefined>()
+    clientMock.history.mockImplementationOnce(async (id) => {
+      await betaHistory.promise
+      const row = rows.find(candidate => candidate.header.id === id)!
+      return { header: row.header, events: [], inheritedEventCount: 0 }
+    })
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
+    betaHistory.resolve(undefined)
+    await waitFor(() => {
+      expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    })
     const activeRow = { ...rows.find(row => row.header.id === 'session-alpha')!, updatedAt: Date.now(), running: true,
       pendingInteraction: { kind: 'approval' as const } }
     rows = rows.map(row => row.header.id === activeRow.header.id ? activeRow : row)
@@ -437,6 +486,19 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
     expect(await screen.findByText('Order refused')).toBeTruthy()
     expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move session Alpha down' })).toHaveProperty('disabled', false) })
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+    const betaDragRow = workspaceRows.getByRole('treeitem', { name: /Beta/ })
+    const alphaDropRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    vi.spyOn(alphaDropRow, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 2 } as DOMRect)
+    fireEvent.dragStart(betaDragRow, { dataTransfer })
+    const dragOver = createEvent.dragOver(alphaDropRow, { dataTransfer })
+    Object.defineProperty(dragOver, 'clientY', { value: 0 })
+    fireEvent(alphaDropRow, dragOver)
+    const drop = createEvent.drop(alphaDropRow, { dataTransfer })
+    Object.defineProperty(drop, 'clientY', { value: 0 })
+    fireEvent(alphaDropRow, drop)
+    await waitFor(() => { expect(reorderSession).toHaveBeenLastCalledWith(workspaceId, 'session-beta', 'session-alpha', expect.any(AbortSignal)) })
 
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
@@ -444,9 +506,16 @@ it.each([
 
     const messageInput = screen.getByRole('textbox', { name: 'Message' })
     fireEvent.change(messageInput, { target: { value: 'Start work' } })
+    await screen.findByRole('button', { name: 'Send' })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
-    expect(messageInput).toHaveProperty('disabled', false)
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
+    expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
+    await waitFor(() => { expect(attach).toHaveBeenCalledWith('session-alpha', -1, expect.any(Function),
+      expect.any(AbortSignal), expect.any(Function), expect.any(AbortSignal)) })
+    expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
     expect(messageInput).toHaveProperty('value', '')
     const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
     queue.mockRejectedValueOnce(new Error(validationJson))
@@ -536,7 +605,13 @@ it.each([
     expect(screen.getByText('No scheduled tasks.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Back to conversation' }))
 
-    fireEvent.click(within(alphaRow).getByRole('button', { name: 'Session actions for Alpha' }))
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Alpha/ })).getByRole('button', { name: 'Session actions for Alpha' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
+    const titleInput = screen.getByRole('textbox', { name: 'Session title' })
+    expect(document.activeElement).toBe(titleInput)
+    fireEvent.keyDown(titleInput, { key: 'Escape' })
+    expect(screen.queryByRole('textbox', { name: 'Session title' })).toBeNull()
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Alpha/ })).getByRole('button', { name: 'Session actions for Alpha' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Session title' }), { target: { value: 'Renamed Alpha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -567,19 +642,35 @@ it.each([
     fireEvent.change(search, { target: { value: 'Needle' } })
     const searchResult = await screen.findByRole('treeitem', { name: /Needle in transcript/ })
     expect(clientMock.search).toHaveBeenCalledWith('Needle', undefined, expect.any(AbortSignal))
+    let runningTurn: AbortSignal | undefined
+    attach.mockImplementationOnce((_id, _lastSeq, _observe, signal, _onFollowError, detach) => {
+      runningTurn = signal
+      return new Promise((resolve) => { detach?.addEventListener('abort', () => { resolve(undefined) }, { once: true }) })
+    })
     fireEvent.click(searchResult)
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal)) })
+    await screen.findByRole('button', { name: 'Stop' })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Needle in transcript/ })).toBeNull() })
 
     const refreshedRow = await screen.findByRole('treeitem', { name: /Refreshed Alpha/ })
     fireEvent.click(within(refreshedRow).getByRole('button', { name: 'Session actions for Refreshed Alpha' }))
-    expect(screen.queryByRole('menuitem', { name: 'Delete session' })).toBeNull()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Archive session' }))
+    expect(screen.getByRole('menuitem', { name: 'Archive session' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete session' }))
+    const deleteDialog = await screen.findByRole('dialog', { name: 'Delete session' })
+    const historyCallsBeforeArchive = clientMock.history.mock.calls.length
+    fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete session' }))
     await waitFor(() => { expect(clientMock.archive).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal)) })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
+    await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
+    expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
+    expect(runningTurn?.aborted).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is a protected system directory'),
+      { code: 'native/workspace-forbidden', details: {} }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+    expect(await screen.findByText(/^System directories cannot be added/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledWith('workspace-new', expect.any(AbortSignal)) })
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
@@ -631,4 +722,4 @@ it.each([
     localStorage.removeItem(PENDING_DEFAULT_KEY)
     await host.stop()
   }
-})
+}, 20_000)
