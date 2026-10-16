@@ -144,10 +144,11 @@ function main(): void {
         '--reporter=verbose',
         '--no-file-parallelism',
         'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-jobs.e2e.ts',
+        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-skills.e2e.ts',
         'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-workflow.e2e.ts',
         'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-code-runtime.e2e.ts',
       ]
-      console.log('release verify-packed-install: running packed Jobs, Workflow, and code-runtime e2e against the installed consumer')
+      console.log('release verify-packed-install: running packed Jobs, Skills, Workflow, and code-runtime e2e against the installed consumer')
       execaSync('pnpm', args, {
         cwd: root,
         env: {
