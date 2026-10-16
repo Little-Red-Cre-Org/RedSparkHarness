@@ -177,20 +177,28 @@ export interface NativeRootExecutionOperations {
    */
   workspaceRoutes(): readonly Readonly<NativeRootRoute>[]
   /**
-   * Select an existing registered Workspace under the Program's explicit directory and policy admission.
-   * @param request - configured base route and branded Workspace identity; arbitrary cwd is not accepted.
+   * Select an existing registered Workspace under the Program's path admission.
+   * @param request - Workspace identity and optional `trusted` approval to bypass `allowedRoots`; system directories stay forbidden.
    * @param signal - caller cancellation combined with Program lifetime.
    * @returns immutable route after canonical directory, policy and capacity validation.
    */
-  selectWorkspace(request: { readonly baseRoute: NativeRootRouteId; readonly workspaceId: WorkspaceId },
+  selectWorkspace(request: {
+    readonly baseRoute: NativeRootRouteId
+    readonly workspaceId: WorkspaceId
+    readonly trusted?: boolean
+  },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
-   * Create or reuse an existing directory as a Workspace after the selected Program's route policy admits its canonical path.
-   * @param request - configured base route and absolute existing directory; arbitrary paths outside route policy are rejected.
+   * Create or reuse an existing directory as a Workspace after the selected Program's route admission.
+   * @param request - absolute path and optional `trusted` approval to bypass `allowedRoots`; system directories stay forbidden.
    * @param signal - caller cancellation composed with Program lifetime.
    * @returns immutable admitted route after Workspace registration and filesystem identity checks.
    */
-  createWorkspaceRoute?(request: { readonly baseRoute: NativeRootRouteId; readonly path: string },
+  createWorkspaceRoute?(request: {
+    readonly baseRoute: NativeRootRouteId
+    readonly path: string
+    readonly trusted?: boolean
+  },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
    * Retire idle unowned root Agents before withdrawing the dynamic route. Active ownership and pending admissions block release;
