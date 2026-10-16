@@ -37,6 +37,8 @@
       ],
       "requires": [
         "clientNativeSession",
+        "clientNativeWorkspace",
+        "clientNativeDirectoryPicker",
         "clientSlots",
         "clientLocale",
         "clientNativeTheme"

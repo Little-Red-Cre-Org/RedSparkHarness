@@ -4,9 +4,9 @@ import type { ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
   Button, ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
-  ChatMascotHero, ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderOpen16, Pill,
+  ChatMascotHero, ChatWelcome, FishLogo,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { DirectoryBrowserListing, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
@@ -16,7 +16,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+import type {
+  NativeAgentPresetList, NativeDirectoryPickerClient, NativeSessionImage, NativeWorkspace,
+} from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments } from './attachments.tsx'
@@ -26,7 +28,9 @@ import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
 import { NativeOnboarding } from './onboarding.tsx'
 import { NativeTrajectoryInspector } from './trajectory.tsx'
-import { ModelControls, ModelPickerControl } from './model-controls.tsx'
+import { ConversationModeLabel, ModelControls, ModelPickerControl } from './model-controls.tsx'
+import { AgentPresetSeat, WorkspaceChooser } from './workspace-chooser.tsx'
+import { ConversationError } from './conversation-error.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import {
   announcePendingDefaultChanged, composerPendingDefault, readPendingDefault, subscribePendingDefault,
@@ -34,9 +38,11 @@ import {
 } from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
 import type { NativeSettingsActions } from './settings-page.tsx'
+import { requestNativeModelSettings } from './settings-request.ts'
 import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
+type WorkspaceStart = (trust?: boolean) => Promise<SessionId | undefined>
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -49,12 +55,18 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
+  createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-  refreshModelControls, t, renderSlot }: {
+  refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
+  listWorkspaces: () => Promise<readonly NativeWorkspace[]>
+  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
+  addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
+  listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
+  createDirectory: NativeDirectoryPickerClient['createDirectory']
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
   send: (text: string, files: readonly File[]) => Promise<boolean>
   cancel: () => void
@@ -68,6 +80,8 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
   refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
   selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
+  keepDraft: NativeConversationController['keepDraft']
+  takeDraft: NativeConversationController['takeDraft']
   t: Translate
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
 }) {
@@ -79,15 +93,20 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
   const [draft, setDraft] = useState('')
+  const draftRef = useRef(draft)
   const draftVersion = useRef(0)
   const [files, setFiles] = useState<readonly File[]>([])
+  const filesRef = useRef(files)
   const [pendingDefault, setPendingDefault] = useState<BusyEnterBehavior>(readPendingDefault)
   const [pendingDefaultError, setPendingDefaultError] = useState(false)
+  const [presetSeat, setPresetSeat] = useState<NativeAgentPresetList>()
+  const [stagedPreset, setStagedPreset] = useState<string>()
+  const [pendingPreset, setPendingPreset] = useState<{ readonly sessionId: SessionId; readonly preset: string }>()
   const scrollRef = useRef<HTMLDivElement>(null)
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
-  const ready = snapshot.state === 'ready'
-  const acceptsPending = snapshot.state === 'sending'
+  const ready = snapshot.state === 'ready' && snapshot.navigationPending !== true
+  const acceptsPending = snapshot.state === 'sending' && snapshot.navigationPending !== true
   const inputReady = ready || acceptsPending
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
   const hasConversation = snapshot.events.some(event => event.type === 'tool-workflow/run-start'
@@ -97,6 +116,33 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
   const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
   const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
     : selectedTitle?.status === 'absent' ? t('untitledSession') : t('titleUnavailable')
+  useEffect(() => {
+    if (pendingPreset === undefined) return
+    if (selected !== pendingPreset.sessionId) {
+      setPendingPreset(undefined)
+      return
+    }
+    const mode = snapshot.modeControls
+    if (snapshot.state !== 'ready' || mode === undefined) return
+    setPendingPreset(undefined)
+    const preset = pendingPreset.preset
+    if (!mode.locked && mode.canSelect && mode.current !== preset
+      && mode.options.some(option => option.id === preset)) {
+      void selectPreset(preset)
+    }
+  }, [selected, snapshot.state, snapshot.modeControls, pendingPreset, selectPreset])
+  const stagePreset = (id: string): void => {
+    setStagedPreset(id)
+  }
+  const startWorkspaceWithPreset = (start: WorkspaceStart): WorkspaceStart => {
+    const preset = stagedPreset
+    setStagedPreset(undefined)
+    return async (trust) => {
+      const sessionId = await start(trust)
+      if (sessionId !== undefined && preset !== undefined) setPendingPreset({ sessionId, preset })
+      return sessionId
+    }
+  }
   useEffect(() => {
     const lifetime = new AbortController()
     const unsubscribe = subscribePendingDefault(setPendingDefault)
@@ -109,12 +155,25 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
       announcePendingDefaultChanged(value)
       setPendingDefaultError(false)
     }
+    const refreshPresetSeat = async (): Promise<void> => {
+      try {
+        const roster = await settingsActions.agentPresetsList(lifetime.signal)
+        if (lifetime.signal.aborted) return
+        setPresetSeat(roster)
+      } catch {
+        if (!lifetime.signal.aborted) setPresetSeat(undefined)
+      }
+    }
     void (async () => {
       try {
+        void refreshPresetSeat()
         await refreshPreference()
         for await (const event of settingsActions.settingsEvents(lifetime.signal)) {
           if (event.type === 'settings/document-updated' && event.namespace === 'ui-conversation') {
             await refreshPreference()
+          }
+          if (event.type === 'agent-presets/updated') {
+            await refreshPresetSeat()
           }
           if (event.type === 'llm/adapters-updated' || event.type === 'accounts/changed'
             || event.type === 'settings/document-updated' && event.namespace === 'agent-default-model') {
@@ -131,30 +190,49 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
   }, [settingsActions, refreshModelControls])
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
+      if (followedSession.current !== undefined) {
+        keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
+      }
+      const saved = snapshot.selected === undefined ? undefined : takeDraft(snapshot.selected)
       followedSession.current = snapshot.selected
       draftVersion.current++
-      setDraft('')
-      setFiles([])
+      draftRef.current = saved?.text ?? ''
+      filesRef.current = saved?.files ?? []
+      setDraft(draftRef.current)
+      setFiles(filesRef.current)
       followsTranscript.current = true
     }
     const scroll = scrollRef.current
     if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
-  }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
+  }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation, keepDraft, takeDraft])
   const submit = (placement?: 'queued' | 'steering'): void => {
-    if (!inputReady || snapshot.selected === undefined || draft.trim() === '' || snapshot.submissionBusy) return
-    if (acceptsPending && files.length > 0) return
+    if (!inputReady || snapshot.selected === undefined || snapshot.submissionBusy) return
+    if (acceptsPending && (draft.trim() === '' || files.length > 0)) return
+    if (!acceptsPending && draft.trim() === '' && files.length === 0) return
     const version = ++draftVersion.current
     if (acceptsPending) {
       void submitPending(draft, placement ?? composerPendingDefault(pendingDefault)).then((success) => {
-        if (success && draftVersion.current === version) { setDraft(''); setFiles([]) }
+        if (success && draftVersion.current === version) {
+          draftRef.current = ''
+          filesRef.current = []
+          setDraft('')
+          setFiles([])
+        }
       })
     } else {
       const text = draft
       const attachments = files
+      draftRef.current = ''
+      filesRef.current = []
       setDraft('')
       setFiles([])
       void send(text, attachments).then((success) => {
-        if (!success && draftVersion.current === version) { setDraft(text); setFiles(attachments) }
+        if (!success && draftVersion.current === version) {
+          draftRef.current = text
+          filesRef.current = attachments
+          setDraft(text)
+          setFiles(attachments)
+        }
       })
     }
   }
@@ -165,12 +243,27 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
     <NativePendingSubmissions snapshot={snapshot} changePending={changePending} editPending={editPending}
       refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
+      {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
+        files={files} onChange={(nextFiles) => { filesRef.current = nextFiles; setFiles(nextFiles) }}
+        limits={snapshot.modelControls.images} disabled={!ready || snapshot.selected === undefined} t={t}
+      />}
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
-        <textarea className={css.editor} aria-label={t('prompt')} placeholder={t('composerPlaceholder')}
+        <textarea className={css.editor} aria-label={t('prompt')}
+          placeholder={t(snapshot.selected === undefined ? 'composerChooseWorkspace' : 'composerPlaceholder')}
           value={draft} disabled={!inputReady || snapshot.selected === undefined || snapshot.submissionBusy}
-          onChange={(event) => { draftVersion.current++; setDraft(event.target.value) }} rows={1}
+          onChange={(event) => {
+            draftVersion.current++
+            draftRef.current = event.target.value
+            setDraft(event.target.value)
+          }} rows={1}
           onKeyDown={(event) => {
+            if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
+              && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              cancel()
+              return
+            }
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
               if (acceptsPending && (event.metaKey || event.ctrlKey)) {
@@ -184,10 +277,6 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
       </label>
       <ChatComposerToolbar>
         <div className={css.toolbarOptions}>
-          {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
-            files={files} onChange={setFiles} limits={snapshot.modelControls.images}
-            disabled={!ready || snapshot.selected === undefined} t={t}
-          />}
           <ModelControls snapshot={snapshot} selectPreset={selectPreset}
             selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset} t={t} />
         </div>
@@ -202,7 +291,8 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
           {sending
             ? <ChatComposerButton kind="stop" label={t('cancel')} disabled={snapshot.state === 'cancelling'} onClick={cancel} />
             : <ChatComposerButton kind="send" label={t('send')} type="submit"
-              disabled={!ready || snapshot.selected === undefined || draft.trim().length === 0} />}
+              disabled={!ready || snapshot.selected === undefined
+                || (draft.trim().length === 0 && files.length === 0)} />}
         </div>
       </ChatComposerToolbar>
     </ChatComposerCard>
@@ -217,12 +307,13 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
         <div className={css.heading}>
           {selected === undefined ? null : <>
             <strong className={css.sessionTitle}>{conversationTitle}</strong>
-            <Pill active>{t('chatMode')}</Pill>
+            <ConversationModeLabel snapshot={snapshot} t={t} />
           </>}
         </div>
-        <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />}{renderSlot('native.conversation.actions', {})}</nav>
+        <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <><NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />{renderSlot('native.conversation.actions', {})}</>}</nav>
       </header>
-      {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
+      {snapshot.error === undefined ? null : <ConversationError className={css.error} error={snapshot.error} t={t}
+        onOpenModelSettings={requestNativeModelSettings} />}
       {selected === undefined || !hasConversation
         ? <section className={css.empty}>
           <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="hero" state="idle"
@@ -233,11 +324,15 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
               tagline={t('heroTagline')} mark={<FishLogo size={34} />} />
           </div>
           <div className={css.contextRow}>
-            <button type="button" className={css.workspace} disabled>
-              <IconFolderOpen16 size={16} />
-              <span>{workspace}</span>
-              <IconChevronDownOutline14 size={12} />
-            </button>
+            <WorkspaceChooser label={selected === undefined ? t('chooseWorkspace') : workspace}
+              currentWorkspaceId={snapshot.sessions.find(session => session.header.id === selected)?.workspaceId}
+              selected={selected !== undefined} ready={ready} listWorkspaces={listWorkspaces}
+              chooseWorkspace={id => startWorkspaceWithPreset(trust => chooseWorkspace(id, trust))}
+              addWorkspace={path => startWorkspaceWithPreset(trust => addWorkspace(path, trust))}
+              listDirectory={listDirectory} createDirectory={createDirectory}
+              t={t} />
+            {selected === undefined ? <AgentPresetSeat roster={presetSeat}
+              stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
           </div>
           {composer}
         </section>
@@ -273,7 +368,7 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
 /** Minimal native application selected by the explicit native-web profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-application', targets: ['client'],
-  requires: ['clientNativeSession', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation'],
+  requires: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
       || Object.keys(input).some(key => !['locale', 'maxLiveTextChars', 'maxLiveEvents'].includes(key)))) throw new TypeError('native conversation: invalid configuration')
@@ -285,6 +380,8 @@ export const plugin: NativePlugin = {
       || typeof maxLiveEvents !== 'number' || !Number.isSafeInteger(maxLiveEvents) || maxLiveEvents < 1) throw new TypeError('native conversation: invalid live presentation limits')
     return (context) => {
       const client = context.require('clientNativeSession')
+      const workspaceClient = context.require('clientNativeWorkspace')
+      const directoryPicker = context.require('clientNativeDirectoryPicker')
       const slots = context.require('clientSlots')
       const clientLocale = context.require('clientLocale')
       const clientTheme = context.require('clientNativeTheme')
@@ -293,6 +390,19 @@ export const plugin: NativePlugin = {
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
+      let homeDirectory: string | undefined
+      const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
+        const listing = await directoryPicker.list(path, signal ?? context.signal)
+        if (path === undefined) homeDirectory = listing.path
+        return {
+          path: listing.path,
+          home: homeDirectory ?? listing.path,
+          crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
+          entries: listing.entries.filter(entry => entry.kind === 'directory')
+            .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),
+          truncated: false,
+        }
+      }
       context.provide('clientNativeConversation', controller)
       context.own(() => controller.close())
       context.own(slots.inject('sidebar.settings', () => slots.register({
@@ -313,6 +423,43 @@ export const plugin: NativePlugin = {
         inject: () => ({
           hooks: { conversation: controller, locale: clientLocale },
           settingsActions,
+          listWorkspaces: async () => (await workspaceClient.list(context.signal)).workspaces,
+          chooseWorkspace: async (id: NativeWorkspace['workspaceId'], trust?: boolean) => {
+            const navigation = controller.beginNavigation(true)
+            try {
+              const { sessionId } = trust === undefined
+                ? await workspaceClient.connectWorkspace(id, context.signal)
+                : await workspaceClient.connectWorkspace(id, context.signal, trust)
+              await controller.idle()
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              await controller.select(sessionId)
+              return controller.getSnapshot().selected === sessionId ? sessionId : undefined
+            } catch (error: unknown) {
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              controller.releaseNavigation(navigation)
+              throw error
+            }
+          },
+          addWorkspace: async (path: string, trust?: boolean) => {
+            const navigation = controller.beginNavigation(true)
+            try {
+              const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              const { sessionId } = trust === undefined
+                ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
+                : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
+              await controller.idle()
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              await controller.select(sessionId)
+              return controller.getSnapshot().selected === sessionId ? sessionId : undefined
+            } catch (error: unknown) {
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              controller.releaseNavigation(navigation)
+              throw error
+            }
+          },
+          listDirectory,
+          createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
             await controller.send(text, files)
@@ -322,6 +469,8 @@ export const plugin: NativePlugin = {
           changePending: controller.changePending.bind(controller),
           editPending: controller.editPending.bind(controller),
           refreshPendingSubmissions: controller.refreshPendingSubmissions.bind(controller),
+          keepDraft: controller.keepDraft.bind(controller),
+          takeDraft: controller.takeDraft.bind(controller),
           cancel: () => { controller.cancel() },
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
@@ -330,12 +479,18 @@ export const plugin: NativePlugin = {
           selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
         }),
-      }, ({ useConversation, useLocale, settingsActions, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+      }, ({ useConversation, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
+        createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-        refreshModelControls, t, renderSlot }: {
+        refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         settingsActions: NativeSettingsActions
+        listWorkspaces: () => Promise<readonly NativeWorkspace[]>
+        chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
+        addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
+        listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
+        createDirectory: NativeDirectoryPickerClient['createDirectory']
         loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
         send: (text: string, files: readonly File[]) => Promise<boolean>
         cancel: () => void
@@ -347,17 +502,22 @@ export const plugin: NativePlugin = {
         changePending: NativeConversationController['changePending']
         editPending: NativeConversationController['editPending']
         refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
+        keepDraft: NativeConversationController['keepDraft']
+        takeDraft: NativeConversationController['takeDraft']
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
         renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale}
-        settingsActions={settingsActions} loadImage={loadImage} send={send}
+        settingsActions={settingsActions} listWorkspaces={listWorkspaces} chooseWorkspace={chooseWorkspace}
+        addWorkspace={addWorkspace} listDirectory={listDirectory} createDirectory={createDirectory}
+        loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         submitPending={submitPending} changePending={changePending} editPending={editPending}
         refreshPendingSubmissions={refreshPendingSubmissions}
-        refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
+        refreshModelControls={refreshModelControls} keepDraft={keepDraft} takeDraft={takeDraft}
+        t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
         themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
       void controller.load()

@@ -129,3 +129,66 @@ jobs:
       - name: Package publication rules
         if: runner.os == 'Linux'
         run: pnpm run check:ci:package-publication
+
+  packed:
+    name: SPH packed / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare Linux workspace-write sandbox
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
+      - name: Build official Web and desktop sources
+        run: pnpm run build:official
+      # Packed consumer verification starts here; keep shared setup above.
+      - name: Pack dsh release tarballs for consumer verification
+        run: pnpm run release:pack --family dsh --out dist/npm
+      - name: Pack vendored framework for consumer verification
+        run: pnpm run release:pack --family vendor --out dist/npm-vendor
+      - name: Pack Landlock entry for consumer verification
+        run: |
+          pnpm --dir rsh/Core/native/system run build:ts
+          pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
+      - name: Verify independently packed dsh consumer
+        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
+      - uses: actions/setup-python@v6.3.0
+        if: runner.os == 'Windows'
+        with:
+          python-version: '3.10'
+      - name: Prepare keyless Python SDK runner
+        if: runner.os == 'Windows'
+        id: sdk-python
+        run: |
+          python -m pip install uv==0.11.23
+          if ($LASTEXITCODE -ne 0) { throw "Installing uv failed with exit code $LASTEXITCODE" }
+          $sdkPython = (& uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python -c "import sys; print(sys.executable)" | Select-Object -Last 1).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
+          "python=$sdkPython" >> $env:GITHUB_OUTPUT
+      - name: Windows SDK snapshot regressions
+        if: runner.os == 'Windows'
+        run: |
+          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Windows Python SDK text-turn replay
+        if: runner.os == 'Windows'
+        run: pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/text-turn.snapshot.ts
+        env:
+          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}

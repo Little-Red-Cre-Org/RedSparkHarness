@@ -54,6 +54,11 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
+.error p { margin: 0; }
+.error button { margin-top: 4px; }
+.error details { margin-top: 4px; }
+.error pre { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .empty {
   position: relative;
   isolation: isolate;

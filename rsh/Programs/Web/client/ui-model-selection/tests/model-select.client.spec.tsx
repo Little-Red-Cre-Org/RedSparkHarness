@@ -136,7 +136,6 @@ describe('ModelSelect reasoning effort', () => {
     expect(trigger.textContent).toContain('deepseek-official/removed-model')
     fireEvent.click(trigger)
     expect(screen.queryByRole('menuitem', { name: /推理等级/ })).toBeNull()
-    fireEvent.click(screen.getByRole('menuitem', { name: /模型/ }))
     expect(screen.queryByRole('menuitemradio', { name: 'removed-model' })).toBeNull()
     expect(screen.getByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' })).toBeTruthy()
     expect(screen.queryByText('Fast catalog description')).toBeNull()

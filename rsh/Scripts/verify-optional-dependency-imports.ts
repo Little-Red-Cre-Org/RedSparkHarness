@@ -26,7 +26,8 @@
  * and only files that ship — a published package's `src` — are subject. A
  * package with Cordis-free exports may classify a peer as compatibility-only:
  * legacy entries may load it, while each declared safe export's static source
- * closure may not. The packed-consumer test checks the emitted artifact too.
+ * closure may not. A compatibility-only package may load the peer from all its
+ * entries. The packed-consumer test checks the emitted artifact too.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -371,21 +372,26 @@ export function collectOptionalImportViolations(
       if (!isImport && !ts.isExportDeclaration(statement)) continue
       const specifierNode = statement.moduleSpecifier
       if (specifierNode === undefined || !ts.isStringLiteral(specifierNode)) continue
-      const kind = optional.get(packageOf(specifierNode.text))
+      const importedPackage = packageOf(specifierNode.text)
+      const kind = optional.get(importedPackage)
       if (kind === undefined) continue
-      if ((packageOf(specifierNode.text) === '@deepseek-ai/cordis'
-        || compatibilityPeers.get(relative(project.projectRoot, directory).replaceAll('\\', '/'))?.includes(packageOf(specifierNode.text)))
-        && kind === 'peerDependenciesMeta'
-        && cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths).length > 0) {
-        let closure = cordisFreeClosureByDirectory.get(directory)
-        if (closure === undefined) {
-          closure = new Set<string>()
-          for (const typesPath of cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths, project.face)) {
-            for (const source of cordisFreeSourceClosure(project, typesPath, directory)) closure.add(source)
+      const compatibilityPeer = compatibilityPeers.get(relative(project.projectRoot, directory).replaceAll('\\', '/'))
+        ?.includes(importedPackage) === true
+      if ((importedPackage === '@deepseek-ai/cordis' || compatibilityPeer) && kind === 'peerDependenciesMeta') {
+        const typesEntries = cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths)
+        if (typesEntries.length === 0) {
+          if (compatibilityPeer) continue
+        } else {
+          let closure = cordisFreeClosureByDirectory.get(directory)
+          if (closure === undefined) {
+            closure = new Set<string>()
+            for (const typesPath of cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths, project.face)) {
+              for (const source of cordisFreeSourceClosure(project, typesPath, directory)) closure.add(source)
+            }
+            cordisFreeClosureByDirectory.set(directory, closure)
           }
-          cordisFreeClosureByDirectory.set(directory, closure)
+          if (!closure.has(sourceFile.fileName)) continue
         }
-        if (!closure.has(sourceFile.fileName)) continue
       }
       const loads = isImport
         ? importLoadsModule(statement, checker)

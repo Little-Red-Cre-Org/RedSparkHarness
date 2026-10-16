@@ -47,6 +47,117 @@ const makeHeader = (id: string): SessionHeader => ({
   isSeeded: false,
 })
 
+it('refreshes durable history when restore finds no active turn', async () => {
+  const id = 'session-finished-before-attach' as SessionId
+  const finalEvent: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} }
+  let historyReads = 0
+  const client = {
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) {
+      historyReads++
+      return { header: makeHeader(sessionId), events: historyReads === 1 ? [] : [finalEvent], inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    async attach() { return undefined },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    await controller.select(id)
+    expect(historyReads).toBe(2)
+    expect(controller.getSnapshot().events).toEqual([finalEvent])
+  } finally {
+    await controller.close()
+  }
+})
+
+it('waits for controller operations before selecting a connected Session', async () => {
+  const id = 'session-after-refresh' as SessionId
+  const controlsRefresh = deferred<Awaited<ReturnType<NativeSessionClient['modelControls']>>>()
+  let modelControlReads = 0
+  const client = {
+    modelControls() {
+      modelControlReads++
+      return modelControlReads === 1
+        ? Promise.resolve({ catalog: null, canSelectModel: false, presets: [] })
+        : controlsRefresh.promise
+    },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) {
+      return { header: makeHeader(sessionId), events: [], inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    async attach() { return undefined },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    const refresh = controller.refreshModelControls()
+    const idle = controller.idle()
+    expect(controller.getSnapshot().state).toBe('loading')
+    controlsRefresh.resolve({ catalog: null, canSelectModel: false, presets: [] })
+    await idle
+    expect(controller.getSnapshot().state).toBe('ready')
+    await controller.select(id)
+    await refresh
+    expect(controller.getSnapshot().selected).toBe(id)
+  } finally {
+    await controller.close()
+  }
+})
+
+it('deselects a Session with a running turn by detaching without cancelling the Host turn', async () => {
+  let turnSignal: AbortSignal | undefined
+  const attached = deferred<undefined>()
+  const client = {
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) { return { header: makeHeader(sessionId), events: [], inheritedEventCount: 0 } },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    attach(_id: SessionId, _lastSeq: number, _observe: unknown, signal: AbortSignal, _onFollowError: unknown, detach: AbortSignal) {
+      turnSignal = signal
+      attached.resolve(undefined)
+      return new Promise((resolve) => { detach.addEventListener('abort', () => { resolve(undefined) }, { once: true }) })
+    },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    const selection = controller.select('session-running' as SessionId)
+    await attached.promise
+    expect(controller.getSnapshot().state).toBe('sending')
+    await controller.deselect()
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, events: [] })
+    expect(turnSignal?.aborted).toBe(false)
+    await selection
+    const reselect = controller.select('session-running' as SessionId)
+    await expect(controller.deselect()).rejects.toThrow('operation already pending')
+    await controller.close()
+    await reselect
+  } finally {
+    await controller.close()
+  }
+})
+
 it('isolates delayed frames and late carrier errors while retaining title roster refresh', async () => {
   const streams = new Map<string, ReadableStreamDefaultController<Uint8Array>>()
   const firstFollowStarted = deferred<undefined>()
@@ -81,6 +192,7 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const rosterFrames = frameQueue<NativeSessionListFrame>()
   const rpc = {
     async call(_channel: string, endpoint: string, payload: unknown) {
+      if (endpoint === 'session/attach') return { ok: true as const, value: { admissionId: null } }
       if (endpoint === 'session/start') {
         const admissionId = `a${++admissionCount}`
         cursorByAdmission.set(admissionId, (payload as { lastSeq: number }).lastSeq)
@@ -113,12 +225,12 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const followFailures = [firstFollowFailure, secondFollowFailure, thirdFollowFailure]
   const client: NativeSessionClient = {
     ...transport,
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach) {
       const failure = followFailures[promptCount++]!
       return transport.prompt(sessionId, text, resume, signal, observe, images, (error) => {
         onFollowError?.(error)
         failure.resolve(error)
-      }, lastSeq)
+      }, lastSeq, detach)
     },
     async list() { return rows },
     async *follow(signal: AbortSignal) {
@@ -218,6 +330,9 @@ it('isolates delayed frames and late carrier errors while retaining title roster
     fail('a3', new Error('late beta carrier failure'))
     expect(await thirdFollowFailure.promise).toMatchObject({ message: 'late beta carrier failure' })
     expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: 'session-beta', error: 'late beta carrier failure' })
+    await controller.deselect()
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, header: undefined, events: [],
+      modeControls: undefined, permissionControls: undefined, submissions: undefined, error: undefined })
   } finally {
     unsubscribe()
     firstSettlement.resolve({ exitCode: 130, answer: '' })
@@ -296,6 +411,11 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     const sending = controller.send('start')
     expect(() => controller.create()).toThrow('operation already pending')
     expect(controller.getSnapshot()).toMatchObject({ selected: alpha, state: 'sending' })
+    const navigation = controller.beginNavigation(true)
+    const callsBeforeNavigation = calls.length
+    expect(await controller.submitPending('during navigation', 'queued')).toBe(false)
+    expect(calls).toHaveLength(callsBeforeNavigation)
+    controller.releaseNavigation(navigation)
     rejectNext = true
     expect(await controller.submitPending('later', 'queued')).toBe(false)
     expect(controller.getSnapshot()).toMatchObject({ state: 'sending', submissionError: 'not accepted' })

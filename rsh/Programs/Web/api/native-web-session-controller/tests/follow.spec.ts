@@ -97,8 +97,10 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
 
   const entered = Promise.withResolvers<undefined>()
   const cleanup = Promise.withResolvers<undefined>()
+  const followed = Promise.withResolvers<undefined>()
   const executor: Pick<NativeHeadlessApplication, 'executeRootTurn' | 'dispose'> = {
     async executeRootTurn(request, signal) {
+      await followed.promise
       request.onChunk?.({ type: 'text-delta', index: 0, text: 'overflow' })
       entered.resolve(undefined)
       await cleanup.promise
@@ -121,6 +123,11 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
   try {
     const start = await service.handle('session/start', { sessionId: 'overflow-session', text: 'input', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
     if (!start.ok) throw new Error(start.error.message)
+    // Overflow cancels the turn only while a follower is connected.
+    const follow = await service.follow(new Request('http://localhost/api/native-session/follow', { method: 'POST',
+      body: JSON.stringify({ sessionId: 'overflow-session', ...(start.value as { admissionId: string }) }) }))
+    expect(follow.status).toBe(200)
+    followed.resolve(undefined)
     await entered.promise
     let settled = false
     const pending = service.handle('session/await', { sessionId: 'overflow-session', ...(start.value as { admissionId: string }) }, new AbortController().signal)
@@ -133,6 +140,7 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
     expect(outcome.error.message).toContain('byte limit')
     expect(outcome.error.message).toContain('epoch cleanup failed')
   } finally {
+    followed.resolve(undefined)
     cleanup.resolve(undefined)
     await service.close()
   }

@@ -685,6 +685,7 @@
       "@deepseek-ai/dsh-goal-round-driver/native": ["./rsh/Engine/goal/goal-round-driver/src/native.ts"],
       "@deepseek-ai/dsh-goal/native": ["./rsh/Engine/goal/goal/src/native.ts"],
       "@deepseek-ai/dsh-host-directory-picker-native/native-picker": ["./rsh/Programs/Web/host/directory-picker-native/src/native-picker.ts"],
+      "@deepseek-ai/dsh-host-directory-picker/types": ["./rsh/Programs/Web/host/directory-picker/src/types.ts"],
       "@deepseek-ai/dsh-http-routes/native": ["./rsh/Core/util/http-routes/src/native.ts"],
       "@deepseek-ai/dsh-llm-retry/native": ["./rsh/Engine/llm/llm-retry/src/native.ts"],
       "@deepseek-ai/dsh-mcp-client/acp-config": ["./rsh/Modules/Official/mcp/mcp-client/src/acp-config.ts"],

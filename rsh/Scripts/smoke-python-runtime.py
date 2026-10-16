@@ -61,6 +61,15 @@ NATIVE_STAGED_FILES_WRITE_TASK = "Try to overwrite the staged first file using t
 NATIVE_STAGED_FILES_FIRST_REPLY = "Both uploaded files were read."
 NATIVE_STAGED_FILES_COLD_REPLY = "The restored first file is readable."
 NATIVE_STAGED_FILES_WRITE_REPLY = "The staged file stayed read-only."
+NATIVE_SKILLS_FIRST_TASK = "/review Apply the review skill to the requested change, then summarize its instruction."
+NATIVE_SKILLS_COLD_TASK = "/review Continue after restart and follow the review skill again."
+NATIVE_SKILLS_TOOL_CALL_ID = "load-review-skill"
+NATIVE_SKILLS_BODY = (
+    "Always inspect the requested file before proposing a fix. "
+    "Use the skill tool to load these instructions when relevant."
+)
+NATIVE_SKILLS_TOOL_REPLY = "loaded review instructions"
+NATIVE_SKILLS_COLD_REPLY = "cold skill Session restored"
 NATIVE_STAGED_FILES_GATE: tuple[threading.Event, threading.Event] | None = None
 NATIVE_SDK_REFERENCES = (
     Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "native-sdk" / "references.json"
@@ -373,6 +382,8 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         mcp = mcp_tool_followup(call_id, tool_name, tool_text)
         if mcp is not None:
             return mcp
+        if call_id == NATIVE_SKILLS_TOOL_CALL_ID and tool_name == "skill":
+            return text_chunks(NATIVE_SKILLS_TOOL_REPLY)
         fs_search = fs_search_tool_followup(call_id, tool_name, tool_text)
         if fs_search is not None:
             return fs_search
@@ -427,6 +438,8 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         NATIVE_STAGED_FILES_SECOND_TASK,
         NATIVE_STAGED_FILES_COLD_TASK,
         NATIVE_STAGED_FILES_WRITE_TASK,
+        NATIVE_SKILLS_FIRST_TASK,
+        NATIVE_SKILLS_COLD_TASK,
     }
     latest_user_prompt = user_prompts[0] if user_prompts else ""
     staged_prompt = next(
@@ -531,6 +544,11 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         return text_chunks(NATIVE_INBOX_FIRST_REPLY)
     if prompt == NATIVE_INBOX_COLD_TASK:
         return text_chunks(NATIVE_INBOX_COLD_REPLY)
+    if prompt == NATIVE_SKILLS_FIRST_TASK:
+        assert_advertised_tool(body, "skill")
+        return tool_call_chunks(NATIVE_SKILLS_TOOL_CALL_ID, "skill", {"name": "review"})
+    if prompt == NATIVE_SKILLS_COLD_TASK:
+        return text_chunks(NATIVE_SKILLS_COLD_REPLY)
     if prompt in {NATIVE_STAGED_FILES_FIRST_TASK, NATIVE_STAGED_FILES_SECOND_TASK,
                   NATIVE_STAGED_FILES_COLD_TASK, NATIVE_STAGED_FILES_WRITE_TASK}:
         filename = "second.txt" if prompt == NATIVE_STAGED_FILES_SECOND_TASK else "first.txt"
@@ -1374,6 +1392,113 @@ def smoke_sdk_native(base_url: str, executable: Path) -> None:
     smoke_sdk_native_external(base_url, executable, external)
     smoke_sdk_native_inbox(base_url, executable, inbox)
     smoke_sdk_native_staged_files(base_url, executable, staged_files)
+    skills = read_native_sdk_reference("skills")
+    smoke_sdk_native_skills(base_url, executable, skills)
+
+
+def smoke_sdk_native_skills(base_url: str, executable: Path, reference: dict[str, object]) -> None:
+    """Replay the canonical Skills Session through installed Python wheels and two runtime processes."""
+    records = reference["records"]
+    if not isinstance(records, list):
+        raise AssertionError("Skills reference has no Session rows")
+    session_id = str(reference["sessionId"])
+    native_public_inputs(records, (NATIVE_SKILLS_FIRST_TASK, NATIVE_SKILLS_COLD_TASK))
+    canonical_call = next((event.get("data") for event in records
+                           if event.get("type") == "tool/call" and isinstance(event.get("data"), dict)
+                           and event["data"].get("callId") == NATIVE_SKILLS_TOOL_CALL_ID), None)
+    canonical_result = native_staged_tool_result(records, NATIVE_SKILLS_TOOL_CALL_ID)
+    canonical_content = canonical_result.get("content")
+    if not isinstance(canonical_call, dict) or canonical_call.get("name") != "skill" \
+            or not isinstance(canonical_call.get("arguments"), str) \
+            or json.loads(canonical_call["arguments"]) != {"name": "review"} \
+            or not isinstance(canonical_content, list) or len(canonical_content) != 1 \
+            or not isinstance(canonical_content[0], dict) or not isinstance(canonical_content[0].get("text"), str):
+        raise AssertionError("Skills canonical reference omitted its review tool result")
+    canonical_text = canonical_content[0]["text"]
+    canonical_answers = [
+        message_text(event["data"]["message"].get("content"))
+        for event in records if event.get("type") == "assistant/message"
+        and isinstance(event.get("data"), dict)
+        and isinstance(event["data"].get("message"), dict)
+        and any(isinstance(block, dict) and block.get("type") == "text"
+                for block in event["data"]["message"].get("content", []))
+    ]
+    if canonical_answers != [NATIVE_SKILLS_TOOL_REPLY, NATIVE_SKILLS_COLD_REPLY]:
+        raise AssertionError(f"Skills canonical reference has unexpected final responses: {canonical_answers}")
+
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-native-skills-") as temporary:
+        root = Path(temporary).resolve()
+        home, cwd = root / "home", root / "work"
+        sessions = home / "sessions"
+        cwd.mkdir(parents=True)
+        skill_path = cwd / ".agents" / "skills" / "review" / "SKILL.md"
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text(
+            "---\nname: review\ndescription: Inspect changes and state concrete findings.\n---\n\n"
+            f"{NATIVE_SKILLS_BODY}\n",
+            encoding="utf-8",
+        )
+        initialize_installed_native_profile(executable, home, cwd, [
+            {"id": "request-context", "plugin": "@deepseek-ai/dsh-request-context", "scope": "root"},
+            {"id": "skills", "plugin": "@deepseek-ai/dsh-skill", "scope": "root"},
+            {"id": "skill-filesystem", "plugin": "@deepseek-ai/dsh-skill-filesystem", "scope": "root",
+             "config": {"agentsHome": str(home), "dshHome": str(home), "watch": False}},
+            {"id": "tool-skill", "plugin": "@deepseek-ai/dsh-tool-skill", "scope": "root"},
+        ])
+        patch = root / "native.patch.json"
+        write_native_sdk_model_patch(patch, cwd, sessions, base_url, "You are a Native Skills fixture.")
+
+        offset = len(MockModelHandler.requests)
+        first, first_process = run_installed_native_turn(home, cwd, patch, session_id,
+                                                        NATIVE_SKILLS_FIRST_TASK, executable)
+        recovery, recovery_process = run_installed_native_turn(home, cwd, patch, session_id,
+                                                               NATIVE_SKILLS_COLD_TASK, executable)
+        if first.final_response != canonical_answers[0] or recovery.final_response != canonical_answers[1] \
+                or first.finish_reason != "completed" or recovery.finish_reason != "completed":
+            raise AssertionError("installed Skills Native SDK turns differ from the canonical replies")
+        if first_process is None or recovery_process is None or first_process == recovery_process:
+            raise AssertionError(f"Skills cold recovery did not use independent runtime processes: {first_process}, {recovery_process}")
+
+        requests = MockModelHandler.requests[offset:]
+        if len(requests) != 3 or NATIVE_SKILLS_FIRST_TASK not in native_request_user_texts(requests[0]) \
+                or NATIVE_SKILLS_COLD_TASK not in native_request_user_texts(requests[2]) \
+                or any(NATIVE_SKILLS_BODY not in json.dumps(request.get("messages", [])) for request in requests):
+            raise AssertionError(f"installed Skills model requests omitted prompts or Skill instructions: {len(requests)}")
+        assert_advertised_tool(requests[0], "skill")
+        expected_result_text = canonical_text.replace(
+            "{{cwd}}/.agents/skills/review", str(cwd / ".agents" / "skills" / "review"))
+        for request in requests[1:]:
+            messages = request.get("messages")
+            tool_messages = [message for message in messages if isinstance(message, dict)
+                             and message.get("role") == "tool"
+                             and message.get("tool_call_id") == NATIVE_SKILLS_TOOL_CALL_ID] \
+                if isinstance(messages, list) else []
+            if len(tool_messages) != 1 or tool_messages[0].get("content") != expected_result_text:
+                raise AssertionError(
+                    "installed Skills tool result was not sent to the model and restored after restart")
+        first_calls = [event.get("data") for event in first.events if event.get("type") == "tool/call"
+                       and isinstance(event.get("data"), dict)
+                       and event["data"].get("callId") == NATIVE_SKILLS_TOOL_CALL_ID]
+        if len(first_calls) != 1 or first_calls[0].get("name") != canonical_call.get("name") \
+                or first_calls[0].get("arguments") != canonical_call.get("arguments"):
+            raise AssertionError("installed Skills tool call differs from its canonical call")
+        if any(event.get("type") == "tool/call" for event in recovery.events):
+            raise AssertionError("cold Skills recovery repeated the original tool call")
+
+        stored = read_session_logs(sessions).get(session_id)
+        if stored is None:
+            raise AssertionError("installed Skills Session was not cold-readable under its canonical id")
+        installed_result = native_staged_tool_result(first.events, NATIVE_SKILLS_TOOL_CALL_ID)
+        persisted_result = native_staged_tool_result(stored, NATIVE_SKILLS_TOOL_CALL_ID)
+        expected_result = {
+            **canonical_result,
+            "content": [{
+                **canonical_content[0],
+                "text": expected_result_text,
+            }],
+        }
+        if installed_result != expected_result or persisted_result != installed_result:
+            raise AssertionError("installed Skills tool result differs from its canonical or persisted result")
 
 
 def smoke_sdk_native_staged_files(base_url: str, executable: Path,

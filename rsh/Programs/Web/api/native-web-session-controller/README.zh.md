@@ -24,7 +24,7 @@ kind: "package-reference"
 
 配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session、工作区文件和 Workspace 流的并发跟随者数量。`workspaceFiles` 限制默认为每个文本页 2 MiB、每个完整文件 32 MiB、每页 5,000 行和 2,000 个目录项。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
-Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
+Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、活动轮次附着、取消与状态。提示和附着操作在持久化结算后返回；显式取消轮次会在排空后返回 exitCode 130。页面断开会停止跟随和结算等待，但不会取消执行。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
 `session/file-upload` 通过经过身份验证的 `application/octet-stream` 请求体流式传输字节，并交给选定的不可变附件 Provider 保存；响应返回绑定 Program route 与 Session 代际的进程内回执。初始 prompt、`session/queue` 与 `session/steer` 接受有序文本、图片和回执部分；queue 与 steer 要求此 Program 有活动的浏览器轮次。Queue 将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id。只有精确附着的 root owner 能消费回执；FileBlock 在持久化接纳后回执才退休。writer 交接结果不确定时会隔离回执并要求重新上传。`session/submission/edit` 会用文本块替换待处理消息的全部 content，同时保留其 id、source 和位置；它使用精确的 root owner，没有活动 owner 时可通过 idle maintenance 执行，并返回 `updated` 或 `stale`。`session/submission/promote` 要求活动浏览器轮次，并用一条 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾；它返回 `promoted`、`stale` 或 `not-promotable`。`session/submissions` 会折叠持久 Session 前缀，并连同 `throughSeq` 返回完整待处理消息。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
 
@@ -56,9 +56,9 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。文件上传使用同一个选定不可变附件 Provider；精确 root owner 将 FileBlock 加入持久 Session inbox 前，回执元数据仅保留在进程内。模型请求通过 `projectFilesToText` 投影已记录文件引用，并将选定 Provider 路径转换成执行文件系统路径，不会发送 Host 路径或接受客户端自造的持久引用。图片读取由身份认证及完整 Session 历史约束，包含继承引用。图片端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
-可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
+可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。`session/attach` 会为活动轮次替换跟随流，解除并拒绝先前的结算请求，从提供的持久化游标继续，并重放待处理的人类展示。若读取历史期间该 attach 被后续请求取代，则该请求会拒绝，且不会重新绑定待处理展示。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；跟随期间超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连会释放跟随者及其队列；执行器保留轮次所有权直到结算，之后可再次附着。
 
-提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；显式轮次取消信号会使用该身份请求 Host 排空。断开信号只会停止本地跟随和结算等待，不会取消 Host 执行。断开的活动轮次会占用其 Session 槽位直到结算，随后丢弃无人接收的结果，使该 Session 可以接纳下一次提示；结算前的 attach 会为其替代等待者重新保留该结果。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭取消并排空所有轮次。
 
 <a id="invariants"></a>
 

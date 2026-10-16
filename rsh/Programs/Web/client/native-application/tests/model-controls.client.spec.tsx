@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type {
   NativeModeControls, NativePermissionControls, NativeSessionClient,
@@ -44,6 +44,7 @@ async function renderControls() {
     selectPlanMode,
     selectPermissionPreset,
     async *follow() { yield { type: 'baseline' as const, items: [] } },
+    async attach() { return undefined },
     async submissions() { return { throughSeq: -1, submissions: [] } },
     async history(id: SessionId) {
       return { header: { version: SESSION_FORMAT_VERSION, id, createdAt: 1, isSeeded: false },
@@ -103,7 +104,6 @@ it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable
   const trigger = screen.getByRole<HTMLButtonElement>('button', { name: 'trigger.selectAria' })
   expect(trigger.disabled).toBe(false)
   fireEvent.click(trigger)
-  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
   expect(await screen.findByText('Failed: catalog offline')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'retry' }))
 
@@ -135,7 +135,7 @@ it('keeps the picker open across its open-time reload and still selects a model'
     canSelectModel: true, presets: [], catalog: {
       default: { provider: 'fixture', model: 'one' }, routableProviders: ['fixture'], failures: [], groups: [{ id: 'fixture', name: 'Fixture', models: [
         { id: 'one', name: 'One' }, { id: 'two', name: 'Two' },
-      ] }],
+      ] }, { id: 'secondary', name: 'Secondary provider', models: [{ id: 'two-alt', name: 'Two' }] }],
     },
   }
   const snapshot: ConversationSnapshot = {
@@ -157,9 +157,13 @@ it('keeps the picker open across its open-time reload and still selects a model'
     refreshModelControls={refreshModelControls} t={key => key} />)
   expect(screen.getByRole('menu')).toBeTruthy()
   // Keyboard focus stays in the card across the reload and the pane drill.
-  expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /menu\.model/ }))
-  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
+  expect(screen.getByRole('menuitemradio', { name: 'One' })).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'One' }))
-  fireEvent.click(screen.getByRole('menuitemradio', { name: 'Two' }))
+  expect(screen.getByRole('group', { name: 'Secondary provider' })).toBeTruthy()
+  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' })
+  expect(screen.queryByRole('menu')).toBeNull()
+  fireEvent.click(trigger)
+  fireEvent.click(within(screen.getByRole('group', { name: 'Fixture' }))
+    .getByRole('menuitemradio', { name: 'TwoFixture' }))
   await waitFor(() => { expect(selectModel).toHaveBeenCalledWith({ provider: 'fixture', model: 'two' }) })
 })

@@ -26,7 +26,9 @@ export interface ConversationSnapshot {
   readonly human?: NativeWebHumanPrompt | undefined
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
-  readonly selected?: SessionId
+  readonly selected?: SessionId | undefined
+  /** Whether a pending navigation blocks composer submissions. */
+  readonly navigationPending?: boolean | undefined
   readonly events: readonly SessionEvent[]
   readonly liveText?: string | undefined
   readonly liveTruncated?: boolean | undefined
@@ -46,15 +48,16 @@ export interface NativeConversationLimits {
   readonly maxLiveEvents: number
 }
 
-/** Own one interactive Session selection and await all requests before disposal. */
+/** Own one interactive Session view; closing or switching away detaches its waiter without cancelling Host work. */
 export class NativeConversationController {
-  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading' }
+  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading', navigationPending: false }
   private readonly listeners = new Set<() => void>()
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
   private readonly drafts = new Map<SessionId, NativeConversationDraft>()
   private selectionEpoch = 0
+  private navigation = 0
   private submissionRead = 0
   private submissionFloor = -1
   private submissionDraft: {
@@ -65,6 +68,8 @@ export class NativeConversationController {
     requestId: NativeSubmissionRequestId
   } | undefined
   private turn: AbortController | undefined
+  private turnDetach = new AbortController()
+  private handingOff = false
   private foregroundAdmission: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private followErrorOwner: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private closing: Promise<void> | undefined
@@ -78,6 +83,48 @@ export class NativeConversationController {
   /** Read the current conversation view.
    * @returns immutable view snapshot, stable until an operation publishes a change. */
   readonly getSnapshot = (): ConversationSnapshot => this.snapshot
+
+  /** Reserve the next navigation token.
+   * @param disableSending - whether to block submissions while navigation resolves.
+   * @returns next navigation token.
+   */
+  beginNavigation(disableSending = false): number {
+    const token = ++this.navigation
+    this.publish({ navigationPending: disableSending })
+    return token
+  }
+
+  /** Check whether a navigation token is still current.
+   * @param token - navigation token to check.
+   * @returns whether the token is current.
+   */
+  isCurrentNavigation(token: number): boolean { return token === this.navigation }
+
+  /** Wait for controller operations already in flight to settle.
+   * @returns completion after no tracked operations remain pending.
+   */
+  async idle(): Promise<void> {
+    while (this.pending.size > 0) await Promise.allSettled([...this.pending])
+  }
+
+  /** Release a current navigation's composer lock without exposing an error.
+   * @param token - navigation token whose composer lock should be released.
+   * @returns no value.
+   */
+  releaseNavigation(token: number): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false })
+  }
+
+  /** Clear a current navigation's sending lock and expose its failure.
+   * @param token - navigation token that failed.
+   * @param error - failure returned by the navigation operation.
+   * @returns no value.
+   */
+  failNavigation(token: number, error: unknown): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false, error: error instanceof Error ? error.message : String(error) })
+  }
 
   /** Observe view changes.
    * @param listener - render notification.
@@ -102,7 +149,7 @@ export class NativeConversationController {
       this.publish({ error: error instanceof Error ? error.message : String(error) })
     }).finally(() => {
       this.pending.delete(pending)
-      this.publish({ state: 'ready' })
+      if (!this.handingOff) this.publish({ state: 'ready' })
     })
     this.pending.add(pending)
     return pending
@@ -131,7 +178,7 @@ export class NativeConversationController {
     return draft
   }
 
-  private async restore(id: SessionId): Promise<void> {
+  private async restore(id: SessionId, resumeTurn = true): Promise<void> {
     // Controls can cold-open the Session and append its end-seed marker, so history is read last.
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
     const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
@@ -139,13 +186,18 @@ export class NativeConversationController {
     this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls,
       ...this.snapshot.selected === id ? {} : { submissions: undefined } })
     await this.refreshSubmissions(id, this.selectionEpoch)
+    // With no active turn this still re-reads history once: the turn may have settled before attach.
+    if (resumeTurn) await this.followTurn(id, history.events.at(-1)?.seq ?? -1,
+      (signal, admission, observe, onFollowError, detach) => this.client.attach(
+        id, admission.lastSeq, observe, signal, onFollowError, detach))
   }
 
   private beginSelection(): void {
     this.selectionEpoch++
+    this.navigation++
     this.submissionFloor = -1
     this.submissionDraft = undefined
-    this.publish({ submissionBusy: false, submissionError: undefined })
+    this.publish({ navigationPending: false, submissionBusy: false, submissionError: undefined })
   }
 
   private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
@@ -160,6 +212,52 @@ export class NativeConversationController {
     } catch (error: unknown) {
       if (this.selectionEpoch === epoch && this.snapshot.selected === id && read === this.submissionRead) {
         this.publish({ submissionError: error instanceof Error ? error.message : String(error) })
+      }
+    }
+  }
+
+  private async followTurn(
+    id: SessionId, lastSeq: number,
+    runTurn: (signal: AbortSignal, admission: { sessionId: SessionId; lastSeq: number },
+      observe: (frame: NativeSessionFollowFrame) => void, onFollowError: (error: unknown) => void, detach: AbortSignal) =>
+    Promise<{ readonly exitCode: number; readonly answer?: string } | undefined>,
+    ownsFromStart = true,
+  ): Promise<void> {
+    const turn = new AbortController()
+    const turnDetach = new AbortController()
+    const admission = { sessionId: id, lastSeq }
+    this.turn = turn
+    this.turnDetach = turnDetach
+    if (ownsFromStart) {
+      this.foregroundAdmission = admission
+      this.followErrorOwner = admission
+    }
+    this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
+    let turnFailed = false
+    try {
+      const result = await runTurn(turn.signal, admission,
+        (frame) => { this.observe(frame, admission) },
+        (error) => {
+          if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
+            this.publish({ error: error instanceof Error ? error.message : String(error) })
+          }
+        }, AbortSignal.any([this.lifetime.signal, turnDetach.signal]))
+      if (result !== undefined && result.exitCode !== 0 && result.exitCode !== 130) {
+        throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
+      }
+    } catch (error: unknown) {
+      // A detach only stops this view's waiter; the Host turn keeps running.
+      if (!turnDetach.signal.aborted) {
+        turnFailed = true
+        throw error
+      }
+    } finally {
+      if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
+      if (this.turn === turn) this.turn = undefined
+      this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
+      if (!turnDetach.signal.aborted && !this.lifetime.signal.aborted && this.snapshot.selected === id) {
+        try { await this.restore(id, false) }
+        catch (error: unknown) { if (!turnFailed) throw error }
       }
     }
   }
@@ -184,7 +282,8 @@ export class NativeConversationController {
    */
   submitPending(text: string, placement: 'queued' | 'steering'): Promise<boolean> {
     const id = this.snapshot.selected
-    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
+    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.navigationPending === true
+      || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
     const epoch = this.selectionEpoch
     const previous = this.submissionDraft
     const draft = previous?.sessionId === id && previous.epoch === epoch && previous.text === text && previous.placement === placement
@@ -237,7 +336,7 @@ export class NativeConversationController {
   changePending(requestId: NativeSubmissionRequestId, action: 'remove' | 'promote'): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     return this.mutateSubmission(id, this.selectionEpoch, async () => {
       if (action === 'remove') await this.client.dequeue(id, requestId, this.lifetime.signal)
@@ -254,7 +353,8 @@ export class NativeConversationController {
   editPending(requestId: NativeSubmissionRequestId, text: string): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || text.trim() === ''
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
+      || text.trim() === ''
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     const epoch = this.selectionEpoch
     return this.mutateSubmission(id, epoch, async () => {
@@ -341,16 +441,54 @@ export class NativeConversationController {
     })
   }
 
-  /** Select a stored Session and reconstruct its durable transcript.
+  /** Select a stored Session and reconstruct its durable transcript, attaching to a running Host turn.
+   * Switching away detaches this view without cancelling that turn.
    * @param id - identity from the Host's index.
-   * @returns history completion; selection does not execute a turn.
+   * @returns history and any running-turn attachment completion.
    */
-  select(id: SessionId): Promise<void> {
-    this.assertReady()
+  async select(id: SessionId): Promise<void> {
+    await this.detachTurn()
     this.followErrorOwner = undefined
     this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
-    return this.run(() => this.restore(id))
+    await this.run(() => this.restore(id))
+  }
+
+  /** Clear the selected Session and its conversation projection, detaching a running turn without cancelling it.
+   * @returns completion after any detached turn's view settles.
+   * @throws If another operation such as loading is pending.
+   */
+  async deselect(): Promise<void> {
+    await this.detachTurn()
+    this.followErrorOwner = undefined
+    this.beginSelection()
+    this.publish({ state: 'ready', selected: undefined, header: undefined, events: [], modeControls: undefined,
+      permissionControls: undefined, submissions: undefined, error: undefined })
+  }
+
+  private async detachTurn(): Promise<void> {
+    if (this.snapshot.state !== 'sending' && this.snapshot.state !== 'cancelling') {
+      this.assertReady()
+      // Claim the controller before yielding so a concurrent select or deselect is refused.
+      this.publish({ state: 'loading', error: undefined })
+      return
+    }
+    // Stay loading while the detached turn settles so no other operation starts in between.
+    this.followErrorOwner = undefined
+    this.turnDetach.abort()
+    this.handingOff = true
+    this.publish({ state: 'loading', error: undefined })
+    try { await Promise.allSettled([...this.pending]) } finally { this.handingOff = false }
+  }
+
+  /** Clear the selected Session and return the conversation to its empty state. */
+  clear(): void {
+    this.assertReady()
+    this.followErrorOwner = undefined
+    this.beginSelection()
+    this.publish({ selected: undefined, header: undefined, modeControls: undefined, permissionControls: undefined,
+      submissions: undefined, human: undefined, answeringHuman: undefined, submissionBusy: false, submissionError: undefined,
+      events: [], liveText: undefined, liveTruncated: undefined, error: undefined, state: 'ready' })
   }
 
   /** Pin an edited title through the selected Host's existing Session writer.
@@ -484,10 +622,11 @@ export class NativeConversationController {
   /** Send human text through the Host's sole turn executor.
    * @param text - submitted text; empty text requires at least one image.
    * @param files - browser-selected raster files; Provider limits govern admission.
-   * @returns completion after Host settlement and durable transcript refresh.
+   * @returns completion after Host settlement and transcript refresh, or after this view detaches.
    */
   send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
+    if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
     if (id === undefined || (text.trim().length === 0 && files.length === 0)) {
       throw new Error('native conversation: select a Session and enter text or attach an image')
@@ -496,29 +635,16 @@ export class NativeConversationController {
     const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
       && retainedDraft.epoch === this.selectionEpoch && retainedDraft.text === text ? retainedDraft : undefined
     if (reconcileDraft === undefined) this.submissionDraft = undefined
-    const turn = new AbortController()
-    const signal = AbortSignal.any([turn.signal, this.lifetime.signal])
-    let admission = { sessionId: id, lastSeq: this.snapshot.events.at(-1)?.seq ?? -1 }
-    this.turn = turn
-    const takeOwnership = (): void => {
-      this.foregroundAdmission = admission
-      this.followErrorOwner = admission
-    }
-    if (reconcileDraft === undefined) {
-      takeOwnership()
-    }
-    this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
-    return this.run(async () => {
-      let turnFailed = false
-      let reconciled = false
-      try {
+    return this.run(() => this.followTurn(id, this.snapshot.events.at(-1)?.seq ?? -1,
+      async (signal, admission, observe, onFollowError, detach) => {
+        const workSignal = AbortSignal.any([signal, detach])
         if (reconcileDraft !== undefined) {
           // A ready retry checks the Host receipt before starting another turn.
           const read = ++this.submissionRead
           const reads = await Promise.all([
-            this.client.submissions(id, signal), this.client.history(id, signal),
+            this.client.submissions(id, workSignal), this.client.history(id, workSignal),
           ])
-          signal.throwIfAborted()
+          workSignal.throwIfAborted()
           const [submissions, history] = reads
           const matched = submissions.submissions.some(item => item.requestId === reconcileDraft.requestId)
             || history.events.some(event => event.type === 'user/message' && event.data.id === String(reconcileDraft.requestId))
@@ -530,12 +656,11 @@ export class NativeConversationController {
           }
           if (matched) {
             if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
-            reconciled = true
             this.publish({ error: undefined })
-            return
+            return undefined
           }
           if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
-          admission = { sessionId: id, lastSeq: history.events.at(-1)?.seq ?? -1 }
+          admission.lastSeq = history.events.at(-1)?.seq ?? -1
         }
         const images: NativeImageUpload[] = []
         const policy = this.snapshot.modelControls?.images
@@ -549,7 +674,7 @@ export class NativeConversationController {
               const reader = new FileReader()
               const abort = (): void => { cleanup(); reader.abort(); resolve(undefined) }
               const cleanup = (): void => {
-                signal.removeEventListener('abort', abort)
+                workSignal.removeEventListener('abort', abort)
                 reader.onload = reader.onerror = reader.onabort = null
               }
               reader.onload = () => {
@@ -559,41 +684,23 @@ export class NativeConversationController {
               }
               reader.onerror = () => { cleanup(); reject(new Error('native conversation: image read failed', { cause: reader.error })) }
               reader.onabort = (): void => { cleanup(); resolve(undefined) }
-              signal.addEventListener('abort', abort, { once: true })
-              if (signal.aborted) abort()
+              workSignal.addEventListener('abort', abort, { once: true })
+              if (workSignal.aborted) abort()
               else reader.readAsDataURL(file)
             })
             if (data === undefined) return
             images.push({ mediaType, data, name: file.name })
           }
         }
-        if (reconcileDraft !== undefined) { takeOwnership(); this.publish({ error: undefined }) }
-        const observe = (frame: NativeSessionFollowFrame): void => { this.observe(frame, admission) }
-        const onFollowError = (error: unknown): void => {
-          if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
-            this.publish({ error: error instanceof Error ? error.message : String(error) })
-          }
-        }
-        const result = text.trim().length === 0
-          ? await this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
-            true, signal, observe, onFollowError, admission.lastSeq)
-          : await this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq)
-        if (result.exitCode !== 0 && result.exitCode !== 130) {
-          throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
-        }
-      } catch (error: unknown) {
-        turnFailed = true
-        throw error
-      } finally {
-        if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
-        this.turn = undefined
-        this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
-        if (!reconciled && !this.lifetime.signal.aborted && this.snapshot.selected === id) {
-          try { await this.restoreSelected(id) }
-          catch (error: unknown) { if (!turnFailed) throw error }
-        }
-      }
-    })
+        workSignal.throwIfAborted()
+        this.foregroundAdmission = admission
+        this.followErrorOwner = admission
+        if (reconcileDraft !== undefined) this.publish({ error: undefined })
+        return text.trim().length === 0
+          ? this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
+            true, signal, observe, onFollowError, admission.lastSeq, detach)
+          : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach)
+      }, reconcileDraft === undefined))
   }
 
   private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId; readonly lastSeq: number }): void {
@@ -656,7 +763,7 @@ export class NativeConversationController {
     return work
   }
 
-  /** Request cancellation; readiness is published only by the settled send operation. */
+  /** Stop the selected Host turn; readiness is published only by the settled send operation. */
   cancel(): void {
     if (this.turn === undefined) return
     this.publish({ state: 'cancelling' })
