@@ -38,6 +38,8 @@ export interface NativeConversationSnapshot {
   readonly selected?: SessionId | undefined
   /** Readiness of the sole Native Conversation controller. */
   readonly state: 'loading' | 'ready' | 'sending' | 'cancelling' | 'closed'
+  /** Whether a new Session connection currently blocks composer submissions. */
+  readonly navigationPending?: boolean | undefined
   /** Last rejected Native Session operation, when one is visible to the shell. */
   readonly error?: string | undefined
 }
@@ -57,6 +59,30 @@ export interface NativeConversationService {
   subscribe(listener: () => void): () => void
   /** Create and select a Host-owned Session. */
   create(): Promise<void>
+  /** Clear the selected Session and return to the empty conversation state. */
+  clear(): void
+  /** Reserve the next navigation token.
+   * @param disableSending - whether to block submissions while navigation resolves.
+   * @returns next navigation token.
+   */
+  beginNavigation(disableSending?: boolean): number
+  /** Check whether a navigation token is still current. */
+  isCurrentNavigation(token: number): boolean
+  /** Wait for controller operations already in flight to settle.
+   * @returns completion after no tracked operations remain pending.
+   */
+  idle(): Promise<void>
+  /** Release a current navigation's composer lock without exposing an error.
+   * @param token - navigation token whose composer lock should be released.
+   * @returns no value.
+   */
+  releaseNavigation(token: number): void
+  /** Clear a current navigation's sending lock and expose its failure.
+   * @param token - navigation token that failed.
+   * @param error - failure returned by the navigation operation.
+   * @returns no value.
+   */
+  failNavigation(token: number, error: unknown): void
   /** Select an identity from the Host-owned Session index. */
   select(id: SessionId): Promise<void>
   /** Clear the selected Session and its conversation projection, detaching a running turn without cancelling it.
