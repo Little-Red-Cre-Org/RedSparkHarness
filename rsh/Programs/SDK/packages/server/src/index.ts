@@ -37,7 +37,7 @@ export const Config: Schema<JsonRpcConfig> = Schema.object({
   maxTokensAsSuccess: Schema.boolean().default(false),
 })
 
-const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (.+?) \((.*?)\): /
+const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (.+) \((.*)\)$/s
 const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
 
 /** Loader tree methods used for startup settlement; this package does not depend on the Loader. */
@@ -81,18 +81,23 @@ async function startupFailure(loader: StartupLoader): Promise<unknown> {
  */
 function bootFailureError(failure: unknown): Error {
   let entry = ''
-  // The Loader rejects with Error wrappers, and plugin startup errors are Error instances.
-  let error = failure as Error
+  let error = failure
   for (;;) {
-    if (error instanceof AggregateError) error = error.errors[0] as Error
-    const wrapper = LOADER_ENTRY_FAILURE.exec(error.message)
+    if (error instanceof AggregateError) error = error.errors[0]
+    if (!(error instanceof Error) || error.cause === undefined) break
+    // Strip the wrapped `: <detail>` suffix first: entry ids may contain parentheses.
+    const cause = error.cause
+    // oxlint-disable-next-line typescript/no-base-to-string -- mirrors the Loader's own String(cause) detail
+    const detail = `: ${cause instanceof Error ? cause.message : String(cause)}`
+    const wrapper = LOADER_ENTRY_FAILURE.exec(error.message.slice(0, error.message.length - detail.length))
     if (wrapper === null) break
     entry = ` "${wrapper[1]}" (${wrapper[2]})`
-    error = error.cause as Error
+    error = cause
   }
-  const service = DUPLICATE_SERVICE.exec(error.message)?.[1]
+  const type = error instanceof Error ? error.name : typeof error
+  const service = error instanceof Error ? DUPLICATE_SERVICE.exec(error.message)?.[1] : undefined
   const rule = service === undefined ? '' : `: service "${service}" is already provided by another plugin`
-  return new Error(`SDK runtime failed to start: loader entry${entry} failed: ${error.name}${rule}; see the runtime stderr log for details`)
+  return new Error(`SDK runtime failed to start: loader entry${entry} failed: ${type}${rule}; see the runtime stderr log for details`)
 }
 
 /**
@@ -119,7 +124,6 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
   })
 
-  const loader = ctx.get('loader') as StartupLoader | undefined
   let bootFailure: Error | undefined
 
   // Share one exit task so racing shutdown requests cannot dispose the root or
@@ -142,7 +146,8 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     // lifecycle work, and synchronous effect registration; no scheduler delay
     // is part of readiness. A hand-built context without Loader remains
     // immediately usable.
-    if (method === 'initialize' && loader !== undefined) {
+    const loader = method === 'initialize' ? ctx.get('loader') as StartupLoader | undefined : undefined
+    if (loader !== undefined) {
       const failure = await startupFailure(loader)
       if (failure !== undefined) bootFailure = bootFailureError(failure)
     }

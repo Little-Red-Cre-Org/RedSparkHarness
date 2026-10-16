@@ -296,7 +296,12 @@ describe('dsh-sdk-jsonrpc-server plugin apply', () => {
           providerCtx.provide('fs', {})
         },
       }
-      ctx.loader.builtins['secret-error'] = { apply: failWithSecret }
+      ctx.loader.builtins['secret-string'] = {
+        apply() {
+          // A plugin may throw a non-Error value.
+          throw `private provider details: ${secret}`
+        },
+      }
       ctx.loader.builtins['late-service'] = {
         async apply(providerCtx: Context) {
           await groupGate
@@ -349,17 +354,17 @@ describe('dsh-sdk-jsonrpc-server plugin apply', () => {
       }
     })
 
-    it('names the first failing child of a nested group by error type only', async () => {
+    it('names the first failing child of a nested group and does not echo a thrown non-Error value', async () => {
       const boot = await bootTree([{
         id: 'nested',
         name: 'cordis:group',
-        config: [{ id: 'leaked provider', name: 'cordis:secret-error' }, { id: 'fs-b', name: 'cordis:fs-b' }],
+        config: [{ id: 'provider (secondary)', name: 'cordis:secret-string' }, { id: 'fs-b', name: 'cordis:fs-b' }],
       }])
       try {
         const response = boot.initialize()
         boot.releaseGroup()
         await expect(boot.tree).rejects.toThrow()
-        expectBootError(await response, '"leaked provider" (cordis:secret-error) failed: TypeError')
+        expectBootError(await response, '"provider (secondary)" (cordis:secret-string) failed: Error')
       } finally {
         await boot.dispose()
       }
