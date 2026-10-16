@@ -3,6 +3,7 @@
 import type { DesktopPluginRecord } from './project-manager.ts'
 import type { DesktopLocale } from './locale.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
+import type { DesktopErrorType } from './startup-error.ts'
 import type {
   NativeDesktopInstallRequest,
   NativeDesktopListOutcome,
@@ -38,11 +39,10 @@ export const DESKTOP_IPC = {
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
-export interface DesktopUpdateState {
-  readonly phase: 'idle' | 'checking' | 'available' | 'installing' | 'ready' | 'error'
-  readonly version?: string
-  readonly message?: string
-}
+export type DesktopUpdateState =
+  | { readonly phase: 'idle' | 'checking' }
+  | { readonly phase: 'available' | 'installing' | 'ready'; readonly version: string }
+  | { readonly phase: 'error'; readonly version?: string; readonly errorType: DesktopErrorType; readonly logPath?: string }
 
 /** Narrow bridge exposed through context isolation. */
 export interface DshDesktopApi {

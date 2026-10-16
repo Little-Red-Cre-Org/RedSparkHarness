@@ -31,8 +31,8 @@ export interface SessionTitleLlmRequestEventData {
   readonly system: string
   /** Exact auxiliary message list. */
   readonly messages: Message[]
-  /** Exact auxiliary output-token cap. */
-  readonly maxTokens: number
+  /** Exact auxiliary output-token cap; omitted for openai-codex routes that reject it. */
+  readonly maxTokens?: number
 }
 
 declare module '@deepseek-ai/dsh-session/types' {
@@ -76,6 +76,8 @@ const CONFIG_KEYS: ReadonlySet<string> = new Set([
   'provider',
   'model',
 ])
+
+const OPENAI_CODEX_PROVIDER = 'openai-codex'
 
 /** Validate one positive integer limit. */
 function assertPositiveInteger(name: string, value: number): void {
@@ -244,7 +246,7 @@ export async function generateSessionTitle(
     model: route.model,
     messages,
     system,
-    maxTokens: config.maxOutputTokens,
+    ...(route.provider === OPENAI_CODEX_PROVIDER ? {} : { maxTokens: config.maxOutputTokens }),
     sessionId: request.sessionId,
     purpose: 'session-title',
     signal: callDeadline.signal,
@@ -255,7 +257,7 @@ export async function generateSessionTitle(
     route,
     system,
     messages,
-    maxTokens: config.maxOutputTokens,
+    ...(route.provider === OPENAI_CODEX_PROVIDER ? {} : { maxTokens: config.maxOutputTokens }),
   })
   callDeadline.signal.throwIfAborted()
   const assembler = new BlockAssembler()

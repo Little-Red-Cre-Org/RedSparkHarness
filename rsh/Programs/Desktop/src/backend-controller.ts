@@ -32,12 +32,15 @@ export class DesktopBackendController<Host extends DesktopBackendHost> {
   /**
    * @param createHost - Allocate a child and route its fatal failures to the supplied callback.
    * @param publish - Receive availability changes until the controller closes.
-   * @param logError - Persist raw startup and backend failures.
+   * @param logError - Persist raw failures and return the log path when writing succeeds.
    */
   constructor(
     private readonly createHost: (onFailure: (error: Error) => void) => Host,
     private readonly publish: (state: DesktopBackendState) => void,
-    private readonly logError: (label: string, error: unknown) => void = (label, error) => { console.error(label, error) },
+    private readonly logError: (label: string, error: unknown) => string | undefined = (label, error) => {
+      console.error(label, error)
+      return undefined
+    },
   ) {}
 
   /** Current availability, including the last startup or child failure. */
@@ -84,8 +87,8 @@ export class DesktopBackendController<Host extends DesktopBackendHost> {
           if (cleanupError !== error) failure = new AggregateError([error, cleanupError], 'desktop backend startup and cleanup failed')
         }
         if (!cancelled) {
-          this.logError('Desktop backend startup failed', failure)
-          this.update(desktopErrorState(failure))
+          const logPath = this.logError('Desktop backend startup failed', failure)
+          this.update({ ...desktopErrorState(failure), ...(logPath === undefined ? {} : { logPath }) })
         }
         throw failure
       }
@@ -138,13 +141,13 @@ export class DesktopBackendController<Host extends DesktopBackendHost> {
     if (this.current.phase !== 'ready') return
     attempt.cancelled = true
     const cleanup = this.cleanup(attempt)
-    this.logError('Desktop backend failed', error)
-    this.update(desktopErrorState(error))
+    const logPath = this.logError('Desktop backend failed', error)
+    this.update({ ...desktopErrorState(error), ...(logPath === undefined ? {} : { logPath }) })
     void cleanup.catch((cleanupError: unknown) => {
       if (this.attempt === attempt) {
         const failure = new AggregateError([error, cleanupError], 'Desktop backend failed and could not stop')
-        this.logError('Desktop backend cleanup failed', failure)
-        this.update(desktopErrorState(failure))
+        const logPath = this.logError('Desktop backend cleanup failed', failure)
+        this.update({ ...desktopErrorState(failure), ...(logPath === undefined ? {} : { logPath }) })
       }
     })
   }

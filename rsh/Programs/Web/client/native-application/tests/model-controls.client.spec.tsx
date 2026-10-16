@@ -129,3 +129,37 @@ it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'High' }))
   expect(selectModel).not.toHaveBeenCalled()
 })
+
+it('keeps the picker open across its open-time reload and still selects a model', async () => {
+  const modelControls: ConversationSnapshot['modelControls'] = {
+    canSelectModel: true, presets: [], catalog: {
+      default: { provider: 'fixture', model: 'one' }, routableProviders: ['fixture'], failures: [], groups: [{ id: 'fixture', name: 'Fixture', models: [
+        { id: 'one', name: 'One' }, { id: 'two', name: 'Two' },
+      ] }],
+    },
+  }
+  const snapshot: ConversationSnapshot = {
+    sessions: [], events: [], state: 'ready', selected: 'session-alpha' as SessionId, modelControls,
+  }
+  const refreshModelControls = vi.fn(async () => undefined)
+  const selectModel = vi.fn(async () => undefined)
+  const view = render(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
+    refreshModelControls={refreshModelControls} t={key => key} />)
+  const trigger = screen.getByRole('button', { name: 'trigger.aria' })
+  fireEvent.click(trigger)
+  expect(refreshModelControls).toHaveBeenCalledTimes(1)
+  // The reload locks the controls; the browser then drops focus from the trigger to nowhere.
+  view.rerender(<ModelPickerControl snapshot={{ ...snapshot, state: 'loading' }} selectModel={selectModel}
+    refreshModelControls={refreshModelControls} t={key => key} />)
+  expect(trigger.hasAttribute('disabled')).toBe(false)
+  fireEvent.blur(trigger, { relatedTarget: null })
+  view.rerender(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
+    refreshModelControls={refreshModelControls} t={key => key} />)
+  expect(screen.getByRole('menu')).toBeTruthy()
+  // Keyboard focus stays in the card across the reload and the pane drill.
+  expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /menu\.model/ }))
+  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
+  expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'One' }))
+  fireEvent.click(screen.getByRole('menuitemradio', { name: 'Two' }))
+  await waitFor(() => { expect(selectModel).toHaveBeenCalledWith({ provider: 'fixture', model: 'two' }) })
+})

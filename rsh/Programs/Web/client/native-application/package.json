@@ -52,6 +52,7 @@
     "lib/index.js",
     "lib/native.js",
     "lib/controller.js",
+    "lib/controller-*.js",
     "lib/native-*.js",
     "lib/*.css",
     "lib/types/**/*.d.ts"

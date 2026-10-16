@@ -64,7 +64,7 @@ interface SessionTitleSnapshot extends SessionTitleEventData {
 
 ## 辅助请求记录
 
-共享 LLM 辅助组件会在调用模型前，记录每一项已经过验证且可分发的标题请求。即使后续生成失败，载荷仍会复现模型可见的系统输入与消息输入、路由、输出上限、提供方归属和源消息归因。
+共享 LLM 辅助组件会在调用模型前，记录每一项已经过验证且可分发的标题请求。即使后续生成失败，载荷仍会复现模型可见的系统输入与消息输入、路由、提供方归属和源消息归因；仅当路由接受输出上限时才会包含该字段。
 
 ```ts type-equiv
 /** Exact model-visible request recorded before one auxiliary title dispatch. */
@@ -79,8 +79,8 @@ interface SessionTitleLlmRequestEventData {
   readonly system: string
   /** Exact auxiliary message list. */
   readonly messages: Message[]
-  /** Exact auxiliary output-token cap. */
-  readonly maxTokens: number
+  /** Exact auxiliary output-token cap; omitted for openai-codex routes that reject it. */
+  readonly maxTokens?: number
 }
 ```
 

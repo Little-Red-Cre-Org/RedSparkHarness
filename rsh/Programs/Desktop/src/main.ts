@@ -53,23 +53,23 @@ let recoverApplication = (action: RecoveryAction): Promise<void> => {
 }
 
 async function showEmergencyDocument(window: BrowserWindow, failure: DesktopErrorState): Promise<void> {
-  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), {
-    ...failure, logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE),
-  }, profileRecoveryAvailable())
+  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), failure, profileRecoveryAvailable())
   const url = `data:text/html;charset=utf-8,${encodeURIComponent(document)}`
   emergencyPages.set(window, { url, busy: false })
   await window.loadURL(url)
 }
 
-function logDesktopError(label: string, error: unknown): void {
+function logDesktopError(label: string, error: unknown): boolean {
   console.error(label, error)
   try {
     const logs = app.getPath('logs')
     mkdirSync(logs, { recursive: true })
     appendFileSync(join(logs, DESKTOP_LOG_FILE),
       `${new Date().toISOString()} ${label}\n${inspect(error, { depth: null })}\n\n`)
+    return true
   } catch (writeError) {
     console.error('Desktop log write failed', writeError)
+    return false
   }
 }
 
@@ -162,8 +162,11 @@ function createWindow(preload: string, show = false): BrowserWindow {
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
-      logDesktopError('Desktop recovery failed', error)
-      if (!window.isDestroyed()) await showEmergencyDocument(window, desktopErrorState(error))
+      const logged = logDesktopError('Desktop recovery failed', error)
+      const failure = desktopErrorState(error)
+      if (!window.isDestroyed()) await showEmergencyDocument(window, {
+        ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
+      })
     }).catch((error: unknown) => { console.error(error) }).finally(() => { page.busy = false })
   })
   return window
@@ -223,6 +226,22 @@ async function main(): Promise<void> {
   const locale = resolveDesktopLocale(app.getLocale())
   const messages = locale.messages
   const logPath = join(app.getPath('logs'), DESKTOP_LOG_FILE)
+  const updateErrorDetails = (state: Extract<DesktopUpdateState, { phase: 'error' }>) => {
+    const errorTypes = {
+      AggregateError: messages.startupTypeAggregateError,
+      Error: messages.startupTypeError,
+      RangeError: messages.startupTypeRangeError,
+      SyntaxError: messages.startupTypeSyntaxError,
+      TypeError: messages.startupTypeTypeError,
+      UnknownError: messages.startupTypeUnknownError,
+      ValidationError: messages.startupTypeValidationError,
+    } satisfies Record<typeof state.errorType, string>
+    return {
+      message: formatDesktopMessage(messages.startupErrorType, { type: errorTypes[state.errorType] }),
+      detail: state.logPath === undefined ? messages.startupErrorLogAdvice
+        : formatDesktopMessage(messages.startupErrorLogWritten, { path: state.logPath }),
+    }
+  }
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const managementPreload = fileURLToPath(new URL('./preload.cjs', import.meta.url))
   const desktopPet = new DesktopPetWindow(fileURLToPath(new URL('./preload-pet.cjs', import.meta.url)))
@@ -237,8 +256,8 @@ async function main(): Promise<void> {
     emergencyDocument = true
     petUpdatesAllowed = false
     desktopPet.close()
-    logDesktopError('Desktop emergency startup failed', error)
-    const failure = desktopErrorState(error)
+    const logged = logDesktopError('Desktop emergency startup failed', error)
+    const failure = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
     pageError = failure
     if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, failure)
   }
@@ -263,7 +282,7 @@ async function main(): Promise<void> {
   }
   const backendState = (): DesktopBackendState => {
     const state = pageError ?? backend.state
-    return state.phase === 'error' ? { ...state, logPath, profileRecovery: profileRecoveryAvailable() } : state
+    return state.phase === 'error' ? { ...state, profileRecovery: profileRecoveryAvailable() } : state
   }
   const publishBackend = (state: DesktopBackendState): void => {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -285,7 +304,7 @@ async function main(): Promise<void> {
     if (state.phase === 'starting' && !emergencyDocument) pageError = undefined
     publishBackend(backendState())
     if (state.phase === 'error') void navigateMain(startupUrl).catch((error: unknown) => { console.error(error) })
-  }, logDesktopError)
+  }, (label, error) => logDesktopError(label, error) ? logPath : undefined)
 
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateState = state
@@ -323,8 +342,8 @@ async function main(): Promise<void> {
 
   const showStartupError = async (error: unknown): Promise<void> => {
     if (quitting) return
-    logDesktopError('Desktop startup failed', error)
-    pageError = desktopErrorState(error)
+    const logged = logDesktopError('Desktop startup failed', error)
+    pageError = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
     try { await navigateMain(startupUrl) }
     catch (navigationError) {
       await showEmergencyError(new AggregateError([error, navigationError], messages.startupFailed))
@@ -383,6 +402,9 @@ async function main(): Promise<void> {
       try { await reconcileBackend() }
       catch { /* reconcileBackend already showed a Host startup failure. */ }
     },
+    undefined,
+    undefined,
+    (label, error) => logDesktopError(label, error) ? logPath : undefined,
   )
 
   protocol.handle(SCHEME, (request) => {
@@ -602,7 +624,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'error',
           title: messages.updateCheckFailedTitle,
-          message: state.message ?? messages.unknownError,
+          ...updateErrorDetails(state),
         })
       }
       return
@@ -612,7 +634,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'info',
           title: messages.updateCheckTitle,
-          message: state.message ?? messages.updateCurrent,
+          message: messages.updateCurrent,
         })
       }
       return
@@ -621,7 +643,7 @@ async function main(): Promise<void> {
       type: 'info',
       title: messages.updateTitle,
       message: messages.updateAvailable,
-      detail: formatDesktopMessage(messages.updateDetail, { version: state.version ?? '' }),
+      detail: formatDesktopMessage(messages.updateDetail, { version: state.version }),
       buttons: [messages.installAndRestart, messages.later],
       defaultId: 0,
       cancelId: 1,
@@ -632,7 +654,7 @@ async function main(): Promise<void> {
       await dialog.showMessageBox({
         type: 'error',
         title: messages.updateFailedTitle,
-        message: installed.message ?? messages.unknownError,
+        ...updateErrorDetails(installed),
       })
     }
   }
@@ -750,14 +772,17 @@ async function main(): Promise<void> {
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
-  logDesktopError('Desktop initialization failed', error)
+  const logged = logDesktopError('Desktop initialization failed', error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
     await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
   }
   const window = BrowserWindow.getAllWindows()[0] ?? createWindow(fileURLToPath(new URL('./preload-app.cjs', import.meta.url)), true)
   window.once('closed', () => { app.quit() })
-  await showEmergencyDocument(window, desktopErrorState(error))
+  const failure = desktopErrorState(error)
+  await showEmergencyDocument(window, {
+    ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
+  })
 }).catch((error: unknown) => {
   console.error(error)
   app.exit(1)

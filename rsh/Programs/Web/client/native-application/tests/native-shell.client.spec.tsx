@@ -5,7 +5,7 @@ import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from 
 import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
-  NativeSessionListFrame, NativeSessionListItem,
+  NativeSessionListFrame, NativeSessionListItem, NativeSettingsEvent,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -143,6 +143,7 @@ it.each([
       titleActions: { rename: true, refresh: true }, ...activity, workspaceId: 'workspace-shared' as NativeWorkspace['workspaceId'] },
   ]
   const listFrames = frameChannel<NativeSessionListFrame>()
+  const settingsEventFrames = frameChannel<NativeSettingsEvent>()
   const workspaceFrames = frameChannel<NativeWorkspaceFrame>()
   const workspaceId = 'workspace-shared' as NativeWorkspace['workspaceId']
   let workspaces: NativeWorkspace[] = [{
@@ -304,7 +305,13 @@ it.each([
     accountsList: vi.fn(), accountsUsage: vi.fn(), accountsBalance: vi.fn(), accountsSignOut: vi.fn(),
     modelsListProviders: vi.fn(async () => []), modelsListConfigurableProviders: vi.fn(async () => []),
     modelsDiscover: vi.fn(async () => []), modelCatalog: vi.fn(async () => null),
-    pluginInventoryList: vi.fn(async () => ({ entries: [] })), settingsEvents: async function* () {},
+    pluginInventoryList: vi.fn(async () => ({ entries: [] })), settingsEvents: async function* (signal: AbortSignal) {
+      while (true) {
+        const event = await settingsEventFrames.take(signal)
+        if (event === undefined) return
+        yield event
+      }
+    },
     agentPresetsList: vi.fn(async () => ({ default: null, presets: [] })),
     agentPresetRead: vi.fn(async (id: string) => ({ id, source: 'profile' as const, status: 'ready' as const, name: id })),
     agentPresetCopy: vi.fn(async () => ({ updated: true as const })),
@@ -396,6 +403,11 @@ it.each([
       expect(document.body.style.getPropertyValue('--dsh-content-font-size')).toBe(interleaveStartup ? '14px' : '16px')
       expect(screen.queryByRole('dialog')).toBeNull()
     })
+    if (!interleaveStartup) {
+      const modelReads = clientMock.modelControls.mock.calls.length
+      settingsEventFrames.publish({ type: 'llm/adapters-updated' })
+      await waitFor(() => { expect(clientMock.modelControls).toHaveBeenCalledTimes(modelReads + 1) })
+    }
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()

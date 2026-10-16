@@ -60,7 +60,7 @@ export interface NativeWorkspaceClient {
    * @returns the canonical Workspace row and whether this call created it.
    */
   create(
-    input: { readonly path: string }, signal?: AbortSignal,
+    input: { readonly path: string; readonly trust?: boolean }, signal?: AbortSignal,
   ): Promise<{ readonly workspace: NativeWorkspace; readonly created: boolean }>
   /** @param workspaceId - registered Workspace.
    * @param title - proposed display title.
@@ -102,7 +102,7 @@ export interface NativeWorkspaceClient {
    * @param signal - caller cancellation.
    * @returns a reusable blank Session or a newly created blank Session id.
    */
-  connectWorkspace(workspaceId: WorkspaceId, signal?: AbortSignal): Promise<{ readonly sessionId: SessionId }>
+  connectWorkspace(workspaceId: WorkspaceId, signal?: AbortSignal, trust?: boolean): Promise<{ readonly sessionId: SessionId }>
   /** @returns completion after active follow requests have been cancelled. */
   close(): Promise<void>
 }
@@ -257,8 +257,10 @@ export function createNativeWorkspaceClients(
       const result = await call<{ workspaceIds: string[] }>('workspaces/search', { query }, signal)
       return z.array(z.string()).parse(result.workspaceIds).map(id => brandString<WorkspaceId>(id))
     },
-    async connectWorkspace(workspaceId, signal) {
-      const result = await call<{ sessionId: string }>('workspaces/connect', { workspaceId }, signal)
+    async connectWorkspace(workspaceId, signal, trust) {
+      const result = await call<{ sessionId: string }>('workspaces/connect', {
+        workspaceId, ...trust === undefined ? {} : { trust },
+      }, signal)
       return { sessionId: brandString<SessionId>(z.string().min(1).parse(result.sessionId)) }
     },
     async close() {

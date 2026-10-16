@@ -91,7 +91,7 @@ import { NativeWebModels } from './models.ts'
 import { NativeWebSettingsEvents } from './settings-events.ts'
 import { NativeSessionListFeed } from './session-list-follow.ts'
 import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@deepseek-ai/dsh-client-native-session/list-types'
-import { NativeWebWorkspaceService } from './workspaces.ts'
+import { NativeWebWorkspaceService, resolveNativeWorkspaceTrustSettings, type NativeWorkspaceTrustSettings } from './workspaces.ts'
 import { NativeWebDirectoryService } from './directories.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -511,6 +511,7 @@ export interface NativeWebSelectionProviders {
   readonly messageFeedback?: NativeMessageFeedbackOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
+  readonly workspaceTrusted?: ((path: string) => boolean) | undefined
   readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
 }
 
@@ -2069,7 +2070,8 @@ export class NativeWebSessionService {
     if (workspace === undefined) return this.titleRoute()
     const route = this.executor.rootExecution.workspaceRoutes().find(candidate => candidate.workspaceId === workspace.id)
     if (route !== undefined) return route.id
-    return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.titleRoute(), workspaceId: workspace.id }, signal)).id
+    return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.titleRoute(), workspaceId: workspace.id,
+      trusted: this.selections.workspaceTrusted?.(workspace.path) ?? false }, signal)).id
   }
 
   private workspaceForSession(id: SessionId) {
@@ -2219,6 +2221,10 @@ export const plugin: NativePlugin = {
         { schema: nativeUiConversationSettingsSchema, applies: 'live' },
       )
       if (conversationSettings !== undefined) context.own(() => { conversationSettings.dispose() })
+      const workspaceTrustSettings = settings?.register<'workspace-trust', NativeWorkspaceTrustSettings>(
+        'workspace-trust', { paths: [] }, resolveNativeWorkspaceTrustSettings,
+      )
+      if (workspaceTrustSettings !== undefined) context.own(() => { workspaceTrustSettings.dispose() })
       const readDefaultModel = () => defaultModelSelection(defaultSettings)
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
@@ -2238,7 +2244,8 @@ export const plugin: NativePlugin = {
       context.own(() => settingsEvents.close())
       const workspaceService = new NativeWebWorkspaceService(context, workspaceRegistry, executor,
         context.require('sessionPersistence'), context.require('activeSessions'),
-        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), config.maxHistoryEvents, config.maxFollowers)
+        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), workspaceTrustSettings,
+        config.maxHistoryEvents, config.maxFollowers)
       context.own(() => workspaceService.close())
       const directoryService = new NativeWebDirectoryService(context.signal)
       let defaultModelInitialization: Promise<void> | undefined
@@ -2265,7 +2272,7 @@ export const plugin: NativePlugin = {
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           sessionFeedback: context.optional('sessionFeedback'), messageFeedback: context.optional('messageFeedback'),
-          workspaceRegistry,
+          workspaceRegistry, workspaceTrusted: path => workspaceService.trusted(path),
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },
         () => { settingsEvents.agentPresetsUpdated() }, context.require('fs'))
