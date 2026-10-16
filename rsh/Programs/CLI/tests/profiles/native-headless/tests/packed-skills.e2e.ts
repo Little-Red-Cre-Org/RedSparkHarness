@@ -1,10 +1,10 @@
 /** Packed-consumer coverage for Skills loading and cold Session recovery. */
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { isAbsolute, join, relative, sep } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
 
 const PACKED_BIN = process.env.DSH_PACKED_DSH_BIN
@@ -196,6 +196,17 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
         PACKED_SKILLS_FIXTURE_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
+      // The consumer omits optional packages. Lend only the workspace's optional native platform packages (sharp's
+      // binaries, and the flock addon on Linux) so every plugin still has to resolve from the consumer.
+      const hoisted = fileURLToPath(new URL('../../../../../../../node_modules/.pnpm/node_modules/', import.meta.url))
+      const optionalNative = join(root, 'optional-native')
+      for (const [scope, prefix] of [['@img', 'sharp-'], ['@deepseek-ai', `node-addon-system-${process.platform}-`]] as const) {
+        await mkdir(join(optionalNative, scope), { recursive: true })
+        for (const name of (await readdir(join(hoisted, scope))).filter(entry => entry.startsWith(prefix))) {
+          await symlink(join(hoisted, scope, name), join(optionalNative, scope, name), 'junction')
+        }
+      }
+      childEnv.NODE_PATH = optionalNative
       delete childEnv.DEEPSEEK_BASE_URL
       execFileSync(process.execPath, [installedBin, '--profile', 'native-sdk', '--dump-config'],
         { cwd: workspace, env: { ...childEnv, DSH_HOME: home }, stdio: 'ignore' })
