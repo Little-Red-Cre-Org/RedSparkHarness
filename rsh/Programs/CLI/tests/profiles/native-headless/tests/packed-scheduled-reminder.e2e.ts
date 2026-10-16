@@ -162,7 +162,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       })
       const address = modelServer.address()
       if (address === null || typeof address === 'string') throw new Error('packed-scheduled-reminder: model fixture did not bind')
-      const baseURL = 'http://127.0.0.1:' + address.port + '/v1'
+      const baseURL = `http://127.0.0.1:${address.port}/v1`
       await writeFile(patch, JSON.stringify({ formatVersion: 1, installations: [
         { id: 'app', config: { systemPrompt: 'You are a scheduled reminder fixture.', maxSteps: 3 } },
         { id: 'storage', config: { root: sessionsRoot, compression: 'none' } },
