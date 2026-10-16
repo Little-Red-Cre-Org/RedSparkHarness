@@ -683,7 +683,7 @@ function nativeRequiredClosure(
   }
   if (credentialProvider === undefined) throw new Error('desktop native profile is missing its root credentials Provider')
   include(rowKey(credentialProvider.target, credentialProvider.id), 'desktop-private-carrier-provider')
-  for (const service of ['clientApplication', 'clientRenderer']) {
+  for (const service of ['clientApplication', 'clientRenderer', 'clientNativeLayout']) {
     const providers = composition.rows.filter(row => row.target === 'client' && row.metadata.entry.provides.includes(service))
     const provider = providers[0]
     if (providers.length !== 1 || provider === undefined) throw new Error(`desktop native Client requires exactly one ${service} Provider`)

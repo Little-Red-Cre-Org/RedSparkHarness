@@ -72,6 +72,8 @@ const initialClientRows: readonly NativeRow[] = [
   { id: 'client-renderer', plugin: '@fixture/client-renderer' },
   { id: 'optional-client', plugin: '@fixture/optional', config: 'private-client-value' },
   { id: 'client-already-disabled', plugin: '@fixture/optional', disabled: true, config: null },
+  { id: 'layout', plugin: '@fixture/client-layout' },
+  { id: 'session-presentation', plugin: '@fixture/client-session-presentation' },
 ]
 
 function prepareFixture(root: string): { manager: DesktopProjectManager; profile: string } {
@@ -95,6 +97,8 @@ function prepareNativePackages(profile: string): void {
   writeNativePackage(profile, '@fixture/client-app', ['client'], ['clientState'], ['clientApplication'])
   writeNativePackage(profile, '@fixture/client-renderer', ['client'], [], ['clientRenderer'], '1.0.0', [],
     'void document.createElement("div")\n')
+  writeNativePackage(profile, '@fixture/client-layout', ['client'], ['clientNativeSessionPresentation'], ['clientNativeLayout'])
+  writeNativePackage(profile, '@fixture/client-session-presentation', ['client'], [], ['clientNativeSessionPresentation'])
 }
 
 function writePiAiNativePackage(profile: string): void {
@@ -257,6 +261,10 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(listed.inventory.scopes.map(scope => scope.id)).toEqual(['root', 'empty'])
   expect(JSON.stringify(listed.inventory)).not.toContain('private-host-value')
   expect(JSON.stringify(listed.inventory)).not.toContain('private-client-value')
+  expect(listed.inventory.packages.find(row => row.packageName === '@fixture/client-layout')?.installations[0])
+    .toMatchObject({ id: 'layout', canDisable: false, disableReasons: ['client-boot-requirement'] })
+  expect(listed.inventory.packages.find(row => row.packageName === '@fixture/client-session-presentation')?.installations[0])
+    .toMatchObject({ id: 'session-presentation', canDisable: false, disableReasons: ['required-provider'] })
   const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: listed.inventory.revision } },
     hooks(lifecycle), ready)
   expect(applied.status).toBe('applied')
@@ -266,7 +274,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(host.installations.find(row => row.id === 'optional-host')).toMatchObject({ disabled: true, config: { token: 'private-host-value' } })
   expect(host.installations.find(row => row.id === 'already-disabled')).toMatchObject({ ...initialHostRows[4], scope: 'root' })
   expect(client.installations.filter(row => row.disabled !== true).map(row => row.id))
-    .toEqual(['client-state', 'client-app', 'client-renderer'])
+    .toEqual(['client-state', 'client-app', 'client-renderer', 'layout', 'session-presentation'])
   expect(client.installations.find(row => row.id === 'optional-client')).toMatchObject({ disabled: true, config: 'private-client-value' })
   expect(client.installations.find(row => row.id === 'client-already-disabled')).toEqual(initialClientRows[4])
   expect(lifecycle).toEqual({ stop: 1, start: 1 })
@@ -767,7 +775,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const emptyRuntime = join(emptyRoot, 'resources', 'dsh')
   const runtimeDescriptor = readDesktopRuntime(emptyRuntime)
   const noDependencyHostRows = [initialHostRows[0]!, initialHostRows[1]!]
-  const noDependencyClientRows = [initialClientRows[0]!, initialClientRows[1]!, initialClientRows[2]!]
+  const noDependencyClientRows = [initialClientRows[0]!, initialClientRows[1]!, initialClientRows[2]!,
+    initialClientRows[5]!, initialClientRows[6]!]
   const noDependencyPackages = [...noDependencyHostRows, ...noDependencyClientRows].map(row => row.plugin)
   writeNativePackage(emptyRuntime, '@fixture/credentials', ['host'], ['launchEnvironment'], ['credentials'])
   writeNativePackage(emptyRuntime, '@fixture/native-session', ['host'],
@@ -775,6 +784,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   writeNativePackage(emptyRuntime, '@fixture/client-state', ['client'], [], ['clientState'])
   writeNativePackage(emptyRuntime, '@fixture/client-app', ['client'], ['clientState'], ['clientApplication'])
   writeNativePackage(emptyRuntime, '@fixture/client-renderer', ['client'], [], ['clientRenderer'])
+  writeNativePackage(emptyRuntime, '@fixture/client-layout', ['client'], ['clientNativeSessionPresentation'], ['clientNativeLayout'])
+  writeNativePackage(emptyRuntime, '@fixture/client-session-presentation', ['client'], [], ['clientNativeSessionPresentation'])
   writeDesktopRuntime(emptyRuntime, runtimeDescriptor.release, [
     ...runtimeDescriptor.sharedPackages.map(row => row.name), ...noDependencyPackages,
   ])
