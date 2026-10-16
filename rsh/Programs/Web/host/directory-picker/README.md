@@ -27,6 +27,8 @@ The web GUI lets an operator choose a workspace directory with either an OS choo
 
 Mount exactly one directory-picker backend and let the workspace flow drive it: the seam itself is only the service contract, so a composition without a backend has no way to pick a directory.
 
+The package root defines a Cordis service and requires Cordis when loaded. Cordis is an optional peer because the separate `./types` export has no runtime dependency on it.
+
 ### Choosing a backend
 
 The [native backend](../directory-picker-native/README.md) is the right choice when the operator sits at the host's display: `directoryPicker/pick` opens one OS chooser and returns the chosen absolute path, or `null` on cancel. The [browse backend](../directory-picker-browse/README.md) works everywhere — it lists one directory level and creates child directories from the browser, so remote clients that cannot reach an OS dialog still pick a workspace. When the host situation varies between boots, compose the [adaptive chooser](../directory-picker-auto/README.md), which resolves the situation once at boot and mounts the matching backend.

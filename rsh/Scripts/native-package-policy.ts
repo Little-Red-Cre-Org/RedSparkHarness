@@ -272,6 +272,8 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 
 /** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/typert/protocol', ['@deepseek-ai/cordis']],
+  ['rsh/Programs/Web/host/directory-picker', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', [
     '@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-agent',
@@ -341,6 +343,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 
 /** Cordis-free source subpaths exposed beside compatibility package exports. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/typert/protocol', ['./types']],
   ['rsh/Programs/Web/api/session-controller', ['./client-event-types']],
   ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
@@ -364,6 +367,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
   ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
+  ['rsh/Programs/Web/host/directory-picker', ['./types']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory', './responses-transport']],

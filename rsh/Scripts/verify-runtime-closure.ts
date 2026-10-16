@@ -41,15 +41,6 @@ const NATIVE_CLI_ROOT_IMPORTS = [
   ['rsh/Programs/CLI/src/bin.ts', '@deepseek-ai/dsh-app-boot', '@deepseek-ai/dsh-launch-environment/layers'],
   ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@deepseek-ai/dsh-subprocess', '@deepseek-ai/dsh-subprocess/native'],
 ] as const
-const NATIVE_CLI_CORDIS_PEER_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
-  // Typert is a compatibility-only Cordis Service required by workspace-files' root entry.
-  // Native workspace routes import workspace-files/native-types and /native-helpers.
-  '@deepseek-ai/dsh-typert-protocol': ['@deepseek-ai/cordis'],
-  // directory-picker is a compatibility-only Cordis Service required by directory-picker-native's root.
-  // The native controller imports directory-picker-native/native-picker.
-  '@deepseek-ai/dsh-host-directory-picker': ['@deepseek-ai/cordis'],
-} as const satisfies Readonly<Record<string, readonly string[]>>
-
 type RuntimeClosureTarget = 'python-runtime' | 'native-cli'
 
 export interface RuntimeClosureResult {
@@ -126,7 +117,6 @@ export async function verifyRuntimeClosure(
     for (const peer of Object.keys(peers).sort()) {
       if (peerMeta[peer]?.optional === true) continue
       if (target === 'native-cli') {
-        if (NATIVE_CLI_CORDIS_PEER_EXCEPTIONS[packageName]?.includes(peer) === true) continue
         if (isCordisPackage(peer)) {
           failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis peer ${peer}`)
           continue
@@ -204,12 +194,13 @@ function missingNativeCliPlugins(
       ]
       for (const row of rows) {
         const plugin = barePackageName(row.plugin)
-        if (plugin === undefined || !workspace.has(plugin)
-          || runtimeDependencies[plugin]?.startsWith('workspace:') === true) continue
+        if (plugin === undefined) continue
+        const isWorkspacePackage = workspace.has(plugin)
         const version = runtimeDependencies[plugin]
-        const declaration = version === undefined
-          ? ''
-          : ` [CLI dependency is ${JSON.stringify(version)}; expected workspace:]`
+        if (isWorkspacePackage && version?.startsWith('workspace:') === true) continue
+        let declaration = ''
+        if (!isWorkspacePackage) declaration = ' [workspace package not found]'
+        else if (version !== undefined) declaration = ` [CLI dependency is ${JSON.stringify(version)}; expected workspace:]`
         const key = `${plugin}${declaration}`
         const profiles = missing.get(key) ?? new Set<string>()
         profiles.add(`${profile} (${target})`)

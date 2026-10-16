@@ -27,6 +27,8 @@ kind: "package-library"
 
 本包供向 Remote 客户端暴露 Host 能力的业务包与装配维护者使用。它是一个声明库：标记方法、绑定服务，其余交给生成的流水线与 Gateway。
 
+Cordis 是可选 peer：包根出口为定义 `TypertRemoteService` 导入 Cordis，`./types` 只在声明中导入 Cordis。加载包根的消费者必须提供 Cordis；类型声明使用 `Context` 或 `Events` 时，类型检查也需要 Cordis 类型。
+
 ### 暴露 Host 方法
 
 业务包用 `@Remote`（当接收者来自作用域 Context 时用 `@RemoteScope(key)`）标记一个公开实例方法，所属服务要么继承 `TypertRemoteService`，要么通过 `bindTypertRemote()` 声明 `typertRemote` 绑定：

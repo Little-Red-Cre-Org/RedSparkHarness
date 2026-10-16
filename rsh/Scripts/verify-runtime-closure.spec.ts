@@ -255,6 +255,7 @@ describe('verifyRuntimeClosure', () => {
       }],
       ['@deepseek-ai/dsh-typert-protocol', {
         peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
       }],
       ['@deepseek-ai/dsh-native-web-session-controller', {
         dependencies: { '@deepseek-ai/dsh-host-directory-picker-native': 'workspace:^' },
@@ -274,6 +275,18 @@ describe('verifyRuntimeClosure', () => {
       writeFileSync(path, `${JSON.stringify({ name, ...manifest }, null, 2)}\n`)
     }
 
+    const requiredPickerPeer = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
+    expect(requiredPickerPeer.failures).toEqual(expect.arrayContaining([
+      expect.stringContaining('@deepseek-ai/dsh-host-directory-picker -> required Cordis peer @deepseek-ai/cordis'),
+    ]))
+
+    const pickerPath = workspacePaths.get('@deepseek-ai/dsh-host-directory-picker')
+    if (pickerPath === undefined) throw new Error('directory-picker fixture is missing')
+    writeFileSync(pickerPath, `${JSON.stringify({
+      name: '@deepseek-ai/dsh-host-directory-picker',
+      peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+    }, null, 2)}\n`)
     expect((await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')).failures).toEqual([])
 
     const cliPath = join(root, 'rsh/Programs/CLI/package.json')
@@ -322,6 +335,27 @@ describe('verifyRuntimeClosure', () => {
       expect.stringContaining('@scope/required'),
       expect.stringContaining('rsh/Programs/CLI/src/bin.ts: import @deepseek-ai/dsh-app-boot'),
       expect.stringContaining('rsh/Compatibility/DSH/bundle/web-app/src/index.ts: import @deepseek-ai/dsh-subprocess'),
+    ]))
+  })
+
+  it('reports shipped native CLI plugins that no longer have a workspace package', async () => {
+    const plugins = nativeCliPlugins()
+    const missingPlugin = '@deepseek-ai/dsh-task-scheduler'
+    const root = fixture({
+      'rsh/Programs/CLI/package.json': {
+        name: '@deepseek-ai/dsh',
+        dependencies: Object.fromEntries(plugins.map(plugin => [plugin, 'workspace:^'])),
+      },
+      'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
+      'rsh/Programs/CLI/src/bin.ts': "import('@deepseek-ai/dsh-launch-environment/layers')\n",
+      'rsh/Compatibility/DSH/bundle/web-app/src/index.ts': "import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'\n",
+    })
+    workspacePackages(root, plugins.filter(plugin => plugin !== missingPlugin))
+
+    const result = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
+
+    expect(result.failures).toEqual(expect.arrayContaining([
+      expect.stringContaining(`${missingPlugin} [workspace package not found]`),
     ]))
   })
 })
