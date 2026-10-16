@@ -113,6 +113,7 @@ export class NativeConversationController {
     this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls,
       ...this.snapshot.selected === id ? {} : { submissions: undefined } })
     await this.refreshSubmissions(id, this.selectionEpoch)
+    // With no active turn this still re-reads history once: the turn may have settled before attach.
     if (resumeTurn) await this.followTurn(id, history.events.at(-1)?.seq ?? -1,
       (signal, admission, observe, onFollowError, detach) => this.client.attach(
         id, admission.lastSeq, observe, signal, onFollowError, detach))
@@ -157,7 +158,6 @@ export class NativeConversationController {
     }
     this.publish({ state: 'sending', error: undefined, liveText: undefined, liveTruncated: false })
     let turnFailed = false
-    let restoreAfter = true
     try {
       const result = await runTurn(turn.signal, admission,
         (frame) => { this.observe(frame, admission) },
@@ -166,7 +166,6 @@ export class NativeConversationController {
             this.publish({ error: error instanceof Error ? error.message : String(error) })
           }
         }, this.lifetime.signal)
-      restoreAfter = result !== undefined
       if (result !== undefined && result.exitCode !== 0 && result.exitCode !== 130) {
         throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
       }
@@ -177,7 +176,7 @@ export class NativeConversationController {
       if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
       if (this.turn === turn) this.turn = undefined
       this.publish({ liveText: undefined, liveTruncated: false, human: undefined, answeringHuman: false })
-      if (restoreAfter && !this.lifetime.signal.aborted && this.snapshot.selected === id) {
+      if (!this.lifetime.signal.aborted && this.snapshot.selected === id) {
         try { await this.restore(id, false) }
         catch (error: unknown) { if (!turnFailed) throw error }
       }

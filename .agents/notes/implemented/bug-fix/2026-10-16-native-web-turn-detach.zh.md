@@ -12,9 +12,9 @@ Status: implemented
 
 回合生命周期归 Host 所有。断开的结算等待者只解除自身绑定；回合继续运行，待处理的审批和问题保持待处理。无人等待时结算的回合会被回收，`session/start` 在已结算且无人等待的回合之后准入下一次提示。
 
-`session/attach { sessionId, lastSeq }` 从 `lastSeq` 重新打开运行中回合的跟随流，重放待处理的人类提示，并返回其 `admissionId`（没有运行中回合时返回 `null`）。随后页面使用既有的 `native-session/follow`、`session/await`、`session/answer-human` 和 `session/cancel` 端点。较新的 attach 会替换较旧的流；没有单独的恢复状态。
+`session/attach { sessionId, lastSeq }` 从 `lastSeq` 重新打开运行中回合的跟随流，重放待处理的人类提示，并返回其 `admissionId`（没有运行中回合时返回 `null`）。随后页面使用既有的 `native-session/follow`、`session/await`、`session/answer-human` 和 `session/cancel` 端点。较新的 attach 会替换较旧的流，在不取消执行的情况下解除旧页面的结算等待者，并为替代等待者重新保留已断开回合的结果；在读取历史期间被取代的 attach 会被拒绝，且不会重新绑定待处理提示。没有单独的恢复状态。
 
-Client 只在调用方显式的回合信号上发送 `session/cancel`。Client 生命周期和新的 detach 信号只停止跟随和等待，不取消回合。对话控制器把停止作为回合信号，把页面生命周期作为 detach 信号。恢复所选 Session 时会调用 attach；若有回合在运行，控制器显示发送中状态和停止按钮，并通过与 `send()` 相同的路径观察帧。
+Client 只在调用方显式的回合信号上发送 `session/cancel`。Client 生命周期和新的 detach 信号只停止跟随和等待，不取消回合。对话控制器把停止作为回合信号，把页面生命周期作为 detach 信号。恢复所选 Session 时会调用 attach；若有回合在运行，控制器显示发送中状态和停止按钮，并通过与 `send()` 相同的路径观察帧。之后控制器会重新读取持久历史；attach 未找到回合时也会如此，因为回合可能在读取历史与 attach 之间已经结算。
 
 ## 备选方案
 
@@ -30,4 +30,4 @@ Client 只在调用方显式的回合信号上发送 `session/cancel`。Client �
 
 ## 验证
 
-`native.host.spec.ts` 中的两个 Host 用例固定该契约：断开的提示让其回合继续运行，结算后可准入下一次提示；待处理的审批会重放到 attach 的流上，回答后回合完成。现有的控制器和人类交互控件用例覆盖 `send()` 和会话选择仍能正常结算。
+`native.host.spec.ts` 中的三个 Host 用例固定该契约：断开的提示让其回合继续运行，结算后可准入下一次提示；断开后的 attach 在回合于新等待到达前结算时仍保留结算结果；待处理的审批会重放到 attach 的流上，同时旧等待者被解除、重叠且已被取代的 attach 被拒绝，回答后回合完成。一个控制器 follow 用例固定恢复时没有活动回合便刷新历史的行为。现有的控制器和人类交互控件用例覆盖 `send()` 和会话选择仍能正常结算。
