@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { PassThrough, Writable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
+import Loader, { Group } from '@deepseek-ai/cordis-plugin-loader'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
@@ -244,6 +244,145 @@ describe('dsh-sdk-jsonrpc-server plugin apply', () => {
       await harness.dispose()
       await rm(storageDir, { recursive: true, force: true })
     }
+  })
+
+  describe('Loader startup failure', () => {
+    const secret = 'provider-config-secret'
+    const failWithSecret = (): never => { throw new TypeError(`private provider details: ${secret}`) }
+
+    /**
+     * Boot the server inside a Loader group with the given sibling rows. `fs-a`
+     * provides `fs` and holds the group open until `releaseGroup()`, so a
+     * request can be sent while the tree is still starting.
+     */
+    async function bootTree(rows: Record<string, unknown>[]) {
+      const storageDir = await mkdtemp(join(tmpdir(), 'dsh-jsonrpc-apply-loader-failure-'))
+      const ctx = new Context()
+      const input = new PassThrough()
+      const frames: Record<string, unknown>[] = []
+      let pendingOutput = ''
+      const output = new Writable({
+        write(chunk: Buffer, _encoding, callback) {
+          pendingOutput += chunk.toString('utf8')
+          for (let newline = pendingOutput.indexOf('\n'); newline >= 0; newline = pendingOutput.indexOf('\n')) {
+            const line = pendingOutput.slice(0, newline).trim()
+            pendingOutput = pendingOutput.slice(newline + 1)
+            if (line) frames.push(JSON.parse(line) as Record<string, unknown>)
+          }
+          callback()
+        },
+      })
+      let markFsStarted!: () => void
+      let releaseGroup!: () => void
+      const fsStarted = new Promise<void>((resolve) => { markFsStarted = resolve })
+      const groupGate = new Promise<void>((resolve) => { releaseGroup = resolve })
+      await ctx.plugin(Loader)
+      ctx.loader.builtins.group = Group
+      ctx.loader.builtins.jsonrpc = {
+        apply(serverCtx: Context) {
+          jsonrpc.apply(serverCtx, { input, output, exit: () => {} })
+        },
+      }
+      ctx.loader.builtins['fs-a'] = {
+        async apply(providerCtx: Context) {
+          providerCtx.provide('fs', {})
+          markFsStarted()
+          await groupGate
+        },
+      }
+      ctx.loader.builtins['fs-b'] = {
+        async apply(providerCtx: Context) {
+          await fsStarted
+          providerCtx.provide('fs', {})
+        },
+      }
+      ctx.loader.builtins['secret-string'] = {
+        apply() {
+          // A plugin may throw a non-Error value.
+          throw `private provider details: ${secret}`
+        },
+      }
+      ctx.loader.builtins['late-service'] = {
+        async apply(providerCtx: Context) {
+          await groupGate
+          providerCtx.provide('lateService', {})
+        },
+      }
+      ctx.loader.builtins['late-consumer'] = { inject: ['lateService'], apply: failWithSecret }
+      await mountAgentLoopTestDependencies(ctx)
+      await ctx.plugin(AgentLoop, { agents: [] })
+      await ctx.plugin(JsonlSessionPersistence, { root: storageDir })
+      const tree = ctx.loader.create({
+        name: 'cordis:group',
+        config: [{ id: 'server', name: 'cordis:jsonrpc' }, { id: 'fs-a', name: 'cordis:fs-a' }, ...rows],
+      })
+      await fsStarted
+      return {
+        tree,
+        releaseGroup,
+        async initialize(): Promise<Record<string, unknown>> {
+          input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 'init', method: 'initialize', params: { cwd: storageDir, provider: 'deepseek-official', model: 'm' } })}\n`)
+          return await waitFor(() => frames.find(frame => frame.id === 'init'), 'initialize response')
+        },
+        async dispose(): Promise<void> {
+          releaseGroup()
+          await Promise.allSettled([tree])
+          await ctx.fiber.dispose()
+          await rm(storageDir, { recursive: true, force: true })
+        },
+      }
+    }
+
+    function expectBootError(response: Record<string, unknown>, detail: string): void {
+      expect(response).toMatchObject({
+        id: 'init',
+        error: { message: `SDK runtime failed to start: loader entry ${detail}; see the runtime stderr log for details` },
+      })
+      expect(JSON.stringify(response)).not.toContain(secret)
+      expect(JSON.stringify(response)).not.toContain('inactive context')
+    }
+
+    it('names the duplicate service when a sibling provider fails while initialize waits', async () => {
+      const boot = await bootTree([{ id: 'fs-b', name: 'cordis:fs-b', config: { secret } }])
+      try {
+        const response = boot.initialize()
+        boot.releaseGroup()
+        await expect(boot.tree).rejects.toThrow()
+        expectBootError(await response, '"fs-b" (cordis:fs-b) failed: Error: service "fs" is already provided by another plugin')
+      } finally {
+        await boot.dispose()
+      }
+    })
+
+    it('names the first failing child of a nested group and does not echo a thrown non-Error value', async () => {
+      const boot = await bootTree([{
+        id: 'nested',
+        name: 'cordis:group',
+        config: [{ id: 'provider (secondary)', name: 'cordis:secret-string' }, { id: 'fs-b', name: 'cordis:fs-b' }],
+      }])
+      try {
+        const response = boot.initialize()
+        boot.releaseGroup()
+        await expect(boot.tree).rejects.toThrow()
+        expectBootError(await response, '"provider (secondary)" (cordis:secret-string) failed: Error')
+      } finally {
+        await boot.dispose()
+      }
+    })
+
+    it('reports a fiber that fails after its delayed injection resolves', async () => {
+      const boot = await bootTree([
+        { id: 'late-service', name: 'cordis:late-service' },
+        { id: 'late-consumer', name: 'cordis:late-consumer' },
+      ])
+      try {
+        boot.releaseGroup()
+        await boot.tree
+        expectBootError(await boot.initialize(), '"late-consumer" (cordis:late-consumer) failed: TypeError')
+      } finally {
+        await boot.dispose()
+      }
+    })
   })
 
   it('drives a session/prompt turn end-to-end and forwards session notifications as output frames', async () => {
