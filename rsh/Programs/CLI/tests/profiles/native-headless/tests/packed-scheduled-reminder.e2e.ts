@@ -57,7 +57,7 @@ function respondWithScheduleCreate(response: ServerResponse): void {
   response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
   writeSse(response, { choices: [{ index: 0, delta: { role: 'assistant', content: null }, finish_reason: null }] })
   writeSse(response, { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: TOOL_CALL_ID, type: 'function',
-    function: { name: 'schedule_create', arguments: JSON.stringify({ prompt: REMINDER_PROMPT, after_seconds: 5 }) } }] },
+    function: { name: 'schedule_create', arguments: JSON.stringify({ prompt: REMINDER_PROMPT, after_seconds: 15 }) } }] },
   finish_reason: null }] })
   writeSse(response, { choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 10, completion_tokens: 5 } })
   response.end('data: [DONE]\n\n')
@@ -188,7 +188,8 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       }
       const scheduleId = createEvent.data.schedule.id
       const dueInMs = Date.parse(createEvent.data.schedule.scheduledAt) - Date.now()
-      await new Promise<void>(resolve => setTimeout(resolve, Math.max(0, dueInMs) + 200))
+      expect(dueInMs, 'first SDK Host must close before the reminder is due').toBeGreaterThan(0)
+      await new Promise<void>(resolve => setTimeout(resolve, dueInMs + 200))
 
       const requestsBeforeRestore = requests.length
       const coldHarness = new DeepSeekHarness(options)
