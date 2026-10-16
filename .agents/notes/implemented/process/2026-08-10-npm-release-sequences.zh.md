@@ -107,7 +107,7 @@ registry 的两个行为决定了「怎么尝试一次发布」。写入之间�
 | `publishOrder` | 先对 `dependencies` 与 `optionalDependencies` 做硬拓扑排序，再稳定加入不成环的 peer 排序偏好；省略的只是发布先后关系，manifest 中 peer 声明及其 optionality 元数据保持不变，并点名每条省略项；安装依赖成环时报错 |
 | `pack` | 把整族打进一个目录并记录上传顺序 |
 | `verify` | 族的版本基线、完整打印出来的发布顺序；发布时还要求本次运行来自该族的 tag、且成员可发布 |
-| `verify-packed-install` | 把一个或多个 pack 目录的 tarball 装进用户主目录下的一次性 consumer（不放在临时目录：Linux bwrap 会用 tmpfs 遮住它，且它属于 sandbox 可写根），并驱动已安装的可执行入口；传入 `--packed-e2e` 时（`release.yml` 的 dsh 演练会在准备 bwrap 后传入），还会在删除 consumer 之前，针对该已安装入口与 consumer 运行 packed Jobs、Workflow 与 code-runtime e2e；`redspark-ci.yml` 中并行的 `SPH packed` job 也会构建 official profile，打包 dsh、vendor 与 Landlock entry，并在 ubuntu-24.04 和 windows-2025 上以 `--packed-e2e` 运行它 |
+| `verify-packed-install` | 把一个或多个 pack 目录的 tarball 装进用户主目录下的一次性 consumer（不放在临时目录：Linux bwrap 会用 tmpfs 遮住它，且它属于 sandbox 可写根），并驱动已安装的可执行入口；传入 `--packed-e2e` 时（`release.yml` 的 dsh 演练会在准备 bwrap 后传入），还会在删除 consumer 之前，针对该已安装入口与 consumer 运行 packed Jobs、Skills、Workflow 与 code-runtime e2e（Skills e2e 使用 consumer 中已安装的 `@deepseek-ai/dsh-sdk-client`）；`redspark-ci.yml` 中并行的 `SPH packed` job 也会构建 official profile，打包 dsh、vendor 与 Landlock entry，并在 ubuntu-24.04 和 windows-2025 上以 `--packed-e2e` 运行它 |
 | `publish` | 上面那三态 |
 | `process` / `tarball` | 启动命令、读取打包 tarball 的唯一正家，其中的入口守卫让每个脚本都可被 import |
 
