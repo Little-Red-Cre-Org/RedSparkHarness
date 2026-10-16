@@ -26,6 +26,7 @@ import type {
   LlmProviderInfo,
   LlmResolvedModelInfo,
   ModelModality,
+  PreparedAdapterCall,
   ResolvedRetryPolicy,
   RetryPolicyConfig,
   StreamChunk,
@@ -897,6 +898,15 @@ class ReplayAdapter extends LlmAdapter {
       ...model.description === undefined ? {} : { description: model.description },
       ...model.inputModalities === undefined ? {} : { inputModalities: [...model.inputModalities] },
     })))
+  }
+
+  /** Prepare a replay route that supports the requested output token limit. */
+  override async prepareCall(provider: string, model: string): Promise<PreparedAdapterCall> {
+    return {
+      model: await this.resolveModel(provider, model),
+      supportsOutputTokenLimit: () => Promise.resolve(true),
+      stream: options => this.stream(options),
+    }
   }
 
   override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
