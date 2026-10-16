@@ -214,6 +214,15 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   }, [open, pane, state])
   /* jscpd:ignore-end */
 
+  // Keep keyboard focus inside the open card (keyboard open, pane drill, the
+  // open-time reload re-rendering the rows): land on the checked row or the first.
+  useEffect(() => {
+    /* v8 ignore next -- the card ref is attached whenever the menu is open. */
+    if (!open || menuRef.current?.contains(document.activeElement) === true) return
+    const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled)
+    ;(items.find(item => item.getAttribute('aria-checked') === 'true') ?? items[0])?.focus()
+  }, [open, pane, state])
+
   if (!available) return null
 
   const show = (): void => {

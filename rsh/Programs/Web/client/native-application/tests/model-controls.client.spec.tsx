@@ -156,7 +156,10 @@ it('keeps the picker open across its open-time reload and still selects a model'
   view.rerender(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
     refreshModelControls={refreshModelControls} t={key => key} />)
   expect(screen.getByRole('menu')).toBeTruthy()
+  // Keyboard focus stays in the card across the reload and the pane drill.
+  expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /menu\.model/ }))
   fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
+  expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'One' }))
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Two' }))
   await waitFor(() => { expect(selectModel).toHaveBeenCalledWith({ provider: 'fixture', model: 'two' }) })
 })
