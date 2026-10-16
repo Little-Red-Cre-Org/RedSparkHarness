@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-12-native-trajectory-turns.md
-2026-10-12-native-trajectory-turns.md: e9195e11e765ad1b76b61b2ed92d77b0688db8c3
-2026-10-12-native-trajectory-turns.zh.md: a1f4161bac330c57bcbb851805a710b96053dfc6
+2026-10-12-native-trajectory-turns.md: 4cc1056f9b979b9383d7a95c20e4608dc2f15476
+2026-10-12-native-trajectory-turns.zh.md: 8263b62362a2764a776bf54f2bbb21f8df515b58

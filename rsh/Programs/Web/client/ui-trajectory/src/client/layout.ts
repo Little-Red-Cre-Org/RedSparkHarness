@@ -302,9 +302,12 @@ export function deriveTrajectoryLayout(
     }
     if (entry.kind === 'system') {
       const { change, request } = entry
-      const turn = change.kind === 'initial'
-        ? firstVisibleTurn(nodes, partial)
-        : enclosingPromptTurn(nodes, change.seq, partial)
+      const location = eventLocations?.get(change.seq)
+      const turn = location?.kind === 'turn' || location?.kind === 'step'
+        ? location.turn.turn
+        : change.kind === 'initial'
+          ? firstVisibleTurn(nodes, partial)
+          : enclosingPromptTurn(nodes, change.seq, partial)
       pushMessage(turn, {
         absTime: finiteTime(change.time),
         cell: {
