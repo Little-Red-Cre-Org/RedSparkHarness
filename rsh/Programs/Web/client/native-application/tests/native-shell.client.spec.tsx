@@ -754,6 +754,18 @@ it.each([
     expect(createWorkspace).toHaveBeenCalledWith({ path: 'C:\\Work\\New' }, expect.any(AbortSignal))
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-in-workspace', expect.any(AbortSignal)) })
 
+    const composerConnection = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = composerConnection
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Wait for workspace' } })
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false)
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenLastCalledWith(workspaceId, expect.any(AbortSignal)) })
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true)
+    composerConnection.reject(new Error('Workspace unavailable'))
+    await screen.findByRole('alert')
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false) })
+
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
     await waitFor(() => { expect(screen.getByRole('button', { name: 'Move workspace New up' })).toHaveProperty('disabled', true) })

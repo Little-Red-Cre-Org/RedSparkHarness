@@ -388,7 +388,7 @@ export const plugin: NativePlugin = {
           settingsActions,
           listWorkspaces: async () => (await workspaceClient.list(context.signal)).workspaces,
           chooseWorkspace: async (id: NativeWorkspace['workspaceId'], trust?: boolean) => {
-            const navigation = controller.beginNavigation()
+            const navigation = controller.beginNavigation(true)
             try {
               const { sessionId } = trust === undefined
                 ? await workspaceClient.connectWorkspace(id, context.signal)
@@ -399,11 +399,12 @@ export const plugin: NativePlugin = {
               return controller.getSnapshot().selected === sessionId ? sessionId : undefined
             } catch (error: unknown) {
               if (!controller.isCurrentNavigation(navigation)) return undefined
+              controller.releaseNavigation(navigation)
               throw error
             }
           },
           addWorkspace: async (path: string, trust?: boolean) => {
-            const navigation = controller.beginNavigation()
+            const navigation = controller.beginNavigation(true)
             try {
               const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
               if (!controller.isCurrentNavigation(navigation)) return undefined
@@ -416,6 +417,7 @@ export const plugin: NativePlugin = {
               return controller.getSnapshot().selected === sessionId ? sessionId : undefined
             } catch (error: unknown) {
               if (!controller.isCurrentNavigation(navigation)) return undefined
+              controller.releaseNavigation(navigation)
               throw error
             }
           },
