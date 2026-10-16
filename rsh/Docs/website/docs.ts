@@ -292,7 +292,7 @@ const cordisPrimerReference = pairedPages([
     label: { root: '原生配置迁移', en: 'Native configuration migration' },
     sidebar: { root: 'zh-reference', en: 'en-reference' },
     section: { root: '概念', en: 'Concepts' },
-    order: 2,
+    order: 6,
   },
 ])
 

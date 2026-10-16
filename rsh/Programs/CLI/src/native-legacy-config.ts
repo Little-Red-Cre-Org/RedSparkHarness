@@ -237,10 +237,7 @@ function applySettingsRules(options: {
     if (rule.action === 'error') throw new Error(`dsh: ${setting}; ${rule.remedy}; see ${MIGRATION_DOC}`)
     if (rule.action === 'agent-default') {
       const target = activeInstallation(profile.installations, AGENT_PRESETS)
-      const current = target === undefined ? { present: false, value: undefined } : targetValue(target, 'default')
-      if (target !== undefined && !sameTargetValue(current, { present: true, value: old.value })) {
-        validateNativePreset(old.value, profile, target)
-      }
+      if (target !== undefined) validateNativePreset(old.value, profile, target)
       migrate('profile', AGENT_PRESETS, 'default', old.value, old.value, setting)
       continue
     }
