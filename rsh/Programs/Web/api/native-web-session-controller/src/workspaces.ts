@@ -183,14 +183,18 @@ export class NativeWebWorkspaceService {
         requestPath = request.path
         return { ok: true, value: await this.enqueue(signal, async () => {
           const path = await realpath(request.path)
+          requestPath = path
+          // Trust applies only to the exact canonical path the user confirmed; a changed target asks again.
+          if (request.trust === true && path !== request.path) throw new Error('Workspace is outside the configured allowed roots')
           const existing = await this.registry.resolveByPath(path)
-          const trusted = await this.trustPath(path, request.trust === true)
+          const trusted = request.trust === true || this.trusted(path)
           const rootExecution = this.executor.rootExecution
           if (rootExecution.createWorkspaceRoute === undefined) throw new Error('Workspace route creation is unavailable')
           const route = await rootExecution.createWorkspaceRoute({ baseRoute: this.baseRouteId, path, trusted }, signal)
           if (route.workspaceId === undefined) throw new Error('Workspace was not found')
           const created = this.registry.get(route.workspaceId)
           if (created === undefined) throw new Error('Workspace was not found')
+          if (request.trust === true) await this.rememberTrust(path)
           return { workspace: workspaceView(created), created: existing === undefined }
         }) }
       }
@@ -315,8 +319,8 @@ export class NativeWebWorkspaceService {
   }
 
   private async connectWorkspace(workspace: Workspace, trust: boolean, signal: AbortSignal): Promise<{ sessionId: SessionId }> {
-    const trusted = await this.trustPath(workspace.path, trust)
-    const routeId = await this.workspaceRouteId(workspace.id, trusted, signal)
+    const routeId = await this.workspaceRouteId(workspace.id, trust || this.trusted(workspace.path), signal)
+    if (trust) await this.rememberTrust(workspace.path)
     for (const candidate of workspace.sessionIds) {
       if (this.registry.archivedSessionIds.includes(candidate)) continue
       const history = await readNativeSessionHistory(candidate, {
@@ -346,16 +350,15 @@ export class NativeWebWorkspaceService {
     return (await this.executor.rootExecution.selectWorkspace({ baseRoute: this.baseRouteId, workspaceId: id, trusted }, signal)).id
   }
 
-  private async trustPath(path: string, trust: boolean): Promise<boolean> {
+  private trusted(path: string): boolean {
+    return this.trustSettings?.get().paths.some(root => within(root, path)) ?? false
+  }
+
+  /** Persist a confirmed path only after route admission accepted it, so forbidden paths never become trusted. */
+  private async rememberTrust(path: string): Promise<void> {
     const settings = this.trustSettings
-    if (trust) {
-      if (settings !== undefined) {
-        const paths = settings.get().paths
-        if (!paths.includes(path)) await settings.replace({ paths: [...paths, path] }, settings.revision)
-      }
-      return true
-    }
-    return settings?.get().paths.some(root => within(root, path)) ?? false
+    if (settings === undefined || settings.get().paths.includes(path)) return
+    await settings.replace({ paths: [...settings.get().paths, path] }, settings.revision)
   }
 
   private changed(change: DomainChanged): void {

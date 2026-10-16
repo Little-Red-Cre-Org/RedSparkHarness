@@ -252,12 +252,12 @@ function NativeSessionBrowser({
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
-  const requestWorkspaceTrust = (error: unknown, retry: () => Promise<void>): boolean => {
+  const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
     if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
     const path = 'path' in error.details ? error.details.path : undefined
     if (typeof path !== 'string') return false
     setDirectoryPickerOpen(false)
-    setWorkspaceTrustPrompt({ path, retry })
+    setWorkspaceTrustPrompt({ path, retry: () => retry(path) })
     return true
   }
   const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
@@ -351,7 +351,7 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, () => createWorkspace(path, true))) setDirectoryPickerError(errorMessage(error))
+      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true))) setDirectoryPickerError(errorMessage(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {

@@ -39,19 +39,19 @@ const within = (root: string, path: string): boolean => {
   return difference === '' || !isAbsolute(difference) && difference !== '..' && !difference.startsWith('../') && !difference.startsWith('..\\')
 }
 
-const posixSystemDirectories = ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/usr', '/var', '/System', '/Library']
-const macosSystemDirectories = ['/private/etc', '/private/var']
+const posixSystemDirectories = ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/usr', '/System', '/Library', '/private/etc']
+// Parents of user temp/data trees: reject the directory itself only.
+const posixSystemParents = ['/var', '/private', '/private/var']
 const windowsSystemDirectories = ['windows', 'program files', 'program files (x86)', 'programdata']
 
 function isProtectedSystemDirectory(path: string): boolean {
   if (parse(path).root === path) return true
   if (process.platform === 'win32') {
+    // Drive and UNC roots alike, so \\host\C$\Windows is still protected.
     const root = parse(path).root
-    return /^[a-z]:\\$/iu.test(root) && windowsSystemDirectories.some(name =>
-      within(resolve(root, name).toLowerCase(), path.toLowerCase()))
+    return windowsSystemDirectories.some(name => within(resolve(root, name).toLowerCase(), path.toLowerCase()))
   }
-  return posixSystemDirectories.some(root => within(root, path))
-    || process.platform === 'darwin' && macosSystemDirectories.some(root => within(root, path))
+  return posixSystemDirectories.some(root => within(root, path)) || posixSystemParents.includes(path)
 }
 
 interface WorkspaceRouteRegistry {
