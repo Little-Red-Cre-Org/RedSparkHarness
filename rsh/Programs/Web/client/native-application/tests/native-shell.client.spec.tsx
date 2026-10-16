@@ -642,8 +642,14 @@ it.each([
     fireEvent.change(search, { target: { value: 'Needle' } })
     const searchResult = await screen.findByRole('treeitem', { name: /Needle in transcript/ })
     expect(clientMock.search).toHaveBeenCalledWith('Needle', undefined, expect.any(AbortSignal))
+    let runningTurn: AbortSignal | undefined
+    attach.mockImplementationOnce((_id, _lastSeq, _observe, signal, _onFollowError, detach) => {
+      runningTurn = signal
+      return new Promise((resolve) => { detach?.addEventListener('abort', () => { resolve(undefined) }, { once: true }) })
+    })
     fireEvent.click(searchResult)
     await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal)) })
+    await screen.findByRole('button', { name: 'Stop' })
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Needle in transcript/ })).toBeNull() })
 
     const refreshedRow = await screen.findByRole('treeitem', { name: /Refreshed Alpha/ })
@@ -657,6 +663,7 @@ it.each([
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
     await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
     expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
+    expect(runningTurn?.aborted).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })

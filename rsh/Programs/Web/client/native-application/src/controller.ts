@@ -373,31 +373,36 @@ export class NativeConversationController {
    * @returns history and any running-turn attachment completion.
    */
   async select(id: SessionId): Promise<void> {
-    if (this.snapshot.state === 'sending' || this.snapshot.state === 'cancelling') {
-      // Stay loading while the detached turn settles so no other operation starts in between.
-      this.followErrorOwner = undefined
-      this.turnDetach.abort()
-      this.handingOff = true
-      this.publish({ state: 'loading', error: undefined })
-      try { await Promise.allSettled([...this.pending]) } finally { this.handingOff = false }
-    } else {
-      this.assertReady()
-    }
+    await this.detachTurn()
     this.followErrorOwner = undefined
     this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
     await this.run(() => this.restore(id))
   }
 
-  /** Clear the selected Session and its conversation projection.
-   * @throws If the controller is not ready.
+  /** Clear the selected Session and its conversation projection, detaching a running turn without cancelling it.
+   * @returns completion after any detached turn's view settles.
+   * @throws If another operation such as loading is pending.
    */
-  deselect(): void {
-    this.assertReady()
+  async deselect(): Promise<void> {
+    await this.detachTurn()
     this.followErrorOwner = undefined
     this.beginSelection()
-    this.publish({ selected: undefined, header: undefined, events: [], modeControls: undefined, permissionControls: undefined,
-      submissions: undefined, error: undefined })
+    this.publish({ state: 'ready', selected: undefined, header: undefined, events: [], modeControls: undefined,
+      permissionControls: undefined, submissions: undefined, error: undefined })
+  }
+
+  private async detachTurn(): Promise<void> {
+    if (this.snapshot.state !== 'sending' && this.snapshot.state !== 'cancelling') {
+      this.assertReady()
+      return
+    }
+    // Stay loading while the detached turn settles so no other operation starts in between.
+    this.followErrorOwner = undefined
+    this.turnDetach.abort()
+    this.handingOff = true
+    this.publish({ state: 'loading', error: undefined })
+    try { await Promise.allSettled([...this.pending]) } finally { this.handingOff = false }
   }
 
   /** Pin an edited title through the selected Host's existing Session writer.

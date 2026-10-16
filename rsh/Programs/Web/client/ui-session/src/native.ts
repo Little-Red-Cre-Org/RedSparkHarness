@@ -59,10 +59,11 @@ export interface NativeConversationService {
   create(): Promise<void>
   /** Select an identity from the Host-owned Session index. */
   select(id: SessionId): Promise<void>
-  /** Clear the selected Session and its conversation projection.
-   * @throws If the controller is not ready.
+  /** Clear the selected Session and its conversation projection, detaching a running turn without cancelling it.
+   * @returns completion after any detached turn's view settles.
+   * @throws If another operation such as loading is pending.
    */
-  deselect(): void
+  deselect(): Promise<void>
   /** Pin a durable title through the selected Host owner. */
   renameTitle(id: SessionId, title: string): Promise<void>
   /** Refresh a durable title through the selected Host provider or fallback. */

@@ -240,7 +240,8 @@ function NativeSessionBrowser({
         return
       }
     }
-    if (snapshot.state !== 'ready' || snapshot.selected === undefined || !archived.has(snapshot.selected)) return
+    // A generating or approval-waiting Session is detached, not awaited: its Host turn keeps running.
+    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) return
     const lastOrder = selectionOrder.current
     let nextId: NativeSessionId | undefined
     if (lastOrder?.id === snapshot.selected) {
@@ -248,8 +249,9 @@ function NativeSessionBrowser({
       nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
         ?? lastOrder.ids.slice(0, index).reverse().find(id => visibleIds.includes(id))
     }
-    deselectSession()
-    if (nextId !== undefined) runWorkspaceAction(trust => selectSession(nextId, trust))
+    void deselectSession().then(() => {
+      if (nextId !== undefined) runWorkspaceAction(trust => selectSession(nextId, trust))
+    }, (error: unknown) => { setActionError(errorMessage(error)) })
   }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession, deselectSession,
     archived, visibleIds])
   useEffect(() => {
