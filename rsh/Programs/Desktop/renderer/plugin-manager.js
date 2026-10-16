@@ -86,9 +86,25 @@ async function main() {
     document.querySelector('#recovery').hidden = backend.phase !== 'error'
     document.querySelector('#recovery-description').textContent = nativeMode ? messages.nativeRecoveryAdvice : messages.recoveryDescription
     configureMode()
-    // Native status uses only localized state; legacy diagnostics retain their existing presentation.
     document.querySelector('#startup-error').textContent = backend.phase === 'error'
-      ? (nativeMode ? messages.nativeBackendError : (backend.message ?? '')) : ''
+      ? startupErrorDetails(backend) : ''
+  }
+
+  function startupErrorDetails(backend) {
+    const types = {
+      AggregateError: messages.startupTypeAggregateError,
+      Error: messages.startupTypeError,
+      RangeError: messages.startupTypeRangeError,
+      SyntaxError: messages.startupTypeSyntaxError,
+      TypeError: messages.startupTypeTypeError,
+      ValidationError: messages.startupTypeValidationError,
+    }
+    return [
+      messages.startupErrorType.replace('{type}', types[backend.errorType] || messages.startupTypeUnknownError),
+      backend.path === undefined ? '' : messages.startupErrorPath.replace('{path}', backend.path),
+      backend.rule === undefined ? '' : messages.startupErrorRule.replace('{rule}', backend.rule),
+      messages.startupErrorLogAdvice,
+    ].filter(Boolean).join('\n')
   }
 
   unsubscribe = api.backend.subscribe(backend => {

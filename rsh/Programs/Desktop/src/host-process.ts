@@ -38,7 +38,11 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'ready':
       return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
     case 'fatal':
-      return typeof candidate.message === 'string'
+      return ['AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'UnknownError', 'ValidationError']
+        .includes(candidate.errorType as string)
+        && (candidate.path === undefined || Array.isArray(candidate.path)
+          && candidate.path.every((part: unknown) => typeof part === 'string' || typeof part === 'number'))
+        && (candidate.rule === undefined || typeof candidate.rule === 'string')
     default:
       return false
   }
@@ -156,6 +160,7 @@ export class DesktopHostProcess {
     this.exitPromise = new Promise<void>((resolve) => {
       child.once('close', (code) => {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
+        if (suffix !== '') console.error('Desktop Host stderr', this.stderr.trim())
         if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
         else this.fail(new Error(`dsh desktop host stopped${suffix}`))
         resolve()
@@ -401,7 +406,12 @@ export class DesktopHostProcess {
         this.readyResolve(message)
         return
       case 'fatal':
-        this.fail(new Error(message.message))
+        const error = new Error()
+        error.name = message.errorType
+        if (message.path !== undefined) Object.assign(error, {
+          issues: [{ path: message.path, ...message.rule === undefined ? {} : { rule: message.rule } }],
+        })
+        this.fail(error)
         return
       default:
         message satisfies never

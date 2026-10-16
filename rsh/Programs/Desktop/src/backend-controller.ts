@@ -1,9 +1,10 @@
 /** Owns one backend startup and its quiescent teardown independently of windows. */
 
 import { desktopErrorState } from './startup-error.ts'
+import type { DesktopErrorState } from './startup-error.ts'
 
 /** Backend availability presented by the desktop window. */
-export type DesktopBackendState = { readonly phase: 'starting' } | { readonly phase: 'ready' } | { readonly phase: 'error'; readonly message: string; readonly profileRecovery?: boolean }
+export type DesktopBackendState = { readonly phase: 'starting' } | { readonly phase: 'ready' } | (DesktopErrorState & { readonly profileRecovery?: boolean })
 
 /** Child lifecycle owned by the desktop backend controller. */
 export interface DesktopBackendHost {
@@ -80,7 +81,10 @@ export class DesktopBackendController<Host extends DesktopBackendHost> {
         try { await this.cleanup(attempt) } catch (cleanupError) {
           if (cleanupError !== error) failure = new AggregateError([error, cleanupError], 'desktop backend startup and cleanup failed')
         }
-        if (!cancelled) this.update(desktopErrorState(failure))
+        if (!cancelled) {
+          console.error('Desktop backend startup failed', failure)
+          this.update(desktopErrorState(failure))
+        }
         throw failure
       }
     }).finally(() => { if (this.pending === pending) this.pending = undefined })
@@ -132,9 +136,14 @@ export class DesktopBackendController<Host extends DesktopBackendHost> {
     if (this.current.phase !== 'ready') return
     attempt.cancelled = true
     const cleanup = this.cleanup(attempt)
+    console.error('Desktop backend failed', error)
     this.update(desktopErrorState(error))
     void cleanup.catch((cleanupError: unknown) => {
-      if (this.attempt === attempt) this.update(desktopErrorState(new AggregateError([error, cleanupError], 'Desktop backend failed and could not stop')))
+      if (this.attempt === attempt) {
+        const failure = new AggregateError([error, cleanupError], 'Desktop backend failed and could not stop')
+        console.error('Desktop backend cleanup failed', failure)
+        this.update(desktopErrorState(failure))
+      }
     })
   }
 

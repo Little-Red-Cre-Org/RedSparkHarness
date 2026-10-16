@@ -31,6 +31,7 @@ import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 import { desktopErrorState } from './startup-error.ts'
+import type { DesktopErrorState } from './startup-error.ts'
 import { startupFailureDocument } from './startup-document.ts'
 import { DesktopPetWindow } from './pet-window.ts'
 import { parsePetPresentation } from './pet-presentation.ts'
@@ -40,7 +41,7 @@ const SCHEME = 'dsh-app'
 let focusPrimaryWindow = (): void => {}
 type RecoveryAction = 'restart' | 'plugins' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
-const emergencyPages = new WeakMap<BrowserWindow, { url: string; message: string; busy: boolean }>()
+const emergencyPages = new WeakMap<BrowserWindow, { url: string; busy: boolean }>()
 let recoverApplication = (action: RecoveryAction): Promise<void> => {
   if (action !== 'restart') return Promise.reject(new Error('Desktop recovery could not initialize; reinstall the application'))
   app.relaunch()
@@ -48,10 +49,10 @@ let recoverApplication = (action: RecoveryAction): Promise<void> => {
   return Promise.resolve()
 }
 
-async function showEmergencyDocument(window: BrowserWindow, message: string): Promise<void> {
-  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), message, profileRecoveryAvailable())
+async function showEmergencyDocument(window: BrowserWindow, failure: DesktopErrorState): Promise<void> {
+  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), failure, profileRecoveryAvailable())
   const url = `data:text/html;charset=utf-8,${encodeURIComponent(document)}`
-  emergencyPages.set(window, { url, message, busy: false })
+  emergencyPages.set(window, { url, busy: false })
   await window.loadURL(url)
 }
 
@@ -144,7 +145,7 @@ function createWindow(preload: string, show = false): BrowserWindow {
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
-      if (!window.isDestroyed()) await showEmergencyDocument(window, `${page.message}\n${desktopErrorState(error).message}`)
+      if (!window.isDestroyed()) await showEmergencyDocument(window, desktopErrorState(error))
     }).catch((error: unknown) => { console.error(error) }).finally(() => { page.busy = false })
   })
   return window
@@ -217,9 +218,10 @@ async function main(): Promise<void> {
     emergencyDocument = true
     petUpdatesAllowed = false
     desktopPet.close()
-    const diagnostic = desktopErrorState(error).message
-    pageError = { phase: 'error', message: diagnostic }
-    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, diagnostic)
+    console.error('Desktop emergency startup failed', error)
+    const failure = desktopErrorState(error)
+    pageError = failure
+    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, failure)
   }
 
   const navigateMain = (url: string): Promise<void> => {
@@ -302,6 +304,7 @@ async function main(): Promise<void> {
 
   const showStartupError = async (error: unknown): Promise<void> => {
     if (quitting) return
+    console.error('Desktop startup failed', error)
     pageError = desktopErrorState(error)
     try { await navigateMain(startupUrl) }
     catch (navigationError) {
@@ -392,8 +395,9 @@ async function main(): Promise<void> {
       await manager.mutate(mutation, hooks)
       await navigateMain(applicationUrl)
     } catch (error) {
-      await showStartupError(error)
-      throw error
+      try { await showStartupError(error) }
+      catch (failure) { console.error(failure) }
+      throw new Error(messages.startupFailed)
     }
   }
   const nativeList = async (event: IpcMainInvokeEvent, payload: unknown) => {
@@ -538,7 +542,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.backendRetry, async (event) => {
     assertDesktopSender(event, ['shell'])
-    await reconcileBackend()
+    try { await reconcileBackend() } catch { return }
     focusPrimaryWindow()
   })
   ipcMain.handle(DESKTOP_IPC.applicationRestart, async (event) => {
@@ -727,15 +731,14 @@ async function main(): Promise<void> {
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error)
-  console.error(error)
+  console.error('Desktop initialization failed', error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
-    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? message : message}\n`).catch(() => undefined)
+    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
   }
   const window = BrowserWindow.getAllWindows()[0] ?? createWindow(fileURLToPath(new URL('./preload-app.cjs', import.meta.url)), true)
   window.once('closed', () => { app.quit() })
-  await showEmergencyDocument(window, message)
+  await showEmergencyDocument(window, desktopErrorState(error))
 }).catch((error: unknown) => {
   console.error(error)
   app.exit(1)

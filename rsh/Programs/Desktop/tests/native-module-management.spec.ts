@@ -299,6 +299,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(readFileSync(hostProfilePath, 'utf8')).toBe(requiredHostBefore)
   expect(readFileSync(clientProfilePath, 'utf8')).toBe(requiredClientBefore)
   const fakeToken = 'native-desktop-fake-token'
+  const fakeHeaderName = `Authorization: Bearer ${fakeToken}`
   const preflightFixture = prepareFixture(fixtureRoot())
   await preflightFixture.manager.applyRelease()
   writeNativeProfile(preflightFixture.profile, [...initialHostRows,
@@ -306,7 +307,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
       providers: { gateway: {
         api: 'openai-completions', baseURL: 'https://gateway.invalid/v1',
         models: [{ id: 'test-model', name: 'Test Model' }],
-        headers: { [`Authorization: Bearer ${fakeToken}`]: 'value' },
+        headers: { [fakeHeaderName]: 'value' },
       } },
     } },
   ], initialClientRows)
@@ -324,7 +325,31 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
     expectedRevision: preflightInventory.inventory.revision,
     key: { target: 'host', id: brandString<NativeDesktopInstallationId>('pi-ai-invalid-header') }, enabled: true,
   } }, hooks(preflightLifecycle), ready)
+  const diagnosticValues: unknown[] = [preflightRefusal]
+  const diagnosticSeen = new Set<object>()
+  let diagnosticErrors = 0
+  while (diagnosticValues.length > 0) {
+    const value = diagnosticValues.pop()
+    if (value instanceof Error) {
+      diagnosticErrors += 1
+      for (const detail of [value.message, value.stack, 'detail' in value ? value.detail : undefined]) {
+        if (typeof detail !== 'string') continue
+        expect(detail).not.toContain(fakeToken)
+        expect(detail).not.toContain(fakeHeaderName)
+        expect(detail).not.toContain('Authorization')
+      }
+      diagnosticValues.push(value.cause)
+      if (value instanceof AggregateError) {
+        for (const nested of value.errors as unknown[]) diagnosticValues.push(nested)
+      }
+    } else if (typeof value === 'object' && value !== null && !diagnosticSeen.has(value)) {
+      diagnosticSeen.add(value)
+      for (const nested of Object.values(value) as unknown[]) diagnosticValues.push(nested)
+    }
+  }
+  expect(diagnosticErrors).toBe(0)
   expect(JSON.stringify(preflightRefusal)).not.toContain(fakeToken)
+  expect(JSON.stringify(preflightRefusal)).not.toContain(fakeHeaderName)
   expect(preflightRefusal).toMatchObject({ status: 'refused', error: { code: 'dependency-conflict' } })
   if (preflightRefusal.status !== 'refused') return
   expect(preflightRefusal.error.diagnostic).toEqual({ path: 'providers.0.headers.0', rule: 'valid-fetch-header' })

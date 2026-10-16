@@ -12,7 +12,7 @@ it('keeps disabled packages visible and offers recovery without a running backen
   const toggle = vi.fn(async (_name: string, active: boolean) => { enabled = active })
   const api = {
     locale: async () => resolveDesktopLocale('en'),
-    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', message: 'plugin requires Cordis ^2.0.0' }, retry: vi.fn(), subscribe: () => () => {} },
+    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', errorType: 'Error' }, retry: vi.fn(), subscribe: () => () => {} },
     plugins: { list: async () => [{ name: 'example-plugin', version: '1.0.0', enabled }], disableAll, toggle },
   }
   Object.defineProperty(dom.window, 'dshDesktop', { value: api })
@@ -21,7 +21,9 @@ it('keeps disabled packages visible and offers recovery without a running backen
     const document = dom.window.document
     await expect.poll(() => document.querySelector('#plugins li')?.textContent).toContain('example-plugin')
     expect(document.querySelector<HTMLElement>('#recovery')?.hidden).toBe(false)
-    expect(document.querySelector('#startup-error')?.textContent).toBe('plugin requires Cordis ^2.0.0')
+    expect(document.querySelector('#startup-error')?.textContent).toBe(
+      'Error type: Application error\nDetailed information is available in the local Desktop log.',
+    )
     document.querySelector<HTMLButtonElement>('#disable-all')?.click()
     await expect.poll(() => document.querySelector<HTMLElement>('#recovery')?.hidden).toBe(true)
     expect(disableAll).toHaveBeenCalledOnce()
