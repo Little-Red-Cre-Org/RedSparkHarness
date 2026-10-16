@@ -86,7 +86,7 @@ function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: Abo
   const service = new NativeWebSessionService(executor,
     { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-      maxSteps: 1, builtinTools: false, maxPendingRequests: 2, maxHistoryEvents: 10, maxPromptChars: 100,
+      maxSteps: 1, builtinTools: false, maxPendingRequests: 4, maxHistoryEvents: 10, maxPromptChars: 100,
       maxFollowBufferBytes: 100_000, maxFollowers: 4, maxPendingHumanRequests: 2 }), lifetime.signal)
   const answerers: NativeApprovalAnswerer[] = []
   const disposers: (() => void)[] = []
@@ -109,7 +109,7 @@ function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: Abo
   }
   const clients = [0, 1].map(() => createNativeSessionClient(rpc, { maxFollowBufferChars: 100_000 }))
   return {
-    id, owner, answerers, clients,
+    id, owner, answerers, clients, service,
     async close() {
       await Promise.all(clients.map(client => client.close()))
       for (const dispose of disposers) dispose()
@@ -151,9 +151,38 @@ it('keeps a detached turn running and accepts the next prompt after it settles',
   }
 })
 
+it('keeps settlement for an attach after a page disconnect when the turn settles before the new await', async () => {
+  const started = Promise.withResolvers<undefined>()
+  const completion = Promise.withResolvers<DetachedTurnResult>()
+  const fixture = detachedTurnFixture(async () => {
+    started.resolve(undefined)
+    return completion.promise
+  })
+  const detach = new AbortController()
+  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
+    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
+  try {
+    await started.promise
+    detach.abort()
+    await expect(firstPrompt).rejects.toBeDefined()
+    const attached = await fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, new AbortController().signal)
+    if (!attached.ok) throw new Error(attached.error.message)
+    const { admissionId } = attached.value as { admissionId: string }
+    completion.resolve({ exitCode: 0, answer: 'settled before await' })
+    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'idle' }) })
+    await expect(fixture.service.handle('session/await', { sessionId: fixture.id, admissionId }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { exitCode: 0, answer: 'settled before await' } })
+  } finally {
+    completion.resolve({ exitCode: 130, answer: '' })
+    await fixture.close()
+  }
+})
+
 it('replays a pending approval onto an attached turn feed', async () => {
   const approvalStarted = Promise.withResolvers<undefined>()
+  let turnSignal: AbortSignal | undefined
   const fixture = detachedTurnFixture(async (_request, signal, owner) => {
+    turnSignal = signal
     approvalStarted.resolve(undefined)
     const answerer = fixture.answerers[0]
     const answer = await answerer?.({ id: 'fixture-approval' as NativeApprovalAnswererRequest['id'],
@@ -168,20 +197,31 @@ it('replays a pending approval onto an attached turn feed', async () => {
   }, undefined, undefined, SessionSeq(0), detach.signal)
   const attachedPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
   let attached!: Promise<DetachedTurnResult | undefined>
+  let superseded!: Promise<DetachedTurnResult | undefined>
+  const supersededHistory = Promise.withResolvers<readonly SessionEvent[]>()
   try {
     await approvalStarted.promise
     const promptId = await firstPromptId.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
+    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => supersededHistory.promise)
+    superseded = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), () => {})
+    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
     attached = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), (frame) => {
       if (frame.type === 'human' && frame.prompt.kind === 'approval') attachedPromptId.resolve(frame.prompt.id)
     })
-    const resumedPromptId = await attachedPromptId.promise
+    const resumedPromptId = await Promise.race([
+      attachedPromptId.promise,
+      attached.then(() => { throw new Error('attached turn settled before approval replay') }),
+    ])
     expect(resumedPromptId).toBe(promptId)
+    await expect(firstPrompt).rejects.toBeDefined()
+    expect(turnSignal?.aborted).toBe(false)
+    supersededHistory.resolve(await fixture.owner.readEvents())
+    await expect(superseded).rejects.toThrow('attach was superseded')
     await fixture.clients[1]!.answerHuman(fixture.id, resumedPromptId, { kind: 'approval', outcome: 'allowed-once' })
     await expect(attached).resolves.toMatchObject({ exitCode: 0, answer: 'approved' })
   } finally {
     detach.abort()
+    supersededHistory.resolve(await fixture.owner.readEvents())
     await fixture.close()
   }
 })
