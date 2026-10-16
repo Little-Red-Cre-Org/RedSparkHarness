@@ -92,7 +92,7 @@ export interface DirectoryBrowserProps {
   /** Dialog visibility (owner-local; closed unmounts nothing but resets on reopen). */
   open: boolean
   /**
-   * List one directory level (absent path = the Host home directory); the
+   * List one directory level (absent path = the Host start directory); the
    * signal aborts a superseded scan on the wire. A rejection may carry
    * `{ rpcError: { message: string } }`; the dialog prefers that Host
    * business message over the ordinary Error text.
@@ -449,7 +449,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
    * upgrade — one keystroke must move the view once. A failure leaves the
    * last readable panes standing and says nothing, while an arrival clears
    * the stale message and re-parks focus the swap dropped.
-   * @param path - the level to list; absent lists the Host home directory.
+   * @param path - the level to list; absent lists the Host start directory.
    * @param options - `closeEditor` retires the path draft on arrival and
    * bounds the wait for the parent leg; `announce` surfaces a failure as the
    * dialog's alert.
@@ -615,7 +615,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
     select(entry)
   }, [child, select])
 
-  // Every open starts fresh at the Host home directory; closing invalidates
+  // Every open starts fresh at the Host start directory; closing invalidates
   // any in-flight response so a late arrival cannot repopulate a closed dialog.
   useEffect(() => {
     openGeneration.current += 1
