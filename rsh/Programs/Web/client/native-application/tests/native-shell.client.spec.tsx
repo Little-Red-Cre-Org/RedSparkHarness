@@ -2,7 +2,8 @@
 import { cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
   NativeSessionListFrame, NativeSessionListItem, NativeSettingsEvent,
@@ -14,7 +15,7 @@ import { plugin as application } from '../src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
 import { plugin as layout } from '../../ui-layout/src/native.ts'
-import { plugin as sessionPresentation } from '../../ui-session/src/native.ts'
+import { plugin as sessionPresentation, type NativeConversationService } from '../../ui-session/src/native.ts'
 import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
@@ -79,13 +80,14 @@ const sessionProvider = (
   },
 })
 
-const mountApplication = (container: HTMLElement): NativePlugin => ({
+const mountApplication = (container: HTMLElement, observeConversation: (service: NativeConversationService) => void): NativePlugin => ({
   apiVersion: 1,
   name: 'test-native-application-mount',
   targets: ['client'],
-  requires: ['clientApplication', 'clientRenderer'],
+  requires: ['clientApplication', 'clientRenderer', 'clientNativeConversation'],
   provides: [],
   resolve: () => (context) => {
+    observeConversation(context.require('clientNativeConversation'))
     context.own(context.require('clientRenderer').mount(
       container, context.require('clientApplication'), context.signal,
     ))
@@ -304,6 +306,11 @@ it.each([
     { namespace: 'ui-conversation', schema: {}, value: { busyEnter: 'steer' }, base: {}, user: {},
       applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
   ], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })
+  let betaHasConversation = true
+  const betaMessage = {
+    type: 'user/message', seq: SessionSeq(1), time: 1, surfaceOp: 'append',
+    data: { id: 'beta-message', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Beta task' }] },
+  } as unknown as SessionEvent
   const clientMock = {
     close,
     settingsDescribe: vi.fn((_signal?: AbortSignal) => {
@@ -370,7 +377,7 @@ it.each([
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
-      return { header: row.header, events: [], inheritedEventCount: 0 }
+      return { header: row.header, events: id === 'session-beta' && betaHasConversation ? [betaMessage] : [], inheritedEventCount: 0 }
     }),
     create: vi.fn(async () => {
       const header = makeHeader('session-created')
@@ -393,6 +400,7 @@ it.each([
 
   const container = document.createElement('div')
   document.body.append(container)
+  let conversation: NativeConversationService | undefined
   const scope = new NativeScope()
   const host = new NativeHost(resolveInstallation([
     { plugin: sessionProvider(client, workspaceClient, directoryPicker), scope, config: undefined },
@@ -404,7 +412,7 @@ it.each([
     { plugin: layout, scope, config: undefined },
     { plugin: sidebar, scope, config: undefined },
     { plugin: rightbar, scope, config: undefined },
-    { plugin: mountApplication(container), scope, config: undefined },
+    { plugin: mountApplication(container, (service) => { conversation = service }), scope, config: undefined },
   ], 'client'))
 
   const originalLanguage = document.documentElement.lang
@@ -449,12 +457,7 @@ it.each([
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(1) })
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
-    delayedConnection.resolve({ sessionId: 'session-alpha' as SessionId })
-    await waitFor(() => {
-      expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal))
-      expect(clientMock.selectPreset).not.toHaveBeenCalled()
-      expect(document.title).toBe('Beta — Product')
-    })
+    expect(clientMock.selectPreset).not.toHaveBeenCalled()
     const pendingStart = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
     pendingWorkspaceConnection = pendingStart
     const pendingMessageInput = screen.getByRole('textbox', { name: 'Message' })
@@ -473,6 +476,26 @@ it.each([
     connectWorkspace.mockRejectedValueOnce(new Error('Workspace unavailable'))
     fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
     expect((await screen.findByRole('alert')).textContent).toContain('Workspace unavailable')
+    const untrustedConnect = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
+    pendingWorkspaceConnection = untrustedConnect
+    const controlsRefresh = Promise.withResolvers<Awaited<ReturnType<NativeSessionClient['modelControls']>>>()
+    const modelReads = clientMock.modelControls.mock.calls.length
+    clientMock.modelControls.mockImplementationOnce(() => controlsRefresh.promise)
+    const connectionCalls = connectWorkspace.mock.calls.length
+    fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(connectionCalls + 1) })
+    settingsEventFrames.publish({ type: 'llm/adapters-updated' })
+    await waitFor(() => { expect(clientMock.modelControls).toHaveBeenCalledTimes(modelReads + 1) })
+    untrustedConnect.reject(new NativeSessionRpcError('native/workspace-untrusted', 'Workspace is untrusted', {
+      path: 'C:\\Work\\Shared',
+    }))
+    await waitFor(() => {
+      expect(conversation?.getSnapshot().state).toBe('loading')
+      expect(conversation?.getSnapshot().navigationPending).toBe(false)
+    })
+    controlsRefresh.resolve({ catalog: null, canSelectModel: false, presets: [] })
+    await waitFor(() => { expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('disabled', false) })
+    expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -497,6 +520,7 @@ it.each([
     alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    betaHasConversation = false
     clientMock.history.mockClear()
     const betaHistory = Promise.withResolvers<undefined>()
     clientMock.history.mockImplementationOnce(async (id) => {
@@ -705,6 +729,22 @@ it.each([
     await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Refreshed Alpha/ })).toBeNull() })
     await waitFor(() => { expect(clientMock.history.mock.calls.length).toBeGreaterThan(historyCallsBeforeArchive) })
     expect(clientMock.history.mock.calls.at(-1)?.[0]).toBe('session-beta')
+
+    fireEvent.click(within(screen.getByRole('treeitem', { name: /Beta/ }))
+      .getByRole('button', { name: 'Session actions for Beta' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete session' }))
+    const betaDeleteDialog = await screen.findByRole('dialog', { name: 'Delete session' })
+    fireEvent.click(within(betaDeleteDialog).getByRole('button', { name: 'Delete session' }))
+    await waitFor(() => { expect(clientMock.archive).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(screen.queryByRole('treeitem', { name: /Beta/ })).toBeNull() })
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Choose workspace' })).toHaveProperty('disabled', false) })
+    const connectionCountBeforeHeroStart = connectWorkspace.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Shared' }))
+    await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(connectionCountBeforeHeroStart + 1) })
+    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal)) })
+    expect(clientMock.selectPreset).not.toHaveBeenCalled()
+    delayedConnection.resolve({ sessionId: 'session-alpha' as SessionId })
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })

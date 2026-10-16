@@ -894,6 +894,7 @@ export const plugin: NativePlugin = {
             .catch((error: unknown) => {
               if (error instanceof NativeSessionRpcError && error.code === 'native/workspace-untrusted') {
                 const latest = controller.getSnapshot()
+                controller.releaseNavigation(navigation)
                 if (latest.state === 'ready' && controller.isCurrentNavigation(navigation)) controller.clear()
               } else controller.failNavigation(navigation, error)
             })

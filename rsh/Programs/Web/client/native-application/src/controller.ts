@@ -93,6 +93,15 @@ export class NativeConversationController {
    */
   isCurrentNavigation(token: number): boolean { return token === this.navigation }
 
+  /** Release a current navigation's composer lock without exposing an error.
+   * @param token - navigation token whose composer lock should be released.
+   * @returns no value.
+   */
+  releaseNavigation(token: number): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false })
+  }
+
   /** Clear a current navigation's sending lock and expose its failure.
    * @param token - navigation token that failed.
    * @param error - failure returned by the navigation operation.

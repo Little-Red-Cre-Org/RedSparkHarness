@@ -68,6 +68,11 @@ export interface NativeConversationService {
   beginNavigation(disableSending?: boolean): number
   /** Check whether a navigation token is still current. */
   isCurrentNavigation(token: number): boolean
+  /** Release a current navigation's composer lock without exposing an error.
+   * @param token - navigation token whose composer lock should be released.
+   * @returns no value.
+   */
+  releaseNavigation(token: number): void
   /** Clear a current navigation's sending lock and expose its failure.
    * @param token - navigation token that failed.
    * @param error - failure returned by the navigation operation.

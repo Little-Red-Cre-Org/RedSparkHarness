@@ -14,20 +14,20 @@ import type { ConversationLocaleKey } from './locales.ts'
 import css from './workspace-chooser.module.css'
 
 type Translate = (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
+type WorkspaceStart = (trust?: boolean) => Promise<SessionId | undefined>
 
 /** Choose an existing Workspace or add a directory from the conversation hero. */
 export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, listWorkspaces, chooseWorkspace,
-  addWorkspace, listDirectory, createDirectory, discardStagedPreset, t }: {
+  addWorkspace, listDirectory, createDirectory, t }: {
   label: string
   currentWorkspaceId?: NativeWorkspace['workspaceId'] | undefined
   selected: boolean
   ready: boolean
   listWorkspaces: () => Promise<readonly NativeWorkspace[]>
-  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
-  addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
+  chooseWorkspace: (id: NativeWorkspace['workspaceId']) => WorkspaceStart
+  addWorkspace: (path: string) => WorkspaceStart
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
-  discardStagedPreset: () => void
   t: Translate
 }) {
   const [workspaces, setWorkspaces] = useState<readonly NativeWorkspace[]>([])
@@ -69,24 +69,20 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
       setDirectoryOpen(true)
       return
     }
+    const start = chooseWorkspace(id as NativeWorkspace['workspaceId'])
     setBusy(true)
-    void chooseWorkspace(id as NativeWorkspace['workspaceId']).catch((reason: unknown) => {
-      if (!requestWorkspaceTrust(reason, () => chooseWorkspace(id as NativeWorkspace['workspaceId'], true))) {
-        discardStagedPreset()
-        setError(errorMessage(reason))
-      }
+    void start().catch((reason: unknown) => {
+      if (!requestWorkspaceTrust(reason, () => start(true))) setError(errorMessage(reason))
     }).finally(() => { setBusy(false) })
   }
   const addDirectory = (path: string): void => {
     setDirectoryError(undefined)
     setDirectoryBusy(true)
-    void addWorkspace(path).then(() => {
+    const start = addWorkspace(path)
+    void start().then(() => {
       setDirectoryOpen(false)
     }).catch((reason: unknown) => {
-      if (!requestWorkspaceTrust(reason, trustedPath => addWorkspace(trustedPath, true))) {
-        discardStagedPreset()
-        setDirectoryError(errorMessage(reason))
-      }
+      if (!requestWorkspaceTrust(reason, () => start(true))) setDirectoryError(errorMessage(reason))
     }).finally(() => { setDirectoryBusy(false) })
   }
 
@@ -97,7 +93,6 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
       setTrustPrompt(undefined)
     }).catch((reason: unknown) => {
       setTrustPrompt(undefined)
-      discardStagedPreset()
       setError(errorMessage(reason))
     }).finally(() => { setTrustPending(false) })
   }
@@ -127,12 +122,11 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
       onOpen={addDirectory} onClose={() => { setDirectoryOpen(false) }} busy={directoryBusy} ownerError={directoryError} t={t} />
     {trustPrompt === undefined ? null : <Modal open title={t('workspaceTrustTitle')} description={t('workspaceTrustBody')}
       closeLabel={t('close')} onClose={() => {
-        if (!trustPending) { setTrustPrompt(undefined); discardStagedPreset() }
+        if (!trustPending) setTrustPrompt(undefined)
       }}
       footer={<>
         <Button variant="outline" disabled={trustPending} onClick={() => {
           setTrustPrompt(undefined)
-          discardStagedPreset()
         }}>{t('browser.cancel')}</Button>
         <Button variant="primary" disabled={trustPending} onClick={confirmTrust}>{t('workspaceTrust')}</Button>
       </>}>
