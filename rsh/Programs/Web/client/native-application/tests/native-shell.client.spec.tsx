@@ -432,6 +432,19 @@ it.each([
     alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    clientMock.history.mockClear()
+    const betaHistory = Promise.withResolvers<undefined>()
+    clientMock.history.mockImplementationOnce(async (id) => {
+      await betaHistory.promise
+      const row = rows.find(candidate => candidate.header.id === id)!
+      return { header: row.header, events: [], inheritedEventCount: 0 }
+    })
+    fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
+    fireEvent.click(alphaRow)
+    betaHistory.resolve(undefined)
+    await waitFor(() => {
+      expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
+    })
     const activeRow = { ...rows.find(row => row.header.id === 'session-alpha')!, updatedAt: Date.now(), running: true,
       pendingInteraction: { kind: 'approval' as const } }
     rows = rows.map(row => row.header.id === activeRow.header.id ? activeRow : row)

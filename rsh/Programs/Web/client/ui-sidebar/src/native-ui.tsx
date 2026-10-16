@@ -59,7 +59,6 @@ type NativeWorkspacesInjected = {
     workspaceRegistry: HostObservable<NativeWorkspaceSnapshot>
     homeDirectory: HostObservable<string | undefined>
   }
-  getConversationSnapshot: NativeConversationService['getSnapshot']
   displayTitle: NativeSessionPresentation['displayTitle']
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
@@ -163,7 +162,7 @@ function errorMessage(error: unknown): string {
 const SEARCH_DEBOUNCE_MS = 250
 
 function NativeSessionBrowser({
-  wide, useConversation, useWorkspaceRegistry, getConversationSnapshot, displayTitle, selectSession, deselectSession,
+  wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, deselectSession,
   renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
   renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
@@ -171,7 +170,6 @@ function NativeSessionBrowser({
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
-  getConversationSnapshot: NativeConversationService['getSnapshot']
   displayTitle: NativeSessionPresentation['displayTitle']
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
@@ -197,6 +195,7 @@ function NativeSessionBrowser({
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
   const [pendingSessionId, setPendingSessionId] = useState<NativeSessionId>()
+  const [pendingArchive, setPendingArchive] = useState<{ id: NativeSessionId; nextId: NativeSessionId | undefined }>()
   const [switchNotice, setSwitchNotice] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<NativeWorkspaceId>()
@@ -228,10 +227,16 @@ function NativeSessionBrowser({
   useEffect(() => {
     if (snapshot.state !== 'ready') return
     setSwitchNotice(false)
-    if (pendingSessionId === undefined) return
-    setPendingSessionId(undefined)
-    if (pendingSessionId !== snapshot.selected) void selectSession(pendingSessionId)
-  }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession])
+    if (pendingSessionId !== undefined) {
+      setPendingSessionId(undefined)
+      if (pendingSessionId !== snapshot.selected) void selectSession(pendingSessionId)
+    }
+    if (pendingArchive === undefined) return
+    setPendingArchive(undefined)
+    if (snapshot.selected !== pendingArchive.id) return
+    if (pendingArchive.nextId === undefined) deselectSession()
+    else void selectSession(pendingArchive.nextId)
+  }, [snapshot.state, snapshot.selected, pendingSessionId, pendingArchive, selectSession, deselectSession])
   useEffect(() => {
     if (wide && searchExpanded) searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded])
@@ -271,13 +276,13 @@ function NativeSessionBrowser({
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
   const openSession = (id: NativeSessionId): void => {
+    if (snapshot.state === 'loading') {
+      setPendingSessionId(id)
+      return
+    }
     if (id === snapshot.selected) return
     if (snapshot.state === 'sending' || snapshot.state === 'cancelling') {
       setSwitchNotice(true)
-      return
-    }
-    if (snapshot.state === 'loading') {
-      setPendingSessionId(id)
       return
     }
     if (snapshot.state === 'ready') {
@@ -372,13 +377,11 @@ function NativeSessionBrowser({
           onArchive={async (id) => {
             try {
               await archiveSession(id)
-              const current = getConversationSnapshot()
-              if (current.selected !== id || current.state !== 'ready') return
+              if (snapshot.selected !== id) return
               const visibleIds = groups.flatMap(group => group.expanded ? group.sessions.map(row => row.id) : [])
               const index = visibleIds.indexOf(id)
               const nextId = visibleIds[index + 1] ?? visibleIds[index - 1]
-              if (nextId === undefined) deselectSession()
-              else await selectSession(nextId)
+              setPendingArchive({ id, nextId })
             } catch (error: unknown) {
               setActionError(errorMessage(error))
             }
@@ -886,7 +889,6 @@ export const plugin: NativePlugin = {
       name: 'sidebar.workspaces', locale: 'nativeSidebar',
       inject: (): NativeWorkspacesInjected => ({
         hooks: { conversation: controller, workspaceRegistry, homeDirectory },
-        getConversationSnapshot: controller.getSnapshot.bind(controller),
         displayTitle: item => presentation.displayTitle(item),
         selectSession: controller.select.bind(controller),
         deselectSession: controller.deselect.bind(controller),
@@ -918,13 +920,12 @@ export const plugin: NativePlugin = {
         reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
       }),
-    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, getConversationSnapshot, displayTitle,
+    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
       selectSession, deselectSession, renameTitle, refreshTitle,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
       renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
-        getConversationSnapshot={getConversationSnapshot}
         useHomeDirectory={useHomeDirectory}
         displayTitle={displayTitle} selectSession={selectSession} deselectSession={deselectSession}
         renameTitle={renameTitle} refreshTitle={refreshTitle}
