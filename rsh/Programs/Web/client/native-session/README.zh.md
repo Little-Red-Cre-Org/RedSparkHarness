@@ -111,11 +111,11 @@ interface NativeSettingsDescription {
 
 `uploadFile(sessionId, file, signal?)` 会将字节流式传到 Host 并返回进程内回执。初始 prompt、`queueContent` 和 `steerContent` 可将这些回执与有序文本、编码图片一起提交；Host 在根所有者内准入图片，并在持久化准入后退休文件回执。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
 
-`close()` 会取消 Client 拥有的提示和跟随流、中止上传，并等待这些调用结算；原生安装器在卸载时等待该操作。
+`close()` 会解除 Client 已拥有提示和跟随流的等待，中止上传，并等待这些调用结算；原生安装器在卸载时等待该操作。
 
 已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets、workspace-files 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
-提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；轮次信号会使用该身份请求 Host 排空。detach 信号只停止本地等待，Host 执行会继续。断开轮次结算后会退休其无人接收的结果，之后可准入下一次提示。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭取消并排空所有轮次。
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；轮次信号会使用该身份请求 Host 排空。detach 信号只停止本地等待，Host 执行会继续。断开轮次结算后会退休其无人接收的结果，之后可准入下一次提示。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭会解除 Client 等待；Host 回合继续运行，直至正常结算或显式取消。
 
 `queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`queueContent(sessionId, content, requestId, signal?)` 与 `steerContent(...)` 接受有序文本、编码图片和暂存文件回执，并提交到相同 inbox。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求。`submissions(sessionId, signal?)` 返回 `{ throughSeq, submissions }`，其中包含完整的持久化待处理消息。`editSubmission(sessionId, requestId, text, signal?)` 会通过精确的 root owner 替换消息全部 content，同时保留身份与位置，也支持 idle maintenance；`promoteSubmission(sessionId, requestId, signal?)` 会将 queued 输入移到 `next-step`，并要求活动浏览器轮次。其结果分别区分 `updated`/`stale` 与 `promoted`/`stale`/`not-promotable`。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
 

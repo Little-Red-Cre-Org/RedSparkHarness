@@ -47,6 +47,37 @@ const makeHeader = (id: string): SessionHeader => ({
   isSeeded: false,
 })
 
+it('refreshes durable history when restore finds no active turn', async () => {
+  const id = 'session-finished-before-attach' as SessionId
+  const finalEvent: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} }
+  let historyReads = 0
+  const client = {
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) {
+      historyReads++
+      return { header: makeHeader(sessionId), events: historyReads === 1 ? [] : [finalEvent], inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    async attach() { return undefined },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    await controller.select(id)
+    expect(historyReads).toBe(2)
+    expect(controller.getSnapshot().events).toEqual([finalEvent])
+  } finally {
+    await controller.close()
+  }
+})
+
 it('isolates delayed frames and late carrier errors while retaining title roster refresh', async () => {
   const streams = new Map<string, ReadableStreamDefaultController<Uint8Array>>()
   const firstFollowStarted = deferred<undefined>()
