@@ -10,9 +10,9 @@ Schema 校验消息可能包含配置值。发给 renderer 的启动错误不能
 
 ## 决定
 
-pi-ai 原生配置生产者保留原 Schemastery 校验错误及其 message 供本地诊断，并在存在安全路径时附加第一条 schema issue，路径中的字典键替换为其在输入中的序号。
+pi-ai 原生配置生产者保留原 Schemastery 校验错误及其 message 供本地诊断，并在存在安全路径时附加第一条 schema issue，路径中的字典键替换为其在输入中的序号。组合解析与已保存设置使用同一校验。
 
-Desktop 与 DesktopHost 沿错误 cause 或 AggregateError 链查找首个结构化 issue，只投影字符串或数字路径段及字符串 rule，不读取 message。错误类型来自固定的 Error.name 集合；其他名称映射为 `Error`。
+Desktop 与 DesktopHost 沿错误 cause 或 AggregateError 链查找首个带字符串 rule 的结构化 issue；不带 rule 的原始校验器 issue 可能含用户字典键，会被忽略。只投影字符串或数字路径段及字符串 rule，不读取 message。错误类型来自固定的 Error.name 集合；其他名称映射为 `Error`。
 
 ## 考虑过的替代方案
 

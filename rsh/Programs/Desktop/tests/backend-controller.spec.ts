@@ -83,7 +83,9 @@ describe('desktop backend controller', () => {
   it('publishes preparation errors and permits retry', async () => {
     const f = fixture()
     const fakeToken = 'desktop-projection-fake-token'
-    await expect(f.controller.start(async () => { throw new Error(fakeToken) })).rejects.toThrow(fakeToken)
+    const rawIssue = { path: ['presets', `Authorization: Bearer ${fakeToken}`], message: fakeToken }
+    await expect(f.controller.start(async () => { throw Object.assign(new Error(fakeToken), { issues: [rawIssue] }) }))
+      .rejects.toThrow(fakeToken)
     expect(f.controller.state).toEqual({ phase: 'error', errorType: 'Error' })
     expect(JSON.stringify(f.controller.state)).not.toContain(fakeToken)
     expect(f.create).not.toHaveBeenCalled()

@@ -20,9 +20,14 @@ const errorTypes = new Set<DesktopErrorType>([
  */
 export function desktopErrorState(error: unknown): DesktopErrorState {
   const errors = errorChain(error)
-  const source = errors.find(candidate => Array.isArray((candidate as Error & { issues?: unknown }).issues)) ?? errors[0]
-  const issues = source === undefined ? undefined : (source as Error & { issues?: unknown }).issues
-  const issue = Array.isArray(issues) ? (issues as unknown[])[0] : undefined
+  // Only producer-sanitized issues carry a rule; raw validator issues may name user dictionary keys.
+  const issueOf = (candidate: Error): unknown => {
+    const issues = (candidate as Error & { issues?: unknown }).issues
+    const issue: unknown = Array.isArray(issues) ? (issues as unknown[])[0] : undefined
+    return typeof issue === 'object' && issue !== null && 'rule' in issue && typeof issue.rule === 'string' ? issue : undefined
+  }
+  const source = errors.find(candidate => issueOf(candidate) !== undefined) ?? errors[0]
+  const issue = source === undefined ? undefined : issueOf(source)
   const path: (string | number)[] | undefined = typeof issue === 'object' && issue !== null && 'path' in issue && Array.isArray(issue.path)
     ? (issue.path as unknown[]).filter((part: unknown): part is string | number => typeof part === 'string' || typeof part === 'number')
     : undefined

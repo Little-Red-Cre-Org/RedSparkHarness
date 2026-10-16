@@ -52,7 +52,8 @@ function safeConfigPath(input: unknown, path: readonly (string | number | symbol
     if (typeof segment !== 'string' && typeof segment !== 'number') return undefined
     const parent = path[index - 1]
     let safeSegment = segment
-    if (typeof segment === 'string' && typeof parent === 'string' && dictionaryFields.has(parent)) {
+    if (typeof segment === 'string' && typeof parent === 'string' && dictionaryFields.has(parent)
+      && typeof safePath[index - 1] === 'string') {
       if (typeof value !== 'object' || value === null) return undefined
       safeSegment = Object.keys(value).indexOf(segment)
       if (safeSegment < 0) return undefined
@@ -63,6 +64,18 @@ function safeConfigPath(input: unknown, path: readonly (string | number | symbol
       : undefined
   }
   return safePath
+}
+
+/** Validate pi-ai configuration and attach a safe issue to schema failures without replacing them. */
+function validateConfig(input: Parameters<typeof Config>[0]): Config {
+  try {
+    return Config(input)
+  } catch (error) {
+    if (!z.ValidationError.is(error)) throw error
+    const path = safeConfigPath(input, error.options.path)
+    if (path !== undefined) Object.assign(error, { issues: [{ path, rule: 'schema' }] })
+    throw error
+  }
 }
 
 function profilesWithAccountRoutes(
@@ -93,15 +106,7 @@ export const plugin: NativePlugin = {
     for (const key of Object.keys(input)) {
       if (key !== 'providers') throw new Error(`llm-pi-ai: unknown native configuration field ${key}`)
     }
-    let base: Config
-    try {
-      base = Config(input)
-    } catch (error) {
-      if (!z.ValidationError.is(error)) throw error
-      const path = safeConfigPath(input, error.options.path)
-      if (path !== undefined) Object.assign(error, { issues: [{ path, rule: 'schema' }] })
-      throw error
-    }
+    const base = validateConfig(input)
     resolveProfiles(base.providers, 'deferred')
     return async (context) => {
       const credentials = context.require('credentials')
@@ -123,7 +128,7 @@ export const plugin: NativePlugin = {
       let settingsSelection: NativeSettingsScope<Config> | undefined
       if (settings !== undefined) {
         const selection = settings.register<'llm-pi-ai', Config>('llm-pi-ai', { providers: base.providers ?? {} }, (value) => {
-          const config = Config(value)
+          const config = validateConfig(value)
           resolveProfiles(config.providers, 'deferred')
           return config
         }, assertServiceable, { schema: Config, applies: 'live' })

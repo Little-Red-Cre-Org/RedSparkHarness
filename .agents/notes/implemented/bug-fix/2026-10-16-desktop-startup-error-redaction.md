@@ -10,9 +10,9 @@ Schema validation messages can contain configuration values. Renderer-facing sta
 
 ## Decision
 
-The pi-ai native configuration producer keeps the original Schemastery validation error and its message for local diagnostics, and attaches the first schema issue with a path whose dictionary keys use their input-order positions when such a path exists.
+The pi-ai native configuration producer keeps the original Schemastery validation error and its message for local diagnostics, and attaches the first schema issue with a path whose dictionary keys use their input-order positions when such a path exists. Composition resolution and stored settings use the same validation.
 
-Desktop and DesktopHost project the first structured issue found along an error cause or AggregateError chain. They expose only string or number path segments and a string rule, without reading messages. Error types come from a fixed Error.name set; other names become `Error`.
+Desktop and DesktopHost project the first structured issue with a string rule found along an error cause or AggregateError chain; raw validator issues without a rule may name user dictionary keys and are ignored. They expose only string or number path segments and a string rule, without reading messages. Error types come from a fixed Error.name set; other names become `Error`.
 
 ## Alternatives considered
 
