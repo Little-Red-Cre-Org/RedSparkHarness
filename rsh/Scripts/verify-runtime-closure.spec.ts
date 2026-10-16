@@ -281,12 +281,26 @@ describe('verifyRuntimeClosure', () => {
       dependencies: Record<string, string>
       optionalDependencies: Record<string, string>
     }
-    delete cli.dependencies['@deepseek-ai/dsh-task-scheduler']
     cli.optionalDependencies['@deepseek-ai/dsh-task-scheduler'] = 'workspace:^'
     writeFileSync(cliPath, `${JSON.stringify(cli, null, 2)}\n`)
 
     const nativeAgentPath = workspacePaths.get('@deepseek-ai/dsh-native-agent')
     if (nativeAgentPath === undefined) throw new Error('native-agent fixture is missing')
+    writeFileSync(nativeAgentPath, `${JSON.stringify({
+      name: '@deepseek-ai/dsh-native-agent',
+      dependencies: { '@scope/required': 'workspace:^' },
+      optionalDependencies: { '@scope/required': 'workspace:^' },
+    }, null, 2)}\n`)
+    const duplicateResult = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
+    expect(duplicateResult.failures).toEqual(expect.arrayContaining([
+      expect.stringContaining('@deepseek-ai/dsh-task-scheduler is declared in both dependencies and optionalDependencies'),
+      expect.stringContaining('@deepseek-ai/dsh-native-agent -> @scope/required is declared in both dependencies and optionalDependencies'),
+    ]))
+
+    delete cli.dependencies['@deepseek-ai/dsh-task-scheduler']
+    cli.optionalDependencies['@deepseek-ai/dsh-task-scheduler'] = 'workspace:^'
+    writeFileSync(cliPath, `${JSON.stringify(cli, null, 2)}\n`)
+
     writeFileSync(nativeAgentPath, `${JSON.stringify({
       name: '@deepseek-ai/dsh-native-agent',
       peerDependencies: {

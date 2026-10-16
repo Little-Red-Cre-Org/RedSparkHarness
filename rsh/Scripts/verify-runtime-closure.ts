@@ -7,7 +7,6 @@ import { readFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { isCordisGroupEntry, loadCordisYaml } from './cordis-yaml.ts'
-import { OPTIONAL_NATIVE_HOST_PEERS } from './package-dependency-policy.ts'
 import { PACKAGE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 import {
   SHIPPED_NATIVE_PROFILES,
@@ -42,9 +41,12 @@ const NATIVE_CLI_ROOT_IMPORTS = [
   ['rsh/Programs/CLI/src/bin.ts', '@deepseek-ai/dsh-app-boot', '@deepseek-ai/dsh-launch-environment/layers'],
   ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@deepseek-ai/dsh-subprocess', '@deepseek-ai/dsh-subprocess/native'],
 ] as const
-/** Cordis peers required by compatibility roots in packages with Cordis-free Native subpaths. */
 const NATIVE_CLI_CORDIS_PEER_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
+  // Typert is a compatibility-only Cordis Service required by workspace-files' root entry.
+  // Native workspace routes import workspace-files/native-types and /native-helpers.
   '@deepseek-ai/dsh-typert-protocol': ['@deepseek-ai/cordis'],
+  // directory-picker is a compatibility-only Cordis Service required by directory-picker-native's root.
+  // The native controller imports directory-picker-native/native-picker.
   '@deepseek-ai/dsh-host-directory-picker': ['@deepseek-ai/cordis'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
@@ -79,6 +81,14 @@ export async function verifyRuntimeClosure(
   const queue: string[] = []
   const failures: string[] = []
 
+  if (target === 'native-cli') {
+    for (const dependency of Object.keys(runtimeDependencies).sort()) {
+      if (runtimeManifest.optionalDependencies?.[dependency] !== undefined) {
+        failures.push(`${runtimeName} -> ${dependency} is declared in both dependencies and optionalDependencies`)
+      }
+    }
+  }
+
   for (const dependency of Object.keys(runtimeDependencies).sort()) {
     if (target === 'native-cli' && isCordisPackage(dependency)) {
       failures.push(`${runtimeName} -> required Cordis dependency ${dependency}`)
@@ -105,6 +115,14 @@ export async function verifyRuntimeClosure(
     if (current === undefined) continue
     const peers = current.manifest.peerDependencies ?? {}
     const peerMeta = current.manifest.peerDependenciesMeta ?? {}
+    const dependencies = current.manifest.dependencies ?? {}
+    if (target === 'native-cli') {
+      for (const dependency of Object.keys(dependencies).sort()) {
+        if (current.manifest.optionalDependencies?.[dependency] !== undefined) {
+          failures.push(`${formatChain(runtimeName, packageName, parents)} -> ${dependency} is declared in both dependencies and optionalDependencies`)
+        }
+      }
+    }
     for (const peer of Object.keys(peers).sort()) {
       if (peerMeta[peer]?.optional === true) continue
       if (target === 'native-cli') {
@@ -113,16 +131,15 @@ export async function verifyRuntimeClosure(
           failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis peer ${peer}`)
           continue
         }
-        if (OPTIONAL_NATIVE_HOST_PEERS[packageName]?.includes(peer) === true) continue
       }
       if (!workspace.has(peer)) continue
       if (runtimeDependencies[peer]?.startsWith('workspace:') === true) continue
       failures.push(`${formatChain(runtimeName, packageName, parents)} -> ${peer}`)
     }
-    const dependencies = target === 'native-cli'
-      ? current.manifest.dependencies ?? {}
-      : { ...current.manifest.dependencies, ...current.manifest.optionalDependencies }
-    for (const dependency of Object.keys(dependencies).sort()) {
+    const packageDependencies = target === 'native-cli'
+      ? dependencies
+      : { ...dependencies, ...current.manifest.optionalDependencies }
+    for (const dependency of Object.keys(packageDependencies).sort()) {
       if (target === 'native-cli' && isCordisPackage(dependency)) {
         failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis dependency ${dependency}`)
         continue
