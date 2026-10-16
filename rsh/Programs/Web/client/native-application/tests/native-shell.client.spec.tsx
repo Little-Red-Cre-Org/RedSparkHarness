@@ -242,9 +242,21 @@ it.each([
   }
   const close = vi.fn(async () => undefined)
   const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
-  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal) => {
+  let turnStarted = false
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach) => {
+    turnStarted = true
     signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
-    return promptSettlement.promise
+    const detached = new Promise<never>((_resolve, reject) => {
+      detach?.addEventListener('abort', () => { reject(new Error('detached')) }, { once: true })
+    })
+    return Promise.race([promptSettlement.promise, detached])
+  })
+  const attach = vi.fn<NativeSessionClient['attach']>((id, _lastSeq, _observe, _signal, _onFollowError, detach) => {
+    if (id !== 'session-alpha' || !turnStarted) return Promise.resolve(undefined)
+    const detached = new Promise<never>((_resolve, reject) => {
+      detach?.addEventListener('abort', () => { reject(new Error('detached')) }, { once: true })
+    })
+    return Promise.race([promptSettlement.promise, detached])
   })
   let pendingMessages: NativePendingSubmission[] = []
   let inboxRevision = 0
@@ -344,7 +356,7 @@ it.each([
     selectPermissionPreset: vi.fn(async () => undefined),
     selectPreset: vi.fn(async () => undefined),
     submissions: vi.fn(async () => pendingSnapshot()),
-    prompt, queue, steer, dequeue, promoteSubmission, editSubmission,
+    prompt, attach, queue, steer, dequeue, promoteSubmission, editSubmission,
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
@@ -440,7 +452,8 @@ it.each([
       return { header: row.header, events: [], inheritedEventCount: 0 }
     })
     fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
-    fireEvent.click(alphaRow)
+    await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
     betaHistory.resolve(undefined)
     await waitFor(() => {
       expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
@@ -487,13 +500,16 @@ it.each([
 
     const messageInput = screen.getByRole('textbox', { name: 'Message' })
     fireEvent.change(messageInput, { target: { value: 'Start work' } })
+    await screen.findByRole('button', { name: 'Send' })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
-    const historyCallsBeforeBlockedSwitch = clientMock.history.mock.calls.length
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    expect(screen.getByText('This session is still generating a reply. Stop it or wait for it to finish before switching sessions.')).toBeTruthy()
-    expect(clientMock.history).toHaveBeenCalledTimes(historyCallsBeforeBlockedSwitch)
-    expect(messageInput).toHaveProperty('disabled', false)
+    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal)) })
+    expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
+    fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
+    await waitFor(() => { expect(attach).toHaveBeenCalledWith('session-alpha', -1, expect.any(Function),
+      expect.any(AbortSignal), expect.any(Function), expect.any(AbortSignal)) })
+    expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
     expect(messageInput).toHaveProperty('value', '')
     const validationJson = '[{"code":"too_big","maximum":10,"path":["prompt"],"message":"Too big"}]'
     queue.mockRejectedValueOnce(new Error(validationJson))
@@ -576,7 +592,6 @@ it.each([
     fireEvent.change(messageInput, { target: { value: 'Keep this next draft' } })
     promptSettlement.resolve({ exitCode: 0, answer: '' })
     await waitFor(() => { expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull() })
-    await waitFor(() => { expect(screen.queryByText('This session is still generating a reply. Stop it or wait for it to finish before switching sessions.')).toBeNull() })
     expect(messageInput).toHaveProperty('value', 'Keep this next draft')
 
     fireEvent.click(screen.getByRole('button', { name: 'Scheduled tasks' }))

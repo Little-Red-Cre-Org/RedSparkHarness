@@ -195,7 +195,6 @@ function NativeSessionBrowser({
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
   const [pendingSessionId, setPendingSessionId] = useState<NativeSessionId>()
-  const [switchNotice, setSwitchNotice] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<NativeWorkspaceId>()
   const [workspaceTitleDraft, setWorkspaceTitleDraft] = useState('')
@@ -229,7 +228,6 @@ function NativeSessionBrowser({
   const searchQuery = query.trim()
   useEffect(() => {
     if (snapshot.state !== 'ready') return
-    setSwitchNotice(false)
     if (pendingSessionId !== undefined) {
       setPendingSessionId(undefined)
       if (pendingSessionId !== snapshot.selected) {
@@ -298,14 +296,7 @@ function NativeSessionBrowser({
       return
     }
     if (id === snapshot.selected) return
-    if (snapshot.state === 'sending' || snapshot.state === 'cancelling') {
-      setSwitchNotice(true)
-      return
-    }
-    if (snapshot.state === 'ready') {
-      setSwitchNotice(false)
-      void selectSession(id)
-    }
+    void selectSession(id)
   }
   const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
     if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
@@ -527,8 +518,6 @@ function NativeSessionBrowser({
       </>}
     />
     {actionError !== undefined && <div role="alert">{actionError}</div>}
-    {switchNotice && (snapshot.state === 'sending' || snapshot.state === 'cancelling')
-      && <div role="status">{t('session.switchPending')}</div>}
     <nav className={css.workspaceList} aria-label={t('workspace')} role="tree">
       {searchExpanded && searchQuery !== '' ? <>
         {currentSearch.status === 'loading' && <WorkspaceSectionEmpty label={t('search.pending')} />}

@@ -40,7 +40,7 @@ export interface NativeConversationLimits {
   readonly maxLiveEvents: number
 }
 
-/** Own one interactive Session view; disposal detaches its turn waiter without cancelling Host work. */
+/** Own one interactive Session view; closing or switching away detaches its waiter without cancelling Host work. */
 export class NativeConversationController {
   private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading' }
   private readonly listeners = new Set<() => void>()
@@ -58,6 +58,7 @@ export class NativeConversationController {
     requestId: NativeSubmissionRequestId
   } | undefined
   private turn: AbortController | undefined
+  private turnDetach = new AbortController()
   private foregroundAdmission: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private followErrorOwner: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private closing: Promise<void> | undefined
@@ -149,8 +150,10 @@ export class NativeConversationController {
     ownsFromStart = true,
   ): Promise<void> {
     const turn = new AbortController()
+    const turnDetach = new AbortController()
     const admission = { sessionId: id, lastSeq }
     this.turn = turn
+    this.turnDetach = turnDetach
     if (ownsFromStart) {
       this.foregroundAdmission = admission
       this.followErrorOwner = admission
@@ -165,14 +168,17 @@ export class NativeConversationController {
           if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
             this.publish({ error: error instanceof Error ? error.message : String(error) })
           }
-        }, this.lifetime.signal)
+        }, AbortSignal.any([this.lifetime.signal, turnDetach.signal]))
       restoreAfter = result !== undefined
       if (result !== undefined && result.exitCode !== 0 && result.exitCode !== 130) {
         throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
       }
     } catch (error: unknown) {
-      turnFailed = true
-      throw error
+      if (!turnDetach.signal.aborted) {
+        turnFailed = true
+        throw error
+      }
+      restoreAfter = false
     } finally {
       if (this.foregroundAdmission === admission) this.foregroundAdmission = undefined
       if (this.turn === turn) this.turn = undefined
@@ -361,16 +367,22 @@ export class NativeConversationController {
     })
   }
 
-  /** Select a stored Session and reconstruct its durable transcript.
+  /** Select a stored Session and reconstruct its durable transcript, attaching to a running Host turn.
+   * Switching away detaches this view without cancelling that turn.
    * @param id - identity from the Host's index.
-   * @returns history completion; selection does not execute a turn.
+   * @returns history and any running-turn attachment completion.
    */
-  select(id: SessionId): Promise<void> {
+  async select(id: SessionId): Promise<void> {
+    if (this.snapshot.state === 'sending' || this.snapshot.state === 'cancelling') {
+      this.followErrorOwner = undefined
+      this.turnDetach.abort()
+      await Promise.allSettled([...this.pending])
+    }
     this.assertReady()
     this.followErrorOwner = undefined
     this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
-    return this.run(() => this.restore(id))
+    await this.run(() => this.restore(id))
   }
 
   /** Clear the selected Session and its conversation projection.
@@ -515,7 +527,7 @@ export class NativeConversationController {
   /** Send human text through the Host's sole turn executor.
    * @param text - nonempty submitted text.
    * @param files - browser-selected raster files; Provider limits govern admission.
-   * @returns completion after Host settlement and durable transcript refresh.
+   * @returns completion after Host settlement and transcript refresh, or after this view detaches.
    */
   send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
@@ -650,7 +662,7 @@ export class NativeConversationController {
     return work
   }
 
-  /** Request cancellation; readiness is published only by the settled send operation. */
+  /** Stop the selected Host turn; readiness is published only by the settled send operation. */
   cancel(): void {
     if (this.turn === undefined) return
     this.publish({ state: 'cancelling' })
