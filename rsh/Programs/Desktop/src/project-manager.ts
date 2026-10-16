@@ -322,6 +322,13 @@ const desktopCarrierProvider = {
   resolve: () => () => {},
 } as unknown as NativePlugin
 
+class NativeHostPreflightError extends Error {
+  constructor(readonly diagnostic?: NativeDesktopOperationFailure['diagnostic']) {
+    super('Native Host preflight failed')
+    this.name = 'NativeHostPreflightError'
+  }
+}
+
 async function validateHostInFreshWorker(profile: NativeProfileConfig, rows: readonly NativeSelectedRow[],
   profileProviders: NativeResolvedComposition['profileProviders'], supportRows: readonly NativeSelectedRow[]): Promise<void> {
   const root = profile.scopes.find(scope => scope.parent === undefined)
@@ -369,8 +376,7 @@ async function validateHostInFreshWorker(profile: NativeProfileConfig, rows: rea
     worker.once('message', (reply: NativeHostPreflightReply) => {
       received = true
       if (reply.valid) resolve()
-      else reject(new Error(reply.message ?? 'Native Host preflight failed',
-        reply.cause === undefined ? undefined : { cause: new Error(reply.cause) }))
+      else reject(new NativeHostPreflightError(reply.diagnostic))
     })
     worker.once('error', (reason) => {
       if (received) return
@@ -385,6 +391,10 @@ async function validateHostInFreshWorker(profile: NativeProfileConfig, rows: rea
   })
   try { await result }
   finally { await worker.terminate() }
+}
+
+function preflightDiagnostic(error: unknown): NativeDesktopOperationFailure['diagnostic'] {
+  return error instanceof NativeHostPreflightError ? error.diagnostic : undefined
 }
 
 interface NativeCandidate {
@@ -1073,13 +1083,15 @@ export class DesktopProjectManager {
           try { await validateNativeComposition(next.files, this.paths.profile, this.runtime.dsh,
             this.currentRuntime(), dirname(this.paths.root)) }
           catch (error: unknown) {
-            throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, next.blockedBy, error)
+            throw new NativeDesktopOperationFailure('dependency-conflict', false, undefined, next.blockedBy,
+              preflightDiagnostic(error))
           }
         } else {
           try { await validateNativeComposition(files, this.paths.profile, this.runtime.dsh,
             this.currentRuntime(), dirname(this.paths.root)) }
           catch (error: unknown) {
-            throw new NativeDesktopOperationFailure('profile-invalid', false, undefined, undefined, error)
+            throw new NativeDesktopOperationFailure('profile-invalid', false, undefined, undefined,
+              preflightDiagnostic(error))
           }
         }
         const profilePath = join(this.paths.profile, 'rsh.profile.json')
@@ -1246,20 +1258,13 @@ export class DesktopProjectManager {
 
   private nativeError(failure: NativeDesktopOperationFailure, state: DesktopBackendState) {
     const profileRecovery = existsSync(this.pendingPackages) || (state.phase === 'error' && state.profileRecovery)
-    const original = failure.cause
-    const detail = original instanceof Error ? original.message : undefined
-    const cause = original instanceof Error && original.cause !== undefined
-      ? original.cause instanceof Error ? original.cause.message
-        : typeof original.cause === 'string' ? original.cause : undefined
-      : undefined
     return {
       code: failure.code,
       messageKey: nativeErrorMessageKeys[failure.code],
       backend: backendProjection(state, profileRecovery),
       ...failure.currentRevision === undefined ? {} : { currentRevision: failure.currentRevision },
       ...failure.blockedBy === undefined ? {} : { blockedBy: failure.blockedBy },
-      ...detail === undefined ? {} : { detail },
-      ...cause === undefined ? {} : { cause },
+      ...failure.diagnostic === undefined ? {} : { diagnostic: failure.diagnostic },
     }
   }
 

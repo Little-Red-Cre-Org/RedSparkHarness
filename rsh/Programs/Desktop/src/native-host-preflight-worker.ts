@@ -3,6 +3,7 @@ import { parentPort, workerData } from 'node:worker_threads'
 import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
 import { NativeScope, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { pathToFileURL } from 'node:url'
+import type { NativeDesktopValidationDiagnostic } from './native-module-management.ts'
 import type { NativeHostPreflightInput, NativeHostPreflightReply } from './native-host-preflight-types.ts'
 
 const port = parentPort
@@ -11,14 +12,27 @@ if (port === null) throw new Error('desktop native Host preflight requires a wor
 void validate().then(
   () => { port.postMessage({ valid: true } satisfies NativeHostPreflightReply) },
   (reason: unknown) => {
-    const cause = reason instanceof Error ? reason.cause : undefined
+    const diagnostic = validationDiagnostic(reason)
     port.postMessage({
       valid: false,
-      message: reason instanceof Error ? reason.message : 'native Host preflight failed',
-      ...cause instanceof Error ? { cause: cause.message } : typeof cause === 'string' ? { cause } : {},
+      ...diagnostic === undefined ? {} : { diagnostic },
     } satisfies NativeHostPreflightReply)
   },
 )
+
+/** Project the first structured validation issue without reading its message or other fields. */
+function validationDiagnostic(reason: unknown): NativeDesktopValidationDiagnostic | undefined {
+  if (!(reason instanceof Error) || !('issues' in reason) || !Array.isArray(reason.issues)) return undefined
+  const issue: unknown = reason.issues[0]
+  if (typeof issue !== 'object' || issue === null || !('path' in issue) || !('rule' in issue)) return undefined
+  const path = issue.path
+  const rule = issue.rule
+  if (!Array.isArray(path) || typeof rule !== 'string'
+    || !path.every((part: unknown): part is string | number => typeof part === 'string' || typeof part === 'number')) {
+    return undefined
+  }
+  return { path: path.join('.'), rule }
+}
 
 async function validate(): Promise<void> {
   const input = workerData as NativeHostPreflightInput

@@ -254,8 +254,7 @@ async function main() {
     const result = message(outcome.status === 'refused' ? 'nativeRefused' : 'nativeRecoveryRequired', { reason })
       + (blocked ? ` (${blocked})` : '')
     return [result,
-      error.detail === undefined ? undefined : message('nativeOperationDetail', { detail: error.detail }),
-      error.cause === undefined ? undefined : message('nativeOperationCause', { cause: error.cause }),
+      error.diagnostic === undefined ? undefined : message('nativeValidationDiagnostic', error.diagnostic),
     ].filter(value => value !== undefined).join('\n')
   }
 

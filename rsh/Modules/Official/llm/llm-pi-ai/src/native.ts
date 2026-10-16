@@ -68,6 +68,7 @@ export const plugin: NativePlugin = {
       if (key !== 'providers') throw new Error(`llm-pi-ai: unknown native configuration field ${key}`)
     }
     const base = Config(input)
+    resolveProfiles(base.providers, 'deferred')
     return async (context) => {
       const credentials = context.require('credentials')
       const environment = context.require('launchEnvironment')

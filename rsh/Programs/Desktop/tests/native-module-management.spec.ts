@@ -3,6 +3,7 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, expect, it } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
@@ -94,6 +95,17 @@ function prepareNativePackages(profile: string): void {
   writeNativePackage(profile, '@fixture/client-app', ['client'], ['clientState'], ['clientApplication'])
   writeNativePackage(profile, '@fixture/client-renderer', ['client'], [], ['clientRenderer'], '1.0.0', [],
     'void document.createElement("div")\n')
+}
+
+function writePiAiNativePackage(profile: string): void {
+  const packageDir = fileURLToPath(new URL('../../../Modules/Official/llm/llm-pi-ai/', import.meta.url))
+  const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as Record<string, unknown>
+  manifest.version = '1.0.0'
+  const directory = join(profile, 'node_modules/@deepseek-ai/dsh-llm-pi-ai')
+  mkdirSync(join(directory, 'lib'), { recursive: true })
+  writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest))
+  writeFileSync(join(directory, 'lib/native.js'),
+    `export { plugin } from ${JSON.stringify(pathToFileURL(join(packageDir, 'src/native.ts')).href)}\n`)
 }
 
 function writeNativePnpm(root: string): string {
@@ -286,30 +298,36 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   } })
   expect(readFileSync(hostProfilePath, 'utf8')).toBe(requiredHostBefore)
   expect(readFileSync(clientProfilePath, 'utf8')).toBe(requiredClientBefore)
+  const fakeToken = 'native-desktop-fake-token'
   const preflightFixture = prepareFixture(fixtureRoot())
   await preflightFixture.manager.applyRelease()
   writeNativeProfile(preflightFixture.profile, [...initialHostRows,
-    { id: 'throwing-host', plugin: '@fixture/throwing-host', disabled: true },
+    { id: 'pi-ai-invalid-header', plugin: '@deepseek-ai/dsh-llm-pi-ai', disabled: true, config: {
+      providers: { gateway: {
+        api: 'openai-completions', baseURL: 'https://gateway.invalid/v1',
+        models: [{ id: 'test-model', name: 'Test Model' }],
+        headers: { [`Authorization: Bearer ${fakeToken}`]: 'value' },
+      } },
+    } },
   ], initialClientRows)
   prepareNativePackages(preflightFixture.profile)
-  writeNativePackage(preflightFixture.profile, '@fixture/throwing-host', ['host'], [], [])
-  writeFileSync(join(preflightFixture.profile, 'node_modules/@fixture/throwing-host/native.js'),
-    'export const plugin = { apiVersion: 1, name: "@fixture/throwing-host", targets: ["host"], requires: [], provides: [], resolve() { throw new Error("preflight failed", { cause: new Error("fixture cause") }) } }\n')
+  writePiAiNativePackage(preflightFixture.profile)
   const preflightInventory = await preflightFixture.manager.listNativeModules(ready)
   expect(preflightInventory.status).toBe('listed')
   if (preflightInventory.status !== 'listed') return
-  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@fixture/throwing-host')
-    ?.installations[0]).toMatchObject({ id: 'throwing-host', canEnable: true })
+  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-llm-pi-ai')
+    ?.installations[0]).toMatchObject({ id: 'pi-ai-invalid-header', canEnable: true })
   const preflightHostBefore = readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')
   const preflightClientBefore = readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')
   const preflightLifecycle = { stop: 0, start: 0 }
   const preflightRefusal = await preflightFixture.manager.mutateNativeModules({ type: 'toggle', request: {
     expectedRevision: preflightInventory.inventory.revision,
-    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('throwing-host') }, enabled: true,
+    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('pi-ai-invalid-header') }, enabled: true,
   } }, hooks(preflightLifecycle), ready)
-  expect(preflightRefusal).toMatchObject({ status: 'refused', error: {
-    code: 'dependency-conflict', detail: 'preflight failed', cause: 'fixture cause',
-  } })
+  expect(JSON.stringify(preflightRefusal)).not.toContain(fakeToken)
+  expect(preflightRefusal).toMatchObject({ status: 'refused', error: { code: 'dependency-conflict' } })
+  if (preflightRefusal.status !== 'refused') return
+  expect(preflightRefusal.error.diagnostic).toEqual({ path: 'providers.0.headers.0', rule: 'valid-fetch-header' })
   expect(preflightLifecycle).toEqual({ stop: 0, start: 0 })
   expect(readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')).toBe(preflightHostBefore)
   expect(readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')).toBe(preflightClientBefore)
