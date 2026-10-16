@@ -103,7 +103,7 @@ export function PluginInventoryTab({ actions, t, active }: {
         </button>
       </p> : null}
       {!hasEntries ? <p className={css.status}>{t('settingsPluginListEmpty')}</p> : null}
-      {hasEntries && groups.length === 0 ? <p className={css.status}>{t('settingsPluginListEmptySearch')}</p> : null}
+      {hasEntries && groups.length === 0 && normalizedQuery.length > 0 ? <p className={css.status}>{t('settingsPluginListEmptySearch')}</p> : null}
       {groups.map(([scope, entries]) => {
         const open = normalizedQuery.length > 0 || !collapsedScopes.has(scope)
         const groupId = `${id}-scope-${encodeURIComponent(scope)}`

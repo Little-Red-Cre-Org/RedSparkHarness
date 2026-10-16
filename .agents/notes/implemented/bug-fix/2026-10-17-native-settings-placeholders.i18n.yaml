@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-17-native-settings-placeholders.md
-2026-10-17-native-settings-placeholders.md: 64c8630009a6450de407ea5ff2ab0bc18b5b6ba1
-2026-10-17-native-settings-placeholders.zh.md: bd0498e96406af97f9c6605f98e625c591c82cbf
+2026-10-17-native-settings-placeholders.md: 5f63dc8fcf370c33955a89ceb0c26d6930412c04
+2026-10-17-native-settings-placeholders.zh.md: 402a2504b2f1f2798be9ed9e9857586b310be0b5

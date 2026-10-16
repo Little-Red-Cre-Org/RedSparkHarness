@@ -1949,7 +1949,7 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     actions: { ...actions, settingsDescribe: vi.fn(async () => settingsDescription([row()])), settingsMutate: fallbackMutate },
     t: localeKey => en[localeKey],
   })
-  expect(await screen.findByText(en.busySendPreferenceUnavailable)).toBeTruthy()
+  expect(await screen.findByText(en.busySendPreferenceHostGap)).toBeTruthy()
   expect(screen.getByText(en.settingsBusyEnterSteer)).toBeTruthy()
   expect(screen.queryByRole('combobox', { name: en.settingsBusyEnter })).toBeNull()
   expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')

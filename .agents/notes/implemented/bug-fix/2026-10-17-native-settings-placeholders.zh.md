@@ -12,7 +12,7 @@ Status: implemented
 
 - **N25：**`native-sidebar-settings.tsx` 不再列出“任务中心”；native Host 没有任务中心 API，该页无法显示真实数据。侧边栏定时任务空状态（`ui-sidebar` 的 `NativeScheduledTasksPanel`）新增提示：在会话中让 Agent 创建，并给出示例。native Agent 带有 `schedule_create` 工具，所以这条提示描述的是可用的路径。
 - **N26：**`agent-presets` 缺失时，`AgentPresetsSection` 用一条中性说明取代开关区块：新会话使用标为默认的预设，仍可查看和复制预设。此时就绪卡片不再变灰。状态为 `needs-migration` 或 `invalid` 的预设移入折叠的“暂不可用的预设（N）”`<details>` 分组，附简短说明，使用中性或警告标记，不再显示红框。
-- **N27：**没有 `ui-conversation` 时，繁忙发送行不再显示禁用的下拉框，而是以文字显示当前生效的值，说明改为 Host 不保存此偏好。“高级设置”改名为“开发者选项”，折叠摘要说明其中是原始 JSON 覆盖、schema 和凭据引用。
+- **N27：**Settings 读取成功但没有 `ui-conversation` 时，繁忙发送行不再显示禁用的下拉框，而是以文字显示当前生效的值，说明改为 Host 不保存此偏好；读取中或读取失败时仍显示禁用的下拉框和读取失败提示。“高级设置”改名为“开发者选项”，折叠摘要说明其中是原始 JSON 覆盖、schema 和凭据引用。
 - **N28：**确认缺少 namespace（已加载、未在刷新、上次读取成功）的插件卡片显示为静态卡片，内嵌“当前 Host 暂不支持配置此插件。”，不显示展开箭头。插件列表按短包名把 `native-*` 和 `storage-*` 插件折叠到“显示/折叠”链接之后，并显示数量；搜索时列出全部匹配项。只读说明改为 Host 暂不支持开关插件。
 
 ## Alternatives considered

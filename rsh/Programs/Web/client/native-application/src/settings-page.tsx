@@ -618,6 +618,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const transcript = namespaces.find(row => row.namespace === 'ui-chat')
   const conversation = namespaces.find(row => row.namespace === 'ui-conversation')
   const pet = namespaces.find(row => row.namespace === 'ui-pet')
+  // Only a completed, successful describe without ui-conversation proves the Host lacks the preference.
+  const busySendHostGap = conversation === undefined && limits !== undefined && !loading && error === undefined
   const selectBusyEnter = (value: BusyEnterBehavior): void => {
     if (conversation === undefined) return
     void mutateField(conversation, ['busyEnter'], value)
@@ -702,10 +704,12 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     <div className={css.row}>
       <div className={css.rowText}><div className={css.title}>{t('settingsBusyEnter')}</div>
         <div className={css.description}>{t('settingsBusyEnterDescription')}</div>
-        {conversation === undefined ? <div className={css.description} role="status">{t('busySendPreferenceUnavailable')}</div> : null}</div>
-      {conversation === undefined ? <span className={css.fixedValue}>
+        {conversation === undefined ? <div className={css.description} role="status">
+          {t(busySendHostGap ? 'busySendPreferenceHostGap' : 'busySendPreferenceUnavailable')}</div> : null}</div>
+      {busySendHostGap ? <span className={css.fixedValue}>
         {t(pendingDefault === 'steer' ? 'settingsBusyEnterSteer' : 'settingsBusyEnterQueue')}
-      </span> : <select aria-label={t('settingsBusyEnter')} value={pendingDefault} disabled={saving !== undefined}
+      </span> : <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
+        disabled={saving !== undefined || conversation === undefined}
         onChange={(event) => { selectBusyEnter(event.target.value as BusyEnterBehavior) }}>
         <option value="queue">{t('settingsBusyEnterQueue')}</option>
         <option value="steer">{t('settingsBusyEnterSteer')}</option>
