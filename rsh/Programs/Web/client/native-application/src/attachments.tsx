@@ -213,8 +213,9 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
           event.currentTarget.value = ''
         }}
       />
-      <button type="button" className={css.picker} disabled={disabled} onClick={() => { inputRef.current?.click() }}>
-        {t('images')}
+      <button type="button" className={css.picker} disabled={disabled} title={t('attachImage')}
+        aria-label={t('attachImage')} onClick={() => { inputRef.current?.click() }}>
+        <span aria-hidden>+</span>
       </button>
       {railItems.length > 0 && <div className={css.rail}>
         <AttachmentRail

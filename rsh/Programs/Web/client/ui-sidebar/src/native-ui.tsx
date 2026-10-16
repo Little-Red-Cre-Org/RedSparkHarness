@@ -972,7 +972,7 @@ export const plugin: NativePlugin = {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
           }
         },
-        selectSession: controller.select.bind(controller),
+        selectSession: async (id) => { layout.collapseNarrow(); await controller.select(id) },
         deselectSession: controller.deselect.bind(controller),
         beginNavigation: controller.beginNavigation.bind(controller),
         isCurrentNavigation: controller.isCurrentNavigation.bind(controller),

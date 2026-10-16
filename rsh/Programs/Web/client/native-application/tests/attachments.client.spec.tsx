@@ -26,6 +26,7 @@ const limits: NonNullable<NativeModelControls['images']> = {
 
 const messages: Record<string, string> = {
   images: 'Add images',
+  attachImage: 'Add image',
   image: 'Image',
   imageLoading: 'Loading image…',
   imageLoadFailed: 'Image failed to load; retry',
