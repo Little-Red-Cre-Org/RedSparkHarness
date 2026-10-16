@@ -76,13 +76,15 @@ function discoveryAbortError(signal: AbortSignal | undefined, requestSignal: Abo
 interface CodexModelEntry {
   slug?: unknown
   display_name?: unknown
+  context_window?: unknown
   visibility?: unknown
 }
 
-/** Model fields guaranteed by the public Sign in with ChatGPT catalog. */
+/** Model fields returned by the public Sign in with ChatGPT catalog. */
 export interface CodexDiscoveredModel {
   readonly id: string
   readonly name: string
+  readonly contextWindow?: number
 }
 
 /** Capacity fields nested by enriched model-directory replies. */
@@ -351,9 +353,11 @@ export async function fetchCodexModels(
     if (entry.visibility !== 'list') continue
     const id = label(entry.slug)
     if (id === undefined) continue
+    const contextWindow = capacity(entry.context_window)
     models.push({
       id,
       name: label(entry.display_name) ?? id,
+      ...contextWindow === undefined ? {} : { contextWindow },
     })
   }
   return models
@@ -384,6 +388,7 @@ async function discoverCodexModels(
   return (await fetchCodexModels(token, signal)).map(model => ({
     id: model.id,
     name: model.name,
+    ...model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow },
   }))
 }
 

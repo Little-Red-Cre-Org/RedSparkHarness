@@ -90,7 +90,7 @@ import { NativeWebModels } from './models.ts'
 import { NativeWebSettingsEvents } from './settings-events.ts'
 import { NativeSessionListFeed } from './session-list-follow.ts'
 import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@deepseek-ai/dsh-client-native-session/list-types'
-import { NativeWebWorkspaceService } from './workspaces.ts'
+import { NativeWebWorkspaceService, resolveNativeWorkspaceTrustSettings, type NativeWorkspaceTrustSettings } from './workspaces.ts'
 import { NativeWebDirectoryService } from './directories.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -2194,6 +2194,10 @@ export const plugin: NativePlugin = {
         'agent-default-model', {}, resolveDefaultModelSettings,
       )
       if (defaultSettings !== undefined) context.own(() => { defaultSettings.dispose() })
+      const workspaceTrustSettings = settings?.register<'workspace-trust', NativeWorkspaceTrustSettings>(
+        'workspace-trust', { paths: [] }, resolveNativeWorkspaceTrustSettings,
+      )
+      if (workspaceTrustSettings !== undefined) context.own(() => { workspaceTrustSettings.dispose() })
       const readDefaultModel = () => defaultModelSelection(defaultSettings)
       const executor = createNativeHeadlessApplication(context, turn, context.scope, {
         execution: context.require('sessionExecution'), active: context.require('activeSessions'),
@@ -2213,7 +2217,8 @@ export const plugin: NativePlugin = {
       context.own(() => settingsEvents.close())
       const workspaceService = new NativeWebWorkspaceService(context, workspaceRegistry, executor,
         context.require('sessionPersistence'), context.require('activeSessions'),
-        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), config.maxHistoryEvents, config.maxFollowers)
+        config.rootRouteId ?? brandString<NativeRootRouteId>('root'), workspaceTrustSettings,
+        config.maxHistoryEvents, config.maxFollowers)
       context.own(() => workspaceService.close())
       const directoryService = new NativeWebDirectoryService(context.signal)
       let defaultModelInitialization: Promise<void> | undefined

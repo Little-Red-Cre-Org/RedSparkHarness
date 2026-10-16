@@ -6,11 +6,13 @@ import { expect, it } from 'vitest'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { FsTargetKey } from '@deepseek-ai/dsh-fs/native'
 import type { NativeRootRoute, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
 import { WorkspaceId, type Workspace } from '@deepseek-ai/dsh-workspace-definition'
 import { NativeWorkspaceRoutes } from '../src/workspace-routes.ts'
 
-async function fixture() {
+async function fixture(outsidePolicyRoot = false) {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-workspace-routes-'))
+  const policyRoot = outsidePolicyRoot ? await mkdtemp(join(tmpdir(), 'rsh-workspace-policy-')) : directory
   const workspaceId = WorkspaceId('workspace')
   const workspace: Workspace = {
     id: workspaceId,
@@ -28,7 +30,7 @@ async function fixture() {
   const baseId = brandString<NativeRootRouteId>('base')
   const base: NativeRootRoute = {
     id: baseId,
-    configuration: { cwd: directory, provider: 'test', model: 'test', systemPrompt: '', maxSteps: 1 },
+    configuration: { cwd: policyRoot, provider: 'test', model: 'test', systemPrompt: '', maxSteps: 1 },
   }
   const routes = new NativeWorkspaceRoutes(base, { maxRoutes: 1, allowedRoots: [directory] }, {
     get: id => id === workspace.id ? workspace : undefined,
@@ -36,8 +38,9 @@ async function fixture() {
   }, {
     resolve: async path => ({ targetKey: FsTargetKey(path), displayPath: path }),
     processPath: target => target.displayPath,
-    sandboxMode: undefined,
-  }, undefined, new AbortController().signal, () => false)
+    sandboxMode: outsidePolicyRoot ? 'workspace-write' : undefined,
+  }, outsidePolicyRoot ? new NativeSandboxPolicy({ mode: 'workspace-write', workspaceRoot: policyRoot }) : undefined,
+  new AbortController().signal, () => false)
   const route = await routes.select(baseId, workspaceId, new AbortController().signal)
   return {
     baseId,
@@ -48,6 +51,7 @@ async function fixture() {
     async close() {
       await routes.close()
       await rm(directory, { recursive: true, force: true })
+      if (policyRoot !== directory) await rm(policyRoot, { recursive: true, force: true })
     },
   }
 }
@@ -87,6 +91,15 @@ it('keeps a route selected and selectable when retirement fails', async () => {
     expect(state.routes.resolve(state.route.id)).toBe(state.route)
     await expect(state.routes.select(state.baseId, state.workspaceId, new AbortController().signal))
       .resolves.toBe(state.route)
+  } finally {
+    await state.close()
+  }
+})
+
+it('admits an allowed Workspace outside a confined policy root', async () => {
+  const state = await fixture(true)
+  try {
+    expect(state.route.configuration.cwd).toBe(state.directory)
   } finally {
     await state.close()
   }

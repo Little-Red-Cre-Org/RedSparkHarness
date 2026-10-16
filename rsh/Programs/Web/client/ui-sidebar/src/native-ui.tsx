@@ -12,6 +12,7 @@ import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
+import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
 }
@@ -61,10 +62,10 @@ type NativeWorkspacesInjected = {
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
-  selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
+  selectWorkspace: (id: NativeWorkspaceId, trust?: boolean) => Promise<void>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
-  createWorkspace: (path: string) => Promise<void>
+  createWorkspace: (path: string, trust?: boolean) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
@@ -170,11 +171,11 @@ function NativeSessionBrowser({
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
-  selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
+  selectWorkspace: (id: NativeWorkspaceId, trust?: boolean) => Promise<void>
   useHomeDirectory: SnapshotSelectorHook<string | undefined>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
-  createWorkspace: (path: string) => Promise<void>
+  createWorkspace: (path: string, trust?: boolean) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
@@ -203,6 +204,8 @@ function NativeSessionBrowser({
   const [directoryPickerOpen, setDirectoryPickerOpen] = useState(false)
   const [directoryPickerBusy, setDirectoryPickerBusy] = useState(false)
   const [directoryPickerError, setDirectoryPickerError] = useState<string>()
+  const [workspaceTrustPrompt, setWorkspaceTrustPrompt] = useState<{ path: string; retry: () => Promise<void> }>()
+  const [workspaceTrustPending, setWorkspaceTrustPending] = useState(false)
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
   const searchInput = useRef<HTMLInputElement>(null)
@@ -248,6 +251,30 @@ function NativeSessionBrowser({
   }, [searchExpanded, searchQuery, searchSessions, archived, sessionItems, workspaceItems, t])
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
+  }
+  const requestWorkspaceTrust = (error: unknown, retry: () => Promise<void>): boolean => {
+    if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
+    const path = 'path' in error.details ? error.details.path : undefined
+    if (typeof path !== 'string') return false
+    setDirectoryPickerOpen(false)
+    setWorkspaceTrustPrompt({ path, retry })
+    return true
+  }
+  const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
+    setActionError(undefined)
+    void action().catch((error: unknown) => {
+      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(errorMessage(error))
+    })
+  }
+  const confirmWorkspaceTrust = (): void => {
+    if (workspaceTrustPrompt === undefined || workspaceTrustPending) return
+    setWorkspaceTrustPending(true)
+    void workspaceTrustPrompt.retry().then(() => {
+      setWorkspaceTrustPrompt(undefined)
+    }).catch((error: unknown) => {
+      setWorkspaceTrustPrompt(undefined)
+      setActionError(errorMessage(error))
+    }).finally(() => { setWorkspaceTrustPending(false) })
   }
   const addWorkspaceAction = <Tooltip label={t('addWorkspace')} delayMs={500} disabled={wide}>
     <button type="button" className={css.workspaceHeaderButton} aria-label={t('addWorkspace')}
@@ -324,7 +351,7 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      setDirectoryPickerError(errorMessage(error))
+      if (!requestWorkspaceTrust(error, () => createWorkspace(path, true))) setDirectoryPickerError(errorMessage(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {
@@ -340,19 +367,39 @@ function NativeSessionBrowser({
   const currentSearch = searchState.query === searchQuery
     ? searchState
     : { query: searchQuery, status: 'loading' as const, items: [] }
-  if (!wide) return <WorkspaceSectionHeader
-    wide={false}
-    label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
-    searchExpanded={searchExpanded}
-    query={query}
-    maxLength={500}
-    searchLabel={t('search')}
-    searchAriaLabel={t('searchAria')}
-    placeholder={t('searchPlaceholder')}
-    clearLabel={t('search')}
-    actions={addWorkspaceAction}
-    onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
-  />
+  const workspaceTrustDialog = workspaceTrustPrompt === undefined ? null : <Modal
+    open
+    title={t('workspaceTrustTitle')}
+    description={t('workspaceTrustBody')}
+    closeLabel={t('close')}
+    onClose={() => { if (!workspaceTrustPending) setWorkspaceTrustPrompt(undefined) }}
+    footer={<>
+      <Button variant="outline" disabled={workspaceTrustPending} onClick={() => { setWorkspaceTrustPrompt(undefined) }}>
+        {t('cancel')}
+      </Button>
+      <Button variant="primary" disabled={workspaceTrustPending} onClick={confirmWorkspaceTrust}>
+        {t('workspaceTrust')}
+      </Button>
+    </>}
+  >
+    <code>{workspaceTrustPrompt.path}</code>
+  </Modal>
+  if (!wide) return <>
+    <WorkspaceSectionHeader
+      wide={false}
+      label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
+      searchExpanded={searchExpanded}
+      query={query}
+      maxLength={500}
+      searchLabel={t('search')}
+      searchAriaLabel={t('searchAria')}
+      placeholder={t('searchPlaceholder')}
+      clearLabel={t('search')}
+      actions={addWorkspaceAction}
+      onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
+    />
+    {workspaceTrustDialog}
+  </>
   return <div className={css.workspaceBrowser}>
     <WorkspaceSectionHeader
       wide={wide}
@@ -442,14 +489,14 @@ function NativeSessionBrowser({
                     else next.add(group.key)
                     return next
                   })
-                  if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+                  if (workspaceId !== undefined && snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
                 }} onCreate={workspaceId === undefined ? undefined : () => {
                   setCollapsedGroups((current) => {
                     const next = new Set(current)
                     next.delete(group.key)
                     return next
                   })
-                  if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+                  if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
                 }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
                 {order !== 'manual' || workspaceId === undefined ? null
                   : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
@@ -504,6 +551,7 @@ function NativeSessionBrowser({
       ownerError={directoryPickerError}
       t={t}
     />
+    {workspaceTrustDialog}
   </div>
 }
 
@@ -749,15 +797,19 @@ export const plugin: NativePlugin = {
         refreshTitle: controller.refreshTitle.bind(controller),
         searchSessions: nativeSession.search.bind(nativeSession),
         archiveSession: id => nativeSession.archive(id, context.signal),
-        selectWorkspace: async (id) => {
-          const { sessionId } = await workspaceClient.connectWorkspace(id, context.signal)
+        selectWorkspace: async (id, trust) => {
+          const { sessionId } = trust === undefined
+            ? await workspaceClient.connectWorkspace(id, context.signal)
+            : await workspaceClient.connectWorkspace(id, context.signal, trust)
           await controller.select(sessionId)
         },
         listDirectory,
         createDirectory: (path, name) => directoryPicker.createDirectory(path, name, context.signal),
-        createWorkspace: async (path) => {
-          const { workspace } = await workspaceClient.create({ path }, context.signal)
-          const { sessionId } = await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
+        createWorkspace: async (path, trust) => {
+          const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
+          const { sessionId } = trust === undefined
+            ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
+            : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
           await controller.select(sessionId)
         },
         renameWorkspace: (id, title) => workspaceClient.rename(id, title, context.signal),
