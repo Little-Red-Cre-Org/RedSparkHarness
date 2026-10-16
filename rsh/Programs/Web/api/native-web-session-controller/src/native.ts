@@ -6,8 +6,9 @@ import { open, opendir, readdir, readlink, realpath, stat } from 'node:fs/promis
 import { posix, relative, sep, win32 } from 'node:path'
 import type { FileHandle } from 'node:fs/promises'
 import { TextDecoder } from 'node:util'
-import { z } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
+import schemastery from '@deepseek-ai/schemastery'
+import { z } from 'zod'
 import { NativeSessionFeed } from './follow.ts'
 import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult, NativeSubmissionPromotionResult,
   NativeSubmissionsSnapshot, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
@@ -542,6 +543,10 @@ interface NativeDefaultModelSettings {
   readonly model?: string
 }
 
+interface NativeUiConversationSettings {
+  readonly busyEnter: 'queue' | 'steer'
+}
+
 function resolveDefaultModelSettings(value: NativeSettingsSection): NativeDefaultModelSettings {
   for (const key of Object.keys(value)) {
     if (!['provider', 'model'].includes(key)) throw new TypeError(`agent-default-model: unknown field "${key}"`)
@@ -552,6 +557,21 @@ function resolveDefaultModelSettings(value: NativeSettingsSection): NativeDefaul
     throw new TypeError('agent-default-model: provider and model must be nonempty strings')
   }
   return { provider, model }
+}
+
+const nativeUiConversationSettingsSchema = schemastery.object({
+  busyEnter: schemastery.union(['queue', 'steer'] as const).default('queue'),
+})
+
+function resolveUiConversationSettings(value: NativeSettingsSection): NativeUiConversationSettings {
+  for (const key of Object.keys(value)) {
+    if (key !== 'busyEnter') throw new TypeError(`ui-conversation: unknown field "${key}"`)
+  }
+  const { busyEnter } = value
+  if (busyEnter !== 'queue' && busyEnter !== 'steer') {
+    throw new TypeError('ui-conversation: busyEnter must be "queue" or "steer"')
+  }
+  return { busyEnter }
 }
 
 function defaultModelSelection(settings: NativeSettingsScope<NativeDefaultModelSettings> | undefined): Pick<ModelSelection, 'provider' | 'model'> | undefined {
@@ -2281,6 +2301,11 @@ export const plugin: NativePlugin = {
         'agent-default-model', {}, resolveDefaultModelSettings,
       )
       if (defaultSettings !== undefined) context.own(() => { defaultSettings.dispose() })
+      const conversationSettings = settings?.register<'ui-conversation', NativeUiConversationSettings>(
+        'ui-conversation', { busyEnter: 'queue' }, resolveUiConversationSettings, undefined,
+        { schema: nativeUiConversationSettingsSchema, applies: 'live' },
+      )
+      if (conversationSettings !== undefined) context.own(() => { conversationSettings.dispose() })
       const workspaceTrustSettings = settings?.register<'workspace-trust', NativeWorkspaceTrustSettings>(
         'workspace-trust', { paths: [] }, resolveNativeWorkspaceTrustSettings,
       )
