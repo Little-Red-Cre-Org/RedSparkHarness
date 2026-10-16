@@ -73,10 +73,15 @@ export class NativeConversationController {
    * @returns immutable view snapshot, stable until an operation publishes a change. */
   readonly getSnapshot = (): ConversationSnapshot => this.snapshot
 
-  /** Reserve the next navigation token. */
+  /** Reserve the next navigation token.
+   * @returns next navigation token.
+   */
   beginNavigation(): number { return ++this.navigation }
 
-  /** Check whether a navigation token is still current. */
+  /** Check whether a navigation token is still current.
+   * @param token - navigation token to check.
+   * @returns whether the token is current.
+   */
   isCurrentNavigation(token: number): boolean { return token === this.navigation }
 
   /** Observe view changes.
