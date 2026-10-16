@@ -34,6 +34,8 @@ kind: "package-reference"
 
 Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、基于 Host 已安装 Agent 预设的模式选择器、权限选择器，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。模式选择器在 Host 不允许选择或首轮锁定后会禁用。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限选择器。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。空白 Session 上下文行显示所选 Session 的工作区标签或禁用占位符。切换工作区仍由侧边栏处理。Native 页面不提供命令补全或消息反馈。
 
+恢复所选 Session 时，控制器会携带最近加载的事件序号调用 `session/attach`。如果 Host 轮次仍在运行，控制器会保留发送中和停止状态，恢复实时跟随，并接收待处理的审批或问题。停止会取消轮次；页面卸载只会断开本地流和结算等待。
+
 本页面拥有运行中轮次时，Composer 可继续输入文字：Enter 或排队将消息加入下一轮，插话将消息加入下一模型步骤，Shift+Enter 换行。待处理消息来自 Host submissions 快照，位于输入框上方，使用紧凑单行预览。右侧依次提供全文展开/折叠、文字编辑、改为插话和删除操作。拖拽排序尚缺 Host 契约，当前不可用。修改保留 requestId，等待 Host 确认后刷新收件箱；失败保留草稿。刷新拒绝旧事件前缀和过期会话选择的响应。轮次结算会保留为后续提交输入的文字。排队和插话暂仅支持文字，使用前需移除所选附件；已提供行内文字编辑，含附件时禁用编辑；侧边栏仍沿用运行中禁止切换会话的限制。
 
 当所选 Session 的已加载历史包含当前 goal 时，composer 堆栈会显示其目标、持久 phase 和已准入轮次进度，包括已完成的 goal。此条带为只读，也不显示进程本地 activation。
@@ -54,7 +56,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 
 <a id="invariants"></a>
 
-带有 `canAllowSession: true` 的审批在允许一次和拒绝旁提供会话动作；其精确可复用范围由 Host 拥有。通用关闭和计划讨论通过 `cancel-questions` 取消整个待答问题批次，同时保持该轮活动。问题卡保留标题、详情、选项、多选和自定义文本。提交失败会保留请求并重新启用控件；只有捕获的同一会话和展示才能接收回答错误或释放提交锁。Host 移除帧负责清除 prompt。整轮取消仍是独立操作，并等待 Host 结算。重载恢复持久决策与工具结果，不恢复过期待答展示。
+带有 `canAllowSession: true` 的审批在允许一次和拒绝旁提供会话动作；其精确可复用范围由 Host 拥有。通用关闭和计划讨论通过 `cancel-questions` 取消整个待答问题批次，同时保持该轮活动。问题卡保留标题、详情、选项、多选和自定义文本。提交失败会保留请求并重新启用控件；只有捕获的同一会话和展示才能接收回答错误或释放提交锁。Host 移除帧负责清除 prompt。整轮取消仍是独立操作，并等待 Host 结算。重载会附着活动轮次并重放仍待处理的展示；已完成的 Session 会恢复持久决策与工具结果。
 
 图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
 
@@ -68,6 +70,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 ## 开发备注
 
 生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；共享展示归属见[聊天展示决策](../../../../../.agents/notes/implemented/architecture/2026-10-12-shared-chat-presentation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)；提供方编辑与订阅行见[原生 Models 决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.zh.md)；Agent 预设的详情与文件夹操作见[原生 Web Agent 预设管理决策](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.zh.md)。
+
 
 Native 审批与问题限制见 [Native human interaction 决策](../../../../../.agents/notes/implemented/feature/2026-10-12-native-human-interactions.zh.md)；事件投影与持久化轮次计时见 [Native Trajectory 决策](../../../../../.agents/notes/implemented/bug-fix/2026-10-12-native-trajectory-turns.zh.md)。
 

@@ -11057,6 +11057,9 @@ importers:
       '@deepseek-ai/dsh-workspace-definition':
         specifier: workspace:^
         version: link:../../../../Engine/workspace/workspace-definition
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11097,9 +11100,6 @@ importers:
       '@deepseek-ai/dsh-webhook-github':
         specifier: workspace:^
         version: link:../../../../Modules/Official/webhook/webhook-github
-      '@deepseek-ai/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
 
   rsh/Programs/Web/api/remotes:
     dependencies:
