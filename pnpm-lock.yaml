@@ -9664,6 +9664,9 @@ importers:
       '@deepseek-ai/dsh-native-tui':
         specifier: workspace:^
         version: link:../TUI/native-tui
+      '@deepseek-ai/dsh-native-web-assets':
+        specifier: workspace:^
+        version: link:../Web/host/native-web-assets
       '@deepseek-ai/dsh-native-web-host':
         specifier: workspace:^
         version: link:../Web/host/native-web-host

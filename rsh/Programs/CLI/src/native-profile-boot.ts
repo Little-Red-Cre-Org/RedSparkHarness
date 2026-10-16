@@ -3,9 +3,12 @@ import { watch, type FSWatcher } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { NativeApplication, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { installProxyFromEnvironment } from '@deepseek-ai/dsh-http-proxy'
+import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { loadNativeProfile, replaceNativeProfile } from './native-profile-loader.ts'
+import { loadNativeProfile, readNativeProfile, refuseLegacyPatch, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
+import { migrateNativeLegacyConfig } from './native-legacy-config.ts'
 import { createProcessShutdown } from './process-shutdown.ts'
 
 const SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
@@ -42,21 +45,37 @@ function isNativeRunAdmissionInterruption(error: unknown): boolean {
   )
 }
 
-/** Launch the selected native application and await complete host teardown. */
+/** Check legacy launch configuration, migrate supported settings, then launch a native application.
+ * The global proxy stays installed until the Host has stopped.
+ * @param options - selected profile, ordered JSON patches, app arguments, and optional Harness home.
+ * @returns completion after application exit and complete Host teardown.
+ * @throws when legacy configuration is unsupported or native profile startup fails.
+ */
 export async function runNativeProfile(options: {
   profile: string
   patchFiles: readonly string[]
   args: readonly string[]
   home?: string
 }): Promise<void> {
-  let application: NativeApplication | undefined
   const home = options.home ?? resolveDshHome()
+  const environment = loadLayeredEnv('dsh')
+  const profileDirectory = join(home, 'profiles', options.profile)
+  refuseLegacyPatch(join(profileDirectory, 'cordis.yml'))
+  const profile = readNativeProfile({ profile: options.profile, patchFiles: options.patchFiles, home })
+  await migrateNativeLegacyConfig({ profileName: options.profile,
+    installAnchor: fileURLToPath(import.meta.url), home, profile, patchFiles: options.patchFiles, environment })
+  const live = nativeProfileReloadMode(options.profile, home) === 'live'
+  let application: NativeApplication | undefined
   const onApplication = (selected: NativeApplication): void => { application = selected }
   let carrier: { readonly plugin: NativePlugin; readonly scope: string } | undefined
   if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
     const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
     carrier = { plugin, scope: 'root' }
   }
+  const disposeProxy = await installProxyFromEnvironment(environment,
+    (message) => { process.stderr.write(`dsh: ${message}\n`) })
+  let proxyDisposal: Promise<void> | undefined
+  const releaseProxy = (): Promise<void> => proxyDisposal ??= disposeProxy()
   let loaded = await loadNativeProfile({
     profile: options.profile,
     patchFiles: options.patchFiles,
@@ -64,10 +83,13 @@ export async function runNativeProfile(options: {
     installAnchor: fileURLToPath(import.meta.url),
     onApplication,
     home,
+    environment,
     ...(carrier === undefined ? {} : { carrier }),
+  }).catch(async (error: unknown) => {
+    await releaseProxy()
+    throw error
   })
   const { host } = loaded
-  const live = nativeProfileReloadMode(options.profile, home) === 'live'
   let stopping = false
   let reloadPending = false
   let reloadBusy = false
@@ -84,6 +106,7 @@ export async function runNativeProfile(options: {
     const stopped = host.stop()
     await reloadWork
     await stopped
+    await releaseProxy()
   })
   const rejectCandidate = (error: unknown): void => {
     process.stderr.write(`dsh: native profile reload rejected: ${error instanceof Error ? error.message : String(error)}\n`)
@@ -95,6 +118,7 @@ export async function runNativeProfile(options: {
       candidate = await loadNativeProfile({
         profile: options.profile, patchFiles: options.patchFiles, target: 'host',
         installAnchor: fileURLToPath(import.meta.url), home, previous: loaded, onApplication,
+        environment,
         ...(carrier === undefined ? {} : { carrier }),
       })
     } catch (error) {
@@ -180,7 +204,11 @@ export async function runNativeProfile(options: {
     process.removeListener('SIGINT', onInterrupt)
     stopping = true
     closeWatchers()
-    await reloadWork
-    await host.stop()
+    try {
+      await reloadWork
+      await host.stop()
+    } finally {
+      await releaseProxy()
+    }
   }
 }

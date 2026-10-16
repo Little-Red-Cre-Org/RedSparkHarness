@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-17-native-profile-runtime-and-legacy-settings.md
+2026-10-17-native-profile-runtime-and-legacy-settings.md: b8a083129e8ebed8a6ffa2a6ed4266c036366d12
+2026-10-17-native-profile-runtime-and-legacy-settings.zh.md: b9e6bc9aa4d3a6feed31b85e77dd4d7daa7ea6d9

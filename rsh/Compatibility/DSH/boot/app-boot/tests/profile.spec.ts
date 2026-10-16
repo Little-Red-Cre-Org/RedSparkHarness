@@ -192,6 +192,7 @@ describe('loadProfile', () => {
     const dir = join(tmp(), 'managed', 'desktop')
     initProfile(dir, ['bundle-a'])
     const profile = loadProfileDirectory('managed app', dir, anchor)
+    expect(readProfileManifest('managed app', dir).dsh?.profile?.runtime).toBe('legacy')
     expect(profile.dir).toBe(dir)
     expect(profile.name).toBe('desktop')
     expect(profile.layers.map(layer => layer.packageName)).toEqual(['bundle-a'])
@@ -275,6 +276,7 @@ describe('loadProfile', () => {
     writeProfileManifest(stock, retiredManifest)
     loadProfile('t', 'headless', anchor, home)
     expect(readProfileManifest('t', stock).dsh?.profile).toEqual({
+      runtime: 'legacy',
       bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
       patchReload: 'startup',
     })

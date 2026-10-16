@@ -23,7 +23,8 @@ function record(value: unknown, label: string, allowed: readonly string[]): Reco
 /**
  * Read the runtime marker from one profile package manifest.
  * @param profileDir - directory containing the profile's package.json.
- * @returns the validated profile runtime and configuration reload mode.
+ * @returns the validated profile runtime and configuration reload mode; a missing manifest retains legacy initialization.
+ * @throws when an existing manifest lacks both a valid native marker and a legacy `bundles` array, or combines incompatible fields.
  */
 export function resolveDshProfileDirectoryExecution(profileDir: string): DshProfileExecution {
   const manifestPath = join(profileDir, 'package.json')
@@ -32,14 +33,23 @@ export function resolveDshProfileDirectoryExecution(profileDir: string): DshProf
   const dsh = manifest.dsh === undefined ? {} : object(manifest.dsh, 'profile dsh')
   const profile = dsh.profile === undefined ? {} : record(dsh.profile, 'dsh.profile', ['bundles', 'patchReload', 'runtime', 'config', 'configReload'])
   if (profile.runtime === undefined) {
-    if (profile.config !== undefined || profile.configReload !== undefined) throw new Error('dsh.profile.config/configReload requires runtime native')
+    if (profile.config !== undefined || profile.configReload !== undefined) {
+      throw new Error(`profile ${profileDir} has no dsh.profile.runtime; declare "runtime": "native" with "config": "rsh.profile.json", or use "bundles": [...] without native config; see rsh/Docs/native-config-migration.md`)
+    }
+    if (Array.isArray(profile.bundles)) return { runtime: 'legacy', reload: 'startup' }
+    throw new Error(`profile ${profileDir} must declare "runtime": "native" with "config": "rsh.profile.json", or "bundles": [...]; see rsh/Docs/native-config-migration.md`)
+  }
+  if (profile.runtime === 'legacy') {
+    if (profile.config !== undefined || profile.configReload !== undefined) {
+      throw new Error('dsh.profile.runtime legacy cannot declare config or configReload; see rsh/Docs/native-config-migration.md')
+    }
     return { runtime: 'legacy', reload: 'startup' }
   }
   if (profile.runtime !== 'native' || profile.config !== 'rsh.profile.json') {
     throw new Error('dsh.profile.runtime/config must select native and rsh.profile.json')
   }
   if (profile.bundles !== undefined || profile.patchReload !== undefined) {
-    throw new Error('native profile cannot declare Cordis bundles or patchReload')
+    throw new Error('native profile cannot declare Cordis bundles or patchReload; see rsh/Docs/native-config-migration.md')
   }
   if (profile.configReload !== undefined && profile.configReload !== 'startup' && profile.configReload !== 'live') {
     throw new Error('dsh.profile.configReload must be startup or live')
