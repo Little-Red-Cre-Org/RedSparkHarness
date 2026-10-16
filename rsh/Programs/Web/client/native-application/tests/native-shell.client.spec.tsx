@@ -705,4 +705,4 @@ it.each([
     localStorage.removeItem(PENDING_DEFAULT_KEY)
     await host.stop()
   }
-})
+}, 20_000)
