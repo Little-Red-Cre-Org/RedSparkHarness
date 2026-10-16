@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
@@ -454,6 +454,19 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Move session Alpha down' }))
     expect(await screen.findByText('Order refused')).toBeTruthy()
     expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Move session Alpha down' })).toHaveProperty('disabled', false) })
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+    const betaDragRow = workspaceRows.getByRole('treeitem', { name: /Beta/ })
+    const alphaDropRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
+    vi.spyOn(alphaDropRow, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 2 } as DOMRect)
+    fireEvent.dragStart(betaDragRow, { dataTransfer })
+    const dragOver = createEvent.dragOver(alphaDropRow, { dataTransfer })
+    Object.defineProperty(dragOver, 'clientY', { value: 0 })
+    fireEvent(alphaDropRow, dragOver)
+    const drop = createEvent.drop(alphaDropRow, { dataTransfer })
+    Object.defineProperty(drop, 'clientY', { value: 0 })
+    fireEvent(alphaDropRow, drop)
+    await waitFor(() => { expect(reorderSession).toHaveBeenLastCalledWith(workspaceId, 'session-beta', 'session-alpha', expect.any(AbortSignal)) })
 
     fireEvent.click(alphaRow)
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })

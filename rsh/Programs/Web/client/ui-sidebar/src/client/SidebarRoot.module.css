@@ -557,6 +557,14 @@
   margin-top: 4px;
 }
 
+.workspaceDropBefore {
+  border-top: 2px solid var(--dsw-alias-border-l3);
+}
+
+.workspaceDropAfter {
+  border-bottom: 2px solid var(--dsw-alias-border-l3);
+}
+
 .workspaceHeaderButton {
   flex: none;
   display: inline-flex;
@@ -665,6 +673,14 @@
 .orderControls {
   display: flex;
   flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.orderedRow:hover .orderControls,
+.orderedRow:focus-within .orderControls {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .orderControls button {

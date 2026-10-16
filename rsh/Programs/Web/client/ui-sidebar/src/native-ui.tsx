@@ -47,6 +47,9 @@ type NativeSidebarTranslate = TranslateNS<'nativeSidebar'>
 type NativeSessionId = Parameters<NativeConversationService['select']>[0]
 type NativeWorkspaceId = NativeWorkspace['workspaceId']
 type NativeSessionGroup = WorkspaceGroupRow<NativeWorkspaceId, NativeSessionId>
+type NativeOrderDrag =
+  | { kind: 'session'; workspaceId: NativeWorkspaceId; id: NativeSessionId; over?: { id: NativeSessionId; half: 'before' | 'after' } }
+  | { kind: 'workspace'; id: NativeWorkspaceId; over?: { id: NativeWorkspaceId; half: 'before' | 'after' } }
 interface NativeWorkspaceSnapshot extends NativeWorkspaceBaseline {
   readonly ready: boolean
 }
@@ -207,6 +210,7 @@ function NativeSessionBrowser({
   const [orderingPending, setOrderingPending] = useState(false)
   const [order, setOrder] = useState<'updated' | 'manual'>('updated')
   const [groupBy, setGroupBy] = useState<'workspace' | 'flat'>('workspace')
+  const [drag, setDrag] = useState<NativeOrderDrag>()
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
   const [directoryPickerOpen, setDirectoryPickerOpen] = useState(false)
   const [directoryPickerBusy, setDirectoryPickerBusy] = useState(false)
@@ -333,6 +337,24 @@ function NativeSessionBrowser({
   const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false,
     group?: NativeSessionGroup, index = 0) => {
     const item = sessionItems.get(session.id)
+    const workspaceId = group?.workspaceId
+    const dragProps = order !== 'manual' || group === undefined || workspaceId === undefined ? undefined : {
+      active: drag?.kind === 'session' && drag.workspaceId === workspaceId,
+      marker: drag?.kind === 'session' && drag.over?.id === session.id ? drag.over.half : null,
+      start: () => setDrag({ kind: 'session', workspaceId, id: session.id }),
+      hover: (half: 'before' | 'after') => setDrag(current => current?.kind === 'session'
+        ? { ...current, over: { id: session.id, half } } : current),
+      drop: (half: 'before' | 'after') => {
+        if (drag?.kind !== 'session' || drag.id === session.id) { setDrag(undefined); return }
+        const remaining = group.sessions.filter(row => row.id !== drag.id)
+        const position = remaining.findIndex(row => row.id === session.id) + (half === 'after' ? 1 : 0)
+        if (position !== group.sessions.findIndex(row => row.id === drag.id)) {
+          runOrdering(() => reorderSession(drag.workspaceId, drag.id, remaining[position]?.id))
+        }
+        setDrag(undefined)
+      },
+      end: () => setDrag(undefined),
+    }
     return <div key={session.id}>
       <div className={css.orderedRow}>
         <SessionNodeItem
@@ -360,6 +382,7 @@ function NativeSessionBrowser({
               setActionError(errorMessage(error))
             }
           }}
+          drag={dragProps}
           flat={flat}
           refreshTitleLabel={t('refreshTitle')}
           t={t}
@@ -525,7 +548,30 @@ function NativeSessionBrowser({
                 setWorkspaceDeleteTarget({ id: workspaceId, title: group.label })
               },
             }
-            return <div className={css.workspaceGroup} key={group.key}>
+            const dropMarker = drag?.kind === 'workspace' && drag.over !== undefined && drag.over.id === workspaceId
+              ? drag.over.half === 'before' ? css.workspaceDropBefore : css.workspaceDropAfter : ''
+            return <div className={`${css.workspaceGroup} ${dropMarker}`} key={group.key}
+              onDragOver={order !== 'manual' || workspaceId === undefined ? undefined : (event) => {
+                if (drag?.kind !== 'workspace') return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = 'move'
+                const rect = event.currentTarget.getBoundingClientRect()
+                setDrag({ ...drag, over: { id: workspaceId, half: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after' } })
+              }}
+              onDrop={order !== 'manual' || workspaceId === undefined ? undefined : (event) => {
+                if (drag?.kind !== 'workspace') return
+                event.preventDefault()
+                if (drag.id !== workspaceId) {
+                  const remaining = registry.workspaces.filter(row => row.workspaceId !== drag.id)
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  const half = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                  const position = remaining.findIndex(row => row.workspaceId === workspaceId) + (half === 'after' ? 1 : 0)
+                  if (position !== registry.workspaces.findIndex(row => row.workspaceId === drag.id)) {
+                    runOrdering(() => reorderWorkspace(drag.id, remaining[position]?.workspaceId))
+                  }
+                }
+                setDrag(undefined)
+              }}>
               <div className={css.orderedRow}>
                 <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
                   setCollapsedGroups((current) => {
@@ -541,7 +587,11 @@ function NativeSessionBrowser({
                     return next
                   })
                   if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
-                }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
+                }} actions={workspaceActions} showCreate={workspaceId !== undefined}
+                drag={order !== 'manual' || workspaceId === undefined ? undefined : {
+                  start: () => setDrag({ kind: 'workspace', id: workspaceId }),
+                  end: () => setDrag(undefined),
+                }} t={t} />
                 {order !== 'manual' || workspaceId === undefined ? null
                   : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
                     registry.workspaces.length, (up) => {
