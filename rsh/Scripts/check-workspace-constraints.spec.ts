@@ -217,6 +217,36 @@ describe('dsh family version coherence', () => {
 })
 
 describe('Cordis peer classification', () => {
+  it.each([
+    {
+      name: 'application distribution and ordinary schema dependency',
+      manifests: [
+        { dir: 'rsh/Programs/CLI', manifest: { name: '@deepseek-ai/dsh' } },
+        {
+          dir: 'rsh/Programs/Web/api/native-web-session-controller',
+          manifest: {
+            name: '@deepseek-ai/dsh-native-web-session-controller',
+            dependencies: { '@deepseek-ai/schemastery': 'workspace:^' },
+          },
+        },
+      ],
+    },
+    {
+      name: 'registered compatibility-only optional Cordis peer',
+      manifests: [{
+        dir: 'rsh/Core/typert/protocol',
+        manifest: {
+          name: '@deepseek-ai/dsh-typert-protocol',
+          peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+          peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+          devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        },
+      }],
+    },
+  ] satisfies Array<{ name: string; manifests: WorkspaceManifest[] }>)('$name passes the library Cordis policy', ({ manifests }) => {
+    for (const manifest of manifests) expect(checkCordisPeerPolicy(manifest)).toEqual([])
+  })
+
   it('requires Cordis for compatibility-only packages', () => {
     expect(checkCordisPeerPolicy({
       dir: 'rsh/Engine/core/agent-loop',
@@ -306,6 +336,7 @@ describe('Cordis peer classification', () => {
       },
     })).toContain('@deepseek-ai/dsh-fs-local: mixed native package must mark the Cordis peer as optional')
   })
+
 })
 
 describe('package payload constraints', () => {

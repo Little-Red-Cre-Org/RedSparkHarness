@@ -48,7 +48,7 @@ export async function runCli(): Promise<void> {
       }
       requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-app-boot')
+      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-launch-environment/layers')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,

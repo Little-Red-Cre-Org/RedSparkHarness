@@ -33,6 +33,15 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'sidebar-right', plugin: '@deepseek-ai/dsh-client-ui-sidebar-right' },
 ] as const
 
+/**
+ * Return the browser Client rows written for a shipped native profile.
+ * @param profile - shipped native profile name.
+ * @returns the profile's Client installations, or an empty list without a Client composition.
+ */
+export function shippedNativeProfileClientComposition(profile: string): readonly { plugin: string }[] {
+  return profile === 'native-web' ? NATIVE_WEB_CLIENT_INSTALLATIONS : []
+}
+
 function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
   return [
     { id: 'workflow', plugin: '@deepseek-ai/dsh-workflow', scope: ROOT },
