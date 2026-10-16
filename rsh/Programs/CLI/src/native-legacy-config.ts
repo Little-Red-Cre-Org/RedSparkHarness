@@ -15,7 +15,7 @@ import {
 import {
   applyNativeProfilePatches, parseNativeProfileConfig, type NativeProfileConfig,
 } from './native-profile-config.ts'
-import { expandNativeProfilePresets } from './native-profile-loader.ts'
+import { expandNativeProfilePresets, nearestNativeProfileInstallation } from './native-profile-loader.ts'
 
 const MIGRATION_DOC = 'rsh/Docs/native-config-migration.md'
 const NATIVE_CLI = 'native CLI launch'
@@ -184,13 +184,14 @@ function nativeClientPath(profile: NativeProfileConfig): string | undefined {
   return join(resolve(projectDir), 'rsh.client.json')
 }
 
-function validateNativePreset(id: unknown, profile: NativeProfileConfig): void {
+function validateNativePreset(id: unknown, profile: NativeProfileConfig, target: Installation): void {
   if (typeof id !== 'string') throw new Error(`dsh: agent-presets.default must name a native preset; see ${MIGRATION_DOC}`)
-  const registered = profile.installations.some(row => row.plugin === AGENT_PRESET_STANDING && row.disabled !== true
+  const standings = profile.installations.filter(row => row.plugin === AGENT_PRESET_STANDING && row.disabled !== true
     && record(row.config)?.id === id)
+  const registered = standings.some(row => nearestNativeProfileInstallation(profile, row.scope, AGENT_PRESETS)?.id === target.id)
   if (registered) return
-  const presets = activeInstallation(profile.installations, AGENT_PRESETS)
-  const folders = record(presets?.config)?.folders as readonly NativePresetFolderSummary[] | undefined
+  if (standings.length > 0) throw new Error(`dsh: preset ${id} does not exist; see ${MIGRATION_DOC}`)
+  const folders = record(target.config)?.folders as readonly NativePresetFolderSummary[] | undefined
   const folder = folders?.find(candidate => candidate.id === id)
   if (folder?.status === 'needs-migration') {
     throw new Error(`dsh: preset ${id} still uses agent.cordis.yml; rewrite it as agent.native.json; see ${MIGRATION_DOC}`)
@@ -238,7 +239,7 @@ function applySettingsRules(options: {
       const target = activeInstallation(profile.installations, AGENT_PRESETS)
       const current = target === undefined ? { present: false, value: undefined } : targetValue(target, 'default')
       if (current.present && isDeepStrictEqual(current.value, old.value)) continue
-      validateNativePreset(old.value, profile)
+      if (target !== undefined) validateNativePreset(old.value, profile, target)
       migrate('profile', AGENT_PRESETS, 'default', old.value, old.value, setting)
       continue
     }

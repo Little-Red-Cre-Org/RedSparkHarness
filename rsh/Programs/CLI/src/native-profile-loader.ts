@@ -248,6 +248,22 @@ function scopeAncestry(profile: NativeProfileConfig, scopeId: string): string[] 
   return ancestry
 }
 
+/** Find the nearest active installation of a plugin visible from a profile scope.
+ * @param profile - expanded native profile composition.
+ * @param scopeId - scope where the consumer is installed.
+ * @param plugin - provider package to find.
+ * @returns the nearest active installation, or undefined when no ancestor installs it.
+ */
+export function nearestNativeProfileInstallation(profile: NativeProfileConfig, scopeId: string,
+  plugin: string): NativeProfileConfig['installations'][number] | undefined {
+  for (const scope of scopeAncestry(profile, scopeId)) {
+    const installation = profile.installations.find(row => row.scope === scope
+      && row.plugin === plugin && row.disabled !== true)
+    if (installation !== undefined) return installation
+  }
+  return undefined
+}
+
 /**
  * Derive child routes from the nearest visible pi-ai model Provider and validate child admission.
  * @param profile - selected native composition before child runtime activation.
