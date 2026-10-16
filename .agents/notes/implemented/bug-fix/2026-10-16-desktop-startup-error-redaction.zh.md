@@ -22,7 +22,7 @@ Desktop 与 DesktopHost 沿错误 cause 或 AggregateError 链查找首个带字
 
 ## 影响
 
-renderer 状态只含本地化错误类型、可选路径和 rule，以及本地日志路径。Desktop 会将启动和后端失败的原始详情（包括 Host stderr）追加写入 `app.getPath('logs')/desktop.log`，启动页和应急页都显示该路径。兼容插件重试会刷新后端状态，且仅在状态进入 `ready` 后报告完成。
+renderer 状态只含本地化错误类型、可选路径和 rule，以及本地日志路径。Desktop 会将启动和后端失败的原始详情（包括 Host stderr）追加写入 `app.getPath('logs')/desktop.log`；仅在写入成功时，renderer 状态和两个错误页才附带该路径，否则显示通用的本地日志提示。兼容插件重试会刷新后端状态，且仅在状态进入 `ready` 后报告完成。
 
 ## 验证
 

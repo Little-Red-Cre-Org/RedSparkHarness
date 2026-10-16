@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { runInContext } from 'node:vm'
+import { JSDOM } from 'jsdom'
 import { DESKTOP_IPC } from '../src/ipc.ts'
 import { resolveDesktopLocale } from '../src/locale.ts'
 import { startupFailureDocument } from '../src/startup-document.ts'
@@ -33,7 +35,9 @@ const harness = await vi.hoisted(async () => {
   let nativeMutationRecoveryGate: { readonly promise: Promise<void>; resolve(): void } | undefined
   let nativeMutationRecoveryWaiting = deferred()
   let autoReadyRecoveryHost = false
+  let failLogWrites = false
   let updateRestartWaiting = deferred()
+  let updateCheckState: unknown = { phase: 'idle' }
   let updateBeforeRestart: (() => Promise<void>) | undefined
   let updateAfterFailedRestart: (() => Promise<void>) | undefined
   const nativeMutations: unknown[] = []
@@ -118,6 +122,9 @@ const harness = await vi.hoisted(async () => {
   return {
     windows, hosts, handlers, app, FakeWindow, FakeHost, desktopPetClose, desktopPetUpdate, nativeMutations,
     quitPrevented, installUpdate,
+    updateLogError: undefined as ((label: string, error: unknown) => string | undefined) | undefined,
+    get updateCheckState() { return updateCheckState },
+    set updateCheckState(value: unknown) { updateCheckState = value },
     get applicationMenu() { return applicationMenu },
     setApplicationMenu(menu: unknown) { applicationMenu = menu },
     menuPopup: vi.fn(),
@@ -150,6 +157,8 @@ const harness = await vi.hoisted(async () => {
     },
     set autoReadyRecoveryHost(value: boolean) { autoReadyRecoveryHost = value },
     get updateRestartWaiting() { return updateRestartWaiting },
+    get failLogWrites() { return failLogWrites },
+    set failLogWrites(value: boolean) { failLogWrites = value },
     get updateBeforeRestart() { return updateBeforeRestart },
     get updateAfterFailedRestart() { return updateAfterFailedRestart },
     setUpdateCallbacks(beforeRestart: () => Promise<void>, afterFailedRestart: () => Promise<void>) {
@@ -169,6 +178,8 @@ const harness = await vi.hoisted(async () => {
       nativeMutationRecoveryComplete = false; nativeMutationRecoveryRestartError = ''
       nativeMutationRecoveryGate = undefined; nativeMutationRecoveryWaiting = deferred()
       autoReadyRecoveryHost = false
+      failLogWrites = false
+      updateCheckState = { phase: 'idle' }
       quitPrevented.length = 0; quitWasAllowed = false; quitWasAllowedAfterNativeRecovery = false
       updateBeforeRestart = undefined; updateAfterFailedRestart = undefined; updateRestartWaiting = deferred()
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
@@ -177,6 +188,16 @@ const harness = await vi.hoisted(async () => {
   }
 })
 
+vi.mock('node:fs', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...fs,
+    appendFileSync: (...args: Parameters<typeof fs.appendFileSync>) => {
+      if (harness.failLogWrites) throw Object.assign(new Error('Permission denied'), { code: 'EACCES' })
+      fs.appendFileSync(...args)
+    },
+  }
+})
 vi.mock('electron', () => ({
   app: harness.app,
   BrowserWindow: harness.FakeWindow,
@@ -256,7 +277,7 @@ vi.mock('../src/pet-window.ts', () => ({
 }))
 vi.mock('../src/update-coordinator.ts', () => ({
   DesktopUpdateCoordinator: class {
-    readonly check = vi.fn()
+    readonly check = vi.fn(async () => harness.updateCheckState)
     readonly install = async () => {
       const restart = harness.updateBeforeRestart?.()
       harness.updateRestartWaiting.resolve()
@@ -267,8 +288,12 @@ vi.mock('../src/update-coordinator.ts', () => ({
       _publish: unknown,
       beforeRestart: () => Promise<void>,
       afterFailedRestart: () => Promise<void>,
+      _updater: unknown,
+      _enabled: unknown,
+      logError: (label: string, error: unknown) => string | undefined,
     ) {
       harness.setUpdateCallbacks(beforeRestart, afterFailedRestart)
+      harness.updateLogError = logError
     }
   },
 }))
@@ -430,6 +455,59 @@ describe('desktop main startup', () => {
     expect(html).toContain('dsh-recovery://restart')
     expect(html).not.toContain('dsh-recovery://reset')
     expect(html).not.toContain('dsh-recovery://plugins')
+  })
+
+  it('uses generic diagnostics when the Desktop log cannot be written', async () => {
+    harness.failLogWrites = true
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.reject(new Error('backend startup failed'))
+    await harness.errorPublished.promise
+
+    const state = invoke(DESKTOP_IPC.backendStatus) as DesktopBackendState
+    expect(state).toMatchObject({ phase: 'error', errorType: 'Error' })
+    expect(state).not.toHaveProperty('logPath')
+    const messages = resolveDesktopLocale('en').messages
+    const writtenPath = messages.startupErrorLogWritten.replace('{path}', join(resources, 'desktop.log'))
+    const normalPage = new JSDOM(readFileSync(new URL('../renderer/startup.html', import.meta.url), 'utf8'), {
+      runScripts: 'outside-only',
+    })
+    Object.defineProperty(normalPage.window, 'dshDesktop', { value: {
+      protocolVersion: 1,
+      locale: async () => resolveDesktopLocale('en'),
+      backend: { status: async () => state, subscribe: () => () => {} },
+      disablePlugins: async () => {}, restart: async () => {}, resetConfiguration: async () => {},
+    } })
+    runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), normalPage.getInternalVMContext())
+    await vi.waitFor(() => {
+      expect(normalPage.window.document.querySelector('#error')?.textContent).toContain(messages.startupErrorLogAdvice)
+    })
+    const normalErrorText = normalPage.window.document.querySelector('#error')?.textContent ?? ''
+    expect(normalErrorText).not.toContain(writtenPath)
+    expect(normalErrorText).not.toContain(join(resources, 'desktop.log'))
+    normalPage.window.dispatchEvent(new normalPage.window.Event('pagehide'))
+    normalPage.window.close()
+
+    const window = harness.windows[0]!
+    window.webContents.emit('preload-error', {}, 'preload-app.cjs', new Error('preload unavailable'))
+    const emergencyPage = decodeURIComponent(window.urls.at(-1)!)
+    expect(emergencyPage).toContain(messages.startupErrorLogAdvice)
+    expect(emergencyPage).not.toContain(writtenPath)
+    expect(emergencyPage).not.toContain(join(resources, 'desktop.log'))
+
+    // Derive the update state from the logger main.ts hands to the coordinator, so a failed write must drop the path.
+    const updateLogPath = harness.updateLogError?.('Desktop update failed', new TypeError('update failed'))
+    expect(updateLogPath).toBeUndefined()
+    harness.updateCheckState = { phase: 'error', errorType: 'TypeError', ...(updateLogPath === undefined ? {} : { logPath: updateLogPath }) }
+    const menu = harness.applicationMenu as { items: Array<{ submenu?: Array<{ click?: () => void }> }> }
+    menu.items[0]?.submenu?.[1]?.click?.()
+    await vi.waitFor(() => {
+      expect(harness.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
+        title: messages.updateCheckFailedTitle,
+        message: messages.startupErrorType.replace('{type}', messages.startupTypeTypeError),
+        detail: messages.startupErrorLogAdvice,
+      }))
+    })
   })
 
   it('reloads a crashed startup renderer in the same window', async () => {
@@ -656,7 +734,7 @@ describe('desktop main startup', () => {
     await firstHost.stopping.promise
     harness.installUpdate.mockImplementationOnce(async () => {
       await harness.updateAfterFailedRestart?.()
-      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
+      return { phase: 'error', version: '1.1.0', errorType: 'Error' }
     })
     const installing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
     await harness.updateRestartWaiting.promise
@@ -689,7 +767,7 @@ describe('desktop main startup', () => {
 
     harness.installUpdate.mockImplementationOnce(async () => {
       await harness.updateAfterFailedRestart?.()
-      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
+      return { phase: 'error', version: '1.1.0', errorType: 'Error' }
     })
     const closing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
     await harness.hosts[2]!.stopping.promise

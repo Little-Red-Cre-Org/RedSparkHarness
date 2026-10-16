@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { app } from 'electron'
 import electronUpdater, { type AppUpdater } from 'electron-updater'
 import type { DesktopUpdateState } from './ipc.ts'
+import { desktopErrorState } from './startup-error.ts'
 const { autoUpdater } = electronUpdater
 
 /** Checks, downloads, and installs one complete Desktop release. */
@@ -19,6 +20,7 @@ export class DesktopUpdateCoordinator {
    * @param afterFailedRestart - restore the application after an installation handoff fails.
    * @param updater - Electron artifact updater; replaceable for tests.
    * @param enabled - whether this packaged process carries updater configuration.
+   * @param logError - persist raw update failures and return the log path when writing succeeds.
    */
   constructor(
     private readonly publish: (state: DesktopUpdateState) => DesktopUpdateState,
@@ -28,6 +30,10 @@ export class DesktopUpdateCoordinator {
     private readonly enabled: () => boolean = () => (
       app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml'))
     ),
+    private readonly logError: (label: string, error: unknown) => string | undefined = (label, error) => {
+      console.error(label, error)
+      return undefined
+    },
   ) {
     this.updater.autoDownload = false
     this.updater.autoInstallOnAppQuit = false
@@ -66,10 +72,7 @@ export class DesktopUpdateCoordinator {
         : this.publish({ phase: 'available', version })
     } catch (error) {
       this.availableVersion = undefined
-      return this.publish({
-        phase: 'error',
-        message: error instanceof Error ? error.message : String(error),
-      })
+      return this.failed(error)
     }
   }
 
@@ -82,11 +85,7 @@ export class DesktopUpdateCoordinator {
     try {
       await this.updater.downloadUpdate()
     } catch (error) {
-      return this.publish({
-        phase: 'error',
-        version,
-        message: error instanceof Error ? error.message : String(error),
-      })
+      return this.failed(error, version)
     }
     this.availableVersion = undefined
     const ready = this.publish({ phase: 'ready', version })
@@ -138,16 +137,22 @@ export class DesktopUpdateCoordinator {
 
   private async failedRestart(version: string, error: unknown): Promise<DesktopUpdateState> {
     this.availableVersion = version
-    let message = error instanceof Error ? error.message : String(error)
+    let failure = error
     try {
       await this.afterFailedRestart()
     } catch (recoveryError) {
-      message += `; ${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`
+      failure = new AggregateError([error, recoveryError], 'Desktop update and recovery failed')
     }
+    return this.failed(failure, version)
+  }
+
+  private failed(error: unknown, version?: string): DesktopUpdateState {
+    const logPath = this.logError('Desktop update failed', error)
     return this.publish({
       phase: 'error',
-      version,
-      message,
+      ...(version === undefined ? {} : { version }),
+      errorType: desktopErrorState(error).errorType,
+      ...(logPath === undefined ? {} : { logPath }),
     })
   }
 }

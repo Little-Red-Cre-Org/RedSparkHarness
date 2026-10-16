@@ -22,7 +22,7 @@ Desktop and DesktopHost project the first structured issue with a string rule fo
 
 ## Consequences
 
-Renderer state contains a localized error type, optional path and rule, and the local log path. Desktop appends raw startup and backend failures, including Host stderr, to `app.getPath('logs')/desktop.log`, and both the startup page and the emergency page show that path. Legacy plugin retries refresh backend state and report completion only after it reaches `ready`.
+Renderer state contains a localized error type, optional path and rule, and the local log path. Desktop appends raw startup and backend failures, including Host stderr, to `app.getPath('logs')/desktop.log`; renderer state and both error pages include that path only when the write succeeds, and otherwise show generic local-log advice. Legacy plugin retries refresh backend state and report completion only after it reaches `ready`.
 
 ## Verification
 
