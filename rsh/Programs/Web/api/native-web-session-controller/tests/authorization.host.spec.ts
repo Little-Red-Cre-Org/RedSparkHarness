@@ -155,7 +155,7 @@ it.each([
     const describedSettings = await nativeRpcHandler!('settings/describe', {}, new AbortController().signal)
     expect(describedSettings).toMatchObject({ ok: true, value: { namespaces: expect.arrayContaining([
       expect.objectContaining({ namespace: 'ui-conversation', value: { busyEnter: 'queue' }, revision: 0 }),
-    ]) } })
+    ]) as unknown } })
     const changedConversation = await nativeRpcHandler!('settings/mutate', {
       ns: 'ui-conversation', ops: [{ op: 'set', path: ['busyEnter'], value: 'steer' }], expectedRevision: 0,
     }, new AbortController().signal)
