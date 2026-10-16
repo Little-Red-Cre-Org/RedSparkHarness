@@ -10,9 +10,8 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem,
+  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem, NativeSessionRpcError,
 } from '@deepseek-ai/dsh-client-native-session/native'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
 }
@@ -57,7 +56,7 @@ type NativeWorkspacesInjected = {
     homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
-  selectSession: NativeConversationService['select']
+  selectSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -155,6 +154,12 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** Match native RPC refusals by code: a source run can load a second NativeSessionRpcError class, so instanceof is unreliable. */
+function rpcRefusal(error: unknown, code: string): Partial<NativeSessionRpcError> | undefined {
+  const refusal = error as Partial<NativeSessionRpcError> | null | undefined
+  return refusal?.code === code ? refusal : undefined
+}
+
 const SEARCH_DEBOUNCE_MS = 250
 
 function NativeSessionBrowser({
@@ -166,7 +171,7 @@ function NativeSessionBrowser({
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
   displayTitle: NativeSessionPresentation['displayTitle']
-  selectSession: NativeConversationService['select']
+  selectSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -252,9 +257,11 @@ function NativeSessionBrowser({
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
+  const workspaceError = (error: unknown): string =>
+    rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
   const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
-    if (!(error instanceof NativeSessionRpcError) || error.code !== 'native/workspace-untrusted') return false
-    const path = 'path' in error.details ? error.details.path : undefined
+    const details = rpcRefusal(error, 'native/workspace-untrusted')?.details
+    const path = details !== undefined && 'path' in details ? details.path : undefined
     if (typeof path !== 'string') return false
     setDirectoryPickerOpen(false)
     setWorkspaceTrustPrompt({ path, retry: () => retry(path) })
@@ -263,7 +270,7 @@ function NativeSessionBrowser({
   const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
     setActionError(undefined)
     void action().catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(errorMessage(error))
+      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(workspaceError(error))
     })
   }
   const confirmWorkspaceTrust = (): void => {
@@ -273,7 +280,7 @@ function NativeSessionBrowser({
       setWorkspaceTrustPrompt(undefined)
     }).catch((error: unknown) => {
       setWorkspaceTrustPrompt(undefined)
-      setActionError(errorMessage(error))
+      setActionError(workspaceError(error))
     }).finally(() => { setWorkspaceTrustPending(false) })
   }
   const addWorkspaceAction = <Tooltip label={t('addWorkspace')} delayMs={500} disabled={wide}>
@@ -310,7 +317,7 @@ function NativeSessionBrowser({
           node={session}
           currentId={snapshot.selected}
           now={Date.now()}
-          onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
+          onOpen={(id) => { if (snapshot.state === 'ready') runWorkspaceAction(trust => selectSession(id, trust)) }}
           onRename={item?.titleActions?.rename === true
             ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
             : undefined}
@@ -351,7 +358,7 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true))) setDirectoryPickerError(errorMessage(error))
+      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true))) setDirectoryPickerError(workspaceError(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {
@@ -384,6 +391,16 @@ function NativeSessionBrowser({
   >
     <code>{workspaceTrustPrompt.path}</code>
   </Modal>
+  const directoryBrowser = <DirectoryBrowser
+    open={directoryPickerOpen}
+    listDirectory={listDirectory}
+    createDirectory={createDirectory}
+    onOpen={adoptWorkspaceDirectory}
+    onClose={() => { setDirectoryPickerOpen(false) }}
+    busy={directoryPickerBusy}
+    ownerError={directoryPickerError}
+    t={t}
+  />
   if (!wide) return <>
     <WorkspaceSectionHeader
       wide={false}
@@ -398,6 +415,7 @@ function NativeSessionBrowser({
       actions={addWorkspaceAction}
       onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
     />
+    {directoryBrowser}
     {workspaceTrustDialog}
   </>
   return <div className={css.workspaceBrowser}>
@@ -461,7 +479,7 @@ function NativeSessionBrowser({
             if (snapshot.state !== 'ready') return
             setSearchExpanded(false)
             setQuery('')
-            void selectSession(id)
+            runWorkspaceAction(trust => selectSession(id, trust))
           }} t={t}
         />)}
       </> : <>
@@ -541,16 +559,7 @@ function NativeSessionBrowser({
       {workspaceDeletePending && <div role="status">{t('delete.pending')}</div>}
       {workspaceDeleteError !== undefined && <div role="alert">{workspaceDeleteError}</div>}
     </Modal>
-    <DirectoryBrowser
-      open={directoryPickerOpen}
-      listDirectory={listDirectory}
-      createDirectory={createDirectory}
-      onOpen={adoptWorkspaceDirectory}
-      onClose={() => { setDirectoryPickerOpen(false) }}
-      busy={directoryPickerBusy}
-      ownerError={directoryPickerError}
-      t={t}
-    />
+    {directoryBrowser}
     {workspaceTrustDialog}
   </div>
 }
@@ -789,7 +798,15 @@ export const plugin: NativePlugin = {
       inject: (): NativeWorkspacesInjected => ({
         hooks: { conversation: controller, workspaceRegistry, homeDirectory },
         displayTitle: item => presentation.displayTitle(item),
-        selectSession: controller.select.bind(controller),
+        selectSession: async (id, trust) => {
+          const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
+          const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
+          // Admit the Workspace first: select() reports a cold untrusted route only as a generic Session error.
+          if (workspace !== undefined) {
+            await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
+          }
+          await controller.select(id)
+        },
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
           await controller.renameTitle(id, title)
           return controller.getSnapshot().error === undefined

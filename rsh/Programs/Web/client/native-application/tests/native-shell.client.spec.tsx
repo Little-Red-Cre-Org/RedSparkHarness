@@ -154,6 +154,8 @@ it.each([
   const workspaceBaseline = (): NativeWorkspaceBaseline => ({ workspaces, archivedSessionIds })
   const createWorkspace = vi.fn(async (input: Parameters<NativeWorkspaceClient['create']>[0]) => {
     const { path } = input
+    const existing = workspaces.find(item => item.path === path)
+    if (existing !== undefined) return { workspace: existing, created: false }
     const workspace: NativeWorkspace = {
       workspaceId: 'workspace-new' as NativeWorkspace['workspaceId'], path, title: 'New',
       createdAt: '2026-10-11T00:00:00.000Z', updatedAt: '2026-10-11T00:00:00.000Z', sessionIds: [],
@@ -438,8 +440,12 @@ it.each([
     expect(await screen.findByText('Order refused')).toBeTruthy()
     expect(screen.getByRole('treeitem', { name: /Alpha/ }).compareDocumentPosition(screen.getByRole('treeitem', { name: /Beta/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is outside the configured allowed roots'),
+      { code: 'native/workspace-untrusted', details: { path: 'C:\\Work\\Shared' } }))
     fireEvent.click(alphaRow)
+    fireEvent.click(await screen.findByRole('button', { name: 'Trust' }))
     await waitFor(() => { expect(document.title).toBe('Alpha — Product') })
+    expect(createWorkspace).toHaveBeenLastCalledWith({ path: 'C:\\Work\\Shared', trust: true }, expect.any(AbortSignal))
     expect(clientMock.history).toHaveBeenCalledWith('session-alpha', expect.any(AbortSignal))
 
     const messageInput = screen.getByRole('textbox', { name: 'Message' })
@@ -580,6 +586,10 @@ it.each([
 
     fireEvent.click(screen.getByRole('button', { name: 'New workspace' }))
     await screen.findByRole('dialog', { name: 'Select Workspace Directory' })
+    createWorkspace.mockRejectedValueOnce(Object.assign(new Error('Workspace is a protected system directory'),
+      { code: 'native/workspace-forbidden', details: {} }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+    expect(await screen.findByText(/^System directories cannot be added/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledWith('workspace-new', expect.any(AbortSignal)) })
     expect(listDirectory).toHaveBeenCalledWith(undefined, expect.any(AbortSignal))
