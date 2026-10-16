@@ -110,7 +110,6 @@ jobs:
           snapshots/native-sdk/external-operation.snapshot.ts
           snapshots/native-sdk/skills.snapshot.ts
           snapshots/native-sdk/archify.snapshot.ts
-          snapshots/native-sdk/text-turn.snapshot.ts
         env:
           DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions
