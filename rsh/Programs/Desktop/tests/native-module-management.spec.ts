@@ -253,7 +253,9 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const hostProfilePath = join(profile, 'rsh.profile.json')
   const clientProfilePath = join(profile, 'rsh.client.json')
   await manager.applyRelease()
-  writeCurrentProfile(profile)
+  writeNativeProfile(profile, initialHostRows, initialClientRows.map(row => row.id === 'layout' || row.id === 'session-presentation'
+    ? { ...row, disabled: true } : row))
+  prepareNativePackages(profile)
   const lifecycle = { stop: 0, start: 0 }
   const listed = await manager.listNativeModules(ready)
   expect(listed.status).toBe('listed')
@@ -261,11 +263,29 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(listed.inventory.scopes.map(scope => scope.id)).toEqual(['root', 'empty'])
   expect(JSON.stringify(listed.inventory)).not.toContain('private-host-value')
   expect(JSON.stringify(listed.inventory)).not.toContain('private-client-value')
-  expect(listed.inventory.packages.find(row => row.packageName === '@fixture/client-layout')?.installations[0])
+  const presentationEnabled = await manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: listed.inventory.revision,
+    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('session-presentation') }, enabled: true,
+  } }, hooks(lifecycle), ready)
+  expect(presentationEnabled.status).toBe('applied')
+  if (presentationEnabled.status !== 'applied') return
+  const layoutEnabled = await manager.mutateNativeModules({ type: 'toggle', request: {
+    expectedRevision: presentationEnabled.revision,
+    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('layout') }, enabled: true,
+  } }, hooks(lifecycle), ready)
+  expect(layoutEnabled.status).toBe('applied')
+  if (layoutEnabled.status !== 'applied') return
+  const enabledClient = readJson(clientProfilePath) as { installations: NativeRow[] }
+  expect(enabledClient.installations.filter(row => row.id === 'layout' || row.id === 'session-presentation')
+    .every(row => row.disabled !== true)).toBe(true)
+  const enabledListing = await manager.listNativeModules(ready)
+  expect(enabledListing.status).toBe('listed')
+  if (enabledListing.status !== 'listed') return
+  expect(enabledListing.inventory.packages.find(row => row.packageName === '@fixture/client-layout')?.installations[0])
     .toMatchObject({ id: 'layout', canDisable: false, disableReasons: ['client-boot-requirement'] })
-  expect(listed.inventory.packages.find(row => row.packageName === '@fixture/client-session-presentation')?.installations[0])
+  expect(enabledListing.inventory.packages.find(row => row.packageName === '@fixture/client-session-presentation')?.installations[0])
     .toMatchObject({ id: 'session-presentation', canDisable: false, disableReasons: ['required-provider'] })
-  const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: listed.inventory.revision } },
+  const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: enabledListing.inventory.revision } },
     hooks(lifecycle), ready)
   expect(applied.status).toBe('applied')
   const host = readJson(hostProfilePath) as { installations: NativeRow[] }
@@ -277,7 +297,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
     .toEqual(['client-state', 'client-app', 'client-renderer', 'layout', 'session-presentation'])
   expect(client.installations.find(row => row.id === 'optional-client')).toMatchObject({ disabled: true, config: 'private-client-value' })
   expect(client.installations.find(row => row.id === 'client-already-disabled')).toEqual(initialClientRows[4])
-  expect(lifecycle).toEqual({ stop: 1, start: 1 })
+  expect(lifecycle).toEqual({ stop: 3, start: 3 })
   const after = await manager.listNativeModules(ready)
   expect(after.status).toBe('listed')
   if (after.status !== 'listed') return
@@ -379,7 +399,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   } finally {
     if (existsSync(manager.paths.lock)) rmSync(manager.paths.lock)
   }
-  expect(lifecycle).toEqual({ stop: 1, start: 1 })
+  expect(lifecycle).toEqual({ stop: 3, start: 3 })
 
   writeNativeProfile(profile, [...initialHostRows,
     { id: 'duplicate-inventory', plugin: '@fixture/inventory-duplicate' }], initialClientRows)
