@@ -1,5 +1,6 @@
 RedSpark Harness could not start
 Choose a recovery action below. Disabling third-party plugins retains their files.
 If application files are missing or damaged, close the application and reinstall it. Your tasks are stored separately.
-Failure details
+Error type: Application error
+Detailed information has been written to: /home/test/Desktop/desktop.log
 Close and restart
