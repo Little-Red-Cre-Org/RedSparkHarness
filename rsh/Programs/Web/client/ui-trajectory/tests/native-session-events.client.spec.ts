@@ -57,14 +57,22 @@ describe('Native Trajectory Session projection', () => {
     const snapshot = buildTrajectorySnapshot([
       event(0, 1_000, 'turn/start', { turn: 1 }),
       event(1, 1_010, 'step/start', { turn: 1, step: 1 }),
-      event(2, 1_090, 'assistant/attempt', { turn: 1, step: 1, stream: [] }),
-      event(3, 1_095, 'step/end', { turn: 1, step: 1 }),
-      event(4, 1_100, 'turn/end', {
+      event(2, 1_020, 'user/message', {
+        id: 'user-1', role: 'user', content: [{ type: 'text', text: 'failed turn prompt' }],
+        source: { kind: 'user' },
+      }),
+      event(3, 1_090, 'assistant/attempt', { turn: 1, step: 1, stream: [] }),
+      event(4, 1_095, 'step/end', { turn: 1, step: 1 }),
+      event(5, 1_100, 'turn/end', {
         turn: 1, reason: { kind: 'error', error: { code: 'PROVIDER', message: 'provider failed' } },
       }),
-      event(5, 1_200, 'turn/start', { turn: 2 }),
-      event(6, 1_210, 'step/start', { turn: 2, step: 1 }),
-      assistant(7, 1_220, 2, 1),
+      event(6, 1_200, 'turn/start', { turn: 2 }),
+      event(7, 1_210, 'step/start', { turn: 2, step: 1 }),
+      event(8, 1_220, 'user/message', {
+        id: 'user-2', role: 'user', content: [{ type: 'text', text: 'successful turn prompt' }],
+        source: { kind: 'user' },
+      }),
+      assistant(9, 1_230, 2, 1),
     ])
     const turns = deriveTrajectoryLayout({
       nodes: snapshot.eventNodes,
@@ -81,7 +89,17 @@ describe('Native Trajectory Session projection', () => {
       { turn: 2, step: 1, status: 'complete' },
     ])
     expect(snapshot.eventLocations.get(SessionSeq(0))).toMatchObject({ kind: 'turn', turn: { turn: 1 } })
-    expect(snapshot.eventLocations.get(SessionSeq(2))).toMatchObject({ kind: 'step', turn: { turn: 1 }, step: { step: 1 } })
+    expect(snapshot.eventLocations.get(SessionSeq(2))).toMatchObject({ kind: 'turn', turn: { turn: 1 } })
+    expect(snapshot.eventLocations.get(SessionSeq(3))).toMatchObject({ kind: 'step', turn: { turn: 1 }, step: { step: 1 } })
     expect(turns.map(turn => turn.turn)).toEqual([1, 2])
+    expect(turns.map(turn => ({
+      turn: turn.turn,
+      prompts: turn.groups.flatMap(group => group.cells)
+        .filter(cell => cell.kind === 'user')
+        .map(cell => cell.sourceSeq),
+    }))).toEqual([
+      { turn: 1, prompts: [2] },
+      { turn: 2, prompts: [8] },
+    ])
   })
 })

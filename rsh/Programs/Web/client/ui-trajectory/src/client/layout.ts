@@ -381,7 +381,10 @@ export function deriveTrajectoryLayout(
     if (node.kind === 'user') {
       // user/message has no turn on the wire; enclose it in the next assistant
       // (or partial) turn, else open the turn after the last assistant.
-      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
+      const location = eventLocations?.get(node.seq)
+      const turn = location?.kind === 'turn' || location?.kind === 'step'
+        ? location.turn.turn
+        : enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
@@ -428,7 +431,10 @@ export function deriveTrajectoryLayout(
       continue
     }
     if (node.kind === 'context') {
-      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
+      const location = eventLocations?.get(node.seq)
+      const turn = location?.kind === 'turn' || location?.kind === 'step'
+        ? location.turn.turn
+        : enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
