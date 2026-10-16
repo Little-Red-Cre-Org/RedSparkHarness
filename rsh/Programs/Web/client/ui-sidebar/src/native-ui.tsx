@@ -320,6 +320,8 @@ function NativeSessionBrowser({
     setActionError(undefined)
     void open().catch((error: unknown) => {
       if (!current()) return
+      // A trust prompt or a final failure ends this open: an archive must fall back to the neighbouring row.
+      request.settled = true
       if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
     })
   }
@@ -341,6 +343,7 @@ function NativeSessionBrowser({
     return true
   }
   const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
+    openRequest.current = undefined
     setActionError(undefined)
     void action().catch((error: unknown) => {
       if (!requestWorkspaceTrust(error, () => action(true))) setActionError(workspaceError(error))
@@ -448,6 +451,7 @@ function NativeSessionBrowser({
     </div>
   }
   const adoptWorkspaceDirectory = (path: string): void => {
+    openRequest.current = undefined
     setDirectoryPickerError(undefined)
     setDirectoryPickerBusy(true)
     void createWorkspace(path).then(() => {
@@ -844,18 +848,17 @@ export const plugin: NativePlugin = {
       workspaces: [], archivedSessionIds: [], ready: false,
     })
     const homeDirectory = createSnapshotStore<string | undefined>(undefined)
-    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ path }) => {
-      homeDirectory.set(path)
+    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ home }) => {
+      homeDirectory.set(home)
     }).catch((error: unknown) => {
       if (!context.signal.aborted) console.error('native sidebar home directory lookup failed:', error)
     })
     context.own(async () => { await homeLookup })
     const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
       const listing = await directoryPicker.list(path, signal ?? context.signal)
-      if (path === undefined) homeDirectory.set(listing.path)
       return {
         path: listing.path,
-        home: homeDirectory.getSnapshot() ?? listing.path,
+        home: listing.home,
         crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
         entries: listing.entries.filter(entry => entry.kind === 'directory')
           .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),
@@ -928,6 +931,14 @@ export const plugin: NativePlugin = {
         // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
         admitSession: async (id, trust) => {
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
+          // Sessions can load before the Workspace baseline; an unknown Workspace is only "unregistered" once it arrives.
+          if (workspaceId !== undefined && !workspaceRegistry.getSnapshot().ready) {
+            await new Promise<void>((resolve) => {
+              const stop = workspaceRegistry.subscribe(() => {
+                if (workspaceRegistry.getSnapshot().ready) { stop(); resolve() }
+              })
+            })
+          }
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
