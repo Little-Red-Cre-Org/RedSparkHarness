@@ -493,10 +493,13 @@ it.each([
     }))
     await waitFor(() => {
       expect(conversation?.getSnapshot().state).toBe('loading')
-      expect(conversation?.getSnapshot().navigationPending).toBe(false)
+      expect(conversation?.getSnapshot().navigationPending).toBe(true)
     })
     controlsRefresh.resolve({ catalog: null, canSelectModel: false, presets: [] })
-    await waitFor(() => { expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('disabled', false) })
+    await waitFor(() => {
+      expect(conversation?.getSnapshot()).toMatchObject({ state: 'ready', selected: undefined, navigationPending: false })
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('disabled', true)
+    })
     expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)

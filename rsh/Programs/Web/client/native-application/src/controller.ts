@@ -256,7 +256,8 @@ export class NativeConversationController {
    */
   submitPending(text: string, placement: 'queued' | 'steering'): Promise<boolean> {
     const id = this.snapshot.selected
-    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
+    if (id === undefined || this.snapshot.state !== 'sending' || this.snapshot.navigationPending === true
+      || this.snapshot.submissionBusy || text.trim() === '') return Promise.resolve(false)
     const epoch = this.selectionEpoch
     const previous = this.submissionDraft
     const draft = previous?.sessionId === id && previous.epoch === epoch && previous.text === text && previous.placement === placement

@@ -411,6 +411,11 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     const sending = controller.send('start')
     expect(() => controller.create()).toThrow('operation already pending')
     expect(controller.getSnapshot()).toMatchObject({ selected: alpha, state: 'sending' })
+    const navigation = controller.beginNavigation(true)
+    const callsBeforeNavigation = calls.length
+    expect(await controller.submitPending('during navigation', 'queued')).toBe(false)
+    expect(calls).toHaveLength(callsBeforeNavigation)
+    controller.releaseNavigation(navigation)
     rejectNext = true
     expect(await controller.submitPending('later', 'queued')).toBe(false)
     expect(controller.getSnapshot()).toMatchObject({ state: 'sending', submissionError: 'not accepted' })

@@ -946,11 +946,11 @@ export const plugin: NativePlugin = {
               await controller.idle()
               if (controller.isCurrentNavigation(navigation)) return controller.select(sessionId)
             })
-            .catch((error: unknown) => {
+            .catch(async (error: unknown) => {
               if (rpcRefusal(error, 'native/workspace-untrusted') !== undefined) {
-                const latest = controller.getSnapshot()
-                controller.releaseNavigation(navigation)
-                if (latest.state === 'ready' && controller.isCurrentNavigation(navigation)) controller.clear()
+                await controller.idle()
+                if (controller.isCurrentNavigation(navigation) && controller.getSnapshot().state === 'ready') controller.clear()
+                else controller.releaseNavigation(navigation)
               } else controller.failNavigation(navigation, error)
             })
         },

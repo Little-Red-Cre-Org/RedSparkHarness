@@ -100,7 +100,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
   const ready = snapshot.state === 'ready' && snapshot.navigationPending !== true
-  const acceptsPending = snapshot.state === 'sending'
+  const acceptsPending = snapshot.state === 'sending' && snapshot.navigationPending !== true
   const inputReady = ready || acceptsPending
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
   const hasConversation = snapshot.events.some(event => event.type === 'tool-workflow/run-start'
