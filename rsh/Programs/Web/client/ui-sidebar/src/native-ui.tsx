@@ -236,7 +236,7 @@ function NativeSessionBrowser({
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
-  const openRequest = useRef<{ id: NativeSessionId; settled: boolean }>()
+  const openRequest = useRef<{ id: NativeSessionId; settled: boolean; navigation: number }>()
   // Admission completes asynchronously, so it reads the conversation as of now rather than as of the click.
   const live = useRef(snapshot)
   live.current = snapshot
@@ -253,7 +253,8 @@ function NativeSessionBrowser({
     // A generating or approval-waiting Session is detached, not awaited: its Host turn keeps running.
     // A queued click or an open still in admission wins over the neighbouring row.
     const lastOrder = selectionOrder.current
-    let nextId = pending ?? (openRequest.current?.settled === false ? openRequest.current.id : undefined)
+    const request = openRequest.current
+    let nextId = pending ?? (request?.settled === false && isCurrentNavigation(request.navigation) ? request.id : undefined)
     if (nextId === undefined && lastOrder?.id === snapshot.selected) {
       const index = lastOrder.ids.indexOf(snapshot.selected)
       nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
@@ -263,7 +264,7 @@ function NativeSessionBrowser({
       if (nextId !== undefined) admitAndSelect(nextId)
     }, (error: unknown) => { setActionError(errorMessage(error)) })
   }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession, deselectSession,
-    archived, visibleIds])
+    archived, visibleIds, isCurrentNavigation])
   useEffect(() => {
     if (snapshot.selected !== undefined && visibleIds.includes(snapshot.selected)) {
       selectionOrder.current = { id: snapshot.selected, ids: visibleIds }
@@ -311,7 +312,7 @@ function NativeSessionBrowser({
     rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
   const admitAndSelect = (id: NativeSessionId): void => {
     const navigation = beginNavigation()
-    const request = { id, settled: false }
+    const request = { id, settled: false, navigation }
     openRequest.current = request
     const from = live.current.selected
     // A later open or any other navigation during admission makes this request stale.
