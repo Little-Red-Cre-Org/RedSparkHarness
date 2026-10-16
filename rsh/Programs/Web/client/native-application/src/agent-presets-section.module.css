@@ -57,10 +57,6 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
-.hostGap {
-  color: var(--dsw-alias-state-warn-primary);
-}
-
 .settingsReadFailure {
   display: flex;
   align-items: center;
@@ -127,9 +123,9 @@
   opacity: .48;
 }
 
-.cardBroken,
-.cardBroken:hover {
-  border-color: var(--dsw-alias-state-error-primary);
+.cardUnavailable .cardName,
+.cardUnavailable .cardDesc {
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .cardMain {
@@ -177,12 +173,6 @@
   margin-left: auto;
 }
 
-.brokenBadge {
-  border: 0;
-  background: var(--dsw-alias-state-error-primary);
-  color: var(--dsw-alias-bg-layer-3);
-}
-
 .cardDesc {
   display: -webkit-box;
   min-height: 42px;
@@ -196,7 +186,7 @@
 }
 
 .cardProblem {
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12px;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -388,4 +378,8 @@
   color: var(--dsw-alias-state-error-primary);
   font-size: 12px;
   line-height: 1.5;
+}
+
+summary.groupHead {
+  cursor: pointer;
 }
