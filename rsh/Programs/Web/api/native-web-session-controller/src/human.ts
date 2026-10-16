@@ -8,7 +8,7 @@ import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-cl
 import type { NativeSessionFeed } from './follow.ts'
 
 interface Pending {
-  readonly feed: NativeSessionFeed
+  feed: NativeSessionFeed
   readonly parseAnswer: (value: unknown) => unknown
   readonly agent: NativeAgent
   readonly prompt: NativeWebHumanPrompt
@@ -27,6 +27,17 @@ export class NativeWebHumanInteraction {
    */
   constructor(private readonly capacity: number, private readonly changed: (agent: NativeAgent) => void) {}
 
+  /** Move one Agent's unanswered presentations to its replacement feed.
+   * @param agent - exact root Agent whose turn is being reattached.
+   * @param feed - replacement presentation stream.
+   */
+  rebind(agent: NativeAgent, feed: NativeSessionFeed): void {
+    const pending = [...this.pending.values()].filter(entry => entry.agent === agent)
+    for (const entry of pending) entry.feed = feed
+    const first = pending[0]
+    if (first !== undefined) feed.push({ type: 'human', prompt: first.prompt })
+  }
+
   /** @param agent - exact root Agent whose pending presentation is projected.
    * @returns a redacted interaction kind, when the Agent awaits the user.
    */
@@ -43,18 +54,19 @@ export class NativeWebHumanInteraction {
     signal.throwIfAborted()
     if (this.closed || this.pending.size >= this.capacity) throw new Error('native Web human interaction is closed or at capacity')
     const outcome = Promise.withResolvers<unknown>()
-    const remove = (): void => {
-      this.pending.delete(prompt.id)
+    const remove = (entry: Pending): void => {
+      this.pending.delete(entry.prompt.id)
       signal.removeEventListener('abort', abort)
-      feed.push({ type: 'human-removed', id: prompt.id })
+      const activeFeed = entry.feed
+      activeFeed.push({ type: 'human-removed', id: entry.prompt.id })
       this.changed(agent)
-      const next = [...this.pending.values()].find(entry => entry.feed === feed)
-      if (next !== undefined && !this.closed) feed.push({ type: 'human', prompt: next.prompt })
+      const next = [...this.pending.values()].find(pending => pending.feed === activeFeed)
+      if (next !== undefined && !this.closed) activeFeed.push({ type: 'human', prompt: next.prompt })
     }
-    const abort = (): void => { remove(); outcome.reject(signal.reason) }
+    const abort = (): void => { remove(entry); outcome.reject(signal.reason) }
     const entry: Pending = { feed, agent, prompt, signal, parseAnswer,
-      finish: (value) => { remove(); outcome.resolve(value) },
-      reject: (error) => { remove(); outcome.reject(error) } }
+      finish: (value) => { remove(entry); outcome.resolve(value) },
+      reject: (error) => { remove(entry); outcome.reject(error) } }
     this.pending.set(prompt.id, entry)
     signal.addEventListener('abort', abort, { once: true })
     this.changed(agent)

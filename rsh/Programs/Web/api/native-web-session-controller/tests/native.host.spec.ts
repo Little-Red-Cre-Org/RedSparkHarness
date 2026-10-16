@@ -22,7 +22,7 @@ import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/na
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { NativeAgentId, type NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalAnswerer, NativeApprovalAnswererRequest, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -35,7 +35,8 @@ import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mo
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
 import { ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -43,7 +44,7 @@ import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/na
 import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
-import { createNativeSessionClient, nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
+import { createNativeSessionClient, nativeSubmissionRequestId, type NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
@@ -56,6 +57,134 @@ import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
 import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig, type NativeWebSelectionProviders } from '../src/native.ts'
+
+type DetachedTurnRequest = Parameters<NativeHeadlessApplication['executeRootTurn']>[0]
+type DetachedTurnResult = Awaited<ReturnType<NativeHeadlessApplication['executeRootTurn']>>
+
+function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: AbortSignal,
+  owner: NativeActiveSessionOwner) => Promise<DetachedTurnResult>) {
+  const id = SessionId('detached-turn-session')
+  const events: SessionEvent[] = [
+    { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
+  ]
+  const owner = {
+    agent: {}, session: { id, header: { id, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false } },
+    invocation: 'root', writerAvailable: true, readEvents: async () => events, onEvent: () => () => {},
+  } as unknown as NativeActiveSessionOwner
+  const active = {
+    owners: () => [owner], owner: () => owner, onAttached: () => () => {}, onDetached: () => () => {},
+  } as unknown as NativeActiveSessionOperations
+  const executor = {
+    rootExecution: { capture: () => ({ id: 'detached-turn-route' }) },
+    async executeRootTurn(request: DetachedTurnRequest, signal: AbortSignal) {
+      await request.onBaseline?.(owner, signal)
+      return execute(request, signal, owner)
+    },
+    dispose: async () => {},
+  } as unknown as NativeHeadlessApplication
+  const lifetime = new AbortController()
+  const service = new NativeWebSessionService(executor,
+    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+      maxSteps: 1, builtinTools: false, maxPendingRequests: 2, maxHistoryEvents: 10, maxPromptChars: 100,
+      maxFollowBufferBytes: 100_000, maxFollowers: 4, maxPendingHumanRequests: 2 }), lifetime.signal)
+  const answerers: NativeApprovalAnswerer[] = []
+  const disposers: (() => void)[] = []
+  const approvals = {
+    registerAnswerer(answerer: NativeApprovalAnswerer) {
+      answerers.push(answerer)
+      return () => { answerers.splice(answerers.indexOf(answerer), 1) }
+    },
+  } as unknown as NativeApprovalServiceDefinition
+  const context = ({ own: (dispose: () => void) => { disposers.push(dispose) }, scope: {} }) as unknown as Parameters<NativeWebSessionService['bindHuman']>[0]
+  service.bindHuman(context, approvals)
+  const rpc: ClientConnectionRpc = {
+    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime.signal),
+    response: (_target, endpoint, payload, signal) => {
+      if (endpoint !== 'native-session/follow') throw new Error(`unexpected response endpoint ${endpoint}`)
+      return service.follow(new Request('http://localhost/api/native-session/follow', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal,
+      }))
+    },
+  }
+  const clients = [0, 1].map(() => createNativeSessionClient(rpc, { maxFollowBufferChars: 100_000 }))
+  return {
+    id, owner, answerers, clients,
+    async close() {
+      await Promise.all(clients.map(client => client.close()))
+      for (const dispose of disposers) dispose()
+      await service.close()
+    },
+  }
+}
+
+it('keeps a detached turn running and accepts the next prompt after it settles', async () => {
+  const started = Promise.withResolvers<undefined>()
+  const firstCompletion = Promise.withResolvers<DetachedTurnResult>()
+  let executionCount = 0
+  let turnSignal: AbortSignal | undefined
+  const fixture = detachedTurnFixture(async (_request, signal) => {
+    executionCount++
+    if (executionCount === 1) {
+      turnSignal = signal
+      started.resolve(undefined)
+      return firstCompletion.promise
+    }
+    return { exitCode: 0, answer: 'second prompt' }
+  })
+  const detach = new AbortController()
+  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
+    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
+  try {
+    await started.promise
+    detach.abort()
+    await expect(firstPrompt).rejects.toBeDefined()
+    expect(turnSignal?.aborted).toBe(false)
+    firstCompletion.resolve({ exitCode: 0, answer: 'first prompt' })
+    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' }) })
+    await expect(fixture.clients[0]!.prompt(fixture.id, 'second prompt', true, undefined,
+      () => {}, undefined, undefined, SessionSeq(0))).resolves.toEqual({ exitCode: 0, answer: 'second prompt' })
+    expect(executionCount).toBe(2)
+  } finally {
+    firstCompletion.resolve({ exitCode: 130, answer: '' })
+    await fixture.close()
+  }
+})
+
+it('replays a pending approval onto an attached turn feed', async () => {
+  const approvalStarted = Promise.withResolvers<undefined>()
+  const fixture = detachedTurnFixture(async (_request, signal, owner) => {
+    approvalStarted.resolve(undefined)
+    const answerer = fixture.answerers[0]
+    const answer = await answerer?.({ id: 'fixture-approval' as NativeApprovalAnswererRequest['id'],
+      agent: owner.agent, toolName: 'fixture-tool', policy: 'ask', signal })
+    if (answer === undefined) throw new Error('fixture approval was not claimed')
+    return { exitCode: 0, answer: 'approved' }
+  })
+  const firstPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
+  const detach = new AbortController()
+  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'approval prompt', true, undefined, (frame) => {
+    if (frame.type === 'human' && frame.prompt.kind === 'approval') firstPromptId.resolve(frame.prompt.id)
+  }, undefined, undefined, SessionSeq(0), detach.signal)
+  const attachedPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
+  let attached!: Promise<DetachedTurnResult | undefined>
+  try {
+    await approvalStarted.promise
+    const promptId = await firstPromptId.promise
+    detach.abort()
+    await expect(firstPrompt).rejects.toBeDefined()
+    attached = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), (frame) => {
+      if (frame.type === 'human' && frame.prompt.kind === 'approval') attachedPromptId.resolve(frame.prompt.id)
+    })
+    const resumedPromptId = await attachedPromptId.promise
+    expect(resumedPromptId).toBe(promptId)
+    await fixture.clients[1]!.answerHuman(fixture.id, resumedPromptId, { kind: 'approval', outcome: 'allowed-once' })
+    await expect(attached).resolves.toMatchObject({ exitCode: 0, answer: 'approved' })
+  } finally {
+    detach.abort()
+    await fixture.close()
+  }
+})
 
 it.each([{ namespace: 'optional-settings' }])('describes absent optional Settings without accepting writes ($namespace)', async ({ namespace }) => {
   const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
@@ -762,11 +891,11 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
     const originalPrompt = client.prompt.bind(client)
-    client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq) => originalPrompt(
+    client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq, detach) => originalPrompt(
       selectedSession, text, resume, signal, (frame) => {
         if (frame.type === 'submission-update') submissionUpdates.push({ requestId: frame.requestId, status: frame.status })
         observe?.(frame)
-      }, images, onFollowError, lastSeq)
+      }, images, onFollowError, lastSeq, detach)
     restoreClientPrompt = () => { client.prompt = originalPrompt }
     const settingsDescription = await client.settingsDescribe()
     expect((await client.pluginInventoryList()).entries).toContainEqual(expect.objectContaining({ name: plugin.name, state: 'ready' }))
