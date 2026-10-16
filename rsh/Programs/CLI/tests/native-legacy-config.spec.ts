@@ -122,6 +122,14 @@ it('rejects a migration target that differs from both the legacy value and shipp
     await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: conflicting,
       patchFiles: [], environment: emptyEnvironment }))
       .rejects.toThrow('migration conflict:')
+    const patchedToLegacy = {
+      ...conflicting,
+      installations: conflicting.installations.map(row => row.plugin === '@deepseek-ai/dsh-agent-presets'
+        ? { ...row, config: { default: 'compact' } } : row),
+    }
+    await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: patchedToLegacy,
+      patchFiles: [], environment: emptyEnvironment }))
+      .rejects.toThrow('migration conflict:')
     expect(JSON.parse(await readFile(profilePath, 'utf8'))).toEqual(conflicting)
     expect(await readFile(settingsPath, 'utf8')).toBe(settingsText)
   } finally {

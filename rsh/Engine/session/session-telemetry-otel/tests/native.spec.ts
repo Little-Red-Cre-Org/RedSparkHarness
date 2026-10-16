@@ -20,7 +20,10 @@ import { NativeProgramActiveSession } from '../../../core/native-headless/src/co
 import { NativeContinuationSession } from '../../../core/native-headless/src/continuation-session.ts'
 import { plugin } from '../src/native.ts'
 
-it('honors the process hardoff over FEEDBACK_ONLY configuration without constructing an exporter', async () => {
+it.each([
+  { DSH_TELEMETRY_DISABLED: '1' },
+  { DSH_TELEMETRY_MODE: 'DISABLED' },
+])('honors the process hardoff %o over FEEDBACK_ONLY configuration without constructing an exporter', async (values) => {
   const scope = new NativeScope()
   let sharing: string | undefined
   const consumer: NativePlugin = {
@@ -31,7 +34,7 @@ it('honors the process hardoff over FEEDBACK_ONLY configuration without construc
     { plugin, scope, config: { mode: 'FEEDBACK_ONLY', exporter: { url: 'not-an-endpoint' } } },
     { plugin: consumer, scope, config: undefined },
     { plugin: launchEnvironmentProvider(createLaunchEnvironmentSnapshot([{
-      source: 'process', values: { DSH_TELEMETRY_DISABLED: '1' },
+      source: 'process', values,
     }])), scope, config: undefined },
   ], 'host'))
 
