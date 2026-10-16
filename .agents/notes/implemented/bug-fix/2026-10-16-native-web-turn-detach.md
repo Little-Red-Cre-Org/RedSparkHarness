@@ -12,9 +12,9 @@ Closing or reloading the native Web page cancelled the running turn, including a
 
 The turn lifetime belongs to the Host. A disconnected settlement waiter only unbinds itself; the turn keeps running and its pending approvals and questions stay pending. A turn that settles without a waiter is retired, and `session/start` admits the next prompt after a settled turn that nobody awaits.
 
-`session/attach { sessionId, lastSeq }` reopens the running turn's follow stream from `lastSeq`, replays its pending human prompt, and returns its `admissionId` (or `null` when no turn runs). The page then uses the existing `native-session/follow`, `session/await`, `session/answer-human`, and `session/cancel` endpoints. A newer attach replaces the older feed; there is no separate recovery state.
+`session/attach { sessionId, lastSeq }` reopens the running turn's follow stream from `lastSeq`, replays its pending human prompt, and returns its `admissionId` (or `null` when no turn runs). The page then uses the existing `native-session/follow`, `session/await`, `session/answer-human`, and `session/cancel` endpoints. A newer attach replaces the older feed and detaches the older page's settlement waiter without cancelling execution; an attach superseded while it reads history rejects without rebinding pending prompts. There is no separate recovery state.
 
-The Client sends `session/cancel` only for the caller's explicit turn signal. Client lifetime and the new detach signal stop following and awaiting without cancelling. The conversation controller passes Stop as the turn signal and its page lifetime as the detach signal. Restoring a selected Session attaches; when a turn is running, the controller shows the sending state and Stop and observes frames through the same path as `send()`.
+The Client sends `session/cancel` only for the caller's explicit turn signal. Client lifetime and the new detach signal stop following and awaiting without cancelling. The conversation controller passes Stop as the turn signal and its page lifetime as the detach signal. Restoring a selected Session attaches; when a turn is running, the controller shows the sending state and Stop and observes frames through the same path as `send()`. Afterwards it re-reads durable history, also when attach finds no turn, because the turn may have settled between the history read and attach.
 
 ## Alternatives considered
 
@@ -30,4 +30,4 @@ A reload or tab close no longer cancels Host work, and a reopened page resumes l
 
 ## Verification
 
-Two Host specs in `native.host.spec.ts` pin the contract: a detached prompt keeps its turn running and the next prompt is admitted after it settles; a pending approval is replayed onto an attached feed and answering it completes the turn. The existing controller and human-control specs cover that `send()` and selection still settle normally.
+Two Host specs in `native.host.spec.ts` pin the contract: a detached prompt keeps its turn running and the next prompt is admitted after it settles; a pending approval is replayed onto an attached feed while the old waiter is detached and an overlapping superseded attach is rejected, and answering it completes the turn. A controller follow spec pins the history refresh when restore finds no active turn. The existing controller and human-control specs cover that `send()` and selection still settle normally.

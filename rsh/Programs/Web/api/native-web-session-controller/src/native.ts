@@ -527,7 +527,7 @@ interface NativeWebSessionTurn {
   readonly admissionId: NativeSessionAdmissionId
   readonly controller: AbortController
   readonly done: Promise<unknown>
-  waiting: boolean
+  settlement: AbortController | undefined
   settled: boolean
   orphaned: boolean
   feed: NativeSessionFeed | undefined
@@ -745,7 +745,7 @@ export class NativeWebSessionService {
     })()
     const existing = this.turns.get(id)
     if (existing !== undefined) {
-      if (existing.settled && !existing.waiting) this.turns.delete(id)
+      if (existing.settled && existing.settlement === undefined) this.turns.delete(id)
       else throw new Error('native web session: Session already has a pending turn')
     }
     if (this.turns.size >= this.config.maxPendingRequests) throw new Error('native web session: turn settlement capacity reached')
@@ -906,14 +906,14 @@ export class NativeWebSessionService {
     }).finally(() => { turn.current?.feed?.finish() })
     this.followTasks.add(followTask)
     void followTask.then(() => { this.followTasks.delete(followTask) })
-    turn.current = { admissionId, controller, done, waiting: false, settled: false, orphaned: false, feed, following: false,
+    turn.current = { admissionId, controller, done, settlement: undefined, settled: false, orphaned: false, feed, following: false,
       lastSeq: fields.follow === true ? fields.lastSeq as number : -1, baselineThroughSeq: undefined, feedFailure: undefined, submissions }
     const admittedTurn = turn.current
     this.turns.set(id, admittedTurn)
     // Keep rejected execution attached until the settlement consumer reads the same promise.
     const markSettled = (): void => {
       admittedTurn.settled = true
-      if (admittedTurn.orphaned && !admittedTurn.waiting && this.turns.get(id) === admittedTurn) this.turns.delete(id)
+      if (admittedTurn.orphaned && admittedTurn.settlement === undefined && this.turns.get(id) === admittedTurn) this.turns.delete(id)
       this.publishListChange(id)
     }
     void done.then(markSettled, (error: unknown) => { markSettled(); refused(error) })
@@ -938,6 +938,9 @@ export class NativeWebSessionService {
     })
     turn.feed?.detach()
     turn.feed = feed
+    const settlement = turn.settlement
+    turn.settlement = undefined
+    settlement?.abort(new Error('native web session: settlement waiter detached by attach'))
     turn.following = false
     turn.lastSeq = fields.lastSeq
     const owner = this.active.owners().find(candidate => candidate.session.id === id
@@ -948,6 +951,7 @@ export class NativeWebSessionService {
       if (turn.baselineThroughSeq !== undefined) {
         const events = await owner.readEvents({ maxEvents: this.config.maxHistoryEvents + 1, signal })
         signal.throwIfAborted()
+        if (turn.feed !== feed) throw new Error('native web session: attach was superseded')
         if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach root owner was released')
         if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
         const cursor = fields.lastSeq
@@ -1626,8 +1630,11 @@ export class NativeWebSessionService {
     for (const key of Object.keys(fields)) if (!['sessionId', 'admissionId'].includes(key)) throw new Error('native web session: unexpected settlement field')
     const id = sessionId(fields.sessionId)
     const turn = this.turns.get(id)
-    if (turn === undefined || fields.admissionId !== turn.admissionId || turn.waiting) throw new Error('native web session: unavailable turn settlement')
-    turn.waiting = true
+    if (turn === undefined || fields.admissionId !== turn.admissionId || turn.settlement !== undefined) {
+      throw new Error('native web session: unavailable turn settlement')
+    }
+    const settlement = new AbortController()
+    turn.settlement = settlement
     try {
       return await this.settlements.run(signal, async (accepted) => {
         let abort!: () => void
@@ -1637,16 +1644,23 @@ export class NativeWebSessionService {
           accepted.addEventListener('abort', abort, { once: true })
           if (accepted.aborted) abort()
         })
-        try { return await Promise.race([turn.done, disconnected]) }
+        let detach!: () => void
+        const detached = new Promise<never>((_resolve, reject) => {
+          detach = (): void => { reject(settlement.signal.reason) }
+          settlement.signal.addEventListener('abort', detach, { once: true })
+          if (settlement.signal.aborted) detach()
+        })
+        try { return await Promise.race([turn.done, disconnected, detached]) }
         finally {
           accepted.removeEventListener('abort', abort)
+          settlement.signal.removeEventListener('abort', detach)
           if (accepted.aborted) turn.orphaned = true
         }
       })
     } finally {
       if (signal.aborted) turn.orphaned = true
-      if (this.turns.get(id) === turn) {
-        turn.waiting = false
+      if (this.turns.get(id) === turn && turn.settlement === settlement) {
+        turn.settlement = undefined
         if (turn.settled) this.turns.delete(id)
       }
     }
