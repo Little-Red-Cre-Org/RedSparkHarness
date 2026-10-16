@@ -944,26 +944,35 @@ export class NativeWebSessionService {
     settlement?.abort(new Error('native web session: settlement waiter detached by attach'))
     turn.following = false
     turn.lastSeq = fields.lastSeq
-    const owner = this.active.owners().find(candidate => candidate.session.id === id
-      && candidate.invocation === 'root' && candidate.writerAvailable)
-    if (owner !== undefined) {
-      if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach lost its exact root owner')
-      this.executor.rootExecution.capture(owner)
-      if (turn.baselineThroughSeq !== undefined) {
-        const events = await owner.readEvents({ maxEvents: this.config.maxHistoryEvents + 1, signal })
-        signal.throwIfAborted()
-        if (turn.feed !== feed) throw new Error('native web session: attach was superseded')
-        if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach root owner was released')
-        if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
-        const cursor = fields.lastSeq
-        if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
-          throw new Error('native web session: follow cursor is outside the exact Session history')
+    try {
+      const owner = this.active.owners().find(candidate => candidate.session.id === id
+        && candidate.invocation === 'root' && candidate.writerAvailable)
+      if (owner !== undefined) {
+        if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach lost its exact root owner')
+        this.executor.rootExecution.capture(owner)
+        if (turn.baselineThroughSeq !== undefined) {
+          const events = await owner.readEvents({ maxEvents: this.config.maxHistoryEvents + 1, signal })
+          signal.throwIfAborted()
+          if (turn.feed !== feed) throw new Error('native web session: attach was superseded')
+          if (this.active.owner(owner.agent, owner.session) !== owner) throw new Error('native web session: attach root owner was released')
+          if (events.length > this.config.maxHistoryEvents) throw new Error('native web session: history exceeds configured event limit')
+          const cursor = fields.lastSeq
+          if (cursor >= events.length || cursor >= 0 && events[cursor]?.seq !== cursor) {
+            throw new Error('native web session: follow cursor is outside the exact Session history')
+          }
+          feed.setBaseline(id, cursor, events.slice(cursor + 1))
         }
-        feed.setBaseline(id, cursor, events.slice(cursor + 1))
+        this.human.rebind(owner.agent, feed)
+      } else if (turn.baselineThroughSeq !== undefined) {
+        throw new Error('native web session: attach has no exact active root owner')
       }
-      this.human.rebind(owner.agent, feed)
-    } else if (turn.baselineThroughSeq !== undefined) {
-      throw new Error('native web session: attach has no exact active root owner')
+    } catch (error: unknown) {
+      // A failed attach that still owns the feed leaves no consumer; restore abandonment so the turn retires.
+      if (this.turns.get(id) === turn && turn.feed === feed && turn.settlement === undefined) {
+        if (turn.settled) this.turns.delete(id)
+        else turn.orphaned = true
+      }
+      throw error
     }
     return { admissionId: turn.admissionId }
   }
