@@ -504,9 +504,9 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => { expect(prompt).toHaveBeenCalledOnce() })
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
-    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal)) })
-    expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
     fireEvent.click(screen.getByRole('treeitem', { name: /Alpha/ }))
+    await waitFor(() => { expect(clientMock.history).toHaveBeenCalledWith('session-beta', expect.any(AbortSignal)) })
+    expect(prompt.mock.calls[0]?.[3]?.aborted).toBe(false)
     await waitFor(() => { expect(attach).toHaveBeenCalledWith('session-alpha', -1, expect.any(Function),
       expect.any(AbortSignal), expect.any(Function), expect.any(AbortSignal)) })
     expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))

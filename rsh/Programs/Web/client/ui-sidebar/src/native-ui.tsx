@@ -227,7 +227,7 @@ function NativeSessionBrowser({
   const selectionOrder = useRef<{ id: NativeSessionId; ids: readonly NativeSessionId[] }>()
   const searchQuery = query.trim()
   useEffect(() => {
-    if (snapshot.state !== 'ready') return
+    if (snapshot.state === 'loading' || snapshot.state === 'closed') return
     if (pendingSessionId !== undefined) {
       setPendingSessionId(undefined)
       if (pendingSessionId !== snapshot.selected) {
@@ -235,7 +235,7 @@ function NativeSessionBrowser({
         return
       }
     }
-    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) return
+    if (snapshot.state !== 'ready' || snapshot.selected === undefined || !archived.has(snapshot.selected)) return
     const lastOrder = selectionOrder.current
     let nextId: NativeSessionId | undefined
     if (lastOrder?.id === snapshot.selected) {

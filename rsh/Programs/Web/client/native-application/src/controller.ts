@@ -59,6 +59,7 @@ export class NativeConversationController {
   } | undefined
   private turn: AbortController | undefined
   private turnDetach = new AbortController()
+  private handingOff = false
   private foregroundAdmission: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private followErrorOwner: { readonly sessionId: SessionId; readonly lastSeq: number } | undefined
   private closing: Promise<void> | undefined
@@ -96,7 +97,7 @@ export class NativeConversationController {
       this.publish({ error: error instanceof Error ? error.message : String(error) })
     }).finally(() => {
       this.pending.delete(pending)
-      this.publish({ state: 'ready' })
+      if (!this.handingOff) this.publish({ state: 'ready' })
     })
     this.pending.add(pending)
     return pending
@@ -374,11 +375,15 @@ export class NativeConversationController {
    */
   async select(id: SessionId): Promise<void> {
     if (this.snapshot.state === 'sending' || this.snapshot.state === 'cancelling') {
+      // Stay loading while the detached turn settles so no other operation starts in between.
       this.followErrorOwner = undefined
       this.turnDetach.abort()
-      await Promise.allSettled([...this.pending])
+      this.handingOff = true
+      this.publish({ state: 'loading', error: undefined })
+      try { await Promise.allSettled([...this.pending]) } finally { this.handingOff = false }
+    } else {
+      this.assertReady()
     }
-    this.assertReady()
     this.followErrorOwner = undefined
     this.beginSelection()
     this.publish({ state: 'loading', error: undefined })
