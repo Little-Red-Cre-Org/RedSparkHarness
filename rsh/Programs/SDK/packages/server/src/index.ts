@@ -40,6 +40,12 @@ export const Config: Schema<JsonRpcConfig> = Schema.object({
 const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (.+?) \((.*?)\): /
 const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
 
+/** Loader tree methods used for startup settlement; this package does not depend on the Loader. */
+interface StartupLoader {
+  getTasks(): Promise<unknown>[]
+  await(): Promise<void>
+}
+
 /**
  * Wait until the Loader tree settles and return the first startup failure. A
  * failed entry rejects its task before rollback removes it, so the tasks are
@@ -48,7 +54,7 @@ const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
  * @param loader - the Loader whose current tree is starting.
  * @returns the first rejection, or `undefined` when the tree started.
  */
-async function startupFailure(loader: Context['loader']): Promise<unknown> {
+async function startupFailure(loader: StartupLoader): Promise<unknown> {
   let failure: unknown
   for (let tasks = loader.getTasks(); tasks.length > 0; tasks = loader.getTasks()) {
     for (const outcome of await Promise.allSettled(tasks)) {
@@ -113,7 +119,7 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
   })
 
-  const loader = ctx.get('loader')
+  const loader = ctx.get('loader') as StartupLoader | undefined
   let bootFailure: Error | undefined
 
   // Share one exit task so racing shutdown requests cannot dispose the root or
