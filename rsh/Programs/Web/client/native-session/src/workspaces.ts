@@ -41,6 +41,8 @@ export interface NativeDirectoryEntry {
 /** One directory level and its filesystem ancestry. */
 export interface NativeDirectoryListing {
   readonly path: string
+  /** Host home directory, used to shorten displayed paths. */
+  readonly home: string
   readonly entries: readonly NativeDirectoryEntry[]
   readonly crumbs: readonly { readonly name: string; readonly path: string }[]
 }
@@ -113,7 +115,7 @@ export interface NativeDirectoryPickerClient {
    * @returns the selected directory, or null when the operator cancels.
    */
   pick(signal?: AbortSignal): Promise<string | null>
-  /** @param path - absolute directory; omission lists the host home directory.
+  /** @param path - absolute directory; omission lists the Host launch directory.
    * @param signal - caller cancellation.
    * @returns direct children and filesystem breadcrumbs.
    */
@@ -140,7 +142,8 @@ const frameSchema = z.discriminatedUnion('type', [
 ])
 const directoryEntrySchema = z.strictObject({ name: z.string(), path: z.string(), kind: z.enum(['directory', 'file']) })
 const directorySchema = z.strictObject({
-  path: z.string(), entries: z.array(directoryEntrySchema), crumbs: z.array(z.strictObject({ name: z.string(), path: z.string() })),
+  path: z.string(), home: z.string(), entries: z.array(directoryEntrySchema),
+  crumbs: z.array(z.strictObject({ name: z.string(), path: z.string() })),
 })
 
 function workspace(value: unknown): NativeWorkspace {

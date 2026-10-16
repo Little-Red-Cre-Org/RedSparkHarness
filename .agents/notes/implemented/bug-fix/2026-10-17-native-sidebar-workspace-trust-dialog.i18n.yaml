@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-17-native-sidebar-workspace-trust-dialog.md
-2026-10-17-native-sidebar-workspace-trust-dialog.md: 8f48600bb22baa55ef89da64c16a893fa50e836d
-2026-10-17-native-sidebar-workspace-trust-dialog.zh.md: c716d07cb7f7beed214aad5faeab7cedc0c3d192
+2026-10-17-native-sidebar-workspace-trust-dialog.md: 0ad6da1fe0ed9dd53812d627cbf1d74157af8634
+2026-10-17-native-sidebar-workspace-trust-dialog.zh.md: abfece2fb658db9acb2baaae089978b454cb299f
