@@ -7,7 +7,7 @@ import type { DesktopErrorState, DesktopErrorType } from './startup-error.ts'
 /**
  * Render escaped diagnostics without depending on application resource files.
  * @param locale - Shell-owned translations.
- * @param failure - Sanitized failure type and optional configuration path.
+ * @param failure - Sanitized failure type, optional configuration path, and local log path.
  * @param profileRecovery - Whether the initialized application can repair its profile.
  * @returns An HTML document suitable for an isolated emergency window.
  */
@@ -27,7 +27,8 @@ export function startupFailureDocument(locale: DesktopLocale, failure: DesktopEr
     formatDesktopMessage(locale.messages.startupErrorType, { type: errorTypes[failure.errorType] }),
     ...failure.path === undefined ? [] : [formatDesktopMessage(locale.messages.startupErrorPath, { path: failure.path })],
     ...failure.rule === undefined ? [] : [formatDesktopMessage(locale.messages.startupErrorRule, { rule: failure.rule })],
-    locale.messages.startupErrorLogAdvice,
+    failure.logPath === undefined ? locale.messages.startupErrorLogAdvice
+      : formatDesktopMessage(locale.messages.startupErrorLogWritten, { path: failure.logPath }),
   ].join('\n')
   return `<!doctype html><html lang="${locale.id}"><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action dsh-recovery:">

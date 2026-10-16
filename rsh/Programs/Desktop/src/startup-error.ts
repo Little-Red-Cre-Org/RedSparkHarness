@@ -8,6 +8,8 @@ export interface DesktopErrorState {
   readonly errorType: DesktopErrorType
   readonly path?: string
   readonly rule?: string
+  /** Local Desktop log destination; never contains the logged diagnostic itself. */
+  readonly logPath?: string
 }
 
 const errorTypes = new Set<DesktopErrorType>([

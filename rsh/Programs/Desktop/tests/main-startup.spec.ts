@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { DESKTOP_IPC } from '../src/ipc.ts'
 import { resolveDesktopLocale } from '../src/locale.ts'
@@ -98,6 +98,7 @@ const harness = await vi.hoisted(async () => {
     getLocale: () => 'en-US',
     getVersion: () => '1.0.0',
     getAppPath: () => 'desktop-test-app',
+    getPath: (name: string) => name === 'logs' ? resources : '',
     requestSingleInstanceLock: () => true,
     exit: vi.fn(),
     relaunch: vi.fn(),
@@ -792,12 +793,15 @@ describe('desktop main startup', () => {
     expect(errors).toBe(0)
     expect(JSON.stringify(payload)).not.toContain(fakeToken)
     expect(JSON.stringify(payload)).not.toContain('Authorization')
-    expect(payload).toEqual({ phase: 'error', errorType: 'ValidationError', path: 'providers.0.headers.0', rule: 'schema', profileRecovery: true })
+    expect(payload).toEqual({ phase: 'error', errorType: 'ValidationError', path: 'providers.0.headers.0', rule: 'schema',
+      logPath: join(resources, 'desktop.log'), profileRecovery: true })
     expect(status).toEqual(payload)
+    expect(readFileSync(join(resources, 'desktop.log'), 'utf8')).toContain(fakeToken)
     const emergencyDocument = startupFailureDocument(resolveDesktopLocale('en'), status, true)
     expect(emergencyDocument).not.toContain(fakeToken)
     expect(emergencyDocument).not.toContain('Authorization')
     expect(emergencyDocument).toContain('providers.0.headers.0')
+    expect(emergencyDocument).toContain(join(resources, 'desktop.log'))
     expect(harness.windows[0]!.urls).toEqual(['dsh-app://shell/startup.html'])
     const nextStarted = harness.nextHostStart()
     const retry = Promise.resolve(invoke(DESKTOP_IPC.backendRetry))
@@ -807,6 +811,11 @@ describe('desktop main startup', () => {
     await retry
     expect(harness.windows).toHaveLength(1)
     expect(harness.windows[0]!.urls.at(-1)).toBe('dsh-app://app/index.html')
+    const window = harness.windows[0]!
+    window.webContents.emit('preload-error', {}, 'preload-app.cjs', new Error('preload unavailable'))
+    const emergencyPage = decodeURIComponent(window.urls.at(-1)!)
+    expect(emergencyPage).toContain(join(resources, 'desktop.log'))
+    expect(emergencyPage).not.toContain(fakeToken)
     expect(harness.dialog.showErrorBox).not.toHaveBeenCalled()
   })
 

@@ -150,17 +150,17 @@ it('keeps subscribed state when initial status arrives late and detaches on page
 it.each(['en', 'zh-CN'])('offers recovery actions with %s guidance and preserves diagnostic text', async (locale) => {
   const page = startup(locale)
   await expect.poll(() => page.button('#restart').disabled).toBe(true)
-  page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error' })
+  page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
   await expect(`${page.copy()}\n`).toMatchFileSnapshot(fileURLToPath(new URL(`./expected/startup-${locale}-profile.txt`, import.meta.url)))
   for (const action of ['#disable-plugins', '#reset-configuration', '#restart']) {
-    page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error' })
+    page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
     page.button(action).click()
     expect(page.element('#actions').hidden).toBe(true)
   }
   expect(page.disablePlugins).toHaveBeenCalledOnce()
   expect(page.resetConfiguration).toHaveBeenCalledOnce()
   expect(page.restart).toHaveBeenCalledOnce()
-  page.publish({ phase: 'error', profileRecovery: false, errorType: 'Error' })
+  page.publish({ phase: 'error', profileRecovery: false, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
   expect(page.button('#disable-plugins').hidden).toBe(true)
   expect(page.button('#reset-configuration').hidden).toBe(true)
   await expect(`${page.copy()}\n`).toMatchFileSnapshot(fileURLToPath(new URL(`./expected/startup-${locale}-restart.txt`, import.meta.url)))

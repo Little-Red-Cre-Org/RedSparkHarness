@@ -22,8 +22,8 @@ Desktop 与 DesktopHost 沿错误 cause 或 AggregateError 链查找首个带字
 
 ## 影响
 
-renderer 状态只含本地化错误类型及可选路径和 rule。Host 诊断与 stderr 写入本地 Desktop 主进程日志。
+renderer 状态只含本地化错误类型、可选路径和 rule，以及本地日志路径。Desktop 会将启动和后端失败的原始详情（包括 Host stderr）追加写入 `app.getPath('logs')/desktop.log`，启动页和应急页都显示该路径。兼容插件重试会刷新后端状态，且仅在状态进入 `ready` 后报告完成。
 
 ## 验证
 
-启动回归用例通过 `pi-ai` 原生解析触发真实 Authorization 数组 schema 错误，并检查序号路径及 fake token 不出现在错误消息、stack、cause 和 renderer payload JSON 中。现有 adapter 与 native-module-management 用例继续检查 cause 链脱敏。
+启动回归用例通过 `pi-ai` 原生解析触发真实 Authorization 数组 schema 错误，并检查序号路径，fake token 不出现在错误消息、stack、cause、renderer payload JSON 和两个错误页中，但出现在本地日志文件中。兼容插件管理用例检查失败的重试不会报告完成。现有 adapter 与 native-module-management 用例继续检查 cause 链脱敏。

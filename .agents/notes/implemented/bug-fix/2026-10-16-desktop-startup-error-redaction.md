@@ -22,8 +22,8 @@ Desktop and DesktopHost project the first structured issue with a string rule fo
 
 ## Consequences
 
-Renderer state contains a localized error type and optional path and rule. Host diagnostics and stderr are recorded in the local Desktop process log.
+Renderer state contains a localized error type, optional path and rule, and the local log path. Desktop appends raw startup and backend failures, including Host stderr, to `app.getPath('logs')/desktop.log`, and both the startup page and the emergency page show that path. Legacy plugin retries refresh backend state and report completion only after it reaches `ready`.
 
 ## Verification
 
-The startup regression passes a real Authorization-array schema failure through `pi-ai` resolution and checks the numeric path and the absence of the fake token from error messages, stacks, causes, and renderer payload JSON. Existing adapter and native module management tests retain cause-chain redaction assertions.
+The startup regression passes a real Authorization-array schema failure through `pi-ai` resolution and checks the numeric path, the absence of the fake token from error messages, stacks, causes, renderer payload JSON, and both error pages, and its presence in the local log file. The legacy plugin manager test checks that a failed retry does not report completion. Existing adapter and native module management tests retain cause-chain redaction assertions.

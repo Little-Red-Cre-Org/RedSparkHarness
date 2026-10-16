@@ -22,7 +22,7 @@ async function main() {
       messages.startupErrorType.replace('{type}', types[state.errorType] || messages.startupTypeUnknownError),
       state.path === undefined ? '' : messages.startupErrorPath.replace('{path}', state.path),
       state.rule === undefined ? '' : messages.startupErrorRule.replace('{rule}', state.rule),
-      messages.startupErrorLogAdvice,
+      state.logPath === undefined ? messages.startupErrorLogAdvice : messages.startupErrorLogWritten.replace('{path}', state.logPath),
     ].filter(Boolean).join('\n')
   }
   function render(state) {

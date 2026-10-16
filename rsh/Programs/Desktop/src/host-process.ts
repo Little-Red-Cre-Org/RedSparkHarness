@@ -98,6 +98,7 @@ export class DesktopHostProcess {
    * @param inspectPort - optional loopback inspector port for workspace development.
    * @param environment - Child environment; runtime and package-manager overrides are removed.
    * @param onFailure - Receives the first fatal child or transport failure, including after readiness.
+   * @param logError - Persists stderr and child failure details.
    */
   constructor(
     private readonly node: string,
@@ -106,6 +107,7 @@ export class DesktopHostProcess {
     private readonly inspectPort?: number,
     private readonly environment: NodeJS.ProcessEnv = process.env,
     private readonly onFailure?: (error: Error) => void,
+    private readonly logError: (label: string, error: unknown) => void = (label, error) => { console.error(label, error) },
   ) {}
 
   /** Start the child once and resolve only after its complete composition is active. */
@@ -160,7 +162,7 @@ export class DesktopHostProcess {
     this.exitPromise = new Promise<void>((resolve) => {
       child.once('close', (code) => {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
-        if (suffix !== '') console.error('Desktop Host stderr', this.stderr.trim())
+        if (suffix !== '') this.logError('Desktop Host stderr', this.stderr.trim())
         if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
         else this.fail(new Error(`dsh desktop host stopped${suffix}`))
         resolve()
@@ -423,7 +425,7 @@ export class DesktopHostProcess {
     if (!this.failureReported) {
       this.failureReported = true
       try { this.onFailure?.(error) } catch (listenerError) {
-        console.error('desktop host failure listener failed', listenerError)
+        this.logError('desktop host failure listener failed', listenerError)
       }
     }
     for (const pending of this.pending.values()) {

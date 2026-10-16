@@ -1,8 +1,10 @@
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
+import { appendFileSync, mkdirSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { inspect } from 'node:util'
 import {
   app,
   BrowserWindow,
@@ -38,6 +40,7 @@ import { parsePetPresentation } from './pet-presentation.ts'
 import { showTaskNotification } from './task-notification.ts'
 
 const SCHEME = 'dsh-app'
+const DESKTOP_LOG_FILE = 'desktop.log'
 let focusPrimaryWindow = (): void => {}
 type RecoveryAction = 'restart' | 'plugins' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
@@ -50,10 +53,24 @@ let recoverApplication = (action: RecoveryAction): Promise<void> => {
 }
 
 async function showEmergencyDocument(window: BrowserWindow, failure: DesktopErrorState): Promise<void> {
-  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), failure, profileRecoveryAvailable())
+  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), {
+    ...failure, logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE),
+  }, profileRecoveryAvailable())
   const url = `data:text/html;charset=utf-8,${encodeURIComponent(document)}`
   emergencyPages.set(window, { url, busy: false })
   await window.loadURL(url)
+}
+
+function logDesktopError(label: string, error: unknown): void {
+  console.error(label, error)
+  try {
+    const logs = app.getPath('logs')
+    mkdirSync(logs, { recursive: true })
+    appendFileSync(join(logs, DESKTOP_LOG_FILE),
+      `${new Date().toISOString()} ${label}\n${inspect(error, { depth: null })}\n\n`)
+  } catch (writeError) {
+    console.error('Desktop log write failed', writeError)
+  }
 }
 
 protocol.registerSchemesAsPrivileged([{
@@ -145,6 +162,7 @@ function createWindow(preload: string, show = false): BrowserWindow {
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
+      logDesktopError('Desktop recovery failed', error)
       if (!window.isDestroyed()) await showEmergencyDocument(window, desktopErrorState(error))
     }).catch((error: unknown) => { console.error(error) }).finally(() => { page.busy = false })
   })
@@ -204,6 +222,7 @@ async function main(): Promise<void> {
   let updateState: DesktopUpdateState = { phase: 'idle' }
   const locale = resolveDesktopLocale(app.getLocale())
   const messages = locale.messages
+  const logPath = join(app.getPath('logs'), DESKTOP_LOG_FILE)
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const managementPreload = fileURLToPath(new URL('./preload.cjs', import.meta.url))
   const desktopPet = new DesktopPetWindow(fileURLToPath(new URL('./preload-pet.cjs', import.meta.url)))
@@ -218,7 +237,7 @@ async function main(): Promise<void> {
     emergencyDocument = true
     petUpdatesAllowed = false
     desktopPet.close()
-    console.error('Desktop emergency startup failed', error)
+    logDesktopError('Desktop emergency startup failed', error)
     const failure = desktopErrorState(error)
     pageError = failure
     if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, failure)
@@ -244,7 +263,7 @@ async function main(): Promise<void> {
   }
   const backendState = (): DesktopBackendState => {
     const state = pageError ?? backend.state
-    return state.phase === 'error' ? { ...state, profileRecovery: profileRecoveryAvailable() } : state
+    return state.phase === 'error' ? { ...state, logPath, profileRecovery: profileRecoveryAvailable() } : state
   }
   const publishBackend = (state: DesktopBackendState): void => {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -256,7 +275,7 @@ async function main(): Promise<void> {
     const hostInspectPort = developmentHostInspectPort(development !== undefined)
     const host = new DesktopHostProcess(resources.node, development ?? resources.dsh, activeProject,
       hostInspectPort, desktopHostEnvironment(app.isPackaged && process.platform === 'win32'
-        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure)
+        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure, logDesktopError)
     return {
       start: () => host.start(),
       stop: () => host.stop(),
@@ -266,7 +285,7 @@ async function main(): Promise<void> {
     if (state.phase === 'starting' && !emergencyDocument) pageError = undefined
     publishBackend(backendState())
     if (state.phase === 'error') void navigateMain(startupUrl).catch((error: unknown) => { console.error(error) })
-  })
+  }, logDesktopError)
 
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateState = state
@@ -304,7 +323,7 @@ async function main(): Promise<void> {
 
   const showStartupError = async (error: unknown): Promise<void> => {
     if (quitting) return
-    console.error('Desktop startup failed', error)
+    logDesktopError('Desktop startup failed', error)
     pageError = desktopErrorState(error)
     try { await navigateMain(startupUrl) }
     catch (navigationError) {
@@ -731,7 +750,7 @@ async function main(): Promise<void> {
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
-  console.error('Desktop initialization failed', error)
+  logDesktopError('Desktop initialization failed', error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
     await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
