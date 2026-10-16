@@ -341,9 +341,10 @@ function NativeSessionBrowser({
     const dragProps = order !== 'manual' || group === undefined || workspaceId === undefined ? undefined : {
       active: drag?.kind === 'session' && drag.workspaceId === workspaceId,
       marker: drag?.kind === 'session' && drag.over?.id === session.id ? drag.over.half : null,
-      start: () => setDrag({ kind: 'session', workspaceId, id: session.id }),
-      hover: (half: 'before' | 'after') => setDrag(current => current?.kind === 'session'
-        ? { ...current, over: { id: session.id, half } } : current),
+      start: () => { setDrag({ kind: 'session', workspaceId, id: session.id }) },
+      hover: (half: 'before' | 'after') => {
+        setDrag(current => current?.kind === 'session' ? { ...current, over: { id: session.id, half } } : current)
+      },
       drop: (half: 'before' | 'after') => {
         if (drag?.kind !== 'session' || drag.id === session.id) { setDrag(undefined); return }
         const remaining = group.sessions.filter(row => row.id !== drag.id)
@@ -353,7 +354,7 @@ function NativeSessionBrowser({
         }
         setDrag(undefined)
       },
-      end: () => setDrag(undefined),
+      end: () => { setDrag(undefined) },
     }
     return <div key={session.id}>
       <div className={css.orderedRow}>
@@ -589,8 +590,8 @@ function NativeSessionBrowser({
                   if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
                 }} actions={workspaceActions} showCreate={workspaceId !== undefined}
                 drag={order !== 'manual' || workspaceId === undefined ? undefined : {
-                  start: () => setDrag({ kind: 'workspace', id: workspaceId }),
-                  end: () => setDrag(undefined),
+                  start: () => { setDrag({ kind: 'workspace', id: workspaceId }) },
+                  end: () => { setDrag(undefined) },
                 }} t={t} />
                 {order !== 'manual' || workspaceId === undefined ? null
                   : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
