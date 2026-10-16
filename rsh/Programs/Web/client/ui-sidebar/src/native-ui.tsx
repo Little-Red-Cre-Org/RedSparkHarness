@@ -59,9 +59,11 @@ type NativeWorkspacesInjected = {
     homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<boolean>
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
+  beginNavigation: NativeConversationService['beginNavigation']
+  isCurrentNavigation: NativeConversationService['isCurrentNavigation']
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -169,6 +171,7 @@ const SEARCH_DEBOUNCE_MS = 250
 
 function NativeSessionBrowser({
   wide, useConversation, useWorkspaceRegistry, displayTitle, admitSession, selectSession, deselectSession,
+  beginNavigation, isCurrentNavigation,
   renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
   renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
@@ -177,9 +180,11 @@ function NativeSessionBrowser({
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<boolean>
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
+  beginNavigation: NativeConversationService['beginNavigation']
+  isCurrentNavigation: NativeConversationService['isCurrentNavigation']
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
@@ -305,21 +310,29 @@ function NativeSessionBrowser({
   const workspaceError = (error: unknown): string =>
     rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
   const admitAndSelect = (id: NativeSessionId): void => {
+    const navigation = beginNavigation()
     const request = { id, settled: false }
     openRequest.current = request
     const from = live.current.selected
     // A later open or any other navigation during admission makes this request stale.
     const current = (): boolean => openRequest.current === request && live.current.selected === from
+      && isCurrentNavigation(navigation)
     const open = async (trust?: boolean): Promise<void> => {
-      const admitted = await admitSession(id, trust)
-      if (!admitted || !current()) return
+      await admitSession(id, trust)
+      if (!current()) {
+        if (openRequest.current === request) openRequest.current = undefined
+        return
+      }
       request.settled = true
       if (live.current.state === 'loading') setPendingSessionId(id)
       else await selectSession(id)
     }
     setActionError(undefined)
     void open().catch((error: unknown) => {
-      if (!current()) return
+      if (!current()) {
+        if (openRequest.current === request) openRequest.current = undefined
+        return
+      }
       if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
     })
   }
@@ -952,16 +965,16 @@ export const plugin: NativePlugin = {
         displayTitle: item => presentation.displayTitle(item),
         // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
         admitSession: async (id, trust) => {
-          const navigation = controller.beginNavigation()
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
           }
-          return controller.isCurrentNavigation(navigation)
         },
         selectSession: controller.select.bind(controller),
         deselectSession: controller.deselect.bind(controller),
+        beginNavigation: controller.beginNavigation.bind(controller),
+        isCurrentNavigation: controller.isCurrentNavigation.bind(controller),
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
           await controller.renameTitle(id, title)
           return controller.getSnapshot().error === undefined
@@ -994,12 +1007,14 @@ export const plugin: NativePlugin = {
       }),
     }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
       admitSession, selectSession, deselectSession, renameTitle, refreshTitle,
+      beginNavigation, isCurrentNavigation,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
       renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
         displayTitle={displayTitle} admitSession={admitSession} selectSession={selectSession} deselectSession={deselectSession}
+        beginNavigation={beginNavigation} isCurrentNavigation={isCurrentNavigation}
         renameTitle={renameTitle} refreshTitle={refreshTitle}
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
