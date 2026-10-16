@@ -334,6 +334,8 @@ function NativeSessionBrowser({
         if (openRequest.current === request) openRequest.current = undefined
         return
       }
+      // A trust prompt or a final failure ends this open: an archive must fall back to the neighbouring row.
+      request.settled = true
       if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
     })
   }
@@ -861,30 +863,35 @@ export const plugin: NativePlugin = {
       workspaces: [], archivedSessionIds: [], ready: false,
     })
     const homeDirectory = createSnapshotStore<string | undefined>(undefined)
-    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ path }) => {
-      homeDirectory.set(path)
+    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ home }) => {
+      homeDirectory.set(home)
     }).catch((error: unknown) => {
       if (!context.signal.aborted) console.error('native sidebar home directory lookup failed:', error)
     })
     context.own(async () => { await homeLookup })
     const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
       const listing = await directoryPicker.list(path, signal ?? context.signal)
-      if (path === undefined) homeDirectory.set(listing.path)
       return {
         path: listing.path,
-        home: homeDirectory.getSnapshot() ?? listing.path,
+        home: listing.home,
         crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
         entries: listing.entries.filter(entry => entry.kind === 'directory')
           .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),
         truncated: false,
       }
     }
+    // Settles once: resolved by the first baseline, rejected if the follow ends before one arrives.
+    const workspaceBaseline = Promise.withResolvers<void>()
+    workspaceBaseline.promise.catch(() => {})
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
           workspaceRegistry.set(nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame))
+          if (workspaceRegistry.getSnapshot().ready) workspaceBaseline.resolve()
         }
+        workspaceBaseline.reject(new Error('Workspace list unavailable'))
       } catch (error: unknown) {
+        workspaceBaseline.reject(error)
         if (!context.signal.aborted) console.error('native sidebar Workspace follow failed:', error)
       }
     })()
@@ -970,6 +977,8 @@ export const plugin: NativePlugin = {
         // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
         admitSession: async (id, trust) => {
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
+          // Sessions can load before the Workspace baseline; an unknown Workspace is only "unregistered" once it arrives.
+          if (workspaceId !== undefined) await workspaceBaseline.promise
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
