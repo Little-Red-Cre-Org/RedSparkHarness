@@ -246,10 +246,12 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   }
 
   const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
-    if (event.relatedTarget instanceof Node && (
-      rootRef.current?.contains(event.relatedTarget) === true
-      || menuRef.current?.contains(event.relatedTarget) === true
-    )) return
+    // Focus dropping to nowhere (a click on the card's non-focusable area, or the
+    // trigger locking while the open-time reload runs) is not leaving the picker;
+    // outside clicks close through the document mousedown listener instead.
+    if (!(event.relatedTarget instanceof Node)) return
+    if (rootRef.current?.contains(event.relatedTarget) === true
+      || menuRef.current?.contains(event.relatedTarget) === true) return
     close()
   }
 
@@ -320,7 +322,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
         aria-expanded={open}
         aria-controls={open ? `${id}-menu` : undefined}
         title={triggerLabel}
-        disabled={locked}
+        disabled={locked && !open}
         onClick={() => {
           if (open) {
             close()
