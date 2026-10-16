@@ -22,6 +22,8 @@ import css from './onboarding.module.css'
 
 const WELCOME_ACK_KEY = 'dsh.native.onboarding.welcome'
 const WELCOME_ACK_VERSION = '2026-08-13.1'
+const MODELS_SKIP_KEY = 'dsh.native.onboarding.models'
+const MODELS_SKIP_VERSION = '2026-10-17.1'
 
 type Step = 'welcome' | 'models' | 'done'
 type Translate = (key: ConversationLocaleKey) => string
@@ -75,10 +77,11 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
   readonly usable: boolean
   readonly setup?: ModelSetup
 }> {
-  const [activeProviders, configurableProviders, description] = await Promise.all([
+  const [activeProviders, configurableProviders, description, catalog] = await Promise.all([
     client.modelsListProviders(signal),
     client.modelsListConfigurableProviders(signal),
     client.settingsDescribe(signal),
+    client.modelCatalog(signal),
   ])
   const namespaces = new Map(description.namespaces.map(descriptor => [descriptor.namespace, asNamespace(descriptor)]))
   const refs = [...new Set(configurableProviders.flatMap((entry) => {
@@ -111,6 +114,10 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
       ...(entry.declared === undefined ? {} : { declared: entry.declared }),
     }]
   })
+  // The Host's default Session route leads, so the form opens on the provider new Sessions use.
+  const defaultProvider = catalog?.default.provider
+  const defaultIndex = providers.findIndex(entry => entry.provider === defaultProvider)
+  if (defaultIndex > 0) providers.unshift(...providers.splice(defaultIndex, 1))
   const customNamespace = namespaces.get('llm-pi-ai')
   const protocols = customNamespace === undefined ? [] : modelProtocolChoices(customNamespace, modelSettingsSchema)
   const setup: ModelSetup = {
@@ -167,8 +174,8 @@ export function NativeOnboarding({ client, localeService, themeService, children
   themeService: NativeThemeService
   children: ReactNode
 }): ReactNode {
-  const [step, setStep] = useState<Step>(() => localStorage.getItem(WELCOME_ACK_KEY) === WELCOME_ACK_VERSION
-    ? 'models' : 'welcome')
+  const [step, setStep] = useState<Step>(() => localStorage.getItem(WELCOME_ACK_KEY) !== WELCOME_ACK_VERSION
+    ? 'welcome' : localStorage.getItem(MODELS_SKIP_KEY) === MODELS_SKIP_VERSION ? 'done' : 'models')
   const [locale, setLocale] = useState(localeService.getSnapshot().locale)
   const [colorScheme, setColorScheme] = useState(themeService.getSnapshot().active.colorScheme)
   const [welcomeError, setWelcomeError] = useState<string>()
@@ -211,6 +218,12 @@ export function NativeOnboarding({ client, localeService, themeService, children
     } catch {
       setWelcomeError(t('welcomeError'))
     }
+  }
+
+  const configureLater = (): void => {
+    // Settings > Models stays the way back; an unsaved skip only means the step returns next launch.
+    try { localStorage.setItem(MODELS_SKIP_KEY, MODELS_SKIP_VERSION) } catch { /* not persisted */ }
+    setStep('done')
   }
 
   if (step === 'done') return <>{children}</>
@@ -259,7 +272,7 @@ export function NativeOnboarding({ client, localeService, themeService, children
               operations={operations} schema={modelSettingsSchema}
               t={onboardingCopy} readOnly={false} onClose={(changed) => {
                 if (changed) setModelUpdate(value => value + 1)
-                else setStep('done')
+                else configureLater()
               }} />
           </>}
         </section>

@@ -339,11 +339,14 @@ export function ProviderEditor<TCopy extends string = ModelEditorCopyKey>(props:
     const models = modelDrafts(modelsOverridden ? customModels : inheritedModels())
     const defaultContextWindow = schema.getPath(fallback, ['defaultContextWindow'])
     const defaultMaxTokens = schema.getPath(fallback, ['maxTokens'])
+    // A required key cannot be left blank, so only the optional editor offers environment authentication.
     const keyPlaceholder = keyLocked
       ? t('keyEnvLocked')
-      : keyState?.configured === true && props.credentialRequired !== true
-        ? t('keyStored')
-        : family === 'pi-ai' ? t('keyPlaceholderNative') : t('keyPlaceholder')
+      : props.credentialRequired === true
+        ? t('keyPlaceholder')
+        : keyState?.configured === true
+          ? t('keyStored')
+          : family === 'pi-ai' ? t('keyPlaceholderNative') : t('keyPlaceholder')
     /** What both family editors take: the rows, whose layer owns them, and the two writes. */
     const catalogProps = {
       models,
