@@ -46,8 +46,8 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
-      - name: Build Web and desktop sources
-        run: pnpm run build
+      - name: Build official Web and desktop sources
+        run: pnpm run build:official
       - name: Typecheck
         run: pnpm run typecheck:contracts-ready
       - uses: actions/setup-python@v6.3.0
@@ -127,3 +127,13 @@ jobs:
       - name: Package publication rules
         if: runner.os == 'Linux'
         run: pnpm run check:ci:package-publication
+      - name: Pack dsh release tarballs for consumer verification
+        run: pnpm run release:pack --family dsh --out dist/npm
+      - name: Pack vendored framework for consumer verification
+        run: pnpm run release:pack --family vendor --out dist/npm-vendor
+      - name: Pack Landlock entry for consumer verification
+        run: |
+          pnpm --dir rsh/Core/native/system run build:ts
+          pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
+      - name: Verify independently packed dsh consumer
+        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
