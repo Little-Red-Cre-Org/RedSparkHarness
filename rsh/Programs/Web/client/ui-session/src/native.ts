@@ -38,6 +38,8 @@ export interface NativeConversationSnapshot {
   readonly selected?: SessionId | undefined
   /** Readiness of the sole Native Conversation controller. */
   readonly state: 'loading' | 'ready' | 'sending' | 'cancelling' | 'closed'
+  /** Whether a new Session connection currently blocks composer submissions. */
+  readonly navigationPending?: boolean | undefined
   /** Last rejected Native Session operation, when one is visible to the shell. */
   readonly error?: string | undefined
 }
@@ -59,10 +61,19 @@ export interface NativeConversationService {
   create(): Promise<void>
   /** Clear the selected Session and return to the empty conversation state. */
   clear(): void
-  /** Reserve the next navigation token. */
-  beginNavigation(): number
+  /** Reserve the next navigation token.
+   * @param disableSending - whether to block submissions while navigation resolves.
+   * @returns next navigation token.
+   */
+  beginNavigation(disableSending?: boolean): number
   /** Check whether a navigation token is still current. */
   isCurrentNavigation(token: number): boolean
+  /** Clear a current navigation's sending lock and expose its failure.
+   * @param token - navigation token that failed.
+   * @param error - failure returned by the navigation operation.
+   * @returns no value.
+   */
+  failNavigation(token: number, error: unknown): void
   /** Select an identity from the Host-owned Session index. */
   select(id: SessionId): Promise<void>
   /** Pin a durable title through the selected Host owner. */

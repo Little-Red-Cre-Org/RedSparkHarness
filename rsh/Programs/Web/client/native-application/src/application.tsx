@@ -14,6 +14,7 @@ import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
+import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
@@ -40,6 +41,7 @@ import type { NativeSettingsActions } from './settings-page.tsx'
 import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
+type StagedPreset = { readonly id: string; readonly generation: number; readonly pending: boolean; readonly sessionId?: SessionId }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -60,8 +62,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
   listWorkspaces: () => Promise<readonly NativeWorkspace[]>
-  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<void>
-  addWorkspace: (path: string, trust?: boolean) => Promise<void>
+  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
+  addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
@@ -93,12 +95,12 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const [pendingDefault, setPendingDefault] = useState<BusyEnterBehavior>(readPendingDefault)
   const [pendingDefaultError, setPendingDefaultError] = useState(false)
   const [presetSeat, setPresetSeat] = useState<NativeAgentPresetList>()
-  const [stagedPreset, setStagedPreset] = useState<string>()
-  const appliedStagedPreset = useRef<string>()
+  const [stagedPreset, setStagedPreset] = useState<StagedPreset>()
+  const presetGeneration = useRef(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
-  const ready = snapshot.state === 'ready'
+  const ready = snapshot.state === 'ready' && snapshot.navigationPending !== true
   const acceptsPending = snapshot.state === 'sending'
   const inputReady = ready || acceptsPending
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
@@ -110,20 +112,48 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
     : selectedTitle?.status === 'absent' ? t('untitledSession') : t('titleUnavailable')
   useEffect(() => {
+    if (stagedPreset === undefined || stagedPreset.pending) return
+    if (stagedPreset.sessionId === undefined) {
+      if (selected !== undefined) setStagedPreset(undefined)
+      return
+    }
+    if (selected !== stagedPreset.sessionId) {
+      setStagedPreset(undefined)
+      return
+    }
     const mode = snapshot.modeControls
-    if (selected === undefined || snapshot.state !== 'ready' || mode === undefined || stagedPreset === undefined) return
-    const preset = stagedPreset
+    if (snapshot.state !== 'ready' || mode === undefined) return
+    const preset = stagedPreset.id
     setStagedPreset(undefined)
-    if (appliedStagedPreset.current === preset) return
-    if (!mode.locked && mode.canSelect && mode.current !== stagedPreset
+    if (!mode.locked && mode.canSelect && mode.current !== preset
       && mode.options.some(option => option.id === preset)) {
-      appliedStagedPreset.current = preset
       void selectPreset(preset)
     }
   }, [selected, snapshot.state, snapshot.modeControls, stagedPreset, selectPreset])
   const stagePreset = (id: string): void => {
-    appliedStagedPreset.current = undefined
-    setStagedPreset(id)
+    setStagedPreset({ id, generation: ++presetGeneration.current, pending: false })
+  }
+  const discardStagedPreset = (): void => {
+    setStagedPreset(current => current?.pending ? undefined : current)
+  }
+  const startWorkspaceWithPreset = async (start: () => Promise<SessionId | undefined>): Promise<SessionId | undefined> => {
+    const staged = stagedPreset
+    if (staged !== undefined) {
+      setStagedPreset(current => current?.generation === staged.generation ? { ...current, pending: true } : current)
+    }
+    try {
+      const sessionId = await start()
+      if (staged !== undefined) {
+        setStagedPreset(current => current?.generation !== staged.generation ? current
+          : sessionId === undefined ? undefined : { ...current, sessionId, pending: false })
+      }
+      return sessionId
+    } catch (error: unknown) {
+      if (staged !== undefined && !(error instanceof NativeSessionRpcError && error.code === 'native/workspace-untrusted')) {
+        setStagedPreset(current => current?.generation === staged.generation ? undefined : current)
+      }
+      throw error
+    }
   }
   useEffect(() => {
     const lifetime = new AbortController()
@@ -278,10 +308,12 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             <WorkspaceChooser label={selected === undefined ? t('chooseWorkspace') : workspace}
               currentWorkspaceId={snapshot.sessions.find(session => session.header.id === selected)?.workspaceId}
               selected={selected !== undefined} ready={ready} listWorkspaces={listWorkspaces}
-              chooseWorkspace={chooseWorkspace} addWorkspace={addWorkspace} listDirectory={listDirectory}
-              createDirectory={createDirectory} t={t} />
+              chooseWorkspace={(id, trust) => startWorkspaceWithPreset(() => chooseWorkspace(id, trust))}
+              addWorkspace={(path, trust) => startWorkspaceWithPreset(() => addWorkspace(path, trust))}
+              listDirectory={listDirectory} createDirectory={createDirectory}
+              discardStagedPreset={discardStagedPreset} t={t} />
             {selected === undefined ? <AgentPresetSeat roster={presetSeat}
-              stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
+              stagedPreset={stagedPreset?.id} stagePreset={stagePreset} t={t} /> : null}
           </div>
           {composer}
         </section>
@@ -375,18 +407,33 @@ export const plugin: NativePlugin = {
           listWorkspaces: async () => (await workspaceClient.list(context.signal)).workspaces,
           chooseWorkspace: async (id: NativeWorkspace['workspaceId'], trust?: boolean) => {
             const navigation = controller.beginNavigation()
-            const { sessionId } = trust === undefined
-              ? await workspaceClient.connectWorkspace(id, context.signal)
-              : await workspaceClient.connectWorkspace(id, context.signal, trust)
-            if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
+            try {
+              const { sessionId } = trust === undefined
+                ? await workspaceClient.connectWorkspace(id, context.signal)
+                : await workspaceClient.connectWorkspace(id, context.signal, trust)
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              await controller.select(sessionId)
+              return controller.getSnapshot().selected === sessionId ? sessionId : undefined
+            } catch (error: unknown) {
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              throw error
+            }
           },
           addWorkspace: async (path: string, trust?: boolean) => {
             const navigation = controller.beginNavigation()
-            const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
-            const { sessionId } = trust === undefined
-              ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
-              : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
-            if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
+            try {
+              const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              const { sessionId } = trust === undefined
+                ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
+                : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              await controller.select(sessionId)
+              return controller.getSnapshot().selected === sessionId ? sessionId : undefined
+            } catch (error: unknown) {
+              if (!controller.isCurrentNavigation(navigation)) return undefined
+              throw error
+            }
           },
           listDirectory,
           createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
@@ -415,8 +462,8 @@ export const plugin: NativePlugin = {
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         settingsActions: NativeSettingsActions
         listWorkspaces: () => Promise<readonly NativeWorkspace[]>
-        chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<void>
-        addWorkspace: (path: string, trust?: boolean) => Promise<void>
+        chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
+        addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
         listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
         createDirectory: NativeDirectoryPickerClient['createDirectory']
         loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>

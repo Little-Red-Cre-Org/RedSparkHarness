@@ -781,7 +781,7 @@ export const plugin: NativePlugin = {
         startSession: () => {
           const current = controller.getSnapshot()
           if (current.state !== 'ready') return
-          const navigation = controller.beginNavigation()
+          const navigation = controller.beginNavigation(true)
           const selectedWorkspace = current.sessions.find(session => session.header.id === current.selected)?.workspaceId
           const recentSession = current.sessions.reduce<NativeSessionListItem | undefined>((recent, session) =>
             session.workspaceId !== undefined && (recent === undefined || session.updatedAt > recent.updatedAt)
@@ -799,7 +799,7 @@ export const plugin: NativePlugin = {
               if (error instanceof NativeSessionRpcError && error.code === 'native/workspace-untrusted') {
                 const latest = controller.getSnapshot()
                 if (latest.state === 'ready' && controller.isCurrentNavigation(navigation)) controller.clear()
-              } else console.warn('native sidebar start session failed:', error)
+              } else controller.failNavigation(navigation, error)
             })
         },
         toggleSidebar: () => { layout.toggleSidebar() },

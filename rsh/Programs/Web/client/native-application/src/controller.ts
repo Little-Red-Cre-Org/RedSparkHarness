@@ -27,6 +27,8 @@ export interface ConversationSnapshot {
   readonly answeringHuman?: boolean | undefined
   readonly sessions: readonly NativeSessionListItem[]
   readonly selected?: SessionId | undefined
+  /** Whether a pending navigation blocks composer submissions. */
+  readonly navigationPending?: boolean | undefined
   readonly events: readonly SessionEvent[]
   readonly liveText?: string | undefined
   readonly liveTruncated?: boolean | undefined
@@ -42,7 +44,7 @@ export interface NativeConversationLimits {
 
 /** Own one interactive Session view; disposal detaches its turn waiter without cancelling Host work. */
 export class NativeConversationController {
-  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading' }
+  private snapshot: ConversationSnapshot = { sessions: [], events: [], state: 'loading', navigationPending: false }
   private readonly listeners = new Set<() => void>()
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
@@ -74,15 +76,30 @@ export class NativeConversationController {
   readonly getSnapshot = (): ConversationSnapshot => this.snapshot
 
   /** Reserve the next navigation token.
+   * @param disableSending - whether to block submissions while navigation resolves.
    * @returns next navigation token.
    */
-  beginNavigation(): number { return ++this.navigation }
+  beginNavigation(disableSending = false): number {
+    const token = ++this.navigation
+    this.publish({ navigationPending: disableSending })
+    return token
+  }
 
   /** Check whether a navigation token is still current.
    * @param token - navigation token to check.
    * @returns whether the token is current.
    */
   isCurrentNavigation(token: number): boolean { return token === this.navigation }
+
+  /** Clear a current navigation's sending lock and expose its failure.
+   * @param token - navigation token that failed.
+   * @param error - failure returned by the navigation operation.
+   * @returns no value.
+   */
+  failNavigation(token: number, error: unknown): void {
+    if (!this.isCurrentNavigation(token)) return
+    this.publish({ navigationPending: false, error: error instanceof Error ? error.message : String(error) })
+  }
 
   /** Observe view changes.
    * @param listener - render notification.
@@ -136,7 +153,7 @@ export class NativeConversationController {
     this.navigation++
     this.submissionFloor = -1
     this.submissionDraft = undefined
-    this.publish({ submissionBusy: false, submissionError: undefined })
+    this.publish({ navigationPending: false, submissionBusy: false, submissionError: undefined })
   }
 
   private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
@@ -530,6 +547,7 @@ export class NativeConversationController {
    */
   send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
+    if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
     if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
     const retainedDraft = this.submissionDraft

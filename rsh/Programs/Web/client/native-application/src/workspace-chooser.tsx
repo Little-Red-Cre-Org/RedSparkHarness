@@ -8,6 +8,7 @@ import type { DirectoryBrowserListing } from '@deepseek-ai/dsh-client-ui-primiti
 import type {
   NativeAgentPresetList, NativeDirectoryPickerClient, NativeWorkspace,
 } from '@deepseek-ai/dsh-client-native-session/native'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './workspace-chooser.module.css'
@@ -16,16 +17,17 @@ type Translate = (key: ConversationLocaleKey, params?: Record<string, unknown>) 
 
 /** Choose an existing Workspace or add a directory from the conversation hero. */
 export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, listWorkspaces, chooseWorkspace,
-  addWorkspace, listDirectory, createDirectory, t }: {
+  addWorkspace, listDirectory, createDirectory, discardStagedPreset, t }: {
   label: string
   currentWorkspaceId?: NativeWorkspace['workspaceId'] | undefined
   selected: boolean
   ready: boolean
   listWorkspaces: () => Promise<readonly NativeWorkspace[]>
-  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<void>
-  addWorkspace: (path: string, trust?: boolean) => Promise<void>
+  chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
+  addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
+  discardStagedPreset: () => void
   t: Translate
 }) {
   const [workspaces, setWorkspaces] = useState<readonly NativeWorkspace[]>([])
@@ -35,10 +37,10 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
   const [directoryError, setDirectoryError] = useState<string>()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
-  const [trustPrompt, setTrustPrompt] = useState<{ path: string; retry: () => Promise<void> }>()
+  const [trustPrompt, setTrustPrompt] = useState<{ path: string; retry: () => Promise<unknown> }>()
   const [trustPending, setTrustPending] = useState(false)
 
-  const requestWorkspaceTrust = (reason: unknown, retry: (path: string) => Promise<void>): boolean => {
+  const requestWorkspaceTrust = (reason: unknown, retry: (path: string) => Promise<unknown>): boolean => {
     if (!(reason instanceof NativeSessionRpcError) || reason.code !== 'native/workspace-untrusted') return false
     const path = 'path' in reason.details ? reason.details.path : undefined
     if (typeof path !== 'string') return false
@@ -70,6 +72,7 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
     setBusy(true)
     void chooseWorkspace(id as NativeWorkspace['workspaceId']).catch((reason: unknown) => {
       if (!requestWorkspaceTrust(reason, () => chooseWorkspace(id as NativeWorkspace['workspaceId'], true))) {
+        discardStagedPreset()
         setError(errorMessage(reason))
       }
     }).finally(() => { setBusy(false) })
@@ -81,6 +84,7 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
       setDirectoryOpen(false)
     }).catch((reason: unknown) => {
       if (!requestWorkspaceTrust(reason, trustedPath => addWorkspace(trustedPath, true))) {
+        discardStagedPreset()
         setDirectoryError(errorMessage(reason))
       }
     }).finally(() => { setDirectoryBusy(false) })
@@ -93,6 +97,7 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
       setTrustPrompt(undefined)
     }).catch((reason: unknown) => {
       setTrustPrompt(undefined)
+      discardStagedPreset()
       setError(errorMessage(reason))
     }).finally(() => { setTrustPending(false) })
   }
@@ -121,9 +126,14 @@ export function WorkspaceChooser({ label, currentWorkspaceId, selected, ready, l
     <DirectoryBrowser open={directoryOpen} listDirectory={listDirectory} createDirectory={createDirectory}
       onOpen={addDirectory} onClose={() => { setDirectoryOpen(false) }} busy={directoryBusy} ownerError={directoryError} t={t} />
     {trustPrompt === undefined ? null : <Modal open title={t('workspaceTrustTitle')} description={t('workspaceTrustBody')}
-      closeLabel={t('close')} onClose={() => { if (!trustPending) setTrustPrompt(undefined) }}
+      closeLabel={t('close')} onClose={() => {
+        if (!trustPending) { setTrustPrompt(undefined); discardStagedPreset() }
+      }}
       footer={<>
-        <Button variant="outline" disabled={trustPending} onClick={() => { setTrustPrompt(undefined) }}>{t('browser.cancel')}</Button>
+        <Button variant="outline" disabled={trustPending} onClick={() => {
+          setTrustPrompt(undefined)
+          discardStagedPreset()
+        }}>{t('browser.cancel')}</Button>
         <Button variant="primary" disabled={trustPending} onClick={confirmTrust}>{t('workspaceTrust')}</Button>
       </>}>
       <code>{trustPrompt.path}</code>
