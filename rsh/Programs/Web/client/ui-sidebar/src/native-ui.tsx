@@ -500,7 +500,9 @@ function NativeSessionBrowser({
     : { query: searchQuery, status: 'loading' as const, items: [] }
   // Roving tab stop: Tab reaches the tree once, arrows move between rows.
   useLayoutEffect(() => {
-    const tree = treeRef.current as HTMLElement
+    // The collapsed sidebar renders no tree.
+    const tree = treeRef.current
+    if (tree === null) return
     tree.tabIndex = tree.querySelector('[role="treeitem"]') !== null
       && tree.querySelector('[role="treeitem"][tabindex="0"]') === null ? 0 : -1
   })

@@ -67,7 +67,9 @@ export function SettingsPanel({
       const focusable = Array.from(root.querySelectorAll<HTMLElement>(
         'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]',
       )).filter(element => element.getAttribute('tabindex') !== '-1' && element.closest('[hidden]') === null
-        && (element.tagName === 'SUMMARY' || element.closest('details:not([open])') === null))
+        // A summary stays visible while its own disclosure is closed, but not inside a closed outer disclosure.
+        && ((element.tagName === 'SUMMARY' ? (element.parentElement as HTMLElement).parentElement as HTMLElement : element)
+          .closest('details:not([open])') === null))
       const first = focusable[0] as HTMLElement
       const last = focusable.at(-1) as HTMLElement
       const [edge, wrap] = event.shiftKey ? [first, last] : [last, first]
