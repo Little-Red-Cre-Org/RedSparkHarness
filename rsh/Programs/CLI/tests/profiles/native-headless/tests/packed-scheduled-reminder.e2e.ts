@@ -1,9 +1,9 @@
 /** Packed-consumer coverage for scheduled reminders across a cold SDK restore. */
 import { createRequire } from 'node:module'
-import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { isAbsolute, join, relative, sep } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
@@ -121,16 +121,6 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
       delete childEnv.DEEPSEEK_BASE_URL
-      // Lend only optional native platform packages; the selected plugins still resolve from the installed consumer.
-      const hoisted = fileURLToPath(new URL('../../../../../../../node_modules/.pnpm/node_modules/', import.meta.url))
-      const optionalNative = join(root, 'optional-native')
-      for (const [scope, prefix] of [['@img', 'sharp-'], ['@deepseek-ai', 'node-addon-system-' + process.platform + '-']] as const) {
-        await mkdir(join(optionalNative, scope), { recursive: true })
-        for (const name of (await readdir(join(hoisted, scope))).filter(entry => entry.startsWith(prefix))) {
-          await symlink(join(hoisted, scope, name), join(optionalNative, scope, name), 'junction')
-        }
-      }
-      childEnv.NODE_PATH = optionalNative
       const profileDump = await execa(process.execPath, [installedBin, '--profile', 'native-sdk', '--dump-config'], {
         cwd: workspace, env: childEnv, extendEnv: false, reject: false, timeout: 30_000,
       })
