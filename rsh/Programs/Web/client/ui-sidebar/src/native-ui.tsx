@@ -59,7 +59,7 @@ type NativeWorkspacesInjected = {
     homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<boolean>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
@@ -177,7 +177,7 @@ function NativeSessionBrowser({
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
+  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<boolean>
   selectSession: NativeConversationService['select']
   deselectSession: NativeConversationService['deselect']
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
@@ -308,13 +308,11 @@ function NativeSessionBrowser({
     const request = { id, settled: false }
     openRequest.current = request
     const from = live.current.selected
-    const navigationPending = live.current.navigationPending
     // A later open or any other navigation during admission makes this request stale.
     const current = (): boolean => openRequest.current === request && live.current.selected === from
-      && live.current.navigationPending === navigationPending
     const open = async (trust?: boolean): Promise<void> => {
-      await admitSession(id, trust)
-      if (!current()) return
+      const admitted = await admitSession(id, trust)
+      if (!admitted || !current()) return
       request.settled = true
       if (live.current.state === 'loading') setPendingSessionId(id)
       else await selectSession(id)
@@ -954,11 +952,13 @@ export const plugin: NativePlugin = {
         displayTitle: item => presentation.displayTitle(item),
         // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
         admitSession: async (id, trust) => {
+          const navigation = controller.beginNavigation()
           const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
           const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
           if (workspace !== undefined) {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
           }
+          return controller.isCurrentNavigation(navigation)
         },
         selectSession: controller.select.bind(controller),
         deselectSession: controller.deselect.bind(controller),

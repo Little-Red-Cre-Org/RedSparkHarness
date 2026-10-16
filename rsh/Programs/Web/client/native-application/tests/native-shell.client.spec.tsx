@@ -722,16 +722,17 @@ it.each([
     await waitFor(() => {
       expect(connectWorkspace).toHaveBeenCalledTimes(connections + 1)
     })
-    admission.resolve({ workspace: workspaces[0]!, created: false })
-    await admission.promise
-    await Promise.resolve()
-    await Promise.resolve()
     expect(conversation?.getSnapshot().navigationPending).toBe(true)
     newSessionConnection.resolve({ sessionId: 'session-alpha' as SessionId })
     await waitFor(() => {
       expect(conversation?.getSnapshot().selected).toBe('session-alpha')
       expect(conversation?.getSnapshot().state).toBe('ready')
     })
+    admission.resolve({ workspace: workspaces[0]!, created: false })
+    await admission.promise
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    await conversation?.idle()
+    expect(conversation?.getSnapshot().selected).toBe('session-alpha')
     expect(clientMock.history).toHaveBeenLastCalledWith('session-alpha', expect.any(AbortSignal))
     expect(createWorkspace).toHaveBeenCalledTimes(admissionCalls + 1)
     fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
