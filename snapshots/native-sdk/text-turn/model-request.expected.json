@@ -3,7 +3,7 @@
   "messages": [
     {
       "role": "system",
-      "content": "You are a native SDK fixture."
+      "content": "You are a native SDK fixture.\n\nUse workflow only when the user explicitly requests a workflow or large multi-agent orchestration. For one or two delegations, prefer subagent calls.\n\nUse the ralph tool ONLY when the direct human explicitly asks for a Ralph loop or fresh-agent iterative execution. Each Ralph round starts a fresh child with no conversation seed and uses the shared workspace as durable memory. Completion and blockers are worker reports, not independent evaluation. Use same-session goal tools for ordinary long-running objectives, and plain subagents or workflows for bounded delegation and fan-out."
     },
     {
       "role": "user",
@@ -206,6 +206,97 @@
               "type": "boolean"
             }
           }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
         }
       }
     },

@@ -62,7 +62,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
           "python=$sdkPython" >> $env:GITHUB_OUTPUT
       - name: Native profile and pi-ai lifecycle regressions
-        run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts
+        run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts rsh/Modules/Community/experimental/webworker-runtime/tests/vfs-example-fixture.spec.ts
       - name: Native request context, skill, Archify, and TUI regressions
         run: >-
           pnpm exec vitest run
@@ -89,11 +89,13 @@ jobs:
           snapshots/native-sdk/external-operation.snapshot.ts
           snapshots/native-sdk/skills.snapshot.ts
           snapshots/native-sdk/archify.snapshot.ts
-      - name: SDK child bwrap mount regressions
+          snapshots/native-sdk/text-turn.snapshot.ts
+      - name: SDK child bwrap mount and SDK snapshot regressions
         if: runner.os == 'Linux'
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
           rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
+          && pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
         env:
           DSH_REQUIRE_BWRAP_E2E: '1'
       - name: Windows SDK child operator path regression
