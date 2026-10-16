@@ -37,7 +37,7 @@ export const Config: Schema<JsonRpcConfig> = Schema.object({
   maxTokensAsSuccess: Schema.boolean().default(false),
 })
 
-const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (\S+) \((.*?)\): /
+const LOADER_ENTRY_FAILURE = /^failed to \w+ loader entry (.+?) \((.*?)\): /
 const DUPLICATE_SERVICE = /^service "([^"]+)" has been registered/
 
 /**

@@ -353,13 +353,13 @@ describe('dsh-sdk-jsonrpc-server plugin apply', () => {
       const boot = await bootTree([{
         id: 'nested',
         name: 'cordis:group',
-        config: [{ id: 'leaked', name: 'cordis:secret-error' }, { id: 'fs-b', name: 'cordis:fs-b' }],
+        config: [{ id: 'leaked provider', name: 'cordis:secret-error' }, { id: 'fs-b', name: 'cordis:fs-b' }],
       }])
       try {
         const response = boot.initialize()
         boot.releaseGroup()
         await expect(boot.tree).rejects.toThrow()
-        expectBootError(await response, '"leaked" (cordis:secret-error) failed: TypeError')
+        expectBootError(await response, '"leaked provider" (cordis:secret-error) failed: TypeError')
       } finally {
         await boot.dispose()
       }
