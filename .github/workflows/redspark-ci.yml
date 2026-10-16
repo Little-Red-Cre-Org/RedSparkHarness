@@ -46,8 +46,8 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
-      - name: Build official Web and desktop sources
-        run: pnpm run build:official
+      - name: Build Web and desktop sources
+        run: pnpm run build
       - name: Typecheck
         run: pnpm run typecheck:contracts-ready
       - uses: actions/setup-python@v6.3.0
@@ -127,6 +127,35 @@ jobs:
       - name: Package publication rules
         if: runner.os == 'Linux'
         run: pnpm run check:ci:package-publication
+
+  packed:
+    name: Packed consumer / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare Linux workspace-write sandbox
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
+      - name: Build official Web and desktop sources
+        run: pnpm run build:official
       - name: Pack dsh release tarballs for consumer verification
         run: pnpm run release:pack --family dsh --out dist/npm
       - name: Pack vendored framework for consumer verification
