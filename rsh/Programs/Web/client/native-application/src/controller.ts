@@ -310,7 +310,7 @@ export class NativeConversationController {
   changePending(requestId: NativeSubmissionRequestId, action: 'remove' | 'promote'): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling'
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     return this.mutateSubmission(id, this.selectionEpoch, async () => {
       if (action === 'remove') await this.client.dequeue(id, requestId, this.lifetime.signal)
@@ -327,7 +327,8 @@ export class NativeConversationController {
   editPending(requestId: NativeSubmissionRequestId, text: string): Promise<boolean> {
     const id = this.snapshot.selected
     if (id === undefined || this.snapshot.submissionBusy || this.snapshot.state === 'loading'
-      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || text.trim() === ''
+      || this.snapshot.state === 'closed' || this.snapshot.state === 'cancelling' || this.snapshot.navigationPending === true
+      || text.trim() === ''
       || !this.snapshot.submissions?.submissions.some(item => item.requestId === requestId)) return Promise.resolve(false)
     const epoch = this.selectionEpoch
     return this.mutateSubmission(id, epoch, async () => {
