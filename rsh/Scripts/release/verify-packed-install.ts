@@ -17,7 +17,7 @@
  */
 
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
@@ -94,7 +94,8 @@ function main(): void {
   const expected = packed.get(entry.packageName)
   if (expected === undefined) throw new Error(`${entry.packageName} is not among the packed tarballs`)
 
-  const consumerRoot = mkdtempSync(join(tmpdir(), `dsh-packed-${family.id}-`))
+  // Keep outside /tmp: Linux bwrap hides that install behind tmpfs, and /tmp is a sandbox writable root.
+  const consumerRoot = mkdtempSync(join(homedir(), `.dsh-packed-${family.id}-`))
   try {
     writeFileSync(join(consumerRoot, 'package.json'), `${JSON.stringify({
       name: `dsh-packed-install-${family.id}`,
@@ -144,8 +145,9 @@ function main(): void {
         '--no-file-parallelism',
         'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-jobs.e2e.ts',
         'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-workflow.e2e.ts',
+        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-code-runtime.e2e.ts',
       ]
-      console.log('release verify-packed-install: running packed Jobs and Workflow e2e against the installed consumer')
+      console.log('release verify-packed-install: running packed Jobs, Workflow, and code-runtime e2e against the installed consumer')
       execaSync('pnpm', args, {
         cwd: root,
         env: {

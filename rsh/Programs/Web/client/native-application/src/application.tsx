@@ -116,13 +116,19 @@ function Conversation({ snapshot, useLocale, settingsActions, loadImage, send, c
           if (event.type === 'settings/document-updated' && event.namespace === 'ui-conversation') {
             await refreshPreference()
           }
+          if (event.type === 'llm/adapters-updated' || event.type === 'accounts/changed'
+            || event.type === 'settings/document-updated' && event.namespace === 'agent-default-model') {
+            void Promise.resolve().then(refreshModelControls).catch(() => {
+              // A catalog refresh failure must not stop preference updates.
+            })
+          }
         }
       } catch {
         if (!lifetime.signal.aborted) setPendingDefaultError(true)
       }
     })()
     return () => { lifetime.abort(); unsubscribe() }
-  }, [settingsActions])
+  }, [settingsActions, refreshModelControls])
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
       followedSession.current = snapshot.selected

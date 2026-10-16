@@ -170,8 +170,14 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
       if (menuRef.current?.contains(event.target as Node) === true) return
       setOpen(false)
     }
+    // Leaving the window drops focus to nowhere too, which onBlur ignores.
+    const closeOnWindowBlur = (): void => { setOpen(false) }
     document.addEventListener('mousedown', closeOutside)
-    return () => { document.removeEventListener('mousedown', closeOutside) }
+    window.addEventListener('blur', closeOnWindowBlur)
+    return () => {
+      document.removeEventListener('mousedown', closeOutside)
+      window.removeEventListener('blur', closeOnWindowBlur)
+    }
   }, [open])
 
   // Portaled placement (the Menu primitive's portal rules: fixed from the
@@ -207,6 +213,15 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
     }
   }, [open, pane, state])
   /* jscpd:ignore-end */
+
+  // Keep keyboard focus inside the open card (keyboard open, pane drill, the
+  // open-time reload re-rendering the rows): land on the checked row or the first.
+  useEffect(() => {
+    /* v8 ignore next -- the card ref is attached whenever the menu is open. */
+    if (!open || menuRef.current?.contains(document.activeElement) === true) return
+    const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled)
+    ;(items.find(item => item.getAttribute('aria-checked') === 'true') ?? items[0])?.focus()
+  }, [open, pane, state])
 
   if (!available) return null
 
@@ -246,10 +261,12 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   }
 
   const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
-    if (event.relatedTarget instanceof Node && (
-      rootRef.current?.contains(event.relatedTarget) === true
-      || menuRef.current?.contains(event.relatedTarget) === true
-    )) return
+    // Focus dropping to nowhere (a click on the card's non-focusable area, or the
+    // trigger locking while the open-time reload runs) is not leaving the picker;
+    // outside clicks close through the document mousedown listener instead.
+    if (!(event.relatedTarget instanceof Node)) return
+    if (rootRef.current?.contains(event.relatedTarget) === true
+      || menuRef.current?.contains(event.relatedTarget) === true) return
     close()
   }
 
@@ -320,7 +337,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
         aria-expanded={open}
         aria-controls={open ? `${id}-menu` : undefined}
         title={triggerLabel}
-        disabled={locked}
+        disabled={locked && !open}
         onClick={() => {
           if (open) {
             close()
