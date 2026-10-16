@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { existsSync, writeFileSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
-import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 
 /**
@@ -10,6 +10,14 @@ import { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
  * text before a fixed provider error so the parent can assert safe diagnostics.
  */
 class RouteEchoAdapter extends LlmAdapter {
+  override async prepareCall(provider: string, model: string): Promise<PreparedAdapterCall> {
+    return {
+      model: await this.resolveModel(provider, model),
+      supportsOutputTokenLimit: () => Promise.resolve(true),
+      stream: options => this.stream(options),
+    }
+  }
+
   override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
     return Promise.resolve({
       provider,

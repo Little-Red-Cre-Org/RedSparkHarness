@@ -1449,7 +1449,7 @@ export interface ReplayModelConfig {
 
 依赖：[`ModelModality`](../Engine/llm/llm/src/index.ts) · [`RetryPolicyConfig`](../Engine/llm/llm/src/index.ts) · [`SystemPromptUpdate`](../Engine/llm/llm/src/index.ts)
 
-来源：[`rsh/Tests/test-support/llm-replay/src/index.ts:1123`](../Tests/test-support/llm-replay/src/index.ts)
+来源：[`rsh/Tests/test-support/llm-replay/src/index.ts:1133`](../Tests/test-support/llm-replay/src/index.ts)
 
 <a id="deepseek-aidsh-llm-retry"></a>
 

@@ -41,7 +41,7 @@
   disabled: true
 
 - id: fs-sandbox
-  name: '@deepseek-ai/dsh-fs-sandbox'
+  name: '@deepseek-ai/dsh-fs-sandbox/runtime'
   disabled: true
 
 - id: tool-bash
@@ -76,7 +76,7 @@
   disabled: true
 
 - id: tool-fs
-  name: '@deepseek-ai/dsh-tool-fs'
+  name: '@deepseek-ai/dsh-tool-fs/runtime'
   disabled: true
 
 - id: tool-fs-search

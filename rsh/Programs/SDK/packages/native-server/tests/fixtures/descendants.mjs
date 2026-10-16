@@ -10,7 +10,7 @@ import { setTimeout } from 'node:timers/promises'
 export const plugin = {
   apiVersion: 1, name: 'sdk-descendant-fixture', targets: ['host'],
   requires: ['sessionExecution', 'activeSessions', 'fs', 'sessionPersistence', 'model', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'attachments'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'attachments', 'requestContexts'],
   provides: [],
   resolve: (config) => (context) => {
     const execution = context.require('sessionExecution')
