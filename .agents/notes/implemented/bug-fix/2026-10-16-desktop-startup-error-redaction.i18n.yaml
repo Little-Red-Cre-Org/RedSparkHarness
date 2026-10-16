@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-16-desktop-startup-error-redaction.md
-2026-10-16-desktop-startup-error-redaction.md: 15d236b4ddcd0e3c5767abd650c05beb10fe5a29
-2026-10-16-desktop-startup-error-redaction.zh.md: 4425ccf773101aba6a38b4fadb80e920dfad82d6
+2026-10-16-desktop-startup-error-redaction.md: dd239f933f531ee97899eaf82ae6ce7f83cb3dde
+2026-10-16-desktop-startup-error-redaction.zh.md: c0dab793af04efaf241dd26ce7a16d0f6c0e6937

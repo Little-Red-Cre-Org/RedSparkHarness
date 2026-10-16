@@ -7,7 +7,7 @@ import type { DesktopErrorState, DesktopErrorType } from './startup-error.ts'
 /**
  * Render escaped diagnostics without depending on application resource files.
  * @param locale - Shell-owned translations.
- * @param failure - Sanitized failure type, optional configuration path, and local log path.
+ * @param failure - Sanitized failure type, optional configuration path, and optional local log path.
  * @param profileRecovery - Whether the initialized application can repair its profile.
  * @returns An HTML document suitable for an isolated emergency window.
  */
