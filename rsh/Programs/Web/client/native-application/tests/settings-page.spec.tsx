@@ -1862,15 +1862,19 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
     }
     return updatedRow(namespace, field, operation?.value)
   })
+  const authorizationList = vi.fn(async (_signal?: AbortSignal) => [])
   const actions = {
     settingsDescribe, settingsMutate,
     credentialsDescribe: vi.fn(async () => ({})), credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
-    authorizationList: vi.fn(async () => []),
+    authorizationList,
   } as unknown as NativeSettingsActions
-  const setLocale = vi.fn()
+  const setLocale = vi.fn((_locale: NativeLocaleSnapshot['locale']) => undefined)
   const setThemePreference = vi.fn()
   const setFontSize = vi.fn()
-  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], setLocale, setThemePreference, setFontSize })
+  const nativeActions = { ...emptyAccountActions, ...emptyModelActions, ...actions }
+  const page = render(<SettingsPage actions={nativeActions} t={(localeKey: keyof typeof en) => en[localeKey]}
+    section="general" useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
+    setThemePreference={setThemePreference} setFontSize={setFontSize} />)
   const permission = await screen.findByRole('combobox', { name: en.settingsPermission })
   expect((permission as HTMLSelectElement).value).toBe('workspace-write')
   fireEvent.change(permission, { target: { value: 'danger-full-access' } })
@@ -1933,6 +1937,13 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   fireEvent.change(editor, { target: { value: edited } })
   fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
   expect(await screen.findByText(`${en.appliesLive} · ${en.revision}: 3`)).toBeTruthy()
+  expect(editor.value).toBe(edited)
+
+  const authorizationReadsBeforeLocaleChange = authorizationList.mock.calls.length
+  page.rerender(<SettingsPage actions={nativeActions}
+    t={(localeKey: keyof typeof en) => zh[localeKey]} section="general" useLocale={useLocale} useTheme={useTheme}
+    setLocale={setLocale} setThemePreference={setThemePreference} setFontSize={setFontSize} />)
+  expect(authorizationList).toHaveBeenCalledTimes(authorizationReadsBeforeLocaleChange)
   expect(editor.value).toBe(edited)
   page.unmount()
 

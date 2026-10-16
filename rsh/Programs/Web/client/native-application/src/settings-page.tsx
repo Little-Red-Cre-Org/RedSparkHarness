@@ -394,6 +394,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const refreshes = useRef(0)
   const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
+  const translate = useRef(t)
+  translate.current = t
 
   const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
     const request = ++accountRefreshes.current
@@ -457,18 +459,18 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
           if (latest()) setCredentials(aggregate)
         }
         catch (cause: unknown) {
-          if (latest()) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
+          if (latest()) { setCredentialError(requestError(cause, translate.current, 'native/credentials')); setCredentials({}) }
         }
       }
       return true
     } catch (cause: unknown) {
       if (latest()) {
         resetDrafts.current = false
-        setError(requestError(cause, t, 'native/settings'))
+        setError(requestError(cause, translate.current, 'native/settings'))
       }
       return false
     } finally { if (latest()) setLoading(false) }
-  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference, t])
+  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference])
 
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
