@@ -178,7 +178,7 @@ it.each([
     return { sessionId: sessionId as NativeSessionListItem['header']['id'] }
   })
   const listDirectory = vi.fn(async () => ({
-    path: 'C:\\Work\\New', entries: [], crumbs: [
+    path: 'C:\\Work\\New', home: 'C:\\Work\\New', entries: [], crumbs: [
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
   }))

@@ -45,8 +45,10 @@ async function entry(parent: string, item: Dirent): Promise<NativeDirectoryEntry
 
 /** Native Web RPC owner for the Host's OS folder chooser and directory browser. */
 export class NativeWebDirectoryService {
-  /** @param lifetime - Host installation cancellation. */
-  constructor(private readonly lifetime: AbortSignal) {}
+  /** @param lifetime - Host installation cancellation.
+   * @param startDirectory - launch directory listed when a request names no path.
+   */
+  constructor(private readonly lifetime: AbortSignal, private readonly startDirectory: string) {}
 
   /** Handle one authenticated directory request.
    * @param endpoint - directory RPC endpoint.
@@ -67,13 +69,13 @@ export class NativeWebDirectoryService {
       if (endpoint === 'directories/list') {
         const request = listRequest.parse(payload)
         if (request.path !== undefined && !fullyQualified(request.path)) throw new Error('Directory path must be fully qualified')
-        const path = resolve(request.path ?? homedir())
+        const path = resolve(request.path ?? this.startDirectory)
         const items = await readdir(path, { withFileTypes: true })
         accepted.throwIfAborted()
         const entries = (await Promise.all(items.map(item => entry(path, item))))
           .filter((item): item is NativeDirectoryEntry => item !== undefined)
           .sort((left, right) => left.name.localeCompare(right.name))
-        return { ok: true, value: { path, entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
+        return { ok: true, value: { path, home: homedir(), entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
       }
       if (endpoint === 'directories/create-directory') {
         const request = createRequest.parse(payload)
