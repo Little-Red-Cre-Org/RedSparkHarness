@@ -97,7 +97,7 @@ it('shows a retry after a failed read and renders the returned inventory', async
 })
 
 it('folds native and storage infrastructure plugins until shown or searched', async () => {
-  renderTab(vi.fn(async () => ({ entries: [
+  renderTab(vi.fn<NativeSessionClient['pluginInventoryList']>(async () => ({ entries: [
     ...inventory.entries,
     { id: 'native-1', name: '@deepseek-ai/dsh-native-agent', scope: inventory.entries[0]!.scope, state: 'ready' },
     { id: 'storage-1', name: 'dsh-storage-local', scope: inventory.entries[0]!.scope, state: 'ready' },
