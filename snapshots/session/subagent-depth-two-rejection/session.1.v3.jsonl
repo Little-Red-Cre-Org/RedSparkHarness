@@ -5,7 +5,7 @@
 {"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"inserted":[{"content":[{"type":"text","text":"Call subagent once. Ask that child to attempt one further subagent call, then report the result."}],"source":{"kind":"user"},"role":"user","id":"{{message:7}}"}]}}
 {"type":"turn/start","data":{"turn":1}}
 {"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"removedCount":1,"inserted":[]}}
-{"type":"subagent/descriptor","data":{"version":3,"mode":"one-shot","provider":"spawn","label":"Start depth one"}}
+{"type":"subagent/descriptor","data":{"version":4,"mode":"one-shot","provider":"spawn","label":"Start depth one"}}
 {"type":"step/start","data":{"turn":1,"step":1}}
 {"type":"system/message","data":{"turn":1,"step":1,"message":{"role":"system","content":[{"type":"text","text":"{{system}}"}],"source":{"kind":"plugin","plugin":"@deepseek-ai/dsh-system-prompt"},"id":"{{message:8}}"}},"surfaceOp":"append"}
 {"type":"user/message","data":{"content":[{"type":"text","text":"Call subagent once. Ask that child to attempt one further subagent call, then report the result."}],"source":{"kind":"user"},"role":"user","id":"{{message:7}}"},"surfaceOp":"append"}

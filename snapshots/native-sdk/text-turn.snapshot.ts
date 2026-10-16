@@ -527,7 +527,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const productionRaw = findLog(String(spawned))
     const productionEvents = parseSessionLog(productionRaw)
     expect(productionEvents.find(event => event.type === 'subagent/descriptor')?.data)
-      .toMatchObject({ version: 3, mode: 'one-shot', provider: 'spawn', label: 'production child' })
+      .toMatchObject({ version: 4, mode: 'one-shot', provider: 'spawn', label: 'production child' })
     expect(productionEvents.find(event => event.type === 'native-approval/decided')?.data)
       .toMatchObject({ policy: 'never', outcome: 'rejected' })
     expect(productionEvents.filter(event => event.type === 'tool/result').every(event => event.data.message.content[0]?.type === 'tool-result'

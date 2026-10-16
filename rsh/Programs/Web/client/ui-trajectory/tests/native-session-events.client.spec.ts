@@ -147,7 +147,7 @@ describe('Native Trajectory Session projection', () => {
         assistant(3, 1_030, 3, 1),
       ],
       expectedTurnOrder: [2, 3],
-      expectedPlacements: [{ seq: 0, turn: 2 }],
+      expectedPlacements: [{ seq: 0, turn: 2, step: 4 }],
       expectedUpdatedSystemTurns: [],
       expectedLocations: [{ seq: 0, turn: 2, step: 4 }],
     },
@@ -173,7 +173,14 @@ describe('Native Trajectory Session projection', () => {
     expect(expectedPlacements.map(({ seq }) => ({
       seq,
       turn: turns.find(turn => turn.groups.some(group => group.cells.some(cell => cell.sourceSeq === seq)))?.turn,
-    }))).toEqual(expectedPlacements)
+    }))).toEqual(expectedPlacements.map(({ seq, turn }) => ({ seq, turn })))
+    for (const placement of expectedPlacements) {
+      if (!('step' in placement)) continue
+      const group = turns.find(turn => turn.turn === placement.turn)?.groups.find(
+        group => group.cells.some(cell => cell.sourceSeq === placement.seq),
+      )
+      expect(group?.title).toBe(t('group.step', { step: placement.step }))
+    }
     for (const { seq, turn, step } of expectedLocations) {
       expect(snapshot.eventLocations.get(SessionSeq(seq))).toMatchObject(step === null
         ? { kind: 'turn', turn: { turn } }
