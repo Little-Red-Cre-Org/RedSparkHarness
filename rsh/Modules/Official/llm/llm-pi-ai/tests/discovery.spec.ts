@@ -6,7 +6,7 @@ import { Context } from '@deepseek-ai/cordis'
 import LlmRuntime, { userAgent } from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
-import { discoverModels } from '../src/discovery.ts'
+import { discoverModels, fetchCodexModels } from '../src/discovery.ts'
 
 const servers: Server[] = []
 /** Credential variables a test set, cleared so the next one starts unset. */
@@ -18,6 +18,16 @@ afterEach(async () => {
   vi.unstubAllGlobals()
   for (const name of touchedEnv.splice(0)) Reflect.deleteProperty(process.env, name)
   await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve))))
+})
+
+it('carries the Codex models endpoint context_window into discovery metadata', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ models: [
+    { slug: 'gpt-test', display_name: 'GPT Test', visibility: 'list', context_window: 272_000 },
+  ] }), { headers: { 'content-type': 'application/json' } })))
+
+  await expect(fetchCodexModels('codex-access')).resolves.toEqual([
+    { id: 'gpt-test', name: 'GPT Test', contextWindow: 272_000 },
+  ])
 })
 
 interface ListingServer {

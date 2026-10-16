@@ -1251,6 +1251,17 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       const clients = createNativeWorkspaceClients(rpc, 1000000)
       const workspacePath = join(cwd, 'native-workspace')
       await mkdir(workspacePath)
+      const registeredBeforeDeniedCreate = workspaceRegistryService?.list().map(workspace => workspace.id)
+      const deniedCreate = await rpc.call('/api', 'workspaces/create', { path: process.cwd() }, new AbortController().signal)
+      expect(deniedCreate).toMatchObject({ ok: false, error: {
+        code: 'native/workspace-untrusted', message: 'Workspace is outside the configured allowed roots',
+        details: { path: process.cwd() },
+      } })
+      expect(workspaceRegistryService?.list().map(workspace => workspace.id)).toEqual(registeredBeforeDeniedCreate)
+      const trustedWorkspace = await clients.workspace.create({ path: process.cwd(), trust: true })
+      expect(trustedWorkspace.created).toBe(true)
+      expect(settingsDocument['workspace-trust']).toEqual({ paths: [trustedWorkspace.workspace.path] })
+      await clients.workspace.delete(trustedWorkspace.workspace.workspaceId)
       const directoryListing = await clients.directoryPicker.list(cwd)
       expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
       if (process.platform !== 'win32') {

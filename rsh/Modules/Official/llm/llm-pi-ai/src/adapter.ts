@@ -405,17 +405,17 @@ function codexSubscriptionProvider(
       }
       const entries = await fetchCodexModels(context.credential.access, context.signal)
       const models = entries
-        .map(({ id, name }): Model<Api> => ({
+        .map(({ id, name, contextWindow }): Model<Api> => ({
           id,
           name,
           api: 'openai-responses',
           provider: CODEX_SUBSCRIPTION_ROUTE,
           baseUrl: OPENAI_RESPONSES_BASE_URL,
-          // The public catalog documents slugs and display names, not model capabilities.
+          // The public catalog supplies context_window; other model capabilities remain unknown.
           input: ['text'],
           cost: NO_MODEL_COST,
           reasoning: false,
-          contextWindow: 0,
+          contextWindow: contextWindow ?? 0,
           maxTokens: 0,
         }))
       await context.publish({ update: () => {
