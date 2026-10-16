@@ -93,6 +93,13 @@ export class NativeConversationController {
    */
   isCurrentNavigation(token: number): boolean { return token === this.navigation }
 
+  /** Wait for controller operations already in flight to settle.
+   * @returns completion after no tracked operations remain pending.
+   */
+  async idle(): Promise<void> {
+    while (this.pending.size > 0) await Promise.allSettled([...this.pending])
+  }
+
   /** Release a current navigation's composer lock without exposing an error.
    * @param token - navigation token whose composer lock should be released.
    * @returns no value.

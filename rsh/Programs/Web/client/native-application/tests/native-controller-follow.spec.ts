@@ -78,6 +78,47 @@ it('refreshes durable history when restore finds no active turn', async () => {
   }
 })
 
+it('waits for controller operations before selecting a connected Session', async () => {
+  const id = 'session-after-refresh' as SessionId
+  const controlsRefresh = deferred<Awaited<ReturnType<NativeSessionClient['modelControls']>>>()
+  let modelControlReads = 0
+  const client = {
+    modelControls() {
+      modelControlReads++
+      return modelControlReads === 1
+        ? Promise.resolve({ catalog: null, canSelectModel: false, presets: [] })
+        : controlsRefresh.promise
+    },
+    async *follow(signal: AbortSignal) {
+      yield { type: 'baseline' as const, items: [] }
+      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+    },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(sessionId: SessionId) {
+      return { header: makeHeader(sessionId), events: [], inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    async attach() { return undefined },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    const refresh = controller.refreshModelControls()
+    const idle = controller.idle()
+    expect(controller.getSnapshot().state).toBe('loading')
+    controlsRefresh.resolve({ catalog: null, canSelectModel: false, presets: [] })
+    await idle
+    expect(controller.getSnapshot().state).toBe('ready')
+    await controller.select(id)
+    await refresh
+    expect(controller.getSnapshot().selected).toBe(id)
+  } finally {
+    await controller.close()
+  }
+})
+
 it('isolates delayed frames and late carrier errors while retaining title roster refresh', async () => {
   const streams = new Map<string, ReadableStreamDefaultController<Uint8Array>>()
   const firstFollowStarted = deferred<undefined>()

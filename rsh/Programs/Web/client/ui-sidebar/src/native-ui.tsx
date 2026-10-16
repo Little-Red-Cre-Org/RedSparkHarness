@@ -888,7 +888,8 @@ export const plugin: NativePlugin = {
             return
           }
           void workspaceClient.connectWorkspace(target, context.signal)
-            .then(({ sessionId }) => {
+            .then(async ({ sessionId }) => {
+              await controller.idle()
               if (controller.isCurrentNavigation(navigation)) return controller.select(sessionId)
             })
             .catch((error: unknown) => {

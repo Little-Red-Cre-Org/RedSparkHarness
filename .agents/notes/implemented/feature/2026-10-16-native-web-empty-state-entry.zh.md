@@ -24,4 +24,4 @@ Native conversation hero 没有可用的 Workspace 选择器；从 sidebar 启�
 
 ## Consequences
 
-无 Session 时由 hero 提供 Workspace 和 preset 入口；sidebar 通过共享 Workspace client 与 Session controller 解析目标。已有的孤立空白 Session 不会迁移或删除。Workspace trust 仍需用户明确决定；暂存 preset 仅会在新建或连接的 Session 支持它时应用。侧栏 New Session 在连接和选择完成前禁止发送，其他连接失败显示在会话错误中；当 Host 报告目标 Workspace 不可信时，它会返回空状态；随后由 composer 选择器请求信任，而侧栏在自身的 Workspace 操作中仍保留信任对话框。Workspace 导航会通过 `beginNavigation`/`isCurrentNavigation` 预留 controller 导航令牌，因此较新的选择、清除或导航会取代较慢的待处理连接，与 Cordis `beginNavigation` 一致。
+无 Session 时由 hero 提供 Workspace 和 preset 入口；sidebar 通过共享 Workspace client 与 Session controller 解析目标。已有的孤立空白 Session 不会迁移或删除。Workspace trust 仍需用户明确决定；暂存 preset 仅会在新建或连接的 Session 支持它时应用。侧栏 New Session 在连接和选择完成前禁止发送（与 composer 的 Workspace 启动一样，选择会等待进行中的 controller 刷新结束），其他连接失败显示在会话错误中；当 Host 报告目标 Workspace 不可信时，它会返回空状态；随后由 composer 选择器请求信任，而侧栏在自身的 Workspace 操作中仍保留信任对话框。Workspace 导航会通过 `beginNavigation`/`isCurrentNavigation` 预留 controller 导航令牌，因此较新的选择、清除或导航会取代较慢的待处理连接，与 Cordis `beginNavigation` 一致。

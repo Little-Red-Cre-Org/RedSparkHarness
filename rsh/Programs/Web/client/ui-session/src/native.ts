@@ -68,6 +68,10 @@ export interface NativeConversationService {
   beginNavigation(disableSending?: boolean): number
   /** Check whether a navigation token is still current. */
   isCurrentNavigation(token: number): boolean
+  /** Wait for controller operations already in flight to settle.
+   * @returns completion after no tracked operations remain pending.
+   */
+  idle(): Promise<void>
   /** Release a current navigation's composer lock without exposing an error.
    * @param token - navigation token whose composer lock should be released.
    * @returns no value.

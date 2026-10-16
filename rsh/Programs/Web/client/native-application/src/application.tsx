@@ -393,6 +393,7 @@ export const plugin: NativePlugin = {
               const { sessionId } = trust === undefined
                 ? await workspaceClient.connectWorkspace(id, context.signal)
                 : await workspaceClient.connectWorkspace(id, context.signal, trust)
+              await controller.idle()
               if (!controller.isCurrentNavigation(navigation)) return undefined
               await controller.select(sessionId)
               return controller.getSnapshot().selected === sessionId ? sessionId : undefined
@@ -409,6 +410,7 @@ export const plugin: NativePlugin = {
               const { sessionId } = trust === undefined
                 ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
                 : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
+              await controller.idle()
               if (!controller.isCurrentNavigation(navigation)) return undefined
               await controller.select(sessionId)
               return controller.getSnapshot().selected === sessionId ? sessionId : undefined
