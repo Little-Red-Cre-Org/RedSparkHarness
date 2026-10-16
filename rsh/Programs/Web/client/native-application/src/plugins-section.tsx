@@ -527,6 +527,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
             if (catalogStatusRef.current !== 'idle') void loadCatalog(true)
           }
         }
+        if (!controller.signal.aborted) setSubscriptionFailed(true)
       } catch {
         if (!controller.signal.aborted) setSubscriptionFailed(true)
       }

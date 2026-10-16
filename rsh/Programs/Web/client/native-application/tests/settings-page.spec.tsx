@@ -24,6 +24,10 @@ afterEach(() => {
 
 const locales = [{ language: 'en', strings: en }, { language: 'zh', strings: zh }] as const
 const defaultLimits = { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 }
+function waitForAbort(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve()
+  return new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+}
 const localeSnapshot: NativeLocaleSnapshot = { locale: 'en', revision: 0 }
 const themeSnapshot: ReturnType<NativeThemeService['getSnapshot']> = {
   preference: 'system', fontSize: 14,
@@ -49,10 +53,7 @@ const emptyModelActions = {
   modelCatalog: async () => null,
   pluginInventoryList: async () => ({ entries: [] }),
   settingsEvents: async function* (signal: AbortSignal) {
-    await new Promise<void>((resolve) => {
-      if (signal.aborted) resolve()
-      else signal.addEventListener('abort', () => { resolve() }, { once: true })
-    })
+    await waitForAbort(signal)
   },
 }
 function renderSettingsPage(props: {
@@ -186,9 +187,10 @@ it('keeps every plugin descriptor when another namespace changes during the init
     if (describeCount === 1) return await new Promise<NativeSettingsDescription>((resolve) => { finishInitial = resolve })
     return settingsDescription([uiTheme, webSearch])
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'ui-theme', revision: 1 }
+    await waitForAbort(signal)
   }
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
@@ -215,9 +217,10 @@ it('keeps a staged plugin write fenced to the descriptor revision where editing 
     describeCount += 1
     return settingsDescription(describeCount === 1 ? [initial] : [updatedElsewhere])
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'subagent-model-selection', revision: 2 }
+    await waitForAbort(signal)
   }
   actions.modelCatalog = vi.fn(async () => ({
     default: routeA, routableProviders: ['provider'], failures: [],
@@ -321,9 +324,10 @@ it('uses the refreshed credential reference after clearing and retyping the key 
     describeCount += 1
     return settingsDescription(describeCount === 1 ? [initial] : [refreshed])
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    await waitForAbort(signal)
   }
   actions.credentialsDescribe = credentialsDescribe
   actions.credentialsSet = credentialsSet
@@ -373,9 +377,10 @@ it('keeps the web-search key draft when its credential reference changes during 
     describeCount += 1
     return settingsDescription(describeCount === 1 ? [initial] : [newer])
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 3 }
+    await waitForAbort(signal)
   }
   actions.settingsMutate = vi.fn(async () => {
     await saveAcknowledged
@@ -432,9 +437,10 @@ it('keeps the web-search key draft when its reference changes after credential v
     if (describeCount === 2) return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
     return settingsDescription([newer])
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    await waitForAbort(signal)
   }
   actions.credentialsDescribe = credentialsDescribe
   actions.credentialsSet = credentialsSet
@@ -499,6 +505,7 @@ it('announces queued revisions while an earlier refresh reads credentials', asyn
     await secondEventReady
     if (signal.aborted) return
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    await waitForAbort(signal)
   }
   actions.credentialsDescribe = credentialsDescribe
   const credentialsSet = vi.fn(async () => undefined)
@@ -562,6 +569,7 @@ it('keeps the web-search key draft when its announced revision is still unread a
   actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    await waitForAbort(signal)
   }
   actions.credentialsDescribe = credentialsDescribe
   actions.credentialsSet = credentialsSet
@@ -716,6 +724,7 @@ it('restarts a failed settings subscription when retrying and refreshes on its n
     if (subscriptionCount === 1) throw new Error('settings event stream failed')
     await event
     if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'shell', revision: 3 }
+    await waitForAbort(signal)
   })
   const modelCatalog = vi.fn(async (_signal?: AbortSignal) => catalog)
   actions.modelCatalog = modelCatalog
@@ -737,6 +746,25 @@ it('restarts a failed settings subscription when retrying and refreshes on its n
   expect(await screen.findByLabelText(en.settingsPluginShellTimeoutMs)).toHaveProperty('value', '4500')
 })
 
+it('retries a settings subscription that ends normally', async () => {
+  let subscriptionCount = 0
+  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  actions.settingsEvents = vi.fn(async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
+    subscriptionCount += 1
+    if (subscriptionCount === 1) return
+    await waitForAbort(signal)
+  })
+  render(<PluginsSection actions={actions} t={key => en[key]} />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain(en.settingsPluginLoadFailed)
+  fireEvent.click(within(alert).getByRole('button', { name: en.retry }))
+
+  await waitFor(() => { expect(actions.settingsEvents).toHaveBeenCalledTimes(2) })
+  await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
+  expect(subscriptionCount).toBe(2)
+})
+
 it('does not show a Host gap for a missing namespace after a failed refresh', async () => {
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
@@ -750,6 +778,7 @@ it('does not show a Host gap for a missing namespace after a failed refresh', as
   actions.settingsEvents = async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
     await event
     if (!signal.aborted) yield { type: 'settings/document-updated', namespace: 'shell', revision: 2 }
+    await waitForAbort(signal)
   }
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
@@ -774,9 +803,10 @@ it('shows refresh pending for a missing namespace and blocks writes past its ann
     if (describeCount === 1) return settingsDescription([webSearch])
     return await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 2 }
+    await waitForAbort(signal)
   }
   render(<PluginsSection actions={actions} t={key => en[key]} />)
 
@@ -818,9 +848,10 @@ it('settles an event refresh that started before a save acknowledgment', async (
     return describeCount === 1 ? settingsDescription([initial])
       : await new Promise<NativeSettingsDescription>((resolve) => { finishRefresh = resolve })
   })
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await event
     yield { type: 'settings/document-updated', namespace: 'shell', revision: 1 }
+    await waitForAbort(signal)
   }
   actions.settingsMutate = vi.fn(async () => {
     await saveAcknowledged
@@ -865,9 +896,10 @@ it('retains the last plugin settings, revision, and credential info when a refre
   actions.credentialsDescribe = vi.fn(async () => ({
     DEEPSEEK_API_KEY: { configured: true, writable: true },
   }))
-  actions.settingsEvents = async function* () {
+  actions.settingsEvents = async function* (signal: AbortSignal) {
     await refresh
     yield { type: 'settings/document-updated', namespace: 'web-search-deepseek', revision: 1 }
+    await waitForAbort(signal)
   }
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
