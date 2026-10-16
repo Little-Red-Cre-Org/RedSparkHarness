@@ -968,9 +968,10 @@ export class NativeWebSessionService {
       }
     } catch (error: unknown) {
       // A failed attach that still owns the feed leaves no consumer; restore abandonment so the turn retires.
-      if (this.turns.get(id) === turn && turn.feed === feed && turn.settlement === undefined) {
-        if (turn.settled) this.turns.delete(id)
-        else turn.orphaned = true
+      const current = this.turns.get(id)
+      if (current === turn && current.feed === feed && current.settlement === undefined) {
+        if (current.settled) this.turns.delete(id)
+        else current.orphaned = true
       }
       throw error
     }
