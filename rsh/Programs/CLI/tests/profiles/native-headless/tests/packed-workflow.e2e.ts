@@ -171,7 +171,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       delete childEnv.NODE_PATH
       delete childEnv.DEEPSEEK_BASE_URL
       const childProcess = execa(process.execPath, [installedBin, '--profile', 'native-headless', '--patch', patch, PARENT_TASK], {
-        cwd: installedRoot, env: childEnv, reject: false, timeout: 100_000,
+        cwd: installedRoot, env: childEnv, extendEnv: false, reject: false, timeout: 100_000,
       })
       stopChildProcess = async () => { childProcess.kill('SIGTERM'); await childProcess }
       void childProcess.then(() => { processSettled = true }, () => { processSettled = true })
