@@ -478,7 +478,7 @@ it.each([
     expect((await screen.findByRole('alert')).textContent).toContain('Workspace unavailable')
     const untrustedConnect = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
     pendingWorkspaceConnection = untrustedConnect
-    const controlsRefresh = Promise.withResolvers<Awaited<ReturnType<NativeSessionClient['modelControls']>>>()
+    const controlsRefresh = Promise.withResolvers<Awaited<ReturnType<typeof clientMock.modelControls>>>()
     const modelReads = clientMock.modelControls.mock.calls.length
     clientMock.modelControls.mockImplementationOnce(() => controlsRefresh.promise)
     const connectionCalls = connectWorkspace.mock.calls.length
