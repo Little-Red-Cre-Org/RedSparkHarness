@@ -27,6 +27,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "koffi": "^3.1.0"
+    "koffi": "3.1.1"
   }
 }

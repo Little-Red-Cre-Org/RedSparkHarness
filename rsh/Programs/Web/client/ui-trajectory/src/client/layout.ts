@@ -485,7 +485,12 @@ export function deriveTrajectoryLayout(
           laidList.push(laid)
           index = laid.cell.index
         }
-        pushStep(0, 1, laidList)
+        const location = eventLocations?.get(node.seq)
+        pushStep(
+          location?.kind === 'turn' || location?.kind === 'step' ? location.turn.turn : 0,
+          location?.kind === 'step' ? location.step.step : 1,
+          laidList,
+        )
       }
       prevAbsTime = finiteTime(node.time) ?? prevAbsTime
     }
