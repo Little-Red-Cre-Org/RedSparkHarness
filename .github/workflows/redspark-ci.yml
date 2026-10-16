@@ -112,6 +112,14 @@ jobs:
           snapshots/native-sdk/archify.snapshot.ts
         env:
           DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
+      - name: TEMP Windows SDK snapshot validation (to move into the parallel packed job)
+        if: runner.os == 'Windows'
+        run: |
+          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:DSH_NATIVE_SDK_PYTHON = '${{ steps.sdk-python.outputs.python }}'
+          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/text-turn.snapshot.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: RSH terminal regressions
         run: pnpm --filter @deepseek-ai/dsh-rsh test
       - name: RSH profile smoke
