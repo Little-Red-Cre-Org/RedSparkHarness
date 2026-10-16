@@ -5,7 +5,7 @@ import type {
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 import { nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionImage, NativeSessionInputPart } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModeControls, NativePermissionControls } from '@deepseek-ai/dsh-client-native-session/native'
@@ -34,6 +34,12 @@ export interface ConversationSnapshot {
   readonly error?: string | undefined
 }
 
+/** Draft text and image files retained for one selected Session. */
+export interface NativeConversationDraft {
+  readonly text: string
+  readonly files: readonly File[]
+}
+
 /** Explicit retained presentation limits, supplied by the Client profile. */
 export interface NativeConversationLimits {
   readonly maxLiveTextChars: number
@@ -47,6 +53,7 @@ export class NativeConversationController {
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
+  private readonly drafts = new Map<SessionId, NativeConversationDraft>()
   private selectionEpoch = 0
   private submissionRead = 0
   private submissionFloor = -1
@@ -103,6 +110,25 @@ export class NativeConversationController {
 
   private assertReady(): void {
     if (this.snapshot.state !== 'ready') throw new Error('native conversation: operation already pending')
+  }
+
+  /** Keep a non-empty draft for a Session, deleting an empty draft.
+   * @param id - owning Session.
+   * @param draft - unsent composer text and image files.
+   */
+  keepDraft(id: SessionId, draft: NativeConversationDraft): void {
+    if (draft.text.length === 0 && draft.files.length === 0) this.drafts.delete(id)
+    else this.drafts.set(id, draft)
+  }
+
+  /** Take and remove a Session's saved draft.
+   * @param id - owning Session.
+   * @returns the saved draft, if one exists.
+   */
+  takeDraft(id: SessionId): NativeConversationDraft | undefined {
+    const draft = this.drafts.get(id)
+    this.drafts.delete(id)
+    return draft
   }
 
   private async restore(id: SessionId): Promise<void> {
@@ -456,14 +482,16 @@ export class NativeConversationController {
   }
 
   /** Send human text through the Host's sole turn executor.
-   * @param text - nonempty submitted text.
+   * @param text - submitted text; empty text requires at least one image.
    * @param files - browser-selected raster files; Provider limits govern admission.
    * @returns completion after Host settlement and durable transcript refresh.
    */
   send(text: string, files: readonly File[] = []): Promise<void> {
     this.assertReady()
     const id = this.snapshot.selected
-    if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
+    if (id === undefined || (text.trim().length === 0 && files.length === 0)) {
+      throw new Error('native conversation: select a Session and enter text or attach an image')
+    }
     const retainedDraft = this.submissionDraft
     const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
       && retainedDraft.epoch === this.selectionEpoch && retainedDraft.text === text ? retainedDraft : undefined
@@ -540,13 +568,16 @@ export class NativeConversationController {
           }
         }
         if (reconcileDraft !== undefined) { takeOwnership(); this.publish({ error: undefined }) }
-        const result = await this.client.prompt(id, text, true, signal,
-          (frame) => { this.observe(frame, admission) }, images,
-          (error) => {
-            if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
-              this.publish({ error: error instanceof Error ? error.message : String(error) })
-            }
-          }, admission.lastSeq)
+        const observe = (frame: NativeSessionFollowFrame): void => { this.observe(frame, admission) }
+        const onFollowError = (error: unknown): void => {
+          if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
+            this.publish({ error: error instanceof Error ? error.message : String(error) })
+          }
+        }
+        const result = text.trim().length === 0
+          ? await this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
+            true, signal, observe, onFollowError, admission.lastSeq)
+          : await this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq)
         if (result.exitCode !== 0 && result.exitCode !== 130) {
           throw new Error(`native conversation: turn exited with code ${result.exitCode}`)
         }

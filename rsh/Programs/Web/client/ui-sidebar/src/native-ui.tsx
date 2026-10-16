@@ -1,5 +1,6 @@
 /** Native navigation surface over the Session, layout, and schedule owners. */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import {
   Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
@@ -208,6 +209,7 @@ function NativeSessionBrowser({
   const [workspaceTrustPending, setWorkspaceTrustPending] = useState(false)
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
+  const treeRef = useRef<HTMLElement | null>(null)
   const searchInput = useRef<HTMLInputElement>(null)
   const groups = groupNativeSessions(snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t)
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
@@ -310,6 +312,7 @@ function NativeSessionBrowser({
           node={session}
           currentId={snapshot.selected}
           now={Date.now()}
+          tabIndex={-1}
           onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
           onRename={item?.titleActions?.rename === true
             ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
@@ -367,6 +370,36 @@ function NativeSessionBrowser({
   const currentSearch = searchState.query === searchQuery
     ? searchState
     : { query: searchQuery, status: 'loading' as const, items: [] }
+  // Roving tab stop: Tab reaches the tree once, arrows move between rows.
+  useLayoutEffect(() => {
+    const tree = treeRef.current as HTMLElement
+    tree.tabIndex = tree.querySelector('[role="treeitem"]') !== null
+      && tree.querySelector('[role="treeitem"][tabindex="0"]') === null ? 0 : -1
+  })
+  const focusTreeRow = (tree: HTMLElement, rows: readonly HTMLElement[], next: HTMLElement): void => {
+    tree.tabIndex = -1
+    for (const row of rows) row.tabIndex = row === next ? 0 : -1
+    next.focus()
+  }
+  const handleTreeFocus = (event: ReactFocusEvent<HTMLElement>): void => {
+    const tree = event.currentTarget
+    const rows = Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'))
+    // Entering the tree lands on the selected row; a row focused by pointer becomes the tab stop.
+    const row = event.target === tree ? rows.find(item => item.getAttribute('aria-selected') === 'true') ?? rows[0]
+      : rows.find(item => item === event.target)
+    if (row !== undefined) focusTreeRow(tree, rows, row)
+  }
+  const handleTreeKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    const rows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'))
+    const index = rows.indexOf(event.target as HTMLElement)
+    const targets: Record<string, HTMLElement | undefined> = {
+      ArrowDown: rows[index + 1], ArrowUp: rows[index - 1], Home: rows[0], End: rows.at(-1),
+    }
+    const next = targets[event.key]
+    if (index === -1 || next === undefined) return
+    event.preventDefault()
+    focusTreeRow(event.currentTarget, rows, next)
+  }
   const workspaceTrustDialog = workspaceTrustPrompt === undefined ? null : <Modal
     open
     title={t('workspaceTrustTitle')}
@@ -450,13 +483,15 @@ function NativeSessionBrowser({
       </>}
     />
     {actionError !== undefined && <div role="alert">{actionError}</div>}
-    <nav className={css.workspaceList} aria-label={t('workspace')} role="tree">
+    <nav ref={treeRef} className={css.workspaceList} aria-label={t('workspace')} role="tree"
+      onFocus={handleTreeFocus} onKeyDown={handleTreeKeyDown}>
       {searchExpanded && searchQuery !== '' ? <>
         {currentSearch.status === 'loading' && <WorkspaceSectionEmpty label={t('search.pending')} />}
         {currentSearch.status === 'error' && <WorkspaceSectionEmpty label={t('search.unavailable')} />}
         {currentSearch.status === 'ready' && currentSearch.items.length === 0 && <WorkspaceSectionEmpty label={t('search.noMatches')} />}
         {currentSearch.items.map(result => <SearchResultItem
           key={result.id} result={result} currentId={snapshot.selected}
+          tabIndex={-1}
           onOpen={(id) => {
             if (snapshot.state !== 'ready') return
             setSearchExpanded(false)
@@ -497,7 +532,7 @@ function NativeSessionBrowser({
                     return next
                   })
                   if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
-                }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
+                }} actions={workspaceActions} showCreate={workspaceId !== undefined} tabIndex={-1} t={t} />
                 {order !== 'manual' || workspaceId === undefined ? null
                   : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
                     registry.workspaces.length, (up) => {

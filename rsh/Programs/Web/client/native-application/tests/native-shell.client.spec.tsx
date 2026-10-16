@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
@@ -19,6 +19,7 @@ import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
 import { PENDING_DEFAULT_KEY } from '../src/pending-default.ts'
+import { requestNativeModelSettings } from '../src/settings-request.ts'
 
 const makeHeader = (id: string, cwd?: string): SessionHeader => ({
   version: SESSION_FORMAT_VERSION,
@@ -411,9 +412,32 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
-    const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
+    const tree = screen.getByRole('tree', { name: 'Workspaces' })
+    const workspaceRows = within(tree)
     const alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
-    expect(workspaceRows.getByRole('treeitem', { name: /Beta/ })).toBeTruthy()
+    const betaRow = workspaceRows.getByRole('treeitem', { name: /Beta/ })
+    const firstRow = workspaceRows.getAllByRole('treeitem')[0]!
+    expect(tree.tabIndex).toBe(0)
+    tree.focus()
+    expect(document.activeElement).toBe(firstRow)
+    expect(tree.tabIndex).toBe(-1)
+    fireEvent.keyDown(firstRow, { key: 'ArrowUp' })
+    fireEvent.keyDown(tree, { key: 'End' })
+    expect(document.activeElement).toBe(firstRow)
+    alphaRow.focus()
+    expect(alphaRow.tabIndex).toBe(0)
+    workspaceRows.getAllByRole('button', { hidden: true })[0]!.focus()
+    expect(alphaRow.tabIndex).toBe(0)
+    alphaRow.focus()
+    fireEvent.keyDown(alphaRow, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(betaRow)
+    expect(workspaceRows.getAllByRole('treeitem').filter(row => row.tabIndex === 0)).toEqual([betaRow])
+    fireEvent.keyDown(betaRow, { key: 'Enter' })
+    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(betaRow.getAttribute('aria-selected')).toBe('true') })
+    firstRow.focus()
+    tree.focus()
+    expect(document.activeElement).toBe(betaRow)
     expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(7)
     const activeRow = { ...rows.find(row => row.header.id === 'session-alpha')!, updatedAt: Date.now(), running: true,
       pendingInteraction: { kind: 'approval' as const } }
@@ -614,6 +638,10 @@ it.each([
     expect(screen.getByRole('dialog', { name: '设置' })).toBeTruthy()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
+
+    act(() => { requestNativeModelSettings() })
+    expect(within(screen.getByRole('dialog', { name: '设置' })).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
+    fireEvent.keyDown(document, { key: 'Escape' })
 
     await host.stop()
     expect(container.childElementCount).toBe(0)

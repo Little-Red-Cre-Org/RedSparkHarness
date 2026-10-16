@@ -81,7 +81,14 @@ export function NativeMessageImage({ image, sessionId, loadImage, t }: {
   return <MessageImage image={{ attachment: image }} load={load} variant="single" labels={labels} />
 }
 
-/** Limit-checked Native Client composer file picker, drop target and attachment rail. */
+/** Limit-checked Native Client composer file picker, drop target, paste target and attachment rail.
+ * @param props.files - current composer image files.
+ * @param props.onChange - replace the composer image files.
+ * @param props.limits - Host-advertised image limits.
+ * @param props.disabled - whether the composer rejects new image files.
+ * @param props.t - native application translation callback.
+ * @returns image controls and the attachment rail.
+ */
 export function NativeComposerAttachments({ files, onChange, limits, disabled, t }: {
   files: readonly File[]
   onChange: (files: readonly File[]) => void
@@ -90,6 +97,7 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
   t: Translate
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const attachmentsRef = useRef<HTMLDivElement | null>(null)
   const dragDepth = useRef(0)
   const [dragActive, setDragActive] = useState(false)
   const [notices, setNotices] = useState<readonly AttachmentNotice[]>([])
@@ -124,6 +132,20 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
     if (accepted.length !== files.length) onChange(accepted)
     setNotices(rejected)
   }, [disabled, files, limits, onChange])
+
+  useEffect(() => {
+    if (disabled) return
+    // Pasting into the composer form attaches clipboard files; text-only pastes keep their default.
+    const form = (attachmentsRef.current as HTMLDivElement).closest('form') as HTMLFormElement
+    const onPaste = (event: ClipboardEvent): void => {
+      const pasted = Array.from((event.clipboardData as DataTransfer).files)
+      if (pasted.length === 0) return
+      event.preventDefault()
+      addFiles(pasted)
+    }
+    form.addEventListener('paste', onPaste)
+    return () => { form.removeEventListener('paste', onPaste) }
+  }, [addFiles, disabled])
 
   useEffect(() => {
     const fileTransfer = (event: globalThis.DragEvent): DataTransfer | null => {
@@ -199,7 +221,7 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
         size: fileSizeText(limits.maxImageBytes),
       }),
     }} />}
-    <div className={css.attachments}>
+    <div ref={attachmentsRef} className={css.attachments}>
       <input
         ref={inputRef}
         className={css.input}

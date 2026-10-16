@@ -116,10 +116,13 @@ function activateRowOnKeyDown(event: KeyboardEvent<HTMLDivElement>, action: () =
  * @param props.onCreate - start a Session in this group when the Host can target it.
  * @param props.drag - optional workspace-row drag wiring.
  * @param props.home - host account home for POSIX hover-path abbreviation.
+ * @param props.tabIndex - row tab stop supplied by a containing tree owner.
  * @param props.t - the browser root's locale seat.
  * @returns the row element.
  */
-export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home, label: labelOverride, showCreate = true, t }: {
+export function ProjectRowItem({
+  group, onToggle, onCreate, actions, drag, home, label: labelOverride, showCreate = true, tabIndex = 0, t,
+}: {
   group: WorkspaceGroupRow
   onToggle: () => void
   onCreate?: (() => void) | undefined
@@ -133,6 +136,8 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
   label?: string | undefined
   /** Hide creation when the current Host interface cannot target this group. */
   showCreate?: boolean | undefined
+  /** Row tab stop supplied by a containing tree owner. */
+  tabIndex?: number | undefined
   t: RowTranslate
 }) {
   const row = group
@@ -148,7 +153,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
     <div
       className={clsx(css.projectRow, menuOpen && css.menuOpen)}
       role="treeitem"
-      tabIndex={0}
+      tabIndex={tabIndex}
       aria-expanded={row.expanded}
       onClick={onToggle}
       onKeyDown={(event) => { activateRowOnKeyDown(event, onToggle) }}
@@ -340,13 +345,16 @@ function SessionHoverContent({ node, now, t }: { node: SessionRowNode; now: numb
  * @param props.result - merged local/content search row.
  * @param props.currentId - selected session id.
  * @param props.onOpen - open the selected session.
+ * @param props.tabIndex - row tab stop supplied by a containing tree owner.
  * @param props.t - Workspace-browser translation seat.
  * @returns the result button.
  */
-export function SearchResultItem<Id extends string>({ result, currentId, onOpen, t }: {
+export function SearchResultItem<Id extends string>({ result, currentId, onOpen, tabIndex = 0, t }: {
   result: SessionSearchRow<Id>
   currentId: Id | undefined
   onOpen: (id: Id) => void
+  /** Row tab stop supplied by a containing tree owner. */
+  tabIndex?: number | undefined
   t: RowTranslate
 }) {
   const selected = result.id === currentId
@@ -357,6 +365,7 @@ export function SearchResultItem<Id extends string>({ result, currentId, onOpen,
       type="button"
       className={clsx(css.searchResultRow, selected && css.selected)}
       role="treeitem"
+      tabIndex={tabIndex}
       aria-selected={selected}
       onClick={() => { onOpen(result.id) }}
     >
@@ -395,12 +404,13 @@ export function SearchResultItem<Id extends string>({ result, currentId, onOpen,
  * @param props.onReveal - scroll this row into view after search navigation, then acknowledge it.
  * @param props.drag - optional draggable-row wiring.
  * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
+ * @param props.tabIndex - row tab stop supplied by a containing tree owner.
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
 export function SessionNodeItem<Id extends string>({
   node, currentId, now, onOpen, onRename, onRefresh, refreshTitleLabel, onFork, onArchive, onReveal, drag,
-  flat = false, allowRemove = true, t,
+  flat = false, allowRemove = true, tabIndex = 0, t,
 }: {
   node: SessionRowNode<Id>
   currentId: Id | undefined
@@ -424,6 +434,8 @@ export function SessionNodeItem<Id extends string>({
   flat?: boolean | undefined
   /** Whether the archive callback also supports the legacy confirmation action. */
   allowRemove?: boolean | undefined
+  /** Row tab stop supplied by a containing tree owner. */
+  tabIndex?: number | undefined
   t: RowTranslate
 }) {
   const row = node
@@ -466,7 +478,7 @@ export function SessionNodeItem<Id extends string>({
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
-      tabIndex={0}
+      tabIndex={tabIndex}
       aria-selected={selected}
       onClick={() => { onOpen(node.id) }}
       onKeyDown={(event) => { activateRowOnKeyDown(event, () => { onOpen(node.id) }) }}

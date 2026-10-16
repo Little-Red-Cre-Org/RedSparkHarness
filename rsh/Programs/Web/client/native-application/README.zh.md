@@ -24,7 +24,7 @@ kind: "package-reference"
 
 页面列出已存储 Session、创建空白 Session、选择持久化历史，并通过显式 resume 发送用户文本。取消期间页面保持忙碌，直至 Host 回复确认执行结算且历史刷新完成。安装释放会取消未完成调用，并等待其结算后释放视图控制器。控制器只保留呈现状态，不建立第二个 Session writer、Agent registry 或连接循环。
 
-只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。
+只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。控制器通过 `keepDraft` 和 `takeDraft` 提供按 Session 保存 composer 草稿的接口。`ConversationError` 为原始会话错误显示本地化文案，凭据失败时提供模型设置入口，并可展开查看原始消息。
 
 模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
@@ -56,7 +56,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 
 带有 `canAllowSession: true` 的审批在允许一次和拒绝旁提供会话动作；其精确可复用范围由 Host 拥有。通用关闭和计划讨论通过 `cancel-questions` 取消整个待答问题批次，同时保持该轮活动。问题卡保留标题、详情、选项、多选和自定义文本。提交失败会保留请求并重新启用控件；只有捕获的同一会话和展示才能接收回答错误或释放提交锁。Host 移除帧负责清除 prompt。整轮取消仍是独立操作，并等待 Host 结算。重载恢复持久决策与工具结果，不恢复过期待答展示。
 
-图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
+图片上传使用公布的附件限额及选定 Session 的下一模型。composer 会接收表单内粘贴的图片，并通过 Host content prompt 支持仅发送图片。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
 
 任务面板读取权威 todo/write 快照，包括已接受的实时与恢复历史。每次替换完整列表，只在 turn/start 清空；turn/end 保留最后的计划。状态文案由 locale 提供，面板不修改任务。
 

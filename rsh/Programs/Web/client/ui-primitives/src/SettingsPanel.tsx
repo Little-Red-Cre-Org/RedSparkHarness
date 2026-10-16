@@ -43,7 +43,7 @@ function navIcon(id: string): ReactNode {
   return <IconSettingsOutline16 className={css.navIcon} size={16} />
 }
 
-/** Render a centered Settings dialog with navigation and one selected page.
+/** Render a centered Settings dialog with navigation, focus containment, and opener restoration.
  * @param props - localized chrome, navigation, and page content.
  * @returns the dialog element tree.
  */
@@ -52,22 +52,44 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const active = rows.find(row => row.id === activeId)?.id ?? rows[0]?.id
   const titleId = useId()
+  const panel = useRef<HTMLDivElement | null>(null)
   const closeButton = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
+      if (event.key !== 'Tab') return
+      // A child dialog portaled over Settings keeps its own Tab order.
+      const dialog = (document.activeElement as Element).closest('[aria-modal="true"]')
+      if (dialog !== null && dialog !== panel.current) return
+      // Keep Tab inside the modal dialog: wrap at either end and pull outside focus back in.
+      const root = panel.current as HTMLDivElement
+      const focusable = Array.from(root.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]',
+      )).filter(element => element.getAttribute('tabindex') !== '-1' && element.closest('[hidden]') === null
+        && (element.tagName === 'SUMMARY' || element.closest('details:not([open])') === null))
+      const first = focusable[0] as HTMLElement
+      const last = focusable.at(-1) as HTMLElement
+      const [edge, wrap] = event.shiftKey ? [first, last] : [last, first]
+      if (document.activeElement === edge || !root.contains(document.activeElement)) {
+        event.preventDefault()
+        wrap.focus()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => { document.removeEventListener('keydown', onKeyDown) }
   }, [onClose])
 
-  useEffect(() => { closeButton.current?.focus() }, [])
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement
+    closeButton.current?.focus()
+    return () => { opener.focus() }
+  }, [])
 
   return (
     <div className={css.overlay} role="presentation">
       <div className={css.mask} aria-hidden="true" onClick={onClose} />
-      <div className={css.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={panel} className={css.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <nav className={css.nav}>
           <div className={css.navTitle} id={titleId}>{title}</div>
           <div className={css.navList}>
