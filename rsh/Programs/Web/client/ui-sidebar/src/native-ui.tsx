@@ -794,7 +794,10 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
     </header>
     {error && <p className={css.scheduleError} role="alert">{t('schedule.error')}</p>}
     {!ready ? <p className={css.scheduleEmpty} role="status">{t('schedule.loading')}</p>
-      : jobs.length === 0 ? <p className={css.scheduleEmpty}>{t('schedule.empty')}</p>
+      : jobs.length === 0 ? <div className={css.scheduleEmpty}>
+        <p>{t('schedule.empty')}</p>
+        <p>{t('schedule.emptyHint')}</p>
+      </div>
         : jobs.map((job) => {
           const separator = '; every '
           const separatorIndex = job.schedule.indexOf(separator)

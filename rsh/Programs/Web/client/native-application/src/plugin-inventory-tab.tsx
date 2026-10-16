@@ -18,6 +18,9 @@ const STATE_COPY = {
   disposed: { labelKey: 'settingsPluginListDisposed', tone: 'neutral' },
 } as const satisfies Record<PluginState, { labelKey: ConversationLocaleKey; tone: TagTone }>
 
+// Host runtime and storage packages the user cannot act on; folded until asked for or searched.
+const INFRASTRUCTURE = /^(native-|storage-)/
+
 const FAILURE_COPY = {
   activation: 'settingsPluginListFailureActivation',
   cleanup: 'settingsPluginListFailureCleanup',
@@ -43,6 +46,7 @@ export function PluginInventoryTab({ actions, t, active }: {
   const [query, setQuery] = useState('')
   const [collapsedScopes, setCollapsedScopes] = useState<ReadonlySet<string>>(() => new Set())
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [showInfrastructure, setShowInfrastructure] = useState(false)
 
   useEffect(() => {
     if (active && !started) setStarted(true)
@@ -61,16 +65,19 @@ export function PluginInventoryTab({ actions, t, active }: {
   }, [actions.pluginInventoryList, request, started])
 
   const normalizedQuery = query.trim().toLocaleLowerCase()
+  const foldInfrastructure = !showInfrastructure && normalizedQuery.length === 0
+  const infrastructureCount = (inventory?.entries ?? []).filter(entry => INFRASTRUCTURE.test(shortName(entry.name))).length
   const groups = useMemo(() => {
     const grouped = new Map<string, NativePluginInventoryEntry[]>()
     for (const entry of inventory?.entries ?? []) {
       if (!`${entry.name}\n${entry.id}`.toLocaleLowerCase().includes(normalizedQuery)) continue
+      if (foldInfrastructure && INFRASTRUCTURE.test(shortName(entry.name))) continue
       const entries = grouped.get(entry.scope)
       if (entries === undefined) grouped.set(entry.scope, [entry])
       else entries.push(entry)
     }
     return [...grouped]
-  }, [inventory, normalizedQuery])
+  }, [foldInfrastructure, inventory, normalizedQuery])
 
   const retry = (): void => { setRequest(value => value + 1) }
   const hasEntries = (inventory?.entries.length ?? 0) > 0
@@ -89,6 +96,12 @@ export function PluginInventoryTab({ actions, t, active }: {
           aria-label={t('settingsPluginListSearch')} onChange={(event) => { setQuery(event.currentTarget.value) }} />
       </label>
       <p className={css.gapNote}>{t('settingsPluginListFeatureGap')}</p>
+      {infrastructureCount > 0 && normalizedQuery.length === 0 ? <p className={css.gapNote}>
+        {t(showInfrastructure ? 'settingsPluginListInfrastructureShown' : 'settingsPluginListInfrastructureHidden')} {infrastructureCount}
+        {' · '}<button type="button" className={css.inlineAction} onClick={() => { setShowInfrastructure(!showInfrastructure) }}>
+          {t(showInfrastructure ? 'settingsPluginListHideInfrastructure' : 'settingsPluginListShowInfrastructure')}
+        </button>
+      </p> : null}
       {!hasEntries ? <p className={css.status}>{t('settingsPluginListEmpty')}</p> : null}
       {hasEntries && groups.length === 0 ? <p className={css.status}>{t('settingsPluginListEmptySearch')}</p> : null}
       {groups.map(([scope, entries]) => {

@@ -703,12 +703,13 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
       <div className={css.rowText}><div className={css.title}>{t('settingsBusyEnter')}</div>
         <div className={css.description}>{t('settingsBusyEnterDescription')}</div>
         {conversation === undefined ? <div className={css.description} role="status">{t('busySendPreferenceUnavailable')}</div> : null}</div>
-      <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
-        disabled={saving !== undefined || conversation === undefined}
+      {conversation === undefined ? <span className={css.fixedValue}>
+        {t(pendingDefault === 'steer' ? 'settingsBusyEnterSteer' : 'settingsBusyEnterQueue')}
+      </span> : <select aria-label={t('settingsBusyEnter')} value={pendingDefault} disabled={saving !== undefined}
         onChange={(event) => { selectBusyEnter(event.target.value as BusyEnterBehavior) }}>
         <option value="queue">{t('settingsBusyEnterQueue')}</option>
         <option value="steer">{t('settingsBusyEnterSteer')}</option>
-      </select>
+      </select>}
     </div>
     {pet === undefined ? null : <section className={css.pet} aria-labelledby="native-settings-personalization">
       <h3 id="native-settings-personalization">{t('settingsPersonalization')}</h3>
@@ -723,7 +724,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     {notice === undefined ? null : <p role="status">{notice}</p>}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     <details className={css.advanced}>
-      <summary>{t('settingsAdvanced')}</summary>
+      <summary><span>{t('settingsAdvanced')}</span><span className={css.description}>{t('settingsAdvancedDescription')}</span></summary>
       {refreshButton}
       {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
       {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}

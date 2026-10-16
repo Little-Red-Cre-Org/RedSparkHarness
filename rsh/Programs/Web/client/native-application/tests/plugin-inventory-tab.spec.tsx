@@ -95,3 +95,21 @@ it('shows a retry after a failed read and renders the returned inventory', async
   expect(await screen.findByText('alpha')).toBeTruthy()
   expect(pluginInventoryList).toHaveBeenCalledTimes(2)
 })
+
+it('folds native and storage infrastructure plugins until shown or searched', async () => {
+  renderTab(vi.fn(async () => ({ entries: [
+    ...inventory.entries,
+    { id: 'native-1', name: '@deepseek-ai/dsh-native-agent', scope: inventory.entries[0]!.scope, state: 'ready' },
+    { id: 'storage-1', name: 'dsh-storage-local', scope: inventory.entries[0]!.scope, state: 'ready' },
+  ] })))
+
+  expect(await screen.findByText('alpha')).toBeTruthy()
+  expect(screen.queryByText('native-agent')).toBeNull()
+  expect(screen.getByText(`${en.settingsPluginListInfrastructureHidden} 2`, { exact: false })).toBeTruthy()
+  fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: 'native' } })
+  expect(screen.getByText('native-agent')).toBeTruthy()
+  fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: '' } })
+  fireEvent.click(screen.getByRole('button', { name: en.settingsPluginListShowInfrastructure }))
+  expect(screen.getByText('native-agent')).toBeTruthy()
+  expect(screen.getByText('storage-local')).toBeTruthy()
+})

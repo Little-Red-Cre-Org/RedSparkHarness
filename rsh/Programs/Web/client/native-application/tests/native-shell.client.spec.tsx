@@ -693,7 +693,7 @@ it.each([
     const settingsDialog = screen.getByRole('dialog', { name: '设置' })
     const settingsNav = within(settingsDialog).getByRole('navigation')
     expect(within(settingsNav).getAllByRole('button').map(button => button.textContent?.trim())).toEqual([
-      '通用设置', '任务中心', '模型', '插件', 'Agent 预设',
+      '通用设置', '模型', '插件', 'Agent 预设',
     ])
     fireEvent.click(within(settingsDialog).getByRole('button', { name: '模型' }))
     expect(within(settingsDialog).getByRole('heading', { name: '模型' })).toBeTruthy()
