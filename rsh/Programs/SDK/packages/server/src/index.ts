@@ -61,6 +61,38 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
   })
 
+  const loader = ctx.get('loader')
+  let bootFailure: Error | undefined
+  const startupWatcher = loader === undefined ? undefined : (async () => {
+    let lastFailure: { id: string; name: string; reason: unknown } | undefined
+    for (;;) {
+      // Read entry tasks before rollback can remove the failed subtree.
+      const pending = [...loader.entries()].flatMap((entry) => {
+        const task = entry._initTask ?? entry.fiber?.inertia
+        return task === undefined ? [] : [{ id: entry.id, name: entry.options.name, task }]
+      })
+      if (!pending.length) break
+      const failures = await Promise.all(pending.map(({ task, ...entry }) =>
+        task.then(() => undefined, (reason: unknown) => ({ ...entry, reason }))))
+      // `entries()` yields a parent before its children, so the last failure is the failing leaf entry.
+      lastFailure = failures.findLast(failure => failure !== undefined) ?? lastFailure
+    }
+    if (lastFailure === undefined) return
+
+    // Entry tasks reject with the Loader's `failed to <stage> loader entry` wrapper;
+    // its cause is the plugin's own error. Only the error type and the Cordis
+    // duplicate-service rule reach the client: raw messages can carry config values.
+    const { id, name, reason } = lastFailure
+    const original = (reason as Error).cause
+    /* v8 ignore next -- plugins throw Error instances; a thrown non-Error still gets a generic type */
+    const error = original instanceof Error ? original : new Error()
+    const service = /^service "([^"]+)" has been registered/.exec(error.message)?.[1]
+    const rule = service === undefined ? '' : `: service "${service}" is already provided by another plugin`
+    bootFailure = new Error(
+      `SDK runtime failed to start: loader entry "${id}" (${name}) failed: ${error.name}${rule}; see the runtime stderr log for details`,
+    )
+  })()
+
   // Share one exit task so racing shutdown requests cannot dispose the root or
   // exit the process more than once.
   let exitTask: Promise<void> | undefined
@@ -82,8 +114,10 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
     // is part of readiness. A hand-built context without Loader remains
     // immediately usable.
     if (method === 'initialize') {
-      await ctx.get('loader')?.await()
+      await startupWatcher
+      if (bootFailure === undefined) await loader?.await()
     }
+    if (bootFailure !== undefined) throw bootFailure
     const result = await server.handleRequest(method, params)
     if (method === 'shutdown') {
       // Run after the handler result is written; the task then flushes, disposes, and exits.
