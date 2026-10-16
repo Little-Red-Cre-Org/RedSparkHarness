@@ -133,7 +133,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       delete childEnv.DEEPSEEK_BASE_URL
 
       const profileDump = await execa(process.execPath, [installedBin, '--profile', 'native-headless', '--dump-config'], {
-        cwd: installedRoot, env: childEnv, reject: false, timeout: 30_000,
+        cwd: installedRoot, env: childEnv, extendEnv: false, reject: false, timeout: 30_000,
       })
       expect(profileDump.timedOut, profileDump.stderr).toBe(false)
       expect(profileDump.exitCode, profileDump.stderr).toBe(0)
@@ -204,7 +204,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       ] }))
 
       const childProcess = execa(process.execPath, [installedBin, '--profile', 'native-headless', '--patch', patch, TASK], {
-        cwd: installedRoot, env: childEnv, reject: false, timeout: 100_000,
+        cwd: installedRoot, env: childEnv, extendEnv: false, reject: false, timeout: 100_000,
       })
       stopChildProcess = async () => { childProcess.kill('SIGTERM'); await childProcess }
       void childProcess.then(() => { processSettled = true }, () => { processSettled = true })

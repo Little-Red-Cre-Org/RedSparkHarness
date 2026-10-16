@@ -154,7 +154,7 @@
     "verify-package-readme-limitations": "tsx rsh/Scripts/verify-package-readme-limitations.ts",
     "verify-node-next-types": "tsx rsh/Scripts/verify-node-next-types.ts",
     "verify-optional-dependency-imports": "tsx rsh/Scripts/verify-optional-dependency-imports.ts",
-    "verify-runtime-closure": "tsx rsh/Scripts/verify-runtime-closure.ts",
+    "verify-runtime-closure": "tsx rsh/Scripts/verify-runtime-closure.ts && tsx rsh/Scripts/verify-runtime-closure.ts --target native-cli",
     "verify-application-entrypoints": "tsx rsh/Scripts/verify-application-entrypoints.ts",
     "verify-package-dependencies": "tsx rsh/Scripts/verify-package-dependencies.ts",
     "verify-npm-install-layout": "tsx rsh/Scripts/verify-npm-install-layout.ts",

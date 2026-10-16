@@ -75,6 +75,15 @@
     "@deepseek-ai/cordis": {
       "optional": true
     },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-system-prompt": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-typert-protocol": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-spill": {
       "optional": true
     },

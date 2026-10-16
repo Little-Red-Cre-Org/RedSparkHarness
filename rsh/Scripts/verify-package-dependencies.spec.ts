@@ -50,6 +50,7 @@ function pkg(
 function policy(fields: Partial<PackageDependencyPolicy> = {}): PackageDependencyPolicy {
   return {
     cordisFreePackageDirectories: new Set(),
+    applicationDistributionDirectories: new Map(),
     clientFaceInclude: [],
     clientFaceExclude: [],
     hostPackages: [],
