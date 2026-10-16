@@ -62,6 +62,7 @@
   padding: 0 8px;
   border: 0;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-secondary);
   font: inherit;
@@ -78,6 +79,7 @@
   height: 28px;
   padding: 0 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
