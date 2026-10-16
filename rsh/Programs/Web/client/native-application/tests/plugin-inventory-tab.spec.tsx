@@ -109,6 +109,7 @@ it('folds native and storage infrastructure plugins until shown or searched', as
   fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: 'native' } })
   expect(screen.getByText('native-agent')).toBeTruthy()
   fireEvent.change(screen.getByRole('searchbox', { name: en.settingsPluginListSearch }), { target: { value: '' } })
+  expect(screen.getByRole('button', { name: en.settingsPluginListShowInfrastructure }).getAttribute('aria-expanded')).toBe('false')
   fireEvent.click(screen.getByRole('button', { name: en.settingsPluginListShowInfrastructure }))
   expect(screen.getByText('native-agent')).toBeTruthy()
   expect(screen.getByText('storage-local')).toBeTruthy()

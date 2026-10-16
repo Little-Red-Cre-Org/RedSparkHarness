@@ -382,6 +382,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string>()
   const [error, setError] = useState<string>()
+  const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
   const [accountsError, setAccountsError] = useState<string>()
@@ -435,6 +436,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
         const reset = resetDrafts.current
         if (reset) resetDrafts.current = false
         setLimits(description.limits)
+        setDescribeFailed(false)
         setNamespaces(rows)
         onDocumentAvailabilityChange?.(description.hasDocument)
         applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
@@ -466,6 +468,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     } catch (cause: unknown) {
       if (latest()) {
         resetDrafts.current = false
+        setDescribeFailed(true)
         setError(requestError(cause, translate.current, 'native/settings'))
       }
       return false
@@ -619,7 +622,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const conversation = namespaces.find(row => row.namespace === 'ui-conversation')
   const pet = namespaces.find(row => row.namespace === 'ui-pet')
   // Only a completed, successful describe without ui-conversation proves the Host lacks the preference.
-  const busySendHostGap = conversation === undefined && limits !== undefined && !loading && error === undefined
+  const busySendHostGap = conversation === undefined && limits !== undefined && !loading && !describeFailed
   const selectBusyEnter = (value: BusyEnterBehavior): void => {
     if (conversation === undefined) return
     void mutateField(conversation, ['busyEnter'], value)

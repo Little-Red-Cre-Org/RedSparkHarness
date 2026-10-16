@@ -98,7 +98,7 @@ export function PluginInventoryTab({ actions, t, active }: {
       <p className={css.gapNote}>{t('settingsPluginListFeatureGap')}</p>
       {infrastructureCount > 0 && normalizedQuery.length === 0 ? <p className={css.gapNote}>
         {t(showInfrastructure ? 'settingsPluginListInfrastructureShown' : 'settingsPluginListInfrastructureHidden')} {infrastructureCount}
-        {' · '}<button type="button" className={css.inlineAction} onClick={() => { setShowInfrastructure(!showInfrastructure) }}>
+        {' · '}<button type="button" className={css.inlineAction} aria-expanded={showInfrastructure} onClick={() => { setShowInfrastructure(!showInfrastructure) }}>
           {t(showInfrastructure ? 'settingsPluginListHideInfrastructure' : 'settingsPluginListShowInfrastructure')}
         </button>
       </p> : null}
