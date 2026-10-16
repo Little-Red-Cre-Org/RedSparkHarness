@@ -10,9 +10,8 @@ import {
   type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePackageInstallation,
   type NativePackageProvenance, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
-import { launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
+import { launchEnvironmentProvider, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
 import { nativeAcpChildRuntimeLauncher } from './native-acp-child-runtime-launcher.ts'

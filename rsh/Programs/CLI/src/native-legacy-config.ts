@@ -6,7 +6,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import type { NativePresetFolderSummary } from '@deepseek-ai/dsh-agent-presets/native'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
+import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { parseNativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
 import { parseNativeSettingsDocument, resolveNativeSettingsConfig } from '@deepseek-ai/dsh-settings-file/native'
 import {
