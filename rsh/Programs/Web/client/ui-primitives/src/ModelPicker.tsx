@@ -170,8 +170,14 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
       if (menuRef.current?.contains(event.target as Node) === true) return
       setOpen(false)
     }
+    // Leaving the window drops focus to nowhere too, which onBlur ignores.
+    const closeOnWindowBlur = (): void => { setOpen(false) }
     document.addEventListener('mousedown', closeOutside)
-    return () => { document.removeEventListener('mousedown', closeOutside) }
+    window.addEventListener('blur', closeOnWindowBlur)
+    return () => {
+      document.removeEventListener('mousedown', closeOutside)
+      window.removeEventListener('blur', closeOnWindowBlur)
+    }
   }, [open])
 
   // Portaled placement (the Menu primitive's portal rules: fixed from the

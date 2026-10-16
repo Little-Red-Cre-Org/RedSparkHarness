@@ -178,6 +178,7 @@ export class NativeWorkspaceRoutes {
       // Workspace creation is the durable commit point after canonical path and sandbox admission.
       // Later Session failure releases this temporary route but retains valid Workspace metadata.
       const workspace = await registry.create(canonical)
+      if (trusted && workspace.path !== canonical) throw new Error('Workspace is outside the configured allowed roots')
       return await this.select(baseRoute, workspace.id, signal, trusted)
     } finally {
       if (this.pendingCanonicalPaths.get(canonical) === operation) this.pendingCanonicalPaths.delete(canonical)
