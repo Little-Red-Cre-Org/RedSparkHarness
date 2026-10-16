@@ -251,7 +251,11 @@ async function main() {
     const error = outcome.error
     const reason = Object.hasOwn(messages, error.messageKey) ? messages[error.messageKey] : messages[errorKeys[error.code]]
     const blocked = (error.blockedBy ?? []).map(key => `${targetLabel(key.target)} · ${key.id}`).join(', ')
-    return message(outcome.status === 'refused' ? 'nativeRefused' : 'nativeRecoveryRequired', { reason }) + (blocked ? ` (${blocked})` : '')
+    const result = message(outcome.status === 'refused' ? 'nativeRefused' : 'nativeRecoveryRequired', { reason })
+      + (blocked ? ` (${blocked})` : '')
+    return [result,
+      error.diagnostic === undefined ? undefined : message('nativeValidationDiagnostic', error.diagnostic),
+    ].filter(value => value !== undefined).join('\n')
   }
 
   async function nativeInstall() {

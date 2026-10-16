@@ -409,3 +409,52 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     await transport.close()
   }
 })
+
+it('settles a ready retry from the accepted Host submission before prompting again', async () => {
+  type Inbox = Awaited<ReturnType<NativeSessionClient['submissions']>>
+  const sessionId = 'accepted-retry' as SessionId
+  const item: NativeSessionListItem = { header: makeHeader(sessionId), titleProjection: { status: 'absent' },
+    updatedAt: 1, blank: true, running: false, completed: false, runningSubagentCount: 0, hasActiveSchedule: false }
+  const turn = deferred<{ exitCode: number; answer: string }>()
+  const transport = createNativeSessionClient({ async call() { throw new Error('unexpected transport') } },
+    { maxFollowBufferChars: 10_000 })
+  let promptCount = 0
+  let inbox: Inbox = { throughSeq: -1, submissions: [] }
+  const client: NativeSessionClient = {
+    ...transport,
+    async *follow() { yield { type: 'baseline', items: [item] } },
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
+    async submissions() { return inbox },
+    prompt() { promptCount++; return turn.promise },
+    async queue(_id, text, requestId) {
+      inbox = { throughSeq: SessionSeq(1), submissions: [{ requestId, placement: 'queued', status: 'accepted', message: {
+        id: String(requestId) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },
+        content: [{ type: 'text', text }],
+      } }] }
+      throw new Error('lost acknowledgement')
+    },
+  }
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 100 })
+  try {
+    await controller.load()
+    await controller.select(sessionId)
+    const firstSend = controller.send('retry this accepted text')
+    expect(await controller.submitPending('retry this accepted text', 'queued')).toBe(false)
+    expect(inbox.submissions[0]).toMatchObject({ status: 'accepted', message: { content: [{ text: 'retry this accepted text' }] } })
+    turn.resolve({ exitCode: 0, answer: '' })
+    await firstSend
+    expect(controller.getSnapshot().state).toBe('ready')
+
+    await controller.send('retry this accepted text')
+    expect(promptCount).toBe(1)
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', submissions: { throughSeq: 1 }, error: undefined })
+  } finally {
+    turn.resolve({ exitCode: 130, answer: '' })
+    await controller.close()
+    await transport.close()
+  }
+})

@@ -1,5 +1,6 @@
 /** Serialized Native Host graph sent from the Desktop main process to its validation worker. */
 import type { NativeEntryManifest, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeDesktopValidationDiagnostic } from './native-module-management.ts'
 
 /** Serializable declaration for a loader-owned Host Provider that is not a profile package row. */
 export interface NativeHostPreflightProvider {
@@ -35,7 +36,6 @@ export interface NativeHostPreflightInput {
 }
 
 /** Result returned after the worker validates the current Host installation graph. */
-export interface NativeHostPreflightReply {
-  readonly valid: boolean
-  readonly message?: string
-}
+export type NativeHostPreflightReply =
+  | { readonly valid: true }
+  | { readonly valid: false; readonly diagnostic?: NativeDesktopValidationDiagnostic }

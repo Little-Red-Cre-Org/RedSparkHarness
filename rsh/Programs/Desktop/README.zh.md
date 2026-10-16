@@ -27,7 +27,7 @@ Windows 的一体化标题栏高 40 像素，保留原生窗口按钮。RedSpark
 
 Electron 拥有 `$DSH_HOME/profiles/desktop`。兼容 profile 在 `dependencies` 中以精确版本保存外部插件，并在内置 bundle 后列出已启用插件。Native profile 使用精确的直接依赖保存所选 Host 与 Client 模块；签名应用从 `resources/dsh` 提供 dsh、私有 Desktop Host 及其生产依赖。共享包链接解析到这些实际目录。宿主与插件在同一个内置上游 Node 进程中执行，使用正常的 realpath 解析；Desktop 不启用 `--preserve-symlinks`。CLI 不能启动或修改此 profile。
 
-本地启动页提供启动状态和可用恢复操作；加载后的 dsh 渲染进程仅接收桌面协议标记。独立插件窗口通过 `dshDesktop.plugins` 接收结构化的兼容插件操作和 Native 模块操作；两个渲染进程都无法访问文件系统、原始 Electron IPC、shell 或任意 pnpm 参数。`dshDesktop.plugins.native` 可列出包和持久化安装项、安装、删除、更新、切换安装项及禁用可选安装项。每次变更都携带 inventory revision；profile 写入前会拒绝忙碌或过期请求。Native 页面会将“禁用全部”执行为携带最新 revision 的逐项切换，并保留 Client `layout` 和 `session-presentation`；Host 必需闭包不包含这两个主界面所需的注册项。配置只以 `hasConfig` 表示，不会返回给渲染进程。
+本地启动页提供启动状态和可用恢复操作；加载后的 dsh 渲染进程仅接收桌面协议标记。独立插件窗口通过 `dshDesktop.plugins` 接收结构化的兼容插件操作和 Native 模块操作；两个渲染进程都无法访问文件系统、原始 Electron IPC、shell 或任意 pnpm 参数。`dshDesktop.plugins.native` 可列出包和持久化安装项、安装、删除、更新、切换安装项及禁用可选安装项。每次变更都携带 inventory revision；profile 写入前会拒绝忙碌或过期请求。Native 页面会将“禁用全部”执行为携带最新 revision 的逐项切换，并保留 Client `layout` 和 `session-presentation`；Host 必需闭包不包含这两个主界面所需的注册项。配置只以 `hasConfig` 表示，不会返回给渲染进程。组合校验拒绝诊断只包含配置字段路径和校验规则；提供方和请求头项使用数字序号，且不会包含配置值或原始错误文本。
 
 Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，并以英文作为 fallback。菜单、原生对话框、启动页与插件管理渲染进程使用同一 locale 数据；仓库的 Client UI i18n gate 会检查这些桌面源文件。
 

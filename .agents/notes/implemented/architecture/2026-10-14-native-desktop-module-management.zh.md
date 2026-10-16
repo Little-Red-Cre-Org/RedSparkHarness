@@ -30,7 +30,7 @@ Host 组合预检会在全新 worker 中导入选定的 Host 入口和 CLI 有�
 
 ## 结果
 
-Native 模块窗口可以管理包版本及 Host 或 Client 安装项，同时继续将旧 Cordis 插件操作分开。错误返回稳定 code、本地化 message key、真实后端 phase 和恢复状态，不包含配置值、文件系统路径或包管理器输出。Client 启动默认项变更仍由 [Native Client 预览决策](2026-09-24-desktop-native-client-preview.zh.md)负责，兼容插件的失败行为遵循 [Desktop profile 决策](2026-09-09-desktop-in-place-profile.zh.md)。
+Native 模块窗口可以管理包版本及 Host 或 Client 安装项，同时继续将旧 Cordis 插件操作分开。错误返回稳定 code、本地化 message key、真实后端 phase 和恢复状态，不包含配置值、文件系统路径或包管理器输出。组合校验拒绝（`profile-invalid` 或 `dependency-conflict`）仅在失败携带结构化校验 issue 时附带诊断；诊断只包含配置字段路径（provider、header 等由用户命名的条目以数字序号表示）和校验规则，不包含配置值、用户提供的键或原始错误文本。Client 启动默认项变更仍由 [Native Client 预览决策](2026-09-24-desktop-native-client-preview.zh.md)负责，兼容插件的失败行为遵循 [Desktop profile 决策](2026-09-09-desktop-in-place-profile.zh.md)。
 
 定向 manager 测试覆盖通过 CLI `pluginInventory` Provider 保留必需项、child 路由可启用与缺少 model Provider 时在停止 Host 前拒绝、保存的 child 配置、preset 派生依赖保留且不写回生成行、过期和忙碌请求、精确包变更、部分包恢复、其他注入的 Host Provider、仅浏览器可用的 Client 入口、optional 依赖循环和更新后的 Host 入口。IPC 测试覆盖打包版管理窗口入口。Client bundle 测试覆盖禁用行的保留和从启用选择中排除。浏览器激活仍需打包版 GUI 验收。
 

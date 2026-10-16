@@ -842,8 +842,17 @@ describe('provider profile lifecycle', () => {
     ['x-company', 'line\nbreak'],
     ['x-company', '部署'],
   ])('rejects provider header %j when Fetch cannot represent the entry', (name, value) => {
-    expect(() => resolveProfiles({ openai: { headers: { [name]: value } } }))
-      .toThrow(`provider "openai" header "${name}" is not valid for Fetch`)
+    let caught: unknown
+    try {
+      resolveProfiles({ openai: { headers: { [name]: value } } })
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(Error)
+    if (!(caught instanceof Error)) throw new Error('expected invalid Fetch header to throw')
+    expect(caught.message).toContain('provider #0 header #0 is not valid for Fetch')
+    expect(caught.message).not.toContain('openai')
+    expect(caught.message).not.toContain(name)
   })
 
   it.each(['maxRetries', 'maxRetryDelayMs'] as const)(
