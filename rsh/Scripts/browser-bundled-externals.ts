@@ -124,7 +124,7 @@ interface AliasEntry {
 interface ShellConfig {
   root?: string
   build: {
-    target?: 'modules' | string | string[] | false
+    target?: string | string[] | false
     rollupOptions?: { input?: string | string[] | Record<string, string> }
   }
   define?: Record<string, unknown>
