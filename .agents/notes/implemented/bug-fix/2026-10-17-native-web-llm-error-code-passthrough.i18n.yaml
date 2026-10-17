@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-17-native-web-llm-error-code-passthrough.md
-2026-10-17-native-web-llm-error-code-passthrough.md: b556dcedc070dbd3b1bbabb9ba15c1943453e744
-2026-10-17-native-web-llm-error-code-passthrough.zh.md: 1b8d1d4169bddeb6a13e2055853ac872c6691ffc
+2026-10-17-native-web-llm-error-code-passthrough.md: c4862725e5f4de484d237594f84eb34c3bf2aceb
+2026-10-17-native-web-llm-error-code-passthrough.zh.md: b24b7a7728359b468cf6a43efbae33fdc07ede8c

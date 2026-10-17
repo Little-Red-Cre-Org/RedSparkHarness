@@ -428,6 +428,21 @@ it('includes nested AggregateError messages in native Session failures', async (
       ok: false,
       error: { code: 'AUTH', message: 'model rejected the credential' },
     })
+    failure = new AggregateError([new Error('feed closed'), new LlmError('model rejected the credential', 'AUTH')], 'feed closed; execution failed')
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'AUTH' },
+    })
+    failure = Object.assign(new Error('quota exhausted'), { name: 'LlmError', code: 'QUOTA', failure: { message: 'quota exhausted', code: 'QUOTA' } })
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'QUOTA' },
+    })
+    failure = Object.assign(new Error('storage failure'), { failure: null })
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'native/session' },
+    })
   } finally {
     await service.close()
   }
