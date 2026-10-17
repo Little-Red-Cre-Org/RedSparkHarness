@@ -183,6 +183,125 @@ it('reprepares a same-id text edit made while admitted instructions are preparin
   }
 })
 
+it.each([
+  ['while the model is streaming', 'streaming'],
+  ['during final turn settlement', 'wrap-up'],
+  ['after abort before settlement', 'second-wake'],
+] as const)('parks pending root steers when cancellation lands %s', async (_label, timing) => {
+  const script: ConstructorParameters<typeof MockAdapter>[0] = timing === 'wrap-up'
+    ? [textResponse('First root turn completed.'), textResponse('Pending steer consumed.')]
+    : ['hang', textResponse('Pending steer consumed.')]
+  const state = await fixture(script)
+  const streamStarted = Promise.withResolvers<undefined>()
+  const releaseStream = Promise.withResolvers<undefined>()
+  const originalStream = state.model.stream.bind(state.model)
+  let holdFirstStream = timing !== 'wrap-up'
+  vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    for await (const chunk of originalStream(options)) {
+      yield chunk
+      if (holdFirstStream && chunk.type === 'text-delta') {
+        holdFirstStream = false
+        streamStarted.resolve(undefined)
+        await releaseStream.promise
+      }
+    }
+  })
+  const id = SessionId(`root-cancel-inbox-${timing}`)
+  const steer = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'First pending steer.' }] })
+  const secondSteer = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Second pending steer.' }] })
+  const controller = new AbortController()
+  const settlementEntered = Promise.withResolvers<undefined>()
+  const releaseSettlement = Promise.withResolvers<undefined>()
+  const ownerAttached = Promise.withResolvers<undefined>()
+  let holdSettlement = timing === 'wrap-up'
+  let owner: NativeActiveSessionOwner | undefined
+  let execution: NativeAgentExecution | undefined
+  let removeIdle: (() => Promise<void>) | undefined
+  const attached = state.activeSessions.onAttached(async (active) => {
+    if (active.session.id !== id) return
+    owner = active
+    execution = state.agents.execution(active.agent)
+    if (holdSettlement) {
+      removeIdle = active.onIdle(async () => {
+        if (!holdSettlement) return
+        holdSettlement = false
+        settlementEntered.resolve(undefined)
+        await releaseSettlement.promise
+      })
+    }
+    ownerAttached.resolve(undefined)
+  })
+  const running = state.app.executeRootTurn({ id, resume: false }, controller.signal)
+    .then(value => ({ value }), error => ({ error }))
+  try {
+    await ownerAttached.promise
+    if (owner === undefined || execution === undefined) throw new Error('the exact active root owner was not attached')
+    const rootOwner = owner
+    const rootExecution = execution
+
+    if (timing === 'wrap-up') {
+      await settlementEntered.promise
+      await rootOwner.enqueue(steer, 'next-step', true, controller.signal)
+      controller.abort({ kind: 'user' })
+      releaseSettlement.resolve(undefined)
+      expect(await running).toHaveProperty('value')
+    } else {
+      await streamStarted.promise
+      await rootOwner.enqueue(steer, 'next-step', true, controller.signal)
+      controller.abort({ kind: 'user' })
+      if (timing === 'second-wake') {
+        await rootOwner.enqueue(secondSteer, 'next-step', true, new AbortController().signal)
+      }
+      releaseStream.resolve(undefined)
+      expect(await running).toHaveProperty('error')
+    }
+
+    await vi.waitFor(() => expect(rootExecution.status).toBe('idle'))
+    if (timing === 'second-wake') {
+      const reader = await state.storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'turn/start')).toHaveLength(2)
+        expect(events.filter(event => event.type === 'user/message' && event.data.id === steer.id)).toHaveLength(1)
+        expect(events.filter(event => event.type === 'user/message' && event.data.id === secondSteer.id)).toHaveLength(1)
+        expect(events.filter(event => event.type === 'agent/inbox/spliced'
+          && event.data.inserted.some(message => message.id === steer.id))).toHaveLength(1)
+        expect(events.filter(event => event.type === 'agent/inbox/spliced'
+          && event.data.inserted.some(message => message.id === secondSteer.id))).toHaveLength(1)
+      } finally { await reader.close() }
+      expect(state.model.requests).toHaveLength(2)
+    } else {
+      const pendingReader = await state.storage.open(id, 'read')
+      try {
+        const events = (await pendingReader.read()).events
+        expect(events.filter(event => event.type === 'turn/start')).toHaveLength(1)
+        expect(events.filter(event => event.type === 'agent/inbox/spliced'
+          && event.data.inserted.some(message => message.id === steer.id))).toHaveLength(1)
+        expect(events.filter(event => event.type === 'user/message' && event.data.id === steer.id)).toHaveLength(0)
+      } finally { await pendingReader.close() }
+
+      await expect(state.app.executeRootTurn({ id, resume: true }, new AbortController().signal))
+        .resolves.toMatchObject({ answer: 'Pending steer consumed.' })
+      await vi.waitFor(() => expect(rootExecution.status).toBe('idle'))
+      const reader = await state.storage.open(id, 'read')
+      try {
+        const events = (await reader.read()).events
+        expect(events.filter(event => event.type === 'turn/start')).toHaveLength(2)
+        expect(events.filter(event => event.type === 'user/message' && event.data.id === steer.id)).toHaveLength(1)
+      } finally { await reader.close() }
+      expect(state.model.requests).toHaveLength(2)
+    }
+  } finally {
+    releaseStream.resolve(undefined)
+    releaseSettlement.resolve(undefined)
+    if (!controller.signal.aborted) controller.abort({ kind: 'user' })
+    await running
+    await attached()
+    await removeIdle?.()
+    await state.close()
+  }
+})
+
 it('re-admits a promoted captured next-turn head while request contexts await acceptance', async () => {
   const entered = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
