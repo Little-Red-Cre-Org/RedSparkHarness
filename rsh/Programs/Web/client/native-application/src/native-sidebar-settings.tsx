@@ -130,7 +130,6 @@ export function NativeSidebarSettings({
       closeLabel={t('settingsClose')}
       rows={[
         { id: 'general', label: t('settingsGeneral') },
-        { id: 'jobs', label: t('settingsJobs') },
         { id: 'models', label: t('settingsModels') },
         { id: 'plugins', label: t('settingsPlugins') },
         { id: 'agent-presets', label: t('settingsAgentPresets') },

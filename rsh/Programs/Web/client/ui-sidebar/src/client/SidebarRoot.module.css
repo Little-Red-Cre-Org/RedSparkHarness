@@ -446,6 +446,16 @@
   text-align: center;
 }
 
+.scheduleEmpty > p {
+  margin: 0;
+}
+
+.scheduleEmpty > p + p {
+  margin-top: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
+
 .scheduleError {
   color: #c32132;
 }

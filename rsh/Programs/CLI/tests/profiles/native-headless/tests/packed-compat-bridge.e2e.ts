@@ -12,9 +12,12 @@ const CONSUMER_ROOT = process.env.DSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-compat-bridge'
 const FIRST_TASK = 'Write the requested marker file.'
 const SECOND_TASK = 'Read the marker file in this existing session.'
+const GUARDED_CALL_ID = 'overwrite-packed-compat-bridge-guarded'
 const TOOL_CALL_ID = 'write-packed-compat-bridge'
 const READ_CALL_ID = 'read-packed-compat-bridge'
+const GUARDED_PATH = 'guarded.txt'
 const FILE_PATH = 'compat-bridge-marker.txt'
+const GUARDED_CONTENT = 'PACKED_COMPAT_BRIDGE_GUARDED_ORIGINAL'
 const MARKER = 'PACKED_COMPAT_BRIDGE_MARKER_6d13f8'
 const MODEL = 'packed-compat-bridge-fixture'
 const FIRST_REPLY = 'compatibility bridge wrote the marker'
@@ -123,6 +126,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     let server: ReturnType<typeof createServer> | undefined
     try {
       await mkdir(workspace, { recursive: true })
+      await writeFile(join(workspace, GUARDED_PATH), GUARDED_CONTENT)
       const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1',
         PACKED_COMPAT_FIXTURE_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
@@ -169,9 +173,12 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
             return
           }
           requests.push(parsed)
-          if (requests.length === 1) respondWithToolCall(response, TOOL_CALL_ID, 'write', { file_path: FILE_PATH, content: MARKER })
-          else if (requests.length === 3) respondWithToolCall(response, READ_CALL_ID, 'read', { file_path: FILE_PATH })
-          else respondWithText(response, requests.length === 2 ? FIRST_REPLY : SECOND_REPLY)
+          if (requests.length === 1) respondWithToolCall(response, GUARDED_CALL_ID, 'write', {
+            file_path: GUARDED_PATH, content: 'PACKED_COMPAT_BRIDGE_GUARDED_OVERWRITTEN',
+          })
+          else if (requests.length === 2) respondWithToolCall(response, TOOL_CALL_ID, 'write', { file_path: FILE_PATH, content: MARKER })
+          else if (requests.length === 4) respondWithToolCall(response, READ_CALL_ID, 'read', { file_path: FILE_PATH })
+          else respondWithText(response, requests.length === 3 ? FIRST_REPLY : SECOND_REPLY)
         })
       })
       server = modelServer
@@ -200,6 +207,13 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       expect(first.sessionId).toBe(SESSION_ID)
       expect(first.finalResponse).toBe(FIRST_REPLY)
       expect(first.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
+      const guardedResults = toolResults(first.events, GUARDED_CALL_ID)
+      expect(guardedResults).toHaveLength(1)
+      expect(guardedResults[0]).toMatchObject({ toolCallId: GUARDED_CALL_ID, isError: true,
+        content: [{ type: 'text', text: expect.stringContaining(
+          `${GUARDED_PATH}": file has not been read — read the file, then retry`,
+        ) as unknown }] })
+      await expect(readFile(join(workspace, GUARDED_PATH), 'utf8')).resolves.toBe(GUARDED_CONTENT)
       const writeResults = toolResults(first.events, TOOL_CALL_ID)
       expect(writeResults).toHaveLength(1)
       expect(writeResults[0]).toMatchObject({ toolCallId: TOOL_CALL_ID, isError: false })
@@ -211,7 +225,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       try { second = await nativeHarness.session(SESSION_ID).run(SECOND_TASK) }
       finally { await nativeHarness.close() }
 
-      expect(JSON.stringify(requests[2]?.tools)).toContain('"name":"read"')
+      expect(JSON.stringify(requests[3]?.tools)).toContain('"name":"read"')
       expect(second.sessionId).toBe(SESSION_ID)
       expect(second.finalResponse).toBe(SECOND_REPLY)
       expect(second.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
@@ -219,9 +233,9 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       expect(readResults).toHaveLength(1)
       expect(readResults[0]).toMatchObject({ toolCallId: READ_CALL_ID, isError: false })
       expect(JSON.stringify(readResults[0]?.content)).toContain(MARKER)
-      expect(JSON.stringify(requests[2]?.messages)).toContain(TOOL_CALL_ID)
-      expect(JSON.stringify(requests[2]?.messages)).toContain(MARKER)
-      expect(requests).toHaveLength(4)
+      expect(JSON.stringify(requests[3]?.messages)).toContain(TOOL_CALL_ID)
+      expect(JSON.stringify(requests[3]?.messages)).toContain(MARKER)
+      expect(requests).toHaveLength(5)
     } finally {
       try { if (server !== undefined) await closeServer(server) }
       finally { await rm(root, { recursive: true, force: true }) }
