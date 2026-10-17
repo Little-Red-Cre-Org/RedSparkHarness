@@ -83,6 +83,9 @@
     "@deepseek-ai/dsh-fs-local": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-agent": { "optional": true },
+    "@deepseek-ai/dsh-invariants": { "optional": true },
+    "@deepseek-ai/dsh-tools": { "optional": true },
     "@deepseek-ai/cordis": { "optional": true },
     "@deepseek-ai/dsh-native-runtime": { "optional": true },
     "@deepseek-ai/dsh-native-session-execution": { "optional": true },

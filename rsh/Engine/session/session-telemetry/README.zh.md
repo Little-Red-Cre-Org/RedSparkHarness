@@ -65,7 +65,7 @@ Native Host 使用独立的 `./native-definition` 导出获取 `NativeSessionTel
 
 ### 设计理念
 
-seam 建立在一个边界之上：harness 的职责止于 `emit()`。完整事件捕获、脱敏与 handoff 游标都在这里；批处理、重试、排队与丢失策略属于上报 SDK，本包有意不建模也不包装。设计与被否决的替代方案见[复活 Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.zh.md)。
+seam 建立在一个边界之上：harness 的职责止于 `emit()`。完整事件捕获、脱敏与 handoff 游标都在这里；批处理、重试、排队与丢失策略属于上报 SDK，本包有意不建模也不包装。Cordis peers 仅供 Cordis 入口与协调器使用；Native 后端使用无 Cordis 依赖的 `./records` 和 `./native-definition` 导出。设计与被否决的替代方案见[复活 Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.zh.md)。
 
 ### 源码地图
 

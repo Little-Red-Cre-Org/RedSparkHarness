@@ -43,7 +43,6 @@ export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
   '@deepseek-ai/dsh-rsh',
   '@deepseek-ai/dsh-sdk-app',
   '@deepseek-ai/dsh-sdk-minimal',
-  '@deepseek-ai/dsh-session-telemetry',
   '@deepseek-ai/dsh-time-context',
   '@deepseek-ai/dsh-tmux-context',
   '@deepseek-ai/dsh-tool-bash-persistent',

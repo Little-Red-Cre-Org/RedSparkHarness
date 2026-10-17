@@ -36,6 +36,9 @@ describe('desktop package-set selection', () => {
         dependencies: { external: '^2.0.0', '@deepseek-ai/dsh-native-consumer': '1.0.0' },
         optionalDependencies: {
           ...compatibilityEdges,
+          '@deepseek-ai/dsh-schedule': '1.0.0',
+          '@deepseek-ai/dsh-session-telemetry': '1.0.0',
+          '@deepseek-ai/dsh-session-telemetry-otel': '1.0.0',
           '@deepseek-ai/platform-package': '1.0.0',
           koffi: '^2.0.0',
         },
@@ -48,11 +51,52 @@ describe('desktop package-set selection', () => {
         dependencies: { '@deepseek-ai/cordis': '^1.0.0' },
       })],
       ['@deepseek-ai/cordis', packed('@deepseek-ai/cordis')],
-      ['@deepseek-ai/dsh-base', packed('@deepseek-ai/dsh-base')],
+      ['@deepseek-ai/dsh-base', packed('@deepseek-ai/dsh-base', {
+        dependencies: { '@deepseek-ai/dsh-tools': '^1.0.0' },
+      })],
       ['@deepseek-ai/dsh-web-app', packed('@deepseek-ai/dsh-web-app', {
         dependencies: { '@deepseek-ai/cordis': '^1.0.0' },
       })],
-      [DESKTOP_COMPATIBILITY_HOST_PACKAGE, packed(DESKTOP_COMPATIBILITY_HOST_PACKAGE)],
+      ['@deepseek-ai/dsh-schedule', packed('@deepseek-ai/dsh-schedule', {
+        peerDependencies: {
+          '@deepseek-ai/cordis': '^1.0.0',
+          '@deepseek-ai/dsh-agent': '^1.0.0',
+          '@deepseek-ai/dsh-invariants': '^1.0.0',
+          '@deepseek-ai/dsh-tools': '^1.0.0',
+        },
+        peerDependenciesMeta: {
+          '@deepseek-ai/cordis': { optional: true },
+          '@deepseek-ai/dsh-agent': { optional: true },
+          '@deepseek-ai/dsh-invariants': { optional: true },
+          '@deepseek-ai/dsh-tools': { optional: true },
+        },
+      })],
+      ['@deepseek-ai/dsh-session-telemetry-otel', packed('@deepseek-ai/dsh-session-telemetry-otel', {
+        peerDependencies: {
+          '@deepseek-ai/cordis': '^1.0.0',
+          '@deepseek-ai/dsh-session-telemetry': '^1.0.0',
+        },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      })],
+      ['@deepseek-ai/dsh-session-telemetry', packed('@deepseek-ai/dsh-session-telemetry', {
+        peerDependencies: {
+          '@deepseek-ai/cordis': '^1.0.0',
+          '@deepseek-ai/dsh-agent': '^1.0.0',
+        },
+        peerDependenciesMeta: {
+          '@deepseek-ai/cordis': { optional: true },
+          '@deepseek-ai/dsh-agent': { optional: true },
+        },
+      })],
+      ['@deepseek-ai/dsh-agent', packed('@deepseek-ai/dsh-agent', {
+        peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' },
+      })],
+      ['@deepseek-ai/dsh-invariants', packed('@deepseek-ai/dsh-invariants', {
+        peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' },
+      })],
+      ['@deepseek-ai/dsh-tools', packed('@deepseek-ai/dsh-tools', {
+        peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' },
+      })],
       ['@deepseek-ai/platform-package', packed('@deepseek-ai/platform-package')],
       ['@deepseek-ai/dsh-native-consumer', packed('@deepseek-ai/dsh-native-consumer', {
         peerDependencies: { '@deepseek-ai/cordis': '^1.0.0', '@deepseek-ai/dsh-native-peer': '^1.0.0' },
@@ -67,6 +111,9 @@ describe('desktop package-set selection', () => {
       DESKTOP_HOST_PACKAGE,
       '@deepseek-ai/dsh-native-consumer',
       '@deepseek-ai/dsh-native-peer',
+      '@deepseek-ai/dsh-schedule',
+      '@deepseek-ai/dsh-session-telemetry',
+      '@deepseek-ai/dsh-session-telemetry-otel',
       '@deepseek-ai/platform-package',
       'koffi',
     ])
@@ -79,6 +126,12 @@ describe('desktop package-set selection', () => {
     expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/cordis')
     expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-base')
     expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-web-app')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-schedule')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-session-telemetry')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-session-telemetry-otel')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-agent')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-invariants')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-tools')
     expect(compatibility.packages.map(entry => entry.manifest.name)).toContain(DESKTOP_COMPATIBILITY_HOST_PACKAGE)
     expect(compatibility.ignoredOptionalDependencies).not.toContain('@deepseek-ai/cordis')
     expect(compatibility.ignoredOptionalDependencies).not.toContain('@deepseek-ai/dsh-base')
@@ -105,12 +158,12 @@ describe('desktop package-set selection', () => {
   })
 
   it('requires the Native Host entry files in the default package set', () => {
-    expect(() => assertDesktopHostPackageFiles(DESKTOP_HOST_RUNTIME_FILES.map(file => `package/${file}`))).not.toThrow()
-    expect(() => assertDesktopHostPackageFiles(['package/lib/index.js'])).toThrow(/lib\/native-host\.js/u)
-    expect(() => assertDesktopCompatibilityHostPackageFiles([
+    expect(() => { assertDesktopHostPackageFiles(DESKTOP_HOST_RUNTIME_FILES.map(file => `package/${file}`)) }).not.toThrow()
+    expect(() => { assertDesktopHostPackageFiles(['package/lib/index.js']) }).toThrow(/lib\/native-host\.js/u)
+    expect(() => { assertDesktopCompatibilityHostPackageFiles([
       'package/lib/index.js', 'package/config/desktop.cordis.patch.yml',
-    ])).not.toThrow()
-    expect(() => assertDesktopCompatibilityHostPackageFiles(['package/lib/index.js']))
+    ]) }).not.toThrow()
+    expect(() => { assertDesktopCompatibilityHostPackageFiles(['package/lib/index.js']) })
       .toThrow(/config\/desktop\.cordis\.patch\.yml/u)
   })
 

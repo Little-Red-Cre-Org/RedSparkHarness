@@ -304,6 +304,10 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/interaction/commands', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Modules/Official/feedback/command-feedback', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Modules/Official/feedback/message-feedback', ['@deepseek-ai/dsh-typert-protocol']],
+  ['rsh/Engine/schedule/schedule', [
+    '@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-tools',
+  ]],
+  ['rsh/Engine/session/session-telemetry', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent']],
   ['rsh/Engine/session-query/tool-session-query', ['@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session']],
   ['rsh/Engine/workflow/workflow-worker-thread', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],

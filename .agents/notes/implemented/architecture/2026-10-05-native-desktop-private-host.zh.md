@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-发行描述符选择 Native 装配或显式兼容装配，包集合要求对应的私有 Host 与 Desktop 发行版本一致。Native 是默认装配，打包 `@deepseek-ai/dsh-desktop-host` 且不含兼容专属可选依赖。兼容打包使用独立的 `@deepseek-ai/dsh-desktop-host-compatibility` 身份和单独目标目录，并携带可用的旧版 profile 包闭包。Native 包管理器元数据会忽略精确的兼容专属可选包名，防止 registry 解析补回这些包，同时保留平台原生可选依赖。
+发行描述符选择 Native 装配或显式兼容装配，包集合要求对应的私有 Host 与 Desktop 发行版本一致。Native 是默认装配，打包 `@deepseek-ai/dsh-desktop-host` 且不含兼容专属可选依赖。混合包同时发布 Native 入口时，会将仅供 Cordis 使用的 peers 声明为可选；Native 闭包仍保留该入口需要的共享包，兼容根包仍提供旧入口 peers。兼容打包使用独立的 `@deepseek-ai/dsh-desktop-host-compatibility` 身份和单独目标目录，并携带可用的旧版 profile 包闭包。Native 包管理器元数据会忽略精确的兼容专属可选包名，防止 registry 解析补回这些包，同时保留平台原生可选依赖。
 
 新的 Desktop profile 选择 `dsh.profile.runtime: "native"` 和 `dsh.profile.config: "rsh.profile.json"`。升级只会把完全未修改的旧 starter profile 转为 Native；自定义 Cordis profile 保持不变，只有显式选择 `runtime: "legacy"` 且运行时包含兼容装配时才会启动。重置会创建 Native profile。
 
