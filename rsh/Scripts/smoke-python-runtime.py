@@ -309,10 +309,11 @@ def write_advanced_profile_patch(root: Path, name: str, sessions: Path) -> Path:
     ])
 
 
-def ensure_legacy_sdk_profile(executable: Path, dsh_home: Path, cwd: Path) -> None:
+def ensure_legacy_sdk_profile(executable: Path | None, dsh_home: Path, cwd: Path) -> None:
     """Create the Cordis SDK template under an explicit custom profile name."""
+    dsh = executable or Path(sysconfig.get_path("scripts")) / ("dsh.exe" if IS_WINDOWS else "dsh")
     result = subprocess.run(
-        [str(executable), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
+        [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
         cwd=cwd,
         env={**os.environ, "DSH_HOME": str(dsh_home)},
         text=True,
@@ -2100,6 +2101,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
         (root / "needle.txt").write_text(f"{FS_SEARCH_MARKER}\n")
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_profile_patch(root, "fs-search.patch.yml", sessions, [
             {"id": "skill-filesystem", "disabled": True},
             {"id": "tool-fs-search", "config": {"sampleOverCapGlobResults": False}},
@@ -2110,6 +2112,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
             cwd=str(root),
             dsh_bin=str(executable),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             patches=(str(patch),),
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",
@@ -2133,6 +2136,7 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
         root = Path(temporary).resolve()
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_profile_patch(root, "spawn-node.patch.yml", sessions, [])
         with DeepSeekHarness(
             provider="deepseek-official",
@@ -2140,6 +2144,7 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
             cwd=str(root),
             dsh_bin=str(executable),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             patches=(str(patch),),
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",
@@ -2165,6 +2170,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
         sessions = dsh_home / "sessions"
         server_script = root / "mcp_server.py"
         server_script.write_text(MCP_SERVER_SCRIPT)
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_mcp_patch(root, sessions, server_script)
         discovery_log = server_script.with_suffix(".log")
         with DeepSeekHarness(
@@ -2173,6 +2179,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
             cwd=str(root),
             dsh_bin=None if executable is None else str(executable),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             patches=(str(patch),),
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",

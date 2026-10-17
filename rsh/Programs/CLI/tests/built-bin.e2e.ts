@@ -11,6 +11,7 @@ import {
   PROTOCOL_VERSION,
   type SessionNotification,
 } from '@agentclientprotocol/sdk'
+import { initProfile, PROFILE_TEMPLATES } from '@deepseek-ai/dsh-app-boot'
 import { startMockLlmServer } from '@deepseek-ai/dsh-llm-mock-server'
 import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
 import { execa } from 'execa'
@@ -1975,6 +1976,18 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(plugin.stderr).toContain('dsh plugin does not manage native profile web')
       expect(plugin.stderr).toContain('edit its rsh.profile.json installations instead')
       expect(plugin.stderr).toContain('rsh/Docs/native-config-migration.md')
+    }, SPAWN_TIMEOUT_MS + 30_000)
+
+    it('prints bundle defaults for an existing legacy standard profile', async () => {
+      const profileDir = join(home, 'profiles', 'web')
+      mkdirSync(profileDir, { recursive: true })
+      const template = PROFILE_TEMPLATES.web!
+      initProfile(profileDir, template.bundles, template.patchReload)
+
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
+      expect(code).toBe(0)
+      expect(stderr).toBe('')
+      expect(stdout).toContain('# == @deepseek-ai/dsh-web-app')
     }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('creates a custom profile from a shipped template before printing it', async () => {

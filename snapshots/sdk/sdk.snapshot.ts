@@ -161,6 +161,11 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
   },
 }
 
+function initializeSdkCompatibilityProfile(home: string, name: 'sdk' | 'legacy-sdk'): void {
+  const template = PROFILE_TEMPLATES.sdk
+  initProfile(resolveProfileDir(name, home), template.bundles, template.patchReload)
+}
+
 interface CorpusScenario {
   readonly key: string
   readonly name: string
@@ -544,8 +549,12 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : []),
   ])]
   const dshHome = join(cwd, '.dsh')
-  const sdkTemplate = PROFILE_TEMPLATES.sdk
-  initProfile(resolveProfileDir('legacy-sdk', dshHome), sdkTemplate.bundles, sdkTemplate.patchReload)
+  initializeSdkCompatibilityProfile(dshHome, 'legacy-sdk')
+  if (scenario.name === 'subagent-dsh-sdk-diagnostic') {
+    for (const childName of ['foreground', 'background']) {
+      initializeSdkCompatibilityProfile(join(dshHome, 'children', childName), 'sdk')
+    }
+  }
   const sessionsRoot = join(dshHome, 'sessions')
   const replayFixtures = recording ? [] : await hydrateReplayFixtures(scenario, cwd)
   const fixtureContents = await Promise.all((await fixtureFiles(scenario)).map(file => readFile(file, 'utf8')))
@@ -563,6 +572,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     const childHome = join(cwd, '.child-dsh')
     const childPatch = materializeProfilePatch(assertions.dshSdkChild.config, cwd, patchRoot, patches.length)
     await mkdir(childHome, { recursive: true })
+    initializeSdkCompatibilityProfile(childHome, 'sdk')
     childSessionsRoot = join(childHome, 'sessions')
     childEnvironment = {
       DSH_TEST_CHILD_PATCHES: JSON.stringify([childPatch]),
