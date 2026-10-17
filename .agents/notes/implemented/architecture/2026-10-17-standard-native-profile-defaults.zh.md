@@ -28,4 +28,8 @@ TypeScript 与 Python SDK 继续默认使用 `sdk`。TypeScript 源码 launcher 
 
 新的标准 profile 使用 Native 配置，插件包管理命令会拒绝管理它们，并提示改为编辑 `rsh.profile.json` 安装项。已有 legacy manifest 继续经由 Cordis 启动。新的 legacy 应用组合需要自定义名称和 `--from-default-profile`；`sdk-minimal` 保持独立的 legacy runtime。
 
-定向 CLI、包和 packed-consumer 检查覆盖名称映射、已有 profile 保留、Native Web 数据路径、Native 插件拒绝、无 Cordis 的 headless 启动以及已安装 SDK 声明路径。Session expected 文件仍是作者维护的数据，本次默认变更不会重新生成它们。
+定向 CLI、包和 packed-consumer 检查覆盖名称映射、profile 保留、Native 路径与拒绝行为、无 Cordis 的 headless 启动以及已安装 SDK 声明。已安装声明检查使用严格 NodeNext 解析、消费者自身安装的 Node 类型和 ESNext disposable 声明。
+
+LLM 根入口和 Native 入口直接导出消息构造器与 message.ts 独有类型；共享消息类型（包括 `MessageSourceMap`）只经 `types.ts` 导出一次，使生成声明保留单一且明确的来源。
+
+Session expected 文件仍是作者维护的数据，本次默认变更不会重新生成它们。

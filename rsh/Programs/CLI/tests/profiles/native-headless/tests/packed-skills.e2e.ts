@@ -130,7 +130,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const consumerConfig = join(installedRoot, 'tsconfig.json')
     await writeFile(consumerConfig, JSON.stringify({ compilerOptions: {
       target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true,
-      skipLibCheck: false, types: [], noEmit: true,
+      lib: ['ES2022', 'ESNext.Disposable'], skipLibCheck: false, types: ['node'], noEmit: true,
     }, files: ['sdk-consumer.ts'] }))
     const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc')
     const typecheck = execFileSync(process.execPath, [tsc, '-p', consumerConfig, '--noEmit', '--listFiles'], {
