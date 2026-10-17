@@ -80,7 +80,7 @@ it.each([
       await writeFile(join(trash, 'orphan'), '')
       await writeFile(join(project, 'session-file'), '')
       await writeFile(join(session, 'session.v01.jsonl'), '')
-      return { root }
+      return { root, expectedError: undefined }
     },
   },
 ])('inspects Session storage at $name', async ({ prepare }) => {
