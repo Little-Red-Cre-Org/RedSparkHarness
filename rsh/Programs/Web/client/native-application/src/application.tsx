@@ -21,7 +21,7 @@ import type {
 } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
-import { NativeComposerAttachments } from './attachments.tsx'
+import { NativeComposerAttachments, NativeComposerImagePicker } from './attachments.tsx'
 import { NativePendingSubmissions } from './submissions.tsx'
 import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
@@ -31,6 +31,7 @@ import { NativeTrajectoryPanel } from './trajectory.tsx'
 import { ConversationModeLabel, ModelControls, ModelPickerControl } from './model-controls.tsx'
 import { NativeStatusLine } from './status-line.tsx'
 import { AgentPresetSeat, WorkspaceChooser } from './workspace-chooser.tsx'
+import { ConversationError } from './conversation-error.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import {
   announcePendingDefaultChanged, composerPendingDefault, readPendingDefault, subscribePendingDefault,
@@ -38,6 +39,7 @@ import {
 } from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
 import type { NativeSettingsActions } from './settings-page.tsx'
+import { requestNativeModelSettings } from './settings-request.ts'
 import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
@@ -87,7 +89,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
   createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-  refreshModelControls, t, renderSlot }: {
+  refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
@@ -110,6 +112,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
   selectPermissionPreset: NativeConversationController['selectPermissionPreset']
   refreshModelControls: NativeConversationController['refreshModelControls']
+  keepDraft: NativeConversationController['keepDraft']
+  takeDraft: NativeConversationController['takeDraft']
   t: Translate
   renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
 }) {
@@ -128,8 +132,11 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const trajectoryTabRef = useRef<HTMLButtonElement>(null)
   useEffect(() => { setActiveTab('conversation') }, [selected])
   const [draft, setDraft] = useState('')
+  const draftRef = useRef(draft)
   const draftVersion = useRef(0)
   const [files, setFiles] = useState<readonly File[]>([])
+  const filesRef = useRef(files)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [pendingDefault, setPendingDefault] = useState<BusyEnterBehavior>(readPendingDefault)
   const [pendingDefaultError, setPendingDefaultError] = useState(false)
   const [presetSeat, setPresetSeat] = useState<NativeAgentPresetList>()
@@ -239,35 +246,59 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   }, [settingsActions, refreshModelControls])
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
+      if (followedSession.current !== undefined) {
+        keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
+      }
+      const saved = snapshot.selected === undefined ? undefined : takeDraft(snapshot.selected)
       followedSession.current = snapshot.selected
       draftVersion.current++
-      setDraft('')
-      setFiles([])
+      draftRef.current = saved?.text ?? ''
+      filesRef.current = saved?.files ?? []
+      setDraft(draftRef.current)
+      setFiles(filesRef.current)
       followsTranscript.current = true
     }
     const scroll = scrollRef.current
     if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
-  }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
+  }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation, keepDraft, takeDraft])
   useLayoutEffect(() => {
     if (activeTab !== 'conversation' || !followsTranscript.current) return
     const scroll = scrollRef.current
     if (scroll !== null) scroll.scrollTop = scroll.scrollHeight
   }, [activeTab])
   const submit = (placement?: 'queued' | 'steering'): void => {
-    if (!inputReady || snapshot.selected === undefined || draft.trim() === '' || snapshot.submissionBusy) return
-    if (acceptsPending && files.length > 0) return
+    if (!inputReady || snapshot.selected === undefined || snapshot.submissionBusy) return
+    if (acceptsPending && (draft.trim() === '' || files.length > 0)) return
+    if (!acceptsPending && draft.trim() === '' && files.length === 0) return
     const version = ++draftVersion.current
     if (acceptsPending) {
       void submitPending(draft, placement ?? composerPendingDefault(pendingDefault)).then((success) => {
-        if (success && draftVersion.current === version) { setDraft(''); setFiles([]) }
+        if (success && draftVersion.current === version) {
+          draftRef.current = ''
+          filesRef.current = []
+          setDraft('')
+          setFiles([])
+        }
       })
     } else {
+      const sessionId = snapshot.selected
       const text = draft
       const attachments = files
+      draftRef.current = ''
+      filesRef.current = []
       setDraft('')
       setFiles([])
       void send(text, attachments).then((success) => {
-        if (!success && draftVersion.current === version) { setDraft(text); setFiles(attachments) }
+        if (!success) {
+          if (followedSession.current !== sessionId) {
+            keepDraft(sessionId, { text, files: attachments })
+          } else if (draftRef.current === '' && filesRef.current.length === 0) {
+            draftRef.current = text
+            filesRef.current = attachments
+            setDraft(text)
+            setFiles(attachments)
+          }
+        }
       })
     }
   }
@@ -278,13 +309,30 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
     <NativePendingSubmissions snapshot={snapshot} changePending={changePending} editPending={editPending}
       refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
+      {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
+        files={files} onChange={(nextFiles) => { filesRef.current = nextFiles; setFiles(nextFiles) }}
+        limits={snapshot.modelControls.images} disabled={!ready || snapshot.selected === undefined}
+        inputRef={imageInputRef} t={t}
+      />}
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
         <textarea className={css.editor} aria-label={t('prompt')}
           placeholder={t(snapshot.selected === undefined ? 'composerChooseWorkspace' : 'composerPlaceholder')}
           value={draft} disabled={!inputReady || snapshot.selected === undefined || snapshot.submissionBusy}
-          onChange={(event) => { draftVersion.current++; setDraft(event.target.value) }} rows={1}
+          onChange={(event) => {
+            draftVersion.current++
+            draftRef.current = event.target.value
+            setDraft(event.target.value)
+          }} rows={1}
           onKeyDown={(event) => {
+            if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
+              && !event.nativeEvent.isComposing
+              // oxlint-disable-next-line typescript/no-deprecated -- Safari IME composition Escape is only detectable via keyCode 229.
+              && event.nativeEvent.keyCode !== 229) {
+              event.preventDefault()
+              cancel()
+              return
+            }
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
               if (acceptsPending && (event.metaKey || event.ctrlKey)) {
@@ -298,10 +346,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       </label>
       <ChatComposerToolbar>
         <div className={css.toolbarOptions}>
-          {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
-            files={files} onChange={setFiles} limits={snapshot.modelControls.images}
-            disabled={!ready || snapshot.selected === undefined} t={t}
-          />}
+          {snapshot.modelControls?.images === undefined ? null : <NativeComposerImagePicker inputRef={imageInputRef}
+            disabled={!ready || snapshot.selected === undefined} t={t} />}
           <ModelControls snapshot={snapshot}
             selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset} t={t} />
         </div>
@@ -316,7 +362,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
           {sending
             ? <ChatComposerButton kind="stop" label={t('cancel')} disabled={snapshot.state === 'cancelling'} onClick={cancel} />
             : <ChatComposerButton kind="send" label={t('send')} type="submit"
-              disabled={!ready || snapshot.selected === undefined || draft.trim().length === 0} />}
+              disabled={!ready || snapshot.selected === undefined
+                || (draft.trim().length === 0 && files.length === 0)} />}
         </div>
       </ChatComposerToolbar>
     </ChatComposerCard>
@@ -325,6 +372,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       : pendingDefaultError ? 'busySendPreferenceUnavailable'
         : pendingDefault === 'steer' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
   </form>
+  const errorCard = snapshot.error === undefined ? null : <ConversationError className={css.error} error={snapshot.error} t={t}
+    onOpenModelSettings={requestNativeModelSettings} />
   return <>
     <main className={css.page}>
       <h1 className={css.visuallyHidden}>{t('title')}</h1>
@@ -356,7 +405,6 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             onClick={() => { setActiveTab('trajectory') }}>{t('trajectoryTab')}</button>
         </div>}
       </header>
-      {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
       {selected === undefined || !hasConversation && activeTab === 'conversation'
         ? <section className={css.empty} role={selected === undefined ? undefined : 'tabpanel'}
           id={selected === undefined ? undefined : 'native-conversation-panel'}
@@ -379,6 +427,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             {selected === undefined ? <AgentPresetSeat roster={presetSeat}
               stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
           </div>
+          {errorCard}
           {selected === undefined ? null : <div role="tabpanel" id="native-trajectory-panel"
             aria-labelledby="native-trajectory-tab" hidden><NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} /></div>}
           {composer}
@@ -405,6 +454,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
               {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
                 answerHuman={answerHuman} prompt={snapshot.human}
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
+              {errorCard}
             </section>
           </div>
           <div role="tabpanel" id="native-trajectory-panel" aria-labelledby="native-trajectory-tab"
@@ -441,6 +491,7 @@ export const plugin: NativePlugin = {
       context.own(clientLocale.register('nativeApplication', { en, zh }))
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
+      const sendCancel = { requested: false }
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
       const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
@@ -513,14 +564,21 @@ export const plugin: NativePlugin = {
           createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
-            await controller.send(text, files)
-            return controller.getSnapshot().error === undefined
+            sendCancel.requested = false
+            const admitted = await controller.send(text, files)
+            // oxlint-disable-next-line typescript/no-unnecessary-condition -- cancel() may set it during the await.
+            return admitted && !sendCancel.requested && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),
           editPending: controller.editPending.bind(controller),
           refreshPendingSubmissions: controller.refreshPendingSubmissions.bind(controller),
-          cancel: () => { controller.cancel() },
+          keepDraft: controller.keepDraft.bind(controller),
+          takeDraft: controller.takeDraft.bind(controller),
+          cancel: () => {
+            controller.cancel()
+            sendCancel.requested = controller.getSnapshot().state === 'cancelling'
+          },
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
           selectPreset: controller.selectPreset.bind(controller),
@@ -532,7 +590,7 @@ export const plugin: NativePlugin = {
       }, ({ useConversation, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
         createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-        refreshModelControls, t, renderSlot }: {
+        refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         settingsActions: NativeSettingsActions
@@ -553,6 +611,8 @@ export const plugin: NativePlugin = {
         changePending: NativeConversationController['changePending']
         editPending: NativeConversationController['editPending']
         refreshPendingSubmissions: NativeConversationController['refreshPendingSubmissions']
+        keepDraft: NativeConversationController['keepDraft']
+        takeDraft: NativeConversationController['takeDraft']
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
@@ -566,7 +626,8 @@ export const plugin: NativePlugin = {
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         submitPending={submitPending} changePending={changePending} editPending={editPending}
         refreshPendingSubmissions={refreshPendingSubmissions}
-        refreshModelControls={refreshModelControls} t={t} renderSlot={renderSlot} />)))
+        refreshModelControls={refreshModelControls} keepDraft={keepDraft} takeDraft={takeDraft}
+        t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
         themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })
       void controller.load()

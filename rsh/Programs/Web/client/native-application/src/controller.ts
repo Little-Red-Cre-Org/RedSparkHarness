@@ -5,7 +5,7 @@ import type {
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 import { nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeImageUpload, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionImage, NativeSessionInputPart } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeModeControls, NativePermissionControls } from '@deepseek-ai/dsh-client-native-session/native'
@@ -36,6 +36,12 @@ export interface ConversationSnapshot {
   readonly error?: string | undefined
 }
 
+/** Draft text and image files retained for one selected Session. */
+export interface NativeConversationDraft {
+  readonly text: string
+  readonly files: readonly File[]
+}
+
 /** Explicit retained presentation limits, supplied by the Client profile. */
 export interface NativeConversationLimits {
   readonly maxLiveTextChars: number
@@ -49,6 +55,8 @@ export class NativeConversationController {
   private readonly lifetime = new AbortController()
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
+  private readonly drafts = new Map<SessionId, NativeConversationDraft>()
+  private readonly discardedDrafts = new Set<SessionId>()
   private selectionEpoch = 0
   private navigation = 0
   private submissionRead = 0
@@ -152,6 +160,34 @@ export class NativeConversationController {
     if (this.snapshot.state !== 'ready') throw new Error('native conversation: operation already pending')
   }
 
+  /** Keep a non-empty draft, deleting an empty one; archived and removed Sessions ignore new drafts.
+   * @param id - owning Session.
+   * @param draft - unsent composer text and image files.
+   */
+  keepDraft(id: SessionId, draft: NativeConversationDraft): void {
+    if (this.discardedDrafts.has(id)) return
+    if (draft.text.length === 0 && draft.files.length === 0) this.drafts.delete(id)
+    else this.drafts.set(id, draft)
+  }
+
+  /** Drop a Session's draft after archive or deletion.
+   * @param id - owning Session.
+   */
+  discardDraft(id: SessionId): void {
+    this.discardedDrafts.add(id)
+    this.drafts.delete(id)
+  }
+
+  /** Take and remove a Session's saved draft.
+   * @param id - owning Session.
+   * @returns the saved draft, if one exists.
+   */
+  takeDraft(id: SessionId): NativeConversationDraft | undefined {
+    const draft = this.drafts.get(id)
+    this.drafts.delete(id)
+    return draft
+  }
+
   private async restore(id: SessionId, resumeTurn = true): Promise<void> {
     // Controls can cold-open the Session and append its end-seed marker, so history is read last.
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
@@ -212,7 +248,8 @@ export class NativeConversationController {
       const result = await runTurn(turn.signal, admission,
         (frame) => { this.observe(frame, admission) },
         (error) => {
-          if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
+          if (this.followErrorOwner === admission && this.snapshot.selected === id && !turn.signal.aborted
+            && !this.lifetime.signal.aborted) {
             this.publish({ error: error instanceof Error ? error.message : String(error) })
           }
         }, AbortSignal.any([this.lifetime.signal, turnDetach.signal]))
@@ -221,7 +258,7 @@ export class NativeConversationController {
       }
     } catch (error: unknown) {
       // A detach only stops this view's waiter; the Host turn keeps running.
-      if (!turnDetach.signal.aborted) {
+      if (!turnDetach.signal.aborted && !turn.signal.aborted) {
         turnFailed = true
         throw error
       }
@@ -371,11 +408,16 @@ export class NativeConversationController {
 
   private applyRosterFrame(frame: NativeSessionListFrame): void {
     if (frame.type === 'baseline') {
+      const sessionIds = new Set(frame.items.map(item => item.header.id))
+      for (const id of this.drafts.keys()) {
+        if (!sessionIds.has(id)) this.discardDraft(id)
+      }
       this.publish({ sessions: frame.items })
       return
     }
     const sessions = [...this.snapshot.sessions]
     if (frame.type === 'remove') {
+      this.discardDraft(frame.sessionId)
       this.publish({ sessions: sessions.filter(item => item.header.id !== frame.sessionId) })
       return
     }
@@ -594,19 +636,22 @@ export class NativeConversationController {
   }
 
   /** Send human text through the Host's sole turn executor.
-   * @param text - nonempty submitted text.
+   * @param text - submitted text; empty text requires at least one image.
    * @param files - browser-selected raster files; Provider limits govern admission.
-   * @returns completion after Host settlement and transcript refresh, or after this view detaches.
+   * @returns whether this send matched a Host receipt or the Host admitted its turn; preparation can stop before either.
    */
-  send(text: string, files: readonly File[] = []): Promise<void> {
+  send(text: string, files: readonly File[] = []): Promise<boolean> {
     this.assertReady()
     if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
-    if (id === undefined || text.trim().length === 0) throw new Error('native conversation: select a Session and enter text')
+    if (id === undefined || (text.trim().length === 0 && files.length === 0)) {
+      throw new Error('native conversation: select a Session and enter text or attach an image')
+    }
     const retainedDraft = this.submissionDraft
     const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
       && retainedDraft.epoch === this.selectionEpoch && retainedDraft.text === text ? retainedDraft : undefined
     if (reconcileDraft === undefined) this.submissionDraft = undefined
+    let admitted = false
     return this.run(() => this.followTurn(id, this.snapshot.events.at(-1)?.seq ?? -1,
       async (signal, admission, observe, onFollowError, detach) => {
         const workSignal = AbortSignal.any([signal, detach])
@@ -629,6 +674,7 @@ export class NativeConversationController {
           if (matched) {
             if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
             this.publish({ error: undefined })
+            admitted = true
             return undefined
           }
           if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
@@ -668,8 +714,13 @@ export class NativeConversationController {
         this.foregroundAdmission = admission
         this.followErrorOwner = admission
         if (reconcileDraft !== undefined) this.publish({ error: undefined })
-        return this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach)
-      }, reconcileDraft === undefined))
+        const onAccepted = (): void => { admitted = true }
+        const prompt = text.trim().length === 0
+          ? this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
+            true, signal, observe, onFollowError, admission.lastSeq, detach, onAccepted)
+          : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach, onAccepted)
+        return prompt
+      }, reconcileDraft === undefined)).then(() => admitted)
   }
 
   private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId; readonly lastSeq: number }): void {
@@ -732,7 +783,7 @@ export class NativeConversationController {
     return work
   }
 
-  /** Stop the selected Host turn; readiness is published only by the settled send operation. */
+  /** Stop the selected Host turn; settlement returns the conversation to ready without a cancellation error. */
   cancel(): void {
     if (this.turn === undefined) return
     this.publish({ state: 'cancelling' })

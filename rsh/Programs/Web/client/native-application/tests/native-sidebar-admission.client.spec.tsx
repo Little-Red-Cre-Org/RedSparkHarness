@@ -239,7 +239,8 @@ async function harness(baselineGate: Promise<void> = Promise.resolve()) {
   const close = vi.fn(async () => undefined)
   const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
   let turnStarted = false
-  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach) => {
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach, onAccepted) => {
+    onAccepted?.()
     turnStarted = true
     signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
     const detached = new Promise<never>((_resolve, reject) => {

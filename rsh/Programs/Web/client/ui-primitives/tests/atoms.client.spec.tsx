@@ -1,10 +1,49 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Button, ConnectionIndicator, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, ConnectionIndicator, Input, Menu, Modal, Pill, SettingsPanel } from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
+
+it('keeps Settings Tab focus inside the dialog and restores the opener when it closes', () => {
+  const opener = document.createElement('button')
+  document.body.append(opener)
+  opener.focus()
+  const view = render(<SettingsPanel title="Settings" closeLabel="Close settings"
+    rows={[{ id: 'general', label: 'General' }, { id: 'models', label: 'Models' }]}
+    activeId="general" onSelect={() => {}} onClose={() => {}}>
+    <details><summary>Advanced</summary><input aria-label="Hidden field" /></details>
+  </SettingsPanel>)
+  const close = screen.getByRole('button', { name: 'Close settings' })
+  const general = screen.getByRole('button', { name: 'General' })
+  const advanced = screen.getByText('Advanced')
+  expect(document.activeElement).toBe(close)
+  expect(fireEvent.keyDown(close, { key: 'Tab' })).toBe(true)
+  advanced.focus()
+  fireEvent.keyDown(advanced, { key: 'Tab' })
+  expect(document.activeElement).toBe(general)
+  expect(fireEvent.keyDown(general, { key: 'Tab' })).toBe(true)
+  fireEvent.keyDown(general, { key: 'Tab', shiftKey: true })
+  expect(document.activeElement).toBe(advanced)
+  opener.focus()
+  fireEvent.keyDown(opener, { key: 'Tab' })
+  expect(document.activeElement).toBe(general)
+  const child = document.createElement('div')
+  child.setAttribute('role', 'dialog')
+  child.setAttribute('aria-modal', 'true')
+  const childFirst = document.createElement('button')
+  const childLast = document.createElement('button')
+  child.append(childFirst, childLast)
+  document.body.append(child)
+  childLast.focus()
+  expect(fireEvent.keyDown(childLast, { key: 'Tab' })).toBe(false)
+  expect(document.activeElement).toBe(childFirst)
+  child.remove()
+  view.unmount()
+  expect(document.activeElement).toBe(opener)
+  opener.remove()
+})
 
 describe('Button', () => {
   it('renders children, icon, and forwards clicks', () => {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
@@ -20,6 +20,7 @@ import { plugin as sidebar } from '../../ui-sidebar/src/native.ts'
 import { plugin as rightbar } from '../../ui-sidebar-right/src/native.ts'
 import { plugin as theme } from '../../ui-theme/src/native.ts'
 import { PENDING_DEFAULT_KEY } from '../src/pending-default.ts'
+import { requestNativeModelSettings } from '../src/settings-request.ts'
 
 const makeHeader = (id: string, cwd?: string): SessionHeader => ({
   version: SESSION_FORMAT_VERSION,
@@ -250,7 +251,8 @@ it.each([
   const close = vi.fn(async () => undefined)
   const promptSettlement = Promise.withResolvers<{ exitCode: number; answer: string }>()
   let turnStarted = false
-  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach) => {
+  const prompt = vi.fn<NativeSessionClient['prompt']>((_id, _text, _resume, signal, _observe, _images, _onFollowError, _lastSeq, detach, onAccepted) => {
+    onAccepted?.()
     turnStarted = true
     signal?.addEventListener('abort', () => { promptSettlement.resolve({ exitCode: 130, answer: '' }) }, { once: true })
     const detached = new Promise<never>((_resolve, reject) => {
@@ -577,10 +579,32 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Switch theme' }))
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(screen.queryByRole('dialog')).toBeNull()
-    const workspaceRows = within(screen.getByRole('tree', { name: 'Workspaces' }))
+    const tree = screen.getByRole('tree', { name: 'Workspaces' })
+    const workspaceRows = within(tree)
     let alphaRow = workspaceRows.getByRole('treeitem', { name: /Alpha/ })
     const betaRow = workspaceRows.getByRole('treeitem', { name: /Beta/ })
-    expect(betaRow).toBeTruthy()
+    const firstRow = workspaceRows.getAllByRole('treeitem')[0]!
+    expect(tree.tabIndex).toBe(0)
+    tree.focus()
+    expect(document.activeElement).toBe(firstRow)
+    expect(tree.tabIndex).toBe(-1)
+    fireEvent.keyDown(firstRow, { key: 'ArrowUp' })
+    fireEvent.keyDown(tree, { key: 'End' })
+    expect(document.activeElement).toBe(firstRow)
+    alphaRow.focus()
+    expect(alphaRow.tabIndex).toBe(0)
+    workspaceRows.getAllByRole('button', { hidden: true })[0]!.focus()
+    expect(alphaRow.tabIndex).toBe(0)
+    alphaRow.focus()
+    fireEvent.keyDown(alphaRow, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(betaRow)
+    expect(workspaceRows.getAllByRole('treeitem').filter(row => row.tabIndex === 0)).toEqual([betaRow])
+    fireEvent.keyDown(betaRow, { key: 'Enter' })
+    await waitFor(() => { expect(clientMock.history).toHaveBeenLastCalledWith('session-beta', expect.any(AbortSignal)) })
+    await waitFor(() => { expect(betaRow.getAttribute('aria-selected')).toBe('true') })
+    firstRow.focus()
+    tree.focus()
+    expect(document.activeElement).toBe(betaRow)
     expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(7)
     fireEvent.click(betaRow)
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
@@ -813,6 +837,7 @@ it.each([
     expect(createWorkspace).toHaveBeenCalledTimes(admissionCalls + 1)
     fireEvent.click(workspaceRows.getByRole('treeitem', { name: /Beta/ }))
     await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-beta') })
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveProperty('value', 'Do not send to Beta')
 
     fireEvent.click(screen.getByRole('button', { name: 'Search sessions' }))
     const search = screen.getByPlaceholderText('Search sessions…')
@@ -881,6 +906,21 @@ it.each([
     composerConnection.reject(new Error('Workspace unavailable'))
     await screen.findByRole('alert')
     await waitFor(() => { expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false) })
+    const composerInput = screen.getByRole('textbox', { name: 'Message' })
+    const escCancelled = Promise.withResolvers<undefined>()
+    prompt.mockImplementationOnce((_id, _text, _resume, signal) => new Promise((_resolve, reject) => {
+      signal?.addEventListener('abort', () => {
+        escCancelled.resolve(undefined)
+        reject(new Error('native conversation: user cancelled'))
+      }, { once: true })
+    }))
+    fireEvent.submit(composerInput.closest('form')!)
+    await waitFor(() => { expect(conversation?.getSnapshot().state).toBe('sending') })
+    fireEvent.keyDown(composerInput, { key: 'Escape' })
+    await escCancelled.promise
+    await waitFor(() => { expect(conversation?.getSnapshot().state).toBe('ready') })
+    expect(screen.queryAllByRole('alert').some(alert =>
+      /Request failed|请求失败/.test(alert.textContent ?? ''))).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })
@@ -910,6 +950,10 @@ it.each([
     expect(screen.getByRole('dialog', { name: '设置' })).toBeTruthy()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
+
+    act(() => { requestNativeModelSettings() })
+    expect(within(screen.getByRole('dialog', { name: '设置' })).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
+    fireEvent.keyDown(document, { key: 'Escape' })
 
     await host.stop()
     expect(container.childElementCount).toBe(0)

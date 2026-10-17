@@ -153,12 +153,35 @@
 }
 
 .error {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
   flex: none;
-  width: min(calc(100% - 48px), 780px);
-  margin: 4px auto 0;
+  width: min(100%, 780px);
+  margin: 16px auto 0;
+  padding: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-inline-start: 2px solid var(--dsw-alias-state-error-primary);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
   font-size: 12px;
   line-height: 18px;
-  color: var(--dsw-alias-state-error-primary);
+}
+
+.error > div { min-width: 0; }
+.error > div > strong { font-weight: 600; }
+.error p { margin: 2px 0 0; color: var(--dsw-alias-label-secondary); }
+.error > button { grid-column: 2; grid-row: 1; align-self: center; }
+.error details { grid-column: 1 / -1; min-width: 0; }
+.error summary { color: var(--dsw-alias-label-tertiary); cursor: pointer; }
+.error pre {
+  margin: 4px 0 0;
+  color: var(--dsw-alias-label-secondary);
+  font: 11px/16px monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .empty {

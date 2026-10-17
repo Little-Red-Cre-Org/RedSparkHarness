@@ -45,7 +45,8 @@ function fixture() {
     async history(id) { return { header: header(id), events: [
       { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
     ], inheritedEventCount: 0 } },
-    prompt(_id, _text, _resume, _signal, observe) {
+    prompt(_id, _text, _resume, _signal, observe, _images, _onFollowError, _lastSeq, _detach, onAccepted) {
+      onAccepted?.()
       const settled = Promise.withResolvers<{ exitCode: number; answer: string }>()
       turns.push({ observe, settled })
       return settled.promise
