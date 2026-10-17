@@ -36,6 +36,7 @@
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-native-web-assets": "workspace:^",
+    "@deepseek-ai/dsh-web-compatibility": "workspace:^",
     "@deepseek-ai/dsh-native-web-session-controller": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-web-frontend": "workspace:^",

@@ -93,6 +93,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/package-manifest',
   'rsh/Core/util/time',
   'rsh/Programs/Web/client/ui-dockkit',
+  'rsh/Programs/Web/client/web',
 ])
 
 /** Native-profile Client packages that do not implement the Cordis module-table entry. */
@@ -263,7 +264,6 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Engine/session/session-persistence', ['host', 'client']],
   ['rsh/Engine/session/session-title', ['host']],
   ['rsh/Programs/Web/client/modules', ['client']],
-  ['rsh/Programs/Web/client/web', ['client']],
   ['rsh/Core/util/launch-environment', ['host', 'client']],
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
   ['rsh/Modules/Official/settings/settings', ['host']],
@@ -397,6 +397,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/core/native-agent', ['./inbox', './consumed-work', './definition', './turn-boundary']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
+  ['rsh/Programs/Web/client/web', ['./native-wire']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
   ['rsh/Modules/Official/shell/shell-env', ['./definition']],
@@ -427,6 +428,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/session/session-telemetry/records', ['host']],
   ['rsh/Engine/session/session-telemetry/native-definition', ['host']],
   ['rsh/Programs/Web/api/workspace-files/native-helpers', ['host']],
+  ['rsh/Programs/Web/client/web/native-wire', ['host']],
   ['rsh/Programs/Web/api/session-controller/client-event-types', ['client']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],

@@ -806,6 +806,10 @@ export const CORDIS_CATALOG_POLICY: CordisCatalogPolicy = {
     '@deepseek-ai/dsh-http-routes',
     '@deepseek-ai/dsh-http-routes-cordis',
   ],
+  // This empty runtime feature-detection marker is not the Node type used by HttpRoute.
+  runtimeTypeExclusions: new Set([
+    '@deepseek-ai/dsh-experimental-webworker-runtime#ServerResponse',
+  ]),
   runtimeServiceExclusions: new Set(['cordisInspect', 'dynamicCordisRunner']),
   runtimeServices: [{
     key: 'timer',

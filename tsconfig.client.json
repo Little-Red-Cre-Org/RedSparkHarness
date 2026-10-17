@@ -15,6 +15,8 @@
   },
   "include": [
     "rsh/Scripts/workspace-manifest-globs.ts",
+    // Packed browser consumer tests reuse the pure dependency-closure helper.
+    "rsh/Modules/Official/sandbox/sandbox-local/tests/packed-workspace-closure.ts",
     // Source-subpath test imports can arrive through workspace links whose
     // realpath semantics vary by host. Load package CSS declarations directly.
     "rsh/Programs/Web/client/*/src/css-modules.d.ts",
@@ -109,6 +111,7 @@
     { "path": "./rsh/Programs/Web/client/ui-attachment" },
     { "path": "./rsh/Programs/Web/client/ui-primitives" },
     { "path": "./rsh/Programs/Web/client/modules" },
+    { "path": "./rsh/Modules/Community/experimental/webworker-runtime/tsconfig.client.json" },
     { "path": "./rsh/Modules/Community/experimental/inspector/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/client/hmr" },
     { "path": "./rsh/Programs/Web/client/connection/tsconfig.client.json" },
@@ -171,6 +174,7 @@
     { "path": "./rsh/Programs/Web/api/workspace-files/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/client/native-session" },
     { "path": "./rsh/Programs/Web/client/web" },
+    { "path": "./rsh/Compatibility/DSH/web/frontend" },
     { "path": "./rsh/Engine/context/file-reference" },
     { "path": "./rsh/Programs/Web/application" }
   ]

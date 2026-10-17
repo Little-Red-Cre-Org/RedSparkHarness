@@ -58,6 +58,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Programs/Web/client/ui-primitives': 'Browser-side UI component library; plain component exports.',
   'rsh/Programs/Web/client/ui-slots': 'Browser-side slot-map declarations; plain type exports.',
   'rsh/Programs/Web/client/web': 'Browser application boot library; exports the app entry and static module table.',
+  'rsh/Compatibility/DSH/web/frontend': 'Compatibility browser shell library; exports AppWebEntry and its static module table without a Cordis plugin entry.',
   'rsh/Engine/core/scope': 'Scoped-context primitives; exports functions and types without a plugin entry.',
   'rsh/Engine/workspace/workspace-definition': 'Workspace identity and consumer types without a plugin entry.',
   'rsh/Modules/Community/experimental/webworker-packer': 'Build-time VFS image packer and command library.',

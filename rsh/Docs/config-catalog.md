@@ -3694,5 +3694,6 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-util-time` ([`rsh/Core/util/time/src/index.ts`](../Core/util/time/src/index.ts))
 - `@deepseek-ai/dsh-util-values` ([`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts))
 - `@deepseek-ai/dsh-util-workspace-path` ([`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts))
+- `@deepseek-ai/dsh-web-compatibility` ([`rsh/Compatibility/DSH/web/frontend/src/index.ts`](../Compatibility/DSH/web/frontend/src/index.ts))
 - `@deepseek-ai/dsh-win32-process` ([`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts))
 - `@deepseek-ai/dsh-workspace-definition` ([`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts))

@@ -1302,9 +1302,9 @@ importers:
       '@deepseek-ai/dsh-tool-subagent':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/tool-subagent
-      '@deepseek-ai/dsh-web-frontend':
+      '@deepseek-ai/dsh-web-compatibility':
         specifier: workspace:^
-        version: link:../../../../Programs/Web/application
+        version: link:../../web/frontend
       '@deepseek-ai/dsh-workspace':
         specifier: workspace:^
         version: link:../../../../Modules/Official/workspace/workspace
@@ -1458,6 +1458,88 @@ importers:
       '@deepseek-ai/dsh-tool-subagent':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/tool-subagent
+
+  rsh/Compatibility/DSH/web/frontend:
+    dependencies:
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/loader
+      '@deepseek-ai/dsh-client-modules':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/modules
+      '@deepseek-ai/dsh-client-store':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/store
+      '@deepseek-ai/dsh-client-ui-dockkit':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/ui-dockkit
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/ui-primitives
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/ui-slots
+      '@deepseek-ai/dsh-client-web':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/web
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/ui-renderer
+      '@deepseek-ai/dsh-experimental-webworker-packer':
+        specifier: workspace:^
+        version: link:../../../../Modules/Community/experimental/webworker-packer
+      '@deepseek-ai/dsh-http-routes':
+        specifier: workspace:^
+        version: link:../../../../Core/util/http-routes
+      '@deepseek-ai/dsh-http-routes-cordis':
+        specifier: workspace:^
+        version: link:../../bridge/http-routes-cordis
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../../../Core/util/launch-environment
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ~18.3.0
+        version: 18.3.7(@types/react@18.3.31)
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
+      '@vitejs/plugin-react':
+        specifier: ^4.0.0
+        version: 4.7.0(supports-color@9.4.0)(vite@6.4.3(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+      http-server:
+        specifier: ^14.1.1
+        version: 14.1.1(debug@4.4.3(supports-color@9.4.0))(supports-color@9.4.0)
+      playwright:
+        specifier: ^1.49.0
+        version: 1.61.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@22.20.0)(@vitest/coverage-v8@4.1.8)(happy-dom@20.11.6)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@6.4.3(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+      ws:
+        specifier: 8.21.0
+        version: 8.21.0
 
   rsh/Core/identity/anonymous-user-id:
     devDependencies:
@@ -2718,12 +2800,12 @@ importers:
       '@deepseek-ai/dsh-native-subagent':
         specifier: workspace:^
         version: link:../../subagent/native-subagent
-      '@deepseek-ai/dsh-request-context':
-        specifier: workspace:^
-        version: link:../../context/request-context
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../../Modules/Official/guard/repeat-tool-reminder
+      '@deepseek-ai/dsh-request-context':
+        specifier: workspace:^
+        version: link:../../context/request-context
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../session/session-persistence-jsonl
@@ -5523,6 +5605,9 @@ importers:
       readable-stream:
         specifier: ^4.7.0
         version: 4.7.0
+      string_decoder:
+        specifier: ^1.3.0
+        version: 1.3.0
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -10285,6 +10370,9 @@ importers:
       '@deepseek-ai/dsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../Engine/session/session-persistence-jsonl
+      '@deepseek-ai/dsh-web-compatibility':
+        specifier: workspace:^
+        version: link:../../Compatibility/DSH/web/frontend
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../Web/application
@@ -11579,9 +11667,6 @@ importers:
       '@deepseek-ai/dsh-cmdline':
         specifier: workspace:^
         version: link:../../../Compatibility/DSH/boot/cmdline
-      '@deepseek-ai/dsh-experimental-webworker-packer':
-        specifier: workspace:^
-        version: link:../../../Modules/Community/experimental/webworker-packer
       '@deepseek-ai/dsh-experimental-webworker-runtime':
         specifier: workspace:^
         version: link:../../../Modules/Community/experimental/webworker-runtime
@@ -11597,6 +11682,9 @@ importers:
       '@deepseek-ai/dsh-pwsh-local':
         specifier: workspace:^
         version: link:../../../Modules/Official/shell/pwsh-local
+      '@deepseek-ai/dsh-web-compatibility':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/web/frontend
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.0
@@ -14487,27 +14575,6 @@ importers:
         specifier: 2.0.3
         version: 2.0.3
     devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@deepseek-ai/cordis-plugin-loader':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/loader
-      '@deepseek-ai/dsh-client-modules':
-        specifier: workspace:^
-        version: link:../modules
-      '@deepseek-ai/dsh-client-store':
-        specifier: workspace:^
-        version: link:../store
-      '@deepseek-ai/dsh-client-ui-dockkit':
-        specifier: workspace:^
-        version: link:../ui-dockkit
-      '@deepseek-ai/dsh-client-ui-primitives':
-        specifier: workspace:^
-        version: link:../ui-primitives
-      '@deepseek-ai/dsh-client-ui-renderer':
-        specifier: workspace:^
-        version: link:../ui-renderer
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -14873,6 +14940,9 @@ importers:
 
   rsh/Tests/test-support/client-runtime:
     dependencies:
+      '@deepseek-ai/dsh-web-compatibility':
+        specifier: workspace:^
+        version: link:../../../Compatibility/DSH/web/frontend
       '@testing-library/dom':
         specifier: ^10.4.1
         version: 10.4.1
@@ -14949,9 +15019,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../../../Programs/Web/client/ui-slots
-      '@deepseek-ai/dsh-client-web':
-        specifier: workspace:^
-        version: link:../../../Programs/Web/client/web
       '@deepseek-ai/dsh-remote-mock':
         specifier: workspace:^
         version: link:../remote-mock
@@ -18344,6 +18411,11 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -22799,10 +22871,10 @@ snapshots:
       '@babel/helper-compilation-targets': 7.29.7
       '@babel/helper-module-transforms': 7.29.7(@babel/core@7.29.7(supports-color@9.4.0))(supports-color@9.4.0)
       '@babel/helpers': 7.29.7
-      '@babel/parser': 7.29.7
+      '@babel/parser': 7.29.9
       '@babel/template': 7.29.7
       '@babel/traverse': 7.29.7(supports-color@9.4.0)
-      '@babel/types': 7.29.7
+      '@babel/types': 7.29.8
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
       debug: 4.4.3(supports-color@9.4.0)
@@ -22842,7 +22914,7 @@ snapshots:
   '@babel/helper-module-imports@7.29.7(supports-color@9.4.0)':
     dependencies:
       '@babel/traverse': 7.29.7(supports-color@9.4.0)
-      '@babel/types': 7.29.7
+      '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
 
@@ -22870,7 +22942,7 @@ snapshots:
   '@babel/helpers@7.29.7':
     dependencies:
       '@babel/template': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/types': 7.29.8
 
   '@babel/parser@7.29.7':
     dependencies:
@@ -23804,7 +23876,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.29)
       ajv: 8.20.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -24653,24 +24725,24 @@ snapshots:
 
   '@types/babel__core@7.20.5':
     dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
       '@types/babel__generator': 7.27.0
       '@types/babel__template': 7.4.4
       '@types/babel__traverse': 7.28.0
 
   '@types/babel__generator@7.27.0':
     dependencies:
-      '@babel/types': 7.29.7
+      '@babel/types': 7.29.8
 
   '@types/babel__template@7.4.4':
     dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
 
   '@types/babel__traverse@7.28.0':
     dependencies:
-      '@babel/types': 7.29.7
+      '@babel/types': 7.29.8
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -25282,8 +25354,8 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:

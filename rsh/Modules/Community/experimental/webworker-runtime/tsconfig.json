@@ -1,42 +1,7 @@
 {
-  "extends": "../../../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib/types",
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable",
-      "WebWorker"
-    ],
-    "types": [
-      "node"
-    ]
-  },
-  "include": [
-    "src"
-  ],
+  "files": [],
   "references": [
-    {
-      "path": "../../../../Core/vendor/cordis"
-    },
-    {
-      "path": "../../../../Programs/Web/api/gateway/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Programs/Web/client/modules"
-    },
-    {
-      "path": "../../../../Programs/Web/client/connection/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Programs/Web/client/file-upload/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Core/util/crypto"
-    }
+    { "path": "./tsconfig.host.json" },
+    { "path": "./tsconfig.client.json" }
   ]
 }

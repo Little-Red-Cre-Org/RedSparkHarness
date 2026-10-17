@@ -50,6 +50,8 @@ Mounts relate to each other through ordinary cordis service semantics, with thei
 
 `cordis_inspect` serves API and event data from a generated catalog rather than a duplicated table. The generator reuses the Cordis catalog AST scan and emits service summaries, signatures, original service-method and event JSDoc, event modes, referenced type declarations, and the inherited context API. Ambiguous type names are omitted and oversized declarations are marked as truncated.
 
+Runtime type exclusions use package-qualified identities, so the worker runtime's empty `ServerResponse` feature-detection marker does not stand in for `node:http.ServerResponse` in `HttpRoute`; same-named declarations from other packages remain eligible.
+
 Freshness is gated like every generated artifact: `pnpm run verify-cordis-api` (in `doc-sync`) regenerates in memory and fails on any diff, so a JSDoc or public-signature edit cannot ship without regenerating the catalog the model reads. At runtime the inspect tool intersects the catalog with the live runtime rather than dumping it: broad reports render live catalogued services as summary + signatures, live services without a catalog entry (mount-provided ones) as name + owning fiber, catalogued services with no live provider tersely, and then the referenced type shapes. Exact-name reports render one live service or event with the original JSDoc immediately before each signature; keeping that detail opt-in avoids charging its token cost on exploratory listings.
 
 ### Configuration, rendering, and observability

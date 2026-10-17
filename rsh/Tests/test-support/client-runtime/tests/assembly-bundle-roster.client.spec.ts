@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { getStaticModules } from '@deepseek-ai/dsh-client-web/src/seed.ts'
+import { getStaticModules } from '@deepseek-ai/dsh-web-compatibility/src/seed.ts'
 import { afterAll, describe, expect, it } from 'vitest'
 import { MODULES_PACKAGE } from '../src/assembly/modules.ts'
 import { WEB_PROFILE_BUNDLES, bundleRoster, webApp } from '../src/assembly/bundle-roster.ts'

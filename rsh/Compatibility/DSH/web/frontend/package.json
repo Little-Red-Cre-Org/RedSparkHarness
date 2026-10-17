@@ -1,0 +1,73 @@
+{
+  "name": "@deepseek-ai/dsh-web-compatibility",
+  "description": "Cordis browser shell API and its separately built legacy and worker-preview pages",
+  "version": "0.1.5-rc.2",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Compatibility/DSH/web/frontend"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "dist",
+    "!dist/**/*.map",
+    "!dist/preview.html",
+    "!dist/preview",
+    "lib/types/**/*.d.ts"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.config.ts --mode compatibility",
+    "watch": "vite build --watch --no-emptyOutDir --config vite.config.ts --mode compatibility",
+    "build:preview": "pnpm --filter @deepseek-ai/dsh-experimental-webworker-runtime exec tsdown && pnpm --filter @deepseek-ai/dsh-experimental-webworker-packer exec tsdown && vite build --config vite.config.ts --mode compatibility && dsh-pack-vfs-image --out dist/preview/vfs-image.tar.gz",
+    "serve:preview": "http-server dist -a 0.0.0.0 -p 4173 -c-1"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
+    "@deepseek-ai/dsh-client-modules": "workspace:^",
+    "@deepseek-ai/dsh-client-store": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-dockkit": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
+    "@deepseek-ai/dsh-client-web": "workspace:^",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@types/node": "^22.0.0",
+    "@types/react": "~18.3.1",
+    "@types/react-dom": "~18.3.0",
+    "@types/ws": "8.18.1",
+    "@deepseek-ai/dsh-experimental-webworker-packer": "workspace:^",
+    "@vitejs/plugin-react": "^4.0.0",
+    "http-server": "^14.1.1",
+    "playwright": "^1.49.0",
+    "typescript": "^6.0.3",
+    "vite": "^6.0.0",
+    "vitest": "^4.1.8",
+    "ws": "8.21.0",
+    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
+    "@deepseek-ai/dsh-http-routes": "workspace:^",
+    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
+    "@deepseek-ai/dsh-launch-environment": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  }
+}

@@ -72,7 +72,7 @@ Client business code may statically read `process.env.DSH_CLIENT_*`; every refer
 
 ## Shared modules and the module graph
 
-A dynamic browser half either carries a module privately or requests the shared module-table identity. The client baseline is centralized in [`web/src/platform.ts`](web/src/platform.ts): `PLATFORM_MODULES` names shell-seeded React, Cordis, and static Client libraries; `PRELOADED_CLIENT_EXTERNALS` is reserved for dynamic rows whose factories must arrive before shell boot and is empty when no such row exists.
+A dynamic browser half either carries a module privately or requests the shared module-table identity. The compatibility shell baseline is centralized in [`PLATFORM_MODULES`](../../../../Compatibility/DSH/web/frontend/src/platform.ts): it names shell-seeded React, Cordis, and static Client libraries; `PRELOADED_CLIENT_EXTERNALS` is reserved for dynamic rows whose factories must arrive before shell boot and is empty when no such row exists.
 
 1. **Baseline externals are implicit for every dynamic bundle.** Do not repeat React, Cordis, `client/store`, `ui-primitives`, `ui-slots`, or `ui-dockkit` in package manifests.
 2. **`dsh.client.external` is not a feature-plugin dependency mechanism.** Only infrastructure, transport, or generated assembly may add a package-specific non-baseline value request whose dynamic row must be materialized through the module table. Declare the exact import specifier; only a trailing `/client` aliases the package row.
@@ -94,7 +94,7 @@ Three declarations read like dependency edges and none is interchangeable: Cordi
 
 The seam is `loader.internal = modules`: cordis reaches plugin code through `EntryTree.import`, so every module request must be satisfiable before cordis can order activation above it. The modules node half emits rows in topological order, and `ClientModuleSystem.import`/`prefetch` recursively registers dynamic provider factories before their consumers materialize. This module order is independent from Cordis activation: a provider that injects services can register first and activate last.
 
-`rsh/Programs/Web/client/web` is not a Loader entry. Its static imports seed `PLATFORM_MODULES`; parser-preloaded dynamic rows remain ordinary Loader entries and ordinary `lib/client.js` artifacts.
+`rsh/Programs/Web/client/web` is a Cordis-free Native browser API, not a Loader entry. The compatibility shell in `rsh/Compatibility/DSH/web/frontend` seeds `PLATFORM_MODULES`; parser-preloaded dynamic rows remain ordinary Loader entries and ordinary `lib/client.js` artifacts.
 
 ## Conversation Node discipline
 

@@ -34,6 +34,7 @@ export const CLIENT_BUILD_RECORD_PATH = '.dsh-build/client-build-environment.jso
 const CLIENT_BUILD_RECORD_FORMAT = 1
 const CLIENT_ARTIFACT_PATTERNS = [
   'rsh/Programs/Web/application/dist/**/*',
+  'rsh/Compatibility/DSH/web/frontend/dist/**/*',
   'rsh/**/lib/client.js',
   'rsh/**/lib/client.js.map',
 ] as const
