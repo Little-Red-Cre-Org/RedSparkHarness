@@ -1,6 +1,6 @@
 version: 1
 scenario: fs-policy-reject
-profile: headless
+profile: legacy-headless
 composition: default
 recording: live
 header:

@@ -1,6 +1,6 @@
 version: 1
 scenario: agent-instructions
-profile: headless
+profile: legacy-headless
 composition: agent-instructions
 recording: authored
 header:

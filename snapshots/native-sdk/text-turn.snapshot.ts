@@ -176,7 +176,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
   mkdirSync(workspace)
   const cwdAliases = [...new Set([workspace, realpathSync(workspace), realpathSync.native(workspace)]
     .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]))]
-  const profile = join(home, 'profiles', 'native-sdk')
+  const profile = join(home, 'profiles', 'sdk')
   const fixturePackage = join(profile, 'node_modules', 'fixture-sdk-descendants')
   mkdirSync(fixturePackage, { recursive: true })
   const fixtureUrl = pathToFileURL(join(root, 'rsh/Programs/SDK/packages/native-server/tests/fixtures/descendants.mjs')).href
@@ -187,7 +187,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     exports: { './package.json': './package.json', './native': './native.mjs' },
     dsh: { native: { apiVersion: plugin.apiVersion, entry: './native', targets: plugin.targets,
       requires: plugin.requires, optional: plugin.optional, provides: plugin.provides } } }))
-  const composition = shippedNativeProfileComposition(home, 'native-sdk')
+  const composition = shippedNativeProfileComposition(home, 'sdk')
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-sdk-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
@@ -208,7 +208,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
-  const harness = new DeepSeekHarness({ profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+  const harness = new DeepSeekHarness({ dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
     dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })

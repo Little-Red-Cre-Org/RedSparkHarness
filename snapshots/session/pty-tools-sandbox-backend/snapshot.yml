@@ -1,6 +1,6 @@
 version: 1
 scenario: pty-tools-sandbox-backend
-profile: headless
+profile: legacy-headless
 composition: pty-sandbox-backend
 recording: authored
 header:

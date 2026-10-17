@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-published-run-failure
-profile: headless
+profile: legacy-headless
 composition: subagent-durability-failure
 recording: authored
 header:

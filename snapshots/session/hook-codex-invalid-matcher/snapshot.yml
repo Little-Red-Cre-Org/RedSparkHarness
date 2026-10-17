@@ -1,6 +1,6 @@
 version: 1
 scenario: hook-codex-invalid-matcher
-profile: headless
+profile: legacy-headless
 composition: default
 recording: authored
 header:

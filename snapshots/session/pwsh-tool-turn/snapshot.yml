@@ -1,6 +1,6 @@
 version: 1
 scenario: pwsh-tool-turn
-profile: headless
+profile: legacy-headless
 composition: pwsh
 recording: live
 header:

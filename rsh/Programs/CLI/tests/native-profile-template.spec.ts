@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
@@ -10,7 +10,7 @@ import { resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import type { PiAiAuthInjection } from '@deepseek-ai/dsh-llm-pi-ai/src/adapter.ts'
 import type { PiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
-import { nativeProfileReloadMode } from '../src/native-profile-config.ts'
+import { nativeProfileReloadMode, profileRuntime } from '../src/native-profile-config.ts'
 import { loadNativeProfile } from '../src/native-profile-loader.ts'
 
 const resolutionAuth: PiAiAuthInjection = {
@@ -48,6 +48,56 @@ async function expectModelResolves(
     await adapter.dispose()
   }
 }
+
+it('maps standard profile names to native compositions and preserves existing legacy manifests', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-template-'))
+  const legacyHome = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-legacy-'))
+  try {
+    const mappings = [
+      ['headless', 'native-headless'],
+      ['web', 'native-web'],
+      ['sdk', 'native-sdk'],
+      ['acp', 'native-acp'],
+      ['rsh', 'native-tui'],
+    ] as const
+    for (const [name, nativeName] of mappings) {
+      expect(SHIPPED_NATIVE_PROFILES).toContain(name)
+      const profile = shippedNativeProfileComposition(home, name, 'win32')
+      const nativeProfile = shippedNativeProfileComposition(home, nativeName, 'win32')
+      expect(profile.installations.find(row => row.id === 'app')?.plugin)
+        .toBe(nativeProfile.installations.find(row => row.id === 'app')?.plugin)
+      ensureShippedNativeProfile(name, home)
+      const directory = join(home, 'profiles', name)
+      const manifest = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')) as {
+        dsh: { profile: { runtime: string } }
+      }
+      expect(manifest.dsh.profile.runtime).toBe('native')
+      if (name === 'web') {
+        expect(profile.installations.find(row => row.id === 'app')?.config)
+          .toMatchObject({ projectDir: directory })
+        expect(profile.installations.find(row => row.id === 'task-scheduler')?.config)
+          .toEqual({ path: join(directory, 'task-scheduler.sqlite') })
+        expect(existsSync(join(directory, 'rsh.client.json'))).toBe(true)
+      }
+      if (name === 'rsh') {
+        expect(profile.installations.find(row => row.id === 'task-scheduler')?.config)
+          .toEqual({ path: join(directory, 'task-scheduler.sqlite') })
+      }
+    }
+
+    const legacyDir = join(legacyHome, 'profiles', 'web')
+    await mkdir(legacyDir, { recursive: true })
+    const legacyManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } } }, null, 2)}\n`
+    await writeFile(join(legacyDir, 'package.json'), legacyManifest)
+    ensureShippedNativeProfile('web', legacyHome)
+    expect(profileRuntime('web', legacyHome)).toBe('legacy')
+    expect(await readFile(join(legacyDir, 'package.json'), 'utf8')).toBe(legacyManifest)
+    expect(existsSync(join(legacyDir, 'rsh.profile.json'))).toBe(false)
+  } finally {
+    await Promise.all([rm(home, { recursive: true, force: true }), rm(legacyHome, { recursive: true, force: true })])
+  }
+})
 
 it('defines a native-web Host composition and Client profile without Cordis rows', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-web-template-'))

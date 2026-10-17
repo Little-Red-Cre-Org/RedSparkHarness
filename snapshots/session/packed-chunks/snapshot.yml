@@ -1,6 +1,6 @@
 version: 1
 scenario: packed-chunks
-profile: headless
+profile: legacy-headless
 composition: default
 recording: authored
 sessionFormat:

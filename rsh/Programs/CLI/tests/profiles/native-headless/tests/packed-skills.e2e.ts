@@ -23,7 +23,6 @@ type PersistedSession = { readonly header: JsonObject; readonly events: readonly
 type RunResult = { readonly sessionId: string; readonly finalResponse: string; readonly events: JsonObject[] }
 type InstalledSdk = {
   DeepSeekHarness: new (options: {
-    readonly profile: 'native-sdk'
     readonly dshBin: string
     readonly dshHome: string
     readonly patches: string[]
@@ -122,6 +121,22 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
     const sdkClientPath = await realpath(consumerRequire.resolve('@deepseek-ai/dsh-sdk-client'))
+    await writeFile(join(installedRoot, 'sdk-consumer.ts'), [
+      "import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'",
+      "const client = new DeepSeekHarness({ profile: 'sdk' })",
+      'void client',
+      '',
+    ].join('\n'))
+    const consumerConfig = join(installedRoot, 'tsconfig.json')
+    await writeFile(consumerConfig, JSON.stringify({ compilerOptions: {
+      target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true,
+      lib: ['ES2022', 'ESNext.Disposable'], skipLibCheck: false, types: ['node'], noEmit: true,
+    }, files: ['sdk-consumer.ts'] }))
+    const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc')
+    const typecheck = execFileSync(process.execPath, [tsc, '-p', consumerConfig, '--noEmit', '--listFiles'], {
+      cwd: installedRoot, encoding: 'utf8', stdio: 'pipe',
+    })
+    expect(typecheck).not.toMatch(/node_modules[\\/]@deepseek-ai[\\/]cordis(?:[\\/]|$)/iu)
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith(`..${sep}`) || isAbsolute(sdkRelative)).toBe(false)
     expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@deepseek-ai', 'dsh-sdk-client'])
@@ -197,9 +212,9 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
       delete childEnv.DEEPSEEK_BASE_URL
-      execFileSync(process.execPath, [installedBin, '--profile', 'native-sdk', '--dump-config'],
+      execFileSync(process.execPath, [installedBin, '--profile', 'sdk', '--dump-config'],
         { cwd: workspace, env: { ...childEnv, DSH_HOME: home }, stdio: 'ignore' })
-      const profileConfig = join(home, 'profiles', 'native-sdk', 'rsh.profile.json')
+      const profileConfig = join(home, 'profiles', 'sdk', 'rsh.profile.json')
       const composition = JSON.parse(await readFile(profileConfig, 'utf8')) as { installations: JsonObject[] }
       composition.installations.push(
         { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
@@ -209,7 +224,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
         { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
       )
       await writeFile(profileConfig, JSON.stringify(composition))
-      const options = { profile: 'native-sdk' as const, dshBin: installedBin, dshHome: home, patches: [patch],
+      const options = { dshBin: installedBin, dshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
       const firstHarness = new DeepSeekHarness(options)
       let first: RunResult

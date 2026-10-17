@@ -3,9 +3,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { profileRuntime, type NativeProfileConfig } from './native-profile-config.ts'
+import { type NativeProfileConfig } from './native-profile-config.ts'
 
 const ROOT = 'root'
+const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
+  headless: 'native-headless',
+  web: 'native-web',
+  sdk: 'native-sdk',
+  acp: 'native-acp',
+  rsh: 'native-tui',
+}
 
 interface CliManifest {
   dsh?: { nativeProfileTemplates?: unknown }
@@ -35,10 +42,11 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
 
 /**
  * Return the browser Client rows written for a shipped native profile.
- * @param profile - shipped native profile name.
+ * @param name - requested standard or native profile name.
  * @returns the profile's Client installations, or an empty list without a Client composition.
  */
-export function shippedNativeProfileClientComposition(profile: string): readonly { plugin: string }[] {
+export function shippedNativeProfileClientComposition(name: string): readonly { plugin: string }[] {
+  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
   return profile === 'native-web' ? NATIVE_WEB_CLIENT_INSTALLATIONS : []
 }
 
@@ -101,17 +109,18 @@ function isHeadlessProfile(profile: string): boolean {
 /**
  * Resolve a shipped native composition for the selected platform.
  * @param home - Harness home used by durable providers.
- * @param profile - shipped profile name.
+ * @param name - shipped standard or native profile name.
  * @param platform - target platform for command providers and tools.
  * @returns the profile configuration installed on first use.
  * @remarks Native SDK, SDK-child, ACP and ACP-child profiles install workspace instructions through their selected filesystem Provider.
  */
 export function shippedNativeProfileComposition(
   home: string,
-  profile: string,
+  name: string,
   platform: NodeJS.Platform = process.platform,
 ): NativeProfileConfig {
-  if (!isShippedNativeProfile(profile)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(profile)}`)
+  if (!isShippedNativeProfile(name)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(name)}`)
+  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
   if (profile === 'native-acp-dsh-child') {
     const parent = shippedNativeProfileComposition(home, 'native-acp', platform)
     const recursiveInstallations = new Set([
@@ -198,7 +207,7 @@ export function shippedNativeProfileComposition(
           : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
         scope: ROOT,
         config: profile === 'native-web'
-          ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
+          ? { projectDir: join(home, 'profiles', name), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
           : { provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
             ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
             ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 500, maxPendingHumanRequests: 32 } : {}) },
@@ -299,7 +308,7 @@ export function shippedNativeProfileComposition(
         config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
-        config: { path: join(home, 'profiles', profile, 'task-scheduler.sqlite') },
+        config: { path: join(home, 'profiles', name, 'task-scheduler.sqlite') },
       }] : []),
       ...(profile === 'native-web' ? [{ id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: ROOT }] : []),
@@ -355,20 +364,16 @@ export function ensureShippedNativeProfile(name: string, home: string = resolveD
   if (!isShippedNativeProfile(name)) return
   const profiles = join(home, 'profiles')
   const directory = join(profiles, name)
-  if (existsSync(directory)) {
-    if (profileRuntime(name, home) !== 'native') {
-      throw new Error(`dsh: existing ${name} profile is not a complete native profile`)
-    }
-    return
-  }
+  if (existsSync(join(directory, 'package.json'))) return
   mkdirSync(profiles, { recursive: true })
-  mkdirSync(directory)
+  mkdirSync(directory, { recursive: true })
+  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
   writeFileSync(join(directory, 'rsh.profile.json'), `${JSON.stringify(shippedNativeProfileComposition(home, name), null, 2)}\n`, { flag: 'wx' })
   writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
     name: `dsh-profile-${name}`, private: true,
-    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: name === 'native-web' ? 'live' : 'startup' } },
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: profile === 'native-web' ? 'live' : 'startup' } },
   }, null, 2)}\n`, { flag: 'wx' })
-  if (name === 'native-web') {
+  if (profile === 'native-web') {
     writeFileSync(join(directory, 'rsh.client.json'), `${JSON.stringify({
       formatVersion: 1, installations: NATIVE_WEB_CLIENT_INSTALLATIONS,
     }, null, 2)}\n`, { flag: 'wx' })

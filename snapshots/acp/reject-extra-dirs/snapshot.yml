@@ -1,6 +1,6 @@
 version: 1
 scenario: reject-extra-dirs
-profile: acp
+profile: legacy-acp
 composition: acp-default
 recording: authored
 header:

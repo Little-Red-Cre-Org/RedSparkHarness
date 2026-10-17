@@ -25,7 +25,7 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收到已接受的子事件及真实 `subagent.finished` 结果，覆盖一次性任务的完成、取消、失败和可持续驻留阶段结束；仅打断某一轮不会结束仍驻留的子任务，运行结果仍只投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。SDK wire 目录发现仍不支持；profile 的模型可见 `list_agents` 工具是独立能力。
+Native SDK 组合提供生产使用的进程内子代理工具。新建的标准 `sdk` profile 会选择此组合；已有 profile 则继续由其 manifest 中的 `package.json` 决定 runtime。Session 树订阅收到已接受的子事件及真实 `subagent.finished` 结果，覆盖一次性任务的完成、取消、失败和可持续驻留阶段结束；仅打断某一轮不会结束仍驻留的子任务，运行结果仍只投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。SDK wire 目录发现仍不支持；profile 的模型可见 `list_agents` 工具是独立能力。
 
 当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `DeepSeekHarness`，运行提示词，然后关闭它，使子进程总能被回收。
 
@@ -37,7 +37,7 @@ import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 
 await using harness = new DeepSeekHarness({
   profile: 'sdk',
-  patches: ['./automation.cordis.yml'],
+  patches: ['./sdk.patch.json'],
   provider: 'deepseek-official',
   model: 'deepseek-v4-flash',
   reasoningEffort: ReasoningEffortId('max'),
@@ -46,6 +46,8 @@ await using harness = new DeepSeekHarness({
 const result = await harness.run('say hi')
 console.log(result.finalResponse)
 ```
+
+新建的 `sdk` profile 使用 Native JSON overlay，例如 `{"formatVersion":1,"installations":[{"id":"app","config":{"systemPrompt":"遵循项目说明。"}}]}`。CLI 按既有 profile 的 `package.json` 选择 Native 或 Cordis，不会重写已有 profile。要显式创建 Cordis profile，可使用自定义名称，例如 `dsh --profile legacy-sdk --from-default-profile sdk`；Cordis 源码启动需要先构建 CLI，因为 SDK 不再提供源码专用的 Cordis overlay。
 
 子进程在首次使用时惰性启动，并在多次 `run()` 调用之间持续归实例所有；请调用 `close()`（或使用 `await using`），子进程才总能被回收。`start()` 会记忆化有界的 `initialize` 握手，其中包含工作区 cwd、提供方／模型路由、可选且由适配器持有的 `reasoningEffort`，以及可选的正整数 `maxTokens` 输出上限。Native SDK 还接受可选的 `maxSteps`；握手必须返回不大于请求值的正有效上限。兼容 Cordis runtime 会明确拒绝这个 Native 专属字段。服务器会在接受提示词前校验该确切路由；省略推理强度时保留模型自身的默认值。`initializeTimeoutMs` 默认 30 秒，为冷启动时完整 profile 就绪握手留出时间；诊断会写明所选 profile 并附带保留的 stderr 尾部。`run(input, { sessionId?, onNotification? })` 接受文本或 `SdkPromptContentBlock[]`；内联栅格图像块携带规范 base64 与 `mimeType`，并在运行时内变成持久附件。该调用拥有一个活动区间：它将提示词排入队列，等待其消息 id 出现在持久入队回执中，然后持续收集到整个 agent 下一次进入 `idle`。它返回 `RunResult { sessionId, finalResponse, events, notifications }`，其中 `finalResponse` 是该区间内根会话最后提交的助手文本——并非因果上归属于该提示词的响应，因为 steering（中途引导）、注入的上下文和其他排队工作都可能在 idle 前参与其中。`session(id?)` 打开具名或全新的会话句柄。握手失败且清理成功时，实例会换入全新客户端，使后续调用用新进程重试，直到终结性的 `close()`；如果初始化和清理均失败，`start()` 会返回保留两个原因的有序 `AggregateError`，并继续保留失败的客户端，避免在原进程退出尚未得到证明时启动另一个进程。`maxTokens` 限制每个根 agent 请求的输出量，并由进程内后代继承；压缩（compaction）插件单独持有摘要上限。
 
@@ -108,17 +110,18 @@ console.log(result.finalResponse)
 - [JSON-RPC 服务插件](../server/README.zh.md)——服务本客户端的运行时插件。
 - [Python SDK](../../python/README.zh.md) — 共享同一运行时对端与协议的设计孪生。
 - [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
-- [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — 本客户端启动的 `dsh --profile sdk` 运行时应用。
+- [Native SDK 服务端](../native-server/README.zh.md) — 新建标准 `sdk` profile 使用的运行时插件。
+- [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — legacy profile 使用的 Cordis 应用。
 
 -----
 
 <a id="model-experience"></a>
 
-显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
+Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
-显式选择 `profile: "native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
+Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
 
-对于 `profile: "native-sdk"`，`HarnessSession.uploadFile(bytes, name?)` 保存原始文件字节并返回进程内回执。将 `{ type: "file", receiptId }` 放进 `run()` 或 `steer()` 即可按原位置持久化该文件；只有 Native 接受回执块，runtime 重启后需重新上传字节再使用。
+Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessSession.uploadFile(bytes, name?)` 保存原始文件字节并返回进程内回执。将 `{ type: "file", receiptId }` 放进 `run()` 或 `steer()` 即可按原位置持久化该文件；只有 Native 接受回执块，runtime 重启后需重新上传字节再使用。
 
 `HarnessSession.steer(input)` 与 `HarnessClient.steer(sessionId, contentBlocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发。turn 中断后若 root 已暂停，steer 会唤醒它；显式重新启用之前，Goal 工作仍保持关闭。空闲或未知 Session 及兼容 profile 拒绝该请求。
 

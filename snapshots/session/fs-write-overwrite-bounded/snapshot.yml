@@ -1,6 +1,6 @@
 version: 1
 scenario: fs-write-overwrite-bounded
-profile: headless
+profile: legacy-headless
 composition: fs-diff-bound
 recording: live
 header:

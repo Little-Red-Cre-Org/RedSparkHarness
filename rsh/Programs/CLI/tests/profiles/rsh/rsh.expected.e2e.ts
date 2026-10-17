@@ -6,7 +6,7 @@ const binScript = fileURLToPath(new URL('../../../src/bin.ts', import.meta.url))
 const tsconfigPath = fileURLToPath(new URL('../../../../../../tsconfig.host.json', import.meta.url))
 const configPath = fileURLToPath(new URL('../../../../../Compatibility/DSH/bundle/rsh/cordis.patch.yml', import.meta.url))
 
-describe('shipped RSH profile', () => {
+describe('RSH legacy profile template', () => {
   it('rejects a non-interactive pipe through the assembled Loader', async () => {
     const result = await runLoaderSmoke({
       label: 'RSH terminal requirement',
@@ -14,7 +14,7 @@ describe('shipped RSH profile', () => {
       binScript,
       configPath,
       tsconfigPath,
-      binArgs: ['--profile', 'rsh'],
+      binArgs: ['--profile', 'legacy-rsh', '--from-default-profile', 'rsh'],
       expectedExitCode: 1,
       env: { DSH_TELEMETRY_DISABLED: '1' },
     })
@@ -29,7 +29,7 @@ describe('shipped RSH profile', () => {
       binScript,
       configPath,
       tsconfigPath,
-      binArgs: ['--profile', 'rsh', '--dump-config'],
+      binArgs: ['--profile', 'legacy-rsh', '--from-default-profile', 'rsh', '--dump-config'],
       env: { DSH_TELEMETRY_DISABLED: '1' },
     })
     expect(result.stdout).toContain('@deepseek-ai/dsh-rsh')

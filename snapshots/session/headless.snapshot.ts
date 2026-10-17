@@ -502,7 +502,7 @@ async function collectScenarios(): Promise<HeadlessScenario[]> {
     const manifestPath = join(dir, 'snapshot.yml')
     if (!existsSync(manifestPath)) continue
     const manifest = parseSnapshotManifest(await readFile(manifestPath, 'utf8'), manifestPath)
-    if (manifest.profile !== 'headless' || manifest.composition === undefined) continue
+    if (manifest.profile !== 'legacy-headless' || manifest.composition === undefined) continue
     if (manifest.recording === undefined || manifest.header === undefined) {
       throw new Error(`${entry.name}: a headless corpus manifest needs recording and header metadata`)
     }
@@ -876,7 +876,7 @@ describe('headless recorded-session snapshots', () => {
       || mode === 'record' && scenario.manifest.recording === 'authored'
       || mode === 'record' && scenario.manifest.sessionFormat !== undefined
     const scenarioTest = skipped ? it.skip : mode === 'replay' ? it.concurrent : it
-    scenarioTest(`${mode}s ${scenario.name} through dsh --profile headless`, async () => {
+    scenarioTest(`${mode}s ${scenario.name} through dsh --profile legacy-headless`, async () => {
       let fixtures = await fixtureSessions(scenario)
       const primaryFixture = fixtures[0]
       if (primaryFixture === undefined) throw new Error(`${scenario.name}: missing primary session fixture`)
@@ -919,7 +919,7 @@ describe('headless recorded-session snapshots', () => {
           binScript: dshBin,
           configPath: join(baseComposition.dir, 'cordis.yml'),
           binArgs: [
-            '--profile', 'headless',
+            '--profile', 'legacy-headless', '--from-default-profile', 'headless',
             ...patches.flatMap(file => ['--patch', file]),
             task,
           ],

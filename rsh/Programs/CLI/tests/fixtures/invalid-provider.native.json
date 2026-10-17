@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "installations": [
+    {
+      "id": "pi-ai",
+      "config": {
+        "providers": {
+          "deepseek": {
+            "models": [{ "id": "deepseek-v4-flash", "compat": { "thinkingFormat": "quantum" } }]
+          }
+        }
+      }
+    }
+  ]
+}

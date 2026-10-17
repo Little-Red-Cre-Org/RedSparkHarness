@@ -20,6 +20,11 @@
   ],
   "dsh": {
     "nativeProfileTemplates": [
+      "headless",
+      "web",
+      "sdk",
+      "acp",
+      "rsh",
       "native-headless",
       "native-sdk",
       "native-sdk-dsh-child",

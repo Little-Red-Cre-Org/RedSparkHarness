@@ -103,6 +103,7 @@ function main(): void {
       version: '0.0.0',
       private: true,
       dependencies: Object.fromEntries([...packed].map(([name, entryPacked]) => [name, entryPacked.url])),
+      devDependencies: { '@types/node': '^22.20.0' },
     }, null, 2)}\n`)
 
     const environment = consumerEnvironment(consumerRoot)
@@ -118,6 +119,7 @@ function main(): void {
       'install',
       '--no-audit',
       '--no-fund',
+      '--include=dev',
       '--package-lock=false',
       '--loglevel=http',
     ]

@@ -338,6 +338,8 @@ describe('Python SDK dsh profile keyless smoke', () => {
         'tsx/esm',
         binScript,
         '--profile',
+        'legacy-sdk',
+        '--from-default-profile',
         'sdk',
       ], {
         cwd: repoRoot,
