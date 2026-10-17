@@ -394,6 +394,7 @@
     { "path": "./rsh/Tests/test-support/loader-smoke" },
     { "path": "./rsh/Tests/test-support/llm-mock-server" },
     { "path": "./rsh/Modules/Community/experimental/webworker-packer" },
+    { "path": "./rsh/Modules/Community/experimental/webworker-runtime/tsconfig.host.json" },
     { "path": "./rsh/Modules/Community/experimental/inspector/tsconfig.host.json" },
     { "path": "./rsh/Engine/subagent/subagent" },
     { "path": "./rsh/Engine/subagent/subagent-protocol" },

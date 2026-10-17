@@ -15,7 +15,7 @@
       "path": "../../../../Core/vendor/include"
     },
     {
-      "path": "../webworker-runtime"
+      "path": "../webworker-runtime/tsconfig.host.json"
     },
     {
       "path": "../../../../Core/util/home-paths"

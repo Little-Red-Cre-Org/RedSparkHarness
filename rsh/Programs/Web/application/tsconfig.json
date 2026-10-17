@@ -1,5 +1,5 @@
 {
-  "extends": "../../../../tsconfig.base.json",
+  "extends": "../../../../tsconfig.base.client.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "lib/types",
@@ -10,6 +10,7 @@
       "DOM.Iterable"
     ],
     "types": [
+      "client-build-environment",
       "node"
     ]
   },
@@ -122,6 +123,9 @@
     "tests/workflow-run.e2e.ts"
   ],
   "references": [
+    {
+      "path": "../../../Modules/Community/experimental/webworker-runtime/tsconfig.client.json"
+    },
     {
       "path": "../client/store"
     },

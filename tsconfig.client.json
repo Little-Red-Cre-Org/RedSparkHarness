@@ -111,6 +111,7 @@
     { "path": "./rsh/Programs/Web/client/ui-attachment" },
     { "path": "./rsh/Programs/Web/client/ui-primitives" },
     { "path": "./rsh/Programs/Web/client/modules" },
+    { "path": "./rsh/Modules/Community/experimental/webworker-runtime/tsconfig.client.json" },
     { "path": "./rsh/Modules/Community/experimental/inspector/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/client/hmr" },
     { "path": "./rsh/Programs/Web/client/connection/tsconfig.client.json" },
