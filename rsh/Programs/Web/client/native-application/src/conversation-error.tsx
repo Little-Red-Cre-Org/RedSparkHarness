@@ -1,4 +1,5 @@
 /** Localized presentation for conversation failures with their original detail. */
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 
 type Translate = TranslateNS<'nativeApplication'>
@@ -18,7 +19,7 @@ function modelSetupFailure(error: string): 'missing-credential' | 'auth' | undef
   return undefined
 }
 
-/** Render friendly conversation copy and disclose the raw failure on demand.
+/** Render a localized transcript alert and disclose the raw failure on demand.
  * @param props.error - raw failure text from the conversation snapshot.
  * @param props.t - native application translation callback.
  * @param props.onOpenModelSettings - open Settings at Models for credential failures.
@@ -32,10 +33,18 @@ export function ConversationError({ error, t, onOpenModelSettings, className }: 
   className?: string | undefined
 }) {
   const setup = modelSetupFailure(error)
+  const title = setup === 'auth' ? t('modelSetupAuth') : t('error')
+  const guidance = setup === 'missing-credential' ? t('modelSetupMissingCredential')
+    : setup === 'auth' ? t('modelSetupCredentialGuidance') : undefined
   return (
     <div className={className} role="alert">
-      <p>{setup === 'missing-credential' ? t('modelSetupMissingCredential') : setup === 'auth' ? t('modelSetupAuth') : t('error')}</p>
-      {setup === undefined ? null : <button type="button" onClick={onOpenModelSettings}>{t('openModelSettings')}</button>}
+      <div>
+        <strong>{title}</strong>
+        {guidance === undefined ? null : <p>{guidance}</p>}
+      </div>
+      {setup === undefined ? null : <Button variant="outline" size="sm" onClick={onOpenModelSettings}>
+        {t('openModelSettings')}
+      </Button>}
       <details>
         <summary>{t('errorDetails')}</summary>
         <pre>{error}</pre>

@@ -300,6 +300,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       : pendingDefaultError ? 'busySendPreferenceUnavailable'
         : pendingDefault === 'steer' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
   </form>
+  const errorCard = snapshot.error === undefined ? null : <ConversationError className={css.error} error={snapshot.error} t={t}
+    onOpenModelSettings={requestNativeModelSettings} />
   return <>
     <main className={css.page}>
       <h1 className={css.visuallyHidden}>{t('title')}</h1>
@@ -312,8 +314,6 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
         </div>
         <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <><NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />{renderSlot('native.conversation.actions', {})}</>}</nav>
       </header>
-      {snapshot.error === undefined ? null : <ConversationError className={css.error} error={snapshot.error} t={t}
-        onOpenModelSettings={requestNativeModelSettings} />}
       {selected === undefined || !hasConversation
         ? <section className={css.empty}>
           <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="hero" state="idle"
@@ -334,6 +334,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             {selected === undefined ? <AgentPresetSeat roster={presetSeat}
               stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
           </div>
+          {errorCard}
           {composer}
         </section>
         : <>
@@ -357,6 +358,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
               {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
                 answerHuman={answerHuman} prompt={snapshot.human}
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
+              {errorCard}
             </section>
           </div>
           <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>
@@ -388,6 +390,7 @@ export const plugin: NativePlugin = {
       context.own(clientLocale.register('nativeApplication', { en, zh }))
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
+      let cancelledSend = false
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
       let homeDirectory: string | undefined
@@ -462,8 +465,9 @@ export const plugin: NativePlugin = {
           createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
+            cancelledSend = false
             await controller.send(text, files)
-            return controller.getSnapshot().error === undefined
+            return !cancelledSend && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),
@@ -471,7 +475,10 @@ export const plugin: NativePlugin = {
           refreshPendingSubmissions: controller.refreshPendingSubmissions.bind(controller),
           keepDraft: controller.keepDraft.bind(controller),
           takeDraft: controller.takeDraft.bind(controller),
-          cancel: () => { controller.cancel() },
+          cancel: () => {
+            controller.cancel()
+            cancelledSend = controller.getSnapshot().state === 'cancelling'
+          },
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
           selectPreset: controller.selectPreset.bind(controller),

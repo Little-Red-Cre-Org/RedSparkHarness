@@ -834,14 +834,19 @@ it.each([
     await waitFor(() => { expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false) })
     const composerInput = screen.getByRole('textbox', { name: 'Message' })
     const escCancelled = Promise.withResolvers<undefined>()
-    prompt.mockImplementationOnce((_id, _text, _resume, signal) => new Promise((resolve) => {
-      signal?.addEventListener('abort', () => { escCancelled.resolve(undefined); resolve({ exitCode: 130, answer: '' }) }, { once: true })
+    prompt.mockImplementationOnce((_id, _text, _resume, signal) => new Promise((_resolve, reject) => {
+      signal?.addEventListener('abort', () => {
+        escCancelled.resolve(undefined)
+        reject(new Error('native conversation: user cancelled'))
+      }, { once: true })
     }))
     fireEvent.submit(composerInput.closest('form')!)
     await waitFor(() => { expect(conversation?.getSnapshot().state).toBe('sending') })
     fireEvent.keyDown(composerInput, { key: 'Escape' })
     await escCancelled.promise
     await waitFor(() => { expect(conversation?.getSnapshot().state).toBe('ready') })
+    expect(screen.queryAllByRole('alert').some(alert =>
+      /Request failed|请求失败/.test(alert.textContent ?? ''))).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'Move workspace New up' }))
     await waitFor(() => { expect(reorderWorkspace).toHaveBeenCalledWith('workspace-new', workspaceId, expect.any(AbortSignal)) })

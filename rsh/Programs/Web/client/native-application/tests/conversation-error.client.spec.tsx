@@ -12,13 +12,15 @@ afterEach(cleanup)
 const t = ((key: keyof typeof en) => en[key]) as Parameters<typeof ConversationError>[0]['t']
 
 it.each([
-  ['llm-deepseek: no API key for provider route "deepseek"; set DEEPSEEK_API_KEY', en.modelSetupMissingCredential, true],
-  ['native-model-execution: model error: 401 Authentication Fails', en.modelSetupAuth, true],
-  ['native conversation: turn exited with code 1', en.error, false],
-])('shows friendly copy for %s and keeps the raw detail', (error, message, offersSettings) => {
+  ['llm-deepseek: no API key for provider route "deepseek"; set DEEPSEEK_API_KEY', en.error, en.modelSetupMissingCredential, true],
+  ['native-model-execution: model error: 401 Authentication Fails', en.modelSetupAuth, en.modelSetupCredentialGuidance, true],
+  ['native conversation: turn exited with code 1', en.error, undefined, false],
+])('shows friendly copy for %s and keeps the raw detail collapsed', (error, title, guidance, offersSettings) => {
   const open = vi.fn()
   render(<ConversationError error={error} t={t} onOpenModelSettings={open} />)
-  expect(screen.getByRole('alert').querySelector('p')?.textContent).toBe(message)
+  expect(screen.getByRole('alert').querySelector('strong')?.textContent).toBe(title)
+  expect(screen.getByRole('alert').querySelector('p')?.textContent).toBe(guidance)
+  expect(screen.getByRole('alert').querySelector('details')?.hasAttribute('open')).toBe(false)
   expect(screen.getByText(error)).toBeTruthy()
   const button = screen.queryByRole('button', { name: en.openModelSettings })
   expect(button !== null).toBe(offersSettings)

@@ -238,7 +238,8 @@ export class NativeConversationController {
       const result = await runTurn(turn.signal, admission,
         (frame) => { this.observe(frame, admission) },
         (error) => {
-          if (this.followErrorOwner === admission && this.snapshot.selected === id && !this.lifetime.signal.aborted) {
+          if (this.followErrorOwner === admission && this.snapshot.selected === id && !turn.signal.aborted
+            && !this.lifetime.signal.aborted) {
             this.publish({ error: error instanceof Error ? error.message : String(error) })
           }
         }, AbortSignal.any([this.lifetime.signal, turnDetach.signal]))
@@ -247,7 +248,7 @@ export class NativeConversationController {
       }
     } catch (error: unknown) {
       // A detach only stops this view's waiter; the Host turn keeps running.
-      if (!turnDetach.signal.aborted) {
+      if (!turnDetach.signal.aborted && !turn.signal.aborted) {
         turnFailed = true
         throw error
       }
@@ -763,7 +764,7 @@ export class NativeConversationController {
     return work
   }
 
-  /** Stop the selected Host turn; readiness is published only by the settled send operation. */
+  /** Stop the selected Host turn; settlement returns the conversation to ready without a cancellation error. */
   cancel(): void {
     if (this.turn === undefined) return
     this.publish({ state: 'cancelling' })

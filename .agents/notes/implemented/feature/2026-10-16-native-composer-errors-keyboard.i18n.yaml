@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-16-native-composer-errors-keyboard.md
-2026-10-16-native-composer-errors-keyboard.md: 4cc340a5cde3375331111cb08afe3ed75371e97c
-2026-10-16-native-composer-errors-keyboard.zh.md: 97f98c6dc0e6f3f0dbd5aab82a3381593a91b485
+2026-10-16-native-composer-errors-keyboard.md: 9ae635f3e78d31b442dc6a9b7759dc8d90864207
+2026-10-16-native-composer-errors-keyboard.zh.md: 5b9b5f03b3f4ebc184b4a7342b53690fe8f96866

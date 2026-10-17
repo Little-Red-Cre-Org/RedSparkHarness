@@ -502,7 +502,7 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     delayRead = false
     reads[4]!.resolve(inbox)
     await cancellingRetry
-    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: 'native conversation: user cancelled' })
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: undefined })
     expect(promptCount).toBe(promptsBeforeRetry)
     const callsBeforeRetry = calls.length
     delayRead = true
