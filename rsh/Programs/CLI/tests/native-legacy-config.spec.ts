@@ -36,7 +36,13 @@ it('migrates recognized settings into native profile and Client installations wi
   const presetRow = profile.installations.find(row => row.id === 'agent-presets')!
   const storedProfile = {
     ...profile,
-    installations: profile.installations.map(row => row.id === presetRow.id ? { ...row, disabled: true } : row)
+    installations: profile.installations.map((row) => {
+      const key = row.id === presetRow.id ? 'default'
+        : row.plugin === '@deepseek-ai/dsh-native-sandbox-policy' ? 'mode' : undefined
+      if (key === undefined) return row
+      const config = Object.fromEntries(Object.entries(row.config as Record<string, unknown>).filter(([name]) => name !== key))
+      return { ...row, ...(row.id === presetRow.id ? { disabled: true } : {}), config }
+    })
       .concat({ ...presetRow, id: 'agent-presets-secondary', config: { default: 'operator' } }),
   }
   const effectiveProfile = {
@@ -49,8 +55,9 @@ it('migrates recognized settings into native profile and Client installations wi
   try {
     await migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: effectiveProfile, patchFiles: [], environment: emptyEnvironment })
     const migrated = JSON.parse(await readFile(profilePath, 'utf8')) as typeof profile
-    const client = JSON.parse(await readFile(join(directory, 'rsh.client.json'), 'utf8')) as {
-      installations: { plugin: string; config?: Record<string, unknown> }[]
+    const clientPath = join(directory, 'rsh.client.json')
+    const client = JSON.parse(await readFile(clientPath, 'utf8')) as {
+      installations: { id: string; plugin: string; config?: Record<string, unknown> }[]
     }
     expect(migrated.installations.find(row => row.id === 'agent-presets')?.config)
       .toMatchObject({ default: 'compact' })
@@ -85,7 +92,13 @@ it('migrates recognized settings into native profile and Client installations wi
         ? { ...row, disabled: false } : row.id === 'agent-presets-secondary' ? { ...row, disabled: true } : row),
     }
     await writeFile(profilePath, `${JSON.stringify(withoutPresetDefault, null, 2)}\n`)
-    await writeFile(settingsPath, 'agent-presets:\n  default: standard\n')
+    const clientWithoutLocale = {
+      ...client,
+      installations: client.installations.map(row => row.plugin === '@deepseek-ai/dsh-client-locale'
+        ? { id: row.id, plugin: row.plugin } : row),
+    }
+    await writeFile(clientPath, `${JSON.stringify(clientWithoutLocale, null, 2)}\n`)
+    await writeFile(settingsPath, 'agent-presets:\n  default: standard\nlocale:\n  preference: system\n')
     await migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home,
       profile: effectiveWithoutDefault, patchFiles: [], environment: emptyEnvironment })
     const standingPresetFile = await readFile(profilePath, 'utf8')
@@ -100,13 +113,14 @@ it('migrates recognized settings into native profile and Client installations wi
     await migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home,
       profile: effectiveStandingProfile, patchFiles: [], environment: emptyEnvironment })
     expect(await readFile(profilePath, 'utf8')).toBe(standingPresetFile)
+    expect(JSON.parse(await readFile(clientPath, 'utf8'))).toEqual(clientWithoutLocale)
   } finally {
     stderr.mockRestore()
     await rm(home, { recursive: true, force: true })
   }
 })
 
-it('rejects a migration target that differs from both the legacy value and shipped template', async () => {
+it('rejects persisted migration conflicts, including shipped defaults and system locale', async () => {
   const { home, directory, profile } = await nativeWebProfile()
   const settingsPath = join(home, 'settings.yaml')
   const settingsText = 'agent-presets:\n  default: compact\n'
@@ -121,7 +135,7 @@ it('rejects a migration target that differs from both the legacy value and shipp
   try {
     await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: conflicting,
       patchFiles: [], environment: emptyEnvironment }))
-      .rejects.toThrow('migration conflict:')
+      .rejects.toThrow(`${settingsPath} agent-presets.default="compact" conflicts with ${profilePath} installations[agent-presets].config.default="operator"`)
     const patchedToLegacy = {
       ...conflicting,
       installations: conflicting.installations.map(row => row.plugin === '@deepseek-ai/dsh-agent-presets'
@@ -132,6 +146,35 @@ it('rejects a migration target that differs from both the legacy value and shipp
       .rejects.toThrow('migration conflict:')
     expect(JSON.parse(await readFile(profilePath, 'utf8'))).toEqual(conflicting)
     expect(await readFile(settingsPath, 'utf8')).toBe(settingsText)
+
+    const shippedDefault = profile.installations.find(row => row.id === 'agent-presets')!.config as { default: string }
+    const templateValue = {
+      ...profile,
+      installations: profile.installations.map(row => row.id === 'agent-presets'
+        ? { ...row, config: { default: shippedDefault.default } } : row),
+    }
+    await writeFile(profilePath, `${JSON.stringify(templateValue, null, 2)}\n`)
+    await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: templateValue,
+      patchFiles: [], environment: emptyEnvironment }))
+      .rejects.toThrow(`${settingsPath} agent-presets.default="compact" conflicts with ${profilePath} installations[agent-presets].config.default="standard"`)
+
+    const clientPath = join(directory, 'rsh.client.json')
+    const client = JSON.parse(await readFile(clientPath, 'utf8')) as {
+      installations: { id: string; plugin: string; config?: Record<string, unknown> }[]
+    }
+    const clientWithLocale = {
+      ...client,
+      installations: client.installations.map(row => row.plugin === '@deepseek-ai/dsh-client-locale'
+        ? { ...row, config: { locale: 'zh' } } : row),
+    }
+    await writeFile(clientPath, `${JSON.stringify(clientWithLocale, null, 2)}\n`)
+    const localeSettings = 'locale:\n  preference: system\n'
+    await writeFile(settingsPath, localeSettings)
+    await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile,
+      patchFiles: [], environment: emptyEnvironment }))
+      .rejects.toThrow(`${settingsPath} locale.preference="system" conflicts with ${clientPath} installations[dsh-client-locale].config.locale="zh"`)
+    expect(JSON.parse(await readFile(clientPath, 'utf8'))).toEqual(clientWithLocale)
+    expect(await readFile(settingsPath, 'utf8')).toBe(localeSettings)
   } finally {
     await rm(home, { recursive: true, force: true })
   }

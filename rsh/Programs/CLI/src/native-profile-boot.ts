@@ -45,8 +45,29 @@ function isNativeRunAdmissionInterruption(error: unknown): boolean {
   )
 }
 
+/** The process proxy installation shared by overlapping native launches; the last owner releases it. */
+let sharedProxy: { owners: number; installed: Promise<() => Promise<void>> } | undefined
+
+async function acquireProxy(environment: Parameters<typeof installProxyFromEnvironment>[0]): Promise<() => Promise<void>> {
+  const shared = sharedProxy ??= { owners: 0, installed: installProxyFromEnvironment(environment,
+    (message) => { process.stderr.write(`dsh: ${message}\n`) }) }
+  shared.owners++
+  let dispose: () => Promise<void>
+  try {
+    dispose = await shared.installed
+  } catch (error) {
+    if (sharedProxy === shared) sharedProxy = undefined
+    throw error
+  }
+  return async () => {
+    if (--shared.owners > 0) return
+    if (sharedProxy === shared) sharedProxy = undefined
+    await dispose()
+  }
+}
+
 /** Check legacy launch configuration, migrate supported settings, then launch a native application.
- * The global proxy stays installed until the Host has stopped.
+ * Overlapping launches share the process proxy installation until the last Host has stopped.
  * @param options - selected profile, ordered JSON patches, app arguments, and optional Harness home.
  * @returns completion after application exit and complete Host teardown.
  * @throws when legacy configuration is unsupported or native profile startup fails.
@@ -72,8 +93,7 @@ export async function runNativeProfile(options: {
     const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
     carrier = { plugin, scope: 'root' }
   }
-  const disposeProxy = await installProxyFromEnvironment(environment,
-    (message) => { process.stderr.write(`dsh: ${message}\n`) })
+  const disposeProxy = await acquireProxy(environment)
   let proxyDisposal: Promise<void> | undefined
   const releaseProxy = (): Promise<void> => proxyDisposal ??= disposeProxy()
   let loaded = await loadNativeProfile({

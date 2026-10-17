@@ -12,7 +12,7 @@ Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由�
 
 ## `settings.yaml` 中的值
 
-settings 文档路径遵循应用有序 `--patch` 后生效的 `@deepseek-ai/dsh-settings-file` 安装项配置，surface 选择也使用该有效组合。仅在目标未设置或仍等于 shipped 模板值时，支持的迁移才会写入原始持久 Native profile 或 Client JSON 文件；patch 文件不会写回。目标已等于旧值时保持不变；其他目标值会停止启动，冲突诊断会列出两边的文件路径和值。CLI 会先校验所有选定迁移，再写入任一文件，并为写入的每个值向 stderr 打一行说明。
+settings 文档路径遵循应用有序 `--patch` 后生效的 `@deepseek-ai/dsh-settings-file` 安装项配置，surface 选择也使用该有效组合。仅当目标未设置时，支持的迁移才会写入原始持久 Native profile 或 Client JSON 文件；patch 文件不会写回。目标已等于迁移值时会跳过；任何其他已持久化的目标值都会停止启动，冲突诊断会列出两边的值，以及精确的来源和目标文件键。CLI 会先校验所有选定迁移，再写入任一文件，并为写入的每个值向 stderr 打一行说明。
 
 | 旧 setting | 安装此插件时检查 | Native 处理方式 |
 |---|---|---|
@@ -24,7 +24,7 @@ settings 文档路径遵循应用有序 `--patch` 后生效的 `@deepseek-ai/dsh
 | `agent-default-model.reasoningEffort` | `@deepseek-ai/dsh-native-web-session-controller` | 报错：该字段已删除；请移除。 |
 | `agent-presets.default` | `@deepseek-ai/dsh-agent-presets` | preset id 状态为 ready 时迁移到 `rsh.profile.json` 中该安装项的 `config.default`；id 不存在或仍使用 `agent.cordis.yml` 时会报错。 |
 | `permission.defaultPreset` | `@deepseek-ai/dsh-native-sandbox-policy` | 将 `read-only` 或 `workspace-write` 迁移到 sandbox `config.mode`，并将 approval `config.policy` 设为 `"ask"`；将 `danger-full-access` 迁移到 sandbox `config.mode`，并将 approval `config.policy` 设为 `"never"`。其他值报错。 |
-| `locale.preference` | `rsh.client.json` 中的 `@deepseek-ai/dsh-client-locale` | 将 `en` 或 `zh` 迁移到 Client `config.locale`。`system` 保持未设置，使 Client 跟随浏览器语言。其他值报错。 |
+| `locale.preference` | `rsh.client.json` 中的 `@deepseek-ai/dsh-client-locale` | 将 `en` 或 `zh` 迁移到 Client `config.locale`。`system` 保持未设置，使 Client 跟随浏览器语言；若 Native locale 已显式设置则发生冲突。其他值报错。 |
 | `ui-theme.preference` | `rsh.client.json` 中的 `@deepseek-ai/dsh-client-ui-theme` | 将 `light`、`dark` 或 `system` 迁移到 Client `config.preference`。 |
 | `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` | 报错：将 provider 值迁移到 `llm-pi-ai.providers`，或安装 `@deepseek-ai/dsh-llm-deepseek` 并把字段写入其 `rsh.profile.json` 安装项配置。 |
 | `agent-loop.maxParallelToolCalls` | `@deepseek-ai/dsh-native-agent` | 报错：Native 没有并行调用上限设置；请移除该键。 |
@@ -57,10 +57,10 @@ Native CLI 会拒绝非空的 `$DSH_HOME/profiles/<name>/cordis.yml` 与 Cordis 
 
 ## 全局代理
 
-Native CLI 启动会从启动环境快照解析进程代理，并在加载 profile 插件前安装它。同一个全局 dispatcher 会代理 Native 模型与工具的 HTTP 请求。Host 关闭后，CLI 会释放 dispatcher。支持的代理变量与路由见[网络代理指南](user/guide/network-proxy.zh.md)。
+Native CLI 启动会从启动环境快照解析进程代理，并在加载 profile 插件前安装它。同一个全局 dispatcher 会代理 Native 模型与工具的 HTTP 请求。重叠启动会共享一次安装，并由最后关闭的 Host 释放。支持的代理变量与路由见[网络代理指南](user/guide/network-proxy.zh.md)。
 
 ## 处理冲突
 
-打开冲突诊断指出的文件并选择一个值。要保留 Native 值，就移除对应的旧 setting；要保留旧值，就将 Native 安装项配置改为旧值后重新启动。本文列出每个受支持旧键及其 Native 目标。
+按冲突诊断中指出的来源或目标文件与键处理。要保留 Native 值，就移除对应的旧 setting；要使用旧值产生的 Native 值，就修改 Native 键后重新启动。本文列出每个受支持旧键及其 Native 目标。
 
 Profile 启动与 patch 行为见[dsh CLI 行为参考](../Programs/CLI/reference/README.zh.md)。

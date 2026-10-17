@@ -12,7 +12,7 @@ The Native CLI checks configuration for installed, enabled plugins in `rsh.profi
 
 ## `settings.yaml` values
 
-The settings document path follows the active `@deepseek-ai/dsh-settings-file` installation config after ordered `--patch` overlays. Surface selection also uses that effective composition. Supported migrations write to the original persistent Native profile or Client JSON file only when the target is unset or still equals its shipped template value; patch files are never written. A target already equal to the legacy value is left alone. Any other target value stops startup with both file paths and values in the conflict diagnostic. The CLI validates all selected migrations before writing either file and prints one stderr line for each value it writes.
+The settings document path follows the active `@deepseek-ai/dsh-settings-file` installation config after ordered `--patch` overlays. Surface selection also uses that effective composition. Supported migrations write to the original persistent Native profile or Client JSON file only when the target is unset; patch files are never written. A target already equal to the migration value is skipped. Any other persisted target value stops startup with both values and the exact source and target file keys in the conflict diagnostic. The CLI validates all selected migrations before writing either file and prints one stderr line for each value it writes.
 
 | Legacy setting | Checked when this plugin is installed | Native handling |
 |---|---|---|
@@ -24,7 +24,7 @@ The settings document path follows the active `@deepseek-ai/dsh-settings-file` i
 | `agent-default-model.reasoningEffort` | `@deepseek-ai/dsh-native-web-session-controller` | Error: this field is deleted; remove it. |
 | `agent-presets.default` | `@deepseek-ai/dsh-agent-presets` | Migrate a ready preset id to that installation's `config.default` in `rsh.profile.json`; error when the id is missing or still uses `agent.cordis.yml`. |
 | `permission.defaultPreset` | `@deepseek-ai/dsh-native-sandbox-policy` | Migrate `read-only` or `workspace-write` to sandbox `config.mode` and approval `config.policy: "ask"`; migrate `danger-full-access` to sandbox `config.mode` and approval `config.policy: "never"`. Other values error. |
-| `locale.preference` | `@deepseek-ai/dsh-client-locale` in `rsh.client.json` | Migrate `en` or `zh` to Client `config.locale`. Leave `system` unset so the Client follows the browser language. Other values error. |
+| `locale.preference` | `@deepseek-ai/dsh-client-locale` in `rsh.client.json` | Migrate `en` or `zh` to Client `config.locale`. Leave `system` unset so the Client follows the browser language; an explicitly set Native locale conflicts. Other values error. |
 | `ui-theme.preference` | `@deepseek-ai/dsh-client-ui-theme` in `rsh.client.json` | Migrate `light`, `dark`, or `system` to Client `config.preference`. |
 | `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` | Error: move provider values to `llm-pi-ai.providers`, or install `@deepseek-ai/dsh-llm-deepseek` and put them in its `rsh.profile.json` installation config. |
 | `agent-loop.maxParallelToolCalls` | `@deepseek-ai/dsh-native-agent` | Error: Native has no parallel-call limit setting; remove this key. |
@@ -57,10 +57,10 @@ Native CLI startup refuses a nonempty `$DSH_HOME/profiles/<name>/cordis.yml` and
 
 ## Global proxy
 
-Native CLI startup resolves the process proxy from the launch environment snapshot and installs it before loading profile plugins. The same global dispatcher covers Native model and tool HTTP requests. The CLI disposes the dispatcher after Host shutdown. See the [network proxy guide](user/guide/network-proxy.md) for the supported proxy variables and routes.
+Native CLI startup resolves the process proxy from the launch environment snapshot and installs it before loading profile plugins. The same global dispatcher covers Native model and tool HTTP requests. Overlapping launches share one installation, which the last Host shutdown releases. See the [network proxy guide](user/guide/network-proxy.md) for the supported proxy variables and routes.
 
 ## Resolve a conflict
 
-Open the file named in the conflict diagnostic and choose one value. Keep the Native value by removing the matching legacy setting, or edit the Native installation config to the legacy value and start again. The migration document describes the source setting and Native target for each supported key.
+Use the exact source or target file and key named in the conflict diagnostic. Keep the Native value by removing the matching legacy setting, or set the Native key to the value produced by that legacy setting and start again. The migration document describes the source setting and Native target for each supported key.
 
 See the [CLI behavior reference](../Programs/CLI/reference/README.md) for profile startup and patch behavior.

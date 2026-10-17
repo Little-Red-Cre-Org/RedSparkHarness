@@ -10,9 +10,6 @@ import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environm
 import { parseNativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
 import { parseNativeSettingsDocument, resolveNativeSettingsConfig } from '@deepseek-ai/dsh-settings-file/native'
 import {
-  SHIPPED_NATIVE_PROFILES, shippedNativeProfileClientComposition, shippedNativeProfileComposition,
-} from './native-profile-template.ts'
-import {
   applyNativeProfilePatches, parseNativeProfileConfig, type NativeProfileConfig,
 } from './native-profile-config.ts'
 import { expandNativeProfilePresets, nearestNativeProfileInstallation } from './native-profile-loader.ts'
@@ -32,16 +29,11 @@ type SettingsRule = {
   namespace: string
   key?: string
   surfaces: readonly string[]
-  action: 'pass' | 'error' | 'agent-default' | 'permission-default' | 'locale' | 'theme'
+  action: 'error' | 'agent-default' | 'permission-default' | 'locale' | 'theme'
   remedy?: string
 }
 
 const SETTINGS_RULES: readonly SettingsRule[] = [
-  { namespace: 'llm-pi-ai', surfaces: ['@deepseek-ai/dsh-llm-pi-ai'], action: 'pass' },
-  { namespace: 'web-search-deepseek', surfaces: ['@deepseek-ai/dsh-web-search-deepseek'], action: 'pass' },
-  { namespace: 'ui-conversation', key: 'busyEnter', surfaces: [WEB_SESSION_CONTROLLER], action: 'pass' },
-  { namespace: 'agent-default-model', key: 'provider', surfaces: [WEB_SESSION_CONTROLLER], action: 'pass' },
-  { namespace: 'agent-default-model', key: 'model', surfaces: [WEB_SESSION_CONTROLLER], action: 'pass' },
   { namespace: 'agent-presets', key: 'default', surfaces: [AGENT_PRESETS], action: 'agent-default' },
   { namespace: 'permission', key: 'defaultPreset', surfaces: [NATIVE_SANDBOX_POLICY], action: 'permission-default' },
   { namespace: 'locale', key: 'preference', surfaces: [CLIENT_LOCALE], action: 'locale' },
@@ -132,11 +124,9 @@ function settingValue(document: Record<string, unknown>, namespace: string, key:
     : { present: Object.hasOwn(fields, key), value: fields[key] }
 }
 
-function hasSurface(
-  surface: string, profilePackages: ReadonlySet<string>, clientPackages: ReadonlySet<string>, hasClient: boolean,
-): boolean {
+function hasSurface(surface: string, profilePackages: ReadonlySet<string>, clientPackages: ReadonlySet<string>): boolean {
   if (surface === NATIVE_CLI) return true
-  return profilePackages.has(surface) || hasClient && clientPackages.has(surface)
+  return profilePackages.has(surface) || clientPackages.has(surface)
 }
 
 function targetValue(row: { config?: unknown }, key: string): { present: boolean; value: unknown } {
@@ -149,15 +139,14 @@ function sameTargetValue(left: { present: boolean; value: unknown }, right: { pr
   return left.present === right.present && (!left.present || isDeepStrictEqual(left.value, right.value))
 }
 
-function templateValue(
-  rows: readonly { plugin: string; config?: unknown }[], plugin: string, key: string,
-): { present: boolean; value: unknown } {
-  const row = rows.find(candidate => candidate.plugin === plugin)
-  return row === undefined ? { present: false, value: undefined } : targetValue(row, key)
-}
-
 function rendered(value: unknown): string {
   return value === undefined ? '<unset>' : JSON.stringify(value)
+}
+
+function migrationConflict(source: string, sourceValue: unknown, path: string, installationId: string,
+  key: string, nativeValue: unknown): Error {
+  const target = `${path} installations[${installationId}].config.${key}`
+  return new Error(`dsh: migration conflict: ${source}=${rendered(sourceValue)} conflicts with ${target}=${rendered(nativeValue)}; change ${source} or ${target}; see ${MIGRATION_DOC}`)
 }
 
 function settingsDocument(profile: NativeProfileConfig): { filename: string; document: Record<string, unknown> } | undefined {
@@ -184,25 +173,25 @@ function nativeClientPath(profile: NativeProfileConfig): string | undefined {
   return join(resolve(projectDir), 'rsh.client.json')
 }
 
-function validateNativePreset(id: unknown, profile: NativeProfileConfig, target: Installation): void {
-  if (typeof id !== 'string') throw new Error(`dsh: agent-presets.default must name a native preset; see ${MIGRATION_DOC}`)
+function validateNativePreset(id: unknown, profile: NativeProfileConfig, target: Installation, source: string): void {
+  if (typeof id !== 'string') throw new Error(`dsh: ${source}=${rendered(id)} must name a native preset; see ${MIGRATION_DOC}`)
   const standings = profile.installations.filter(row => row.plugin === AGENT_PRESET_STANDING && row.disabled !== true
     && record(row.config)?.id === id)
   const registered = standings.some(row => nearestNativeProfileInstallation(profile, row.scope, AGENT_PRESETS)?.id === target.id)
   if (registered) return
-  if (standings.length > 0) throw new Error(`dsh: preset ${id} does not exist; see ${MIGRATION_DOC}`)
+  if (standings.length > 0) throw new Error(`dsh: ${source}=${rendered(id)} names missing preset ${id}; see ${MIGRATION_DOC}`)
   const folders = record(target.config)?.folders as readonly NativePresetFolderSummary[] | undefined
   const folder = folders?.find(candidate => candidate.id === id)
   if (folder?.status === 'needs-migration') {
-    throw new Error(`dsh: preset ${id} still uses agent.cordis.yml; rewrite it as agent.native.json; see ${MIGRATION_DOC}`)
+    throw new Error(`dsh: ${source}=${rendered(id)} still uses agent.cordis.yml; rewrite it as agent.native.json; see ${MIGRATION_DOC}`)
   }
   if (folder?.status === 'invalid') {
-    throw new Error(`dsh: preset ${id} is invalid${folder.problem === undefined ? '' : `: ${folder.problem}`}; see ${MIGRATION_DOC}`)
+    throw new Error(`dsh: ${source}=${rendered(id)} names an invalid preset${folder.problem === undefined ? '' : `: ${folder.problem}`}; see ${MIGRATION_DOC}`)
   }
   if (folder?.status === 'ready') {
-    throw new Error(`dsh: preset ${id} is not registered as an active native preset; see ${MIGRATION_DOC}`)
+    throw new Error(`dsh: ${source}=${rendered(id)} is not registered as an active native preset; see ${MIGRATION_DOC}`)
   }
-  throw new Error(`dsh: preset ${id} does not exist; see ${MIGRATION_DOC}`)
+  throw new Error(`dsh: ${source}=${rendered(id)} names missing preset ${id}; see ${MIGRATION_DOC}`)
 }
 
 function activeInstallation(rows: readonly Installation[], plugin: string): Installation | undefined {
@@ -212,10 +201,9 @@ function activeInstallation(rows: readonly Installation[], plugin: string): Inst
 function applySettingsRules(options: {
   settings: { filename: string; document: Record<string, unknown> } | undefined
   profile: NativeProfileConfig
-  clientProfile: { installations: readonly Installation[] } | undefined
+  clientProfile: { path: string; installations: readonly Installation[] } | undefined
   profilePackages: ReadonlySet<string>
   clientPackages: ReadonlySet<string>
-  hasClient: boolean
 }): MigrationIntent[] {
   const { settings, profile, clientProfile } = options
   if (settings === undefined) return []
@@ -230,14 +218,14 @@ function applySettingsRules(options: {
     intents.push({ target, installationId: installation.id, plugin, key, value, sourceValue, source })
   }
   for (const rule of SETTINGS_RULES) {
-    if (rule.action === 'pass' || !rule.surfaces.some(surface => hasSurface(surface, options.profilePackages, options.clientPackages, options.hasClient))) continue
+    if (!rule.surfaces.some(surface => hasSurface(surface, options.profilePackages, options.clientPackages))) continue
     const old = settingValue(settings.document, rule.namespace, rule.key)
     if (!old.present) continue
     const setting = `${settings.filename} ${rule.namespace}${rule.key === undefined ? '' : `.${rule.key}`}`
     if (rule.action === 'error') throw new Error(`dsh: ${setting}; ${rule.remedy}; see ${MIGRATION_DOC}`)
     if (rule.action === 'agent-default') {
       const target = activeInstallation(profile.installations, AGENT_PRESETS)
-      if (target !== undefined) validateNativePreset(old.value, profile, target)
+      if (target !== undefined) validateNativePreset(old.value, profile, target, setting)
       migrate('profile', AGENT_PRESETS, 'default', old.value, old.value, setting)
       continue
     }
@@ -256,7 +244,18 @@ function applySettingsRules(options: {
       continue
     }
     if (rule.action === 'locale') {
-      if (old.value === 'system') continue
+      if (old.value === 'system') {
+        if (clientProfile !== undefined) {
+          const target = activeInstallation(clientProfile.installations, CLIENT_LOCALE)
+          if (target !== undefined) {
+            const current = targetValue(target, 'locale')
+            if (current.present) {
+              throw migrationConflict(setting, old.value, clientProfile.path, target.id, 'locale', current.value)
+            }
+          }
+        }
+        continue
+      }
       if (old.value !== 'en' && old.value !== 'zh') {
         throw new Error(`dsh: ${setting}=${rendered(old.value)} must be en, zh, or system; see ${MIGRATION_DOC}`)
       }
@@ -273,8 +272,7 @@ function applySettingsRules(options: {
 
 type PreparedMigration = { path: string; document: Record<string, unknown>; mode: number; changed: boolean; report: string[] }
 
-function prepareMigrations(path: string, target: MigrationIntent['target'], intents: readonly MigrationIntent[],
-  templateRows: readonly { plugin: string; config?: unknown }[]): PreparedMigration {
+function prepareMigrations(path: string, target: MigrationIntent['target'], intents: readonly MigrationIntent[]): PreparedMigration {
   const report: string[] = []
   const mode = statSync(path).mode & 0o777
   const document = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
@@ -289,15 +287,14 @@ function prepareMigrations(path: string, target: MigrationIntent['target'], inte
     }
     const current = targetValue(row, intent.key)
     if (current.present && isDeepStrictEqual(current.value, intent.value)) continue
-    const shipped = templateValue(templateRows, intent.plugin, intent.key)
-    if (!current.present || shipped.present && isDeepStrictEqual(current.value, shipped.value)) {
+    if (!current.present) {
       const config = record(row.config) ?? {}
       row.config = { ...config, [intent.key]: intent.value }
       report.push(`dsh: migrated ${intent.source}=${rendered(intent.sourceValue)} to ${path} installations[${row.id}].config.${intent.key}=${rendered(intent.value)}; see ${MIGRATION_DOC}`)
       changed = true
       continue
     }
-    throw new Error(`dsh: migration conflict: ${intent.source}=${rendered(intent.sourceValue)}; ${path} installations[${row.id}].config.${intent.key}=${rendered(current.value)} (shipped value ${rendered(shipped.value)}); see ${MIGRATION_DOC}`)
+    throw migrationConflict(intent.source, intent.sourceValue, path, row.id, intent.key, current.value)
   }
   return { path, document, mode, changed, report }
 }
@@ -327,8 +324,6 @@ async function commitMigrations(options: {
   clientPath: string | undefined
   profileIntents: readonly MigrationIntent[]
   clientIntents: readonly MigrationIntent[]
-  profileTemplate: readonly Installation[]
-  clientTemplate: readonly { plugin: string }[]
   patchFiles: readonly string[]
   anchors: readonly ReturnType<typeof createRequire>[]
   home: string
@@ -336,8 +331,8 @@ async function commitMigrations(options: {
   const { profilePath, clientPath, profileIntents, clientIntents } = options
   const applyUnderLocks = async (): Promise<string[]> => {
     const prepared = [
-      ...(profileIntents.length === 0 ? [] : [prepareMigrations(profilePath, 'profile', profileIntents, options.profileTemplate)]),
-      ...(clientIntents.length === 0 || clientPath === undefined ? [] : [prepareMigrations(clientPath, 'client', clientIntents, options.clientTemplate)]),
+      ...(profileIntents.length === 0 ? [] : [prepareMigrations(profilePath, 'profile', profileIntents)]),
+      ...(clientIntents.length === 0 || clientPath === undefined ? [] : [prepareMigrations(clientPath, 'client', clientIntents)]),
     ]
     const profileMigration = prepared.find(migration => migration.path === profilePath)
     if (profileMigration !== undefined) {
@@ -358,10 +353,9 @@ function checkEnvironment(options: {
   environment: LaunchEnvironmentSnapshot
   profilePackages: ReadonlySet<string>
   clientPackages: ReadonlySet<string>
-  hasClient: boolean
 }): void {
   for (const rule of ENVIRONMENT_RULES) {
-    if (!rule.surfaces.some(surface => hasSurface(surface, options.profilePackages, options.clientPackages, options.hasClient))) continue
+    if (!rule.surfaces.some(surface => hasSurface(surface, options.profilePackages, options.clientPackages))) continue
     const entry = options.environment.getFrom(rule.name, ['process'])
     if (entry === undefined || rule.allowDisabled === true && entry.value === 'DISABLED') continue
     throw new Error(`dsh: ${rule.name} is not supported for this native profile; ${rule.remedy}; see ${MIGRATION_DOC}`)
@@ -389,21 +383,18 @@ export async function migrateNativeLegacyConfig(options: {
   const profile = await expandNativeProfilePresets(options.profile, anchors, options.home)
   const clientPath = nativeClientPath(profile)
   const profilePackages = new Set(profile.installations.filter(row => row.disabled !== true).map(row => row.plugin))
-  const hasClient = clientPath !== undefined
   const clientProfile = clientPath !== undefined && existsSync(clientPath)
-    ? parseNativeClientProfile(JSON.parse(readFileSync(clientPath, 'utf8')) as unknown) : undefined
+    ? { path: clientPath,
+      installations: parseNativeClientProfile(JSON.parse(readFileSync(clientPath, 'utf8')) as unknown).installations }
+    : undefined
   const clientRows: Installation[] = clientProfile?.installations.map(row => ({ ...row })) ?? []
   const clientPackages = new Set(clientRows.filter(row => row.disabled !== true).map(row => row.plugin))
-  checkEnvironment({ environment: options.environment, profilePackages, clientPackages, hasClient })
+  checkEnvironment({ environment: options.environment, profilePackages, clientPackages })
   const settings = settingsDocument(profile)
-  const profileTemplate = SHIPPED_NATIVE_PROFILES.includes(options.profileName)
-    ? shippedNativeProfileComposition(options.home, options.profileName).installations : []
-  const clientTemplate = shippedNativeProfileClientComposition(options.profileName)
-  const intents = applySettingsRules({ settings, profile, clientProfile,
-    profilePackages, clientPackages, hasClient })
+  const intents = applySettingsRules({ settings, profile, clientProfile, profilePackages, clientPackages })
   const reports = await commitMigrations({ profilePath, clientPath,
     profileIntents: intents.filter(intent => intent.target === 'profile'),
-    clientIntents: intents.filter(intent => intent.target === 'client'), profileTemplate, clientTemplate,
+    clientIntents: intents.filter(intent => intent.target === 'client'),
     patchFiles: options.patchFiles, anchors, home: options.home })
   for (const line of reports) process.stderr.write(`${line}\n`)
 }
