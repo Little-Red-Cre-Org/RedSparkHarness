@@ -12,7 +12,7 @@ Status: implemented
 
 `dsh.profile.runtime` 显式选择 `native` 或 `legacy`。已存在但未标记的 manifest 只有在声明 `bundles` 数组时才属于 legacy；manifest 缺失时仍由原有初始化器处理，runtime reader 不写入 profile 数据。Native 模板与 legacy app-boot 初始化器各自保存对应的 runtime 标记。
 
-CLI Native 启动器检查 profile 中实际安装的插件，以及由启用的 Native Web Host `config.projectDir` 选择的 Client 安装项。它从应用 JSON patch 后的有效 profile 读取 settings 文件路径和值，再锁定并重读原始持久 JSON 文件后应用迁移意图。当 native 目标未设置或仍为 shipped 模板值时，复制支持的值；目标等于旧值时跳过，其他值作为冲突拒绝。写入前会依据 native preset 发现结果验证 `agent-presets.default` id。它保留 `settings.yaml`；启动变量仅从继承的进程层检查，而 `.env` 继续拒绝 `DSH_*` 启动变量。预检与 Cordis patch 拒绝只在 CLI Native 启动路径运行，不进入 DesktopHost 共用的 profile reader。
+CLI Native 启动器检查 profile 中实际安装的插件，以及由启用的 Native Web Host `config.projectDir` 选择的 Client 安装项。它从应用 JSON patch 后的有效 profile 读取 settings 文件路径和值，再锁定并重读原始持久 JSON 文件后应用迁移意图。仅当 native 目标未设置时复制支持的值；目标等于旧值时跳过，其他任何已持久化的值都作为冲突拒绝，报错写明两边的值以及应修改的文件和 key；`locale.preference: system` 要求 native locale 未设置。写入前会依据 native preset 发现结果验证 `agent-presets.default` id。它保留 `settings.yaml`；启动变量仅从继承的进程层检查，而 `.env` 继续拒绝 `DSH_*` 启动变量。预检与 Cordis patch 拒绝只在 CLI Native 启动路径运行，不进入 DesktopHost 共用的 profile reader。
 
 CLI Native 启动器在激活插件前，根据启动环境安装现有 HTTP 代理 dispatcher，并在 Host 关闭后释放它。
 
