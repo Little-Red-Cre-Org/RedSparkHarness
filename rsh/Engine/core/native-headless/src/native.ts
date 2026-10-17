@@ -421,6 +421,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   private readonly noticeFailures: unknown[] = []
   private readonly activeOwners = new WeakMap<NativeContinuationSession, ActiveOwnerRegistration>()
   private readonly rootEpochs = new Map<SessionId, { owner: NativeContinuationSession; activation: NativeContinuationActivation }>()
+  private readonly rootInterruptions = new Map<SessionId, number>()
   private readonly settledRoots = new WeakMap<NativeAgentExecution, NativeTurnResult>()
   private readonly rootChunkObservers = new WeakMap<NativeContinuationSession, Set<(chunk: StreamChunk) => void>>()
   private readonly rootOperations = new Map<Promise<unknown>, NativeAgent>()
@@ -1630,6 +1631,9 @@ export class NativeHeadlessApplication implements NativeApplication {
           : { kind: 'error', error: { code: 'UNKNOWN', message: error instanceof Error ? error.message : String(error) } }
         throw error
       } finally {
+        if (invocation === 'root' && reason.kind === 'aborted') {
+          this.rootInterruptions.set(id, (this.rootInterruptions.get(id) ?? 0) + 1)
+        }
         if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {
           track(session.append('turn/end', { turn, reason }))
           await persist()
@@ -2683,6 +2687,7 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   private async deliverContinuationInput(sender: NativeAgent, session: Session, id: SessionId,
     message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId> {
+    const interruption = this.rootInterruptions.get(id) ?? 0
     signal.throwIfAborted()
     if (this.agents.get(sender.id) !== sender || sender.id !== NativeAgentId(session.id)) {
       throw new Error('native-headless: continuation sender is not the exact live Agent')
@@ -2715,7 +2720,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       accepted = await (recipient.status === 'idle' ? recipient.runMaintenance(admit)
         : this.admitContinuationWhileBusy(recipient, id, message, target, signal, admit))
     }
-    if (wake) this.queueRootWake(id, recipient)
+    if (wake) this.queueRootWake(id, recipient, interruption)
     return accepted
   }
 
@@ -2759,8 +2764,13 @@ export class NativeHeadlessApplication implements NativeApplication {
     }
   }
 
-  private queueRootWake(id: SessionId, recipient: NativeAgentExecution): void {
+  private queueRootWake(id: SessionId, recipient: NativeAgentExecution,
+    interruption = this.rootInterruptions.get(id) ?? 0): void {
     const operation = recipient.run(async (agentSignal) => {
+      if ((this.rootInterruptions.get(id) ?? 0) !== interruption) {
+        // Cancellation parks unclaimed input until a later wake.
+        return { exitCode: 0 }
+      }
       const owner = await NativeContinuationSession.restore(this.storage, id, agentSignal)
       try {
         if (!owner.hasPending) return { exitCode: 0 }
