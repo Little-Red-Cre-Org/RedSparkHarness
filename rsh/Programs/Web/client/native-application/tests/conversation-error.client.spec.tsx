@@ -15,6 +15,7 @@ it.each([
   ['llm-deepseek: no API key for provider route "deepseek"; set DEEPSEEK_API_KEY', en.error, en.modelSetupMissingCredential, true],
   ['llm-pi-ai: the API key resolved from DEEPSEEK_API_KEY is blank; set DEEPSEEK_API_KEY to the raw key', en.error, en.modelSetupMissingCredential, true],
   ['native-model-execution: model error: 401 Authentication Fails', en.modelSetupAuth, en.modelSetupCredentialGuidance, true],
+  ['DeepSeek API error (HTTP 401): Authentication Fails', en.modelSetupAuth, en.modelSetupCredentialGuidance, true],
   ['transport failure for /api/session/start: HTTP 401', en.error, undefined, false],
   ['native Session list follow: invalid response HTTP 403', en.error, undefined, false],
   ['native conversation: live history sequence gap; expected 401, received 402 (user/message)', en.error, undefined, false],
@@ -124,7 +125,7 @@ it('does not report admission when Session switching aborts a pending image prom
     (_id, _content, _resume, _signal, _observe, _onFollowError, _lastSeq, detach) => {
       promptStarted.resolve(undefined)
       return new Promise<{ exitCode: number; answer?: string }>((_resolve, reject) => {
-        detach?.addEventListener('abort', () => reject(new DOMException('The operation was aborted', 'AbortError')),
+        detach?.addEventListener('abort', () => { reject(new DOMException('The operation was aborted', 'AbortError')) },
           { once: true })
       })
     })

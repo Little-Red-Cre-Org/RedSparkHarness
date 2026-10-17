@@ -472,6 +472,7 @@ export const plugin: NativePlugin = {
           send: async (text: string, files: readonly File[]) => {
             sendCancel.requested = false
             const admitted = await controller.send(text, files)
+            // oxlint-disable-next-line typescript/no-unnecessary-condition -- cancel() may set it during the await.
             return admitted && !sendCancel.requested && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),

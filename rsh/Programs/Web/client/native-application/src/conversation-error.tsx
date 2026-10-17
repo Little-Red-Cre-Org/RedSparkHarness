@@ -9,7 +9,7 @@ type Translate = TranslateNS<'nativeApplication'>
 const MISSING_CREDENTIAL =
   /\bno (?:API key|credential) for provider route\b|\bAPI key\b.*\b(?:is blank|contains characters no HTTP header can carry)\b/i
 const MISSING_SIGN_IN = /\b(?:requires|needs) an active Sign in\b|\bSign in (?:to DeepSeek|with ChatGPT again)\b/i
-const AUTH_STATUS = /\bmodel error:.*?\b(?:HTTP\s*)?(?:401|403)\b/i
+const AUTH_STATUS = /\bmodel error:.*?\b(?:HTTP\s*)?(?:401|403)\b|\bAPI error \(HTTP (?:401|403)\)/i
 const INVALID_CREDENTIAL = /\bauthentication fail|\b(?:invalid|incorrect) API key\b|\bAPI key (?:is )?invalid\b/i
 const INVALID_SIGN_IN = /\baccount identity is invalid\b|\bSign in with ChatGPT (?:credential|account) changed\b/i
 
