@@ -219,7 +219,7 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
 
   // The narrow drawer is modal: the columns beneath it go inert, focus moves into it, and
-  // closing returns focus to the element that opened it (or the rail when that element is gone).
+  // closing returns focus to the element that opened it while that element is still mounted.
   const drawerRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!sidebarOverlay) return
@@ -228,20 +228,30 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
     const opener = document.activeElement
     const background = frame.querySelectorAll(':scope > [data-center-col], :scope > [data-rightbar-col]')
     for (const element of background) element.setAttribute('inert', '')
-    drawer.focus()
+    if (!drawer.contains(document.activeElement)) drawer.focus()
     return () => {
       for (const element of background) element.removeAttribute('inert')
       const active = document.activeElement
       if (active !== null && active !== document.body && !drawer.contains(active)) return
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus()
-      else drawer.querySelector<HTMLElement>('button')?.focus()
+      if (opener instanceof HTMLElement) opener.focus()
     }
   }, [sidebarOverlay])
-  // Escape inside the drawer closes it, unless an open menu claims that Escape first.
+  // Escape closes the drawer and Tab wraps inside it; an open menu or nested modal owns both keys.
   const onDrawerKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== 'Escape' || !e.currentTarget.contains(e.target as Node)) return
-    if (document.querySelector('[role="menu"]') !== null) return
-    actions.collapseNarrow()
+    if (!e.currentTarget.contains(e.target as Node)) return
+    if (document.querySelector('[role="menu"], [aria-modal="true"]:not([data-sidebar-overlay])') !== null) return
+    if (e.key === 'Escape' && !e.defaultPrevented) actions.collapseNarrow()
+    if (e.key !== 'Tab') return
+    const drawer = e.currentTarget as HTMLElement
+    const focusable = drawer.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')
+    const first = focusable[0] as HTMLElement
+    const last = focusable[focusable.length - 1] as HTMLElement
+    const [edge, wrap] = e.shiftKey ? [first, last] : [last, first]
+    if (document.activeElement === edge || (e.shiftKey && document.activeElement === drawer)) {
+      e.preventDefault()
+      wrap.focus()
+    }
   }, [actions])
 
   return (
@@ -266,8 +276,8 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
         }}>
         {sidebar}
       </div>
-      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')}
-        onClick={actions.collapseNarrow} onKeyDown={onDrawerKeyDown} />}
+      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')} tabIndex={-1}
+        onClick={actions.collapseNarrow} />}
       <>
         <CenterColumn>{main}</CenterColumn>
         <RightbarColumn>

@@ -28,11 +28,12 @@ export function ConversationModeLabel({ snapshot, selectPreset, t }: {
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
   const canSelect = ready && controls !== undefined && controls.canSelect && !controls.locked
   useEffect(() => { if (!canSelect) setOpen(false) }, [canSelect])
-  // The selection reload replaces the trigger with a static chip; refocus the trigger once it returns.
+  // The selection reload replaces the trigger with a static chip; refocus the trigger once it returns,
+  // unless the user has moved focus elsewhere meanwhile.
   useEffect(() => {
     if (!canSelect || !refocus.current) return
     refocus.current = false
-    trigger.current?.focus()
+    if (document.activeElement === document.body) trigger.current?.focus()
   }, [canSelect])
   const items = controls?.options.map(option => ({ id: option.id, label: option.name })) ?? []
   return <>
@@ -107,11 +108,12 @@ export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset
   const currentPermissionLabel = permission?.currentValue === null || permission?.currentValue === undefined
     ? t('unavailable') : permissionLabel(permission.currentValue, currentPermission?.name ?? permission.currentValue, t)
   useEffect(() => { if (!ready) setOpen(false) }, [ready])
-  // The trigger is disabled while the selection applies; refocus it once it is enabled again.
+  // The trigger is disabled while the selection applies; refocus it once it is enabled again,
+  // unless the user has moved focus elsewhere meanwhile.
   useEffect(() => {
     if (!ready || !refocusPermission.current) return
     refocusPermission.current = false
-    permissionTrigger.current?.focus()
+    if (document.activeElement === document.body) permissionTrigger.current?.focus()
   }, [ready])
   return (
     <div className={css.root} role="group" aria-label={t('modelControls')}>
