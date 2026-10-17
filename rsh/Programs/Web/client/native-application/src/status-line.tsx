@@ -1,6 +1,6 @@
 /** Compact usage summary derived from the selected Session's loaded events. */
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { assistantStreamFirstTokenTime } from '@deepseek-ai/dsh-llm/assistant-stream'
+import { assistantStreamFirstTokenTime } from '@deepseek-ai/dsh-llm/native'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import css from './conversation.module.css'

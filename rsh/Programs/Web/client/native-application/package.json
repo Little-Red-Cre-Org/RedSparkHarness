@@ -65,7 +65,6 @@
     "@deepseek-ai/dsh-client-ui-goal": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-client-ui-trajectory": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-client-ui-workflow-run": "workspace:^"
@@ -99,6 +98,7 @@
     "@deepseek-ai/dsh-client-ui-sidebar-right": "workspace:^",
     "@deepseek-ai/dsh-client-ui-theme": "workspace:^",
     "@testing-library/react": "^16.1.0",
+    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
