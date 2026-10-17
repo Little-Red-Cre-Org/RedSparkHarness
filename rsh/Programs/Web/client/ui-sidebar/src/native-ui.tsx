@@ -940,7 +940,11 @@ export const plugin: NativePlugin = {
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
-          workspaceRegistry.set(nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame))
+          const next = nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame)
+          if (frame.type === 'baseline' || frame.type === 'archived') {
+            for (const id of next.archivedSessionIds) controller.discardDraft(id)
+          }
+          workspaceRegistry.set(next)
           if (workspaceRegistry.getSnapshot().ready) workspaceBaseline.resolve()
         }
         workspaceBaseline.reject(new Error('Workspace list unavailable'))
@@ -1054,7 +1058,10 @@ export const plugin: NativePlugin = {
         },
         refreshTitle: controller.refreshTitle.bind(controller),
         searchSessions: nativeSession.search.bind(nativeSession),
-        archiveSession: id => nativeSession.archive(id, context.signal),
+        archiveSession: async (id) => {
+          await nativeSession.archive(id, context.signal)
+          controller.discardDraft(id)
+        },
         selectWorkspace: async (id, trust) => {
           const navigation = controller.beginNavigation()
           const { sessionId } = trust === undefined

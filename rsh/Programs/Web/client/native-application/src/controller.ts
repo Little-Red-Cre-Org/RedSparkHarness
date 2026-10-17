@@ -56,6 +56,7 @@ export class NativeConversationController {
   private readonly pending = new Set<Promise<void>>()
   private readonly background = new Set<Promise<void>>()
   private readonly drafts = new Map<SessionId, NativeConversationDraft>()
+  private readonly discardedDrafts = new Set<SessionId>()
   private selectionEpoch = 0
   private navigation = 0
   private submissionRead = 0
@@ -159,13 +160,22 @@ export class NativeConversationController {
     if (this.snapshot.state !== 'ready') throw new Error('native conversation: operation already pending')
   }
 
-  /** Keep a non-empty draft for a Session, deleting an empty draft.
+  /** Keep a non-empty draft, deleting an empty one; archived and removed Sessions ignore new drafts.
    * @param id - owning Session.
    * @param draft - unsent composer text and image files.
    */
   keepDraft(id: SessionId, draft: NativeConversationDraft): void {
+    if (this.discardedDrafts.has(id)) return
     if (draft.text.length === 0 && draft.files.length === 0) this.drafts.delete(id)
     else this.drafts.set(id, draft)
+  }
+
+  /** Drop a Session's draft after archive or deletion.
+   * @param id - owning Session.
+   */
+  discardDraft(id: SessionId): void {
+    this.discardedDrafts.add(id)
+    this.drafts.delete(id)
   }
 
   /** Take and remove a Session's saved draft.
@@ -398,11 +408,16 @@ export class NativeConversationController {
 
   private applyRosterFrame(frame: NativeSessionListFrame): void {
     if (frame.type === 'baseline') {
+      const sessionIds = new Set(frame.items.map(item => item.header.id))
+      for (const id of this.drafts.keys()) {
+        if (!sessionIds.has(id)) this.discardDraft(id)
+      }
       this.publish({ sessions: frame.items })
       return
     }
     const sessions = [...this.snapshot.sessions]
     if (frame.type === 'remove') {
+      this.discardDraft(frame.sessionId)
       this.publish({ sessions: sessions.filter(item => item.header.id !== frame.sessionId) })
       return
     }
@@ -623,9 +638,9 @@ export class NativeConversationController {
   /** Send human text through the Host's sole turn executor.
    * @param text - submitted text; empty text requires at least one image.
    * @param files - browser-selected raster files; Provider limits govern admission.
-   * @returns completion after Host settlement and transcript refresh, or after this view detaches.
+   * @returns whether this send matched a Host receipt or reached the prompt call; preparation can stop before either.
    */
-  send(text: string, files: readonly File[] = []): Promise<void> {
+  send(text: string, files: readonly File[] = []): Promise<boolean> {
     this.assertReady()
     if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
@@ -636,6 +651,7 @@ export class NativeConversationController {
     const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
       && retainedDraft.epoch === this.selectionEpoch && retainedDraft.text === text ? retainedDraft : undefined
     if (reconcileDraft === undefined) this.submissionDraft = undefined
+    let admitted = false
     return this.run(() => this.followTurn(id, this.snapshot.events.at(-1)?.seq ?? -1,
       async (signal, admission, observe, onFollowError, detach) => {
         const workSignal = AbortSignal.any([signal, detach])
@@ -658,6 +674,7 @@ export class NativeConversationController {
           if (matched) {
             if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
             this.publish({ error: undefined })
+            admitted = true
             return undefined
           }
           if (this.submissionDraft === reconcileDraft) this.submissionDraft = undefined
@@ -697,11 +714,13 @@ export class NativeConversationController {
         this.foregroundAdmission = admission
         this.followErrorOwner = admission
         if (reconcileDraft !== undefined) this.publish({ error: undefined })
-        return text.trim().length === 0
+        const prompt = text.trim().length === 0
           ? this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
             true, signal, observe, onFollowError, admission.lastSeq, detach)
           : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach)
-      }, reconcileDraft === undefined))
+        admitted = true
+        return prompt
+      }, reconcileDraft === undefined)).then(() => admitted)
   }
 
   private observe(frame: NativeSessionFollowFrame, admission: { readonly sessionId: SessionId; readonly lastSeq: number }): void {

@@ -59,11 +59,9 @@ export function SettingsPanel({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
       if (event.key !== 'Tab') return
-      // A child dialog portaled over Settings keeps its own Tab order.
-      const dialog = (document.activeElement as Element).closest('[aria-modal="true"]')
-      if (dialog !== null && dialog !== panel.current) return
-      // Keep Tab inside the modal dialog: wrap at either end and pull outside focus back in.
-      const root = panel.current as HTMLDivElement
+      // Keep Tab inside the topmost modal dialog: wrap at either end and pull outside focus back in.
+      const root = (Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')).at(-1)
+        ?? panel.current) as HTMLDivElement
       const focusable = Array.from(root.querySelectorAll<HTMLElement>(
         'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]',
       )).filter(element => element.getAttribute('tabindex') !== '-1' && element.closest('[hidden]') === null

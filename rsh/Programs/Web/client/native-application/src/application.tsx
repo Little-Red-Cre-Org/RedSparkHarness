@@ -191,7 +191,9 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
       if (followedSession.current !== undefined) {
-        keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
+        if (draftRef.current.length > 0 || filesRef.current.length > 0) {
+          keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
+        }
       }
       const saved = snapshot.selected === undefined ? undefined : takeDraft(snapshot.selected)
       followedSession.current = snapshot.selected
@@ -220,6 +222,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
         }
       })
     } else {
+      const sessionId = snapshot.selected
       const text = draft
       const attachments = files
       draftRef.current = ''
@@ -227,11 +230,15 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       setDraft('')
       setFiles([])
       void send(text, attachments).then((success) => {
-        if (!success && draftVersion.current === version) {
-          draftRef.current = text
-          filesRef.current = attachments
-          setDraft(text)
-          setFiles(attachments)
+        if (!success) {
+          if (draftVersion.current === version) {
+            draftRef.current = text
+            filesRef.current = attachments
+            setDraft(text)
+            setFiles(attachments)
+          } else {
+            keepDraft(sessionId, { text, files: attachments })
+          }
         }
       })
     }
@@ -259,7 +266,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
           }} rows={1}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
-              && !event.nativeEvent.isComposing) {
+              && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
               event.preventDefault()
               cancel()
               return
@@ -464,8 +471,8 @@ export const plugin: NativePlugin = {
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
             cancelledSend = false
-            await controller.send(text, files)
-            return !cancelledSend && controller.getSnapshot().error === undefined
+            const admitted = await controller.send(text, files)
+            return admitted && !cancelledSend && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),
