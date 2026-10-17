@@ -1,6 +1,7 @@
 /** Sign in with ChatGPT OAuth for the public Responses API subscription route. */
 
 import { createServer } from 'node:http'
+import type { ServerResponse } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { HarnessError } from '@deepseek-ai/dsh-llm/native'
@@ -218,6 +219,7 @@ function randomBase64Url(): string {
 async function callbackListener(state: string, signal: AbortSignal): Promise<{
   readonly redirectUri: string
   readonly callback: Promise<CallbackResult>
+  respond(success: boolean): Promise<void>
   close(): Promise<void>
 }> {
   const timeout = AbortSignal.timeout(CALLBACK_TIMEOUT_MS)
@@ -230,6 +232,26 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     rejectCallback = reject
   })
   void callback.catch(() => {})
+  let callbackResponse: ServerResponse | undefined
+  const respond = (success: boolean): Promise<void> => {
+    const response = callbackResponse
+    callbackResponse = undefined
+    if (response === undefined || response.destroyed) return Promise.resolve()
+    return new Promise((resolve) => {
+      const complete = (): void => {
+        response.off('close', complete)
+        response.off('error', complete)
+        resolve()
+      }
+      response.once('error', complete)
+      response.once('close', complete)
+      response.writeHead(success ? 200 : 500, {
+        'content-type': 'text/plain; charset=utf-8',
+        connection: 'close',
+      })
+        .end(success ? 'Sign-in complete. You can close this tab.' : 'Sign-in could not be completed. Return to RedSpark Harness.')
+    })
+  }
   const finish = (result: CallbackResult | Error): void => {
     if (settled) return
     settled = true
@@ -262,28 +284,28 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
       code = queryValue('code')
       clientId = queryValue('client_id')
     } catch (error: unknown) {
-      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in callback was invalid.')
+      callbackResponse = response
       finish(error instanceof Error ? error : new Error(String(error)))
       return
     }
     if (returnedState !== state) {
-      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in state did not match.')
+      callbackResponse = response
       finish(new Error('Sign in with ChatGPT returned a mismatched state'))
       return
     }
     if (oauthError !== undefined) {
-      response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in was not completed. You can close this tab.')
+      callbackResponse = response
       finish(new Error(oauthError === 'access_denied'
         ? 'Sign in with ChatGPT was cancelled or plan usage was not approved'
         : 'Sign in with ChatGPT returned an OAuth error'))
       return
     }
     if (code === undefined || code.length === 0) {
-      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in did not return an authorization code.')
+      callbackResponse = response
       finish(new Error('Sign in with ChatGPT returned no authorization code'))
       return
     }
-    response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in received. Return to RedSpark Harness to finish.')
+    callbackResponse = response
     finish({ code, ...clientId === undefined ? {} : { clientId } })
   })
 
@@ -317,10 +339,14 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   return {
     redirectUri: `http://127.0.0.1:${address.port}/auth/callback`,
     callback,
+    respond,
     async close() {
       callbackSignal.removeEventListener('abort', onAbort)
       if (!server.listening) return
-      await new Promise<void>((resolve, reject) => server.close((error) => { if (error) reject(error); else resolve() }))
+      await new Promise<void>((resolve) => {
+        server.close(() => { resolve() })
+        server.closeAllConnections()
+      })
     },
   }
 }
@@ -419,6 +445,8 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
 
 /**
  * Create pi-ai OAuth semantics while keeping registration metadata separate from OAuth grants.
+ * The callback success page follows token and identity validation. Failures receive generic text.
+ * Listener shutdown closes remaining connections.
  * @param registration - durable owner metadata store shared by Native and Cordis entry points.
  * @returns a pi-ai OAuth provider that signs in, refreshes, and resolves SIWC credentials.
  */
@@ -528,7 +556,7 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           throw new Error('Sign in with ChatGPT selected a different account than the saved registration')
         }
         interaction.signal.throwIfAborted()
-        return {
+        const credential: OAuthCredential = {
           type: 'oauth',
           access,
           refresh,
@@ -544,7 +572,10 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           extAgentHostId,
           scopes,
         }
+        await listener.respond(true)
+        return credential
       } finally {
+        await listener.respond(false)
         await listener.close()
       }
     },

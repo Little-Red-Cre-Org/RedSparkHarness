@@ -1,4 +1,6 @@
 import { get as httpGet } from 'node:http'
+import { once } from 'node:events'
+import { createConnection } from 'node:net'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { describe, expect, it, vi } from 'vitest'
 import { ModelsError } from '@earendil-works/pi-ai'
@@ -105,6 +107,106 @@ describe('Sign in with ChatGPT OAuth', () => {
     }
   })
 
+  it.each(['success', 'failure'] as const)('settles %s login with an idle callback connection', async (outcome) => {
+    const { publicKey, privateKey } = await generateKeyPair('RS256')
+    const kid = 'siwc-idle-connection-key'
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256', use: 'sig' }
+    const issuedClientId = 'issued-idle-client'
+    let nonce = ''
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === 'https://auth.openai.com/.well-known/jwks.json') {
+        return new Response(JSON.stringify({ keys: [jwk] }), { headers: { 'content-type': 'application/json' } })
+      }
+      if (url === 'https://auth.openai.com/api/accounts/oauth/token') {
+        if (outcome === 'failure') return new Response(JSON.stringify({
+          error: 'invalid_grant', error_description: 'private error detail',
+        }), { status: 400, headers: { 'content-type': 'application/json' } })
+        const idToken = await new SignJWT({ nonce })
+          .setProtectedHeader({ alg: 'RS256', kid })
+          .setIssuer('https://auth.openai.com')
+          .setAudience(issuedClientId)
+          .setSubject('idle-connection-account')
+          .setExpirationTime('1h')
+          .sign(privateKey)
+        return new Response(JSON.stringify({
+          access_token: 'idle-access-token',
+          refresh_token: 'idle-refresh-token',
+          id_token: idToken,
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+        }), { headers: { 'content-type': 'application/json' } })
+      }
+      throw new Error(`Unexpected test request to ${url}`)
+    })
+    const controller = new AbortController()
+    const authorizationReady = Promise.withResolvers<URL>()
+    const oauth = createSiwcOAuth(memoryRegistration().store)
+    const interaction = {
+      signal: controller.signal,
+      notify(event: { type: string; url?: string }) {
+        if (event.type === 'auth_url' && event.url !== undefined) authorizationReady.resolve(new URL(event.url))
+      },
+      prompt: async () => '',
+    } as ProviderAuthInteraction
+    const login = oauth.login(interaction, { getDeviceId: () => 'idle-connection-host' }).then(
+      credential => ({ credential }),
+      (error: unknown) => ({ error }),
+    )
+    let idle: { socket: ReturnType<typeof createConnection>; closed: Promise<void> } | undefined
+    try {
+      const authorization = await Promise.race([
+        authorizationReady.promise,
+        login.then((result) => {
+          if ('error' in result) throw result.error
+          return authorizationReady.promise
+        }),
+      ])
+      nonce = authorization.searchParams.get('nonce') ?? ''
+      const callback = new URL(authorization.searchParams.get('redirect_uri')!)
+      callback.search = new URLSearchParams({
+        state: authorization.searchParams.get('state')!,
+        code: 'synthetic-code',
+        client_id: issuedClientId,
+      }).toString()
+      const socket = createConnection({ host: '127.0.0.1', port: Number(callback.port) })
+      idle = { socket, closed: new Promise<void>(resolve => socket.once('close', resolve)) }
+      await once(socket, 'connect')
+      const callbackReply = new Promise<string>((resolve, reject) => {
+        const request = httpGet(callback, (response) => {
+          const chunks: Buffer[] = []
+          response.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+          response.on('end', () => { resolve(Buffer.concat(chunks).toString('utf8')) })
+        })
+        request.on('error', reject)
+      }).then(body => ({ body }), (error: unknown) => ({ error }))
+      const timeout = Promise.withResolvers<{ timeout: true }>()
+      const timer = setTimeout(() => { timeout.resolve({ timeout: true }) }, 2_000)
+      const settled = await Promise.race([login.then(result => ({ result })), timeout.promise])
+      clearTimeout(timer)
+      if ('timeout' in settled) throw new Error('login did not settle with an idle callback connection')
+      const loginResult = settled.result
+      if (outcome === 'success') {
+        expect('credential' in loginResult).toBe(true)
+        if ('credential' in loginResult) expect(isSiwcCredential(loginResult.credential)).toBe(true)
+        await expect(callbackReply).resolves.toEqual({ body: 'Sign-in complete. You can close this tab.' })
+      } else {
+        expect('error' in loginResult).toBe(true)
+        if ('error' in loginResult) expect(loginResult.error).toMatchObject({ code: 'SIWC_TOKEN_EXCHANGE_FAILED' })
+        await expect(callbackReply).resolves.toEqual({
+          body: 'Sign-in could not be completed. Return to RedSpark Harness.',
+        })
+      }
+    } finally {
+      if (!controller.signal.aborted) controller.abort(new Error('test cleanup'))
+      idle?.socket.destroy()
+      if (idle !== undefined) await idle.closed
+      await login
+      fetch.mockRestore()
+    }
+  })
+
   it('keeps host and issued client IDs across interruption after callback persistence', async () => {
     const controller = new AbortController()
     const registration = memoryRegistration(() => { controller.abort(new Error('interrupted after metadata commit')) })
@@ -128,11 +230,12 @@ describe('Sign in with ChatGPT OAuth', () => {
         code: 'synthetic-code',
         client_id: 'issued-client-fixture',
       }).toString()
-      await new Promise<void>((resolve, reject) => {
+      const callbackReply = new Promise<void>((resolve, reject) => {
         const request = httpGet(callback, (response) => { response.resume(); response.on('end', resolve) })
         request.on('error', reject)
       })
       await expect(loginFailure).resolves.toMatchObject({ message: 'interrupted after metadata commit' })
+      await callbackReply
       expect(registration.read()).toEqual({
         extAgentHostId: 'interrupted-host-fixture',
         clientId: 'issued-client-fixture',
@@ -259,9 +362,9 @@ describe('Sign in with ChatGPT OAuth', () => {
       expect(authorization.searchParams.get('code_challenge_method')).toBe('S256')
       expect(authorization.searchParams.get('ext_agent_host_id')).toBe('stable-host-id')
       expect(registration.read()).toEqual({ extAgentHostId: 'stable-host-id' })
-      expect(await completeCallback(authorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
-
+      const callbackReply = completeCallback(authorization)
       const credential = await login
+      expect(await callbackReply).toBe('Sign-in complete. You can close this tab.')
       expect(isSiwcCredential(credential)).toBe(true)
       if (!isSiwcCredential(credential)) throw new Error('synthetic login did not produce an SIWC credential')
       expect(credential).toMatchObject({
@@ -297,8 +400,9 @@ describe('Sign in with ChatGPT OAuth', () => {
         .then(() => undefined, (error: unknown) => error)
       const failedAuthorization = await failedAuthorizationReady
       authorizationNonce = failedAuthorization.searchParams.get('nonce') ?? ''
-      expect(await completeCallback(failedAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
+      const failedCallbackReply = completeCallback(failedAuthorization)
       const exchangeFailure = await failedLogin
+      expect(await failedCallbackReply).toBe('Sign-in could not be completed. Return to RedSpark Harness.')
       expect(exchangeFailure).toBeInstanceOf(HarnessError)
       expect(exchangeFailure).toMatchObject({ code: 'SIWC_TOKEN_EXCHANGE_FAILED' })
       expect((exchangeFailure as Error).message)
@@ -311,8 +415,9 @@ describe('Sign in with ChatGPT OAuth', () => {
         .then(() => undefined, (error: unknown) => error)
       const missingScopeAuthorization = await missingScopeAuthorizationReady
       authorizationNonce = missingScopeAuthorization.searchParams.get('nonce') ?? ''
-      expect(await completeCallback(missingScopeAuthorization)).toBe('Sign-in received. Return to RedSpark Harness to finish.')
+      const missingScopeCallbackReply = completeCallback(missingScopeAuthorization)
       const scopeFailure = await missingScopeLogin
+      expect(await missingScopeCallbackReply).toBe('Sign-in could not be completed. Return to RedSpark Harness.')
       expect(scopeFailure).toBeInstanceOf(HarnessError)
       expect(scopeFailure).toMatchObject({ code: 'SIWC_SCOPE_NOT_GRANTED' })
       expect((scopeFailure as Error).message)
@@ -325,9 +430,10 @@ describe('Sign in with ChatGPT OAuth', () => {
           .then(() => undefined, (error: unknown) => error)
         const invalidAuthorization = await invalidAuthorizationReady
         authorizationNonce = invalidAuthorization.searchParams.get('nonce') ?? ''
-        await completeCallback(invalidAuthorization)
+        const invalidCallbackReply = completeCallback(invalidAuthorization)
         const code = invalidExpiration === undefined ? 'ERR_JWT_CLAIM_VALIDATION_FAILED' : 'ERR_JWT_EXPIRED'
         const identityFailure = await invalidLogin
+        expect(await invalidCallbackReply).toBe('Sign-in could not be completed. Return to RedSpark Harness.')
         expect(identityFailure).toBeInstanceOf(HarnessError)
         expect(identityFailure).toMatchObject({ code: 'SIWC_ID_TOKEN_INVALID' })
         expect((identityFailure as Error).message).toBe(`Sign in with ChatGPT ID token verification failed: ${code} (exp)`)

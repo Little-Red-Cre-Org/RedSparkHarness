@@ -132,6 +132,8 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
+有效的浏览器回调只有在 token 与 ID token 验证完成后才会收到成功页面；交换或验证失败时会收到通用文本。登录返回前会关闭 loopback 监听器并销毁其余连接。
+
 `./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。已提交的 SIWC grant 会通过账户目录激活 `openai-codex`；已提交的 `deepseek-account/default` grant 会激活 `deepseek-account` 路由，并提供账户路由配置中的 `deepseek-flash` 与 `deepseek-v4-pro` 模型。两条路由都会出现在模型目录和可配置提供方列表中。成功的 `openai-codex` Responses 调用会检查用量标头和 `codex.rate_limits` 事件；Host 会按 grant 的 issuer 与 subject 在内存中保存快照。首次观察到快照前，`accounts.usage()` 返回 `USAGE_PENDING`；之后返回 grant 邮箱、额度窗口、可选额度余额以及事件报告的套餐。Host 重启后不会保留这些快照。`native` Host 选择初始模型时，如果账户目录请求失败，authorization service 会记录该 listener failure。DeepSeek 账户 token 由账户凭据所有者按已配置的推理 origin 解析；首个可用账户模型选择也会通过同一所有者检查当前 profile URL。路由会通过 `x-dsh-auth-token` 和 Anthropic 传输要求的 Bearer `Authorization` 请求头发送 token。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。Native 消费方从其所选 `credentials` service 接收记录更新。任一受支持账户更新都会触发 `accounts/changed`；记录更新会使适配器失效，因此后续目录查询会读取已提交的 grant。Host 启动期间，读取账户可用性时送达的账户更新会在发布模型服务前重新调和；设置值也会在安装不重放的监听器前重新读取。native composition base 在安装期间固定；已安装的 settings Provider 会实时应用已验证的 profile 编辑；Cordis 入口会逐请求解析 settings。Native composition 解析会在激活前校验配置中的提供方 profile（包括 Fetch 请求头规则）。Schema 校验错误会保留 Schemastery 原始 message 供本地诊断；存在安全路径时会附加包含安全序号路径的结构化 issue，并将字典键替换为其在输入中的位置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号。移除时会关闭已接纳的迭代器、排空其工作，并等待已接纳的凭据刷新持久化；只有凭据解析与传输全部 settle 后才传播传输关闭失败。
 
 <a id="understand-the-implementation"></a>
