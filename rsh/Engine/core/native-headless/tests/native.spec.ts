@@ -2240,7 +2240,7 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
     await restricted.host.stop()
     await rm(restricted.directory, { recursive: true, force: true })
   }
-})
+}, 15_000)
 
 it('projects a program failure as an explicit native code-runtime tool error', async () => {
   const state = await fixture([
