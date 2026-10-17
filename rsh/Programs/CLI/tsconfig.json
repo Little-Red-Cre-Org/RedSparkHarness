@@ -54,6 +54,9 @@
       "path": "../../Core/util/home-paths"
     },
     {
+      "path": "../../Modules/Official/settings/settings-file"
+    },
+    {
       "path": "../../Core/runtime-diagnostics/native-runtime"
     },
     {
@@ -61,6 +64,9 @@
     },
     {
       "path": "../../Modules/Official/interaction/native-approval"
+    },
+    {
+      "path": "../Web/host/native-web-assets"
     },
     {
       "path": "../../Tests/test-support/loader-smoke"

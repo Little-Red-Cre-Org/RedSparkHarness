@@ -55,6 +55,7 @@ export const plugin: NativePlugin = {
     return (context) => {
       const environment = context.require('launchEnvironment')
       const hardOff = (environment.getFrom('DSH_TELEMETRY_DISABLED', ['process'])?.value.length ?? 0) > 0
+        || environment.getFrom('DSH_TELEMETRY_MODE', ['process'])?.value === 'DISABLED'
       const disabled = hardOff || config.mode === 'DISABLED'
       const telemetry = new NativeTelemetry(context, config, disabled)
       context.provide('sessionTelemetry', telemetry)

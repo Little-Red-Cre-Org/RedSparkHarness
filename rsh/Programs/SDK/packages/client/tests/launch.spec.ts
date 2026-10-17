@@ -135,7 +135,7 @@ describe('SDK dsh launch resolution', () => {
 
   it.each([
     { profile: 'custom-sdk', marker: { runtime: 'native', config: 'rsh.profile.json' }, patch: false },
-    { profile: 'native-custom', marker: {}, patch: true },
+    { profile: 'native-custom', marker: { runtime: 'legacy', bundles: [] }, patch: true },
   ] as const)('uses the profile marker rather than its spelling for $profile', ({ profile, marker, patch }) => {
     const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js' }, { version: '1.0.0' })
     const home = mkdtempSync(join(tmpdir(), 'dsh-sdk-profile-runtime-'))

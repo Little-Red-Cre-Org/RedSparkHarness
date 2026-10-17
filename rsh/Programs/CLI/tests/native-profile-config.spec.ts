@@ -62,11 +62,11 @@ it('selects native only with an explicit, valid profile marker', async () => {
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', configReload: 'unknown' })
     expect(() => profileRuntime('probe', home)).toThrow('configReload must be startup or live')
     await writeManifest({ configReload: 'live' })
-    expect(() => profileRuntime('probe', home)).toThrow('requires runtime native')
+    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', bundles: [] })
     expect(() => profileRuntime('probe', home)).toThrow('cannot declare Cordis bundles')
     await writeManifest({ config: 'rsh.profile.json' })
-    expect(() => profileRuntime('probe', home)).toThrow('requires runtime native')
+    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
     expect(() => profileRuntime('../probe', home)).toThrow('invalid profile name')
   } finally {
     await rm(home, { recursive: true, force: true })

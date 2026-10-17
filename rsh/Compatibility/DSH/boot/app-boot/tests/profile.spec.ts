@@ -275,6 +275,7 @@ describe('loadProfile', () => {
     writeProfileManifest(stock, retiredManifest)
     loadProfile('t', 'headless', anchor, home)
     expect(readProfileManifest('t', stock).dsh?.profile).toEqual({
+      runtime: 'legacy',
       bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
       patchReload: 'startup',
     })

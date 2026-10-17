@@ -1608,10 +1608,11 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const dir = join(home, 'profiles', 'rescue')
       const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
         dependencies: Record<string, string>
-        dsh: { profile: { bundles: string[]; patchReload: string } }
+        dsh: { profile: { runtime: 'legacy'; bundles: string[]; patchReload: string } }
       }
       expect(manifest.dependencies).toEqual({})
       expect(manifest.dsh.profile).toEqual({
+        runtime: 'legacy',
         bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
         patchReload: 'live',
       })

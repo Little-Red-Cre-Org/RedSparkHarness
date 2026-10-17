@@ -165,6 +165,7 @@ autoInstallPeers: false
  * @param dir - the profile directory from {@link resolveProfileDir}.
  * @param bundles - the initial `dsh.profile.bundles` layer list.
  * @param patchReload - user patch-file lifecycle; custom profiles default to live reload.
+ * @returns nothing; a newly written manifest explicitly selects legacy execution.
  */
 export function initProfile(
   dir: string,
@@ -178,7 +179,7 @@ export function initProfile(
       name: `dsh-profile-${basename(dir)}`,
       private: true,
       dependencies: {},
-      dsh: { profile: { bundles: [...bundles], patchReload } },
+      dsh: { profile: { runtime: 'legacy', bundles: [...bundles], patchReload } },
     }
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
   }
@@ -847,7 +848,8 @@ export function loadProfileDirectory(
   options: { userLayer?: boolean } = {},
 ): Profile {
   const manifest = readProfileManifest(binName, dir)
-  if (manifest.dsh?.profile?.runtime !== undefined || manifest.dsh?.profile?.config !== undefined) {
+  const runtime = manifest.dsh?.profile?.runtime
+  if ((runtime !== undefined && runtime !== 'legacy') || manifest.dsh?.profile?.config !== undefined) {
     throw new Error(`${binName}: profile ${dir} declares native runtime metadata; use the native profile launcher`)
   }
   const bundles = manifest.dsh?.profile?.bundles ?? []

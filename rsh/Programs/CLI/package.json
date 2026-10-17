@@ -172,6 +172,7 @@
     "@deepseek-ai/dsh-errors": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-http-proxy": "workspace:^",
+    "@deepseek-ai/dsh-native-web-assets": "workspace:^",
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
     "@deepseek-ai/dsh-output-retention": "workspace:^",
     "@deepseek-ai/dsh-pwsh-local": "workspace:^",

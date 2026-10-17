@@ -48,7 +48,7 @@ Choose it as the default user-settings store: one human-readable document that u
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
 
-The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@deepseek-ai/dsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation. Each changed registered user section emits `settings/document-updated` with its incremented revision, even when its resolved value remains equal.
+The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@deepseek-ai/dsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation. `@deepseek-ai/dsh-settings-file/native` also exports `resolveNativeSettingsConfig` and `parseNativeSettingsDocument` for readers that need the provider's path and parse rules without starting a Host. Each changed registered user section emits `settings/document-updated` with its incremented revision, even when its resolved value remains equal.
 
 ### Editing the document
 

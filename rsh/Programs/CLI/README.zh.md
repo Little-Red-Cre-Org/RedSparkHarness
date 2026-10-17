@@ -62,6 +62,8 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 原生 profile 在包清单中声明 `dsh.profile.runtime: "native"` 及 `config: "rsh.profile.json"`。带版本号的 JSON 文件列出作用域标识和插件安装项；每项包含 id、包名、作用域及完整配置。原生 `--patch` 文件是带版本号的 JSON 覆盖层，按参数顺序替换既有安装项的 config 或 `disabled` 值。每个选中的包清单都必须声明非空 npm `name` 和 `version` 字段；启动器在导入入口前校验其 `dsh.native` 元数据，拒绝非空 Cordis patch 层，并启动一个选中的原生应用。可用的一次性应用见[原生 headless](../../Engine/core/native-headless/README.zh.md)。
 
+已存在的 profile manifest 仅在声明 `runtime: "legacy"` 或声明不带 native 配置字段的 `bundles` 数组时选择 legacy 执行。CLI native 启动会检查已安装插件对应的 legacy-only settings 与启动变量，把受支持的 settings 写入 native profile 文件，并在加载插件前安装启动代理。可接受值与报错见[原生配置迁移参考](../../Docs/native-config-migration.zh.md)。
+
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。
 
 显式选择的内置原生 profile 包含原生 Session 执行 Provider，提供选定的执行注册表与活动 Session 所有者。CLI 解析器将该 Provider 声明为直接依赖；旧 profile 的选择保持不变。
