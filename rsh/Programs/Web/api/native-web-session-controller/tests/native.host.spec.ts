@@ -34,7 +34,7 @@ import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
 import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mode/src/native.ts'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
-import { ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
+import { LlmError, ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
 import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
@@ -403,7 +403,7 @@ it('waits for an owned file upload to settle when the Native Session Client clos
 })
 
 it('includes nested AggregateError messages in native Session failures', async () => {
-  const failure = new AggregateError([
+  let failure: Error = new AggregateError([
     new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
   ], 'native-headless: turn cleanup failed')
   const active = {
@@ -422,6 +422,26 @@ it('includes nested AggregateError messages in native Session failures', async (
     await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
       ok: false,
       error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
+    })
+    failure = new LlmError('model rejected the credential', 'AUTH')
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'AUTH', message: 'model rejected the credential' },
+    })
+    failure = new AggregateError([new Error('feed closed'), new LlmError('model rejected the credential', 'AUTH')], 'feed closed; execution failed')
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'AUTH' },
+    })
+    failure = Object.assign(new Error('quota exhausted'), { name: 'LlmError', code: 'QUOTA', failure: { message: 'quota exhausted', code: 'QUOTA' } })
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'QUOTA' },
+    })
+    failure = Object.assign(new Error('storage failure'), { failure: null })
+    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'native/session' },
     })
   } finally {
     await service.close()
