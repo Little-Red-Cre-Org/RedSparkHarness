@@ -225,12 +225,12 @@ it('isolates delayed frames and late carrier errors while retaining title roster
   const followFailures = [firstFollowFailure, secondFollowFailure, thirdFollowFailure]
   const client: NativeSessionClient = {
     ...transport,
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach) {
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach, onAccepted) {
       const failure = followFailures[promptCount++]!
       return transport.prompt(sessionId, text, resume, signal, observe, images, (error) => {
         onFollowError?.(error)
         failure.resolve(error)
-      }, lastSeq, detach)
+      }, lastSeq, detach, onAccepted)
     },
     async list() { return rows },
     async *follow(signal: AbortSignal) {
@@ -378,7 +378,8 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
       reads.push(read)
       return read.promise
     },
-    prompt(_id, text, _resume, signal, next) {
+    prompt(_id, text, _resume, signal, next, _images, _onFollowError, _lastSeq, _detach, onAccepted) {
+      onAccepted?.()
       promptCount++; if (text === 'retry after settle') expect(controller.getSnapshot().events.at(-1)?.seq).toBe(SessionSeq(13))
       observe = next
       signal?.addEventListener('abort', () => { turn.resolve({ exitCode: 130, answer: '' }) }, { once: true })
@@ -502,7 +503,7 @@ it('keeps Host inbox acknowledgement and sequence ordering separate from turn se
     delayRead = false
     reads[4]!.resolve(inbox)
     await cancellingRetry
-    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: 'native conversation: user cancelled' })
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', error: undefined })
     expect(promptCount).toBe(promptsBeforeRetry)
     const callsBeforeRetry = calls.length
     delayRead = true
@@ -549,7 +550,11 @@ it('settles a ready retry from the accepted Host submission before prompting aga
     async permissionControls() { return { available: false, currentValue: null, options: [] } },
     async history(id) { return { header: makeHeader(id), events: [], inheritedEventCount: 0 } },
     async submissions() { return inbox },
-    prompt() { promptCount++; return turn.promise },
+    prompt(_id, _text, _resume, _signal, _observe, _images, _onFollowError, _lastSeq, _detach, onAccepted) {
+      onAccepted?.()
+      promptCount++
+      return turn.promise
+    },
     async queue(_id, text, requestId) {
       inbox = { throughSeq: SessionSeq(1), submissions: [{ requestId, placement: 'queued', status: 'accepted', message: {
         id: String(requestId) as Inbox['submissions'][number]['message']['id'], role: 'user', source: { kind: 'user' },

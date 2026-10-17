@@ -1,5 +1,6 @@
 /** Native conversation image loading and draft-file presentation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@deepseek-ai/dsh-client-ui-attachment/native'
 import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment/native'
 import { fileSizeText, IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -81,15 +82,43 @@ export function NativeMessageImage({ image, sessionId, loadImage, t }: {
   return <MessageImage image={{ attachment: image }} load={load} variant="single" labels={labels} />
 }
 
-/** Limit-checked Native Client composer file picker, drop target and attachment rail. */
-export function NativeComposerAttachments({ files, onChange, limits, disabled, t }: {
+/** Round '+' button that opens the composer's image file input.
+ * @param props.inputRef - file input rendered by `NativeComposerAttachments`.
+ * @param props.disabled - whether the composer rejects new image files.
+ * @param props.t - native application translation callback.
+ * @returns the picker button.
+ */
+export function NativeComposerImagePicker({ inputRef, disabled, t }: {
+  inputRef: RefObject<HTMLInputElement>
+  disabled: boolean
+  t: Translate
+}) {
+  return <button type="button" className={css.picker} disabled={disabled} title={t('attachImage')}
+    aria-label={t('attachImage')} onClick={() => { inputRef.current?.click() }}>
+    <span aria-hidden>+</span>
+  </button>
+}
+
+/** Limit-checked Native Client composer file picker, drop target, paste target and attachment rail.
+ * @param props.files - current composer image files.
+ * @param props.onChange - replace the composer image files.
+ * @param props.limits - Host-advertised image limits.
+ * @param props.disabled - whether the composer rejects new image files.
+ * @param props.inputRef - file input shared with a toolbar `NativeComposerImagePicker`; the picker renders inline when omitted.
+ * @param props.t - native application translation callback.
+ * @returns image controls and the attachment rail.
+ */
+export function NativeComposerAttachments({ files, onChange, limits, disabled, inputRef: sharedInputRef, t }: {
   files: readonly File[]
   onChange: (files: readonly File[]) => void
   limits: ImageLimits
   disabled: boolean
+  inputRef?: RefObject<HTMLInputElement> | undefined
   t: Translate
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const ownInputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = sharedInputRef ?? ownInputRef
+  const attachmentsRef = useRef<HTMLDivElement | null>(null)
   const dragDepth = useRef(0)
   const [dragActive, setDragActive] = useState(false)
   const [notices, setNotices] = useState<readonly AttachmentNotice[]>([])
@@ -124,6 +153,20 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
     if (accepted.length !== files.length) onChange(accepted)
     setNotices(rejected)
   }, [disabled, files, limits, onChange])
+
+  useEffect(() => {
+    if (disabled) return
+    // Pasting into the composer form attaches clipboard files; text-only pastes keep their default.
+    const form = (attachmentsRef.current as HTMLDivElement).closest('form') as HTMLFormElement
+    const onPaste = (event: ClipboardEvent): void => {
+      const pasted = Array.from((event.clipboardData as DataTransfer).files)
+      if (pasted.length === 0) return
+      event.preventDefault()
+      addFiles(pasted)
+    }
+    form.addEventListener('paste', onPaste)
+    return () => { form.removeEventListener('paste', onPaste) }
+  }, [addFiles, disabled])
 
   useEffect(() => {
     const fileTransfer = (event: globalThis.DragEvent): DataTransfer | null => {
@@ -199,7 +242,7 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
         size: fileSizeText(limits.maxImageBytes),
       }),
     }} />}
-    <div className={css.attachments}>
+    <div ref={attachmentsRef} className={css.attachments}>
       <input
         ref={inputRef}
         className={css.input}
@@ -213,9 +256,7 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, t
           event.currentTarget.value = ''
         }}
       />
-      <button type="button" className={css.picker} disabled={disabled} onClick={() => { inputRef.current?.click() }}>
-        {t('images')}
-      </button>
+      {sharedInputRef === undefined && <NativeComposerImagePicker inputRef={inputRef} disabled={disabled} t={t} />}
       {railItems.length > 0 && <div className={css.rail}>
         <AttachmentRail
           items={railItems}

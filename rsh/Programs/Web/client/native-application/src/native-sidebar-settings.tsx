@@ -11,6 +11,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
 import { applyNativeSettingsPreferences } from './settings-preferences.ts'
+import { subscribeNativeSettingsRequests } from './settings-request.ts'
 import css from './NativeSidebarSettings.module.css'
 
 /** Bind Settings page operations to the selected Native Session Consumer.
@@ -76,6 +77,11 @@ export function NativeSidebarSettings({
   const [hasSettingsDocument, setHasSettingsDocument] = useState(false)
   const [settingsDocumentError, setSettingsDocumentError] = useState(false)
   const startupPreferencesStale = useRef(false)
+  useEffect(() => subscribeNativeSettingsRequests((section) => {
+    startupPreferencesStale.current = true
+    setSettingsSection(section)
+    setShowSettings(true)
+  }), [])
   useEffect(() => {
     const lifetime = new AbortController()
     void settingsActions.settingsDescribe(lifetime.signal).then((description) => {

@@ -1,5 +1,6 @@
 /** Native navigation surface over the Session, layout, and schedule owners. */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import {
   Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
@@ -76,6 +77,7 @@ type NativeWorkspacesInjected = {
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
+  collapseNarrow: () => void
   toggleSidebar: () => void
 }
 type NativeWorkspacesProps = PropsRuntime<'sidebar.workspaces'> & InjectFace<NativeWorkspacesInjected> & PropsLocale<'nativeSidebar'>
@@ -176,7 +178,7 @@ function NativeSessionBrowser({
   beginNavigation, isCurrentNavigation,
   renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
-  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
+  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
@@ -200,6 +202,7 @@ function NativeSessionBrowser({
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
+  collapseNarrow: () => void
   toggleSidebar: () => void
   t: NativeSidebarTranslate
 }) {
@@ -230,6 +233,7 @@ function NativeSessionBrowser({
   const [workspaceTrustPending, setWorkspaceTrustPending] = useState(false)
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
+  const treeRef = useRef<HTMLElement | null>(null)
   const searchInput = useRef<HTMLInputElement>(null)
   const groups = useMemo(() => groupNativeSessions(
     snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t,
@@ -344,6 +348,7 @@ function NativeSessionBrowser({
   }
   const openSession = (id: NativeSessionId): void => {
     openRequest.current = undefined
+    collapseNarrow()
     if (snapshot.state === 'loading') {
       setPendingSessionId(id)
       return
@@ -392,6 +397,14 @@ function NativeSessionBrowser({
       setOrderingPending(false)
     })
   }
+  const toggleGroup = (key: string): void => {
+    setCollapsedGroups((current) => {
+      const next = new Set(current)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
   const orderControls = (kind: 'workspace' | 'session', name: string, index: number, count: number, move: (up: boolean) => void) => (
     <div className={css.orderControls}>
       <button type="button" aria-label={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })} title={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })}
@@ -428,6 +441,7 @@ function NativeSessionBrowser({
           node={session}
           currentId={snapshot.selected}
           now={Date.now()}
+          tabIndex={-1}
           onOpen={openSession}
           onRename={item?.titleActions?.rename === true
             ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
@@ -492,6 +506,50 @@ function NativeSessionBrowser({
   const currentSearch = searchState.query === searchQuery
     ? searchState
     : { query: searchQuery, status: 'loading' as const, items: [] }
+  // Roving tab stop: Tab reaches the tree once, arrows move between rows.
+  useLayoutEffect(() => {
+    // The collapsed sidebar renders no tree.
+    const tree = treeRef.current
+    if (tree === null) return
+    tree.tabIndex = tree.querySelector('[role="treeitem"]') !== null
+      && tree.querySelector('[role="treeitem"][tabindex="0"]') === null ? 0 : -1
+  })
+  const focusTreeRow = (tree: HTMLElement, rows: readonly HTMLElement[], next: HTMLElement): void => {
+    tree.tabIndex = -1
+    for (const row of rows) row.tabIndex = row === next ? 0 : -1
+    next.focus()
+  }
+  const handleTreeFocus = (event: ReactFocusEvent<HTMLElement>): void => {
+    const tree = event.currentTarget
+    const rows = Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'))
+    // Entering the tree lands on the selected row; a row focused by pointer becomes the tab stop.
+    const row = event.target === tree ? rows.find(item => item.getAttribute('aria-selected') === 'true') ?? rows[0]
+      : rows.find(item => item === event.target)
+    if (row !== undefined) focusTreeRow(tree, rows, row)
+  }
+  const handleTreeKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    const rows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'))
+    const row = event.target as HTMLElement
+    const index = rows.indexOf(row)
+    const targets: Record<string, HTMLElement | undefined> = {
+      ArrowDown: rows[index + 1], ArrowUp: rows[index - 1], Home: rows[0], End: rows.at(-1),
+    }
+    const next = targets[event.key]
+    if (index !== -1 && next !== undefined) {
+      event.preventDefault()
+      focusTreeRow(event.currentTarget, rows, next)
+      return
+    }
+    if (row.getAttribute('aria-expanded') === null) return
+    const expanded = row.getAttribute('aria-expanded') === 'true'
+    if ((event.key === 'ArrowRight' && expanded) || (event.key === 'ArrowLeft' && !expanded)
+      || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return
+    const groupRows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded]'))
+    const group = groups[groupRows.indexOf(row)]
+    if (group === undefined) return
+    event.preventDefault()
+    toggleGroup(group.key)
+  }
   const workspaceTrustDialog = workspaceTrustPrompt === undefined ? null : <Modal
     open
     title={t('workspaceTrustTitle')}
@@ -586,13 +644,15 @@ function NativeSessionBrowser({
       </>}
     />
     {actionError !== undefined && <div role="alert">{actionError}</div>}
-    <nav className={css.workspaceList} aria-label={t('workspace')} role="tree">
+    <nav ref={treeRef} className={css.workspaceList} aria-label={t('workspace')} role="tree"
+      onFocus={handleTreeFocus} onKeyDown={handleTreeKeyDown}>
       {searchExpanded && searchQuery !== '' ? <>
         {currentSearch.status === 'loading' && <WorkspaceSectionEmpty label={t('search.pending')} />}
         {currentSearch.status === 'error' && <WorkspaceSectionEmpty label={t('search.unavailable')} />}
         {currentSearch.status === 'ready' && currentSearch.items.length === 0 && <WorkspaceSectionEmpty label={t('search.noMatches')} />}
         {currentSearch.items.map(result => <SearchResultItem
           key={result.id} result={result} currentId={snapshot.selected}
+          tabIndex={-1}
           onOpen={(id) => {
             setSearchExpanded(false)
             setQuery('')
@@ -640,25 +700,19 @@ function NativeSessionBrowser({
                 setDrag(undefined)
               }}>
               <div className={css.orderedRow}>
-                <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
-                  setCollapsedGroups((current) => {
-                    const next = new Set(current)
-                    if (next.has(group.key)) next.delete(group.key)
-                    else next.add(group.key)
-                    return next
-                  })
-                }} onCreate={workspaceId === undefined ? undefined : () => {
-                  setCollapsedGroups((current) => {
-                    const next = new Set(current)
-                    next.delete(group.key)
-                    return next
-                  })
-                  if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
-                }} actions={workspaceActions} showCreate={workspaceId !== undefined}
-                drag={order !== 'manual' || workspaceId === undefined ? undefined : {
-                  start: () => { setDrag({ kind: 'workspace', id: workspaceId }) },
-                  end: () => { setDrag(undefined) },
-                }} t={t} />
+                <ProjectRowItem group={group} label={group.label} home={homeDirectory}
+                  onToggle={() => { toggleGroup(group.key) }} onCreate={workspaceId === undefined ? undefined : () => {
+                    setCollapsedGroups((current) => {
+                      const next = new Set(current)
+                      next.delete(group.key)
+                      return next
+                    })
+                    if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
+                  }} actions={workspaceActions} showCreate={workspaceId !== undefined} tabIndex={-1}
+                  drag={order !== 'manual' || workspaceId === undefined ? undefined : {
+                    start: () => { setDrag({ kind: 'workspace', id: workspaceId }) },
+                    end: () => { setDrag(undefined) },
+                  }} t={t} />
                 {order !== 'manual' || workspaceId === undefined ? null
                   : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
                     registry.workspaces.length, (up) => {
@@ -889,7 +943,11 @@ export const plugin: NativePlugin = {
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
-          workspaceRegistry.set(nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame))
+          const next = nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame)
+          if (frame.type === 'baseline' || frame.type === 'archived') {
+            for (const id of next.archivedSessionIds) controller.discardDraft(id)
+          }
+          workspaceRegistry.set(next)
           if (workspaceRegistry.getSnapshot().ready) workspaceBaseline.resolve()
         }
         workspaceBaseline.reject(new Error('Workspace list unavailable'))
@@ -993,7 +1051,7 @@ export const plugin: NativePlugin = {
             await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
           }
         },
-        selectSession: controller.select.bind(controller),
+        selectSession: async (id) => { layout.collapseNarrow(); await controller.select(id) },
         deselectSession: controller.deselect.bind(controller),
         beginNavigation: controller.beginNavigation.bind(controller),
         isCurrentNavigation: controller.isCurrentNavigation.bind(controller),
@@ -1003,7 +1061,10 @@ export const plugin: NativePlugin = {
         },
         refreshTitle: controller.refreshTitle.bind(controller),
         searchSessions: nativeSession.search.bind(nativeSession),
-        archiveSession: id => nativeSession.archive(id, context.signal),
+        archiveSession: async (id) => {
+          await nativeSession.archive(id, context.signal)
+          controller.discardDraft(id)
+        },
         selectWorkspace: async (id, trust) => {
           const navigation = controller.beginNavigation()
           const { sessionId } = trust === undefined
@@ -1026,12 +1087,13 @@ export const plugin: NativePlugin = {
         reorderWorkspace: (id, before) => workspaceClient.reorder(id, before, context.signal),
         reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
+        collapseNarrow: layout.collapseNarrow.bind(layout),
       }),
     }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
       admitSession, selectSession, deselectSession, renameTitle, refreshTitle,
       beginNavigation, isCurrentNavigation,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
-      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
+      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
@@ -1042,7 +1104,7 @@ export const plugin: NativePlugin = {
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
         renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
         reorderWorkspace={reorderWorkspace} reorderSession={reorderSession}
-        toggleSidebar={toggleSidebar} t={t} />))))
+        collapseNarrow={collapseNarrow} toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',
       inject: () => ({ open: () => { layout.selectPanel(scheduledTasksPanelId) } }),

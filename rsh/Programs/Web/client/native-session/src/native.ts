@@ -785,11 +785,13 @@ export interface NativeSessionClient {
    * @param onFollowError - background follow failure after turn settlement, when present.
    * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
    * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
+   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void, lastSeq?: number, detach?: AbortSignal): Promise<{
+    onFollowError?: (error: unknown) => void, lastSeq?: number, detach?: AbortSignal,
+    onAccepted?: () => void): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -802,11 +804,12 @@ export interface NativeSessionClient {
    * @param onFollowError - background follow failure after turn settlement, when present.
    * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
    * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
+   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   promptContent(sessionId: SessionId, content: readonly NativeSessionInputPart[], resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, onFollowError?: (error: unknown) => void, lastSeq?: number,
-    detach?: AbortSignal): Promise<{
+    detach?: AbortSignal, onAccepted?: () => void): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -1525,7 +1528,7 @@ export function createNativeSessionClient(
     sessionId: SessionId, input: { readonly text: string; readonly images?: readonly NativeImageUpload[] }
       | { readonly content: readonly NativeSessionInputPart[] }, resume: boolean,
     signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    onFollowError?: (error: unknown) => void, lastSeq = -1, detach?: AbortSignal,
+    onFollowError?: (error: unknown) => void, lastSeq = -1, detach?: AbortSignal, onAccepted?: () => void,
   ): Promise<TurnResult> {
     const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
     detachSignal.throwIfAborted()
@@ -1538,6 +1541,7 @@ export function createNativeSessionClient(
       follow: observe !== undefined, ...observe === undefined ? {} : { lastSeq },
       ...'content' in input ? { content: input.content } : { text: input.text, ...input.images === undefined ? {} : { images: input.images } } },
     detachSignal, false)
+    onAccepted?.()
     return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
   }
   async function attach(
@@ -1759,12 +1763,13 @@ export function createNativeSessionClient(
     async submissions(sessionId, signal) {
       return call<NativeSubmissionsSnapshot>('session/submissions', { sessionId }, signal)
     },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach) {
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach, onAccepted) {
       return trackPrompt(runPrompt(sessionId, { text, ...(images === undefined ? {} : { images }) }, resume,
-        signal, observe, onFollowError, lastSeq, detach))
+        signal, observe, onFollowError, lastSeq, detach, onAccepted))
     },
-    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq, detach) {
-      return trackPrompt(runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq, detach))
+    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq, detach, onAccepted) {
+      return trackPrompt(runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq, detach,
+        onAccepted))
     },
     attach(sessionId, lastSeq, observe, signal, onFollowError, detach) {
       return trackPrompt(attach(sessionId, lastSeq, observe, signal, onFollowError, detach))

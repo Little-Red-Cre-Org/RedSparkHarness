@@ -68,6 +68,10 @@ export interface NativeConversationService {
   beginNavigation(disableSending?: boolean): number
   /** Check whether a navigation token is still current. */
   isCurrentNavigation(token: number): boolean
+  /** Drop a Session's saved draft after it is archived or removed.
+   * @param id - owning Session.
+   */
+  discardDraft(id: SessionId): void
   /** Wait for controller operations already in flight to settle.
    * @returns completion after no tracked operations remain pending.
    */
