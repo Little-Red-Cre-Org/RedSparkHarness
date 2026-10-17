@@ -41,7 +41,7 @@ export type NativeAppFrameProps = FrameProps & { useCurrentSessionTitle: UseCurr
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return <div className={css.centerCol} data-center-col>{props.children}</div>
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
@@ -218,6 +218,42 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
   ), [usePanelInfo, renderSlot])
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
 
+  // The narrow drawer is modal: the columns beneath it go inert, focus moves into it, and
+  // closing returns focus to the element that opened it while that element is still mounted.
+  const drawerRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!sidebarOverlay) return
+    const frame = frameRef.current as HTMLDivElement
+    const drawer = drawerRef.current as HTMLDivElement
+    const opener = document.activeElement
+    const background = frame.querySelectorAll(':scope > [data-center-col], :scope > [data-rightbar-col]')
+    for (const element of background) element.setAttribute('inert', '')
+    if (!drawer.contains(document.activeElement)) drawer.focus()
+    // Escape closes the drawer and Tab keeps focus inside it, also when focus fell to body;
+    // an open menu, a nested modal, or a control that already handled the key owns it.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || document.querySelector('[role="menu"], [aria-modal="true"]:not([data-sidebar-overlay])') !== null) return
+      if (e.key === 'Escape') actions.collapseNarrow()
+      if (e.key !== 'Tab') return
+      const focusable = drawer.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')
+      const active = document.activeElement
+      const [edge, wrap] = e.shiftKey ? [focusable[0], focusable[focusable.length - 1]] : [focusable[focusable.length - 1], focusable[0]]
+      if (drawer.contains(active) && wrap !== undefined && active !== edge && !(e.shiftKey && active === drawer)) return
+      e.preventDefault()
+      const target = wrap ?? drawer
+      target.focus()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      for (const element of background) element.removeAttribute('inert')
+      const active = document.activeElement
+      if (active !== null && active !== document.body && !drawer.contains(active)) return
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [sidebarOverlay, actions])
+
   return (
     <div
       ref={frameRef}
@@ -233,11 +269,14 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
       data-dragging={dragging || undefined}
     >
       {documentTitle}
-      <div className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
-        style={sidebarOverlay ? { width: sidebarWidth } : undefined}>
+      <div ref={drawerRef} className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
+        style={sidebarOverlay ? { width: sidebarWidth } : undefined}
+        {...sidebarOverlay && {
+          role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar'), tabIndex: -1,
+        }}>
         {sidebar}
       </div>
-      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')}
+      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')} tabIndex={-1}
         onClick={actions.collapseNarrow} />}
       <>
         <CenterColumn>{main}</CenterColumn>
