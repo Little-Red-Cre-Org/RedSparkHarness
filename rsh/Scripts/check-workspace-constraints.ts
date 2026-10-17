@@ -84,10 +84,9 @@ const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
     'config/desktop.cordis.patch.yml',
     'lib/types/**/*.d.ts',
   ],
-  // Sourcemaps stay out by payload policy; the worker-preview surface
-  // (dist/preview.html and dist/preview/) backs private experimental
-  // packages and is not published.
-  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
+  // Sourcemaps stay out by payload policy; worker preview remains a separate
+  // private experimental surface.
+  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map'],
 }
 
 /** The subset of package.json fields this constraint check cares about. */
@@ -203,6 +202,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
+  '@deepseek-ai/dsh-web-compatibility': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
   '@deepseek-ai/dsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
   '@deepseek-ai/dsh-client-ui-sidebar-right': [
     'lib/native.js',

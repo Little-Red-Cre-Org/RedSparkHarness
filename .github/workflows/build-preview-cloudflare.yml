@@ -76,7 +76,7 @@ jobs:
       - name: Build the preview page and pack the VFS image
         env:
           DSH_CLIENT_TITLE: DSH preview pr-${{ github.event.pull_request.number }}
-        run: pnpm --filter @deepseek-ai/dsh-web-frontend run build:preview
+        run: pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview
 
       # Sourcemaps carry complete sources and stay off the deployment platform.
       # index.html is the served page, which cannot boot without a host
@@ -84,15 +84,15 @@ jobs:
       # the deployment root the usable entry instead of a page that never boots.
       - name: Shape the upload
         run: |
-          find rsh/Programs/Web/application/dist -name '*.map' -delete
-          cp rsh/Programs/Web/application/dist/preview.html rsh/Programs/Web/application/dist/index.html
+          find rsh/Compatibility/DSH/web/frontend/dist -name '*.map' -delete
+          cp rsh/Compatibility/DSH/web/frontend/dist/preview.html rsh/Compatibility/DSH/web/frontend/dist/index.html
 
       - name: Upload to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4 pages deploy rsh/Programs/Web/application/dist \
+          npx --yes wrangler@4 pages deploy rsh/Compatibility/DSH/web/frontend/dist \
             --project-name "$CF_PROJECT" \
             --branch "pr-${{ github.event.pull_request.number }}" \
             --commit-dirty=true

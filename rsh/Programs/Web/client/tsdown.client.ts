@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 import { optionalStringArray } from './modules/src/client/manifest.ts'
-import { PLATFORM_MODULES, PRELOADED_CLIENT_EXTERNALS } from './web/src/platform.ts'
+import { PLATFORM_MODULES, PRELOADED_CLIENT_EXTERNALS } from '../../../Compatibility/DSH/web/frontend/src/platform.ts'
 import { clientBuildEnvironmentDefines } from '../../../Scripts/client-build-environment.ts'
 
 /**

@@ -155,6 +155,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Programs/Web/client/ui-settings-plugin-inventory': { kind: 'none', reason: 'Browser-side inventory projection; registers nothing model-facing.' },
   'rsh/Programs/Web/client/locale': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'rsh/Programs/Web/client/web': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
+  'rsh/Compatibility/DSH/web/frontend': { kind: 'none', reason: 'The compatibility browser shell renders product UI but contributes no model request content.' },
   'rsh/Engine/context/file-reference': { kind: 'indirect', reason: 'The discovery seam and grammar delegate model guidance to the composed provider.' },
   'rsh/Modules/Official/fs/fs': { kind: 'indirect', reason: 'The service interface delegates model rendering to dsh-tool-fs.' },
   'rsh/Modules/Official/e2b/fs-e2b': { kind: 'indirect', reason: 'The provider backend delegates model rendering to dsh-tool-fs.' },

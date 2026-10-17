@@ -84,6 +84,7 @@ describe('browser dependency discovery', () => {
   it('follows both shell pages, workspace aliases, CSS assets and lazy imports without writing output', async () => {
     const root = fixture()
     library(root, 'shell-lib')
+    library(root, 'compat-shell-lib')
     library(root, 'lazy-lib')
     library(root, 'asset-lib')
     library(root, 'native-only-lib')
@@ -101,10 +102,12 @@ describe('browser dependency discovery', () => {
     ].join('\n'))
     write(root, 'rsh/Programs/Web/client/static/src/boot-page.ts', 'import { value } from "leaf-lib"; export const BootPage = value')
     const app = join(root, 'rsh/Programs/Web/application')
-    write(root, 'rsh/Programs/Web/application/package.json', '{"name":"@fixture/web","type":"module","exports":{"./dist/*":"./dist/*"}}')
-    symlinkSync(resolve(repositoryRoot, 'rsh/Programs/Web/application/node_modules'), join(app, 'node_modules'), 'junction')
+    write(root, 'rsh/Programs/Web/application/package.json', '{"name":"@fixture/web","type":"module","exports":{"./dist/*":"./dist/*"},"devDependencies":{"vite":"^6.0.0"}}')
+    mkdirSync(join(app, 'node_modules'), { recursive: true })
+    symlinkSync(resolve(repositoryRoot, 'rsh/Programs/Web/application/node_modules/vite'), join(app, 'node_modules/vite'), 'junction')
     write(root, 'rsh/Programs/Web/application/index.html', '<script type="module" src="./main.ts"></script>')
     write(root, 'rsh/Programs/Web/application/native.html', '<script type="module" src="./native.ts"></script>')
+    write(root, 'rsh/Programs/Web/application/legacy.html', '<script type="module" src="./compat-main.ts"></script>')
     write(root, 'rsh/Programs/Web/application/main.ts', [
       'import { output, lazy } from "@fixture/static"',
       'import { BootPage } from "@fixture/static/boot-page"',
@@ -112,6 +115,8 @@ describe('browser dependency discovery', () => {
       'void lazy()',
     ].join('\n'))
     write(root, 'rsh/Programs/Web/application/native.ts', 'import { value } from "native-only-lib"; console.log(value)')
+    write(root, 'rsh/Programs/Web/application/compat-main.ts', 'import { value } from "compat-shell-lib"; console.log(value)')
+    write(root, 'rsh/Programs/Web/application/preview.ts', 'import { value } from "compat-shell-lib"; await Promise.resolve(value); console.log(value)')
     write(root, 'rsh/Programs/Web/application/vite.config.ts', `export default {
       build: { rollupOptions: { input: {
         index: ${JSON.stringify(join(app, 'index.html'))},
@@ -120,8 +125,21 @@ describe('browser dependency discovery', () => {
       } } }
     }`)
     write(root, 'rsh/Programs/Web/application/dist/sentinel.txt', 'untouched')
+    const compatibility = join(root, 'rsh/Compatibility/DSH/web/frontend')
+    write(root, 'rsh/Compatibility/DSH/web/frontend/package.json', '{"name":"@fixture/compat","type":"module","exports":{"./dist/*":"./dist/*"},"devDependencies":{"vite":"^6.0.0"}}')
+    mkdirSync(join(compatibility, 'node_modules'), { recursive: true })
+    symlinkSync(resolve(repositoryRoot, 'rsh/Programs/Web/application/node_modules/vite'), join(compatibility, 'node_modules/vite'), 'junction')
+    write(root, 'rsh/Compatibility/DSH/web/frontend/vite.config.ts', `export default {
+      root: ${JSON.stringify(app)},
+      build: { target: "es2022", rollupOptions: { input: {
+        index: ${JSON.stringify(join(app, 'legacy.html'))},
+        bootstrap: ${JSON.stringify(join(app, 'preview.ts'))},
+      } } },
+    }`)
 
-    expect(await browserBundledExternals(root)).toEqual(new Set(['shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib', 'leaf-lib']))
+    expect(await browserBundledExternals(root)).toEqual(new Set([
+      'shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib', 'leaf-lib', 'compat-shell-lib',
+    ]))
     expect(readFileSync(join(app, 'dist/sentinel.txt'), 'utf8')).toBe('untouched')
     expect(existsSync(join(app, 'dist/index.html'))).toBe(false)
     expect(existsSync(join(app, 'dist/native.html'))).toBe(false)

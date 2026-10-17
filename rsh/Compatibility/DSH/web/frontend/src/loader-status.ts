@@ -2,10 +2,10 @@
  * Fiber-state projection vocabulary for the framework-free boot page. The
  * boot chain subscribes to `internal/status` and projects the owning loader
  * entry's current state.
- * @module @deepseek-ai/dsh-client-web/src/loader-status
+ * @module @deepseek-ai/dsh-web-compatibility/src/loader-status
  */
 import type { FiberState } from '@deepseek-ai/cordis'
-import type { BootEntryState } from './boot-page.ts'
+import type { BootEntryState } from '@deepseek-ai/dsh-client-web/boot-page'
 
 /**
  * Value mirror of cordis's `FiberState` const enum: a const enum has no

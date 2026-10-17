@@ -60,10 +60,10 @@ it('preserves observations, releases listeners on unload, and shows policy short
     if (runtime === undefined) throw new Error('missing compatibility runtime')
     const legacy = runtime.context
     const syncTrace: string[] = []
-    const legacyObserved = legacy.on('fs/observed', () => { syncTrace.push('cordis') })
+    const legacyObserved = legacy.on('fs/observed', () => { syncTrace.push('compat') })
     const nativeObserved = host.events.on(scope, 'fs/observed', () => { syncTrace.push('native') })
     host.events.emit(scope, 'fs/observed', target, { kind: 'present', version: info.version }, first)
-    expect(syncTrace).toEqual(['cordis', 'native'])
+    expect(syncTrace).toEqual(['compat', 'native'])
     const syncFailure = new Error('Cordis observation listener failed')
     const failingObserved = legacy.on('fs/observed', () => { throw syncFailure }, { prepend: true })
     expect(() => { host.events.emit(scope, 'fs/observed', target, { kind: 'present', version: info.version }, first) })

@@ -43,6 +43,8 @@ export const MODULE_PROXIES: Record<string, string> = {
   'node:http': './node/builtin_modules/implemented/http.ts',
   // Sync-stack AsyncLocalStorage semantics.
   'node:async_hooks': './node/builtin_modules/implemented/async_hooks.ts',
+  // Maintained UTF-8 streaming decoder used by browser-side stream consumers.
+  'node:string_decoder': './node/builtin_modules/implemented/string_decoder.ts',
   // Real implementations over browser primitives.
   'node:util': './node/builtin_modules/implemented/util.ts',
   'node:util/types': './node/builtin_modules/implemented/util/types.ts',

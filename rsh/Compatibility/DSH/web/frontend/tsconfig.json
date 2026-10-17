@@ -1,0 +1,16 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../../rsh/Core/vendor/cordis" },
+    { "path": "../../../../../rsh/Core/vendor/loader" },
+    { "path": "../../../../../rsh/Programs/Web/client/modules" },
+    { "path": "../../../../../rsh/Programs/Web/client/store" },
+    { "path": "../../../../../rsh/Programs/Web/client/ui-dockkit" },
+    { "path": "../../../../../rsh/Programs/Web/client/ui-primitives" },
+    { "path": "../../../../../rsh/Programs/Web/client/ui-renderer" },
+    { "path": "../../../../../rsh/Programs/Web/client/ui-slots" },
+    { "path": "../../../../../rsh/Programs/Web/client/web" }
+  ]
+}

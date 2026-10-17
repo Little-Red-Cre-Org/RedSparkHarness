@@ -167,7 +167,7 @@ if (command === 'add' || command === 'remove') {
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
   if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
     rmSync(${JSON.stringify(failReservedInstall)})
-    const reserved = join(modules, '@deepseek-ai', 'cordis')
+    const reserved = join(modules, '@deepseek-ai/cordis')
     if (existsSync(reserved)) {
       if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
       else rmSync(reserved, { recursive: true, force: true })
@@ -887,8 +887,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
   const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(reservedMarker, '')
-  const profileCordis = join(profile, 'node_modules', '@deepseek-ai', 'cordis')
-  const bundledCordis = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai', 'cordis')
+  const profileCordis = join(profile, 'node_modules', '@deepseek-ai/cordis')
+  const bundledCordis = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai/cordis')
   let oldHostRestartedAfterReservedFailure = false
   const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {

@@ -1,6 +1,6 @@
 /** Resolve direct third-party browser inputs through the shipping build configurations, without emitting files. */
 
-import { globSync, readFileSync } from 'node:fs'
+import { existsSync, globSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -119,12 +119,22 @@ interface AliasEntry {
 }
 
 interface ShellConfig {
-  build: { rollupOptions?: { input?: string | string[] | Record<string, string> } }
+  root?: string
+  build: {
+    target?: 'modules' | string | string[] | false
+    rollupOptions?: { input?: string | string[] | Record<string, string> }
+  }
   define?: Record<string, unknown>
   resolve?: { alias?: readonly AliasEntry[] }
 }
 
 interface ViteApi {
+  loadConfigFromFile(
+    configEnv: { command: 'build'; mode: string },
+    configFile: string,
+    configRoot: string,
+    logLevel: 'error',
+  ): Promise<{ config: { root?: string } } | null>
   resolveConfig(config: Record<string, unknown>, command: 'build'): Promise<ShellConfig>
   build(config: Record<string, unknown>): Promise<unknown>
 }
@@ -134,30 +144,36 @@ async function collectShell(
   workspaceNames: ReadonlySet<string>,
   seen: Set<string>,
 ): Promise<void> {
-  for (const path of globSync('rsh/Programs/**/vite.config.ts', { cwd: root }).sort()) {
+  for (const path of globSync(['rsh/Programs/**/vite.config.ts', 'rsh/Compatibility/DSH/web/frontend/vite.config.ts'], { cwd: root }).sort()) {
     const dir = dirname(resolve(root, path))
     const manifest = readManifest(resolve(dir, 'package.json'))
     if (manifest.private === true || manifest.exports?.['./dist/*'] === undefined) continue
     const vitePath = createRequire(resolve(dir, 'package.json')).resolve('vite')
     const vite = await import(pathToFileURL(vitePath).href) as ViteApi
-    const config = await vite.resolveConfig({ root: dir, logLevel: 'error' }, 'build')
+    const configFile = resolve(dir, 'vite.config.ts')
+    const loaded = await vite.loadConfigFromFile({ command: 'build', mode: 'production' }, configFile, dir, 'error')
+    if (loaded === null) throw new Error(`browser notices: cannot load ${configFile}`)
+    const configRoot = loaded.config.root === undefined ? dir : resolve(dir, loaded.config.root)
+    const config = await vite.resolveConfig({ configFile, root: configRoot, logLevel: 'error' }, 'build')
+    const shellRoot = config.root ?? dir
     const input = config.build.rollupOptions?.input
     const entries = typeof input === 'string' ? { index: input }
       : Array.isArray(input) ? Object.fromEntries(input.map((entry, index) => [String(index), entry]))
         : input ?? {}
-    const pages = Object.fromEntries(Object.entries(entries).filter(([, entry]) => entry.endsWith('.html')))
-    if (Object.keys(pages).length === 0) throw new Error(`browser notices: ${manifest.name} has no HTML build entry`)
-    const pageInput = Object.keys(pages).length === 1 ? Object.values(pages)[0] : pages
+    const inputs = Object.fromEntries(Object.entries(entries).filter(([, entry]) => entry.endsWith('.html') || existsSync(entry)))
+    if (!Object.values(inputs).some(entry => entry.endsWith('.html'))) throw new Error(`browser notices: ${manifest.name} has no HTML build entry`)
+    const pageInput = Object.keys(inputs).length === 1 ? Object.values(inputs)[0] : inputs
     const configuredAliases = config.resolve?.alias ?? []
     await vite.build({
       configFile: false,
-      root: dir,
+      root: shellRoot,
       define: config.define,
       logLevel: 'error',
       plugins: [recorder(seen, workspaceNames, true)],
       resolve: { alias: [...browserSourceAliases(root), ...configuredAliases] },
       build: {
         write: false,
+        ...(config.build.target === undefined ? {} : { target: config.build.target }),
         minify: false,
         sourcemap: false,
         reportCompressedSize: false,

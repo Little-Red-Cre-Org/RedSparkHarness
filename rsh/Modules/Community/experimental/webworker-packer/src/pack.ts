@@ -24,10 +24,11 @@ import {
 import picomatch from 'picomatch'
 import yaml from 'js-yaml'
 import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
+import { DEFAULT_CONDITIONS } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/module-system/module-loader.ts'
 import { REPLACED_EXTERNAL_PACKAGES } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/node/external_packages/replaced-externals.ts'
 import { MODULE_PROXIES, MODULE_PROXY_PREFIXES } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/module-proxies.ts'
 import { WRAPPER_CONTRACT, type ImageFiles, type TransformOutcome } from './transform-image.ts'
-import { EXCLUDE, EXCLUDE_WORKSPACE, IMAGE_ENTRY_SEEDS, PAGE_ASSETS } from './rules.ts'
+import { EXCLUDE, EXCLUDE_WORKSPACE, IMAGE_ENTRY_SEEDS, PAGE_ASSETS, WORKER_RUNTIME_CLIENTS } from './rules.ts'
 
 export { DEFAULT_ROOT } from '@deepseek-ai/dsh-experimental-webworker-runtime'
 
@@ -51,7 +52,9 @@ const excluded = picomatch([...EXCLUDE], { dot: true })
 const workspaceExcluded = picomatch([...EXCLUDE, ...EXCLUDE_WORKSPACE], { dot: true })
 
 /** Page-asset matcher over image paths ({@link PAGE_ASSETS}). */
-const pageAsset = picomatch([...PAGE_ASSETS], { dot: true })
+const pageAssetPath = picomatch([...PAGE_ASSETS], { dot: true })
+const workerRuntimeClients = new Set(WORKER_RUNTIME_CLIENTS)
+const pageAsset = (path: string): boolean => pageAssetPath(path) && !workerRuntimeClients.has(path)
 
 /** One directory tree to copy into the image at a caller-selected mount. */
 export interface ImageTree {
@@ -174,6 +177,32 @@ function rosterOf(config: string): string[] {
   const names = new Set<string>()
   moduleNamesOf(yaml.load(config, { schema: entryListSchema }), names)
   return [...names]
+}
+
+const runtimeConditions = new Set<string>(DEFAULT_CONDITIONS)
+
+/**
+ * Whether an export target has a branch this worker can load at runtime.
+ *
+ * Type declarations and CSS resources are consumed by TypeScript and the page
+ * bundler, not the CommonJS loader. Unknown conditions remain roots so the
+ * loader rejects an unsupported or malformed runtime export instead of
+ * silently omitting it from the image.
+ * @param target - One package export target.
+ * @returns Whether the package face can select an executable target.
+ */
+function hasRuntimeExportTarget(target: unknown): boolean {
+  if (target === null || target === undefined) return false
+  if (typeof target === 'string') return !target.endsWith('.css')
+  if (Array.isArray(target)) return target.some(hasRuntimeExportTarget)
+  if (typeof target !== 'object') return true
+
+  const conditions = Object.entries(target)
+  return conditions.some(([condition, value]) => {
+    if (condition === 'types') return false
+    if (!runtimeConditions.has(condition)) return true
+    return hasRuntimeExportTarget(value)
+  })
 }
 
 /**
@@ -378,17 +407,25 @@ function sweepImage(
   for (const name of rootPackages) {
     const manifestBytes = files[`node_modules/${name}/package.json`]
     if (manifestBytes === undefined) continue // materialize already reported it under `missing`
-    let manifest: { exports?: Record<string, unknown> }
+    let manifest: { exports?: unknown }
     try {
       manifest = JSON.parse(decoder.decode(manifestBytes)) as typeof manifest
     } catch {
       continue
     }
-    // Every non-wildcard face is a root; a face resolving onto a page asset is
-    // kept untransformed below rather than excluded here.
+    // Every non-wildcard runtime face is a root; type-only and stylesheet
+    // exports belong to TypeScript and the page bundler, not the VFS loader.
+    const exportEntries = typeof manifest.exports === 'object' && manifest.exports !== null
+      ? Object.entries(manifest.exports)
+      : []
+    const isSubpathMap = exportEntries.some(([key]) => key === '.' || key.startsWith('./'))
     const subpaths = manifest.exports === undefined
       ? ['.']
-      : Object.keys(manifest.exports).filter(key => key.startsWith('.') && !key.includes('*'))
+      : isSubpathMap
+        ? exportEntries
+          .filter(([key, target]) => key.startsWith('.') && !key.includes('*') && hasRuntimeExportTarget(target))
+          .map(([key]) => key)
+        : hasRuntimeExportTarget(manifest.exports) ? ['.'] : []
     for (const subpath of subpaths) {
       queue.push({ specifier: subpath === '.' ? name : `${name}/${subpath.slice(2)}`, from: root, importer: `workspace face ${name}` })
     }

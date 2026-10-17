@@ -34,6 +34,7 @@ rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/
 rsh/**/__pycache__/
 rsh/**/.pytest_cache/
 rsh/Programs/Web/application/dist/
+rsh/Compatibility/DSH/web/frontend/dist/
 .artifacts/
 .dsh-build/
 .playwright-mcp/

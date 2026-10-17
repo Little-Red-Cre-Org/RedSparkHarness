@@ -1,7 +1,7 @@
 /**
  * Application mount through a dependency fiber, so replacing `uiRenderer`
  * remounts the application. Shared by `AppWebEntry` and the test carrier.
- * @module @deepseek-ai/dsh-client-web/src/mount
+ * @module @deepseek-ai/dsh-web-compatibility/src/mount
  */
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'

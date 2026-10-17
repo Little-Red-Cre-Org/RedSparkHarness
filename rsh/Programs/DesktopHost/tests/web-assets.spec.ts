@@ -11,12 +11,12 @@ async function desktopFixture(): Promise<{ runtime: string; dist: string }> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-host-assets-'))
   roots.push(root)
   const runtime = join(root, 'runtime')
-  const packageRoot = join(runtime, 'node_modules', '@deepseek-ai', 'dsh-web-frontend')
+  const packageRoot = join(runtime, 'node_modules', '@deepseek-ai', 'dsh-web-compatibility')
   const dist = join(packageRoot, 'dist')
   await mkdir(dist, { recursive: true })
   await writeFile(join(runtime, 'package.json'), '{}')
   await writeFile(join(packageRoot, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-web-frontend',
+    name: '@deepseek-ai/dsh-web-compatibility',
     exports: { './dist/*': './dist/*' },
   }))
   await writeFile(join(dist, 'index.html'), '<!doctype html><html><head></head><body><div id="root"></div></body></html>')

@@ -2,7 +2,7 @@
  * Production client composition without the page: mount the Loader over a
  * module system, create every manifest row, wait for quiescence, and audit
  * activation. `AppWebEntry` and the whole-client test carrier both call it.
- * @module @deepseek-ai/dsh-client-web/src/boot-client
+ * @module @deepseek-ai/dsh-web-compatibility/src/boot-client
  */
 import type { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'

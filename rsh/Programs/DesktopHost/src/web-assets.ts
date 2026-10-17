@@ -46,7 +46,7 @@ const MIME: Readonly<Record<string, string>> = {
 /** Serve the installed legacy frontend and its Host-owned transport. */
 export function createDesktopAssetHandler(ctx: Context, runtimeDir: string): ConnectionFetchHandler {
   const require = createRequire(join(runtimeDir, 'package.json'))
-  const distIndex = require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')
+  const distIndex = require.resolve('@deepseek-ai/dsh-web-compatibility/dist/index.html')
   const distRoot = realpathSync(dirname(distIndex))
   const renderIndex = async (): Promise<Response> => {
     const rows: IndexInjection[] = [{ kind: 'script', placement: 'head', text: DESKTOP_TRANSPORT_SCRIPT }]
