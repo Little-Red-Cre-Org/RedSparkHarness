@@ -34,6 +34,8 @@ TypeScript 与 Python SDK 继续默认使用 `sdk`。TypeScript 源码 launcher 
 
 Desktop 从 JSONL 包的 `./native-inspection` 入口执行这项预检；该入口不会加载持久化后端。
 
+profile composer 通过 CLI 包已导出的 `./package.json` 读取随附 profile 名称；即使 Desktop 将 composer 打包进应用，CLI manifest 仍是模板名称的唯一来源。
+
 LLM 根入口和 Native 入口直接导出消息构造器与 message.ts 独有类型；共享消息类型（包括 `MessageSourceMap`）只经 `types.ts` 导出一次，使生成声明保留单一且明确的来源。
 
 Session expected 文件仍是作者维护的数据，本次默认变更不会重新生成它们。

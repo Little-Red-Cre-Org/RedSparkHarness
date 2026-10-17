@@ -1,5 +1,6 @@
 /** First-use compositions for the explicitly selected native profiles. */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import cliPackageManifest from '@deepseek-ai/dsh/package.json' with { type: 'json' }
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
@@ -14,12 +15,7 @@ const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
   rsh: 'native-tui',
 }
 
-interface CliManifest {
-  dsh?: { nativeProfileTemplates?: unknown }
-}
-
-const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as CliManifest
-const nativeProfileTemplates = manifest.dsh?.nativeProfileTemplates
+const nativeProfileTemplates = (cliPackageManifest as { dsh?: { nativeProfileTemplates?: unknown } }).dsh?.nativeProfileTemplates
 if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
   throw new Error('dsh: CLI package must declare its native profile templates')
 }
@@ -114,6 +110,8 @@ function isHeadlessProfile(profile: string): boolean {
  * @param home - Harness home used by durable providers.
  * @param name - shipped standard or native profile name.
  * @param platform - target platform for command providers and tools.
+ * @param options - Optional paths for the profile.
+ * @param options.profileDirectory - Profile directory used by the native Web Host.
  * @returns the profile configuration installed on first use.
  * @remarks Native SDK, SDK-child, ACP and ACP-child profiles install workspace instructions through their selected filesystem Provider.
  */
