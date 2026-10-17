@@ -63,7 +63,7 @@ function readManifest(path: string): Manifest {
 }
 
 /**
- * Source aliases shared with the repository's source-plane TypeScript programs.
+ * Source aliases shared with the repository's source-plane TypeScript programs, retaining Vite resource queries.
  * @param root - Repository root containing tsconfig.base.json.
  * @returns Exact and wildcard aliases for the Vite dependency walk.
  */
@@ -75,8 +75,11 @@ export function browserSourceAliases(root: string): { find: RegExp; replacement:
   return Object.entries(parsed.options.paths ?? {}).map(([name, targets]) => {
     const target = targets[0]
     if (target === undefined) throw new Error(`browser notices: ${name} has no source target in ${path}`)
+    const wildcard = name.includes('*')
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\*', '(.*)')
-    return { find: new RegExp(`^${escaped}$`), replacement: resolve(root, target).replace('*', '$1') }
+    const query = '(\\?.*)?'
+    const replacement = resolve(root, target).replace('*', '$1') + (wildcard ? '$2' : '$1')
+    return { find: new RegExp(`^${escaped}${query}$`), replacement }
   })
 }
 
@@ -171,6 +174,7 @@ async function collectShell(
       logLevel: 'error',
       plugins: [recorder(seen, workspaceNames, true)],
       resolve: { alias: [...browserSourceAliases(root), ...configuredAliases] },
+      worker: { plugins: () => [recorder(seen, workspaceNames, true)] },
       build: {
         write: false,
         ...(config.build.target === undefined ? {} : { target: config.build.target }),

@@ -21,6 +21,9 @@ function fixture(): string {
       paths: {
         '@fixture/static': ['./rsh/Programs/Web/client/static/src/index.ts'],
         '@fixture/static/boot-page': ['./rsh/Programs/Web/client/static/src/boot-page.ts'],
+        '@deepseek-ai/dsh-client-web/base.css': ['./rsh/Programs/Web/client/web/src/base.css'],
+        '@deepseek-ai/dsh-experimental-webworker-runtime/worker': ['./rsh/Modules/Community/experimental/webworker-runtime/src/worker.ts'],
+        '@deepseek-ai/dsh-experimental-webworker-runtime/client': ['./rsh/Modules/Community/experimental/webworker-runtime/src/client/index.ts'],
       },
     },
   }))
@@ -89,6 +92,8 @@ describe('browser dependency discovery', () => {
     library(root, 'asset-lib')
     library(root, 'native-only-lib')
     library(root, 'leaf-lib')
+    library(root, 'client-only-lib')
+    library(root, 'worker-only-lib')
     write(root, 'node_modules/asset-lib/package.json', JSON.stringify({
       name: 'asset-lib', exports: { './theme.css': './theme.css' },
     }))
@@ -101,6 +106,11 @@ describe('browser dependency discovery', () => {
       'export const lazy = () => import("lazy-lib")',
     ].join('\n'))
     write(root, 'rsh/Programs/Web/client/static/src/boot-page.ts', 'import { value } from "leaf-lib"; export const BootPage = value')
+    write(root, 'rsh/Programs/Web/client/web/package.json', '{"name":"@deepseek-ai/dsh-client-web"}')
+    write(root, 'rsh/Programs/Web/client/web/src/base.css', '.native-and-compat { color: red }')
+    write(root, 'rsh/Modules/Community/experimental/webworker-runtime/package.json', '{"name":"@deepseek-ai/dsh-experimental-webworker-runtime"}')
+    write(root, 'rsh/Modules/Community/experimental/webworker-runtime/src/worker.ts', 'import { value } from "worker-only-lib"; self.postMessage(value)')
+    write(root, 'rsh/Modules/Community/experimental/webworker-runtime/src/client/index.ts', 'import { value } from "client-only-lib"; export { value }')
     const app = join(root, 'rsh/Programs/Web/application')
     write(root, 'rsh/Programs/Web/application/package.json', '{"name":"@fixture/web","type":"module","exports":{"./dist/*":"./dist/*"},"devDependencies":{"vite":"^6.0.0"}}')
     mkdirSync(join(app, 'node_modules'), { recursive: true })
@@ -111,12 +121,20 @@ describe('browser dependency discovery', () => {
     write(root, 'rsh/Programs/Web/application/main.ts', [
       'import { output, lazy } from "@fixture/static"',
       'import { BootPage } from "@fixture/static/boot-page"',
+      'import "@deepseek-ai/dsh-client-web/base.css"',
       'console.log(output, BootPage)',
       'void lazy()',
     ].join('\n'))
     write(root, 'rsh/Programs/Web/application/native.ts', 'import { value } from "native-only-lib"; console.log(value)')
     write(root, 'rsh/Programs/Web/application/compat-main.ts', 'import { value } from "compat-shell-lib"; console.log(value)')
-    write(root, 'rsh/Programs/Web/application/preview.ts', 'import { value } from "compat-shell-lib"; await Promise.resolve(value); console.log(value)')
+    write(root, 'rsh/Programs/Web/application/preview.ts', [
+      'import DshWorker from "@deepseek-ai/dsh-experimental-webworker-runtime/worker?worker"',
+      'import { value } from "@deepseek-ai/dsh-experimental-webworker-runtime/client"',
+      'import "@deepseek-ai/dsh-client-web/base.css"',
+      'import { value as compatibilityValue } from "compat-shell-lib"',
+      'await Promise.resolve(value)',
+      'console.log(compatibilityValue, new DshWorker())',
+    ].join('\n'))
     write(root, 'rsh/Programs/Web/application/vite.config.ts', `export default {
       build: { rollupOptions: { input: {
         index: ${JSON.stringify(join(app, 'index.html'))},
@@ -139,11 +157,15 @@ describe('browser dependency discovery', () => {
 
     expect(await browserBundledExternals(root)).toEqual(new Set([
       'shell-lib', 'lazy-lib', 'asset-lib', 'native-only-lib', 'leaf-lib', 'compat-shell-lib',
+      'client-only-lib', 'worker-only-lib',
     ]))
     expect(readFileSync(join(app, 'dist/sentinel.txt'), 'utf8')).toBe('untouched')
     expect(existsSync(join(app, 'dist/index.html'))).toBe(false)
     expect(existsSync(join(app, 'dist/native.html'))).toBe(false)
     expect(existsSync(join(root, 'rsh/Programs/Web/client/static/lib'))).toBe(false)
+    expect(existsSync(join(root, 'rsh/Programs/Web/client/web/lib/base.css'))).toBe(false)
+    expect(existsSync(join(root, 'rsh/Modules/Community/experimental/webworker-runtime/lib/worker.js'))).toBe(false)
+    expect(existsSync(join(root, 'rsh/Modules/Community/experimental/webworker-runtime/lib/client.js'))).toBe(false)
   })
 
   it('normalizes installed module ids and excludes virtual/workspace modules', () => {
