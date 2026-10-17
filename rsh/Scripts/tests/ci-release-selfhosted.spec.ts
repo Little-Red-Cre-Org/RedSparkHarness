@@ -149,7 +149,7 @@ for (const [file, jobIds] of [['release.yml', ['dependencies', 'pack']], ['relea
             expect(commands).toContain('pnpm run ' + (family === 'dsh' ? 'build:official' : 'build:lib:host'))
             expect(commands).toContain('pnpm run release:pack --family ' + family + ' --out ' + output + ' --concurrency 8')
             expect(commands).toContain('pnpm run release:verify-packed-install --family ' + family + ' --from ' + output
-              + (family === 'dsh' ? ' --from dist/npm-vendor --from dist/npm-landlock' : ''))
+              + (family === 'dsh' ? ' --from dist/npm-vendor --from dist/npm-landlock --packed-e2e' : ''))
             expect(job.steps.at(-1)).toMatchObject({ uses: 'actions/upload-artifact@v4', with: { path: output + '/*', 'retention-days': 7 } })
           }
           expect(JSON.stringify(job)).not.toMatch(/secrets\.|release:publish|npm-publish/)
@@ -163,4 +163,11 @@ it.each(['release-publish.yml', 'release-vendor-publish.yml'])('keeps %s manual 
   const publish = workflow(file)
   expect(publish.on).toEqual({ workflow_dispatch: null })
   for (const job of Object.values(publish.jobs)) expect(job['runs-on']).toBe(hosted)
+  if (file === 'release-publish.yml') {
+    const steps = publish.jobs.pack!.steps
+    const sandboxIndex = steps.findIndex(step => step.run === 'bash rsh/Scripts/prepare-ci-bubblewrap.sh')
+    const verifyIndex = steps.findIndex(step => step.run === 'pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e')
+    expect(sandboxIndex).toBeGreaterThanOrEqual(0)
+    expect(verifyIndex).toBeGreaterThan(sandboxIndex)
+  }
 })
