@@ -76,6 +76,7 @@ type NativeWorkspacesInjected = {
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
+  collapseNarrow: () => void
   toggleSidebar: () => void
 }
 type NativeWorkspacesProps = PropsRuntime<'sidebar.workspaces'> & InjectFace<NativeWorkspacesInjected> & PropsLocale<'nativeSidebar'>
@@ -176,7 +177,7 @@ function NativeSessionBrowser({
   beginNavigation, isCurrentNavigation,
   renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
-  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar, t,
+  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
@@ -200,6 +201,7 @@ function NativeSessionBrowser({
   reorderWorkspace: NativeWorkspaceClient['reorder']
   reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
+  collapseNarrow: () => void
   toggleSidebar: () => void
   t: NativeSidebarTranslate
 }) {
@@ -344,6 +346,7 @@ function NativeSessionBrowser({
   }
   const openSession = (id: NativeSessionId): void => {
     openRequest.current = undefined
+    collapseNarrow()
     if (snapshot.state === 'loading') {
       setPendingSessionId(id)
       return
@@ -1026,12 +1029,13 @@ export const plugin: NativePlugin = {
         reorderWorkspace: (id, before) => workspaceClient.reorder(id, before, context.signal),
         reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
+        collapseNarrow: layout.collapseNarrow.bind(layout),
       }),
     }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
       admitSession, selectSession, deselectSession, renameTitle, refreshTitle,
       beginNavigation, isCurrentNavigation,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
-      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, toggleSidebar,
+      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
@@ -1042,7 +1046,7 @@ export const plugin: NativePlugin = {
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
         renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
         reorderWorkspace={reorderWorkspace} reorderSession={reorderSession}
-        toggleSidebar={toggleSidebar} t={t} />))))
+        collapseNarrow={collapseNarrow} toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',
       inject: () => ({ open: () => { layout.selectPanel(scheduledTasksPanelId) } }),

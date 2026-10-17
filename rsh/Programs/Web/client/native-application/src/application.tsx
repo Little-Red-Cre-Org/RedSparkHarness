@@ -60,6 +60,7 @@ function SubagentMenu({ sessions, runningCount, ready, selectSession, t }: {
     id: session.header.id,
     label: (session.titleProjection.status === 'resolved' ? session.titleProjection.title : t('untitledSession'))
       + (session.running ? t('subagentRunningSuffix') : ''),
+    disabled: session.running,
   }))
   return <Menu className={css.subagentMenu} open={open && ready} autoFocus compact portal items={items} onSelect={(id) => {
     setOpen(false)
@@ -121,7 +122,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const selected = snapshot.selected
   const selectedRow = snapshot.sessions.find(session => session.header.id === selected)
   const childSessions = selected === undefined ? []
-    : snapshot.sessions.filter(session => session.header.parentSession === selected)
+    : snapshot.sessions.filter(session => session.header.parentSession === selected && session.header.origin === 'subagent')
   const [activeTab, setActiveTab] = useState<'conversation' | 'trajectory'>('conversation')
   const conversationTabRef = useRef<HTMLButtonElement>(null)
   const trajectoryTabRef = useRef<HTMLButtonElement>(null)
@@ -379,7 +380,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
               stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
           </div>
           {selected === undefined ? null : <div role="tabpanel" id="native-trajectory-panel"
-            aria-labelledby="native-trajectory-tab" hidden><NativeTrajectoryPanel events={snapshot.events} locale={activeLocale} /></div>}
+            aria-labelledby="native-trajectory-tab" hidden><NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} /></div>}
           {composer}
         </section>
         : <>
@@ -409,7 +410,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
           <div role="tabpanel" id="native-trajectory-panel" aria-labelledby="native-trajectory-tab"
             className={css.trajectoryTabPanel}
             hidden={activeTab !== 'trajectory'}>
-            <NativeTrajectoryPanel events={snapshot.events} locale={activeLocale} />
+            <NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} />
           </div>
           <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>
         </>}

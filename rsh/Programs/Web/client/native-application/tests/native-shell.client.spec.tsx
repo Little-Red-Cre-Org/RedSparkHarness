@@ -328,7 +328,7 @@ it.each([
   } as unknown as SessionEvent
   const betaAssistantMessage = {
     type: 'assistant/message', seq: SessionSeq(7), time: 1005, surfaceOp: 'append',
-    data: { turn: 1, step: 1, stream: [], usage: {
+    data: { turn: 1, step: 1, stream: [{ type: 'text-chunks', time0: 905, index: 0, dt: [], texts: ['Beta reply'] }], usage: {
       inputTokens: 1000, outputTokens: 141, totalTokens: 621000, cacheReadTokens: 8100, cacheWriteTokens: 900,
     }, message: { id: 'beta-reply', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' },
       content: [{ type: 'text', text: 'Beta reply' }] } },
@@ -497,7 +497,7 @@ it.each([
     const conversationTab = screen.getByRole('tab', { name: 'Conversation' })
     const trajectoryTab = screen.getByRole('tab', { name: 'Trajectory' })
     expect(conversationTab.getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('2 turns · 2 steps · 141 tok/s · 621K tok · cache hit 81%')).toBeTruthy()
+    expect(screen.getByText('2 turns · 2 steps · 1,410 tok/s · 621K tok · cache hit 81%')).toBeTruthy()
     fireEvent.keyDown(conversationTab, { key: 'ArrowRight' })
     expect([trajectoryTab.getAttribute('aria-selected'), document.activeElement]).toEqual(['true', trajectoryTab])
     fireEvent.click(trajectoryTab)
@@ -506,6 +506,33 @@ it.each([
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeTruthy()
     fireEvent.click(conversationTab)
     expect(clientMock.selectPreset).not.toHaveBeenCalled()
+    const beta = { ...rows.find(row => row.header.id === 'session-beta')!, runningSubagentCount: 1 }
+    const children: NativeSessionListItem[] = [
+      { header: { ...makeHeader('running-child'), parentSession: beta.header.id, origin: 'subagent' },
+        titleProjection: { status: 'resolved', title: 'Running child' }, ...activity, running: true },
+      { header: { ...makeHeader('idle-child'), parentSession: beta.header.id, origin: 'subagent' },
+        titleProjection: { status: 'resolved', title: 'Idle child' }, ...activity },
+      { header: { ...makeHeader('plain-fork'), parentSession: beta.header.id },
+        titleProjection: { status: 'resolved', title: 'Plain fork' }, ...activity },
+    ]
+    rows = [...rows.map(row => row.header.id === beta.header.id ? beta : row), ...children]
+    listFrames.publish({ type: 'upsert', item: beta })
+    for (const item of children) listFrames.publish({ type: 'upsert', item })
+    fireEvent.click(await screen.findByRole('button', { name: '1 subagents running' }))
+    const subagentMenu = await screen.findByRole('menu')
+    const subagentItems = within(subagentMenu).getAllByRole('menuitem')
+    expect(subagentItems.map(item => item.textContent?.trim())).toEqual(['Running child · Running', 'Idle child'])
+    expect(subagentItems[0]).toHaveProperty('disabled', true)
+    fireEvent.click(subagentItems[1]!)
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('idle-child') })
+    expect(clientMock.history).toHaveBeenLastCalledWith('idle-child', expect.any(AbortSignal))
+    rows = rows.filter(row => !children.some(child => child.header.id === row.header.id))
+    const betaWithoutChildren = { ...beta, runningSubagentCount: 0 }
+    rows = rows.map(row => row.header.id === beta.header.id ? betaWithoutChildren : row)
+    for (const item of children) listFrames.publish({ type: 'remove', sessionId: item.header.id })
+    listFrames.publish({ type: 'upsert', item: betaWithoutChildren })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-beta') })
     const pendingStart = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
     pendingWorkspaceConnection = pendingStart
     const pendingMessageInput = screen.getByRole('textbox', { name: 'Message' })

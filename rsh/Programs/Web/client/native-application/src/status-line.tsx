@@ -1,5 +1,6 @@
 /** Compact usage summary derived from the selected Session's loaded events. */
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { assistantStreamFirstTokenTime } from '@deepseek-ai/dsh-llm/assistant-stream'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import css from './conversation.module.css'
@@ -38,12 +39,10 @@ export function NativeStatusLine({ events, locale, t }: {
     + (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0), 0)
   const cacheHit = !hasCacheData || cacheTotalTokens === 0
     ? undefined : Math.round(cacheReadTokens / cacheTotalTokens * 100)
-  const stepStarts = new Map(events.flatMap(event => event.type === 'step/start'
-    ? [[`${event.data.turn}:${event.data.step}`, event.time] as const] : []))
-  const stepStartedAt = latestAssistant === undefined ? undefined
-    : stepStarts.get(`${latestAssistant.data.turn}:${latestAssistant.data.step}`)
-  const elapsedSeconds = stepStartedAt === undefined || latestAssistant === undefined
-    ? undefined : (latestAssistant.time - stepStartedAt) / 1000
+  const firstTokenTime = latestAssistant === undefined
+    ? undefined : assistantStreamFirstTokenTime(latestAssistant.data.stream)
+  const elapsedSeconds = firstTokenTime === undefined || latestAssistant === undefined
+    ? undefined : (latestAssistant.time - firstTokenTime) / 1000
   const rate = latestAssistant?.data.usage === undefined || elapsedSeconds === undefined || elapsedSeconds <= 0
     ? undefined
     : new Intl.NumberFormat(locale === 'zh' ? 'zh-CN' : 'en-US', { maximumFractionDigits: 0 })
