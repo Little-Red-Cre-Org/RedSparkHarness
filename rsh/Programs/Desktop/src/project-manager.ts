@@ -17,7 +17,8 @@ import {
 import { NativeScope, parseNativeEntryManifest,
   type NativeEntryManifest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { parseNativeClientProfile, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
-import { inspectSessionRootCompression, type JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
+import type { JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { load as loadYaml } from 'js-yaml'
 import { spawn } from 'node:child_process'
 import {

@@ -152,6 +152,7 @@
       "@deepseek-ai/dsh-session-persistence/native": ["./rsh/Engine/session/session-persistence/src/native.ts"],
       "@deepseek-ai/dsh-session-persistence/deletion": ["./rsh/Engine/session/session-persistence/src/deletion.ts"],
       "@deepseek-ai/dsh-session-persistence-jsonl/native": ["./rsh/Engine/session/session-persistence-jsonl/src/native.ts"],
+      "@deepseek-ai/dsh-session-persistence-jsonl/native-inspection": ["./rsh/Engine/session/session-persistence-jsonl/src/native-inspection.ts"],
       "@deepseek-ai/dsh-typert-registry/types": ["./rsh/Core/typert/registry/src/types.ts"],
       "@deepseek-ai/dsh-typert-generator": ["./rsh/Core/typert/generator/src/index.ts"],
       "@deepseek-ai/dsh-attachment/types": ["./rsh/Modules/Official/attachment/attachment/src/types.ts"],

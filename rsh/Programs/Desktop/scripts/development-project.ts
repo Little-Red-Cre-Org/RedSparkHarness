@@ -12,7 +12,7 @@ import {
   unlinkSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
 import { createDevelopmentProjectMetadata } from '../src/project-manager.ts'
 import type { DesktopRelease } from '../src/release.ts'
 

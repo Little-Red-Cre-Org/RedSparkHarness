@@ -8,6 +8,7 @@ const output = {
 export default defineConfig([
   { ...output, entry: ['lib/types/index.js'] },
   { ...output, entry: ['lib/types/native.js'] },
+  { ...output, entry: ['lib/types/native-inspection.js'] },
   {
     ...output,
     entry: ['lib/types/worker.js'],
