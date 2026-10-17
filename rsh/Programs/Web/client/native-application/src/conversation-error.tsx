@@ -4,8 +4,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 
 type Translate = TranslateNS<'nativeApplication'>
 
-// The native prompt RPC reports model failures as `native/session` message text without the
-// LlmError code, so status-based authentication guidance is limited to model errors.
+// The Host forwards LlmError codes, but the conversation snapshot keeps only failure text, so classification still matches text.
 const MISSING_CREDENTIAL =
   /\bno (?:API key|credential) for provider route\b|\bAPI key\b.*\b(?:is blank|contains characters no HTTP header can carry)\b/i
 const MISSING_SIGN_IN = /\b(?:requires|needs) an active Sign in\b|\bSign in (?:to DeepSeek|with ChatGPT again)\b/i

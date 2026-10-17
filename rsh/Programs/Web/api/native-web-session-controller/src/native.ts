@@ -46,7 +46,7 @@ import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permissi
 import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage, freezeMessage, LlmError, MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { ContentBlock, TextBlock } from '@deepseek-ai/dsh-llm/native'
 import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
 import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
@@ -1951,7 +1951,7 @@ export class NativeWebSessionService {
       if (endpoint === 'session/list' || endpoint === 'session/search' || endpoint === 'session/archive') {
         return { ok: false, error: { code: 'native/sessions', message: 'Session request failed.', details: {} } }
       }
-      return { ok: false, error: { code: isImageAdmissionError(error) ? 'native/image' : 'native/session',
+      return { ok: false, error: { code: error instanceof LlmError ? error.code : isImageAdmissionError(error) ? 'native/image' : 'native/session',
         message: errorMessage(error), details: submissionErrorDetails(endpoint, payload) } }
     }
   }
