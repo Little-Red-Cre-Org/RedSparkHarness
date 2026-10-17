@@ -309,6 +309,23 @@ def write_advanced_profile_patch(root: Path, name: str, sessions: Path) -> Path:
     ])
 
 
+def ensure_legacy_sdk_profile(executable: Path, dsh_home: Path, cwd: Path) -> None:
+    """Create the Cordis SDK template under an explicit custom profile name."""
+    result = subprocess.run(
+        [str(executable), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
+        cwd=cwd,
+        env={**os.environ, "DSH_HOME": str(dsh_home)},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"failed to create the explicit legacy SDK profile: "
+            f"returncode={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+
+
 def write_mcp_patch(root: Path, sessions: Path, server_script: Path) -> Path:
     """Write a profile patch that mounts the packaged MCP client."""
     return write_profile_patch(root, "mcp.patch.yml", sessions, [{
@@ -1896,6 +1913,7 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
         root = Path(temporary).resolve()
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_advanced_profile_patch(root, "custom.patch.yml", sessions)
         with DeepSeekHarness(
             provider="deepseek-official",
@@ -1903,6 +1921,7 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
             cwd=str(root),
             dsh_bin=str(executable),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             patches=(str(patch),),
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",
@@ -2212,8 +2231,21 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
 
         dsh = Path(sysconfig.get_path("scripts")) / ("dsh.exe" if IS_WINDOWS else "dsh")
         environment = {**os.environ, "DSH_HOME": str(dsh_home)}
+        initialized = subprocess.run(
+            [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
+            cwd=root,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if initialized.returncode != 0:
+            raise AssertionError(
+                f"Python-installed dsh could not create the explicit legacy SDK profile: "
+                f"returncode={initialized.returncode} stdout={initialized.stdout!r} stderr={initialized.stderr!r}"
+            )
         installed = subprocess.run(
-            [str(dsh), "plugin", "--profile", "sdk", "add", f"file:{plugin}"],
+            [str(dsh), "plugin", "--profile", "legacy-sdk", "add", f"file:{plugin}"],
             cwd=root,
             env=environment,
             text=True,
@@ -2226,7 +2258,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
                 f"returncode={installed.returncode} (0x{installed.returncode & 0xffffffff:08x}) "
                 f"stdout={installed.stdout!r} stderr={installed.stderr!r}"
             )
-        manifest = json.loads((dsh_home / "profiles" / "sdk" / "package.json").read_text())
+        manifest = json.loads((dsh_home / "profiles" / "legacy-sdk" / "package.json").read_text())
         if "dsh-python-blackbox-plugin" not in manifest.get("dependencies", {}):
             raise AssertionError(f"dsh plugin did not record the external dependency: {manifest}")
         if "dsh-python-blackbox-plugin" not in manifest["dsh"]["profile"]["bundles"]:
@@ -2237,6 +2269,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
             model="smoke-model",
             cwd=str(root),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",
                 "DSH_TELEMETRY_DISABLED": "1",
@@ -2265,6 +2298,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
         root = Path(temporary).resolve()
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_advanced_profile_patch(root, "snapshot.patch.yml", sessions)
         feedback_patch = write_profile_patch(root, "feedback.patch.yml", sessions, [{"insert": [
             {"id": "snapshot-workflow-order", "name": (
@@ -2284,6 +2318,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             cwd=str(root),
             dsh_bin=str(executable),
             dsh_home=str(dsh_home),
+            profile="legacy-sdk",
             patches=(str(patch), str(feedback_patch)),
             env={
                 "DSH_PERMISSION_MODE": "danger-full-access",
@@ -2337,6 +2372,7 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
         root = Path(temporary).resolve()
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_advanced_profile_patch(root, "restart.patch.yml", sessions)
         first_request = len(MockModelHandler.requests)
 
@@ -2347,6 +2383,7 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
                 cwd=str(root),
                 dsh_bin=str(executable),
                 dsh_home=str(dsh_home),
+                profile="legacy-sdk",
                 patches=(str(patch),),
                 env={
                     "DSH_PERMISSION_MODE": "danger-full-access",
@@ -2410,7 +2447,7 @@ def smoke_direct(base_url: str, executable: Path) -> None:
             "DEEPSEEK_BASE_URL": base_url,
         }
         peer = RuntimePeer(
-            [str(executable), "--profile", "sdk", "--patch", str(patch)],
+            [str(executable), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--patch", str(patch)],
             root,
             environment,
         )

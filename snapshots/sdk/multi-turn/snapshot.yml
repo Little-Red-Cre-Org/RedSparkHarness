@@ -1,6 +1,6 @@
 version: 1
 scenario: multi-turn
-profile: sdk
+profile: legacy-sdk
 composition: default
 recording: live
 sessionFormat:

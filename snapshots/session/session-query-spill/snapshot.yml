@@ -1,6 +1,6 @@
 version: 1
 scenario: session-query-spill
-profile: headless
+profile: legacy-headless
 composition: session-query
 recording: authored
 header:

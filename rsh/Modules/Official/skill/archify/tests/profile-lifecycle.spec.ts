@@ -1,4 +1,4 @@
-/** Real CLI acceptance for the standard profile's built-in Archify provider. */
+/** Real CLI acceptance for the legacy profile's built-in Archify provider. */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -44,8 +44,8 @@ function runCli(
   return { status: result.status, stdout: result.stdout, stderr: result.stderr }
 }
 
-describe('Archify standard profile composition', () => {
-  it('boots one hidden built-in Skill through the real headless profile loader', async () => {
+describe('Archify legacy profile composition', () => {
+  it('boots one hidden built-in Skill through the real legacy headless profile loader', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-archify-standard-'))
     cleanups.push(() => rm(root, { recursive: true, force: true }))
     const home = join(root, 'home')
@@ -58,10 +58,14 @@ describe('Archify standard profile composition', () => {
       '    - id: archify-skill-probe',
       `      name: ${JSON.stringify(pathToFileURL(probeModule).href)}`,
       '      inject: [skills]',
+      '- id: headless-runner',
+      '  disabled: true',
       '',
     ].join('\n'))
 
-    const dump = runCli(workspace, home, ['--profile', 'headless', '--dump-config'])
+    const dump = runCli(workspace, home, [
+      '--profile', 'legacy-headless', '--from-default-profile', 'headless', '--dump-config',
+    ])
     expect(dump.status, dump.stderr || dump.stdout).toBe(0)
     expect(dump.stdout).toContain('id: archify')
     expect(dump.stdout).toContain("name: '@deepseek-ai/dsh-archify'")
@@ -69,7 +73,7 @@ describe('Archify standard profile composition', () => {
     const booted = runCli(
       workspace,
       home,
-      ['--profile', 'headless', '--patch', probePatch, 'probe Archify composition'],
+      ['--profile', 'legacy-headless', '--patch', probePatch, 'probe Archify composition'],
       { ARCHIFY_DSH_PROBE_OUT: probeOutput },
     )
     expect(booted.status, booted.stderr || booted.stdout).toBe(0)

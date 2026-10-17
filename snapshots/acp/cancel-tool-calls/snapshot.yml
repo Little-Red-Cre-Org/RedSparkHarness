@@ -1,6 +1,6 @@
 version: 1
 scenario: cancel-tool-calls
-profile: acp
+profile: legacy-acp
 composition: acp-default
 recording: authored
 header:

@@ -59,6 +59,11 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'plugin': {
+      ensureShippedNativeProfile(invocation.profile)
+      const { profileRuntime } = await import('./native-profile-config.ts')
+      if (profileRuntime(invocation.profile) === 'native') {
+        throw new Error(`dsh: dsh plugin does not manage native profile ${invocation.profile}; edit its rsh.profile.json installations instead (see rsh/Docs/native-config-migration.md)`)
+      }
       requireCompatibilityRuntime()
       const { runPlugin } = await import('./plugin.ts')
       process.exit(runPlugin(invocation.profile, invocation.args))

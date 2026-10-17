@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-continuable-inheritance
-profile: sdk
+profile: legacy-sdk
 composition: subagent-continuable-inheritance
 recording: authored
 header:

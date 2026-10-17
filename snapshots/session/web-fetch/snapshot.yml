@@ -1,6 +1,6 @@
 version: 1
 scenario: web-fetch
-profile: headless
+profile: legacy-headless
 composition: web
 recording: live
 permission: workspace-write

@@ -1,6 +1,6 @@
 version: 1
 scenario: system-prompt-in-history
-profile: sdk
+profile: legacy-sdk
 composition: system-prompt-in-history
 recording: authored
 header:

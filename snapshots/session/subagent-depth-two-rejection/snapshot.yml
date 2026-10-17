@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-depth-two-rejection
-profile: headless
+profile: legacy-headless
 composition: depth-two
 recording: authored
 header:

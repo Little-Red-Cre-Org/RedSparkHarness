@@ -1,4 +1,4 @@
-/** Recorded ACP protocol behavior through the shipped `dsh --profile acp` interface. */
+/** Recorded ACP protocol behavior through an explicit legacy ACP profile. */
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -82,7 +82,8 @@ defineAcpSnapshotSuite({
   agent: {
     binScript: fileURLToPath(new URL('../../rsh/Programs/CLI/src/bin.ts', import.meta.url)),
     configPath: fileURLToPath(new URL('./escalation-approved/cordis.yml', import.meta.url)),
-    profile: 'acp',
+    profile: 'legacy-acp',
+    fromDefaultProfile: 'acp',
     packageResolutionAnchor: fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url)),
     tsconfigPath: fileURLToPath(new URL('../../tsconfig.json', import.meta.url)),
   },

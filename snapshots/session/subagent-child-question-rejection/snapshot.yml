@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-child-question-rejection
-profile: headless
+profile: legacy-headless
 composition: child-question
 recording: authored
 header:

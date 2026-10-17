@@ -1,6 +1,6 @@
 version: 1
 scenario: todo-write
-profile: headless
+profile: legacy-headless
 composition: default
 recording: live
 header:

@@ -1,6 +1,6 @@
 version: 1
 scenario: read-image
-profile: headless
+profile: legacy-headless
 composition: image
 recording: authored
 header:

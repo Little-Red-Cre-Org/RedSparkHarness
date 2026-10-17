@@ -1,6 +1,6 @@
 version: 1
 scenario: ptc-workspace-context
-profile: headless
+profile: legacy-headless
 composition: ptc-workspace-context
 recording: authored
 header:

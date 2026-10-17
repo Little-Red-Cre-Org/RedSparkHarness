@@ -1,6 +1,6 @@
 version: 1
 scenario: compaction-recovery
-profile: headless
+profile: legacy-headless
 composition: compaction-recovery
 recording: authored
 header:

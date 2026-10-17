@@ -24,6 +24,8 @@ import {
   type ProfileManifest,
 } from '@deepseek-ai/dsh-app-boot'
 import { INSTALL_ANCHOR } from './profile-boot.ts'
+import { ensureShippedNativeProfile } from './native-profile-template.ts'
+import { profileRuntime } from './native-profile-config.ts'
 
 const NAME = 'dsh'
 
@@ -118,6 +120,10 @@ function anchorPathSpec(argument: string, cwd: string): string {
  * @returns the pnpm exit code.
  */
 export function runPlugin(profile: string, args: readonly string[]): number {
+  ensureShippedNativeProfile(profile)
+  if (profileRuntime(profile) === 'native') {
+    throw new Error(`dsh: dsh plugin does not manage native profile ${profile}; edit its rsh.profile.json installations instead (see rsh/Docs/native-config-migration.md)`)
+  }
   const dir = resolveProfileDir(profile)
   if (!existsSync(join(dir, 'package.json'))) {
     const template = PROFILE_TEMPLATES[profile]

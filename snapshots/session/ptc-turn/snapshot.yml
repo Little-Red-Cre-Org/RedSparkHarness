@@ -1,6 +1,6 @@
 version: 1
 scenario: ptc-turn
-profile: headless
+profile: legacy-headless
 composition: ptc
 recording: live
 header:

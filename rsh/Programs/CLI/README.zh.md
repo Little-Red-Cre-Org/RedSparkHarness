@@ -21,7 +21,7 @@
 | `dsh web` | `--profile web` 的别名。 |
 | `dsh plugin --profile <name> <pnpm args>` | 通过在 profile 目录中转发给 pnpm 来管理该 profile 的插件。 |
 
-运行命令时所在的目录将作为默认 workspace 根目录。`web`、`rsh`、`headless`、`sdk`、`sdk-minimal`、`acp`、`native-headless`、`native-headless-query`、`native-sdk` 和 `native-acp` profile 在首次使用时会从随附模板自动初始化。使用 `--from-default-profile` 可以基于这些模板之一，在尚未使用的非内置名称处创建其他 profile；通过 `dsh plugin` 则可以初始化一个以 base 为基础的 profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
+运行命令时所在的目录将作为默认 workspace 根目录。新建的 `headless`、`web`、`sdk`、`acp` 和 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`，同时保留请求中的 profile 名称。八个 `native-*` profile 仍可显式选择，`sdk-minimal` 仍是 legacy profile。已有 `package.json` 会保留所选 runtime，初始化不会改写它。使用 `--from-default-profile` 和未使用的自定义名称（如 `legacy-web`）可从随附 Cordis 组合包模板创建 legacy profile；`dsh plugin` 则可初始化以 base 为基础的 legacy profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
 `native-headless`、`native-headless-query`、`native-tui` 和 `native-web` 会话默认值使用随附 pi-ai 的 `deepseek` 路由和 `deepseek-flash` 模型。Native ACP 保留显式的 `deepseek-official` 路由。
 
@@ -34,25 +34,26 @@ Native profile 可选择启用 `dsh-sdk` 或 `dsh-acp-child` 外部驱动。CLI 
 
 ## 应用参数
 
-启动器只解析自身的 flag，并将其后的所有内容交给已启动的 profile；注入该 profile 的任意应用插件都可以解析这份共享的不可变快照（[`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.zh.md)）。启动器无法识别的第一个 token 标志着应用参数的开始：
+启动器只解析自身的 flag，并将其后的所有内容交给已启动的 legacy profile；注入该 profile 的任意应用插件都可以解析这份共享的不可变快照（[`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.zh.md)）。启动器无法识别的第一个 token 标志着应用参数的开始。新建的标准 `web` profile 会选择 Native Web，并拒绝 `--host`、`--port` 和 `--no-open`；名称为 `web` 的既有 legacy manifest 会保留其组合包解析器：
 
 ```sh
-dsh --profile web --port 8080       # --port belongs to the web app
+dsh --profile legacy-web --from-default-profile web --port 8080 # create and run legacy Web
+dsh --profile legacy-web --port 8080 # --port belongs to the legacy web app
 dsh --profile tui --resume <id>     # example, assuming the tui profile is installed; --resume belongs to the terminal app
 dsh --profile headless "run the tests"
 dsh --profile rsh --resume <id>     # --resume belongs to the RedSpark terminal app
-dsh --profile web --help            # the web app's flags, not the launcher's
+dsh --profile legacy-web --help     # the legacy web app's flags, not the launcher's
 dsh --help                          # the launcher's own help
 ```
 
 <a id="profiles"></a>
 ## Profile
 
-profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。`patchReload: live` 监视 profile 与 home 级 patch 文件，`startup` 则只应用一次。
+legacy profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。Native profile 会在包清单中声明 `runtime: "native"` 与 `config: "rsh.profile.json"`，并将安装项保存在带版本的 JSON 中。`package.json` 决定 runtime：显式 Native 标记会选择 Native；`runtime: "legacy"` 或不带 Native 字段的 legacy 组合包列表会选择 Cordis。`patchReload: live` 监视 legacy patch 文件，`startup` 则只应用一次。
 
 `./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析、preset 展开、child 路由派生与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。
 
-选择内置 `native-*` profile 会在首次使用时创建原生 profile 文件；已有 profile 保留其配置。
+选择随附 `native-*` 或标准 profile 名称会在首次使用时创建 Native profile 文件；已有 profile 保留其配置。
 
 随附的 `native-web` profile 会为 Native Session API 安装 `standard` 和 `minimal` agent mode、plan-mode Provider，以及 `workspace-write` 和 `danger-full-access` 常驻权限 preset。
 
@@ -66,7 +67,7 @@ profile 目录包含一个 `package.json`，其中记录树外插件依赖，以
 
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。
 
-显式选择的内置原生 profile 包含原生 Session 执行 Provider，提供选定的执行注册表与活动 Session 所有者。CLI 解析器将该 Provider 声明为直接依赖；旧 profile 的选择保持不变。
+标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 在目录中没有 `package.json` 时会创建 Native profile；runtime resolver 继续为已有 manifest 选择运行时。`sdk-minimal` 仍是 legacy 组合包 profile。原生 Session 执行 Provider 提供选定的执行注册表与活动 Session 所有者，CLI 解析器将该 Provider 声明为直接依赖。
 
 Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目录环境层。兼容启动共用同一验证加载器；每个根作用域拥有真实启动快照 Provider。每个 Host 根作用域还会获得 `pluginInventory` Provider，列出运行中 Host 的安装状态；重载后仍读取被保留的 Host。仅 Client 的配置两者都不安装。
 
@@ -77,7 +78,7 @@ Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目
 
 `dsh.profile.bundles` 中列出的组合包先从 dsh 安装目录解析（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`、`@deepseek-ai/dsh-rsh`、`@deepseek-ai/dsh-headless`、`@deepseek-ai/dsh-sdk-app`、`@deepseek-ai/dsh-sdk-minimal`、`@deepseek-ai/dsh-acp-app`），再从 profile 自身的 `node_modules` 解析；pnpm 会将树外插件安装到该目录。
 
-使用 `--dump-default-config` 和 `--dump-config` 可在不启动的情况下检查组合后的配置树。
+对 legacy 自定义 profile 使用 `--dump-default-config` 检查组合包树；随附标准名称会拒绝该选项。Native `--dump-config` 会在不启动的情况下打印解析后的 Native JSON profile。
 
 层的确切优先级、flag、关闭行为、部署默认值和源码执行方式，以 [CLI 行为参考](reference/README.zh.md)为准。
 

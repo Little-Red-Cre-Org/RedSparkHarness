@@ -1,6 +1,6 @@
 version: 1
 scenario: ptc-read-image-attachment-path
-profile: headless
+profile: legacy-headless
 composition: ptc-image
 recording: authored
 header:

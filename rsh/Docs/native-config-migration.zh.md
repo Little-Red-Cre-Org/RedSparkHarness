@@ -6,7 +6,7 @@
 
 ## Profile runtime 标记
 
-没有 `package.json` 的 profile 在初始化前仍由 resolver 视为 legacy。已存在的 manifest 在 `dsh.profile.runtime` 为 `legacy`，或无 runtime 标记、没有 native 配置字段但有 `dsh.profile.bundles` 数组时，会选择 legacy。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`，或声明 `bundles: [...]`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
+新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 或 `native-tui`，但保留请求中的 profile 目录名称。八个 `native-*` 名称仍可显式选择，`sdk-minimal` 仍是 legacy 组合包 profile。其他 profile 保留其 legacy 初始化行为。对于任意已有 `package.json`，runtime resolver 都会遵循其 profile 标记和组合包列表，且不会改写 profile：`runtime: "legacy"` 或不含原生字段的 `dsh.profile.bundles` 数组会选择 legacy；原生标记会选择 Native。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`，或声明 `bundles: [...]`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
 
 Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由已安装的 `@deepseek-ai/dsh-native-web-host` `config.projectDir` 选择的 Client profile。没有安装该 Host 时，profile 不包含 Client surface。只有安装了该键所属插件时才检查 settings。没有 settings-file Provider 的 profile 不读取或检查 `settings.yaml`。Native profile 模板与 legacy app-boot 初始化器会在初始化 profile 时写入显式 runtime 标记。
 

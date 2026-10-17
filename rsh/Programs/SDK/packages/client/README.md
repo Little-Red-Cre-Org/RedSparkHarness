@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-The native-sdk profile composes the production in-process subagent tool. Session-tree subscriptions receive its accepted child events and real `subagent.finished` results after one-shot completion, cancellation, failure, and continuable residency settlement; interrupting a turn alone does not finish a still-resident child, and run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. A settled continuable child contributes a durable subagent-settled notice to the parent's next turn, after actual cleanup. SDK wire catalog discovery remains unsupported; the profile's model-visible `list_agents` tool is a separate capability.
+The Native SDK composition provides the production in-process subagent tool. A new standard `sdk` profile selects this composition; an existing profile with a `package.json` keeps the runtime declared by its manifest. Session-tree subscriptions receive accepted child events and real `subagent.finished` results after one-shot completion, cancellation, failure, and continuable residency settlement; interrupting a turn alone does not finish a still-resident child, and run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. A settled continuable child contributes a durable subagent-settled notice to the parent's next turn, after actual cleanup. SDK wire catalog discovery remains unsupported; the profile's model-visible `list_agents` tool is a separate capability.
 
 Use this client when TypeScript code must drive a complete Harness runtime from another process and you can name the runtime executable explicitly. The common path is minimal: construct a `DeepSeekHarness` with a launch spec, run prompts, and close it so the child process is always reaped.
 
@@ -37,7 +37,7 @@ import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 
 await using harness = new DeepSeekHarness({
   profile: 'sdk',
-  patches: ['./automation.cordis.yml'],
+  patches: ['./sdk.patch.json'],
   provider: 'deepseek-official',
   model: 'deepseek-v4-flash',
   reasoningEffort: ReasoningEffortId('max'),
@@ -47,9 +47,11 @@ const result = await harness.run('say hi')
 console.log(result.finalResponse)
 ```
 
+For a newly created `sdk` profile, `patches` use Native JSON overlays such as `{"formatVersion":1,"installations":[{"id":"app","config":{"systemPrompt":"Follow the project instructions."}}]}`. The CLI uses an existing profile's `package.json` to select Native or Cordis; it does not rewrite existing profiles. To create a Cordis profile explicitly, use a custom name such as `dsh --profile legacy-sdk --from-default-profile sdk`; Cordis source launches require a built CLI because the SDK no longer supplies a source-only Cordis overlay.
+
 The subprocess starts lazily on first use and stays owned by the instance across `run()` calls; call `close()` (or use `await using`) so the child is always reaped. `start()` memoizes the bounded `initialize` handshake, which carries the workspace cwd, provider/model route, optional adapter-owned `reasoningEffort`, and optional positive `maxTokens` output cap. Native SDK also accepts optional `maxSteps`; its handshake must return a positive effective cap no greater than the request. Compatibility Cordis runtimes explicitly reject this Native-only field. The server validates that exact route before it accepts prompts; an omitted effort preserves the model's default. `initializeTimeoutMs` defaults to 30 seconds to leave time for the full profile-ready handshake on a cold startup, and its diagnostic names the selected profile with the retained stderr tail. `run(input, { sessionId?, onNotification? })` accepts text or `SdkPromptContentBlock[]`; an inline raster block carries canonical base64 plus `mimeType` and becomes a durable attachment inside the runtime. The call owns one activity interval: it queues the prompt, waits until its message id appears in a durable inbox receipt, then collects through the next whole-agent `idle`. It returns `RunResult { sessionId, finalResponse, events, notifications }`, where `finalResponse` is the last committed root-session assistant text in that interval — not a response causally assigned to the prompt, because steering, injected context, and other queued work may contribute before idle. `session(id?)` opens a named or fresh session handle. When a failed handshake is cleaned up successfully, the instance installs a fresh client so a later call retries with a new process until terminal `close()`; if initialization and cleanup both fail, `start()` returns an ordered `AggregateError` and retains the failed client instead of spawning beside a process whose exit is unproved. `maxTokens` caps each root-agent request output and is inherited by in-process descendants; compaction plugins own their separate summary limits.
 
-For `profile: 'native-sdk'`, `session(id).uploadFile(bytes, name?)` stores exact file bytes and returns a process-local receipt. Include `{ type: 'file', receiptId }` in `run()` or `steer()` to persist that file at its original position; only Native accepts receipt blocks, and a runtime restart requires re-uploading bytes before use.
+With a Native profile (`native-sdk` or a new standard `sdk` profile), `session(id).uploadFile(bytes, name?)` stores exact file bytes and returns a process-local receipt. Include `{ type: 'file', receiptId }` in `run()` or `steer()` to persist that file at its original position; only Native accepts receipt blocks, and a runtime restart requires re-uploading bytes before use.
 
 ### Native Host child transport
 
@@ -111,15 +113,16 @@ Read these pages when the client contract is not enough. They move from the wire
 - [JSON-RPC serving plugin](../server/README.md) — the runtime plugin that serves this client.
 - [Python SDK](../../python/README.md) — the design twin that shares the same runtime peer and protocol.
 - [SDK subagent backend](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of this client.
-- [SDK application bundle](../../../../Compatibility/DSH/bundle/sdk-app/README.md) — the `dsh --profile sdk` runtime application this client launches.
+- [Native SDK server](../native-server/README.md) — the runtime plugin used by a new standard `sdk` profile.
+- [SDK application bundle](../../../../Compatibility/DSH/bundle/sdk-app/README.md) — the Cordis application used by legacy profiles.
 
 -----
 
 <a id="model-experience"></a>
 
-With explicit `profile: "native-sdk"`, `HarnessSession.cancel()` and `HarnessClient.cancel(sessionId)` await cancellation of the admitted turn and return false when none is active. `onNotification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
+With a Native profile (`native-sdk` or a new standard `sdk` profile), `HarnessSession.cancel()` and `HarnessClient.cancel(sessionId)` await cancellation of the admitted turn and return false when none is active. `onNotification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
 
-With explicit `profile: "native-sdk"`, `run` also accepts encoded raster image blocks (`{ type: "image", data, mimeType }`) alongside text; the native attachment Provider owns validation and durable storage.
+With a Native profile (`native-sdk` or a new standard `sdk` profile), `run` also accepts encoded raster image blocks (`{ type: "image", data, mimeType }`) alongside text; the native attachment Provider owns validation and durable storage.
 
 `HarnessSession.steer(input)` and `HarnessClient.steer(sessionId, contentBlocks)` durably queue next-step input on the active native-sdk root. They return a message id without waiting for a model answer or cancelling the current dispatch. A steer wakes a root parked after a turn interruption, while Goal work remains disarmed until explicitly rearmed; idle or unknown Sessions and compatibility profiles reject.
 

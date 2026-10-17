@@ -1,6 +1,6 @@
 version: 1
 scenario: session-sandbox-root
-profile: headless
+profile: legacy-headless
 composition: session-sandbox-root
 recording: authored
 header:

@@ -122,6 +122,22 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
     const sdkClientPath = await realpath(consumerRequire.resolve('@deepseek-ai/dsh-sdk-client'))
+    await writeFile(join(installedRoot, 'sdk-consumer.ts'), [
+      "import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'",
+      "const client = new DeepSeekHarness({ profile: 'sdk' })",
+      'void client',
+      '',
+    ].join('\n'))
+    const consumerConfig = join(installedRoot, 'tsconfig.json')
+    await writeFile(consumerConfig, JSON.stringify({ compilerOptions: {
+      target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true,
+      skipLibCheck: false, types: [], noEmit: true,
+    }, files: ['sdk-consumer.ts'] }))
+    const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc')
+    const typecheck = execFileSync(process.execPath, [tsc, '-p', consumerConfig, '--noEmit', '--listFiles'], {
+      cwd: installedRoot, encoding: 'utf8', stdio: 'pipe',
+    })
+    expect(typecheck).not.toMatch(/node_modules[\\/]@deepseek-ai[\\/]cordis(?:[\\/]|$)/iu)
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith(`..${sep}`) || isAbsolute(sdkRelative)).toBe(false)
     expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@deepseek-ai', 'dsh-sdk-client'])

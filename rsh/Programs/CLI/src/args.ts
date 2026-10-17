@@ -181,7 +181,7 @@ export function parseDshArgs(argv: readonly string[], version: string): DshInvoc
     .argument('[args...]', 'arguments for the web app (see: dsh web --help)')
     .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
     .option('--dump-config', 'print the composed web-profile tree (with the user layer and any --patch) and exit')
-    .option('--dump-default-config', 'print the web profile\'s bundle layers (no user layer) and exit')
+    .option('--dump-default-config', 'print the web profile\'s bundle layers (legacy profiles only) and exit')
     .action((args: string[], options: BootOptions) => {
       rejectParentOptions('web')
       resolved = resolveBoot(web, 'web', options, args)

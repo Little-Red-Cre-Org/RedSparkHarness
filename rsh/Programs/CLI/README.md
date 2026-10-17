@@ -21,7 +21,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
-The invoking directory is the default workspace root. The `web`, `rsh`, `headless`, `sdk`, `sdk-minimal`, `acp`, `native-headless`, `native-headless-query`, `native-sdk`, and `native-acp` profiles auto-initialize on first use from shipped templates. Create another profile at an unused, non-shipped name with `--from-default-profile`, or initialize a base-backed profile through `dsh plugin`. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
+The invoking directory is the default workspace root. New `headless`, `web`, `sdk`, `acp`, and `rsh` profiles initialize as `native-headless`, `native-web`, `native-sdk`, `native-acp`, and `native-tui` while retaining the requested profile name. The eight `native-*` profiles remain explicit aliases, and `sdk-minimal` remains a legacy profile. An existing `package.json` keeps its selected runtime and is never rewritten by this initialization. Use `--from-default-profile` with an unused custom name such as `legacy-web` to create a legacy profile from one of the shipped Cordis bundle templates, or use `dsh plugin` to initialize a base-backed legacy profile. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
 The native-headless, native-headless-query, native-tui, and native-web session defaults select the installed pi-ai route `deepseek` with model `deepseek-flash`. Native ACP keeps its explicit `deepseek-official` route.
 
@@ -34,25 +34,26 @@ Native profiles may opt in to the `dsh-sdk` or `dsh-acp-child` external driver. 
 
 ## App arguments
 
-The launcher parses only its own flags and hands everything after them to the booted profile, where any injected app plugin may parse the shared immutable snapshot ([`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.md)). The first token the launcher does not recognize starts the app's arguments:
+The launcher parses only its own flags and hands everything after them to a legacy profile, where any injected app plugin may parse the shared immutable snapshot ([`dsh-cmdline`](../../Compatibility/DSH/boot/cmdline/README.md)). The first token the launcher does not recognize starts the app's arguments. A new standard `web` profile selects Native Web, which rejects `--host`, `--port`, and `--no-open`; an existing legacy manifest named `web` retains its bundle parser:
 
 ```sh
-dsh --profile web --port 8080       # --port belongs to the web app
+dsh --profile legacy-web --from-default-profile web --port 8080 # create and run legacy Web
+dsh --profile legacy-web --port 8080 # --port belongs to the legacy web app
 dsh --profile tui --resume <id>     # example, assuming the tui profile is installed; --resume belongs to the terminal app
 dsh --profile headless "run the tests"
 dsh --profile rsh --resume <id>     # --resume belongs to the RedSpark terminal app
-dsh --profile web --help            # the web app's flags, not the launcher's
+dsh --profile legacy-web --help     # the legacy web app's flags, not the launcher's
 dsh --help                          # the launcher's own help
 ```
 
 <a id="profiles"></a>
 ## Profiles
 
-A profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). `patchReload: live` watches the profile and home-level patch files; `startup` applies them once.
+A legacy profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). A Native profile declares `runtime: "native"` and `config: "rsh.profile.json"` in its package manifest and stores its installations in versioned JSON. `package.json` selects the runtime: an explicit Native marker selects Native, while `runtime: "legacy"` or a legacy bundle list without Native fields selects Cordis. `patchReload: live` watches legacy patch files, and `startup` applies them once.
 
 The `./native-profile` library export shares validated profile parsing, preset expansion, child-route derivation, and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
 
-Selecting a shipped `native-*` profile creates its native profile files on first use; an existing profile keeps its configuration.
+Selecting a shipped `native-*` or standard profile name creates its Native profile files on first use; an existing profile keeps its configuration.
 
 The shipped `native-web` profile installs the `standard` and `minimal` agent modes, the plan-mode Provider, and the standing permission presets `workspace-write` and `danger-full-access` for its Native Session API.
 
@@ -66,7 +67,7 @@ An existing profile manifest selects legacy execution only when it declares `run
 
 The CLI's native launcher depends on the native runtime directly. Cordis, profile boot, config dump, and profile package-management dependencies are optional packages; ordinary installs include them, while native-only deployments may omit optional dependencies. A legacy profile or legacy-only CLI mode then reports the required installation change before importing Cordis. Native profile plugins remain dependencies of the selected profile.
 
-Explicit shipped native profiles include the native Session execution Provider, which supplies the selected execution registry and active Session owners. The CLI resolver declares this Provider as a direct dependency; legacy profile selection remains unchanged.
+The standard names `headless`, `web`, `sdk`, `acp`, and `rsh` create Native profiles when their directory has no `package.json`; the runtime resolver continues to select the runtime for existing manifests. `sdk-minimal` remains a legacy bundle profile. The Native Session execution Provider supplies the selected execution registry and active Session owners, and the CLI resolver declares it as a direct dependency.
 
 Host profiles capture inherited, invoking-directory and Harness-home environment layers before plugin imports. The same checked loader serves compatibility boot; every root scope owns the real launch snapshot Provider. Each Host root scope also gets a `pluginInventory` Provider that lists the running Host's installation states; a reload keeps reading the retained Host. Client-only profiles install neither.
 
@@ -77,7 +78,7 @@ The tree composes over an empty root:
 
 Bundles named in `dsh.profile.bundles` resolve from the dsh installation first (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`, `@deepseek-ai/dsh-rsh`, `@deepseek-ai/dsh-headless`, `@deepseek-ai/dsh-sdk-app`, `@deepseek-ai/dsh-sdk-minimal`, `@deepseek-ai/dsh-acp-app`), then from the profile's own `node_modules`, where pnpm installs out-of-tree plugins.
 
-Use `--dump-default-config` and `--dump-config` to inspect the composed tree without booting it.
+Use `--dump-default-config` with a legacy custom profile to inspect its bundle tree; the option is rejected for standard shipped names. Native `--dump-config` prints the resolved Native JSON profile without booting it.
 
 The [CLI behavior reference](reference/README.md) owns exact layer precedence, flags, shutdown behavior, deployment defaults, and source execution.
 

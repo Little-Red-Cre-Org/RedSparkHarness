@@ -26,11 +26,14 @@ def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(RUNTIME_MODE_ENV_VAR, mode)
 
 
-def _client(tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch, *patches: Path) -> HarnessClient:
+def _client(
+    tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch, *patches: Path, profile: str = "sdk"
+) -> HarnessClient:
     _select_mode(mode, monkeypatch)
     return HarnessClient(
         HarnessConfig(
             dsh_home=str(tmp_path / "home"),
+            profile=profile,
             patches=tuple(str(patch) for patch in patches),
             cwd=str(tmp_path),
             env={
@@ -55,10 +58,9 @@ def test_bundled_runtime_boots_the_sdk_profile(
     assert init.serverInfo is not None
     assert init.serverInfo.name == "deepseek-harness-sdk-runtime"
     profile = json.loads((tmp_path / "home" / "profiles" / "sdk" / "package.json").read_text())
-    assert profile["dsh"]["profile"]["bundles"] == [
-        "@deepseek-ai/dsh-base",
-        "@deepseek-ai/dsh-sdk-app",
-    ]
+    assert profile["dsh"]["profile"]["runtime"] == "native"
+    assert profile["dsh"]["profile"]["config"] == "rsh.profile.json"
+    assert (tmp_path / "home" / "profiles" / "sdk" / "rsh.profile.json").is_file()
 
 
 @pytest.mark.parametrize("mode", _MODES)
@@ -66,11 +68,11 @@ def test_python_sdk_applies_an_ordered_profile_patch(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _select_mode(mode, monkeypatch)
-    patch = tmp_path / "persona.patch.yml"
-    patch.write_text(json.dumps([{
-        "id": "system-prompt",
-        "config": {"persona": "Python SDK ordered patch marker."},
-    }]))
+    patch = tmp_path / "persona.patch.json"
+    patch.write_text(json.dumps({"formatVersion": 1, "installations": [{
+        "id": "app",
+        "config": {"systemPrompt": "Python SDK ordered patch marker."},
+    }]}))
     harness = DeepSeekHarness(
         model="deepseek-v4-pro",
         cwd=str(tmp_path),
@@ -90,12 +92,23 @@ def test_python_sdk_applies_an_ordered_profile_patch(
 def test_bundled_runtime_surfaces_unbundled_plugin_failure(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    home = tmp_path / "home"
+    profile_dir = home / "profiles" / "legacy-sdk"
+    profile_dir.mkdir(parents=True)
+    (profile_dir / "package.json").write_text(json.dumps({
+        "name": "dsh-profile-legacy-sdk",
+        "private": True,
+        "dsh": {"profile": {"runtime": "legacy", "bundles": [
+            "@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app",
+        ]}},
+    }))
+    (profile_dir / "cordis.patch.yml").write_text("[]\n")
     patch = tmp_path / "missing.patch.yml"
     patch.write_text(json.dumps([{
         "insert": [{"id": "missing", "name": "@deepseek-ai/dsh-does-not-exist"}],
     }]))
 
-    client = _client(tmp_path, mode, monkeypatch, patch)
+    client = _client(tmp_path, mode, monkeypatch, patch, profile="legacy-sdk")
     client.start()
     try:
         with pytest.raises((JsonRpcError, TransportClosedError, TimeoutError)) as excinfo:

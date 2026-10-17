@@ -1,6 +1,6 @@
 version: 1
 scenario: ptc-python-turn
-profile: headless
+profile: legacy-headless
 composition: ptc-python
 recording: authored
 platform: posix

@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-acp-diagnostic
-profile: headless
+profile: legacy-headless
 composition: subagent-acp-diagnostic
 recording: authored
 header:

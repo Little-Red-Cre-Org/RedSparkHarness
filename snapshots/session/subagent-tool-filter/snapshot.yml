@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-tool-filter
-profile: headless
+profile: legacy-headless
 composition: subagent-tool-filter
 recording: authored
 header:

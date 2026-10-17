@@ -29,19 +29,19 @@ kind: "package-library"
 
 manifest 的 `profile` 是公开 `dsh` profile 的准确名称；兼容场景使用 `compat`。
 
-语料库的 `snapshots/web/` 目录归属浏览器 `web` 与原生 Web `native-web` 场景；每份清单仍保留实际随附 profile 的准确名称。
+语料库的 `snapshots/web/` 目录归属浏览器 `web` 与原生 Web `native-web` 场景；每份清单仍保留公开 profile 的准确名称。
 
-本包把随附 profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
+本包把 `dsh` profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
 
 `profile: desktop` 标识既有 Electron 私有 Host 生命周期；其 owner 使用实际 Desktop 后端控制器与 Session 往返，不新增应用入口。
 
 ### 编写快照套件
 
-封闭的 profile manifest 接受 `native-acp`，用于基于共享会话记录的原生 ACP 协议场景。
+封闭的 profile manifest 接受 `legacy-headless`、`legacy-sdk` 与 `legacy-acp`，用于以自定义 profile 名称保留 Cordis profile template 的场景。原生场景使用对应的公开 `headless`、`sdk` 或 `acp` profile 名称；显式 `native-*` 别名也有效。
 
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
 
-消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外：
+消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外。legacy profile 将 `profile` 设为自定义名称，并将 `fromDefaultProfile` 设为复制的随附 template：
 
 ```ts
 import { dirname, join } from 'node:path'
@@ -71,7 +71,8 @@ defineAcpSnapshotSuite({
   agent: { // absolute paths, resolved from the suite's own location
     binScript: fileURLToPath(new URL('../../../Programs/CLI/src/bin.ts', import.meta.url)),
     configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    profile: 'acp',
+    profile: 'legacy-acp',
+    fromDefaultProfile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
@@ -80,7 +81,7 @@ defineAcpSnapshotSuite({
 })
 ```
 
-每个已记录 Session 目录携带封闭的 `snapshot.yml` manifest，以及规范 parent 与连续 child 角色。parent 文件名是 `session[.vN].jsonl`；child 是 `session.<ordinal>[.vN].jsonl`；v0 省略 `.v0`，正版本使用小写 `.vN`，且每个文件名与其 header 一致。一个角色可以保留旧 generation，但 harness 会选择数值最高的一项。拥有 fixture 的 manifest 可以声明 `sessionFormat.version` 与一个或多个封闭 `coverage` 名称，把该历史 generation 保留为显式迁移 fixture；省略此字段时跟随当前 writer。manifest 还会指名场景、随附 profile、组合／header 类别、录制来源，以及已完成 Session 无法重建的 replay、平台、权限、环境、workspace 或输入事实。存储保护检查每个选定 parent 与 child 角色的工具结果和可移植路径。提示词／schema 擦除、消息身份及提示词先于请求的顺序检查适用于当前 generation；保留的前代维持其历史表示。适配器注册预期输出、Session 日志与可选 `workspace.expected/` 比较；保护会拒绝遗留目录、缺失角色、非规范名称、绝对路径、格式错误的 manifest 与平台专用分隔符。
+每个已记录 Session 目录携带封闭的 `snapshot.yml` manifest，以及规范 parent 与连续 child 角色。parent 文件名是 `session[.vN].jsonl`；child 是 `session.<ordinal>[.vN].jsonl`；v0 省略 `.v0`，正版本使用小写 `.vN`，且每个文件名与其 header 一致。一个角色可以保留旧 generation，但 harness 会选择数值最高的一项。拥有 fixture 的 manifest 可以声明 `sessionFormat.version` 与一个或多个封闭 `coverage` 名称，把该历史 generation 保留为显式迁移 fixture；省略此字段时跟随当前 writer。manifest 还会指名场景、选用的 profile、组合／header 类别、录制来源，以及已完成 Session 无法重建的 replay、平台、权限、环境、workspace 或输入事实。存储保护检查每个选定 parent 与 child 角色的工具结果和可移植路径。提示词／schema 擦除、消息身份及提示词先于请求的顺序检查适用于当前 generation；保留的前代维持其历史表示。适配器注册预期输出、Session 日志与可选 `workspace.expected/` 比较；保护会拒绝遗留目录、缺失角色、非规范名称、绝对路径、格式错误的 manifest 与平台专用分隔符。
 
 `normalizeSessionSnapshot` 在规范化路径并擦除系统提示文本与工具 schema 后，会保留完整 Session header 与事件 payload，但从已提交 fixture 中省略顶层 `seq`/`time` envelope；它还会规范化嵌入式 stream clock 与历史 packed-row 的 `seq0`/`time0` envelope 与 catalog child 创建时钟。事件顺序与来源事件引用保持不变。Replay 只在内存中合成顶层 envelope，而运行时持久化仍写入完整日志。多 Session 比较会先通过严格的构建期静态 Session 格式目录校验预期日志与收集日志，再进行身份脱敏与规范化；来源文件名不能改变格式校验。保留的历史 replay 输入不是原生当前格式 writer 输出的比较基准：结构迁移保留请求含义，但可以产生不同的事件布局。归一化保留意外的 request-header 字段（包括 `system`），使回归保持可见。无版本的协议适配器单元测试 fixture 不属于已发布 Session 格式语料。[当前写入器格式](../../../Docs/session-format-status.zh.md)的 fixture 每个事件占一行；保留的 v0/v1 fixture 可以使用规范 packed row。[临时仓库迁移器](../../../Scripts/migrate-packed-session-fixtures.ts)（`pnpm run migrate:packed-session-fixtures`）会改写更旧的历史布局，由其[移除提案](../../../../.agents/notes/proposed/process/2026-07-26-remove-packed-session-fixture-migrator.zh.md)负责删除该迁移器。
 

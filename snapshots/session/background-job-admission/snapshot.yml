@@ -1,6 +1,6 @@
 version: 1
 scenario: background-job-admission
-profile: headless
+profile: legacy-headless
 composition: background-job-admission
 recording: authored
 header:
