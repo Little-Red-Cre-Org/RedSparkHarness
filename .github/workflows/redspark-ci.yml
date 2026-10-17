@@ -42,6 +42,12 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: CI workflow regressions
+        if: runner.os == 'Linux'
+        run: pnpm exec vitest run rsh/Scripts/ci-workflow.spec.ts
+      - name: Package publication rules
+        if: runner.os == 'Linux'
+        run: pnpm run check:ci:package-publication
       - name: Prepare Linux workspace-write sandbox
         if: runner.os == 'Linux'
         shell: bash
@@ -50,6 +56,12 @@ jobs:
         run: pnpm run build
       - name: Typecheck
         run: pnpm run typecheck:contracts-ready
+      - name: Lint
+        if: runner.os == 'Linux'
+        run: pnpm run lint:contracts-ready
+      - name: Documentation checks
+        if: runner.os == 'Linux'
+        run: pnpm run doc-sync
       - uses: actions/setup-python@v6.3.0
         with:
           python-version: '3.10'
@@ -120,15 +132,6 @@ jobs:
           DSH_EXAMPLE_MODE: lib
       - name: Client tests (no API credentials)
         run: pnpm run test:gui --maxWorkers=2
-      - name: Lint
-        if: runner.os == 'Linux'
-        run: pnpm run lint:contracts-ready
-      - name: Documentation checks
-        if: runner.os == 'Linux'
-        run: pnpm run doc-sync
-      - name: Package publication rules
-        if: runner.os == 'Linux'
-        run: pnpm run check:ci:package-publication
 
   packed:
     name: SPH packed / ${{ matrix.os }}
@@ -160,7 +163,7 @@ jobs:
         run: pnpm run build:official
       # Packed consumer verification starts here; keep shared setup above.
       - name: Pack dsh release tarballs for consumer verification
-        run: pnpm run release:pack --family dsh --out dist/npm
+        run: pnpm run release:pack --family dsh --out dist/npm --concurrency 4
       - name: Pack vendored framework for consumer verification
         run: pnpm run release:pack --family vendor --out dist/npm-vendor
       - name: Pack Landlock entry for consumer verification

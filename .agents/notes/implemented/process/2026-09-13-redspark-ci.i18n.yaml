@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-09-13-redspark-ci.md
-2026-09-13-redspark-ci.md: b660be2ea4705f5a4359c0765a8e4b9052fb949d
-2026-09-13-redspark-ci.zh.md: 1bf149506331f63979f670a7de72e970d9564c63
+2026-09-13-redspark-ci.md: 93e079643fdd8ab04265e09a89d3b9fc72537ec5
+2026-09-13-redspark-ci.zh.md: 36d9cccb125dc701c6c665eff9e4370147af1848
