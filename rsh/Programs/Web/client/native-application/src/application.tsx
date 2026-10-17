@@ -1,9 +1,9 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
 import {
-  Button, ChatComposerButton, ChatComposerCard, ChatComposerToolbar,
+  Button, ChatComposerButton, ChatComposerCard, ChatComposerToolbar, IconChevronDownOutline14, Menu,
   ChatMascotHero, ChatWelcome, FishLogo,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DirectoryBrowserListing, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -27,8 +27,9 @@ import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
 import { NativeTranscript } from './native-transcript.tsx'
 import { NativeOnboarding } from './onboarding.tsx'
-import { NativeTrajectoryInspector } from './trajectory.tsx'
+import { NativeTrajectoryPanel } from './trajectory.tsx'
 import { ConversationModeLabel, ModelControls, ModelPickerControl } from './model-controls.tsx'
+import { NativeStatusLine } from './status-line.tsx'
 import { AgentPresetSeat, WorkspaceChooser } from './workspace-chooser.tsx'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import {
@@ -42,6 +43,36 @@ import css from './conversation.module.css'
 type Translate = TranslateNS<'nativeApplication'>
 type WorkspaceStart = (trust?: boolean) => Promise<SessionId | undefined>
 
+function SubagentMenu({ sessions, runningCount, ready, selectSession, t }: {
+  sessions: ConversationSnapshot['sessions']
+  runningCount: number
+  ready: boolean
+  selectSession: NativeConversationController['select']
+  t: Translate
+}) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => { if (!ready) setOpen(false) }, [ready])
+  const label = runningCount > 0 ? t('subagentsRunning', { count: runningCount })
+    : t('subagentsCount', { count: sessions.length })
+  if (sessions.length === 0) return runningCount === 0 ? null
+    : <span className={css.subagentStatic} title={label}>{label}</span>
+  const items = sessions.map(session => ({
+    id: session.header.id,
+    label: (session.titleProjection.status === 'resolved' ? session.titleProjection.title : t('untitledSession'))
+      + (session.running ? t('subagentRunningSuffix') : ''),
+    disabled: session.running,
+  }))
+  return <Menu className={css.subagentMenu} open={open && ready} autoFocus compact portal items={items} onSelect={(id) => {
+    setOpen(false)
+    void selectSession(id as SessionId)
+  }} onClose={() => { setOpen(false) }} anchor={
+    <button type="button" className={css.subagentTrigger} aria-label={label} aria-expanded={open && ready} disabled={!ready}
+      title={label} onClick={() => { setOpen(value => !value) }}>
+      <span className={css.chipLabel}>{label}</span><IconChevronDownOutline14 />
+    </button>
+  } />
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Native conversation vocabulary and settings copy. */
@@ -54,7 +85,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
-  createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+  createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
   refreshModelControls, t, renderSlot }: {
   snapshot: ConversationSnapshot
@@ -71,6 +102,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
   selectModel: NativeConversationController['selectModel']
   selectPreset: NativeConversationController['selectPreset']
+  selectSession: NativeConversationController['select']
   selectPlanMode: NativeConversationController['selectPlanMode']
   submitPending: NativeConversationController['submitPending']
   changePending: NativeConversationController['changePending']
@@ -88,6 +120,13 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   }), [activeLocale, t])
   const todos = useMemo(() => foldTodos(snapshot.events), [snapshot.events])
   const selected = snapshot.selected
+  const selectedRow = snapshot.sessions.find(session => session.header.id === selected)
+  const childSessions = selected === undefined ? []
+    : snapshot.sessions.filter(session => session.header.parentSession === selected && session.header.origin === 'subagent')
+  const [activeTab, setActiveTab] = useState<'conversation' | 'trajectory'>('conversation')
+  const conversationTabRef = useRef<HTMLButtonElement>(null)
+  const trajectoryTabRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => { setActiveTab('conversation') }, [selected])
   const [draft, setDraft] = useState('')
   const draftVersion = useRef(0)
   const [files, setFiles] = useState<readonly File[]>([])
@@ -100,6 +139,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const followsTranscript = useRef(true)
   const followedSession = useRef(snapshot.selected)
   const ready = snapshot.state === 'ready' && snapshot.navigationPending !== true
+  const selectedSessionReady = snapshot.state !== 'loading' && snapshot.state !== 'closed'
+    && snapshot.selected !== undefined && snapshot.navigationPending !== true
   const acceptsPending = snapshot.state === 'sending' && snapshot.navigationPending !== true
   const inputReady = ready || acceptsPending
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
@@ -110,6 +151,20 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
   const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
     : selectedTitle?.status === 'absent' ? t('untitledSession') : t('titleUnavailable')
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
+    let next: typeof activeTab
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowLeft': next = activeTab === 'conversation' ? 'trajectory' : 'conversation'; break
+      case 'Home': next = 'conversation'; break
+      case 'End': next = 'trajectory'; break
+      default: return
+    }
+    event.preventDefault()
+    setActiveTab(next)
+    const tabRef = next === 'conversation' ? conversationTabRef : trajectoryTabRef
+    tabRef.current?.focus()
+  }
   useEffect(() => {
     if (pendingPreset === undefined) return
     if (selected !== pendingPreset.sessionId) {
@@ -193,6 +248,11 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
     const scroll = scrollRef.current
     if (scroll !== null && hasConversation && followsTranscript.current) scroll.scrollTop = scroll.scrollHeight
   }, [snapshot.selected, snapshot.events, snapshot.liveText, hasConversation])
+  useLayoutEffect(() => {
+    if (activeTab !== 'conversation' || !followsTranscript.current) return
+    const scroll = scrollRef.current
+    if (scroll !== null) scroll.scrollTop = scroll.scrollHeight
+  }, [activeTab])
   const submit = (placement?: 'queued' | 'steering'): void => {
     if (!inputReady || snapshot.selected === undefined || draft.trim() === '' || snapshot.submissionBusy) return
     if (acceptsPending && files.length > 0) return
@@ -242,7 +302,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             files={files} onChange={setFiles} limits={snapshot.modelControls.images}
             disabled={!ready || snapshot.selected === undefined} t={t}
           />}
-          <ModelControls snapshot={snapshot} selectPreset={selectPreset}
+          <ModelControls snapshot={snapshot}
             selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset} t={t} />
         </div>
         <div className={css.toolbarActions}>
@@ -260,6 +320,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
         </div>
       </ChatComposerToolbar>
     </ChatComposerCard>
+    {selected === undefined ? null : <NativeStatusLine events={snapshot.events} locale={activeLocale} t={t} />}
     {acceptsPending ? <p className={css.inputHint}>{t(files.length > 0 ? 'pendingTextOnly'
       : pendingDefaultError ? 'busySendPreferenceUnavailable'
         : pendingDefault === 'steer' ? 'pendingInputHintSteer' : 'pendingInputHint')}</p> : null}
@@ -268,17 +329,38 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
     <main className={css.page}>
       <h1 className={css.visuallyHidden}>{t('title')}</h1>
       <header className={css.header}>
-        <div className={css.heading}>
-          {selected === undefined ? null : <>
-            <strong className={css.sessionTitle}>{conversationTitle}</strong>
-            <ConversationModeLabel snapshot={snapshot} t={t} />
-          </>}
+        <div className={css.headerTop}>
+          <div className={css.heading}>
+            {selected === undefined ? null : <>
+              <strong className={css.sessionTitle}>{conversationTitle}</strong>
+              <ConversationModeLabel snapshot={snapshot} selectPreset={selectPreset} t={t} />
+              {selectedRow === undefined ? null : <SubagentMenu sessions={childSessions}
+                runningCount={selectedRow.runningSubagentCount} ready={selectedSessionReady}
+                selectSession={selectSession} t={t} />}
+            </>}
+          </div>
+          <nav aria-label={t('conversationActions')} className={css.actions}>
+            {selected === undefined ? null : renderSlot('native.conversation.actions', {})}
+          </nav>
         </div>
-        <nav aria-label={t('conversationActions')} className={css.actions}>{selected === undefined ? null : <><NativeTrajectoryInspector events={snapshot.events} locale={activeLocale} openLabel={t('trajectoryOpen')} title={t('trajectoryTitle')} closeLabel={t('trajectoryClose')} />{renderSlot('native.conversation.actions', {})}</>}</nav>
+        {selected === undefined ? null : <div role="tablist" aria-label={t('conversationTabs')} className={css.tabs}>
+          <button ref={conversationTabRef} id="native-conversation-tab" type="button" role="tab"
+            aria-controls="native-conversation-panel" aria-selected={activeTab === 'conversation'}
+            tabIndex={activeTab === 'conversation' ? 0 : -1} onKeyDown={onTabKeyDown}
+            data-active={activeTab === 'conversation' || undefined}
+            onClick={() => { setActiveTab('conversation') }}>{t('chatMode')}</button>
+          <button ref={trajectoryTabRef} id="native-trajectory-tab" type="button" role="tab"
+            aria-controls="native-trajectory-panel" aria-selected={activeTab === 'trajectory'}
+            tabIndex={activeTab === 'trajectory' ? 0 : -1} onKeyDown={onTabKeyDown}
+            data-active={activeTab === 'trajectory' || undefined}
+            onClick={() => { setActiveTab('trajectory') }}>{t('trajectoryTab')}</button>
+        </div>}
       </header>
       {snapshot.error === undefined ? null : <p className={css.error} role="alert">{t('error')}: {snapshot.error}</p>}
-      {selected === undefined || !hasConversation
-        ? <section className={css.empty}>
+      {selected === undefined || !hasConversation && activeTab === 'conversation'
+        ? <section className={css.empty} role={selected === undefined ? undefined : 'tabpanel'}
+          id={selected === undefined ? undefined : 'native-conversation-panel'}
+          aria-labelledby={selected === undefined ? undefined : 'native-conversation-tab'}>
           <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="hero" state="idle"
             characterLabel={t('petCharacter')} speech={t('petSpeech')}
             pauseLabel={t('petPause')} enableMotionLabel={t('petEnableMotion')} resumeLabel={t('petResume')} />
@@ -297,16 +379,19 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             {selected === undefined ? <AgentPresetSeat roster={presetSeat}
               stagedPreset={stagedPreset} stagePreset={stagePreset} t={t} /> : null}
           </div>
+          {selected === undefined ? null : <div role="tabpanel" id="native-trajectory-panel"
+            aria-labelledby="native-trajectory-tab" hidden><NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} /></div>}
           {composer}
         </section>
         : <>
           <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="floating" state={petState}
             characterLabel={t('petCharacter')} speech={sending ? t('petThinking') : t('petSpeech')}
             pauseLabel={t('petPause')} enableMotionLabel={t('petEnableMotion')} resumeLabel={t('petResume')} />
-          <div ref={scrollRef} className={css.scroll} onScroll={(event) => {
-            const element = event.currentTarget
-            followsTranscript.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
-          }}>
+          <div role="tabpanel" id="native-conversation-panel" aria-labelledby="native-conversation-tab"
+            className={css.scroll} hidden={activeTab !== 'conversation'} ref={scrollRef} onScroll={(event) => {
+              const element = event.currentTarget
+              followsTranscript.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
+            }}>
             {todos === null ? null : <aside className={css.todos} aria-label={t('todos')}>
               <h2>{t('todos')}</h2>
               <ul>{todos.map(todo => <li key={todo.content} data-todo-status={todo.status}>
@@ -321,6 +406,11 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
                 answerHuman={answerHuman} prompt={snapshot.human}
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
             </section>
+          </div>
+          <div role="tabpanel" id="native-trajectory-panel" aria-labelledby="native-trajectory-tab"
+            className={css.trajectoryTabPanel}
+            hidden={activeTab !== 'trajectory'}>
+            <NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} />
           </div>
           <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>
         </>}
@@ -434,12 +524,13 @@ export const plugin: NativePlugin = {
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
           selectPreset: controller.selectPreset.bind(controller),
+          selectSession: controller.select.bind(controller),
           selectPlanMode: controller.selectPlanMode.bind(controller),
           selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
         }),
       }, ({ useConversation, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
-        createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset,
+        createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
         refreshModelControls, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
@@ -456,6 +547,7 @@ export const plugin: NativePlugin = {
         answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
         selectModel: NativeConversationController['selectModel']
         selectPreset: NativeConversationController['selectPreset']
+        selectSession: NativeConversationController['select']
         selectPlanMode: NativeConversationController['selectPlanMode']
         submitPending: NativeConversationController['submitPending']
         changePending: NativeConversationController['changePending']
@@ -470,6 +562,7 @@ export const plugin: NativePlugin = {
         addWorkspace={addWorkspace} listDirectory={listDirectory} createDirectory={createDirectory}
         loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
+        selectSession={selectSession}
         selectPlanMode={selectPlanMode} selectPermissionPreset={selectPermissionPreset}
         submitPending={submitPending} changePending={changePending} editPending={editPending}
         refreshPendingSubmissions={refreshPendingSubmissions}

@@ -14,22 +14,34 @@
 .header {
   display: flex;
   flex: none;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 0 24px;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  padding: 4px 24px 0;
   border-bottom: 0.5px solid var(--dsw-alias-line-regular);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 36px;
+  gap: 8px;
 }
 
 .heading {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   min-width: 0;
-  gap: 12px;
+  overflow: hidden;
+  gap: 6px;
 }
 
 .sessionTitle {
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 38%;
   overflow: hidden;
   color: var(--dsw-alias-label-primary);
   font-size: 15px;
@@ -39,10 +51,105 @@
   white-space: nowrap;
 }
 
+.subagentTrigger {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  max-width: 144px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.subagentStatic {
+  display: inline-flex;
+  align-items: center;
+  max-width: 144px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subagentTrigger:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.subagentTrigger svg { flex: none; color: var(--dsw-alias-label-caption); }
+.chipLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subagentMenu { min-width: 0; max-width: 144px; }
+
 .actions {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  min-width: 0;
+  height: 34px;
+}
+
+.tabs button {
+  position: relative;
+  padding: 0 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tabs button[data-active] {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.tabs button[data-active]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.trajectoryTabPanel {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.trajectoryTabPanel[hidden],
+.scroll[hidden] {
+  display: none;
+}
+
+.tabs button:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
 }
 
 .error {
@@ -204,6 +311,18 @@
   gap: 8px;
 }
 
+.statusLine {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .images {
   display: flex;
   justify-content: flex-end;
@@ -251,6 +370,11 @@
 
 @media (max-width: 560px) {
   .header { padding-right: 12px; padding-left: 12px; }
+  .heading { gap: 3px; }
+  .sessionTitle { max-width: 28%; }
+  .subagentTrigger { max-width: 104px; padding: 0 4px; }
+  .subagentStatic { max-width: 104px; padding: 0 4px; }
+  .actions { gap: 4px; }
   .scroll { padding-right: 12px; padding-left: 12px; }
   .composerArea { padding-right: 8px; padding-left: 8px; }
   .empty { padding-right: 12px; padding-left: 12px; }

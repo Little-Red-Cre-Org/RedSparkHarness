@@ -309,10 +309,34 @@ it.each([
       applies: 'live' as const, secrets: [], credentialRefs: [], revision: 1 },
   ], limits: { maxCredentialRefsPerRead: 1, maxSettingsOperations: 1 } })
   let betaHasConversation = true
+  const betaPriorTurnStart = { type: 'turn/start', seq: SessionSeq(0), time: 0, data: { turn: 0 } } as unknown as SessionEvent
+  const betaPriorStepStart = { type: 'step/start', seq: SessionSeq(1), time: 1, data: { turn: 0, step: 0 } } as unknown as SessionEvent
+  const betaPriorAssistantMessage = {
+    type: 'assistant/message', seq: SessionSeq(2), time: 2, surfaceOp: 'append',
+    data: { turn: 0, step: 0, stream: [], usage: {
+      inputTokens: 0, outputTokens: 0, totalTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+    }, message: { id: 'beta-prior-reply', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' },
+      content: [{ type: 'text', text: 'Beta prior reply' }] } },
+  } as unknown as SessionEvent
+  const betaPriorTurnEnd = { type: 'turn/end', seq: SessionSeq(3), time: 3,
+    data: { turn: 0, reason: { kind: 'completed' } } } as unknown as SessionEvent
+  const betaTurnStart = { type: 'turn/start', seq: SessionSeq(4), time: 4, data: { turn: 1 } } as unknown as SessionEvent
+  const betaStepStart = { type: 'step/start', seq: SessionSeq(5), time: 5, data: { turn: 1, step: 1 } } as unknown as SessionEvent
   const betaMessage = {
-    type: 'user/message', seq: SessionSeq(1), time: 1, surfaceOp: 'append',
+    type: 'user/message', seq: SessionSeq(6), time: 6, surfaceOp: 'append',
     data: { id: 'beta-message', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Beta task' }] },
   } as unknown as SessionEvent
+  const betaAssistantMessage = {
+    type: 'assistant/message', seq: SessionSeq(7), time: 1005, surfaceOp: 'append',
+    data: { turn: 1, step: 1, stream: [{ type: 'text-chunks', time0: 905, index: 0, dt: [], texts: ['Beta reply'] }], usage: {
+      inputTokens: 1000, outputTokens: 141, totalTokens: 621000, cacheReadTokens: 8100, cacheWriteTokens: 900,
+    }, message: { id: 'beta-reply', role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' },
+      content: [{ type: 'text', text: 'Beta reply' }] } },
+  } as unknown as SessionEvent
+  const betaTurnEnd = { type: 'turn/end', seq: SessionSeq(8), time: 1006,
+    data: { turn: 1, reason: { kind: 'completed' } } } as unknown as SessionEvent
+  const betaHistory = [betaPriorTurnStart, betaPriorStepStart, betaPriorAssistantMessage, betaPriorTurnEnd,
+    betaTurnStart, betaStepStart, betaMessage, betaAssistantMessage, betaTurnEnd]
   const clientMock = {
     close,
     settingsDescribe: vi.fn((_signal?: AbortSignal) => {
@@ -379,7 +403,7 @@ it.each([
     history: vi.fn(async (id: SessionId) => {
       const row = rows.find(candidate => candidate.header.id === id)
       if (row === undefined) throw new Error(`unknown test Session ${id}`)
-      return { header: row.header, events: id === 'session-beta' && betaHasConversation ? [betaMessage] : [], inheritedEventCount: 0 }
+      return { header: row.header, events: id === 'session-beta' && betaHasConversation ? betaHistory : [], inheritedEventCount: 0 }
     }),
     create: vi.fn(async () => {
       const header = makeHeader('session-created')
@@ -470,7 +494,45 @@ it.each([
     await waitFor(() => { expect(connectWorkspace).toHaveBeenCalledTimes(1) })
     fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
+    const conversationTab = screen.getByRole('tab', { name: 'Conversation' })
+    const trajectoryTab = screen.getByRole('tab', { name: 'Trajectory' })
+    expect(conversationTab.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('2 turns · 2 steps · 1,410 tok/s · 621K tok · cache hit 81%')).toBeTruthy()
+    fireEvent.keyDown(conversationTab, { key: 'ArrowRight' })
+    expect([trajectoryTab.getAttribute('aria-selected'), document.activeElement]).toEqual(['true', trajectoryTab])
+    fireEvent.click(trajectoryTab)
+    expect(trajectoryTab.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('Turn 1')).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeTruthy()
+    fireEvent.click(conversationTab)
     expect(clientMock.selectPreset).not.toHaveBeenCalled()
+    const beta = { ...rows.find(row => row.header.id === 'session-beta')!, runningSubagentCount: 1 }
+    const children: NativeSessionListItem[] = [
+      { header: { ...makeHeader('running-child'), parentSession: beta.header.id, origin: 'subagent' },
+        titleProjection: { status: 'resolved', title: 'Running child' }, ...activity, running: true },
+      { header: { ...makeHeader('idle-child'), parentSession: beta.header.id, origin: 'subagent' },
+        titleProjection: { status: 'resolved', title: 'Idle child' }, ...activity },
+      { header: { ...makeHeader('plain-fork'), parentSession: beta.header.id },
+        titleProjection: { status: 'resolved', title: 'Plain fork' }, ...activity },
+    ]
+    rows = [...rows.map(row => row.header.id === beta.header.id ? beta : row), ...children]
+    listFrames.publish({ type: 'upsert', item: beta })
+    for (const item of children) listFrames.publish({ type: 'upsert', item })
+    fireEvent.click(await screen.findByRole('button', { name: '1 subagents running' }))
+    const subagentMenu = await screen.findByRole('menu')
+    const subagentItems = within(subagentMenu).getAllByRole('menuitem')
+    expect(subagentItems.map(item => item.textContent?.trim())).toEqual(['Running child · Running', 'Idle child'])
+    expect(subagentItems[0]).toHaveProperty('disabled', true)
+    fireEvent.click(subagentItems[1]!)
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('idle-child') })
+    expect(clientMock.history).toHaveBeenLastCalledWith('idle-child', expect.any(AbortSignal))
+    rows = rows.filter(row => !children.some(child => child.header.id === row.header.id))
+    const betaWithoutChildren = { ...beta, runningSubagentCount: 0 }
+    rows = rows.map(row => row.header.id === beta.header.id ? betaWithoutChildren : row)
+    for (const item of children) listFrames.publish({ type: 'remove', sessionId: item.header.id })
+    listFrames.publish({ type: 'upsert', item: betaWithoutChildren })
+    fireEvent.click(screen.getByRole('treeitem', { name: /Beta/ }))
+    await waitFor(() => { expect(conversation?.getSnapshot().selected).toBe('session-beta') })
     const pendingStart = Promise.withResolvers<Awaited<ReturnType<NativeWorkspaceClient['connectWorkspace']>>>()
     pendingWorkspaceConnection = pendingStart
     const pendingMessageInput = screen.getByRole('textbox', { name: 'Message' })

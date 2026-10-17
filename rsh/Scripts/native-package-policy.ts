@@ -379,7 +379,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/CLI', ['./native-profile']],
   ['rsh/Programs/DesktopHost', ['./native-host']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
-  ['rsh/Engine/llm/llm', ['./brand', './message', './types']],
+  ['rsh/Engine/llm/llm', ['./assistant-stream', './brand', './message', './types']],
   ['rsh/Engine/llm/llm-retry', ['./types']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
