@@ -638,7 +638,7 @@ export class NativeConversationController {
   /** Send human text through the Host's sole turn executor.
    * @param text - submitted text; empty text requires at least one image.
    * @param files - browser-selected raster files; Provider limits govern admission.
-   * @returns whether this send matched a Host receipt or reached the prompt call; preparation can stop before either.
+   * @returns whether this send matched a Host receipt or the Host admitted its turn; preparation can stop before either.
    */
   send(text: string, files: readonly File[] = []): Promise<boolean> {
     this.assertReady()
@@ -714,11 +714,11 @@ export class NativeConversationController {
         this.foregroundAdmission = admission
         this.followErrorOwner = admission
         if (reconcileDraft !== undefined) this.publish({ error: undefined })
+        const onAccepted = (): void => { admitted = true }
         const prompt = text.trim().length === 0
           ? this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
-            true, signal, observe, onFollowError, admission.lastSeq, detach)
-          : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach)
-        admitted = true
+            true, signal, observe, onFollowError, admission.lastSeq, detach, onAccepted)
+          : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach, onAccepted)
         return prompt
       }, reconcileDraft === undefined)).then(() => admitted)
   }

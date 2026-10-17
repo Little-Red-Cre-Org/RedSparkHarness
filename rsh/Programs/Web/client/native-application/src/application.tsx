@@ -191,9 +191,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   useLayoutEffect(() => {
     if (followedSession.current !== snapshot.selected) {
       if (followedSession.current !== undefined) {
-        if (draftRef.current.length > 0 || filesRef.current.length > 0) {
-          keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
-        }
+        keepDraft(followedSession.current, { text: draftRef.current, files: filesRef.current })
       }
       const saved = snapshot.selected === undefined ? undefined : takeDraft(snapshot.selected)
       followedSession.current = snapshot.selected
@@ -231,13 +229,13 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       setFiles([])
       void send(text, attachments).then((success) => {
         if (!success) {
-          if (draftVersion.current === version) {
+          if (followedSession.current !== sessionId) {
+            keepDraft(sessionId, { text, files: attachments })
+          } else if (draftRef.current === '' && filesRef.current.length === 0) {
             draftRef.current = text
             filesRef.current = attachments
             setDraft(text)
             setFiles(attachments)
-          } else {
-            keepDraft(sessionId, { text, files: attachments })
           }
         }
       })
@@ -266,7 +264,9 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
           }} rows={1}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
-              && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
+              && !event.nativeEvent.isComposing
+              // oxlint-disable-next-line typescript/no-deprecated -- Safari IME composition Escape is only detectable via keyCode 229.
+              && event.nativeEvent.keyCode !== 229) {
               event.preventDefault()
               cancel()
               return
@@ -397,7 +397,7 @@ export const plugin: NativePlugin = {
       context.own(clientLocale.register('nativeApplication', { en, zh }))
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
-      let cancelledSend = false
+      const sendCancel = { requested: false }
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
       const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
@@ -470,9 +470,9 @@ export const plugin: NativePlugin = {
           createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
           loadImage: controller.image.bind(controller),
           send: async (text: string, files: readonly File[]) => {
-            cancelledSend = false
+            sendCancel.requested = false
             const admitted = await controller.send(text, files)
-            return admitted && !cancelledSend && controller.getSnapshot().error === undefined
+            return admitted && !sendCancel.requested && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),
@@ -482,7 +482,7 @@ export const plugin: NativePlugin = {
           takeDraft: controller.takeDraft.bind(controller),
           cancel: () => {
             controller.cancel()
-            cancelledSend = controller.getSnapshot().state === 'cancelling'
+            sendCancel.requested = controller.getSnapshot().state === 'cancelling'
           },
           answerHuman: controller.answerHuman.bind(controller),
           selectModel: controller.selectModel.bind(controller),
