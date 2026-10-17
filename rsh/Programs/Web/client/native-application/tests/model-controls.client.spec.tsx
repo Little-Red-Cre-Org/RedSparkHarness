@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useSyncExternalStore } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type {
   NativeModeControls, NativePermissionControls, NativeSessionClient,
@@ -55,10 +56,11 @@ async function renderControls() {
   controllers.push(controller)
   await controller.load()
   await controller.select('session-alpha' as SessionId)
-  render(<ModelControls snapshot={controller.getSnapshot()}
+  const Live = () => <ModelControls snapshot={useSyncExternalStore(controller.subscribe, controller.getSnapshot)}
     selectPlanMode={controller.selectPlanMode.bind(controller)}
     selectPermissionPreset={controller.selectPermissionPreset.bind(controller)}
-    t={key => en[key]} />)
+    t={key => en[key]} />
+  render(<Live />)
   return { controller, selectPreset, selectPlanMode, selectPermissionPreset }
 }
 
@@ -79,16 +81,18 @@ it.each(['plan', 'permission'] as const)('routes the %s composer control through
       expect(selectPermissionPreset).toHaveBeenCalledWith('session-alpha', 'read-only', expect.any(AbortSignal))
     })
     expect(controller.getSnapshot().permissionControls?.currentValue).toBe('read-only')
+    await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Read only' })) })
   }
   expect(selectPreset).not.toHaveBeenCalled()
 })
 
-it('opens the title mode chip and applies the selected Host preset', async () => {
+it('opens the title mode chip, applies the selected Host preset, and returns focus to the chip', async () => {
   const { controller, selectPreset } = await renderControls()
   const t = (key: ConversationLocaleKey, params?: Record<string, unknown>): string =>
     key === 'modeLabel' ? en.modeLabel.replace('{name}', String(params?.name)) : en[key]
-  render(<ConversationModeLabel snapshot={controller.getSnapshot()}
-    selectPreset={controller.selectPreset.bind(controller)} t={t} />)
+  const Live = () => <ConversationModeLabel snapshot={useSyncExternalStore(controller.subscribe, controller.getSnapshot)}
+    selectPreset={controller.selectPreset.bind(controller)} t={t} />
+  render(<Live />)
 
   fireEvent.click(screen.getByRole('button', { name: 'Mode: Standard' }))
   fireEvent.click(screen.getByRole('menuitem', { name: 'Minimal' }))
@@ -97,6 +101,7 @@ it('opens the title mode chip and applies the selected Host preset', async () =>
       id: 'session-alpha', preset: 'minimal', expectedRevision: 7,
     }, expect.any(AbortSignal))
   })
+  await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mode: Minimal' })) })
 })
 
 it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable and locks loaded rows without a Session ($catalogError)', async ({ catalogError }) => {

@@ -1,5 +1,5 @@
 /** Native model picker and Session mode controls for the composer. */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   IconChevronDownOutline14, IconCloseFill14, IconShieldOutline16, Menu, ModelPicker, Pill,
   type ModelPickerState,
@@ -19,6 +19,8 @@ export function ConversationModeLabel({ snapshot, selectPreset, t }: {
   t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
 }) {
   const [open, setOpen] = useState(false)
+  const trigger = useRef<HTMLButtonElement | null>(null)
+  const refocus = useRef(false)
   const controls = snapshot.modeControls
   const current = controls?.current
   const name = current === null || current === undefined ? t('chatMode')
@@ -26,12 +28,18 @@ export function ConversationModeLabel({ snapshot, selectPreset, t }: {
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
   const canSelect = ready && controls !== undefined && controls.canSelect && !controls.locked
   useEffect(() => { if (!canSelect) setOpen(false) }, [canSelect])
+  // The selection reload replaces the trigger with a static chip; refocus the trigger once it returns.
+  useEffect(() => {
+    if (!canSelect || !refocus.current) return
+    refocus.current = false
+    trigger.current?.focus()
+  }, [canSelect])
   const items = controls?.options.map(option => ({ id: option.id, label: option.name })) ?? []
   return <>
     <Menu className={css.modeMenu} open={open && canSelect} autoFocus compact portal items={items} selectedId={current ?? undefined}
-      onSelect={(id) => { setOpen(false); void selectPreset(id) }} onClose={() => { setOpen(false) }}
+      onSelect={(id) => { setOpen(false); refocus.current = true; void selectPreset(id) }} onClose={() => { setOpen(false) }}
       anchor={canSelect
-        ? <button type="button" className={css.modeTrigger} aria-label={t('modeLabel', { name })}
+        ? <button ref={trigger} type="button" className={css.modeTrigger} aria-label={t('modeLabel', { name })}
           aria-expanded={open}
           onClick={() => { setOpen(value => !value) }}>
           <span className={css.modeName}>{name}</span><IconChevronDownOutline14 />
@@ -88,6 +96,8 @@ export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset
 }) {
   const [open, setOpen] = useState(false)
   const [selectingPlan, setSelectingPlan] = useState(false)
+  const permissionTrigger = useRef<HTMLButtonElement | null>(null)
+  const refocusPermission = useRef(false)
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
   const mode = snapshot.modeControls
   const planMode = mode?.planMode
@@ -97,6 +107,12 @@ export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset
   const currentPermissionLabel = permission?.currentValue === null || permission?.currentValue === undefined
     ? t('unavailable') : permissionLabel(permission.currentValue, currentPermission?.name ?? permission.currentValue, t)
   useEffect(() => { if (!ready) setOpen(false) }, [ready])
+  // The trigger is disabled while the selection applies; refocus it once it is enabled again.
+  useEffect(() => {
+    if (!ready || !refocusPermission.current) return
+    refocusPermission.current = false
+    permissionTrigger.current?.focus()
+  }, [ready])
   return (
     <div className={css.root} role="group" aria-label={t('modelControls')}>
       <div className={css.row}>
@@ -123,10 +139,11 @@ export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset
           selectedId={permission.currentValue ?? undefined}
           onSelect={(value) => {
             setOpen(false)
-            if (value !== permission.currentValue) void selectPermissionPreset(value)
+            if (value === permission.currentValue) permissionTrigger.current?.focus()
+            else { refocusPermission.current = true; void selectPermissionPreset(value) }
           }}
           onClose={() => { setOpen(false) }}
-          anchor={<button type="button" className={css.permissionTrigger} title={currentPermission?.description}
+          anchor={<button ref={permissionTrigger} type="button" className={css.permissionTrigger} title={currentPermission?.description}
             disabled={!ready} onClick={() => { setOpen(value => !value) }}>
             <IconShieldOutline16 size={14} />
             <span className={css.permissionName}>{currentPermissionLabel}</span>

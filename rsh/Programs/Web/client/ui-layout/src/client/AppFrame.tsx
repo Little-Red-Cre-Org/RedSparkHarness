@@ -41,7 +41,7 @@ export type NativeAppFrameProps = FrameProps & { useCurrentSessionTitle: UseCurr
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return <div className={css.centerCol} data-center-col>{props.children}</div>
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
@@ -218,6 +218,32 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
   ), [usePanelInfo, renderSlot])
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
 
+  // The narrow drawer is modal: the columns beneath it go inert, focus moves into it, and
+  // closing returns focus to the element that opened it (or the rail when that element is gone).
+  const drawerRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!sidebarOverlay) return
+    const frame = frameRef.current as HTMLDivElement
+    const drawer = drawerRef.current as HTMLDivElement
+    const opener = document.activeElement
+    const background = frame.querySelectorAll(':scope > [data-center-col], :scope > [data-rightbar-col]')
+    for (const element of background) element.setAttribute('inert', '')
+    drawer.focus()
+    return () => {
+      for (const element of background) element.removeAttribute('inert')
+      const active = document.activeElement
+      if (active !== null && active !== document.body && !drawer.contains(active)) return
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus()
+      else drawer.querySelector<HTMLElement>('button')?.focus()
+    }
+  }, [sidebarOverlay])
+  // Escape inside the drawer closes it, unless an open menu claims that Escape first.
+  const onDrawerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Escape' || !e.currentTarget.contains(e.target as Node)) return
+    if (document.querySelector('[role="menu"]') !== null) return
+    actions.collapseNarrow()
+  }, [actions])
+
   return (
     <div
       ref={frameRef}
@@ -233,12 +259,15 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
       data-dragging={dragging || undefined}
     >
       {documentTitle}
-      <div className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
-        style={sidebarOverlay ? { width: sidebarWidth } : undefined}>
+      <div ref={drawerRef} className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
+        style={sidebarOverlay ? { width: sidebarWidth } : undefined}
+        {...sidebarOverlay && {
+          role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar'), tabIndex: -1, onKeyDown: onDrawerKeyDown,
+        }}>
         {sidebar}
       </div>
       {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')}
-        onClick={actions.collapseNarrow} />}
+        onClick={actions.collapseNarrow} onKeyDown={onDrawerKeyDown} />}
       <>
         <CenterColumn>{main}</CenterColumn>
         <RightbarColumn>

@@ -10,9 +10,9 @@ The Native Web Session page differed from the original DSH GUI in its header nav
 
 ## Decision
 
-Show Conversation and Trajectory tabs below the selected Session title, with the Trajectory ledger inline and the composer visible on both tabs. Put the selectable mode chip and direct child-Session menu beside the title. Keep the Plan toggle in the composer, use a compact localized permission menu, and replace the text image picker with a round "+" button in the toolbar; the attachment strip layout is left to PR-C. Derive a muted usage line from loaded Session events and show values only when their inputs are available. On narrow frames, let an expanded sidebar overlay the main column and close it from a backdrop or `collapseNarrow()`.
+Show Conversation and Trajectory tabs below the selected Session title, with the Trajectory ledger inline and the composer visible on both tabs. Put the selectable mode chip and direct child-Session menu beside the title. Keep the Plan toggle in the composer, use a compact localized permission menu, and replace the text image picker with a round "+" button (`NativeComposerImagePicker`) in the toolbar. That button opens the file input rendered by `NativeComposerAttachments` through a shared `inputRef`; `NativeComposerAttachments` stays above the editor and owns the attachment rail, drop target, and clipboard-image paste on the composer form. Derive a muted usage line from loaded Session events and show values only when their inputs are available. On narrow frames, let an expanded sidebar overlay the main column and close it from a backdrop or `collapseNarrow()`.
 
-The current model catalog does not publish context-window sizes, so the usage line omits context percentage. This change adds neither paste handling, which is owned by PR-C, nor file or `@` reference actions, which have no backend support.
+The current model catalog does not publish context-window sizes, so the usage line omits context percentage. This change does not add file or `@` reference actions, which have no backend support.
 
 ## Alternatives considered
 
