@@ -140,7 +140,7 @@ export function NativeAppFrame({ useCurrentSessionTitle, ...props }: NativeAppFr
       usePanelInfo={props.usePanelInfo} />} />
 }
 
-function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTitle }: FrameProps & {
+function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, documentTitle }: FrameProps & {
   documentTitle: ReactNode
 }) {
   const layoutInfo = useStore(state => state.layoutInfo)
@@ -179,11 +179,14 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTit
   const sidebarPreference = sidebarCollapsed
     ? 0
     : layoutInfo.sidebar === 0 ? SIDEBAR_DEFAULT : layoutInfo.sidebar
+  const sidebarOverlay = narrow && layoutInfo.narrowExpanded
   const rightbarPreference = layoutInfo.rightbar ?? viewport * RIGHTBAR_DEFAULT_RATIO
   // Opening on a narrow frame collapses the left sidebar. Eligibility must
   // include that space before the occupant's first shown report arrives.
-  const normal = computeColumns(viewport, !layoutInfo.rightbarShown && narrow ? 0 : sidebarPreference, rightbarPreference)
-  const cols = computeColumns(viewport, sidebarPreference, layoutInfo.rightbarTrack ? rightbarPreference : 0)
+  const normal = computeColumns(viewport,
+    sidebarOverlay || (!layoutInfo.rightbarShown && narrow) ? 0 : sidebarPreference, rightbarPreference)
+  const cols = computeColumns(viewport, sidebarOverlay ? 0 : sidebarPreference, layoutInfo.rightbarTrack ? rightbarPreference : 0)
+  const sidebarWidth = sidebarOverlay ? SIDEBAR_DEFAULT : cols.sidebar
   const colsRef = useRef(cols)
   colsRef.current = cols
   const rightbarWidth = useRef(normal.rightbar)
@@ -208,8 +211,8 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTit
   }, [actions])
   const sidebar = useMemo(() => renderSlot('sidebar', {
     collapsed: sidebarCollapsed,
-    width: cols.sidebar,
-  }), [renderSlot, sidebarCollapsed, cols.sidebar])
+    width: sidebarWidth,
+  }), [renderSlot, sidebarCollapsed, sidebarWidth])
   const main = useMemo(() => (
     <MainPanel usePanelInfo={usePanelInfo} renderSlot={renderSlot} />
   ), [usePanelInfo, renderSlot])
@@ -230,9 +233,12 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTit
       data-dragging={dragging || undefined}
     >
       {documentTitle}
-      <div className={css.sidebarCol}>
+      <div className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
+        style={sidebarOverlay ? { width: sidebarWidth } : undefined}>
         {sidebar}
       </div>
+      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')}
+        onClick={actions.collapseNarrow} />}
       <>
         <CenterColumn>{main}</CenterColumn>
         <RightbarColumn>
@@ -243,7 +249,7 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTit
         {overlays}
       </div>
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+      {!sidebarCollapsed && !sidebarOverlay && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
       {layoutInfo.rightbarShown && !layoutInfo.rightbarFullscreen && normal.rightbar > 0 && (
         <DragHandle side="rightbar" left={viewport - normal.rightbar} onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd} />
       )}

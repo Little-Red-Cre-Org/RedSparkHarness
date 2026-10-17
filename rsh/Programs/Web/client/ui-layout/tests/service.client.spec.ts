@@ -8,6 +8,7 @@ function fakePanels(): PanelActions {
     retainMainPanels: vi.fn(),
     setSidebar: vi.fn(),
     toggleSidebar: vi.fn(),
+    collapseNarrow: vi.fn(),
     setViewportWidth: vi.fn(),
     setRightbar: vi.fn(),
     openRightbar: vi.fn(),
@@ -38,8 +39,10 @@ describe('LayoutController', () => {
     const service = new LayoutController(panels, () => true)
 
     service.toggleSidebar()
+    service.collapseNarrow()
 
     expect(panels.toggleSidebar).toHaveBeenCalledTimes(1)
+    expect(panels.collapseNarrow).toHaveBeenCalledTimes(1)
     expect(panels.setSidebar).not.toHaveBeenCalled()
   })
 
