@@ -20,6 +20,8 @@ const COLD_REPLY = 'cold scheduled reminder restored'
 
 type JsonObject = Record<string, unknown>
 type RunResult = { readonly sessionId: string; readonly finalResponse: string; readonly events: JsonObject[] }
+type HarnessNotification = { readonly method: string; readonly params: { readonly sessionId?: string; readonly event?: JsonObject } }
+type NotificationSubscription = { tryNext(): HarnessNotification | undefined; close(): void }
 type InstalledSdk = {
   DeepSeekHarness: new (options: {
     readonly profile: 'native-sdk'
@@ -32,6 +34,7 @@ type InstalledSdk = {
     readonly env: NodeJS.ProcessEnv
     readonly requestTimeoutMs: number
   }) => {
+    readonly client: { subscribeSessionTree(sessionId: string): NotificationSubscription }
     session(sessionId: string): { run(input: string): Promise<RunResult> }
     close(): Promise<void>
   }
@@ -225,18 +228,34 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
 
       const requestsBeforeRestore = requests.length
       const coldHarness = new DeepSeekHarness(options)
+      const subscription = coldHarness.client.subscribeSessionTree(SESSION_ID)
       let recovery: RunResult
+      const wireEvents: JsonObject[] = []
       try {
         recovery = await coldHarness.session(SESSION_ID).run(COLD_TASK)
         await new Promise<void>(resolve => setTimeout(resolve, 3_000))
+        while (true) {
+          const notification = subscription.tryNext()
+          if (notification === undefined) break
+          if (notification.method === 'session.event' && notification.params.sessionId === SESSION_ID
+            && notification.params.event !== undefined) wireEvents.push(notification.params.event)
+        }
       }
-      finally { await coldHarness.close() }
+      finally {
+        subscription.close()
+        await coldHarness.close()
+      }
 
       const recoveryDispatches = recovery.events.filter(event => event.type === 'schedule/change' && isRecord(event.data)
         && event.data.operation === 'dispatch' && event.data.id === scheduleId)
       expect(recoveryDispatches.length).toBe(1)
       const recoveryReminders = recovery.events.filter(isScheduleReminder)
       expect(recoveryReminders.length).toBe(1)
+      const wireDispatches = wireEvents.filter(event => event.type === 'schedule/change' && isRecord(event.data)
+        && event.data.operation === 'dispatch' && event.data.id === scheduleId)
+      expect(wireDispatches.length).toBe(1)
+      const wireReminders = wireEvents.filter(isScheduleReminder)
+      expect(wireReminders.length).toBe(1)
 
       const reminderRequests = requests.slice(requestsBeforeRestore)
         .filter(request => requestLastUserText(request).includes(REMINDER_PROMPT))
@@ -249,8 +268,10 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       const durableReminders = durableEvents.filter(isScheduleReminder)
       expect(durableReminders.length).toBe(1)
       const runReminderId = isRecord(recoveryReminders[0]!.data) ? recoveryReminders[0]!.data.id : undefined
+      const wireReminderId = isRecord(wireReminders[0]!.data) ? wireReminders[0]!.data.id : undefined
       const durableReminderId = isRecord(durableReminders[0]!.data) ? durableReminders[0]!.data.id : undefined
       expect(runReminderId).toEqual(expect.any(String))
+      expect(wireReminderId).toBe(runReminderId)
       expect(durableReminderId).toBe(runReminderId)
     } finally {
       try { if (server !== undefined) await closeServer(server) }
