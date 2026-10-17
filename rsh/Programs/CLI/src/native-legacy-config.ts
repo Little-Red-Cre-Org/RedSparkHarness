@@ -392,7 +392,7 @@ type MigrationPlan = {
 }
 
 async function planNativeLegacyConfig(options: NativeLegacyConfigOptions,
-  clientDocument?: unknown | null): Promise<MigrationPlan> {
+  clientDocument?: unknown): Promise<MigrationPlan> {
   const profileDirectory = options.profileDirectory ?? join(options.home, 'profiles', options.profileName)
   const profilePath = join(profileDirectory, 'rsh.profile.json')
   const anchors = [

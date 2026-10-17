@@ -120,10 +120,12 @@ describe('desktop core package set', () => {
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
-    expect(() => verifyDesktopCoreLockfile(
-      "packages:\n  '@deepseek-ai/cordis@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
-      packageSet,
-    )).toThrow(/ignored compatibility optional @deepseek-ai\/cordis/u)
+    expect(() => {
+      verifyDesktopCoreLockfile(
+        "packages:\n  '@deepseek-ai/cordis@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
+        packageSet,
+      )
+    }).toThrow(/ignored compatibility optional @deepseek-ai\/cordis/u)
   })
 
 })
