@@ -28,6 +28,7 @@ export const zh = {
   'collapse': '收起',
   'expand': '展开',
   'back': '返回',
+  'sidebar': '侧边栏',
   'brand.localBuild': 'RedSpark Harness',
   'unknown': '未知',
   'none': '无',

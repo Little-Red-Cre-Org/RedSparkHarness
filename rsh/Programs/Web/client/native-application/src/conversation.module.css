@@ -221,26 +221,6 @@
   padding-left: 8px;
 }
 
-.workspace {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: min(100%, 360px);
-  min-height: 28px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 16px;
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-}
-
-.workspace:disabled { cursor: default; }
-.workspace span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.workspace svg:last-child { flex: none; color: var(--dsw-alias-label-caption); }
-
 .editorLabel {
   display: block;
   min-width: 0;
