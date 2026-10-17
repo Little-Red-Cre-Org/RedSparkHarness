@@ -28,7 +28,7 @@ kind: "package-library"
 
 原生 Host 和 Client 从 `./native` 导入快照类型、构造函数和 SSH 检测，不加载 Cordis。根入口另外为 Cordis 消费者提供 `launchEnvironmentOf(ctx)`。原生 Host 将启动快照直接传给 Provider。
 
-`./layers` 向 Node 启动器公开 `loadLayeredEnv(binName, cwd, warn)`。它先验证两个发现的文件再应用任何一层，保留继承环境 > 项目 > 主目录的优先级及来源，并拒绝仅启动环境可设置的变量，主目录代理设置除外。原生 `dsh` 在导入插件前加载这些层，并在每个根作用域拥有一个快照 Provider；仅 Client 的配置不安装这个 Host Provider。
+`./layers` 向 Node 启动器公开 `loadLayeredEnv(binName, cwd, warn, homeDirectory)`。它先验证两个发现的文件再应用任何一层，保留继承环境 > 项目 > 主目录的优先级及来源，并拒绝仅启动环境可设置的变量，主目录代理设置除外。拥有明确主目录路径的调用方会显式传入；其他调用方使用当前进程选定的主目录。原生 `dsh` 在导入插件前加载这些层，并在每个根作用域拥有一个快照 Provider；仅 Client 的配置不安装这个 Host Provider。
 
 ### 解析一个值
 

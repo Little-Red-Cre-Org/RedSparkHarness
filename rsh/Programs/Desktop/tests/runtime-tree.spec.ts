@@ -60,7 +60,6 @@ it('checks the shell version only during build verification', async () => {
   await expect(verifyDesktopRuntime(dsh, '2.0.0')).rejects.toThrow(/does not match Electron/u)
 })
 it.each([
-  { schemaVersion: 2 },
   { platform: 'other' },
   { arch: 'other' },
   { release: { schemaVersion: 2 } },

@@ -40,12 +40,15 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'sidebar-right', plugin: '@deepseek-ai/dsh-client-ui-sidebar-right' },
 ] as const
 
+/** One shipped browser Client installation used by a native Web profile. */
+export type NativeProfileClientInstallation = typeof NATIVE_WEB_CLIENT_INSTALLATIONS[number]
+
 /**
  * Return the browser Client rows written for a shipped native profile.
  * @param name - requested standard or native profile name.
  * @returns the profile's Client installations, or an empty list without a Client composition.
  */
-export function shippedNativeProfileClientComposition(name: string): readonly { plugin: string }[] {
+export function shippedNativeProfileClientComposition(name: string): readonly NativeProfileClientInstallation[] {
   const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
   return profile === 'native-web' ? NATIVE_WEB_CLIENT_INSTALLATIONS : []
 }
@@ -118,6 +121,7 @@ export function shippedNativeProfileComposition(
   home: string,
   name: string,
   platform: NodeJS.Platform = process.platform,
+  options: { readonly profileDirectory?: string } = {},
 ): NativeProfileConfig {
   if (!isShippedNativeProfile(name)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(name)}`)
   const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
@@ -207,7 +211,7 @@ export function shippedNativeProfileComposition(
           : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
         scope: ROOT,
         config: profile === 'native-web'
-          ? { projectDir: join(home, 'profiles', name), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
+          ? { projectDir: options.profileDirectory ?? join(home, 'profiles', name), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
           : { provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
             ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
             ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 500, maxPendingHumanRequests: 32 } : {}) },
@@ -308,7 +312,7 @@ export function shippedNativeProfileComposition(
         config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
-        config: { path: join(home, 'profiles', name, 'task-scheduler.sqlite') },
+        config: { path: join(options.profileDirectory ?? join(home, 'profiles', name), 'task-scheduler.sqlite') },
       }] : []),
       ...(profile === 'native-web' ? [{ id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: ROOT }] : []),

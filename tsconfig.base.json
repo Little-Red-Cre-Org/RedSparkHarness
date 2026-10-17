@@ -444,6 +444,7 @@
       "@deepseek-ai/dsh-deepseek-account": ["./rsh/Modules/Official/credentials/deepseek-account/src"],
       "@deepseek-ai/dsh-deepseek-llm-api-extensions": ["./rsh/Modules/Official/llm/deepseek-llm-api-extensions/src"],
       "@deepseek-ai/dsh-deque": ["./rsh/Core/util/deque/src"],
+      "@deepseek-ai/dsh-desktop-host-compatibility": ["./rsh/Compatibility/DSH/boot/desktop-host-compatibility/src"],
       "@deepseek-ai/dsh-e2b": ["./rsh/Modules/Official/e2b/e2b/src"],
       "@deepseek-ai/dsh-file-reference": ["./rsh/Engine/context/file-reference/src"],
       "@deepseek-ai/dsh-file-reference-local": ["./rsh/Engine/context/file-reference-local/src"],

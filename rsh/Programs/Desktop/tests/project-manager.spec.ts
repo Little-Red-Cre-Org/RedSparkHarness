@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
-import { DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
+import { createCompatibilityPluginProfile, DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
 import { runtimeFixture } from './runtime-fixture.ts'
 
 const roots: string[] = []
@@ -53,8 +53,19 @@ function hooks(overrides: Partial<DesktopProjectHooks> = {}): DesktopProjectHook
 function setup(): { root: string; manager: DesktopProjectManager } {
   const root = temporaryRoot()
   const dsh = join(root, 'resources', 'dsh')
+  runtimeFixture(dsh, '1.0.0', '24.17.0', true)
+  vi.stubEnv('DSH_HOME', join(root, '.dsh'))
+  const manager = new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')), { node: process.execPath, pnpm: writeFakePnpm(root), dsh })
+  createCompatibilityPluginProfile(manager.paths.profile)
+  return { root, manager }
+}
+function setupNative(): { root: string; manager: DesktopProjectManager } {
+  const root = temporaryRoot()
+  const dsh = join(root, 'resources', 'dsh')
   runtimeFixture(dsh)
-  return { root, manager: new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')), { node: process.execPath, pnpm: writeFakePnpm(root), dsh }) }
+  vi.stubEnv('DSH_HOME', join(root, '.dsh'))
+  return { root, manager: new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')),
+    { node: process.execPath, pnpm: writeFakePnpm(root), dsh }) }
 }
 function calls(root: string): { args: string[]; registry: string }[] {
   const path = join(root, 'pnpm-log.jsonl')
@@ -65,9 +76,91 @@ afterEach(async () => {
   const directories = roots.splice(0)
   const results = await Promise.allSettled(cleanups.map(cleanup => cleanup()))
   for (const root of directories) rmSync(root, { recursive: true, force: true })
+  vi.unstubAllEnvs()
   const failures: unknown[] = results.flatMap((result): unknown[] => result.status === 'rejected' ? [result.reason] : [])
   if (failures.length > 0) throw new AggregateError(failures, 'desktop worker cleanup failed')
 })
+
+it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as const)(
+  'keeps Desktop runtime selection explicit for %s', async (scenario) => {
+    const { root, manager } = setupNative()
+    const profile = manager.paths.profile
+    const packagePath = join(profile, 'package.json')
+    const workspacePath = join(profile, 'pnpm-workspace.yaml')
+    if (scenario !== 'fresh') mkdirSync(profile, { recursive: true })
+    if (scenario === 'old-template') {
+      writeFileSync(join(profile, 'package.json'), `${JSON.stringify({
+        name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
+      }, undefined, 2)}\n`)
+    }
+    if (scenario === 'old-template') {
+      const home = dirname(manager.paths.root)
+      const wrongHome = join(root, 'wrong-home')
+      const settingsPath = join(home, 'settings.yaml')
+      mkdirSync(home, { recursive: true })
+      mkdirSync(wrongHome, { recursive: true })
+      mkdirSync(join(profile, 'node_modules'), { recursive: true })
+      writeFileSync(join(profile, '.env'), 'DESKTOP_TEST_SETTING=preserved\n')
+      writeFileSync(settingsPath, 'locale:\n  preference: fr\n')
+      writeFileSync(join(wrongHome, 'settings.yaml'), 'locale:\n  preference: zh\n')
+      vi.stubEnv('DSH_HOME', wrongHome)
+      const originalPackage = readFileSync(packagePath)
+      const originalEnv = readFileSync(join(profile, '.env'))
+      await expect(manager.applyRelease()).rejects.toThrow(/locale.preference="fr" must be en, zh, or system/u)
+      expect(readFileSync(packagePath)).toEqual(originalPackage)
+      expect(readFileSync(join(profile, '.env'))).toEqual(originalEnv)
+      expect(existsSync(workspacePath)).toBe(false)
+      expect(existsSync(join(profile, 'rsh.profile.json'))).toBe(false)
+      expect(existsSync(join(profile, 'rsh.client.json'))).toBe(false)
+      expect(readdirSync(join(profile, 'node_modules'))).toEqual([])
+      unlinkSync(settingsPath)
+    }
+    if (scenario === 'custom-profile') {
+      const patchPath = join(profile, 'cordis.patch.yml')
+      writeFileSync(patchPath, '[]\n')
+      const patchBefore = readFileSync(patchPath)
+      await expect(manager.applyRelease()).rejects.toThrow(/existing profile without a Desktop manifest was not changed/u)
+      expect(readFileSync(patchPath)).toEqual(patchBefore)
+      expect(existsSync(packagePath)).toBe(false)
+      writeFileSync(packagePath, `${JSON.stringify({
+        name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
+      }, undefined, 2)}\n`)
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
+    if (scenario === 'legacy-without-compat') createCompatibilityPluginProfile(profile)
+    const before = scenario === 'custom-profile' || scenario === 'legacy-without-compat'
+      ? [readFileSync(packagePath), readFileSync(workspacePath)] : undefined
+
+    if (scenario === 'fresh' || scenario === 'old-template') {
+      await expect(manager.applyRelease()).resolves.toBe(true)
+      expect(JSON.parse(readFileSync(packagePath, 'utf8'))).toMatchObject({
+        dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' } },
+      })
+      expect(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')).not.toContain('"id": "app"')
+      expect(existsSync(join(profile, 'node_modules', '@deepseek-ai', 'cordis'))).toBe(false)
+      if (scenario === 'old-template') {
+        expect(readFileSync(join(profile, '.env'), 'utf8')).toBe('DESKTOP_TEST_SETTING=preserved\n')
+        const client = JSON.parse(readFileSync(join(profile, 'rsh.client.json'), 'utf8')) as {
+          installations: { plugin: string; config?: unknown }[]
+        }
+        expect(client.installations.find(row => row.plugin === '@deepseek-ai/dsh-client-locale')?.config).toBeUndefined()
+      }
+      expect(calls(root)).toEqual([])
+      return
+    }
+
+    const message = scenario === 'custom-profile'
+      ? /custom Cordis profile was not changed/u
+      : /release omits @deepseek-ai\/dsh-desktop-host-compatibility; the legacy profile was preserved/u
+    await expect(manager.applyRelease()).rejects.toThrow(message)
+    expect(readFileSync(packagePath)).toEqual(before?.[0])
+    expect(readFileSync(workspacePath)).toEqual(before?.[1])
+    expect(existsSync(join(profile, 'desktop-runtime-state.json'))).toBe(false)
+    expect(calls(root)).toEqual([])
+  },
+)
 
 describe('desktop external plugin profile', () => {
   it('reuses plugin files without scanning manifests and can disable or reset them', async () => {
@@ -132,7 +225,8 @@ describe('desktop external plugin profile', () => {
         await expect(manager.applyRelease()).rejects.toThrow('another package transaction is active')
       },
     }))
-    expect(manager.listPlugins()).toEqual([])
+    expect(manager.supportsLegacyPluginManagement()).toBe(false)
+    expect(() => manager.listPlugins()).toThrow('native profiles do not support compatibility plugin management')
     expect(existsSync(join(profile, 'node_modules/plugin'))).toBe(false)
     expect(existsSync(join(profile, 'cordis.patch.yml'))).toBe(false)
     expect(existsSync(join(profile, '.env'))).toBe(false)
@@ -167,7 +261,7 @@ describe('desktop external plugin profile', () => {
     await manager.applyRelease()
     await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
     const dsh = join(root, 'new-node')
-    runtimeFixture(dsh, '1.1.0', '24.18.0')
+    runtimeFixture(dsh, '1.1.0', '24.18.0', true)
     const failing = join(root, 'fail-install.mjs')
     writeFileSync(failing, 'process.exitCode = 1')
     const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh, pnpm: failing })
@@ -196,7 +290,7 @@ describe('desktop external plugin profile', () => {
     if (operation === 'runtime-change') {
       await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
       dsh = join(root, 'new-node')
-      runtimeFixture(dsh, '1.1.0', '24.18.0')
+      runtimeFixture(dsh, '1.1.0', '24.18.0', true)
     }
     const failing = join(root, 'fail-rebuild.mjs')
     writeFileSync(failing, `await import(${JSON.stringify(pathToFileURL(manager.runtime.pnpm).href)}); if (process.argv.includes('rebuild')) process.exitCode = 1`)
@@ -289,7 +383,7 @@ describe('desktop external plugin profile', () => {
     await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
     writeFileSync(join(manager.paths.profile, 'cordis.patch.yml'), '[]\n')
     const nextRoot = join(root, 'relocated', 'dsh')
-    runtimeFixture(nextRoot, '1.1.0')
+    runtimeFixture(nextRoot, '1.1.0', '24.17.0', true)
     const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh: nextRoot })
     await expect(next.applyRelease()).resolves.toBe(true)
     expect(next.listPlugins()).toEqual(manager.listPlugins())
@@ -305,7 +399,7 @@ describe('desktop external plugin profile', () => {
     await manager.applyRelease()
     await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
     const dsh = join(root, 'new-node')
-    runtimeFixture(dsh, '1.1.0', '24.18.0')
+    runtimeFixture(dsh, '1.1.0', '24.18.0', true)
     const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
     await next.applyRelease()
     expect(calls(root).slice(2).map(call => call.args.filter(arg => !arg.startsWith('--config.')))).toEqual([
@@ -319,7 +413,7 @@ describe('desktop external plugin profile', () => {
     await manager.applyRelease()
     await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
     const dsh = join(root, 'next-major')
-    runtimeFixture(dsh, '2.0.0')
+    runtimeFixture(dsh, '2.0.0', '24.17.0', true)
     const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
     await expect(next.applyRelease()).rejects.toThrow(/requires @deepseek-ai\/cordis/u)
     expect(next.releaseVersion()).toBe('2.0.0')

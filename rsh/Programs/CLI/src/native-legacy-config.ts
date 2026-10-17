@@ -272,10 +272,9 @@ function applySettingsRules(options: {
 
 type PreparedMigration = { path: string; document: Record<string, unknown>; mode: number; changed: boolean; report: string[] }
 
-function prepareMigrations(path: string, target: MigrationIntent['target'], intents: readonly MigrationIntent[]): PreparedMigration {
+function prepareMigrationDocument(path: string, target: MigrationIntent['target'], intents: readonly MigrationIntent[],
+  document: Record<string, unknown>, mode: number): PreparedMigration {
   const report: string[] = []
-  const mode = statSync(path).mode & 0o777
-  const document = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
   if (target === 'profile') parseNativeProfileConfig(document)
   else parseNativeClientProfile(document)
   const rows = document.installations as Installation[]
@@ -297,6 +296,12 @@ function prepareMigrations(path: string, target: MigrationIntent['target'], inte
     throw migrationConflict(intent.source, intent.sourceValue, path, row.id, intent.key, current.value)
   }
   return { path, document, mode, changed, report }
+}
+
+function prepareMigrations(path: string, target: MigrationIntent['target'], intents: readonly MigrationIntent[]): PreparedMigration {
+  const mode = statSync(path).mode & 0o777
+  const document = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
+  return prepareMigrationDocument(path, target, intents, document, mode)
 }
 
 async function verifyProfileMigration(prepared: PreparedMigration, intents: readonly MigrationIntent[],
@@ -362,39 +367,90 @@ function checkEnvironment(options: {
   }
 }
 
-/** Expand the selected composition, migrate supported settings, and reject legacy launch configuration.
- * @param options - selected profile, its JSON patches, CLI resolver anchor, Harness home, and launch environment.
- * @returns completion after optional profile-file updates; `settings.yaml` is never written.
- * @throws when an active surface has unsupported legacy values or a migration target conflicts.
- */
-export async function migrateNativeLegacyConfig(options: {
+type NativeLegacyConfigOptions = {
   profileName: string
+  profileDirectory?: string
+  clientPath?: string
   installAnchor: string
   home: string
   profile: NativeProfileConfig
   patchFiles: readonly string[]
   environment: LaunchEnvironmentSnapshot
-}): Promise<void> {
-  const profileDirectory = join(options.home, 'profiles', options.profileName)
+}
+
+type MigrationPlan = {
+  profilePath: string
+  clientPath: string | undefined
+  profile: NativeProfileConfig
+  clientProfile: { path: string; installations: readonly Installation[] } | undefined
+  clientDocument: unknown
+  profileIntents: readonly MigrationIntent[]
+  clientIntents: readonly MigrationIntent[]
+  patchFiles: readonly string[]
+  anchors: readonly ReturnType<typeof createRequire>[]
+  home: string
+}
+
+async function planNativeLegacyConfig(options: NativeLegacyConfigOptions,
+  clientDocument?: unknown | null): Promise<MigrationPlan> {
+  const profileDirectory = options.profileDirectory ?? join(options.home, 'profiles', options.profileName)
   const profilePath = join(profileDirectory, 'rsh.profile.json')
   const anchors = [
     createRequire(options.installAnchor), createRequire(join(profileDirectory, 'package.json')),
   ]
   const profile = await expandNativeProfilePresets(options.profile, anchors, options.home)
-  const clientPath = nativeClientPath(profile)
-  const profilePackages = new Set(profile.installations.filter(row => row.disabled !== true).map(row => row.plugin))
-  const clientProfile = clientPath !== undefined && existsSync(clientPath)
-    ? { path: clientPath,
-      installations: parseNativeClientProfile(JSON.parse(readFileSync(clientPath, 'utf8')) as unknown).installations }
+  const clientPath = options.clientPath ?? nativeClientPath(profile)
+  const source = clientDocument === undefined
+    ? clientPath !== undefined && existsSync(clientPath) ? readFileSync(clientPath, 'utf8') : undefined
+    : clientDocument
+  const clientProfile = clientPath !== undefined && source != null
+    ? { path: clientPath, installations: parseNativeClientProfile(
+      typeof source === 'string' ? JSON.parse(source) as unknown : source).installations }
     : undefined
   const clientRows: Installation[] = clientProfile?.installations.map(row => ({ ...row })) ?? []
+  const profilePackages = new Set(profile.installations.filter(row => row.disabled !== true).map(row => row.plugin))
   const clientPackages = new Set(clientRows.filter(row => row.disabled !== true).map(row => row.plugin))
   checkEnvironment({ environment: options.environment, profilePackages, clientPackages })
   const settings = settingsDocument(profile)
   const intents = applySettingsRules({ settings, profile, clientProfile, profilePackages, clientPackages })
-  const reports = await commitMigrations({ profilePath, clientPath,
-    profileIntents: intents.filter(intent => intent.target === 'profile'),
-    clientIntents: intents.filter(intent => intent.target === 'client'),
-    patchFiles: options.patchFiles, anchors, home: options.home })
+  return { profilePath, clientPath, profile, clientProfile,
+    clientDocument: source, profileIntents: intents.filter(intent => intent.target === 'profile'),
+    clientIntents: intents.filter(intent => intent.target === 'client'), patchFiles: options.patchFiles,
+    anchors, home: options.home }
+}
+
+/** Check a candidate Native profile migration without writing profile files or links.
+ * @param options - selected profile, candidate JSON documents, CLI resolver anchor, Harness home, and launch environment.
+ * @returns completion when unsupported values and migration conflicts are absent.
+ * @throws when an active surface has unsupported legacy values or a migration target conflicts.
+ */
+export async function validateNativeLegacyConfig(options: NativeLegacyConfigOptions & {
+  profileDocument: unknown
+  clientDocument: unknown
+}): Promise<void> {
+  const plan = await planNativeLegacyConfig(options, options.clientDocument)
+  const profileMigration = plan.profileIntents.length === 0 ? undefined
+    : prepareMigrationDocument(plan.profilePath, 'profile', plan.profileIntents,
+      options.profileDocument as Record<string, unknown>, 0o600)
+  if (profileMigration !== undefined) {
+    await verifyProfileMigration(profileMigration, plan.profileIntents, plan.patchFiles, plan.anchors, plan.home)
+  }
+  if (plan.clientIntents.length > 0) {
+    if (plan.clientPath === undefined || plan.clientDocument == null) {
+      throw new Error('dsh: Client migration has no candidate rsh.client.json')
+    }
+    prepareMigrationDocument(plan.clientPath, 'client', plan.clientIntents,
+      plan.clientDocument as Record<string, unknown>, 0o600)
+  }
+}
+
+/** Expand the selected composition, migrate supported settings, and reject legacy launch configuration.
+ * @param options - selected profile, its JSON patches, CLI resolver anchor, Harness home, and launch environment.
+ * @returns completion after optional profile-file updates; `settings.yaml` is never written.
+ * @throws when an active surface has unsupported legacy values or a migration target conflicts.
+ */
+export async function migrateNativeLegacyConfig(options: NativeLegacyConfigOptions): Promise<void> {
+  const plan = await planNativeLegacyConfig(options)
+  const reports = await commitMigrations(plan)
   for (const line of reports) process.stderr.write(`${line}\n`)
 }

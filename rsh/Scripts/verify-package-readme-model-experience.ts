@@ -229,6 +229,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Engine/jobs/jobs': { kind: 'indirect', reason: 'Producer and controller plugins own all model rendering over the job registry.' },
   'rsh/Engine/jobs/jobs-local': { kind: 'indirect', reason: 'The registry backend delegates model rendering to producer plugins and dsh-tool-jobs.' },
   'rsh/Compatibility/DSH/boot/app-boot': { kind: 'indirect', reason: 'Only the loaded plugin tree contributes model context.' },
+  'rsh/Compatibility/DSH/boot/desktop-host-compatibility': { kind: 'indirect', reason: 'The selected legacy plugin tree owns model-visible content.' },
   'rsh/Compatibility/DSH/boot/cmdline': { kind: 'none', reason: 'Resolves the process command line before any session exists; configured rows own every model-visible consequence.' },
   'rsh/Modules/Official/interaction/permission-presets': { kind: 'indirect', reason: 'The service writes mechanism events rendered by dsh-user-approval and dsh-tool-bash.' },
   'rsh/Modules/Official/interaction/user-question-broker': { kind: 'indirect', reason: 'The shared broker supplies answers to question Consumers; it creates no model messages or separate Session events.' },

@@ -53,6 +53,7 @@ describe('desktop development project', () => {
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
+      home: join(root, 'home'),
     })
     expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh'))).toBe(realpathSync(cli))
     expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-desktop-host'))).toBe(realpathSync(host))
@@ -87,6 +88,7 @@ describe('desktop development project', () => {
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
+      home: join(root, 'home'),
     })
     expect(existsSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
   })
@@ -108,6 +110,7 @@ describe('desktop development project', () => {
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
+      home: join(root, 'home'),
     })).toThrow(/must be @deepseek-ai\/dsh@1\.2\.3/u)
   })
 })

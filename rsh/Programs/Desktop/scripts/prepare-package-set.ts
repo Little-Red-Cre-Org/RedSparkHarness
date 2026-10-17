@@ -14,11 +14,15 @@ import {
 import { basename, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
+  DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
+  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
+  DESKTOP_COMPATIBILITY_HOST_RUNTIME_FILES,
   DESKTOP_HOST_PACKAGE,
   DESKTOP_HOST_RUNTIME_FILES,
   DESKTOP_PACKAGES_DIR,
   DESKTOP_PACKAGE_SET_FILE,
   parseDesktopCorePackageSet,
+  type DesktopPackageAssembly,
   type DesktopCorePackageRecord,
 } from '../src/core-package-set.ts'
 import { capture } from '../../../Scripts/release/process.ts'
@@ -30,13 +34,19 @@ const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..', '..')
 
-const REQUIRED_DEPENDENCY_SECTIONS = ['dependencies', 'peerDependencies'] as const
 const OPTIONAL_DEPENDENCY_SECTION = 'optionalDependencies'
 
 /** Packed package information needed to form the local Desktop closure. */
 export interface PackedDesktopPackage {
   readonly tarball: string
   readonly manifest: Readonly<Record<string, unknown>>
+}
+
+/** Package records split by whether the default Desktop runtime may install them. */
+export interface SelectedDesktopPackageSet {
+  readonly assembly: DesktopPackageAssembly
+  readonly packages: readonly PackedDesktopPackage[]
+  readonly ignoredOptionalDependencies: readonly string[]
 }
 
 function dependencyNames(manifest: Readonly<Record<string, unknown>>, section: string): string[] {
@@ -48,6 +58,20 @@ function dependencyNames(manifest: Readonly<Record<string, unknown>>, section: s
   return Object.keys(value).sort()
 }
 
+function requiredDependencyNames(manifest: Readonly<Record<string, unknown>>): string[] {
+  const dependencies = dependencyNames(manifest, 'dependencies')
+  const peers = dependencyNames(manifest, 'peerDependencies')
+  const metadata = manifest.peerDependenciesMeta
+  const optionalPeers = metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {}
+  return [...dependencies, ...peers.filter((name) => {
+    const peer = optionalPeers[name]
+    return peer === undefined || peer === null || typeof peer !== 'object' || Array.isArray(peer)
+      || (peer as Record<string, unknown>).optional !== true
+  })]
+}
+
 /**
  * Select the complete available first-party dependency closures rooted at dsh and its private Host.
  * @param available - Packed packages indexed by package name.
@@ -56,29 +80,71 @@ function dependencyNames(manifest: Readonly<Record<string, unknown>>, section: s
 export function selectDesktopPackageClosure(
   available: ReadonlyMap<string, PackedDesktopPackage>,
 ): PackedDesktopPackage[] {
+  return selectClosure(available, ROOT_PACKAGES, new Set(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES))
+}
+
+function selectClosure(
+  available: ReadonlyMap<string, PackedDesktopPackage>, roots: readonly string[], skippedOptional: ReadonlySet<string>,
+): PackedDesktopPackage[] {
   const selected = new Map<string, PackedDesktopPackage>()
   const visit = (name: string): void => {
     if (selected.has(name)) return
     const packed = available.get(name)
     if (packed === undefined) throw new Error(`desktop package set: packed inputs omit required package ${name}`)
     selected.set(name, packed)
-    for (const section of REQUIRED_DEPENDENCY_SECTIONS) {
-      for (const dependency of dependencyNames(packed.manifest, section)) {
-        if (available.has(dependency)) visit(dependency)
-        else if (dependency.startsWith('@deepseek-ai/')) {
-          throw new Error(`desktop package set: ${name} requires unpacked internal package ${dependency}`)
-        }
+    for (const dependency of requiredDependencyNames(packed.manifest)) {
+      if (available.has(dependency)) visit(dependency)
+      else if (dependency.startsWith('@deepseek-ai/')) {
+        throw new Error(`desktop package set: ${name} requires unpacked internal package ${dependency}`)
       }
     }
     for (const dependency of dependencyNames(packed.manifest, OPTIONAL_DEPENDENCY_SECTION)) {
+      if (skippedOptional.has(dependency)) continue
       if (available.has(dependency)) visit(dependency)
     }
   }
-  for (const name of ROOT_PACKAGES) {
+  for (const name of roots) {
     if (!available.has(name)) throw new Error(`desktop package set: packed inputs omit ${name}`)
     visit(name)
   }
   return [...selected.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, packed]) => packed)
+}
+
+/** Keep the reviewed Cordis-only optional edges out of the default Native Desktop closure. */
+export function selectDesktopPackageSets(
+  available: ReadonlyMap<string, PackedDesktopPackage>,
+  assembly: DesktopPackageAssembly = 'native',
+): SelectedDesktopPackageSet {
+  const dsh = available.get(DSH_PACKAGE)
+  if (dsh === undefined) throw new Error(`desktop package set: packed inputs omit ${DSH_PACKAGE}`)
+  const host = available.get(DESKTOP_HOST_PACKAGE)
+  if (host === undefined) throw new Error(`desktop package set: packed inputs omit ${DESKTOP_HOST_PACKAGE}`)
+  const dshOptional = new Set(dependencyNames(dsh.manifest, OPTIONAL_DEPENDENCY_SECTION))
+  const hostOptional = new Set(dependencyNames(host.manifest, OPTIONAL_DEPENDENCY_SECTION))
+  for (const name of DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES) {
+    const owner = name === DESKTOP_COMPATIBILITY_HOST_PACKAGE ? hostOptional : dshOptional
+    if (!owner.has(name)) throw new Error(`desktop package set: compatibility optional edge ${name} is no longer declared by its owner`)
+  }
+  const roots = assembly === 'native' ? ROOT_PACKAGES : [...ROOT_PACKAGES, DESKTOP_COMPATIBILITY_HOST_PACKAGE]
+  if (assembly === 'compatibility') {
+    const compatibilityHost = available.get(DESKTOP_COMPATIBILITY_HOST_PACKAGE)
+    if (compatibilityHost === undefined) {
+      throw new Error(`desktop package set: compatibility assembly omits ${DESKTOP_COMPATIBILITY_HOST_PACKAGE}`)
+    }
+  }
+  const skippedOptional = assembly === 'native' ? new Set(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES) : new Set<string>()
+  const packages = selectClosure(available, roots, skippedOptional)
+  const selectedNames = new Set(packages.map(packed => packed.manifest.name))
+  if (assembly === 'native') {
+    const included = DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES.find(name => selectedNames.has(name))
+    if (included !== undefined) throw new Error(`desktop package set: Native assembly requires compatibility-only package ${included}`)
+  }
+  return {
+    assembly,
+    packages,
+    ignoredOptionalDependencies: DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
+      .filter(name => assembly === 'native' || !selectedNames.has(name)).sort(),
+  }
 }
 
 function packedManifest(tarball: string): Record<string, unknown> {
@@ -121,16 +187,34 @@ export function assertDesktopHostPackageFiles(files: readonly string[]): void {
   }
 }
 
+/** Require the explicit compatibility Host entry and its private Cordis overlay. */
+export function assertDesktopCompatibilityHostPackageFiles(files: readonly string[]): void {
+  const available = new Set(files)
+  const missing = DESKTOP_COMPATIBILITY_HOST_RUNTIME_FILES
+    .map(file => `package/${file}`)
+    .filter(file => !available.has(file))
+  if (missing.length > 0) {
+    throw new Error(`desktop package set: ${DESKTOP_COMPATIBILITY_HOST_PACKAGE} tarball omits required file(s): ${missing.join(', ')}`)
+  }
+}
+
 /** Prepare a package set from release tarball directories. */
-export function prepareDesktopPackageSet(inputs: readonly string[], output: string): void {
-  const selected = selectDesktopPackageClosure(packedPackages(inputs))
-  const host = selected.find(packed => packed.manifest.name === DESKTOP_HOST_PACKAGE)
+export function prepareDesktopPackageSet(
+  inputs: readonly string[], output: string, assembly: DesktopPackageAssembly = 'native',
+): void {
+  const selected = selectDesktopPackageSets(packedPackages(inputs), assembly)
+  const host = selected.packages.find(packed => packed.manifest.name === DESKTOP_HOST_PACKAGE)
   if (host === undefined) throw new Error(`desktop package set: selected closure omits ${DESKTOP_HOST_PACKAGE}`)
   assertDesktopHostPackageFiles(tarballFiles(host.tarball))
+  if (selected.assembly === 'compatibility') {
+    const compatibilityHost = selected.packages.find(packed => packed.manifest.name === DESKTOP_COMPATIBILITY_HOST_PACKAGE)
+    if (compatibilityHost === undefined) throw new Error(`desktop package set: selected closure omits ${DESKTOP_COMPATIBILITY_HOST_PACKAGE}`)
+    assertDesktopCompatibilityHostPackageFiles(tarballFiles(compatibilityHost.tarball))
+  }
   rmSync(output, { recursive: true, force: true })
   const packageDir = join(output, DESKTOP_PACKAGES_DIR)
   mkdirSync(packageDir, { recursive: true })
-  const records: DesktopCorePackageRecord[] = selected.map((packed) => {
+  const copyRecords = (packages: readonly PackedDesktopPackage[]): DesktopCorePackageRecord[] => packages.map((packed) => {
     const name = packed.manifest.name
     const version = packed.manifest.version
     if (typeof name !== 'string' || typeof version !== 'string') {
@@ -148,24 +232,29 @@ export function prepareDesktopPackageSet(inputs: readonly string[], output: stri
       integrity: `sha512-${createHash('sha512').update(body).digest('base64')}`,
     }
   })
-  const packageSet = parseDesktopCorePackageSet({ schemaVersion: 1, packages: records })
+  const records = copyRecords(selected.packages)
+  const packageSet = parseDesktopCorePackageSet({
+    schemaVersion: 2, assembly: selected.assembly, packages: records,
+    ignoredOptionalDependencies: selected.ignoredOptionalDependencies,
+  })
   writeFileSync(join(output, DESKTOP_PACKAGE_SET_FILE), `${JSON.stringify(packageSet, undefined, 2)}\n`, { mode: 0o600 })
 }
 
 function main(): void {
-  const buildPaths = resolveDesktopTargetBuildPaths()
-  const defaultInputs = [
-    buildPaths.packedDsh,
-    buildPaths.packedVendor,
-    buildPaths.packedLandlock,
-  ]
   const { values } = parseArgs({
-    options: { from: { type: 'string', multiple: true }, out: { type: 'string' } },
+    options: { from: { type: 'string', multiple: true }, out: { type: 'string' }, assembly: { type: 'string' } },
     allowPositionals: false,
   })
-  const inputs = (values.from ?? defaultInputs).map(path => resolve(REPOSITORY_ROOT, path))
+  if (values.assembly !== undefined && values.assembly !== 'native' && values.assembly !== 'compatibility') {
+    throw new Error('desktop package set: --assembly must be native or compatibility')
+  }
+  const buildPaths = values.assembly === undefined
+    ? resolveDesktopTargetBuildPaths()
+    : resolveDesktopTargetBuildPaths({ ...process.env, DSH_DESKTOP_ASSEMBLY: values.assembly })
+  const inputs = (values.from ?? [buildPaths.packedDsh, buildPaths.packedVendor, buildPaths.packedLandlock])
+    .map(path => resolve(REPOSITORY_ROOT, path))
   const output = values.out === undefined ? buildPaths.packageSet : resolve(REPOSITORY_ROOT, values.out)
-  prepareDesktopPackageSet(inputs, output)
+  prepareDesktopPackageSet(inputs, output, buildPaths.assembly)
   console.log(`desktop package set: prepared ${output}`)
 }
 

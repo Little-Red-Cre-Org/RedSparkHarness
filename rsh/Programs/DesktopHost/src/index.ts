@@ -6,8 +6,11 @@
 
 import { closeSync, createReadStream, createWriteStream, mkdirSync, readFileSync } from 'node:fs'
 import { once } from 'node:events'
+import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
+import type { DesktopHostRuntime } from './runtime.ts'
 import {
   DESKTOP_HOST_PROTOCOL_VERSION,
   DESKTOP_PIPE_CHUNK_BYTES,
@@ -55,6 +58,22 @@ type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
 const errorTypes = new Set<DesktopHostFailure['errorType']>([
   'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
 ])
+const COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
+
+async function createCompatibilityRuntime(
+  runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
+): Promise<DesktopHostRuntime> {
+  const require = createRequire(join(projectDir, 'package.json'))
+  let entry: string
+  try {
+    entry = require.resolve(COMPATIBILITY_HOST_PACKAGE)
+  } catch (error) {
+    throw new Error('dsh desktop: legacy bundles require the separately installed Desktop compatibility Host; profile files were preserved', { cause: error })
+  }
+  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@deepseek-ai/dsh-desktop-host-compatibility')
+  return compatibility.createLegacyDesktopRuntime(runtimeDir, projectDir, allowLinkedPackages)
+}
+
 function failureEvent(error: unknown): DesktopHostFailure {
   const errors = errorChain(error)
   // Only producer-sanitized issues carry a rule; raw validator issues may name user dictionary keys.
@@ -149,7 +168,7 @@ export async function runDesktopHost(
   const allowLinkedPackages = options.allowLinkedPackages === true
   const runtime = profileDirectoryRuntime(absoluteProject) === 'native'
     ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
-    : await import('./legacy-host.ts').then(module => module.createLegacyDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
+    : await createCompatibilityRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages)
   const requests = new Map<number, AbortController>()
   let disposing: Promise<void> | undefined
 

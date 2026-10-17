@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-boot 组提供每个 dsh app bin 启动所需的全部能力：`app-boot` 把 `cordis.yml` 连同你的环境与 patch 层变成运行中的应用，并给出清晰的失败信息；`cmdline` 让应用持有自己的命令行 flag 与 `--help`。借助这些包，你可以运行 `dsh`，也可以编写以同样方式启动的新应用或测试用 fixture（测试前置数据）。两者都是 `rsh/Programs/CLI` 与测试专用 Loader fixture 导入的库，绝不是组合加载的插件。本页列出该包组的构成；各包 README 负责各自的包级约定。
+boot 组提供 dsh 应用启动所需的能力：`app-boot` 把 `cordis.yml` 连同环境与 patch 层变成运行中的应用，并给出清晰的失败信息；`cmdline` 让应用持有自己的命令行 flag 与 `--help`。私有的 `desktop-host-compatibility` 包只会在显式选择的 Desktop 兼容装配中启动旧 Cordis profile。每个包的 README 定义其包级约定；Desktop 文档负责兼容装配与 profile 要求。
 
 ## 目录
 
@@ -24,11 +24,13 @@ boot 组提供每个 dsh app bin 启动所需的全部能力：`app-boot` 把 `c
 |---|---|---|
 | [`app-boot`](app-boot/README.zh.md) | 从 `cordis.yml` 启动 dsh 应用：加载 `.env`、应用 profile 与 patch 层，并清晰报告启动失败 | （供各 bin 使用的库） |
 | [`cmdline`](cmdline/README.zh.md) | 让应用持有自己的 flag、`--help` 与退出码；启动器自身 flag 之后的一切原样传入 | `cmdlineArgs`、`appExit` |
+| [`desktop-host-compatibility`](desktop-host-compatibility/README.zh.md) | 在显式选择的 Desktop 兼容装配中启动旧 Cordis profile | 私有 Desktop 运行时 |
 
 <a id="related-documentation"></a>
 ## 相关文档
 
 - [dsh 应用](../../../Programs/CLI/README.zh.md)——在其启动序列中使用这些 helper 的 `dsh` bin。
+- [Desktop](../../../Programs/Desktop/README.zh.md)——发行装配选择与支持的 profile runtime。
 - [Profile 组合包](../bundle/README.zh.md)——可由 `dsh --profile` 组合挂载的可安装 patch 层。
 - [dsh-home-paths](../../../Core/util/home-paths/README.zh.md)——两个包都依赖的 harness home 解析器。
 - [dsh-cmdline](cmdline/README.zh.md)——flag 家族如何由应用持有而非启动器。

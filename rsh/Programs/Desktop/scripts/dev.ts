@@ -53,14 +53,13 @@ async function runPackageScript(script: string, cwd: string): Promise<void> {
   await run(process.execPath, [packageManager, 'run', script], cwd)
 }
 
-async function launchElectron(): Promise<void> {
+async function launchElectron(home: string): Promise<void> {
   const require = createRequire(import.meta.url)
   const electron: unknown = require('electron')
   if (typeof electron !== 'string') throw new Error('desktop development: electron executable is unavailable')
   const mainPort = debugPort('DSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
   const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
   const hostPort = debugPort('DSH_DESKTOP_HOST_INSPECT_PORT', 9230)
-  const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
   const userData = join(DEVELOPMENT_ROOT, 'electron-user-data')
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
@@ -105,12 +104,14 @@ async function main(): Promise<void> {
     pnpmVersion,
   }
   const projectDir = join(DEVELOPMENT_ROOT, 'project')
+  const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
   prepareDevelopmentProject({
     projectDir,
     cliDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'CLI'),
     hostDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'DesktopHost'),
     dependencyDir: join(REPOSITORY_ROOT, 'node_modules', '.pnpm', 'node_modules'),
     release,
+    home,
   })
   if (values['native-profile'] !== undefined) {
     const source = resolve(process.env.INIT_CWD ?? process.cwd(), values['native-profile'])
@@ -121,7 +122,7 @@ async function main(): Promise<void> {
     manifest.dsh.profile = { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' }
     writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   }
-  await launchElectron()
+  await launchElectron(home)
 }
 
 main().catch((error: unknown) => {
