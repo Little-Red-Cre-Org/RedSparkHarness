@@ -105,7 +105,7 @@ async function main(): Promise<void> {
   }
   const projectDir = join(DEVELOPMENT_ROOT, 'project')
   const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
-  prepareDevelopmentProject({
+  await prepareDevelopmentProject({
     projectDir,
     cliDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'CLI'),
     hostDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'DesktopHost'),

@@ -44,7 +44,7 @@ kind: "package-reference"
 
 `root` 必填且无默认值：`process.cwd()` 默认值会随进程 cwd 变更而分散会话文件。现有根必须是可读目录；缺失根在第一次实体化时创建。
 
-`./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。原生 Host 移除 Provider 时会等待已打开句柄关闭。
+`./native` 入口把同一 JSONL 后端作为原生 `sessionPersistence` Provider 提供。必填的 `root` 必须是绝对路径；`compression` 保留相同取值和默认值。`inspectSessionRootCompression(root)` 会报告 canonical live generation 与保留删除 payload 中唯一的编码；没有 generation 时返回 `undefined`，混合编码或旧式平铺 live 布局会抛错。原生 Host 移除 Provider 时会等待已打开句柄关闭。
 
 随包发布的原生入口与 CommonJS migration verifier 无需安装 Cordis 即可运行；包根入口仍是 Cordis 插件入口。
 

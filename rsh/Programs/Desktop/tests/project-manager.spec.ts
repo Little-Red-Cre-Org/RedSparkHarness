@@ -1,8 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, realpathSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SessionId, SessionSeq, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
+import { inspectSessionRootCompression, JsonlSessionBackend, type JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { createCompatibilityPluginProfile, DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
 import { runtimeFixture } from './runtime-fixture.ts'
@@ -71,6 +74,54 @@ function calls(root: string): { args: string[]; registry: string }[] {
   const path = join(root, 'pnpm-log.jsonl')
   return existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { args: string[]; registry: string }) : []
 }
+interface StoredSessionFixture {
+  readonly id: ReturnType<typeof SessionId>
+  readonly events: SessionEvent[]
+  readonly path: string
+  readonly bytes: Buffer
+}
+async function writeSession(root: string, compression: JsonlCompression, value: string): Promise<StoredSessionFixture> {
+  const id = SessionId(value)
+  const header: SessionHeader = { version: SESSION_FORMAT_VERSION, id, createdAt: 1000, isSeeded: false }
+  const events: SessionEvent[] = [
+    { type: 'turn/start', seq: SessionSeq(0), time: 1, data: { turn: 1 } },
+    { type: 'turn/end', seq: SessionSeq(1), time: 2, data: { turn: 1, reason: { kind: 'completed' } } },
+  ]
+  const backend = new JsonlSessionBackend({ root, compression })
+  try {
+    const handle = await backend.create(header)
+    try { await handle.append(events) } finally { await handle.close() }
+  } finally {
+    await backend.close()
+  }
+  const directory = join(root, '_no-cwd', value)
+  const suffix = compression === 'zstd' ? '.jsonl.zstd' : '.jsonl'
+  const log = readdirSync(directory).find(name => name.endsWith(suffix))
+  if (log === undefined) throw new Error(`${compression} Session fixture did not write a committed generation`)
+  const path = join(directory, log)
+  return { id, events, path, bytes: readFileSync(path) }
+}
+async function expectSessionReadable(root: string, compression: JsonlCompression, fixture: StoredSessionFixture): Promise<void> {
+  const backend = new JsonlSessionBackend({ root, compression })
+  try {
+    const handle = await backend.open(fixture.id, 'read')
+    try { expect((await handle.read()).events).toEqual(fixture.events) } finally { await handle.close() }
+  } finally {
+    await backend.close()
+  }
+}
+function nativeStorageConfig(profile: string): { root: string; compression?: JsonlCompression } {
+  const document = JSON.parse(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')) as {
+    installations: Array<{ plugin: string; config?: unknown }>
+  }
+  const storage = document.installations.find(row => row.plugin === '@deepseek-ai/dsh-session-persistence-jsonl')
+  if (storage === undefined || typeof storage.config !== 'object' || storage.config === null
+    || Array.isArray(storage.config) || typeof (storage.config as { root?: unknown }).root !== 'string') {
+    throw new Error('Native Desktop profile has no JSONL storage configuration')
+  }
+  const config = storage.config as { root: string; compression?: JsonlCompression }
+  return config
+}
 afterEach(async () => {
   const cleanups = releaseWorkers.splice(0)
   const directories = roots.splice(0)
@@ -87,6 +138,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
     const profile = manager.paths.profile
     const packagePath = join(profile, 'package.json')
     const workspacePath = join(profile, 'pnpm-workspace.yaml')
+    let history: StoredSessionFixture | undefined
     if (scenario !== 'fresh') mkdirSync(profile, { recursive: true })
     if (scenario === 'old-template') {
       writeFileSync(join(profile, 'package.json'), `${JSON.stringify({
@@ -100,6 +152,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       const settingsPath = join(home, 'settings.yaml')
       mkdirSync(home, { recursive: true })
       mkdirSync(wrongHome, { recursive: true })
+      history = await writeSession(join(home, 'sessions'), 'zstd', 'desktop-compression-upgrade')
       mkdirSync(join(profile, 'node_modules'), { recursive: true })
       writeFileSync(join(profile, '.env'), 'DESKTOP_TEST_SETTING=preserved\n')
       writeFileSync(settingsPath, 'locale:\n  preference: fr\n')
@@ -138,9 +191,26 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       expect(JSON.parse(readFileSync(packagePath, 'utf8'))).toMatchObject({
         dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' } },
       })
+      const storage = nativeStorageConfig(profile)
+      expect(storage.root).toBe(join(dirname(manager.paths.root), 'sessions'))
+      expect(storage.compression).toBe(scenario === 'fresh' ? 'none' : 'zstd')
       expect(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')).not.toContain('"id": "app"')
       expect(existsSync(join(profile, 'node_modules', '@deepseek-ai', 'cordis'))).toBe(false)
       if (scenario === 'old-template') {
+        if (history === undefined) throw new Error('old-template Session fixture was not created')
+        if (storage.compression === undefined) throw new Error('Native Desktop profile omitted Session compression')
+        await expectSessionReadable(storage.root, storage.compression, history)
+        expect(readFileSync(history.path)).toEqual(history.bytes)
+        const deletionBackend = new JsonlSessionBackend({ root: storage.root, compression: 'zstd' })
+        try {
+          const receipt = await deletionBackend.deletions.delete(history.id)
+          expect(await inspectSessionRootCompression(storage.root)).toBe('zstd')
+          expect(await deletionBackend.deletions.list()).toEqual([receipt])
+          const retained = join(storage.root, '.rsh-session-trash', receipt.id, 'payload', basename(history.path))
+          expect(readFileSync(retained)).toEqual(history.bytes)
+          await deletionBackend.deletions.restore(receipt.id)
+          await expectSessionReadable(storage.root, storage.compression, history)
+        } finally { await deletionBackend.close() }
         expect(readFileSync(join(profile, '.env'), 'utf8')).toBe('DESKTOP_TEST_SETTING=preserved\n')
         const client = JSON.parse(readFileSync(join(profile, 'rsh.client.json'), 'utf8')) as {
           installations: { plugin: string; config?: unknown }[]
@@ -200,6 +270,7 @@ describe('desktop external plugin profile', () => {
   it('resets the entire profile without backups while retaining its lock and shared data', async () => {
     const { root, manager } = setup()
     await manager.applyRelease()
+    const history = await writeSession(join(dirname(manager.paths.root), 'sessions'), 'zstd', 'desktop-reset-preserve')
     await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
     const profile = manager.paths.profile
     expect(manager.paths.lock).toBe(join(profile, 'lock'))
@@ -235,10 +306,43 @@ describe('desktop external plugin profile', () => {
     expect(readFileSync(join(shared, 'sentinel'), 'utf8')).toBe('preserve')
     expect(readFileSync(task, 'utf8')).toBe('retained task')
     expect(readFileSync(homeEnvironment, 'utf8')).toBe('HOME_SETTING=retained')
+    const storage = nativeStorageConfig(profile)
+    expect(storage.compression).toBe('zstd')
+    if (storage.compression === undefined) throw new Error('reset Native profile omitted Session compression')
+    await expectSessionReadable(storage.root, storage.compression, history)
+    expect(readFileSync(history.path)).toEqual(history.bytes)
     expect(readdirSync(profile).some(name => name.includes('backup'))).toBe(false)
     expect(calls(root)).toHaveLength(2)
     await expect(manager.applyRelease()).resolves.toBe(false)
     expect(existsSync(homeEnvironment)).toBe(true)
+  })
+
+  it('refuses a mixed Session root before reset stops the Host or changes profile files and links', async () => {
+    const { root, manager } = setupNative()
+    await manager.applyRelease()
+    const sessions = join(dirname(manager.paths.root), 'sessions')
+    const compressed = await writeSession(sessions, 'zstd', 'desktop-mixed-zstd')
+    const plainSource = await writeSession(join(root, 'plain-session-root'), 'none', 'desktop-mixed-plain')
+    const plainPath = join(sessions, '_no-cwd', 'desktop-mixed-plain', basename(plainSource.path))
+    mkdirSync(dirname(plainPath), { recursive: true })
+    copyFileSync(plainSource.path, plainPath)
+    const profile = manager.paths.profile
+    const files = ['package.json', 'pnpm-workspace.yaml', 'rsh.profile.json', 'rsh.client.json', 'desktop-runtime-state.json']
+    const profileBytes = new Map(files.filter(name => existsSync(join(profile, name)))
+      .map(name => [name, readFileSync(join(profile, name))]))
+    const dependencyLinks = join(profile, 'node_modules', '@deepseek-ai')
+    const links = readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])
+    const beforeChange = vi.fn(async () => {})
+
+    await expect(manager.resetConfiguration(hooks({ beforeChange }))).rejects.toThrow(/mixed compression/u)
+
+    expect(beforeChange).not.toHaveBeenCalled()
+    expect(new Map(files.filter(name => existsSync(join(profile, name)))
+      .map(name => [name, readFileSync(join(profile, name))]))).toEqual(profileBytes)
+    expect(readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])).toEqual(links)
+    expect(readFileSync(compressed.path)).toEqual(compressed.bytes)
+    expect(readFileSync(plainPath)).toEqual(plainSource.bytes)
+    expect(calls(root)).toEqual([])
   })
 
   it('reports damaged application metadata as a reinstall failure', async () => {

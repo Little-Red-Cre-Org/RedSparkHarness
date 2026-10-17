@@ -17,6 +17,7 @@ import {
 import { NativeScope, parseNativeEntryManifest,
   type NativeEntryManifest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { parseNativeClientProfile, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { inspectSessionRootCompression, type JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
 import { load as loadYaml } from 'js-yaml'
 import { spawn } from 'node:child_process'
 import {
@@ -124,7 +125,15 @@ export type DesktopProjectMutation =
   | { readonly type: 'plugin-toggle'; readonly name: string; readonly enabled: boolean }
   | { readonly type: 'plugins-disable-all' }
 
+interface NativeDesktopPreflight {
+  readonly environment: LaunchEnvironmentSnapshot
+}
+interface NativeDesktopCandidatePreflight extends NativeDesktopPreflight {
+  readonly compression: JsonlCompression
+}
+
 const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
+const SESSION_STORAGE_PACKAGE = '@deepseek-ai/dsh-session-persistence-jsonl'
 const DSH_PACKAGE = '@deepseek-ai/dsh'
 const CORE_BUILD_PACKAGE = '@deepseek-ai/dsh-subprocess-local'
 const DESKTOP_PROFILE_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] as const
@@ -1352,17 +1361,20 @@ export class DesktopProjectManager {
    */
   async resetConfiguration(hooks: DesktopProjectHooks): Promise<void> {
     await this.withLock(async () => {
-      await hooks.beforeChange()
       this.descriptor = this.readRuntime()
+      const home = dirname(this.paths.root)
+      const sessionsCompression = await inspectSessionRootCompression(join(home, 'sessions'))
+      const nativeEnvironment = await this.preflightNativeProfile(this.paths.profile, true, sessionsCompression, true)
+      await hooks.beforeChange()
       for (const entry of readdirSync(this.paths.profile, { withFileTypes: true })) {
         const path = join(this.paths.profile, entry.name)
         if (path === this.paths.lock) continue
         if (entry.isDirectory()) removeOwnedDirectory(path)
         else unlinkSync(path)
       }
-      createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root))
+      createNativeDesktopProfile(this.paths.profile, home, process.platform, {}, nativeEnvironment.compression)
       this.prepareProfile(this.paths.profile)
-      await this.migrateNativeProfile(this.paths.profile)
+      await this.migrateNativeProfile(this.paths.profile, nativeEnvironment.environment)
       await hooks.afterChange()
     })
   }
@@ -1439,31 +1451,35 @@ export class DesktopProjectManager {
     return this.withLock(async () => {
       const target = this.readRuntime()
       this.descriptor = target
-      let nativeEnvironment: LaunchEnvironmentSnapshot | undefined
+      let nativeEnvironment: NativeDesktopPreflight | undefined
       if (!existsSync(join(this.paths.profile, 'package.json'))) {
         if (!isNewProfileDirectory(this.paths.profile)) {
           throw new Error('dsh desktop: existing profile without a Desktop manifest was not changed; reset it to create a Native profile')
         }
-        nativeEnvironment = await this.preflightNativeProfile(this.paths.profile, true)
-        createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root))
+        const sessionsCompression = await inspectSessionRootCompression(join(dirname(this.paths.root), 'sessions'))
+        const prepared = await this.preflightNativeProfile(this.paths.profile, true, sessionsCompression)
+        nativeEnvironment = prepared
+        createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root), process.platform, {}, prepared.compression)
       } else if (profileDirectoryRuntime(this.paths.profile) === 'legacy') {
         const manifest = readJson(join(this.paths.profile, 'package.json'))
         const profile = isRecord(manifest) && isRecord(manifest.dsh) && isRecord(manifest.dsh.profile)
           ? manifest.dsh.profile : undefined
         if (profile?.runtime === 'legacy') this.assertCompatibilityHostAvailable()
         else if (isLegacyStarterProfile(this.paths.profile, this.paths.lock)) {
-          nativeEnvironment = await this.preflightNativeProfile(this.paths.profile, true)
-          createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root))
+          const sessionsCompression = await inspectSessionRootCompression(join(dirname(this.paths.root), 'sessions'))
+          const prepared = await this.preflightNativeProfile(this.paths.profile, true, sessionsCompression)
+          nativeEnvironment = prepared
+          createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root), process.platform, {}, prepared.compression)
         } else {
           throw new Error('dsh desktop: custom Cordis profile was not changed; select runtime legacy with a compatibility-enabled release, or reset it to create a Native profile')
         }
       }
       if (profileDirectoryRuntime(this.paths.profile) === 'native' && nativeEnvironment === undefined) {
-        nativeEnvironment = await this.preflightNativeProfile(this.paths.profile, false)
+        nativeEnvironment = await this.preflightNativeProfile(this.paths.profile, false, undefined)
       }
       const previous = readDesktopProfileState(this.paths.profile)
       if (profileDirectoryRuntime(this.paths.profile) === 'native' && nativeEnvironment !== undefined) {
-        await this.migrateNativeProfile(this.paths.profile, nativeEnvironment)
+        await this.migrateNativeProfile(this.paths.profile, nativeEnvironment.environment)
       }
       if (!existsSync(this.pendingPackages) && previous?.runtimeId === desktopRuntimeId(target)
         && previous.lockHash === desktopPluginLockHash(this.paths.profile)
@@ -1524,18 +1540,37 @@ export class DesktopProjectManager {
     else this.prepareProfile(projectDir)
   }
 
-  private async preflightNativeProfile(profileDirectory: string, candidate: boolean): Promise<LaunchEnvironmentSnapshot> {
+  private preflightNativeProfile(
+    profileDirectory: string,
+    candidate: true,
+    sessionsCompression: JsonlCompression | undefined,
+    resetCandidate?: boolean,
+  ): Promise<NativeDesktopCandidatePreflight>
+  private preflightNativeProfile(
+    profileDirectory: string,
+    candidate: false,
+    sessionsCompression: undefined,
+    resetCandidate?: boolean,
+  ): Promise<NativeDesktopPreflight>
+  private async preflightNativeProfile(
+    profileDirectory: string,
+    candidate: boolean,
+    sessionsCompression: JsonlCompression | undefined,
+    resetCandidate = false,
+  ): Promise<NativeDesktopPreflight | NativeDesktopCandidatePreflight> {
     const home = dirname(this.paths.root)
-    const documents = candidate ? nativeDesktopProfileDocuments(home, process.platform, profileDirectory) : undefined
+    const compression = sessionsCompression ?? 'none'
+    const documents = candidate
+      ? nativeDesktopProfileDocuments(home, process.platform, profileDirectory, compression) : undefined
     const profileDocument = documents?.profile ?? readJson(join(profileDirectory, 'rsh.profile.json'))
     const clientDocument = documents?.client ?? readJson(join(profileDirectory, 'rsh.client.json'))
     const profile = documents?.profile ?? readNativeProfile({ profile: 'desktop', profileDir: profileDirectory, patchFiles: [] })
-    const environment = loadLayeredEnv('dsh', profileDirectory, undefined, home)
+    const environment = loadLayeredEnv('dsh', resetCandidate ? home : profileDirectory, undefined, home)
     await validateNativeLegacyConfig({ profileName: 'desktop', profileDirectory,
       clientPath: join(profileDirectory, 'rsh.client.json'),
       installAnchor: join(this.runtime.dsh, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
       home, profile, profileDocument, clientDocument, patchFiles: [], environment })
-    return environment
+    return candidate ? { environment, compression } : { environment }
   }
 
   private async migrateNativeProfile(profileDirectory: string, environment?: LaunchEnvironmentSnapshot): Promise<void> {
@@ -1763,37 +1798,61 @@ export function createRuntimeProjectMetadata(projectDir: string, release: Deskto
  * Create metadata for the unpackaged development project that links the current workspace.
  * @param projectDir - Disposable development profile directory.
  * @param release - Release identity shared by the linked CLI package and Electron shell.
+ * @param home - Harness home whose Sessions directory supplies the physical encoding.
+ * @param compression - Selected encoding for the generated JSONL storage row.
+ * @returns Nothing after the development profile is written.
  */
-export function createDevelopmentProjectMetadata(projectDir: string, release: DesktopRelease, home: string): void {
-  mkdirSync(projectDir, { recursive: true, mode: 0o700 })
+export function createDevelopmentProjectMetadata(
+  projectDir: string,
+  release: DesktopRelease,
+  home: string,
+  compression: JsonlCompression,
+): void {
   createNativeDesktopProfile(projectDir, home, process.platform, {
     [DSH_PACKAGE]: release.version,
     [DESKTOP_HOST_PACKAGE]: release.version,
-  })
+  }, compression)
 }
 
-function nativeDesktopProfileDocuments(home: string, platform: NodeJS.Platform, projectDir: string): {
+function nativeDesktopProfileDocuments(
+  home: string,
+  platform: NodeJS.Platform,
+  projectDir: string,
+  compression: JsonlCompression,
+): {
   profile: NativeProfileConfig
   client: NativeClientProfile
 } {
   const composition = shippedNativeProfileComposition(home, 'web', platform, { profileDirectory: projectDir })
+  const storageInstallation = composition.installations.find(row => row.plugin === SESSION_STORAGE_PACKAGE)
+  if (storageInstallation === undefined) throw new Error(`desktop project: Native profile template omitted ${SESSION_STORAGE_PACKAGE}`)
+  const installations = composition.installations.filter(row => row.id !== 'app').map(row => row.plugin === SESSION_STORAGE_PACKAGE
+    ? { ...row, config: { ...(isRecord(row.config) ? row.config : {}), compression } } : row)
   return {
-    profile: { ...composition, installations: composition.installations.filter(row => row.id !== 'app') },
+    profile: { ...composition, installations },
     client: parseNativeClientProfile({ formatVersion: 1, installations: shippedNativeProfileClientComposition('web') }),
   }
 }
 
-/** Create the fresh Native Desktop profile and its browser Client composition. */
+/**
+ * Create the fresh Native Desktop profile and its browser Client composition.
+ * @param projectDir - Profile directory to materialize.
+ * @param home - Harness home used by durable Providers.
+ * @param platform - Target operating system for shipped Providers.
+ * @param dependencies - Exact runtime package dependencies for the profile.
+ * @param compression - Physical encoding selected for the shared Session root.
+ * @returns Nothing after the generated documents are written.
+ */
 export function createNativeDesktopProfile(
-  projectDir: string, home: string, platform: NodeJS.Platform = process.platform,
-  dependencies: Record<string, string> = {},
+  projectDir: string, home: string, platform: NodeJS.Platform,
+  dependencies: Record<string, string>, compression: JsonlCompression,
 ): void {
+  const documents = nativeDesktopProfileDocuments(home, platform, projectDir, compression)
   mkdirSync(projectDir, { recursive: true, mode: 0o700 })
   writeJson(join(projectDir, 'package.json'), {
     name: PROJECT_NAME, private: true, version: '0.0.0', dependencies,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' } },
   } satisfies DesktopProjectManifest)
-  const documents = nativeDesktopProfileDocuments(home, platform, projectDir)
   writeJson(join(projectDir, 'rsh.profile.json'), documents.profile)
   writeJson(join(projectDir, 'rsh.client.json'), documents.client)
   writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile({}, DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES), { mode: 0o600 })

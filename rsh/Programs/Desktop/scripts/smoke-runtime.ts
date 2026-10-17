@@ -21,7 +21,7 @@ export async function smokeDesktopRuntime(root: string, node: string, runtime: D
   const profile = join(home, 'profiles', 'desktop')
   const host = new DesktopHostProcess(node, root, profile, undefined, { ...environment, DSH_HOME: home })
   try {
-    createNativeDesktopProfile(profile, home)
+    createNativeDesktopProfile(profile, home, process.platform, {}, 'none')
     const ready = await host.start()
     if (ready.dshVersion !== runtime.release.version) throw new Error('desktop runtime: Host reported another dsh release')
     const response = await host.fetch(new Request('dsh-app://app/'))

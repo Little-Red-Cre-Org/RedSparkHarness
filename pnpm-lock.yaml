@@ -10274,6 +10274,9 @@ importers:
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../Web/host/native-web-assets
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-persistence-jsonl
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@9.4.0)
@@ -10293,6 +10296,9 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../Engine/core/session
       '@electron/notarize':
         specifier: 2.5.0
         version: 2.5.0(supports-color@9.4.0)

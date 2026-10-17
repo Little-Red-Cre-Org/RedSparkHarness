@@ -41,6 +41,8 @@ New profiles select the Native Host with `dsh.profile.runtime: "native"` and `ds
 
 The compatibility Host serves only the existing application. If its profile contains `rsh.client.json`, Host startup fails with an error requiring `dsh.profile.runtime: "native"`; the compatibility Typert Session endpoints do not implement the Native Session response, follow, and image routes. Without `rsh.client.json`, `/native.html` returns 404 and `/` keeps the existing application. Native mode supports the selected Session Client capabilities. Legacy compatibility-plugin list and mutation actions are unavailable for native profiles and report a localized message; Native profiles use `dshDesktop.plugins.native`.
 
+Fresh profiles, exact starter conversion, reset, and development-project creation select the single canonical generation encoding under the shared Session root, including retained deletion payloads. An empty root selects `none`; mixed encodings or the obsolete flat live layout refuse before profile writes or Host stop. Existing Native profiles retain their configured encoding and do not scan the shared root during ordinary upgrades.
+
 See the [Native Desktop module page decision](../../../.agents/notes/implemented/feature/2026-10-14-native-desktop-module-page.md) for request handling, inventory refresh, and compatibility fallback in the renderer.
 
 ### Runtime and plugin activation
