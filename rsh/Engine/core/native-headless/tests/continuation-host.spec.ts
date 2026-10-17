@@ -232,7 +232,7 @@ it.each([
     ownerAttached.resolve(undefined)
   })
   const running = state.app.executeRootTurn({ id, resume: false }, controller.signal)
-    .then(value => ({ value }), error => ({ error }))
+    .then(value => ({ value }), (error: unknown) => ({ error }))
   try {
     await ownerAttached.promise
     if (owner === undefined || execution === undefined) throw new Error('the exact active root owner was not attached')
@@ -256,7 +256,7 @@ it.each([
       expect(await running).toHaveProperty('error')
     }
 
-    await vi.waitFor(() => expect(rootExecution.status).toBe('idle'))
+    await vi.waitFor(() => { expect(rootExecution.status).toBe('idle') })
     if (timing === 'second-wake') {
       const reader = await state.storage.open(id, 'read')
       try {
@@ -282,7 +282,7 @@ it.each([
 
       await expect(state.app.executeRootTurn({ id, resume: true }, new AbortController().signal))
         .resolves.toMatchObject({ answer: 'Pending steer consumed.' })
-      await vi.waitFor(() => expect(rootExecution.status).toBe('idle'))
+      await vi.waitFor(() => { expect(rootExecution.status).toBe('idle') })
       const reader = await state.storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
