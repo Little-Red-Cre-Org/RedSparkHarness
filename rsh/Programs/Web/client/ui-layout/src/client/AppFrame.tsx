@@ -229,30 +229,30 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
     const background = frame.querySelectorAll(':scope > [data-center-col], :scope > [data-rightbar-col]')
     for (const element of background) element.setAttribute('inert', '')
     if (!drawer.contains(document.activeElement)) drawer.focus()
+    // Escape closes the drawer and Tab keeps focus inside it, also when focus fell to body;
+    // an open menu, a nested modal, or a control that already handled the key owns it.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || document.querySelector('[role="menu"], [aria-modal="true"]:not([data-sidebar-overlay])') !== null) return
+      if (e.key === 'Escape') actions.collapseNarrow()
+      if (e.key !== 'Tab') return
+      const focusable = drawer.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')
+      const active = document.activeElement
+      const [edge, wrap] = e.shiftKey ? [focusable[0], focusable[focusable.length - 1]] : [focusable[focusable.length - 1], focusable[0]]
+      if (drawer.contains(active) && wrap !== undefined && active !== edge && !(e.shiftKey && active === drawer)) return
+      e.preventDefault()
+      const target = wrap ?? drawer
+      target.focus()
+    }
+    document.addEventListener('keydown', onKeyDown)
     return () => {
+      document.removeEventListener('keydown', onKeyDown)
       for (const element of background) element.removeAttribute('inert')
       const active = document.activeElement
       if (active !== null && active !== document.body && !drawer.contains(active)) return
       if (opener instanceof HTMLElement) opener.focus()
     }
-  }, [sidebarOverlay])
-  // Escape closes the drawer and Tab wraps inside it; an open menu or nested modal owns both keys.
-  const onDrawerKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!e.currentTarget.contains(e.target as Node)) return
-    if (document.querySelector('[role="menu"], [aria-modal="true"]:not([data-sidebar-overlay])') !== null) return
-    if (e.key === 'Escape' && !e.defaultPrevented) actions.collapseNarrow()
-    if (e.key !== 'Tab') return
-    const drawer = e.currentTarget as HTMLElement
-    const focusable = drawer.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')
-    const first = focusable[0] as HTMLElement
-    const last = focusable[focusable.length - 1] as HTMLElement
-    const [edge, wrap] = e.shiftKey ? [first, last] : [last, first]
-    if (document.activeElement === edge || (e.shiftKey && document.activeElement === drawer)) {
-      e.preventDefault()
-      wrap.focus()
-    }
-  }, [actions])
+  }, [sidebarOverlay, actions])
 
   return (
     <div
@@ -272,7 +272,7 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
       <div ref={drawerRef} className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
         style={sidebarOverlay ? { width: sidebarWidth } : undefined}
         {...sidebarOverlay && {
-          role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar'), tabIndex: -1, onKeyDown: onDrawerKeyDown,
+          role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar'), tabIndex: -1,
         }}>
         {sidebar}
       </div>
