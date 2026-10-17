@@ -78,7 +78,7 @@ Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目
 
 `dsh.profile.bundles` 中列出的组合包先从 dsh 安装目录解析（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`、`@deepseek-ai/dsh-rsh`、`@deepseek-ai/dsh-headless`、`@deepseek-ai/dsh-sdk-app`、`@deepseek-ai/dsh-sdk-minimal`、`@deepseek-ai/dsh-acp-app`），再从 profile 自身的 `node_modules` 解析；pnpm 会将树外插件安装到该目录。
 
-对 legacy 自定义 profile 使用 `--dump-default-config` 检查组合包树；随附标准名称会拒绝该选项。Native `--dump-config` 会在不启动的情况下打印解析后的 Native JSON profile。
+对 legacy profile 使用 `--dump-default-config` 检查组合包默认值；当所选 profile 实际解析为 Native runtime 时会拒绝该选项，因此标准名称下已有的 legacy manifest 仍可使用。`--from-default-profile` 要求目标名称不是随附 profile 名称。Native `--dump-config` 会在不启动的情况下打印解析后的 Native JSON profile。
 
 层的确切优先级、flag、关闭行为、部署默认值和源码执行方式，以 [CLI 行为参考](reference/README.zh.md)为准。
 

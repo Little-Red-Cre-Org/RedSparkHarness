@@ -56,7 +56,7 @@ dsh --profile legacy-web --from-default-profile web --dump-default-config
 dsh --profile legacy-web --patch ./extra.cordis.yml --dump-config
 ```
 
-`--dump-default-config` 只打印 legacy 组合包各层；随附标准名称会拒绝该选项，因为它们默认使用 Native。对 legacy 自定义 profile，`--dump-config` 额外加上其 `cordis.patch.yml`、home 级的 `$DSH_HOME/cordis.patch.yml` 和 `--patch` overlay。两种 legacy dump 都会打印注释，标明每行由哪个文件提供，以及哪些 overlay 修改过它；`!!js` 表达式保持未求值，插入行中的相对插件名以各自 patch 文件所在目录解析，找不到目标的 patch 会报告到 stderr。Native `--dump-config` 会打印解析后的 Native profile JSON。dump 操作会初始化缺失的 profile 文件，但不会准备 `$DSH_HOME/profiles/node_modules` 下的运行时模块 fallback；它不会运行应用的命令行参数提供方，因此调用中包含应用参数时会拒绝该调用。
+`--dump-default-config` 只打印 legacy 组合包各层；当所选 profile 实际解析为 Native 时会拒绝该选项，因此标准名称下已有的 legacy manifest 仍可使用。`--from-default-profile` 要求目标名称不是随附 profile 名称。对 legacy profile，`--dump-config` 额外加上其 `cordis.patch.yml`、home 级的 `$DSH_HOME/cordis.patch.yml` 和 `--patch` overlay。两种 legacy dump 都会打印注释，标明每行由哪个文件提供，以及哪些 overlay 修改过它；`!!js` 表达式保持未求值，插入行中的相对插件名以各自 patch 文件所在目录解析，找不到目标的 patch 会报告到 stderr。Native `--dump-config` 会打印解析后的 Native profile JSON。dump 操作会初始化缺失的 profile 文件，但不会准备 `$DSH_HOME/profiles/node_modules` 下的运行时模块 fallback；它不会运行应用的命令行参数提供方，因此调用中包含应用参数时会拒绝该调用。
 
 ## 插件管理
 

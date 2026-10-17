@@ -78,7 +78,7 @@ The tree composes over an empty root:
 
 Bundles named in `dsh.profile.bundles` resolve from the dsh installation first (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`, `@deepseek-ai/dsh-rsh`, `@deepseek-ai/dsh-headless`, `@deepseek-ai/dsh-sdk-app`, `@deepseek-ai/dsh-sdk-minimal`, `@deepseek-ai/dsh-acp-app`), then from the profile's own `node_modules`, where pnpm installs out-of-tree plugins.
 
-Use `--dump-default-config` with a legacy custom profile to inspect its bundle tree; the option is rejected for standard shipped names. Native `--dump-config` prints the resolved Native JSON profile without booting it.
+Use `--dump-default-config` to inspect bundle defaults for a legacy profile; it is rejected when the selected profile resolves to Native, so an existing legacy manifest under a standard name remains eligible. `--from-default-profile` requires a non-shipped target name. Native `--dump-config` prints the resolved Native JSON profile without booting it.
 
 The [CLI behavior reference](reference/README.md) owns exact layer precedence, flags, shutdown behavior, deployment defaults, and source execution.
 
