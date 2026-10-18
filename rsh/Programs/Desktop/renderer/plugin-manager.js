@@ -433,25 +433,12 @@ async function main() {
     }, message('installing', { spec }))
   })
   document.querySelector('#retry').addEventListener('click', () => void run(() => api.backend.retry(), messages.retry))
-  async function disableNativeEligible() {
-    while (inventory !== undefined) {
-      const row = inventory.packages.flatMap(pkg => pkg.installations).find(
-        candidate => candidate.canDisable && !(candidate.target === 'client' && coreClientIds.has(candidate.id)),
-      )
-      if (row === undefined) return
-      const applied = await run(
-        () => nativeApi.toggle({
-          expectedRevision: inventory.revision, key: { target: row.target, id: row.id }, enabled: false,
-        }),
-        messages.changingActivation,
-      )
-      if (!applied) return
-    }
-  }
-
   disableAll.addEventListener('click', () => {
-    if (nativeMode) void disableNativeEligible()
-    else void run(() => api.plugins.disableAll(), messages.changingActivation)
+    if (nativeMode) {
+      void run(() => nativeApi.disableAll({ expectedRevision: inventory.revision }), messages.changingActivation)
+      return
+    }
+    void run(() => api.plugins.disableAll(), messages.changingActivation)
   })
   refresh.addEventListener('click', () => void load(messages.refreshing, messages.refreshed))
 
