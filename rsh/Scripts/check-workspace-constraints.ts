@@ -71,6 +71,8 @@ const standardReleaseMemberDirectory = new RegExp('^(?:' + [
 ].join('|') + ')$')
 /** Installable application assembled by electron-builder rather than published to npm. */
 const desktopApplicationDirectory = 'rsh/Programs/Desktop'
+/** Private compatibility assembly shipped only through the Desktop package set. */
+const privateDesktopAssemblyDirectory = 'rsh/Compatibility/DSH/boot/desktop-host-compatibility'
 const applicationPackageDirectories = new Set([
   'rsh/Programs/CLI',
   'rsh/Programs/Web/application',
@@ -81,7 +83,6 @@ const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@deepseek-ai/dsh-desktop-host': [
     'lib/*.js',
-    'config/desktop.cordis.patch.yml',
     'lib/types/**/*.d.ts',
   ],
   // Sourcemaps stay out by payload policy; worker preview remains a separate
@@ -160,6 +161,7 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
+  '@deepseek-ai/dsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
   '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
   '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
@@ -363,7 +365,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
-  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/native-inspection.js', 'lib/shared-*.js'],
   // The argv-prefix runner entry ships beside the lib as its own bundle;
   // sandbox-local resolves it through the package's ./runner export. tsdown
   // also shares its generated FFI code through a hashed runtime chunk.
@@ -504,6 +506,7 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
 }
 
 function isReleaseMemberDirectory(dir: string): boolean {
+  if (dir === privateDesktopAssemblyDirectory) return false
   return standardReleaseMemberDirectory.test(dir) || isPublicExperimentalPackageDirectory(dir)
 }
 
@@ -618,6 +621,15 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       || manifest.repository.url !== repositoryUrl
       || manifest.repository.directory !== expectedDirectory) {
       errors.push(`${label}: published Landlock package repository must use ${repositoryUrl} with directory ${expectedDirectory} for trusted publishing`)
+    }
+  } else if (dir === privateDesktopAssemblyDirectory) {
+    if (manifest.private !== true) {
+      errors.push(`${label}: private Desktop assembly must set "private": true`)
+    }
+    if (manifest.repository?.type !== 'git'
+      || manifest.repository.url !== publishedRepositoryUrl
+      || manifest.repository.directory !== dir) {
+      errors.push(`${label}: private Desktop assembly repository must use ${publishedRepositoryUrl} with directory ${dir}`)
     }
   } else if (isReleaseMemberDirectory(dir)) {
     // Release members state that they are publishable: npm refuses a private

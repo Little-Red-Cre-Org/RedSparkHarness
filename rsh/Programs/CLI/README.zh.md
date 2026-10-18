@@ -51,7 +51,7 @@ dsh --help                          # the launcher's own help
 
 legacy profile 目录包含一个 `package.json`，其中记录树外插件依赖，以及 profile manifest（元数据清单）`dsh.profile`、其中按顺序排列的 `bundles` 列表与 `patchReload` 生命周期；还包含一个 `cordis.patch.yml`，其中保存用户自己的 patch 层。Native profile 会在包清单中声明 `runtime: "native"` 与 `config: "rsh.profile.json"`，并将安装项保存在带版本的 JSON 中。`package.json` 决定 runtime：显式 Native 标记会选择 Native；`runtime: "legacy"` 或不带 Native 字段的 legacy 组合包列表会选择 Cordis。`patchReload: live` 监视 legacy patch 文件，`startup` 则只应用一次。
 
-`./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析、preset 展开、child 路由派生与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。
+`./native-profile` 库导出让私有 Desktop Host 复用经过校验的 profile 解析、preset 展开、child 路由派生与安装规划。它接受显式安装 profile 目录及可选的允许包根目录，不提供应用启动器或 argv API。随附 profile 名称来自 CLI 包导出的 `./package.json`，由该 manifest 单一维护。
 
 选择随附 `native-*` 或标准 profile 名称会在首次使用时创建 Native profile 文件；已有 profile 保留其配置。
 

@@ -29,7 +29,7 @@ afterEach(() => {
 })
 
 describe('desktop development project', () => {
-  it('projects the built dsh and Desktop Host applications with their dependency graph', () => {
+  it('projects the built dsh and Desktop Host applications with their dependency graph', async () => {
     const root = temporaryRoot()
     const cli = join(root, 'apps', 'cli')
     const host = join(root, 'apps', 'desktop-host')
@@ -47,12 +47,13 @@ describe('desktop development project', () => {
     mkdirSync(join(dependencies, '@scope', 'dependency'))
     writeFileSync(join(dependencies, '@scope', 'dependency', 'package.json'), '{}\n')
 
-    const project = prepareDevelopmentProject({
+    const project = await prepareDevelopmentProject({
       projectDir: join(root, 'development'),
       cliDir: cli,
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
+      home: join(root, 'home'),
     })
     expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh'))).toBe(realpathSync(cli))
     expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-desktop-host'))).toBe(realpathSync(host))
@@ -67,7 +68,7 @@ describe('desktop development project', () => {
     expect(manifest.dependencies['@deepseek-ai/dsh-desktop-host']).toBe('1.2.3')
   })
 
-  it('projects runtime entrypoints from linked dependency packages', () => {
+  it('projects runtime entrypoints from linked dependency packages', async () => {
     const root = temporaryRoot()
     const cli = join(root, 'apps', 'cli')
     const host = join(root, 'apps', 'desktop-host')
@@ -81,17 +82,18 @@ describe('desktop development project', () => {
     writeFileSync(join(host, 'lib', 'index.js'), '')
     writeFileSync(join(adapter, 'lib', 'runtime.js'), '')
 
-    const project = prepareDevelopmentProject({
+    const project = await prepareDevelopmentProject({
       projectDir: join(root, 'development'),
       cliDir: cli,
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
+      home: join(root, 'home'),
     })
     expect(existsSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
   })
 
-  it('rejects a CLI package from another release', () => {
+  it('rejects a CLI package from another release', async () => {
     const root = temporaryRoot()
     const cli = join(root, 'apps', 'cli')
     const host = join(root, 'apps', 'desktop-host')
@@ -102,12 +104,13 @@ describe('desktop development project', () => {
     writeFileSync(join(cli, 'package.json'), '{"name":"@deepseek-ai/dsh","version":"2.0.0"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
-    expect(() => prepareDevelopmentProject({
+    await expect(prepareDevelopmentProject({
       projectDir: join(root, 'development'),
       cliDir: cli,
       hostDir: host,
       dependencyDir: dependencies,
       release: release(),
-    })).toThrow(/must be @deepseek-ai\/dsh@1\.2\.3/u)
+      home: join(root, 'home'),
+    })).rejects.toThrow(/must be @deepseek-ai\/dsh@1\.2\.3/u)
   })
 })

@@ -167,13 +167,13 @@ if (command === 'add' || command === 'remove') {
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
   if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
     rmSync(${JSON.stringify(failReservedInstall)})
-    const reserved = join(modules, '@deepseek-ai/cordis')
+    const reserved = join(modules, '@deepseek-ai/dsh')
     if (existsSync(reserved)) {
       if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
       else rmSync(reserved, { recursive: true, force: true })
     }
     mkdirSync(reserved, { recursive: true })
-    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '1.0.0' }))
+    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '1.0.0' }))
     process.exitCode = 1
   }
 } else if (command === 'install') {
@@ -832,7 +832,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
       if (emptyRestartCalls === 1) throw new Error('New Host start failed')
       emptyProfileRestored = !existsSync(emptyLock)
         && !existsSync(join(emptyFixture.profile, 'node_modules/@fixture/new-client'))
-        && existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/cordis'))
+        && existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/dsh'))
+        && !existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/cordis'))
         && !existsSync(join(emptyFixture.profile, 'desktop-packages-pending'))
     },
   }, ready)
@@ -887,8 +888,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
   const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(reservedMarker, '')
-  const profileCordis = join(profile, 'node_modules', '@deepseek-ai/cordis')
-  const bundledCordis = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai/cordis')
+  const profileDsh = join(profile, 'node_modules', '@deepseek-ai/dsh')
+  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai/dsh')
   let oldHostRestartedAfterReservedFailure = false
   const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {
@@ -898,8 +899,9 @@ it('installs, updates, and removes exact Native packages without losing row conf
   } }, {
     beforeChange: async () => {},
     afterChange: async () => {
-      oldHostRestartedAfterReservedFailure = existsSync(profileCordis) && lstatSync(profileCordis).isSymbolicLink()
-        && existsSync(join(bundledCordis, 'package.json'))
+      oldHostRestartedAfterReservedFailure = existsSync(profileDsh) && lstatSync(profileDsh).isSymbolicLink()
+        && existsSync(join(bundledDsh, 'package.json'))
+        && !existsSync(join(profile, 'node_modules/@deepseek-ai/cordis'))
         && !existsSync(join(profile, 'node_modules/@fixture/new-client'))
         && !existsSync(join(profile, 'desktop-packages-pending'))
     },
@@ -908,7 +910,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
   expect(readFileSync(hostProfilePath)).toEqual(beforeReservedFailure.host)
   expect(readFileSync(clientProfilePath)).toEqual(beforeReservedFailure.client)
   expect(oldHostRestartedAfterReservedFailure).toBe(true)
-  expect(existsSync(join(bundledCordis, 'package.json'))).toBe(true)
+  expect(existsSync(join(bundledDsh, 'package.json'))).toBe(true)
   const reservedFailureCalls = readFileSync(pnpmLog, 'utf8').trim().split('\n').slice(callsBeforeReservedFailure)
     .map(line => JSON.parse(line) as string[])
   expect(reservedFailureCalls.some(args => args.slice(args.indexOf('install')).join(' ')
@@ -974,7 +976,7 @@ it('restores reserved Host peer links before validating package mutations', asyn
   ], initialClientRows)
   prepareNativePackages(profile)
   writeNativePackage(profile, '@fixture/shared-peer-host', ['host'], [], [], '1.0.0', [],
-    "import '@deepseek-ai/cordis'\n", { '@deepseek-ai/cordis': '*' })
+    "import '@deepseek-ai/dsh-desktop-host'\n", { '@deepseek-ai/dsh-desktop-host': '*' })
 
   const initial = await manager.listNativeModules(ready)
   expect(initial.status).toBe('listed')

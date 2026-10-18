@@ -53,6 +53,7 @@ const PACKAGE_LIBRARIES: Readonly<Record<string, string>> = {
   'rsh/Core/runtime-diagnostics/native-runtime': 'Portable native installation and resource ownership API; no Cordis plugin entry.',
   'rsh/Compatibility/DSH/boot/app-boot': 'Boot library the app bins import; plain helper exports.',
   'rsh/Compatibility/DSH/boot/cmdline': 'Command-line library the app bins import; plain module exports.',
+  'rsh/Compatibility/DSH/boot/desktop-host-compatibility': 'Private Desktop compatibility Host assembly; plain module export.',
   'rsh/Compatibility/DSH/bridge/http-routes-cordis': 'Cordis service and event declaration augmentation; it has no Cordis Provider entry.',
   'rsh/Programs/Web/client/store': 'Browser-side state primitives; plain function/type exports.',
   'rsh/Programs/Web/client/ui-primitives': 'Browser-side UI component library; plain component exports.',

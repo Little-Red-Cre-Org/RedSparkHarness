@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   checkDshFamilyVersion,
   checkCordisPeerPolicy,
+  checkWorkspaceManifest,
   collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
@@ -216,6 +217,48 @@ describe('dsh family version coherence', () => {
   })
 })
 
+describe('private Desktop compatibility assembly constraints', () => {
+  const owner: WorkspaceManifest = {
+    dir: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
+    manifest: {
+      name: '@deepseek-ai/dsh-desktop-host-compatibility',
+      version: '0.1.5-rc.2',
+      private: true,
+      repository: {
+        type: 'git',
+        url: 'git+https://github.com/deepseek-ai/deepseek-harness.git',
+        directory: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
+      },
+      type: 'module',
+      main: 'lib/index.js',
+      types: 'lib/types/index.d.ts',
+      files: ['lib/index.js', 'config/desktop.cordis.patch.yml', 'lib/types/**/*.d.ts'],
+      peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      exports: { '.': { types: './lib/types/index.d.ts', default: './lib/index.js' } },
+    },
+  }
+
+  it('keeps the private assembly repository and payload exact', () => {
+    expect(checkWorkspaceManifest(owner)).toEqual([])
+    expect(checkWorkspaceManifest({
+      ...owner,
+      manifest: { ...owner.manifest, private: false },
+    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly must set "private": true')
+    expect(checkWorkspaceManifest({
+      ...owner,
+      manifest: { ...owner.manifest, files: ['lib/index.js', 'lib/types/**/*.d.ts'] },
+    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: package.json files must be ["lib/index.js","config/desktop.cordis.patch.yml","lib/types/**/*.d.ts"]')
+    expect(checkWorkspaceManifest({
+      ...owner,
+      manifest: {
+        ...owner.manifest,
+        repository: { ...owner.manifest.repository, directory: 'rsh/Programs/DesktopHost' },
+      },
+    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/deepseek-ai/deepseek-harness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
+  })
+})
+
 describe('Cordis peer classification', () => {
   it.each([
     {
@@ -319,9 +362,9 @@ describe('Cordis peer classification', () => {
       },
     })).toEqual([])
     expect(checkCordisPeerPolicy({
-      dir: 'rsh/Programs/Web/client/web',
+      dir: 'rsh/Modules/Official/webhook/webhook',
       manifest: {
-        name: '@deepseek-ai/dsh-client-web',
+        name: '@deepseek-ai/dsh-webhook',
         peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
         peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
         devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },

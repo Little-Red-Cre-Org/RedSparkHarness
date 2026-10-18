@@ -175,7 +175,7 @@ it('uses inline version input for Native and compatibility package updates', asy
   expect(p.legacy.update).toHaveBeenCalledWith('legacy-plugin', '1.2.3')
 })
 
-it('keeps core Client rows out of Native disable-all and refreshes revision between toggles', async () => {
+it('disables every eligible Native row in one revisioned call', async () => {
   const p = page()
   p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1', { optional: false }) })
   p.start()
@@ -183,48 +183,25 @@ it('keeps core Client rows out of Native disable-all and refreshes revision betw
   expect(p.button('#disable-all').disabled).toBe(true)
   expect(p.element('#disable-all-note').textContent).toContain('layout and session-presentation stay enabled')
   p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-1') })
-    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-2', { disabledIds: ['shared'] }) })
-    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3', { disabledIds: ['shared', 'optional'] }) })
+    .mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-2', { disabledIds: ['shared', 'optional'] }) })
   p.button('#refresh').click()
   await p.settled()
   expect(p.button('#disable-all').disabled).toBe(false)
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.disableAll).not.toHaveBeenCalled()
-  expect(p.native.toggle).toHaveBeenNthCalledWith(1, {
-    expectedRevision: 'revision-1', key: { target: 'host', id: 'shared' }, enabled: false,
-  })
-  expect(p.native.toggle).toHaveBeenNthCalledWith(2, {
-    expectedRevision: 'revision-2', key: { target: 'host', id: 'optional' }, enabled: false,
-  })
-  expect(p.native.toggle).toHaveBeenCalledTimes(2)
+  expect(p.native.disableAll).toHaveBeenCalledOnce()
+  expect(p.native.disableAll).toHaveBeenCalledWith({ expectedRevision: 'revision-1' })
+  expect(p.native.toggle).not.toHaveBeenCalled()
+  expect(p.legacy.disableAll).not.toHaveBeenCalled()
   expect(p.button('#disable-all').disabled).toBe(true)
-  // After disabling a consumer, a previously blocked provider becomes eligible on the next inventory.
-  p.native.list.mockResolvedValueOnce({
-    status: 'listed', inventory: disableAllInventory('revision-4', { blockedIds: ['optional'] }),
-  }).mockResolvedValueOnce({
-    status: 'listed', inventory: disableAllInventory('revision-5', { disabledIds: ['shared'] }),
-  }).mockResolvedValueOnce({
-    status: 'listed', inventory: disableAllInventory('revision-6', { disabledIds: ['shared', 'optional'] }),
-  })
+  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3') })
   p.button('#refresh').click()
   await p.settled()
+  p.native.disableAll.mockResolvedValueOnce(failure('busy'))
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.toggle).toHaveBeenNthCalledWith(3, {
-    expectedRevision: 'revision-4', key: { target: 'host', id: 'shared' }, enabled: false,
-  })
-  expect(p.native.toggle).toHaveBeenNthCalledWith(4, {
-    expectedRevision: 'revision-5', key: { target: 'host', id: 'optional' }, enabled: false,
-  })
-  expect(p.native.toggle).toHaveBeenCalledTimes(4)
-  p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-7') })
-  p.button('#refresh').click()
-  await p.settled()
-  p.native.toggle.mockResolvedValueOnce(failure('busy'))
-  p.button('#disable-all').click()
-  await p.settled()
-  expect(p.native.toggle).toHaveBeenCalledTimes(5)
+  expect(p.native.disableAll).toHaveBeenCalledTimes(2)
+  expect(p.native.toggle).not.toHaveBeenCalled()
 })
 
 it('re-reads stale inventory and waits for another user submission without optimistic changes', async () => {
@@ -263,12 +240,12 @@ it.each(['recovery-required', 'ipc'])('keeps %s failures in Native mode without 
   const p = page()
   p.start()
   await p.settled()
-  if (kind === 'ipc') p.native.toggle.mockRejectedValueOnce(new Error('private transport diagnostic'))
-  else p.native.toggle.mockResolvedValueOnce(failure(kind, 'recovery-required'))
+  if (kind === 'ipc') p.native.disableAll.mockRejectedValueOnce(new Error('private transport diagnostic'))
+  else p.native.disableAll.mockResolvedValueOnce(failure(kind, 'recovery-required'))
   p.button('#disable-all').click()
   await p.settled()
-  expect(p.native.toggle).toHaveBeenCalledOnce()
-  expect(p.native.disableAll).not.toHaveBeenCalled()
+  expect(p.native.disableAll).toHaveBeenCalledOnce()
+  expect(p.native.toggle).not.toHaveBeenCalled()
   expect(p.legacy.list).not.toHaveBeenCalled()
   expect(p.legacy.disableAll).not.toHaveBeenCalled()
   expect(p.backend.retry).not.toHaveBeenCalled()

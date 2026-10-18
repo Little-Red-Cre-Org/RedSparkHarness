@@ -2,6 +2,7 @@ import type { DesktopAutoUpdateTarget } from './desktop-auto-update-environment.
 
 /** Mutable target directories plus the shared immutable download cache. */
 export interface DesktopTargetBuildPaths {
+  readonly assembly: 'native' | 'compatibility'
   readonly root: string
   readonly artifacts: string
   readonly runtime: string
@@ -28,12 +29,22 @@ export function resolveDesktopBuildTarget(
   hostArch?: string,
 ): DesktopAutoUpdateTarget
 
+/** Resolve the explicitly selected Desktop runtime assembly.
+ * @param env - Packaging environment.
+ * @returns Native by default or the selected compatibility assembly.
+ */
+export function resolveDesktopBuildAssembly(env?: NodeJS.ProcessEnv): 'native' | 'compatibility'
+
 /**
  * Return the mutable preparation and artifact directories owned by one release target.
  * @param target - Supported Desktop target name.
+ * @param assembly - Runtime assembly, defaulting to Native.
  * @returns Target paths plus the shared immutable download cache.
  */
-export function desktopTargetBuildPaths(target: DesktopAutoUpdateTarget): DesktopTargetBuildPaths
+export function desktopTargetBuildPaths(
+  target: DesktopAutoUpdateTarget,
+  assembly?: 'native' | 'compatibility',
+): DesktopTargetBuildPaths
 
 /**
  * Resolve the paths owned by the target selected in a packaging environment.

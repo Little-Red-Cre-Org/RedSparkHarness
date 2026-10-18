@@ -30,6 +30,12 @@ TypeScript 与 Python SDK 继续默认使用 `sdk`。TypeScript 源码 launcher 
 
 定向 CLI、包和 packed-consumer 检查覆盖名称映射、profile 保留、Native 路径与拒绝行为、无 Cordis 的 headless 启动以及已安装 SDK 声明。已安装声明检查使用严格 NodeNext 解析、消费者自身安装的 Node 类型和 ESNext disposable 声明。
 
+新建 Desktop profile、精确 Desktop starter 转换、重置和开发 profile 会选择共享 Session 根目录下 canonical live generation 与保留删除 payload 中唯一的编码；空根使用 `none`，混合编码或旧式平铺 live 数据会在写入 profile 或停止 Host 前拒绝。普通升级时已有 Native Desktop profile 保留其显式编码。
+
+Desktop 从 JSONL 包的 `./native-inspection` 入口执行这项预检；该入口不会加载持久化后端。
+
+profile composer 通过 CLI 包已导出的 `./package.json` 读取随附 profile 名称；即使 Desktop 将 composer 打包进应用，CLI manifest 仍是模板名称的唯一来源。
+
 LLM 根入口和 Native 入口直接导出消息构造器与 message.ts 独有类型；共享消息类型（包括 `MessageSourceMap`）只经 `types.ts` 导出一次，使生成声明保留单一且明确的来源。
 
 Session expected 文件仍是作者维护的数据，本次默认变更不会重新生成它们。

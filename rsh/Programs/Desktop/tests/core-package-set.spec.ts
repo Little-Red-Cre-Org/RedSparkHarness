@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   DESKTOP_PACKAGES_DIR,
   DESKTOP_PACKAGE_SET_FILE,
+  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
+  DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
   desktopCorePackageOverrides,
   desktopDshPackageSpec,
   parseDesktopCorePackageSet,
@@ -43,11 +45,11 @@ function packageSetProject(): {
   const base = record('@deepseek-ai/dsh-base', 'dsh-base.tgz', baseBody)
   const host = record('@deepseek-ai/dsh-desktop-host', 'dsh-desktop-host.tgz', hostBody)
   writeFileSync(join(packageDir, dsh.file), dshBody)
-  writeFileSync(join(packageDir, base.file), baseBody)
   writeFileSync(join(packageDir, host.file), hostBody)
   writeFileSync(join(root, DESKTOP_PACKAGE_SET_FILE), `${JSON.stringify({
-    schemaVersion: 1,
-    packages: [dsh, base, host],
+    schemaVersion: 2, assembly: 'native',
+    packages: [dsh, host],
+    ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
   })}\n`)
   return { root, dsh, base, host }
 }
@@ -58,24 +60,42 @@ afterEach(() => {
 
 describe('desktop core package set', () => {
   it('pins the direct dsh dependency and every internal package to local tarballs', () => {
-    const { root } = packageSetProject()
+    const { root, dsh, base, host } = packageSetProject()
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
     expect(desktopDshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
       '@deepseek-ai/dsh': 'file:./desktop-packages/dsh.tgz',
-      '@deepseek-ai/dsh-base': 'file:./desktop-packages/dsh-base.tgz',
       '@deepseek-ai/dsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
     })
+    expect(packageSet.ignoredOptionalDependencies).toEqual([...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort())
+    const compatibilityHost = record(DESKTOP_COMPATIBILITY_HOST_PACKAGE, 'compat-host.tgz', Buffer.from('compat'))
+    const cordis = record('@deepseek-ai/cordis', 'cordis.tgz', Buffer.from('cordis'))
+    const compatibilityPackages = [dsh, base, host, compatibilityHost, cordis]
+      .sort((left, right) => left.name.localeCompare(right.name))
+    const compatibility = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'compatibility',
+      packages: compatibilityPackages,
+      ignoredOptionalDependencies: DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
+        .filter(name => !compatibilityPackages.some(entry => entry.name === name)).sort() }, '1.2.3')
+    expect(compatibility.assembly).toBe('compatibility')
+    expect(compatibility.packages.map(entry => entry.name)).toContain(DESKTOP_COMPATIBILITY_HOST_PACKAGE)
+    expect(compatibility.ignoredOptionalDependencies).not.toContain('@deepseek-ai/cordis')
   })
 
   it('rejects version drift, descriptor disorder, corruption, and extra files', () => {
     const { root, dsh, base, host } = packageSetProject()
     expect(() => verifyDesktopCorePackageSet(root, '2.0.0')).toThrow(/does not match Desktop/u)
+    expect(() => parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, base, host],
+      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() }))
+      .toThrow(/Native assembly contains a compatibility-only package/u)
     expect(() => parseDesktopCorePackageSet({
-      schemaVersion: 1,
-      packages: [dsh, base, { ...host, version: '2.0.0' }],
+      schemaVersion: 2, assembly: 'native',
+      packages: [dsh, { ...host, version: '2.0.0' }],
+      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
     }, '1.2.3')).toThrow(/dsh-desktop-host@2\.0\.0 does not match Desktop 1\.2\.3/u)
-    expect(() => parseDesktopCorePackageSet({ schemaVersion: 1, packages: [base, dsh, host] }))
+    expect(() => parseDesktopCorePackageSet({
+      schemaVersion: 2, assembly: 'native', packages: [base, dsh, host],
+      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
+    }))
       .toThrow(/sorted by name/u)
     writeFileSync(join(root, DESKTOP_PACKAGES_DIR, dsh.file), 'changed')
     expect(() => verifyDesktopCorePackageSet(root, '1.2.3')).toThrow(/integrity check failed/u)
@@ -86,7 +106,8 @@ describe('desktop core package set', () => {
   it('rejects registry resolutions for names supplied by the local package set', () => {
     const dsh = record('@deepseek-ai/dsh', 'dsh.tgz', Buffer.from('dsh'))
     const host = record('@deepseek-ai/dsh-desktop-host', 'host.tgz', Buffer.from('host'))
-    const packageSet = parseDesktopCorePackageSet({ schemaVersion: 1, packages: [dsh, host] })
+    const packageSet = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
+      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() })
     expect(() => {
       verifyDesktopCoreLockfile(
         "packages:\n  '@deepseek-ai/dsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
@@ -99,5 +120,12 @@ describe('desktop core package set', () => {
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
+    expect(() => {
+      verifyDesktopCoreLockfile(
+        "packages:\n  '@deepseek-ai/cordis@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
+        packageSet,
+      )
+    }).toThrow(/ignored compatibility optional @deepseek-ai\/cordis/u)
   })
+
 })

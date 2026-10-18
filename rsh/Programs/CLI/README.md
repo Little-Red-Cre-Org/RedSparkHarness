@@ -51,7 +51,7 @@ dsh --help                          # the launcher's own help
 
 A legacy profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list and `patchReload` lifecycle) and a `cordis.patch.yml` (the user's own patch layer). A Native profile declares `runtime: "native"` and `config: "rsh.profile.json"` in its package manifest and stores its installations in versioned JSON. `package.json` selects the runtime: an explicit Native marker selects Native, while `runtime: "legacy"` or a legacy bundle list without Native fields selects Cordis. `patchReload: live` watches legacy patch files, and `startup` applies them once.
 
-The `./native-profile` library export shares validated profile parsing, preset expansion, child-route derivation, and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API.
+The `./native-profile` library export shares validated profile parsing, preset expansion, child-route derivation, and installation planning with the private Desktop Host. It accepts an explicit installed profile directory and optional allowed package roots; it exposes no application launcher or argv API. Shipped profile names come from the CLI package's `./package.json` export, keeping that manifest as their single source.
 
 Selecting a shipped `native-*` or standard profile name creates its Native profile files on first use; an existing profile keeps its configuration.
 

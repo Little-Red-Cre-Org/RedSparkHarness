@@ -233,6 +233,43 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
 
+  rsh/Compatibility/DSH/boot/desktop-host-compatibility:
+    dependencies:
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/include
+      '@deepseek-ai/dsh-app-boot':
+        specifier: workspace:^
+        version: link:../app-boot
+      '@deepseek-ai/dsh-cmdline':
+        specifier: workspace:^
+        version: link:../cmdline
+      '@deepseek-ai/dsh-web-compatibility':
+        specifier: workspace:^
+        version: link:../../web/frontend
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-api-gateway':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/api/gateway
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/connection
+      '@deepseek-ai/dsh-client-modules':
+        specifier: workspace:^
+        version: link:../../../../Programs/Web/client/modules
+      '@deepseek-ai/dsh-http-routes':
+        specifier: workspace:^
+        version: link:../../../../Core/util/http-routes
+      '@deepseek-ai/dsh-http-routes-cordis':
+        specifier: workspace:^
+        version: link:../../bridge/http-routes-cordis
+      '@deepseek-ai/dsh-launch-environment':
+        specifier: workspace:^
+        version: link:../../../../Core/util/launch-environment
+
   rsh/Compatibility/DSH/bridge/compat-code-runtime:
     dependencies:
       '@deepseek-ai/dsh-code-runtime-definition':
@@ -10237,6 +10274,9 @@ importers:
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../Web/host/native-web-assets
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-persistence-jsonl
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@9.4.0)
@@ -10256,6 +10296,9 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../Engine/core/session
       '@electron/notarize':
         specifier: 2.5.0
         version: 2.5.0(supports-color@9.4.0)
@@ -10292,97 +10335,25 @@ importers:
 
   rsh/Programs/DesktopHost:
     dependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../Core/vendor/cordis
-      '@deepseek-ai/cordis-plugin-include':
-        specifier: workspace:^
-        version: link:../../Core/vendor/include
       '@deepseek-ai/dsh':
         specifier: workspace:^
         version: link:../CLI
-      '@deepseek-ai/dsh-api-gateway':
-        specifier: workspace:^
-        version: link:../Web/api/gateway
-      '@deepseek-ai/dsh-app-boot':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/boot/app-boot
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../Web/client/connection
-      '@deepseek-ai/dsh-client-modules':
-        specifier: workspace:^
-        version: link:../Web/client/modules
-      '@deepseek-ai/dsh-client-native-application':
-        specifier: workspace:^
-        version: link:../Web/client/native-application
-      '@deepseek-ai/dsh-client-native-session':
-        specifier: workspace:^
-        version: link:../Web/client/native-session
-      '@deepseek-ai/dsh-client-ui-directory-picker-native':
-        specifier: workspace:^
-        version: link:../Web/client/ui-directory-picker-native
-      '@deepseek-ai/dsh-client-ui-renderer':
-        specifier: workspace:^
-        version: link:../Web/client/ui-renderer
-      '@deepseek-ai/dsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../Web/client/ui-slots
-      '@deepseek-ai/dsh-cmdline':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/boot/cmdline
-      '@deepseek-ai/dsh-credentials-local':
-        specifier: workspace:^
-        version: link:../../Modules/Official/credentials/credentials-local
-      '@deepseek-ai/dsh-fs-local':
-        specifier: workspace:^
-        version: link:../../Modules/Official/fs/fs-local
-      '@deepseek-ai/dsh-host-directory-picker-native':
-        specifier: workspace:^
-        version: link:../Web/host/directory-picker-native
-      '@deepseek-ai/dsh-host-webserver':
-        specifier: workspace:^
-        version: link:../Web/host/webserver
-      '@deepseek-ai/dsh-http-routes':
-        specifier: workspace:^
-        version: link:../../Core/util/http-routes
-      '@deepseek-ai/dsh-launch-environment':
-        specifier: workspace:^
-        version: link:../../Core/util/launch-environment
-      '@deepseek-ai/dsh-native-agent':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-agent
-      '@deepseek-ai/dsh-native-model-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-model-execution
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../Core/runtime-diagnostics/native-runtime
-      '@deepseek-ai/dsh-native-session-execution':
-        specifier: workspace:^
-        version: link:../../Engine/core/native-session-execution
       '@deepseek-ai/dsh-native-web-assets':
         specifier: workspace:^
         version: link:../Web/host/native-web-assets
       '@deepseek-ai/dsh-native-web-session-controller':
         specifier: workspace:^
         version: link:../Web/api/native-web-session-controller
-      '@deepseek-ai/dsh-session-persistence-jsonl':
+    optionalDependencies:
+      '@deepseek-ai/dsh-desktop-host-compatibility':
         specifier: workspace:^
-        version: link:../../Engine/session/session-persistence-jsonl
-      '@deepseek-ai/dsh-web-compatibility':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/web/frontend
-      '@deepseek-ai/dsh-web-frontend':
-        specifier: workspace:^
-        version: link:../Web/application
-      esbuild:
-        specifier: ^0.28.1
-        version: 0.28.1
-    devDependencies:
-      '@deepseek-ai/dsh-client-web':
-        specifier: workspace:^
-        version: link:../Web/client/web
+        version: link:../../Compatibility/DSH/boot/desktop-host-compatibility
 
   rsh/Programs/SDK/packages/client:
     dependencies:
@@ -18411,11 +18382,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -23876,7 +23842,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.29)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -25354,8 +25320,8 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:

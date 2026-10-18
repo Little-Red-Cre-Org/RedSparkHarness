@@ -44,7 +44,7 @@ Recoverable deletion moves the entire Session directory into `.rsh-session-trash
 
 `root` is required and has no default: a `process.cwd()` default would scatter session files as the process's cwd changes. An existing root must be a readable directory; an absent root is created on first materialization.
 
-The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. The native host awaits open-handle closure when it removes the Provider.
+The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. `inspectSessionRootCompression(root)` reports the sole encoding among canonical live generations and retained deletion payloads, or `undefined` when none exist; mixed encodings and the obsolete flat live layout throw. The `./native-inspection` entry exports this read-only scan without loading the backend. The native host awaits open-handle closure when it removes the Provider.
 
 The published native entry and CommonJS migration verifier run without Cordis installed; the package root remains the Cordis plugin entry.
 
