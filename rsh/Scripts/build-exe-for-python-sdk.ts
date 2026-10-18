@@ -21,7 +21,11 @@ const root = resolve(import.meta.dirname, '..', '..')
 
 /** The closure manifest whose dependencies define the executable. */
 const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
-/** CLI package that owns the executable entry; pruning keeps it without following its legacy edges. */
+/**
+ * CLI package that owns the executable entry. It is a closure leaf: its own manifest declares the
+ * legacy superset, so the prune keeps the package without following those edges.
+ */
+const CLI_PACKAGE = '@deepseek-ai/dsh'
 /**
  * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
  * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
@@ -410,7 +414,7 @@ class SingleExeBuild {
     if (unexpected.length > 0) {
       throw new Error(`build-exe-for-python-sdk: staged closure still carries Cordis packages: ${unexpected.join(', ')}.`)
     }
-    const missing = missingStagedNeighbours(nodeModules, ['@deepseek-ai/dsh'])
+    const missing = missingStagedNeighbours(nodeModules, [CLI_PACKAGE])
     if (missing.length > 0) {
       throw new Error(`build-exe-for-python-sdk: pruned staged closure lost required neighbours: ${missing.join(', ')}.`)
     }
