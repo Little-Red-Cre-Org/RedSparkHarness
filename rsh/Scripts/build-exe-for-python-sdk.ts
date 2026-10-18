@@ -15,7 +15,7 @@ import { parseArgs } from 'node:util'
 import { coalesceStagedDshToolsPeer } from './coalesce-staged-dsh-tools.ts'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
 import { preservePnpmWorkspaceState } from './preserve-pnpm-workspace-state.ts'
-import { installedMatching, OPTIONAL_EDGES_EXCLUDED_FOR, pruneStagedClosure } from './python-runtime-closure-prune.ts'
+import { installedMatching, missingStagedNeighbours, OPTIONAL_EDGES_EXCLUDED_FOR, pruneStagedClosure } from './python-runtime-closure-prune.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 
@@ -409,6 +409,10 @@ class SingleExeBuild {
     const unexpected = cordis.filter(name => !PRESET_REQUIRED_CORDIS.has(name))
     if (unexpected.length > 0) {
       throw new Error(`build-exe-for-python-sdk: staged closure still carries Cordis packages: ${unexpected.join(', ')}.`)
+    }
+    const missing = missingStagedNeighbours(nodeModules, ['@deepseek-ai/dsh'])
+    if (missing.length > 0) {
+      throw new Error(`build-exe-for-python-sdk: pruned staged closure lost required neighbours: ${missing.join(', ')}.`)
     }
   }
 

@@ -34,16 +34,20 @@ function staging(packages: Record<string, Record<string, unknown>>): string {
 }
 
 describe('reachableStagedPackages', () => {
-  it('follows required peers but not optional ones', () => {
+  it('keeps an optional peer a retained package imports at runtime, but not a legacy Cordis one', () => {
     const nodeModules = staging({
-      '@scope/root': { peerDependencies: { '@scope/required': '1', '@scope/optional': '1' }, peerDependenciesMeta: { '@scope/optional': { optional: true } } },
-      '@scope/required': {},
-      '@scope/optional': {},
+      '@scope/presets': {
+        peerDependencies: { '@scope/scope': '1', '@deepseek-ai/cordis': '1' },
+        peerDependenciesMeta: { '@scope/scope': { optional: true }, '@deepseek-ai/cordis': { optional: true } },
+      },
+      '@scope/scope': {},
+      '@deepseek-ai/cordis': {},
     })
 
-    const { reachable } = reachableStagedPackages(readStagedPackages(nodeModules), ['@scope/root'])
+    const { reachable } = reachableStagedPackages(readStagedPackages(nodeModules), ['@scope/presets'])
 
-    expect([...reachable].sort()).toEqual(['@scope/required', '@scope/root'])
+    expect(reachable.has('@scope/scope')).toBe(true)
+    expect(reachable.has('@deepseek-ai/cordis')).toBe(false)
   })
 
   it('does not follow optionalDependencies of a leaf package', () => {

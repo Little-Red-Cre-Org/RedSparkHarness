@@ -65,11 +65,22 @@ export function readStagedPackages(nodeModules: string): Map<string, StagedPacka
 export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@deepseek-ai/dsh']
 
 /**
+ * Optional neighbours that are legacy assembly rather than runtime needs.
+ *
+ * A package may list a plugin in `peerDependenciesMeta` as optional and still import it by value at
+ * runtime, which is how `dsh-agent-presets` uses `dsh-scope`. Dropping such a package breaks the
+ * packaged runtime, so only the legacy Cordis neighbours stay excluded.
+ */
+function isLegacyOptionalNeighbour(name: string): boolean {
+  return name.startsWith('@deepseek-ai/cordis')
+}
+
+/**
  * Compute the packages a staged closure can reach from its declared dependencies.
  *
- * Required peers are followed even when a package lists none of its own: the shipped types and the
- * SEA step resolve them from the staged root, so dropping a provider breaks the packaged runtime
- * even though no `dependencies` edge names it.
+ * Every neighbour the runtime can resolve counts: `dependencies`, `optionalDependencies` of a
+ * non-leaf package, and peers whether or not the manifest marks them optional. Only the legacy
+ * Cordis assembly stays out, because that is what this prune exists to remove.
  * @param packages - installed packages keyed by name.
  * @param declared - names the runtime manifest declares.
  * @param leafPackages - names whose optional dependency edges must not be followed.
@@ -98,10 +109,11 @@ export function reachableStagedPackages(
     if (!leaves.has(name)) {
       for (const dependency of Object.keys(staged.manifest.optionalDependencies ?? {})) queue.push(dependency)
     }
-    // A required peer is a runtime contract: the SEA step resolves it from the staging root, so it
-    // stays even when this package lists no dependency edge for it.
+    // A peer, optional or not, is something the package imports at runtime and resolves from the
+    // staging root; the legacy Cordis assembly is the only optional neighbour kept out.
     for (const peer of Object.keys(staged.manifest.peerDependencies ?? {})) {
-      if (staged.manifest.peerDependenciesMeta?.[peer]?.optional === true) continue
+      const optional = staged.manifest.peerDependenciesMeta?.[peer]?.optional === true
+      if (optional && isLegacyOptionalNeighbour(peer)) continue
       queue.push(peer)
     }
   }
@@ -179,6 +191,38 @@ function pruneNestedNodeModules(nodeModules: string, reachable: ReadonlySet<stri
       visitPackage(join(nodeModules, entry.name))
     }
   }
+}
+
+/**
+ * Report required neighbours of retained packages that the tree no longer holds.
+ *
+ * Only workspace packages count: platform-specific optional payloads (`@esbuild/*`, `@img/*`,
+ * `@vscode/ripgrep-*`) are never installed for every target, and the CLI's own manifest is the
+ * legacy superset. A missing workspace neighbour means the packaged runtime fails on import, so the
+ * build stops here instead of at launch.
+ * @param nodeModules - absolute path of the deployed node_modules directory.
+ * @param excludedDependents - packages whose own edges are the legacy superset.
+ * @returns `dependent -> neighbour` entries that are absent from the tree.
+ */
+export function missingStagedNeighbours(nodeModules: string, excludedDependents: readonly string[] = []): string[] {
+  const packages = readStagedPackages(nodeModules)
+  const excluded = new Set(excludedDependents)
+  const missing: string[] = []
+  for (const [name, staged] of packages) {
+    if (excluded.has(name)) continue
+    const meta = staged.manifest.peerDependenciesMeta ?? {}
+    const neighbours = [
+      ...Object.keys(staged.manifest.dependencies ?? {}),
+      ...Object.keys(staged.manifest.optionalDependencies ?? {}),
+      ...Object.keys(staged.manifest.peerDependencies ?? {}).filter(peer => meta[peer]?.optional !== true),
+    ]
+    for (const neighbour of neighbours) {
+      if (!neighbour.startsWith('@deepseek-ai/')) continue
+      if (packages.has(neighbour)) continue
+      missing.push(`${name} -> ${neighbour}`)
+    }
+  }
+  return missing.sort()
 }
 
 /**
