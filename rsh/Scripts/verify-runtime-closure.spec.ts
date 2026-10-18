@@ -37,11 +37,20 @@ function workspace(root: string, name: string, manifest: Record<string, unknown>
   writeFileSync(path, `${JSON.stringify({ name, ...manifest }, null, 2)}\n`)
 }
 
+/**
+ * Every plugin a shipped profile or preset mounts, so the fixture manifest equals the closure the
+ * equality check validates.
+ * @returns dependency map for the runtime manifest fixture.
+ */
 function nativeSdkDependencies(): Record<string, string> {
   const plugins = new Set<string>()
   for (const platform of ['linux', 'darwin', 'win32'] as const) {
-    for (const row of shippedNativeProfileComposition('/dsh-test', 'native-sdk', platform).installations) {
-      plugins.add(row.plugin)
+    for (const profile of SHIPPED_NATIVE_PROFILES) {
+      const composition = shippedNativeProfileComposition('/dsh-test', profile, platform)
+      for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
+        plugins.add(row.plugin)
+      }
+      for (const row of shippedNativeProfileClientComposition(profile)) plugins.add(row.plugin)
     }
   }
   return Object.fromEntries([...plugins].map(plugin => [plugin, 'workspace:^']))
@@ -199,8 +208,23 @@ describe('verifyRuntimeClosure', () => {
 
     const result = await verifyRuntimeClosure(root)
 
+    expect(result.failures).toContain('rsh/Programs/SDK/python/sdk-runtime/platforms.json defines no runtime targets')
+  })
+
+  it('rejects a dependency no shipped profile or retained package requires', async () => {
+    const root = fixture({
+      'rsh/Programs/SDK/python/sdk-runtime/package.json': {
+        name: 'runtime',
+        dependencies: runtimeDependencies({ '@scope/legacy-bundle': 'workspace:^' }),
+      },
+      'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
+      'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': '[]\n',
+    })
+
+    const result = await verifyRuntimeClosure(root)
+
     expect(result.failures).toEqual([
-      'rsh/Programs/SDK/python/sdk-runtime/platforms.json defines no runtime targets',
+      'runtime -> @scope/legacy-bundle is declared but no shipped profile or retained package requires it',
     ])
   })
 
@@ -220,7 +244,7 @@ describe('verifyRuntimeClosure', () => {
     const result = await verifyRuntimeClosure(root)
 
     expect(result.workspacePackageCount).toBe(1)
-    expect(result.failures).toEqual(['runtime -> @scope/root -> @scope/required'])
+    expect(result.failures).toContain('runtime -> @scope/root -> @scope/required')
   })
 
   it('checks native CLI profile dependencies, required peers, Cordis edges, and root imports', async () => {

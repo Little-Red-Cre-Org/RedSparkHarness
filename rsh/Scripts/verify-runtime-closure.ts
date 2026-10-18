@@ -2,7 +2,7 @@
  * Verify that the Python runtime or native CLI manifest supplies its shipped
  * compositions and every required workspace peer in its dependency graph.
  */
-import { globSync } from 'node:fs'
+import { globSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -36,6 +36,13 @@ type RuntimePlatformManifest = Record<string, RuntimePlatform>
 
 const AGENT_PRESET_GLOB = 'rsh/Engine/preset/agent-presets/presets/*/agent.cordis.yml'
 const PYTHON_RUNTIME_MANIFEST = 'rsh/Programs/SDK/python/sdk-runtime/package.json'
+/**
+ * CLI package that owns the executable entry inside the Python runtime.
+ *
+ * Its own manifest declares the full legacy superset, so it is retained as a leaf rather than
+ * walked; the runtime closure supplies every peer it needs.
+ */
+const CLI_MANIFEST_PACKAGE = '@deepseek-ai/dsh'
 const CLI_MANIFEST = 'rsh/Programs/CLI/package.json'
 const NATIVE_CLI_ROOT_IMPORTS = [
   ['rsh/Programs/CLI/src/bin.ts', '@deepseek-ai/dsh-app-boot', '@deepseek-ai/dsh-launch-environment/layers'],
@@ -134,17 +141,102 @@ export async function verifyRuntimeClosure(
         failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis dependency ${dependency}`)
         continue
       }
-      if (!workspace.has(dependency) || parents.has(dependency)) continue
+      if (parents.has(dependency)) continue
+      // A non-workspace dependency is packaging payload the wheel must still ship. Recording it as
+      // reached keeps the equality check from reporting it as an uncovered declaration, while the
+      // traversal below only walks workspace manifests.
       parents.set(dependency, packageName)
       queue.push(dependency)
     }
   }
 
+  if (target === 'python-runtime') {
+    failures.push(...uncoveredRuntimeDependencies(
+      runtimeName, runtimeDependencies, queue, workspace, parents, shippedProfilePlugins(root, targets),
+    ))
+  }
   return {
     failures,
     presetCount: presetPaths.length,
     workspacePackageCount: queue.length,
   }
+}
+
+/**
+ * Collect every plugin a shipped profile or agent preset mounts directly.
+ * @param root - repository root.
+ * @param targets - runtime platform targets from the platform manifest.
+ * @returns bare package names used as closure roots.
+ */
+function shippedProfilePlugins(root: string, targets: readonly string[]): Set<string> {
+  const plugins = new Set<string>()
+  for (const target of targets) {
+    const platform = processPlatformForTarget(target)
+    for (const profile of SHIPPED_NATIVE_PROFILES) {
+      const composition = shippedNativeProfileComposition(root, profile, platform)
+      for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
+        const name = barePackageName(row.plugin)
+        if (name !== undefined) plugins.add(name)
+      }
+    }
+  }
+  for (const presetPath of globSync(AGENT_PRESET_GLOB, { cwd: root }).sort()) {
+    const document = loadCordisYaml(readFileSync(resolve(root, presetPath), 'utf8'))
+    if (!Array.isArray(document)) continue
+    // A plugin is a root when any packaged target activates it; the wheel serves every target.
+    const processPlatforms = new Set(targets.map(target => processPlatformForTarget(target)))
+    for (const processPlatform of processPlatforms) {
+      for (const plugin of activeBarePluginPackages(document, processPlatform)) plugins.add(plugin)
+    }
+  }
+  return plugins
+}
+
+/**
+ * Report manifest dependencies the shipped closure never reaches.
+ *
+ * A superset passes the missing-plugin checks while still shipping the legacy assembly, so the
+ * manifest must equal the reachable closure rather than merely contain it.
+ * @param runtimeName - manifest name used in diagnostics.
+ * @param runtimeDependencies - the manifest's declared dependencies.
+ * @param reachable - packages the closure walked from the shipped profiles and presets.
+ * @param workspace - workspace package index.
+ * @param parents - discovery parent per package, used for the chain in diagnostics.
+ * @returns one failure per dependency outside the closure.
+ */
+function uncoveredRuntimeDependencies(
+  runtimeName: string,
+  runtimeDependencies: Readonly<Record<string, string>>,
+  reachable: readonly string[],
+  workspace: ReadonlyMap<string, WorkspacePackage>,
+  parents: ReadonlyMap<string, string | undefined>,
+  profileRoots: ReadonlySet<string>,
+): string[] {
+  const visited = new Set(reachable)
+  const failures: string[] = []
+  // The traversal starts from every declared root, so `visited` alone proves nothing. A dependency
+  // is justified only when some retained package, or a shipped profile row, names it as an edge.
+  const edgeTargets = new Set<string>()
+  for (const [name, current] of workspace) {
+    if (!visited.has(name)) continue
+    for (const target of Object.keys(current.manifest.dependencies ?? {})) edgeTargets.add(target)
+    for (const target of Object.keys(current.manifest.optionalDependencies ?? {})) edgeTargets.add(target)
+    const meta = current.manifest.peerDependenciesMeta ?? {}
+    for (const target of Object.keys(current.manifest.peerDependencies ?? {})) {
+      if (meta[target]?.optional === true) continue
+      edgeTargets.add(target)
+    }
+  }
+  for (const dependency of Object.keys(runtimeDependencies).sort()) {
+    // The CLI package owns the executable entry the runtime ships; its own manifest is the legacy
+    // superset and is not part of the closed graph. Retained peers are edges of retained packages.
+    if (dependency === CLI_MANIFEST_PACKAGE) continue
+    if (profileRoots.has(dependency)) continue
+    if (edgeTargets.has(dependency)) continue
+    if (parents.get(dependency) !== undefined) continue
+    failures.push(`${runtimeName} -> ${dependency} is declared but no shipped profile or retained package requires it`)
+  }
+  return failures
 }
 
 if (import.meta.main) {
