@@ -90,6 +90,7 @@ Host 会将所选旧 profile 与 Desktop 拥有的路由和流处理组合起来
 <a id="known-limitations-and-deferred-work"></a>
 
 - 包含 `rsh.client.json` 的 profile 必须使用 Native Host，本兼容 runtime 会拒绝它。
+- 不发布 invariant companion：本组装通过 app-boot 挂载所选旧插件树，这些关系已由其所有者持有；Host 自身只把 Fetch 请求路由到该树，没有可独立比对的可变状态。
 
 <a id="dev-note"></a>
 ### 开发备注

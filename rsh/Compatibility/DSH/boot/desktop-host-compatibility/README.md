@@ -90,6 +90,7 @@ This Host adds no request prefix. Cache behavior belongs to the selected profile
 <a id="known-limitations-and-deferred-work"></a>
 
 - Profiles containing `rsh.client.json` require the Native Host and are rejected by this compatibility runtime.
+- No invariant companion is published because this assembly mounts the selected legacy tree through app-boot, whose owner already holds those relations; the Host itself only routes Fetch requests to that tree and owns no independently mutable state to compare.
 
 <a id="dev-note"></a>
 ### Dev Note

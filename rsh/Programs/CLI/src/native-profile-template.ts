@@ -1,6 +1,5 @@
 /** First-use compositions for the explicitly selected native profiles. */
-import cliPackageManifest from '@deepseek-ai/dsh/package.json' with { type: 'json' }
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
@@ -15,7 +14,7 @@ const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
   rsh: 'native-tui',
 }
 
-const nativeProfileTemplates = (cliPackageManifest as { dsh?: { nativeProfileTemplates?: unknown } }).dsh?.nativeProfileTemplates
+const nativeProfileTemplates = cliNativeProfileTemplates()
 if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
   throw new Error('dsh: CLI package must declare its native profile templates')
 }
@@ -95,6 +94,17 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
 
 function cliRuntimeRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..')
+}
+
+/**
+ * Read this CLI package's declared native profile templates at runtime.
+ * @returns the `dsh.nativeProfileTemplates` value, or `undefined` when the manifest does not declare it.
+ */
+function cliNativeProfileTemplates(): unknown {
+  const manifest: unknown = JSON.parse(readFileSync(join(cliRuntimeRoot(), 'package.json'), 'utf8'))
+  const dsh = typeof manifest === 'object' && manifest !== null && 'dsh' in manifest
+    ? (manifest as { dsh?: unknown }).dsh : undefined
+  return typeof dsh === 'object' && dsh !== null ? (dsh as { nativeProfileTemplates?: unknown }).nativeProfileTemplates : undefined
 }
 
 function isShippedNativeProfile(name: string): boolean {
