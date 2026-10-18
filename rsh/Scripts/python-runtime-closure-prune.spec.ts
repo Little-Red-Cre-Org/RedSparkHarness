@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   installedMatching,
+  missingStagedNeighbours,
   pruneStagedClosure,
   readStagedPackages,
   reachableStagedPackages,
@@ -119,5 +120,35 @@ describe('pruneStagedClosure', () => {
 
     expect(result.removed).toEqual(['@scope/legacy'])
     expect(existsSync(join(nodeModules, '@scope/legacy'))).toBe(true)
+  })
+})
+
+describe('missingStagedNeighbours', () => {
+  it('reports a retained package whose optional peer is absent', () => {
+    const nodeModules = staging({
+      '@scope/presets': { peerDependencies: { '@scope/scope': '1' }, peerDependenciesMeta: { '@scope/scope': { optional: true } } },
+    })
+
+    expect(missingStagedNeighbours(nodeModules, [], '@scope/')).toEqual(['@scope/presets -> @scope/scope'])
+  })
+
+  it('keeps the same legacy Cordis exemption as the closure walk', () => {
+    const nodeModules = staging({
+      '@scope/presets': {
+        peerDependencies: { '@deepseek-ai/cordis': '1' },
+        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      },
+    })
+
+    expect(missingStagedNeighbours(nodeModules)).toEqual([])
+  })
+
+  it('skips packages the caller excluded and neighbours outside the scope', () => {
+    const nodeModules = staging({
+      '@deepseek-ai/dsh': { optionalDependencies: { '@deepseek-ai/legacy': '1' } },
+      '@scope/presets': { dependencies: { 'third-party-payload': '1' } },
+    })
+
+    expect(missingStagedNeighbours(nodeModules, ['@deepseek-ai/dsh'])).toEqual([])
   })
 })

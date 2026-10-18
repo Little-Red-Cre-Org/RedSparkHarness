@@ -194,7 +194,7 @@ function pruneNestedNodeModules(nodeModules: string, reachable: ReadonlySet<stri
 }
 
 /**
- * Report required neighbours of retained packages that the tree no longer holds.
+ * Report neighbours of retained packages that the tree no longer holds.
  *
  * Only workspace packages count: platform-specific optional payloads (`@esbuild/*`, `@img/*`,
  * `@vscode/ripgrep-*`) are never installed for every target, and the CLI's own manifest is the
@@ -202,22 +202,30 @@ function pruneNestedNodeModules(nodeModules: string, reachable: ReadonlySet<stri
  * build stops here instead of at launch.
  * @param nodeModules - absolute path of the deployed node_modules directory.
  * @param excludedDependents - packages whose own edges are the legacy superset.
+ * @param scopePrefix - package-name prefix whose neighbours the check covers.
  * @returns `dependent -> neighbour` entries that are absent from the tree.
  */
-export function missingStagedNeighbours(nodeModules: string, excludedDependents: readonly string[] = []): string[] {
+export function missingStagedNeighbours(
+  nodeModules: string,
+  excludedDependents: readonly string[] = [],
+  scopePrefix = '@deepseek-ai/',
+): string[] {
   const packages = readStagedPackages(nodeModules)
   const excluded = new Set(excludedDependents)
   const missing: string[] = []
   for (const [name, staged] of packages) {
     if (excluded.has(name)) continue
+    // The check mirrors the closure walk: an optional peer is a runtime import too, so a missing one
+    // is a launch failure. Only an optional legacy Cordis neighbour stays exempt, as in the walk.
     const meta = staged.manifest.peerDependenciesMeta ?? {}
     const neighbours = [
       ...Object.keys(staged.manifest.dependencies ?? {}),
       ...Object.keys(staged.manifest.optionalDependencies ?? {}),
-      ...Object.keys(staged.manifest.peerDependencies ?? {}).filter(peer => meta[peer]?.optional !== true),
+      ...Object.keys(staged.manifest.peerDependencies ?? {}).filter(peer => !(
+        meta[peer]?.optional === true && isLegacyOptionalNeighbour(peer))),
     ]
     for (const neighbour of neighbours) {
-      if (!neighbour.startsWith('@deepseek-ai/')) continue
+      if (!neighbour.startsWith(scopePrefix)) continue
       if (packages.has(neighbour)) continue
       missing.push(`${name} -> ${neighbour}`)
     }
