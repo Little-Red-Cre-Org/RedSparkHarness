@@ -15,11 +15,27 @@ import { parseArgs } from 'node:util'
 import { coalesceStagedDshToolsPeer } from './coalesce-staged-dsh-tools.ts'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
 import { preservePnpmWorkspaceState } from './preserve-pnpm-workspace-state.ts'
+import { installedMatching, missingStagedNeighbours, OPTIONAL_EDGES_EXCLUDED_FOR, pruneStagedClosure } from './python-runtime-closure-prune.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 
 /** The closure manifest whose dependencies define the executable. */
 const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
+/**
+ * CLI package that owns the executable entry. It is a closure leaf: its own manifest declares the
+ * legacy superset, so the prune keeps the package without following those edges.
+ */
+const CLI_PACKAGE = '@deepseek-ai/dsh'
+/**
+ * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
+ * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
+ * unreachable legacy edge and must not reach the packaged runtime.
+ */
+const PRESET_REQUIRED_CORDIS = new Set([
+  '@deepseek-ai/cordis',
+  '@deepseek-ai/dsh-cordis-host-runner',
+  '@deepseek-ai/dsh-tool-cordis',
+])
 /** The sole executable entry inside the deployed closure. */
 const ENTRY_BIN = 'runtime-bootstrap.mjs'
 /** Python-visible executable basename. */
@@ -308,10 +324,13 @@ class SingleExeBuild {
     if (this.cli.dryRun) await deploy()
     else await preservePnpmWorkspaceState(root, deploy)
     await this.restoreLegacyHoists()
+    await this.pruneToDeclaredClosure()
     await this.materializeStagedLinks()
     if (this.cli.dryRun) {
       console.log('build-exe-for-python-sdk: [dry-run] coalesce identical nested @deepseek-ai/dsh-tools peer copies')
     } else {
+      // Pruning already removed nested copies of anything outside the closure. Coalescing a tree that
+      // still holds them requires each peer to resolve, which the pruned tree no longer guarantees.
       const coalescedToolsCopies = await coalesceStagedDshToolsPeer(this.staging)
       if (coalescedToolsCopies > 0) {
         console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @deepseek-ai/dsh-tools peer copies.`)
@@ -366,6 +385,38 @@ class SingleExeBuild {
     }
     if (restored.length > 0) {
       console.log(`build-exe-for-python-sdk: restored legacy deploy hoists: ${restored.join(', ')}`)
+    }
+  }
+
+  /**
+   * Remove staged packages the runtime manifest's closure cannot reach.
+   *
+   * `pnpm deploy` resolves the CLI package's own optional dependencies, so the staged tree carries
+   * the legacy Cordis assembly even when the closure manifest does not declare it. Pruning here keeps
+   * the packaged runtime equal to the declared closure instead of the CLI's superset.
+   */
+  private async pruneToDeclaredClosure(): Promise<void> {
+    const nodeModules = join(this.staging, 'node_modules')
+    if (this.cli.dryRun) {
+      console.log('build-exe-for-python-sdk: [dry-run] prune staged packages outside the declared closure')
+      return
+    }
+    const manifest = JSON.parse(await readFile(join(this.staging, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>
+    }
+    const declared = Object.keys(manifest.dependencies ?? {})
+    const result = pruneStagedClosure(nodeModules, declared, OPTIONAL_EDGES_EXCLUDED_FOR)
+    if (result.removed.length > 0) {
+      console.log(`build-exe-for-python-sdk: pruned ${result.removed.length} staged packages outside the declared closure.`)
+    }
+    const cordis = installedMatching(nodeModules, /cordis/u)
+    const unexpected = cordis.filter(name => !PRESET_REQUIRED_CORDIS.has(name))
+    if (unexpected.length > 0) {
+      throw new Error(`build-exe-for-python-sdk: staged closure still carries Cordis packages: ${unexpected.join(', ')}.`)
+    }
+    const missing = missingStagedNeighbours(nodeModules, [CLI_PACKAGE])
+    if (missing.length > 0) {
+      throw new Error(`build-exe-for-python-sdk: pruned staged closure lost required neighbours: ${missing.join(', ')}.`)
     }
   }
 

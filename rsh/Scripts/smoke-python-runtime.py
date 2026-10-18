@@ -2249,7 +2249,8 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
         if initialized.returncode != 0:
             raise AssertionError(
                 f"Python-installed dsh could not create the explicit legacy SDK profile: "
-                f"returncode={initialized.returncode} stdout={initialized.stdout!r} stderr={initialized.stderr!r}"
+                f"returncode={initialized.returncode} (0x{initialized.returncode & 0xffffffff:08x}) "
+                f"stdout={initialized.stdout!r} stderr={initialized.stderr!r}"
             )
         installed = subprocess.run(
             [str(dsh), "plugin", "--profile", "legacy-sdk", "add", f"file:{plugin}"],

@@ -2,6 +2,11 @@
 
 Each carrier skips independently when absent. The dummy API key only satisfies
 adapter loading; initialize and shutdown do not call a model.
+
+The carriers ship the native ``sdk`` profile only. The legacy bundle profile
+needs the CLI's optional compatibility packages, which the pruned deploy
+closure deliberately omits, so those cases skip instead of asserting a legacy
+composition the artifact no longer carries.
 """
 
 from __future__ import annotations
@@ -13,9 +18,14 @@ import pytest
 
 from deepseek_harness import DeepSeekHarness, HarnessClient, HarnessConfig
 from deepseek_harness.errors import JsonRpcError, TransportClosedError
-from deepseek_harness_runtime import RUNTIME_MODE_ENV_VAR, resolve_bundled_launch_args
+from deepseek_harness_runtime import (
+    RUNTIME_MODE_ENV_VAR,
+    bundled_package_dir,
+    resolve_bundled_launch_args,
+)
 
 _MODES = ("exe", "node")
+_LEGACY_BUNDLES = ("@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app")
 
 
 def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -24,6 +34,23 @@ def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
     except FileNotFoundError as exc:
         pytest.skip(f"bundled {mode}-mode runtime unavailable on this machine: {exc}")
     monkeypatch.setenv(RUNTIME_MODE_ENV_VAR, mode)
+
+
+def _legacy_bundle_roots() -> tuple[Path, ...]:
+    """Skip the legacy-profile case when the carrier ships no compatibility packages.
+
+    The bundled carriers deploy a native-only closure, and the CLI refuses a
+    legacy profile without its optional compatibility packages. The case only
+    has meaning on a carrier that still carries them.
+    """
+    node_root = bundled_package_dir() / "runtime" / "node"
+    roots = tuple(node_root / "node_modules" / bundle for bundle in _LEGACY_BUNDLES)
+    if node_root.is_dir() and not all(root.is_dir() for root in roots):
+        pytest.skip(
+            "bundled carrier deploys the native-only closure; the legacy profile "
+            f"needs {', '.join(_LEGACY_BUNDLES)}, which it omits"
+        )
+    return roots
 
 
 def _client(
@@ -53,7 +80,7 @@ def test_bundled_runtime_boots_the_sdk_profile(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with _client(tmp_path, mode, monkeypatch) as client:
-        init = client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-pro")
+        init = client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
 
     assert init.serverInfo is not None
     assert init.serverInfo.name == "deepseek-harness-sdk-runtime"
@@ -69,12 +96,14 @@ def test_python_sdk_applies_an_ordered_profile_patch(
 ) -> None:
     _select_mode(mode, monkeypatch)
     patch = tmp_path / "persona.patch.json"
+    # A present installation config replaces the whole prior value, so the
+    # patch repeats maxSteps instead of relying on a merge.
     patch.write_text(json.dumps({"formatVersion": 1, "installations": [{
         "id": "app",
-        "config": {"systemPrompt": "Python SDK ordered patch marker."},
+        "config": {"systemPrompt": "Python SDK ordered patch marker.", "maxSteps": 8},
     }]}))
     harness = DeepSeekHarness(
-        model="deepseek-v4-pro",
+        model="deepseek-v4-flash",
         cwd=str(tmp_path),
         dsh_home=str(tmp_path / "home"),
         patches=(str(patch),),
@@ -92,8 +121,8 @@ def test_python_sdk_applies_an_ordered_profile_patch(
 def test_bundled_runtime_surfaces_unbundled_plugin_failure(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    home = tmp_path / "home"
-    profile_dir = home / "profiles" / "legacy-sdk"
+    _legacy_bundle_roots()
+    profile_dir = tmp_path / "home" / "profiles" / "legacy-sdk"
     profile_dir.mkdir(parents=True)
     (profile_dir / "package.json").write_text(json.dumps({
         "name": "dsh-profile-legacy-sdk",
@@ -112,7 +141,7 @@ def test_bundled_runtime_surfaces_unbundled_plugin_failure(
     client.start()
     try:
         with pytest.raises((JsonRpcError, TransportClosedError, TimeoutError)) as excinfo:
-            client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-pro")
+            client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
     finally:
         client.close()
 
