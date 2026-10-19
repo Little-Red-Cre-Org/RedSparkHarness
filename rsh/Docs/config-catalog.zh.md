@@ -1946,7 +1946,7 @@ export interface Config {
 export type JsonlCompression = 'zstd' | 'none'
 ```
 
-来源：[`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:88`](../Engine/session/session-persistence-jsonl/src/backend.ts)
+来源：[`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:95`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 

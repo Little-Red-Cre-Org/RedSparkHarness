@@ -158,7 +158,7 @@ runPersistenceContract('jsonl-zstd', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-jsonl-zstd-contract-'))
   const instance = async (): Promise<{ persistence: SessionPersistence; dispose: () => Promise<void> }> => {
     const ctx = new Context()
-    const fiber = await ctx.plugin(JsonlSessionPersistence, { root })
+    const fiber = await ctx.plugin(JsonlSessionPersistence, { root, compression: 'zstd' })
     return {
       persistence: ctx.sessionPersistence,
       dispose: async () => { await fiber.dispose() },
@@ -374,10 +374,10 @@ describe('Zstandard frame structure', () => {
   })
 })
 
-describe('JsonlSessionPersistence: default Zstandard encoding', () => {
+describe('JsonlSessionPersistence: Zstandard encoding', () => {
   it('materializes an explicitly durable empty session as one header frame', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const m = meta('empty-zstd', '/work')
     const handle = await ctx.sessionPersistence.create(m)
     await handle.flush()
@@ -389,9 +389,9 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
     await expect(readAll(ctx.sessionPersistence, m.id)).resolves.toMatchObject({ events: [] })
   })
 
-  it('writes .jsonl.zstd by default with one header frame and one first-batch frame', async () => {
+  it('writes one header frame and one first-batch frame under Zstandard', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('default-zstd', '/work')
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
 
@@ -413,7 +413,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('serves a migrated compressed v0 read without publishing a successor', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('zstd-v0-read', '/work')
     const sourcePath = generationLogPath(root, header.cwd, header.id, 0, 'zstd')
     const currentPath = logPath(root, header.cwd, header.id, 'zstd')
@@ -455,7 +455,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('a read rejects a present zstd artifact that carries no frame', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('raw-zero-frame', '/work')
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
     // The path still exists, so zero frames is corruption rather than absence.
@@ -472,12 +472,12 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
       backend = new JsonlSessionPersistence(inner, { root })
     })
     const header = meta('direct-default')
-    const path = logPath(root, header.cwd, header.id, 'zstd')
+    const path = logPath(root, header.cwd, header.id, 'none')
 
     const events = oneTurnLog()
     await writeLog(backend, header, events)
 
-    const plaintext = (await decodeCompleteFrames(await readFile(path))).toString()
+    const plaintext = (await readFile(path)).toString()
     const recordTypes = plaintext.trimEnd().split('\n')
       .map(line => (JSON.parse(line) as { type: string }).type)
     expect(recordTypes).not.toContain('text-chunks')
@@ -490,7 +490,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('appends one frame per durable batch without rewriting prior bytes', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('append-frame')
     const handle = await ctx.sessionPersistence.create(header)
     await handle.append(oneTurnLog())
@@ -511,7 +511,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('lists from a multi-chunk header frame without decoding a corrupt event frame', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('large-header', `/work/${'x'.repeat(24_000)}`)
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
     const path = logPath(root, header.cwd, header.id, 'zstd')
@@ -526,7 +526,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('stops multi-frame inspection when cancellation arrives at a slice deadline', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('cancel-zstd-frames')
     const headerFrame = await compressZstdFrame(`${JSON.stringify(toHeaderLine(header))}\n`)
     const eventFrame = await compressZstdFrame(`${JSON.stringify(oneTurnLog()[0])}\n`)
@@ -544,7 +544,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('continues decoding every frame after a slice deadline yields', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('yield-zstd-frames')
     const events = oneTurnLog().slice(0, 2)
     const headerFrame = await compressZstdFrame(`${JSON.stringify(toHeaderLine(header))}\n`)
@@ -594,7 +594,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('recovers complete records from a torn final frame and rewrites them on the next append', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('recover-torn', '/proj')
     const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => undefined)
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
@@ -646,7 +646,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('retries the torn-tail rewrite when its first durable write fails', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('retry-torn-rewrite', '/proj')
     vi.spyOn(ctx.logger, 'warn').mockImplementation(() => undefined)
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
@@ -695,7 +695,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('drops a frame torn in its header before it has produced plaintext', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('partial-magic')
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
     const path = logPath(root, header.cwd, header.id, 'zstd')
@@ -709,7 +709,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('recovers a final frame torn at its checksum byte in full', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('partial-checksum')
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
     const path = logPath(root, header.cwd, header.id, 'zstd')
@@ -739,7 +739,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('rejects a complete frame containing a torn JSONL record', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('complete-bad-jsonl')
     await writeLog(ctx.sessionPersistence, header, oneTurnLog())
     await appendFile(
@@ -751,7 +751,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
 
   it('rolls back a checksummed append frame when fsync fails', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     const header = meta('zstd-fsync-rollback')
     const handle = await ctx.sessionPersistence.create(header)
     await handle.append(oneTurnLog())
@@ -793,7 +793,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
       await mkdir(sessionDir(root, undefined, sessionId), { recursive: true })
       await writeFile(logPath(root, undefined, sessionId, 'zstd'), content)
     }
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     expect(await ctx.sessionPersistence.list()).toEqual([])
 
     const twoLinesId = SessionId('two-lines')
@@ -818,7 +818,7 @@ describe('JsonlSessionPersistence: default Zstandard encoding', () => {
     const corruptHeader = Buffer.from(await compressZstdFrame(`${JSON.stringify(toHeaderLine(meta('bad-checksum')))}\n`))
     corruptHeader[corruptHeader.length - 1] = corruptHeader[corruptHeader.length - 1]! ^ 0xFF
     await writeFile(logPath(root, undefined, SessionId('bad-checksum'), 'zstd'), corruptHeader)
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
 
     await expect(ctx.sessionPersistence.open(SessionId('partial-only'), 'read'))
       .rejects.toThrow(/empty or header-less Zstandard session log/)
@@ -833,19 +833,30 @@ describe('JsonlSessionPersistence: encoding selection', () => {
     const rawRoot = await freshRoot('dsh-jsonl-raw-mismatch-')
     const raw = await mount(rawRoot, 'none')
     await writeLog(raw.sessionPersistence, meta('raw-log'), oneTurnLog())
-    const defaultBackend = await mount(rawRoot)
-    await expect(defaultBackend.sessionPersistence.list()).rejects.toThrow(/configured for compression "zstd"/)
+    const zstdBackend = await mount(rawRoot, 'zstd')
+    await expect(zstdBackend.sessionPersistence.list()).rejects.toThrow(/configured for compression "zstd"/)
 
     const zstdRoot = await freshRoot('dsh-jsonl-zstd-mismatch-')
-    const zstd = await mount(zstdRoot)
+    const zstd = await mount(zstdRoot, 'zstd')
     await writeLog(zstd.sessionPersistence, meta('zstd-log'), oneTurnLog())
     const rawBackend = await mount(zstdRoot, 'none')
     await expect(rawBackend.sessionPersistence.list()).rejects.toThrow(/configured for compression "none"/)
   })
 
+  it('stores plaintext when the composition does not choose an encoding', async () => {
+    const root = await freshRoot('dsh-jsonl-default-')
+    const ctx = await mount(root)
+    const header = meta('default-encoding')
+    await writeLog(ctx.sessionPersistence, header, oneTurnLog())
+
+    const written = await readdir(sessionDir(root, header.cwd, header.id))
+    expect(written.filter(name => name.endsWith('.jsonl'))).toHaveLength(1)
+    expect(written.filter(name => name.endsWith('.jsonl.zstd'))).toEqual([])
+  })
+
   it('rechecks targeted artifacts and listing after an initially empty root', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     expect(await ctx.sessionPersistence.list()).toEqual([])
 
     const loadHeader = meta('late-raw-load', '/late')
@@ -862,7 +873,7 @@ describe('JsonlSessionPersistence: encoding selection', () => {
 
   it('refuses materialization when an opposite artifact appears after create', async () => {
     const root = await freshRoot()
-    const ctx = await mount(root)
+    const ctx = await mount(root, 'zstd')
     await ctx.sessionPersistence.list()
     const header = meta('late-raw-materialize', '/late')
     const handle = await ctx.sessionPersistence.create(header)

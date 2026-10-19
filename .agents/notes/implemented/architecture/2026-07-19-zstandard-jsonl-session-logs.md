@@ -36,7 +36,7 @@ EOF inside the final frame is a torn tail. The frame belongs to an append that n
 
 ### Consumers and verification
 
-The CLI, ACP, and stdio app bundles expose symmetric `persistenceCompression` pass-through configuration. The web host assembly and ordinary app compositions omit the option and use the compressed default. Snapshot recording and replay compositions select `'none'` explicitly because committed fixtures are raw JSONL inputs to replay and normalization.
+The CLI, ACP, and stdio app bundles expose symmetric `persistenceCompression` pass-through configuration. Compositions that omit the option get the backend default, which is plaintext: every shipped profile template and the Desktop profile writer select `'none'`, so Zstandard is chosen explicitly rather than inherited. Snapshot recording and replay compositions also select `'none'` explicitly because committed fixtures are raw JSONL inputs to replay and normalization.
 
 The shared persistence and coordinator contracts run against both encodings. Backend tests cover standard framing and checksum interoperability, header-only listing, append rollback, encoding mismatch rejection, complete-frame corruption, and final-frame tears through headers, blocks, and checksum trailers. Default runtime, built-bin, headless, ACP, and Python smokes assert the compressed suffix and Zstandard magic or decode the header; raw-content tests opt out explicitly.
 

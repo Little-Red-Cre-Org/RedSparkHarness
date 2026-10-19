@@ -63,7 +63,14 @@ export type { JsonlCompression } from './format.ts'
  */
 const COLD_LOG_MEMO_MAX_ENTRIES = 2
 
-const DEFAULT_COMPRESSION: JsonlCompression = 'zstd'
+/**
+ * Physical encoding when a composition does not choose one.
+ *
+ * Plaintext keeps session logs readable during diagnosis and matches what every shipped profile
+ * template and the Desktop profile writer already select, so a backend mounted without an explicit
+ * `compression` stores the same generation the rest of the product does.
+ */
+const DEFAULT_COMPRESSION: JsonlCompression = 'none'
 /**
  * Internal scheduling constant, not deployment configuration: balance
  * frame-boundary event-loop yields against `setImmediate` overhead. One frame
