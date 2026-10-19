@@ -172,6 +172,22 @@ describe('pruneStagedClosure', () => {
     expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray'])
   })
 
+  it('keeps a nested tree when neither copy declares a version', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': {},
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({ name: '@scope/stray' })}\n`)
+
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray'], [])
+
+    expect(existsSync(nested)).toBe(true)
+    expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray'])
+  })
+
   it('keeps a nested tree whose divergence sits below its direct child', () => {
     const nodeModules = staging({
       '@scope/cli': {},

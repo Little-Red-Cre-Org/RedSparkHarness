@@ -233,6 +233,9 @@ function pruneNestedNodeModules(
  */
 function isEquivalentToRoot(nested: StagedPackage, root: StagedPackage | undefined): boolean {
   if (root === undefined) return false
+  // Two manifests that both omit `version` are not evidence of the same release, so absence
+  // leaves the copy unproven and the tree is kept.
+  if (nested.manifest.version === undefined || root.manifest.version === undefined) return false
   if (nested.manifest.version !== root.manifest.version) return false
   return sameMap(nested.manifest.dependencies, root.manifest.dependencies)
     && sameMap(nested.manifest.peerDependencies, root.manifest.peerDependencies)

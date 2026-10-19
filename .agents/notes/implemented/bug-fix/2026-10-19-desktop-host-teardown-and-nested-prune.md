@@ -29,6 +29,8 @@ Each descriptor has exactly one owner.
 
 The prune keeps a nested tree unless it is provably equivalent to the staging root. `pruneNestedNodeModules` now takes the package map read before any deletion and compares every package in a nested tree against its same-named root package: same `version`, and the same `dependencies` and `peerDependencies` maps regardless of key order. The comparison descends into deeper `node_modules` trees, because a copy that nests further is not proven equivalent by its direct children alone. A tree whose packages all match, at every depth, is deleted as pure weight. A tree holding any divergent package — a different version, a different neighbour map, or no root counterpart at all — is kept, and each blocking package is reported through the new `PruneResult.retainedNested` as `owner -> nested package`.
 
+Equivalence is proven, never assumed. A package whose copy and root both omit `version` is treated as divergent: two manifests that say nothing about their release are not evidence of the same one, so the tree stays.
+
 ## Alternatives considered
 
 **Set `autoClose: false` and keep the explicit `closeSync` calls.** Rejected because the streams still hold the descriptor and their own destroy path still closes it; `autoClose: false` changes when the stream closes its handle, not whether teardown and the stream race for it. The descriptor needs one owner, not a flag that pretends there are none.
@@ -55,4 +57,4 @@ Equivalence covers `version`, `dependencies`, and `peerDependencies`. A nested c
 
 `rsh/Programs/Desktop/tests/host-process.spec.ts` gains two cases: one starts a ready Host, stops it, and asserts `onFailure` was never called and no `EBADF` line was logged; the other makes the child exit with a non-zero code during teardown and asserts the exit is still reported. The fixture Host in that file no longer calls `closeSync` after `destroy()`, so the fixture models the shipped Host instead of the defect.
 
-`rsh/Scripts/python-runtime-closure-prune.spec.ts` covers the four outcomes the rule distinguishes — an equivalent tree is deleted, a divergent copy (other version, other dependency map, or no root counterpart) is kept and reported, and a divergence below a direct child keeps the tree — plus key-order insensitivity of the dependency comparison.
+`rsh/Scripts/python-runtime-closure-prune.spec.ts` covers the outcomes the rule distinguishes — an equivalent tree is deleted; a divergent copy (other version, other dependency map, no root counterpart, or no version on either side) is kept and reported; and a divergence below a direct child keeps the tree — plus key-order insensitivity of the dependency comparison.

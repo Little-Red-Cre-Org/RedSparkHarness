@@ -29,6 +29,8 @@ Python runtime 的 prune 有一个镜像问题。`pruneNestedNodeModules` 删除
 
 prune 只在嵌套树可证明与暂存根等价时才删除它。`pruneNestedNodeModules` 现在接收“删除前读取的包映射”，把嵌套树中的每个包与其同名根包比较：`version` 相同，且 `dependencies` 与 `peerDependencies` 映射在忽略键序的情况下相等。比较会递归进入更深的 `node_modules`，因为一个继续向下嵌套的副本无法仅凭其直接子项被证明等价。全部匹配的树（在每一层）作为纯粹的冗余被删除。含有任何不一致包的树 —— 版本不同、同伴映射不同、或根本没有同名根包 —— 予以保留，每个阻断删除的包通过新增的 `PruneResult.retainedNested` 以 `owner -> 嵌套包` 的形式上报。
 
+等价性是被证明的，而不是被假定的。副本与根包都不声明 `version` 的包按不一致处理：两份都没有说明自身发布版本的清单，不构成同一版本的证据，因此该树保留。
+
 ## Alternatives considered
 
 **设置 `autoClose: false` 并保留显式的 `closeSync` 调用。** 否决：流仍然持有该描述符，其自身的销毁路径仍然会关闭它；`autoClose: false` 改变的是流何时关闭句柄，而不是收尾与流是否竞争这个句柄。描述符需要唯一所有者，而不是一个假装没有所有者的标志。
@@ -55,4 +57,4 @@ prune 可能保留它过去会删除的嵌套树，因此打包后的 Python run
 
 `rsh/Programs/Desktop/tests/host-process.spec.ts` 新增两个用例：一个启动就绪的 Host 并停止它，断言 `onFailure` 从未被调用、也没有记录任何含 `EBADF` 的行；另一个让子进程在收尾期间以非零码退出，断言该退出仍被上报。该文件中的 Host 夹具不再在 `destroy()` 之后调用 `closeSync`，因此夹具现在模拟的是真实的 Host 而不是缺陷。
 
-`rsh/Scripts/python-runtime-closure-prune.spec.ts` 覆盖规则区分的四种结果 —— 等价树被删除、不一致副本（版本不同、依赖映射不同、无同名根包）被保留并上报、直接子项之下的不一致也会保留整棵树 —— 以及依赖比较的键序无关性。
+`rsh/Scripts/python-runtime-closure-prune.spec.ts` 覆盖规则区分的各种结果 —— 等价树被删除；不一致副本（版本不同、依赖映射不同、无同名根包、或两侧都不声明版本）被保留并上报；直接子项之下的不一致也会保留整棵树 —— 以及依赖比较的键序无关性。
