@@ -25,7 +25,7 @@ Python runtime 的 prune 有一个镜像问题。`pruneNestedNodeModules` 删除
 
 `rsh/Programs/DesktopHost/src/pipes.ts` 中的 `openDesktopHostPipes()` 把两个描述符都打开为拥有它们的流，其 `close()` 只执行一次：销毁请求端，在响应端等待 `end()` 以便排队中的帧送达 Electron，然后销毁写流。`runDesktopHost` 的停止路径只调用 `pipes.close()`；Host 入口中已不再有 `closeSync`。
 
-`DesktopHostProcess.stop()` 在请求子进程关闭之前置位 `stopping`，`fail()` 会检查该标志。一次有意收尾期间出现的 EOF、零退出码或迟到的管道错误，都是这次调用所要求的结果，因此都不作为失败上报。非零退出码仍然上报，因为那是子进程在退出途中真的失败了。
+`DesktopHostProcess.stop()` 在请求子进程关闭之前置位 `stopping`。此后管道 `error` 事件与响应管道的 `'end'` 都被忽略，因为 `stop()` 自己会关闭两个管道，它们的失败是这次关闭的预期后果。`fail()` 有意**不**受该标志约束：子进程的退出处理器在收尾期间仍会上报非零退出码，因此退出途中崩溃的 Host 仍然可见，而不会被记成一次干净的停止。
 
 prune 只在嵌套树可证明与暂存根等价时才删除它。`pruneNestedNodeModules` 现在接收“删除前读取的包映射”，把嵌套树中的每个包与其同名根包比较：`version` 相同，且 `dependencies` 与 `peerDependencies` 映射在忽略键序的情况下相等。比较会递归进入更深的 `node_modules`，因为一个继续向下嵌套的副本无法仅凭其直接子项被证明等价。全部匹配的树（在每一层）作为纯粹的冗余被删除。含有任何不一致包的树 —— 版本不同、同伴映射不同、或根本没有同名根包 —— 予以保留，每个阻断删除的包通过新增的 `PruneResult.retainedNested` 以 `owner -> 嵌套包` 的形式上报。
 
@@ -53,6 +53,6 @@ prune 可能保留它过去会删除的嵌套树，因此打包后的 Python run
 
 `rsh/Programs/DesktopHost/tests/pipes.spec.ts` 把两个描述符打开为普通文件，断言一次关闭在没有任何流错误的情况下完成且两个描述符都已关闭、排队的响应字节先被刷出、重复的 `close()` 调用共享一次收尾。
 
-`rsh/Programs/Desktop/tests/host-process.spec.ts` 新增用例：启动一个就绪的 Host、停止它，并断言 `onFailure` 从未被调用、也没有记录任何含 `EBADF` 的行。该文件中的 Host 夹具不再在 `destroy()` 之后调用 `closeSync`，因此夹具现在模拟的是真实的 Host 而不是缺陷。
+`rsh/Programs/Desktop/tests/host-process.spec.ts` 新增两个用例：一个启动就绪的 Host 并停止它，断言 `onFailure` 从未被调用、也没有记录任何含 `EBADF` 的行；另一个让子进程在收尾期间以非零码退出，断言该退出仍被上报。该文件中的 Host 夹具不再在 `destroy()` 之后调用 `closeSync`，因此夹具现在模拟的是真实的 Host 而不是缺陷。
 
 `rsh/Scripts/python-runtime-closure-prune.spec.ts` 覆盖规则区分的四种结果 —— 等价树被删除、不一致副本（版本不同、依赖映射不同、无同名根包）被保留并上报、直接子项之下的不一致也会保留整棵树 —— 以及依赖比较的键序无关性。

@@ -231,6 +231,23 @@ function onRequestFrame() {}
     } finally { await host.stop().catch(() => undefined) }
   })
 
+  it('still reports a child that fails while the teardown is in progress', async () => {
+    const project = projectWithHost(`
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'crash-during-stop' })
+function onRequestFrame() {}
+process.on('message', message => { if (message.type === 'shutdown') process.exit(7) })
+`)
+    const failures: Error[] = []
+    const host = new DesktopHostProcess(process.execPath, project, project, undefined, process.env,
+      (error) => { failures.push(error) })
+    try {
+      await host.start()
+      await host.stop()
+      // An intentional teardown suppresses pipe EOF, never a non-zero child exit.
+      await expect.poll(() => failures.map(error => error.message)).toEqual(['dsh desktop host exited with 7'])
+    } finally { await host.stop().catch(() => undefined) }
+  })
+
   it('ignores a response end that arrives after the renderer cancels its stream', async () => {
     const project = projectWithHost(`
 process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'cancel-race' })

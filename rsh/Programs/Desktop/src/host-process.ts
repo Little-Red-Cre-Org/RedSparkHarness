@@ -151,8 +151,8 @@ export class DesktopHostProcess {
         this.fail(errorOf(error, 'dsh desktop host response pipe failed'))
       }
     })
-    requestPipe.once('error', (error) => { this.fail(error) })
-    responsePipe.once('error', (error) => { this.fail(error) })
+    requestPipe.once('error', (error) => { this.failUnlessStopping(error) })
+    responsePipe.once('error', (error) => { this.failUnlessStopping(error) })
     child.on('message', (message: unknown) => {
       if (!isDesktopHostEvent(message)) {
         this.fail(new Error('dsh desktop host sent an invalid IPC event'))
@@ -426,9 +426,21 @@ export class DesktopHostProcess {
     }
   }
 
+  /**
+   * Report a pipe failure except during an intentional teardown.
+   *
+   * `stop()` closes both pipes itself, so an error they emit once teardown started is the
+   * expected consequence of that close. A child that fails on its own is reported by the exit
+   * handler, which keeps a non-zero exit visible even while stopping.
+   * @param error - failure raised by a pipe stream.
+   */
+  private failUnlessStopping(error: Error): void {
+    if (!this.stopping) this.fail(error)
+  }
+
   private fail(error: Error): void {
     this.readyReject(error)
-    if (!this.failureReported && !this.stopping) {
+    if (!this.failureReported) {
       this.failureReported = true
       try { this.onFailure?.(error) } catch (listenerError) {
         this.logError('desktop host failure listener failed', listenerError)

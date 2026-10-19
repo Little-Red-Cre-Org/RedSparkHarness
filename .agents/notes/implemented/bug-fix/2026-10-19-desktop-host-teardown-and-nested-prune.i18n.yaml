@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-19-desktop-host-teardown-and-nested-prune.md
-2026-10-19-desktop-host-teardown-and-nested-prune.md: 45464b578c55128602a7df1b047522eff0796768
-2026-10-19-desktop-host-teardown-and-nested-prune.zh.md: ec9cd85c287d7bd4d8fca522afd1b69478f8958f
+2026-10-19-desktop-host-teardown-and-nested-prune.md: 5ecb70f6e2dfde6d7e9c3cc7ca5c977e1cee9a63
+2026-10-19-desktop-host-teardown-and-nested-prune.zh.md: 1ca23d5197fcab0852b293e796d376db4b6f20b4
