@@ -389,7 +389,7 @@ describe('JsonlSessionPersistence: Zstandard encoding', () => {
     await expect(readAll(ctx.sessionPersistence, m.id)).resolves.toMatchObject({ events: [] })
   })
 
-  it('writes .jsonl.zstd by default with one header frame and one first-batch frame', async () => {
+  it('writes one header frame and one first-batch frame under Zstandard', async () => {
     const root = await freshRoot()
     const ctx = await mount(root, 'zstd')
     const header = meta('default-zstd', '/work')
