@@ -409,6 +409,12 @@ class SingleExeBuild {
     if (result.removed.length > 0) {
       console.log(`build-exe-for-python-sdk: pruned ${result.removed.length} staged packages outside the declared closure.`)
     }
+    // A retained nested tree is a copy the runtime resolves instead of the staging root, so the
+    // artifact keeps bytes this build cannot prove it could drop. Surface it rather than let a
+    // divergence accumulate unseen.
+    for (const entry of result.retainedNested ?? []) {
+      console.log(`build-exe-for-python-sdk: kept nested package divergent from the staging root: ${entry}.`)
+    }
     const cordis = installedMatching(nodeModules, /cordis/u)
     const unexpected = cordis.filter(name => !PRESET_REQUIRED_CORDIS.has(name))
     if (unexpected.length > 0) {

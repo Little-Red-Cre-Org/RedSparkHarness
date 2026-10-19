@@ -98,7 +98,65 @@ describe('pruneStagedClosure', () => {
     expect(installedMatching(nodeModules, /@scope\//u)).toEqual(['@scope/cli', '@scope/kept'])
   })
 
-  it('removes nested node_modules trees of retained packages', () => {
+  it('removes a nested tree that duplicates the staging root exactly', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': { version: '1.0.0', dependencies: { '@scope/peer': '1' } },
+      '@scope/peer': {},
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({
+      name: '@scope/stray', version: '1.0.0', dependencies: { '@scope/peer': '1' },
+    })}\n`)
+
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray'], [])
+
+    expect(existsSync(join(nodeModules, '@scope/nested-owner/node_modules'))).toBe(false)
+    expect(result.retainedNested).toBeUndefined()
+  })
+
+  it('keeps a nested tree whose copy declares another version', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': { version: '1.0.0', dependencies: { '@scope/peer': '1' } },
+      '@scope/peer': {},
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({
+      name: '@scope/stray', version: '2.0.0', dependencies: { '@scope/peer': '1' },
+    })}\n`)
+
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray'], [])
+
+    expect(existsSync(nested)).toBe(true)
+    expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray'])
+  })
+
+  it('treats a different dependency map as a divergence at the same version', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': { version: '1.0.0', dependencies: { '@scope/peer': '1' } },
+      '@scope/peer': {},
+      '@scope/other': {},
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({
+      name: '@scope/stray', version: '1.0.0', dependencies: { '@scope/other': '1' },
+    })}\n`)
+
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray'], [])
+
+    expect(existsSync(nested)).toBe(true)
+    expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray'])
+  })
+
+  it('keeps a nested tree whose package has no same-named package in the staging root', () => {
     const nodeModules = staging({
       '@scope/cli': {},
       '@scope/nested-owner': {},
@@ -106,9 +164,49 @@ describe('pruneStagedClosure', () => {
     })
     const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
     mkdirSync(nested, { recursive: true })
-    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({ name: '@scope/stray' })}\n`)
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({ name: '@scope/stray', version: '1.0.0' })}\n`)
 
-    pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/legacy-removed'], [])
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/legacy-removed'], [])
+
+    expect(existsSync(nested)).toBe(true)
+    expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray'])
+  })
+
+  it('keeps a nested tree whose divergence sits below its direct child', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': { version: '1.0.0' },
+      '@scope/deep': { version: '1.0.0' },
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({ name: '@scope/stray', version: '1.0.0' })}\n`)
+    const deeper = join(nested, 'node_modules/@scope/deep')
+    mkdirSync(deeper, { recursive: true })
+    writeFileSync(join(deeper, 'package.json'), `${JSON.stringify({ name: '@scope/deep', version: '9.9.9' })}\n`)
+
+    const result = pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray', '@scope/deep'], [])
+
+    expect(existsSync(nested)).toBe(true)
+    expect(result.retainedNested).toEqual(['@scope/nested-owner -> @scope/stray/@scope/deep'])
+  })
+
+  it('compares dependency maps regardless of key order', () => {
+    const nodeModules = staging({
+      '@scope/cli': {},
+      '@scope/nested-owner': {},
+      '@scope/stray': { version: '1.0.0', dependencies: { '@scope/a': '1', '@scope/b': '2' } },
+      '@scope/a': {},
+      '@scope/b': {},
+    })
+    const nested = join(nodeModules, '@scope/nested-owner/node_modules/@scope/stray')
+    mkdirSync(nested, { recursive: true })
+    writeFileSync(join(nested, 'package.json'), `${JSON.stringify({
+      name: '@scope/stray', version: '1.0.0', dependencies: { '@scope/b': '2', '@scope/a': '1' },
+    })}\n`)
+
+    pruneStagedClosure(nodeModules, ['@scope/cli', '@scope/nested-owner', '@scope/stray'], [])
 
     expect(existsSync(join(nodeModules, '@scope/nested-owner/node_modules'))).toBe(false)
   })

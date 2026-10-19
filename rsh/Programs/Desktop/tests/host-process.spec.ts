@@ -7,7 +7,7 @@ import { DesktopHostProcess } from '../src/host-process.ts'
 const roots: string[] = []
 
 const HOST_WIRE = `
-import { closeSync, createReadStream, createWriteStream } from 'node:fs'
+import { createReadStream, createWriteStream } from 'node:fs'
 const requestPipe = createReadStream('', { fd: 3, autoClose: false })
 const responsePipe = createWriteStream('', { fd: 4, autoClose: false })
 const MAGIC = 0x44534833
@@ -48,11 +48,10 @@ requestPipe.on('data', chunk => {
 })
 process.on('message', message => {
   if (message.type === 'shutdown') {
+    // The streams own descriptors 3 and 4: destroy() closes the read end and end()
+    // closes the write end. A separate close would run after one of them and report EBADF.
     requestPipe.destroy()
-    closeSync(3)
     responsePipe.end(() => {
-      responsePipe.destroy()
-      closeSync(4)
       process.disconnect()
       process.exitCode = 0
     })
@@ -213,6 +212,23 @@ function onRequestFrame(frame) {
     } finally {
       await host.stop().catch(() => undefined)
     }
+  })
+
+  it('stops a ready Host without reporting the teardown as a failure', async () => {
+    const project = projectWithHost(`
+process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'clean-stop' })
+function onRequestFrame() {}
+`)
+    const failures: Error[] = []
+    const logged: string[] = []
+    const host = new DesktopHostProcess(process.execPath, project, project, undefined, process.env,
+      (error) => { failures.push(error) }, (label, error) => { logged.push(`${label} :: ${String(error)}`) })
+    try {
+      await host.start()
+      await expect(host.stop()).resolves.toBeUndefined()
+      expect(failures).toEqual([])
+      expect(logged.filter(line => line.includes('EBADF'))).toEqual([])
+    } finally { await host.stop().catch(() => undefined) }
   })
 
   it('ignores a response end that arrives after the renderer cancels its stream', async () => {

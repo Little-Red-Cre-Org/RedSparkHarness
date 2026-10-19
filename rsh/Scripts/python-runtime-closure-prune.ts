@@ -14,6 +14,7 @@ export interface StagedPackage {
   readonly name: string
   readonly directory: string
   readonly manifest: {
+    readonly version?: string
     readonly dependencies?: Record<string, string>
     readonly optionalDependencies?: Record<string, string>
     readonly peerDependencies?: Record<string, string>
@@ -128,6 +129,8 @@ function unique(values: readonly string[]): string[] {
 export interface PruneResult {
   readonly removed: readonly string[]
   readonly unresolved: readonly string[]
+  /** `owner -> nested package` entries whose nested tree was kept because it is not equivalent. */
+  readonly retainedNested?: readonly string[]
 }
 
 /**
@@ -136,7 +139,7 @@ export interface PruneResult {
  * @param declared - dependency names the runtime manifest declares.
  * @param leafPackages - packages whose optional dependency edges must not be followed.
  * @param dryRun - report the plan without deleting.
- * @returns removed and unresolved package names.
+ * @returns removed and unresolved package names, plus nested trees kept for a divergence.
  */
 export function pruneStagedClosure(
   nodeModules: string,
@@ -155,25 +158,52 @@ export function pruneStagedClosure(
   }
   // The virtual store holds the same trees; removing it after the links are gone drops the copies.
   rmSync(join(nodeModules, '.pnpm'), { recursive: true, force: true })
-  // Nested node_modules trees under retained packages carry the same superset; a retained package
-  // resolves its peers from the staging root, so the nested copies only add unreachable weight.
-  // This runs even when nothing was pruned at the top level.
-  pruneNestedNodeModules(nodeModules, reachable)
-  return { removed: pruned.sort(), unresolved }
+  // Nested node_modules trees under retained packages are only weight when they duplicate the
+  // staging root exactly; a divergent copy is what Node would actually resolve, so it stays.
+  const retainedNested = pruneNestedNodeModules(nodeModules, reachable, packages)
+  return { removed: pruned.sort(), unresolved, ...(retainedNested.length === 0 ? {} : { retainedNested }) }
 }
 
 /**
- * Delete nested node_modules trees under every retained package.
+ * Delete the nested node_modules trees of retained packages that duplicate the staging root.
  *
- * A retained package resolves its peers from the staging root, so a nested copy can only add
- * unreachable weight or a second instance of a shared package.
+ * Node resolves `<package>/node_modules/<dep>` before the staging root, so a nested copy decides
+ * which module the runtime loads. A tree is removed only when every package it holds, at every
+ * depth, is equivalent to its same-named root package: same version, same `dependencies`, and
+ * same `peerDependencies`. Anything else stays, and is reported to the caller.
  * @param nodeModules - absolute path of the deployed node_modules directory.
  * @param reachable - package names the closure keeps.
+ * @param rootPackages - packages read from the staging root before any deletion.
+ * @returns `owner -> nested package` entries whose divergence kept the nested tree.
  */
-function pruneNestedNodeModules(nodeModules: string, reachable: ReadonlySet<string>): void {
-  const visitPackage = (directory: string): void => {
+function pruneNestedNodeModules(
+  nodeModules: string,
+  reachable: ReadonlySet<string>,
+  rootPackages: ReadonlyMap<string, StagedPackage>,
+): string[] {
+  const retained: string[] = []
+  const visitPackage = (owner: string, directory: string): void => {
     const nested = join(directory, 'node_modules')
-    if (existsSync(nested)) rmSync(nested, { recursive: true, force: true })
+    if (!existsSync(nested)) return
+    const divergent: string[] = []
+    // Judge the complete tree: a copy that nests further is not proven equivalent by its
+    // direct children alone, so descend instead of assuming the deeper levels match.
+    const inspect = (candidate: string, label: string): void => {
+      for (const [name, staged] of readStagedPackages(candidate)) {
+        if (!isEquivalentToRoot(staged, rootPackages.get(name))) {
+          divergent.push(label === '' ? name : `${label}/${name}`)
+          continue
+        }
+        const deeper = join(staged.directory, 'node_modules')
+        if (existsSync(deeper)) inspect(deeper, label === '' ? name : `${label}/${name}`)
+      }
+    }
+    inspect(nested, '')
+    if (divergent.length === 0) {
+      rmSync(nested, { recursive: true, force: true })
+      return
+    }
+    for (const name of divergent.sort()) retained.push(`${owner} -> ${name}`)
   }
   for (const entry of readdirSync(nodeModules, { withFileTypes: true })) {
     if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
@@ -183,14 +213,44 @@ function pruneNestedNodeModules(nodeModules: string, reachable: ReadonlySet<stri
       if (!existsSync(scopeDir)) continue
       for (const scoped of readdirSync(scopeDir, { withFileTypes: true })) {
         if (!scoped.isDirectory() && !scoped.isSymbolicLink()) continue
-        if (!reachable.has(`${entry.name}/${scoped.name}`)) continue
-        visitPackage(join(scopeDir, scoped.name))
+        const name = `${entry.name}/${scoped.name}`
+        if (!reachable.has(name)) continue
+        visitPackage(name, join(scopeDir, scoped.name))
       }
     } else {
       if (!reachable.has(entry.name)) continue
-      visitPackage(join(nodeModules, entry.name))
+      visitPackage(entry.name, join(nodeModules, entry.name))
     }
   }
+  return retained.sort()
+}
+
+/**
+ * Report whether a nested package resolves to the same module as the staging root copy.
+ * @param nested - package found below a retained package's own `node_modules`.
+ * @param root - same-named package in the staging root, when one exists.
+ * @returns true when both declare the same version and the same neighbour maps.
+ */
+function isEquivalentToRoot(nested: StagedPackage, root: StagedPackage | undefined): boolean {
+  if (root === undefined) return false
+  if (nested.manifest.version !== root.manifest.version) return false
+  return sameMap(nested.manifest.dependencies, root.manifest.dependencies)
+    && sameMap(nested.manifest.peerDependencies, root.manifest.peerDependencies)
+}
+
+/**
+ * Compare two dependency maps regardless of key order.
+ * @param left - first map.
+ * @param right - second map.
+ * @returns true when both name the same keys with the same ranges.
+ */
+function sameMap(left: Record<string, string> | undefined, right: Record<string, string> | undefined): boolean {
+  const leftMap = left ?? {}
+  const rightMap = right ?? {}
+  const leftKeys = Object.keys(leftMap).sort()
+  const rightKeys = Object.keys(rightMap).sort()
+  if (leftKeys.length !== rightKeys.length) return false
+  return leftKeys.every((key, index) => key === rightKeys[index] && leftMap[key] === rightMap[key])
 }
 
 /**

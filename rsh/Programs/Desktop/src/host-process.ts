@@ -90,6 +90,7 @@ export class DesktopHostProcess {
   private exitPromise: Promise<void> | undefined
   private stderr = ''
   private failureReported = false
+  private stopping = false
 
   /**
    * @param node - absolute bundled upstream Node.js executable.
@@ -141,6 +142,8 @@ export class DesktopHostProcess {
     child.stdout?.pipe(process.stdout)
     responsePipe.on('data', (chunk: Buffer) => { this.acceptResponseBytes(chunk) })
     responsePipe.once('end', () => {
+      // `stop()` closes the pipes on purpose; EOF there is the expected teardown result.
+      if (this.stopping) return
       try {
         this.responseDecoder.finish()
         this.fail(new Error('dsh desktop host response pipe ended'))
@@ -164,7 +167,7 @@ export class DesktopHostProcess {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
         if (suffix !== '') this.logError('Desktop Host stderr', this.stderr.trim())
         if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
-        else this.fail(new Error(`dsh desktop host stopped${suffix}`))
+        else if (!this.stopping) this.fail(new Error(`dsh desktop host stopped${suffix}`))
         resolve()
       })
     })
@@ -218,6 +221,9 @@ export class DesktopHostProcess {
   async stop(): Promise<void> {
     const child = this.child
     if (child === undefined) return
+    // Mark the teardown first: every pipe EOF, disconnect, and zero exit below is the
+    // outcome this call asked for, not a transport failure to report.
+    this.stopping = true
     this.blockedResponses.clear()
     this.responsePipe?.resume()
     if (child.connected) this.send({ type: 'shutdown' })
@@ -422,7 +428,7 @@ export class DesktopHostProcess {
 
   private fail(error: Error): void {
     this.readyReject(error)
-    if (!this.failureReported) {
+    if (!this.failureReported && !this.stopping) {
       this.failureReported = true
       try { this.onFailure?.(error) } catch (listenerError) {
         this.logError('desktop host failure listener failed', listenerError)

@@ -4,18 +4,17 @@
  * @module @deepseek-ai/dsh-desktop-host
  */
 
-import { closeSync, createReadStream, createWriteStream, mkdirSync, readFileSync } from 'node:fs'
+import { readFileSync, mkdirSync } from 'node:fs'
 import { once } from 'node:events'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
 import type { DesktopHostRuntime } from './runtime.ts'
+import { openDesktopHostPipes } from './pipes.ts'
 import {
   DESKTOP_HOST_PROTOCOL_VERSION,
   DESKTOP_PIPE_CHUNK_BYTES,
-  DESKTOP_REQUEST_PIPE_FD,
-  DESKTOP_RESPONSE_PIPE_FD,
   DesktopHostRequestDecoder,
   encodeDesktopResponseData,
   encodeDesktopResponseEnd,
@@ -242,8 +241,9 @@ async function main(): Promise<void> {
   if (option !== undefined && option !== '--allow-linked-profile') {
     throw new Error(`dsh desktop: unsupported internal option ${JSON.stringify(option)}`)
   }
-  const requestPipe = createReadStream('', { fd: DESKTOP_REQUEST_PIPE_FD, autoClose: false })
-  const responsePipe = createWriteStream('', { fd: DESKTOP_RESPONSE_PIPE_FD, autoClose: false })
+  const pipes = openDesktopHostPipes()
+  const requestPipe = pipes.requests
+  const responsePipe = pipes.responses
   let responseWriteTail: Promise<void> = Promise.resolve()
   const writeResponse = (frame: Buffer): Promise<void> => {
     const write = responseWriteTail.then(async () => {
@@ -292,16 +292,12 @@ async function main(): Promise<void> {
       requestBodies.clear()
       blockedRequests.clear()
       discardedRequestBodies.clear()
+      // Closing the request end stops further reads; the pipe owns descriptor 3.
       requestPipe.destroy()
-      closeSync(DESKTOP_REQUEST_PIPE_FD)
       await controller.dispose()
       await Promise.allSettled([...runs])
       await responseWriteTail.catch(() => undefined)
-      if (!responsePipe.destroyed) {
-        await new Promise<void>((resolvePromise) => { responsePipe.end(resolvePromise) })
-        responsePipe.destroy()
-      }
-      closeSync(DESKTOP_RESPONSE_PIPE_FD)
+      await pipes.close()
       if (process.connected) process.disconnect()
       process.exitCode = requestedExitCode
     })()
