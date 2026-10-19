@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-desktop-host
  */
 
-import { readFileSync, mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { once } from 'node:events'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'

@@ -41,8 +41,8 @@ export function openDesktopHostPipes(
     close(): Promise<void> {
       closing ??= (async () => {
         requests.destroy()
-        // `end()` closes the descriptor once its queued writes drain; destroying first would
-        // abort bytes the response pipe has not accepted yet.
+        // `end()` closes the descriptor once its queued writes drain, and its callback still runs
+        // when a queued write fails; destroying first would abort bytes the pipe has not accepted.
         if (!responses.destroyed) await new Promise<void>((resolve) => { responses.end(resolve) })
         responses.destroy()
       })()
