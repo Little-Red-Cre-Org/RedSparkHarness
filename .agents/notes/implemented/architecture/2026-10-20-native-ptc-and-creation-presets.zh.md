@@ -22,4 +22,4 @@ Native web 与 TUI profile 注册 `ptc` 和 `cordis` 子作用域。`ptc` 安装
 
 ## Consequences
 
-PTC 会话的模型只看到 `run_code`。其他继承工具仍是程序绑定，但该作用域会在 `workflow` 已发布时隐藏它。创造模式不检查、也不挂载 Cordis 插件；它用文件工具写预设目录。已有 profile 在下次加载时展开新目录，不重写 `rsh.profile.json`。未提供某行所需服务的 profile 把该预设标为无效，Host 仍然启动。已经注册这些 id 的 profile 使用自己的常驻行，并跳过目录行。`minimal` 仍然没有 `agent.native.json`。
+PTC 会话的模型只看到 `run_code`。其他继承工具仍是程序绑定，但该作用域会在 `workflow` 已发布时隐藏它。创造模式不检查、也不挂载 Cordis 插件。它的 persona 和技能要求模型写 Native 模块包和 `agent.native.json` 预设。已有 profile 在下次加载时展开新目录，不重写 `rsh.profile.json`。未提供某行所需服务的 profile 把该预设标为无效，Host 仍然启动。已经注册这些 id 的 profile 使用自己的常驻行，并跳过目录行。`minimal` 仍然没有 `agent.native.json`。
