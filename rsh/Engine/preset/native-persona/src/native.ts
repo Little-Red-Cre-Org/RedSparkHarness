@@ -11,7 +11,7 @@ import { personaServices } from './services.ts'
  * installation would plan against a Native service the preset may not mount.
  */
 export const plugin: NativePlugin = nativePluginForCordis('@deepseek-ai/dsh-native-persona', (context, config) => ({
-  plugin: { name: 'persona', apply: applyPersona as never },
+  plugin: { name: 'persona', apply: applyPersona },
   config,
   services: personaServices(context),
 }), ['promptSections'])
