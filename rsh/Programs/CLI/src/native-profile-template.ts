@@ -97,17 +97,31 @@ const NATIVE_SESSION_TITLE_INSTALLATIONS = [
     config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
 ] as const
 
+const STANDARD_PERSONA = {
+  prefix: 'You are a coding agent powered by the {{model}} model.',
+  suffix: 'Your working directory is {{cwd}}.',
+} as const
+
+const CREATION_PERSONA = {
+  prefix: "You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness.\n\nYou can author Agent presets for this Native runtime. A preset is one directory under ${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/ with preset.yml and agent.native.json. preset.yml holds the display name and description. agent.native.json uses formatVersion 1 and an installations array; each row has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope.\n\nShared services stay in the profile rsh.profile.json. A preset owns only the rows that should apply to sessions that select it. Do not edit or delete shipped presets. Copy a shipped preset into a new directory under .agent-presets and edit the copy. A plugin row must name a Native package the profile can resolve.",
+  suffix: 'Your working directory is {{cwd}}.',
+} as const
+
 const NATIVE_AGENT_PRESET_INSTALLATIONS = [
   { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
   { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
     config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
   { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
-  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard',
-    config: {
-      prefix: 'You are a coding agent powered by the {{model}} model.',
-      suffix: 'Your working directory is {{cwd}}.',
-    } },
+  { id: 'preset-ptc', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
+    config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
+  { id: 'preset-cordis', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
+    config: { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset：具备标准模式的全部能力，并提供预设创作指导。' } },
+  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
+  { id: 'persona-ptc', plugin: '@deepseek-ai/dsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
+  { id: 'persona-cordis', plugin: '@deepseek-ai/dsh-native-persona', scope: 'cordis', config: CREATION_PERSONA },
+  { id: 'code-tool-ptc', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'ptc',
+    config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] } },
 ] as const
 
 /**
@@ -245,7 +259,7 @@ export function shippedNativeProfileComposition(
   return {
     formatVersion: 1,
     scopes: profile === 'native-web' || profile === 'native-tui'
-      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }]
+      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }, { id: 'ptc', parent: ROOT }, { id: 'cordis', parent: ROOT }]
       : [{ id: ROOT }],
     installations: [
       {

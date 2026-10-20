@@ -916,7 +916,8 @@ export class NativeHeadlessApplication implements NativeApplication {
             && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
           : []
         const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)
-        const programToolNames = this.tools === undefined || this.tools.modelMode === 'native'
+        const toolMode = this.tools?.modelModeFor(agent.scope)
+        const programToolNames = this.tools === undefined || toolMode === 'native'
         || !modelTools.includes('run_code') ? []
           : this.tools.sdkSchemas(agent.scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name)
             .filter(name => allowed(name)
@@ -929,7 +930,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           }
         }
         const modelSchemas = modelSnapshot?.schemas ?? []
-        const programSnapshot = this.tools === undefined || this.tools.modelMode === 'native' || !modelTools.includes('run_code')
+        const programSnapshot = this.tools === undefined || toolMode === 'native' || !modelTools.includes('run_code')
           ? undefined : this.tools.captureProgramSnapshot(programToolNames, agent.scope)
         if (programSnapshot !== undefined) {
           toolSnapshots.push(programSnapshot)
@@ -1086,8 +1087,8 @@ export class NativeHeadlessApplication implements NativeApplication {
               }
             }
             if (delegation.programToolNames.length > 0 || registryNames.includes('run_code')
-            && this.tools !== undefined && this.tools.modelMode !== 'native') {
-              if (this.tools === undefined || this.tools.modelMode === 'native') {
+            && this.tools !== undefined && toolMode !== 'native') {
+              if (this.tools === undefined || toolMode === 'native') {
                 throw new Error('native-headless: external program bindings are unavailable')
               }
               const capturedSchemas = programSnapshot?.programSchemas?.filter(schema => delegation.programToolNames.includes(schema.name))
