@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-desktop-private-host.md
-2026-10-05-native-desktop-private-host.md: 5fa8acb3b0916722fc134f4decc1ce0750c3b4b0
-2026-10-05-native-desktop-private-host.zh.md: 4105fe8c484d3943da96c23ff04ec87bc591647a
+2026-10-05-native-desktop-private-host.md: 4179aba952f182419e5794cd999f730ee721dab6
+2026-10-05-native-desktop-private-host.zh.md: 80c706df30e7e3a4c1e077102a3a66c0c26ec5ee

@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
 import {
+  cordisHostingNativeReferences,
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
@@ -269,6 +270,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
       options: ts.CompilerOptions,
     ): boolean => {
       if (specifier.startsWith('node:')) return true
+      const hostingReferences = cordisHostingNativeReferences.get(sourceOwner)
+      if (hostingReferences?.includes(specifier) === true) return true
       if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
       if (specifier.startsWith('@deepseek-ai/cordis-plugin-')) return false
       if (stylesheetReferenceAllowed(sourceOwner, sourceFile, specifier)) return true

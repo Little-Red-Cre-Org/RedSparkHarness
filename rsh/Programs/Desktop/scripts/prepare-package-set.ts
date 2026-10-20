@@ -58,18 +58,14 @@ function dependencyNames(manifest: Readonly<Record<string, unknown>>, section: s
   return Object.keys(value).sort()
 }
 
-function requiredDependencyNames(manifest: Readonly<Record<string, unknown>>): string[] {
-  const dependencies = dependencyNames(manifest, 'dependencies')
-  const peers = dependencyNames(manifest, 'peerDependencies')
+function optionalPeerNames(manifest: Readonly<Record<string, unknown>>): Set<string> {
   const metadata = manifest.peerDependenciesMeta
-  const optionalPeers = metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
-    ? metadata as Record<string, unknown>
-    : {}
-  return [...dependencies, ...peers.filter((name) => {
-    const peer = optionalPeers[name]
-    return peer === undefined || peer === null || typeof peer !== 'object' || Array.isArray(peer)
-      || (peer as Record<string, unknown>).optional !== true
-  })]
+  if (metadata === null || typeof metadata !== 'object' || Array.isArray(metadata)) return new Set()
+  const names = Object.entries(metadata).filter(([, peer]) => {
+    return peer !== null && typeof peer === 'object' && !Array.isArray(peer)
+      && (peer as Record<string, unknown>).optional === true
+  }).map(([name]) => name)
+  return new Set(names)
 }
 
 /**
@@ -87,20 +83,32 @@ function selectClosure(
   available: ReadonlyMap<string, PackedDesktopPackage>, roots: readonly string[], skippedOptional: ReadonlySet<string>,
 ): PackedDesktopPackage[] {
   const selected = new Map<string, PackedDesktopPackage>()
+  // Compatibility-only packages stay out of the Native assembly. A peer names a host-provided
+  // package, so that edge is skipped; a hard dependency on one cannot be satisfied and fails here.
+  const follow = (owner: string, dependency: string, kind: 'dependency' | 'peer' | 'optional'): void => {
+    if (skippedOptional.has(dependency)) {
+      if (kind === 'dependency') {
+        throw new Error(`desktop package set: ${owner} requires compatibility-only package ${dependency}`)
+      }
+      return
+    }
+    if (available.has(dependency)) visit(dependency)
+    else if (kind !== 'optional' && dependency.startsWith('@deepseek-ai/')) {
+      throw new Error(`desktop package set: ${owner} requires unpacked internal package ${dependency}`)
+    }
+  }
   const visit = (name: string): void => {
     if (selected.has(name)) return
     const packed = available.get(name)
     if (packed === undefined) throw new Error(`desktop package set: packed inputs omit required package ${name}`)
     selected.set(name, packed)
-    for (const dependency of requiredDependencyNames(packed.manifest)) {
-      if (available.has(dependency)) visit(dependency)
-      else if (dependency.startsWith('@deepseek-ai/')) {
-        throw new Error(`desktop package set: ${name} requires unpacked internal package ${dependency}`)
-      }
+    const optionalPeers = optionalPeerNames(packed.manifest)
+    for (const dependency of dependencyNames(packed.manifest, 'dependencies')) follow(name, dependency, 'dependency')
+    for (const dependency of dependencyNames(packed.manifest, 'peerDependencies')) {
+      if (!optionalPeers.has(dependency)) follow(name, dependency, 'peer')
     }
     for (const dependency of dependencyNames(packed.manifest, OPTIONAL_DEPENDENCY_SECTION)) {
-      if (skippedOptional.has(dependency)) continue
-      if (available.has(dependency)) visit(dependency)
+      follow(name, dependency, 'optional')
     }
   }
   for (const name of roots) {

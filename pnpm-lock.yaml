@@ -1625,6 +1625,16 @@ importers:
 
   rsh/Core/native/system/packages/linux-x64: {}
 
+  rsh/Core/runtime-diagnostics/cordis-bridge:
+    dependencies:
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../native-runtime
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../vendor/cordis
+
   rsh/Core/runtime-diagnostics/invariants:
     dependencies:
       '@deepseek-ai/schemastery':
@@ -3676,6 +3686,28 @@ importers:
       '@deepseek-ai/dsh-typert-protocol':
         specifier: workspace:^
         version: link:../../../Core/typert/protocol
+
+  rsh/Engine/preset/native-persona:
+    dependencies:
+      '@deepseek-ai/dsh-cordis-bridge':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/cordis-bridge
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@deepseek-ai/dsh-persona':
+        specifier: workspace:^
+        version: link:../persona
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../core/system-prompt
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../Core/vendor/cordis
 
   rsh/Engine/preset/persona:
     dependencies:
@@ -9552,6 +9584,9 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../Core/vendor/cordis
       '@deepseek-ai/dsh-acp-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/acp-child
@@ -9663,6 +9698,9 @@ importers:
       '@deepseek-ai/dsh-compaction-tool-result-pruner':
         specifier: workspace:^
         version: link:../../Engine/compaction/compaction-tool-result-pruner
+      '@deepseek-ai/dsh-cordis-bridge':
+        specifier: workspace:^
+        version: link:../../Core/runtime-diagnostics/cordis-bridge
       '@deepseek-ai/dsh-credentials':
         specifier: workspace:^
         version: link:../../Modules/Official/credentials/credentials
@@ -9747,6 +9785,9 @@ importers:
       '@deepseek-ai/dsh-native-model-selection':
         specifier: workspace:^
         version: link:../../Engine/llm/native-model-selection
+      '@deepseek-ai/dsh-native-persona':
+        specifier: workspace:^
+        version: link:../../Engine/preset/native-persona
       '@deepseek-ai/dsh-native-prompt':
         specifier: workspace:^
         version: link:../../Engine/core/native-prompt
@@ -9801,6 +9842,9 @@ importers:
       '@deepseek-ai/dsh-permission-presets':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/permission-presets
+      '@deepseek-ai/dsh-persona':
+        specifier: workspace:^
+        version: link:../../Engine/preset/persona
       '@deepseek-ai/dsh-plan-mode':
         specifier: workspace:^
         version: link:../../Modules/Official/plan/plan-mode
@@ -10112,9 +10156,6 @@ importers:
         specifier: 8.21.0
         version: 8.21.0
     optionalDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../Core/vendor/cordis
       '@deepseek-ai/cordis-plugin-hmr':
         specifier: workspace:^
         version: link:../../Core/vendor/hmr
@@ -10175,9 +10216,6 @@ importers:
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
-      '@deepseek-ai/dsh-persona':
-        specifier: workspace:^
-        version: link:../../Engine/preset/persona
       '@deepseek-ai/dsh-request-context':
         specifier: workspace:^
         version: link:../../Engine/context/request-context

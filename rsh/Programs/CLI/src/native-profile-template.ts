@@ -103,6 +103,11 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
     config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
   { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard',
+    config: {
+      prefix: 'You are a coding agent powered by the {{model}} model.',
+      suffix: 'Your working directory is {{cwd}}.',
+    } },
 ] as const
 
 /**

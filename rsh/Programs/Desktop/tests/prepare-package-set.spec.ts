@@ -143,7 +143,7 @@ describe('desktop package-set selection', () => {
       .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
     const available = new Map<string, PackedDesktopPackage>([
       ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh', {
-        dependencies: { '@deepseek-ai/dsh-base': '^1.0.0' },
+        dependencies: { '@deepseek-ai/dsh-native-missing': '^1.0.0' },
         optionalDependencies: compatibilityEdges,
       })],
       [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
@@ -155,6 +155,65 @@ describe('desktop package-set selection', () => {
     expect(() => selectDesktopPackageSets(new Map([
       ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
     ]))).toThrow(/omit @deepseek-ai\/dsh-desktop-host/u)
+  })
+
+  it('does not follow a non-optional peer into a compatibility-only package', () => {
+    const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
+      .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
+    const available = new Map<string, PackedDesktopPackage>([
+      ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh', {
+        dependencies: { '@deepseek-ai/dsh-native-consumer': '1.0.0' },
+        optionalDependencies: compatibilityEdges,
+      })],
+      [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
+        dependencies: { '@deepseek-ai/dsh': '^1.0.0' },
+        optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
+      })],
+      [DESKTOP_COMPATIBILITY_HOST_PACKAGE, packed(DESKTOP_COMPATIBILITY_HOST_PACKAGE)],
+      ['@deepseek-ai/dsh-native-consumer', packed('@deepseek-ai/dsh-native-consumer', {
+        peerDependencies: { '@deepseek-ai/dsh-system-prompt': '^1.0.0' },
+      })],
+      ['@deepseek-ai/dsh-system-prompt', packed('@deepseek-ai/dsh-system-prompt', {
+        peerDependencies: {
+          '@deepseek-ai/dsh-invariants': '^1.0.0',
+          '@deepseek-ai/dsh-native-peer': '^1.0.0',
+        },
+      })],
+      ['@deepseek-ai/dsh-invariants', packed('@deepseek-ai/dsh-invariants')],
+      ['@deepseek-ai/dsh-native-peer', packed('@deepseek-ai/dsh-native-peer')],
+    ])
+    const selected = selectDesktopPackageSets(available)
+    expect(selected.packages.map(entry => entry.manifest.name)).toEqual([
+      '@deepseek-ai/dsh',
+      DESKTOP_HOST_PACKAGE,
+      '@deepseek-ai/dsh-native-consumer',
+      '@deepseek-ai/dsh-native-peer',
+      '@deepseek-ai/dsh-system-prompt',
+    ])
+    const compatibility = selectDesktopPackageSets(available, 'compatibility')
+    expect(compatibility.packages.map(entry => entry.manifest.name)).toContain('@deepseek-ai/dsh-invariants')
+  })
+
+  it('rejects a hard dependency on a compatibility-only package', () => {
+    const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
+      .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
+    const available = new Map<string, PackedDesktopPackage>([
+      ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh', {
+        dependencies: { '@deepseek-ai/dsh-native-consumer': '1.0.0' },
+        optionalDependencies: compatibilityEdges,
+      })],
+      [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
+        dependencies: { '@deepseek-ai/dsh': '^1.0.0' },
+        optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
+      })],
+      ['@deepseek-ai/dsh-native-consumer', packed('@deepseek-ai/dsh-native-consumer', {
+        dependencies: { '@deepseek-ai/dsh-invariants': '^1.0.0' },
+      })],
+      ['@deepseek-ai/dsh-invariants', packed('@deepseek-ai/dsh-invariants')],
+    ])
+    expect(() => selectDesktopPackageSets(available)).toThrow(
+      '@deepseek-ai/dsh-native-consumer requires compatibility-only package @deepseek-ai/dsh-invariants',
+    )
   })
 
   it('requires the Native Host entry files in the default package set', () => {

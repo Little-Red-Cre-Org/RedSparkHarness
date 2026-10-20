@@ -184,6 +184,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-telemetry': ['lib/records.js'],
+  '@deepseek-ai/dsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
+  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/types-*.js'],
   '@deepseek-ai/dsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
   '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
