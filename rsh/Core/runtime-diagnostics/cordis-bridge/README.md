@@ -21,23 +21,25 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-`hostCordisPlugin` takes the Cordis plugin, its configuration, and the service objects it may read. `nativePluginForCordis` wraps that host as a Native plugin. `requires` must match the package native manifest. `personaServices` presents the Native `promptSections` registry as the Cordis `systemPrompt` service and registers persona sections on the installation scope.
+`hostCordisPlugin` takes the Cordis plugin, its configuration, and the service objects it may read. `nativePluginForCordis` wraps that host as a Native plugin. `requires` must match the package native manifest.
+
+The package owns the Cordis context, not the services. A caller translates the Native services its Cordis plugin reads and hands the translated set to the host; `@deepseek-ai/dsh-native-persona` publishes the persona translation.
 
 <a id="model-experience"></a>
 ## Model Experience
 
-Indirectly. A bridged persona contributes system-prompt sections. The consuming application renders those sections and records the assembled prompt.
+Indirectly, through the Cordis plugin it hosts and the native application that renders the contributions.
 
 #### KV Cache effect
 
-The consuming application owns request-prefix changes from the bridged sections.
+The consuming application owns request-prefix changes from the contributed sections.
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- `complete` and runtime-context suppression are not carried into the Native prompt registry.
-- Only the persona service translation ships. Other Cordis rows need their own translation before a Native preset can host them.
+- Only the persona translation ships. Other Cordis rows need their own translation before a Native preset can host them.
+- The host runs one Cordis plugin per Native row.
 
 No invariant companion is published. The bridge does not own a relation that independent observations can diverge on.
 

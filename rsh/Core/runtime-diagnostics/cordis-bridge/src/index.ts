@@ -87,8 +87,3 @@ export function nativePluginForCordis(
     },
   }
 }
-
-export {
-  bridgedSystemPrompt, personaServices, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION,
-} from './services.ts'
-export type { BridgedSystemPrompt, PersonaServices } from './services.ts'

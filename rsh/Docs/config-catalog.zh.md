@@ -3616,6 +3616,7 @@ export interface Config {
 - `@deepseek-ai/dsh-compat-settings-adapters`（[`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts)）
 - `@deepseek-ai/dsh-compat-settings-definition`（[`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)）
 - `@deepseek-ai/dsh-compat-tool-fs`（[`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts)）
+- `@deepseek-ai/dsh-cordis-bridge`（[`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts)）
 - `@deepseek-ai/dsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
 - `@deepseek-ai/dsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
 - `@deepseek-ai/dsh-desktop-host-compatibility`（[`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts)）
@@ -3643,6 +3644,7 @@ export interface Config {
 - `@deepseek-ai/dsh-native-jobs`（[`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-native-model-execution`（[`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts)）
 - `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
+- `@deepseek-ai/dsh-native-persona`（[`rsh/Engine/preset/native-persona/src/index.ts`](../Engine/preset/native-persona/src/index.ts)）
 - `@deepseek-ai/dsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
 - `@deepseek-ai/dsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
 - `@deepseek-ai/dsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）

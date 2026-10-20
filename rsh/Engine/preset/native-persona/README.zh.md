@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-persona` 是随包发布的 Cordis persona 插件的 Native 行。它通过 `dsh-cordis-bridge` 运行该插件，并读取 `promptSections`。
+`dsh-native-persona` 是随包发布的 Cordis persona 插件的 Native 行。它通过 `dsh-cordis-bridge` 运行该插件，并发布把 Native 提示词注册表呈现为 Cordis `systemPrompt` 服务的翻译。
 
 ## 目录
 
@@ -22,6 +22,8 @@ kind: "package-reference"
 ## 配置
 
 该行接受 Cordis persona 配置：必需的 `prefix`、可选的 `suffix`，以及可选的 `complete` 和 `includeRuntimeContext`。它必须安装在能够读取 `promptSections` 的预设作用域里。Native 的 web 和 TUI 模板把它安装在 `standard` 作用域上。
+
+`personaServices` 把 Native 提示词注册表翻译成 persona 插件所读的 Cordis 服务界面，并把 persona 段落登记在安装作用域上，而不是注册表根上。
 
 <a id="model-experience"></a>
 ## 模型体验

@@ -68,6 +68,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },
   'rsh/Engine/context/request-context': { kind: 'indirect', reason: 'The Provider delegates model-visible messages and durable Session acceptance to its consuming Program.' },
   'rsh/Engine/core/native-prompt': { kind: 'indirect', reason: 'The registry delegates rendered prompt placement and Session logging to its consuming native application.' },
+  'rsh/Core/runtime-diagnostics/cordis-bridge': { kind: 'indirect', reason: 'The host delegates every model-visible contribution to the Cordis plugin it runs and the application that renders it.' },
+  'rsh/Engine/preset/native-persona': { kind: 'indirect', reason: 'The row delegates persona section rendering and Session recording to its consuming native application.' },
   'rsh/Modules/Official/sandbox/native-sandbox-policy': { kind: 'indirect', reason: 'The policy delegates model-visible denial text and durable results to filesystem tools and their application.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-local': { kind: 'indirect', reason: 'The bridge delegates every model-visible filesystem outcome to its native consumer.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-policy': { kind: 'indirect', reason: 'The bridge changes filesystem decisions but delegates model rendering to the native tool consumer.' },

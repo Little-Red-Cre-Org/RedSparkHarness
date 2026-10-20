@@ -243,6 +243,8 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/fs/fs-observation-policy', 'Cordis event policy and native entry share a package'],
   ['rsh/Modules/Official/fs/fs-sandbox', 'Cordis and native filesystem Providers share per-call sandbox enforcement'],
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native title generation delegates through the selected title and model capabilities while its legacy adapter remains optional'],
+  ['rsh/Core/runtime-diagnostics/cordis-bridge', 'Native and Cordis entries share the Cordis context owner and the Native plugin wrapper'],
+  ['rsh/Engine/preset/native-persona', 'Native and Cordis persona entries share the persona section names and the bridged system-prompt service'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */
@@ -271,6 +273,14 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 ])
 
 /** Optional peers whose imports are restricted to package compatibility entries. */
+/** Native entries whose source may reference Cordis to host a Cordis plugin. */
+export const cordisHostingNativeReferences: ReadonlyMap<string, readonly string[]> = new Map([
+  ['rsh/Core/runtime-diagnostics/cordis-bridge', ['@deepseek-ai/cordis']],
+  ['rsh/Engine/preset/native-persona', [
+    '@deepseek-ai/cordis', '@deepseek-ai/dsh-persona', '@deepseek-ai/dsh-system-prompt',
+  ]],
+])
+
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Core/typert/protocol', ['@deepseek-ai/cordis']],
   ['rsh/Programs/Web/host/directory-picker', ['@deepseek-ai/cordis']],

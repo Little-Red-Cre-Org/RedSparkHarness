@@ -21,23 +21,25 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`hostCordisPlugin` 接收 Cordis 插件、它的配置，以及它可以读取的服务对象。`nativePluginForCordis` 把这个宿主包装成 Native 插件。`requires` 必须与包的 native 清单一致。`personaServices` 把 Native 的 `promptSections` 注册表呈现为 Cordis 的 `systemPrompt` 服务，并把 persona 段落登记在安装作用域上。
+`hostCordisPlugin` 接收 Cordis 插件、它的配置，以及它可以读取的服务对象。`nativePluginForCordis` 把这个宿主包装成 Native 插件。`requires` 必须与包的 native 清单一致。
+
+该包拥有 Cordis 上下文，但不拥有服务。调用方翻译自己的 Cordis 插件所读的 Native 服务，并把翻译后的集合交给宿主；`@deepseek-ai/dsh-native-persona` 发布 persona 的翻译。
 
 <a id="model-experience"></a>
 ## 模型体验
 
-间接。被桥接的 persona 贡献系统提示词段落。消费方应用渲染这些段落并记录组装后的提示词。
+间接。被桥接的插件通过调用方翻译出的服务贡献模型可见内容。消费方应用渲染并记录结果。
 
 #### KV Cache effect
 
-消费方应用拥有被桥接段落引起的请求前缀变化。
+消费方应用拥有被桥接贡献引起的请求前缀变化。
 
 ## 已知限制与后续工作
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- `complete` 和运行时上下文抑制不会带进 Native 提示词注册表。
-- 目前只交付 persona 的服务翻译。其他 Cordis 行需要各自的翻译，Native 预设才能托管它们。
+- 目前只交付 persona 的翻译。其他 Cordis 行需要各自的翻译，Native 预设才能托管它们。
+- 每个 Native 行只运行一个 Cordis 插件。
 
 不发布 invariant 伴随包。桥接层不拥有可以由独立观察发生分歧的关系。
 

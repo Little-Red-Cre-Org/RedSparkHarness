@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-native-persona` is the Native row for the shipped Cordis persona plugin. It runs that plugin through `dsh-cordis-bridge` and reads `promptSections`.
+`dsh-native-persona` is the Native row for the shipped Cordis persona plugin. It runs that plugin through `dsh-cordis-bridge` and publishes the translation that presents the Native prompt registry as the Cordis `systemPrompt` service.
 
 ## Table of Contents
 
@@ -23,14 +23,16 @@ English | [中文](README.zh.md)
 
 The row accepts the Cordis persona configuration: a required `prefix`, an optional `suffix`, and the optional `complete` and `includeRuntimeContext` flags. It must be installed in a preset scope that can read `promptSections`. The Native web and TUI templates install it on the `standard` scope.
 
+`personaServices` translates the Native prompt registry into the Cordis service surface the persona plugin reads, and registers the persona sections on the installation scope rather than the registry root.
+
 <a id="model-experience"></a>
 ## Model Experience
 
-The prefix and suffix become persona system-prompt sections for agents in that preset scope. The consuming application renders them and records the assembled prompt.
+Indirectly, through the native application that renders the persona sections and records the assembled prompt.
 
 #### KV Cache effect
 
-Changing the prefix or suffix changes the rendered system prompt for that preset scope.
+The consuming application owns request-prefix changes from the contributed sections.
 
 ## Known Limitations and Deferred Work
 

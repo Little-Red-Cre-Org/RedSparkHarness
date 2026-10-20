@@ -1,11 +1,11 @@
 /**
- * Ready-made bridges for the shipped Cordis rows a Native preset may host.
+ * Bridged services for the shipped Cordis rows a Native preset may host.
  *
  * Each builder translates the Native service a Cordis plugin reads into the Cordis shape that
  * plugin expects. Keeping the translations here — rather than in each plugin — is what lets an
  * unmodified shipped plugin run under either runtime.
  *
- * @module @deepseek-ai/dsh-cordis-bridge/services
+ * @module @deepseek-ai/dsh-native-persona/services
  */
 
 import type { NativeContext, NativeScope } from '@deepseek-ai/dsh-native-runtime'

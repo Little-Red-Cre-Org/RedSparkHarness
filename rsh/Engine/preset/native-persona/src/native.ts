@@ -1,7 +1,8 @@
 /** Native Host row hosting the shipped Cordis persona plugin. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { apply as applyPersona } from '@deepseek-ai/dsh-persona'
-import { nativePluginForCordis, personaServices } from '@deepseek-ai/dsh-cordis-bridge'
+import { nativePluginForCordis } from '@deepseek-ai/dsh-cordis-bridge/native'
+import { personaServices } from './services.ts'
 
 /**
  * Provide one persona row by running the shipped Cordis plugin through the bridge.

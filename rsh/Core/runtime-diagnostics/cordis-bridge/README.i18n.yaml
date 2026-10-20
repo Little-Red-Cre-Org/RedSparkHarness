@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Core/runtime-diagnostics/cordis-bridge/README.md
-README.md: 3fac1f45aebe99647577792f38ed05108ebc21dc
-README.zh.md: b3629499fb5fb294381bbab1efc7d09080501185
+README.md: a1d6df8c40da72df3dca010263d2ab327598501d
+README.zh.md: 9956ac2b1dc61aaaa8825c4992e9951c23973a9b
