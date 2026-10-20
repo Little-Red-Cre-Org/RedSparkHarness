@@ -45,7 +45,7 @@ function workspace(root: string, name: string, manifest: Record<string, unknown>
 function nativeSdkDependencies(): Record<string, string> {
   const plugins = new Set<string>()
   for (const platform of ['linux', 'darwin', 'win32'] as const) {
-    for (const profile of SHIPPED_NATIVE_PROFILES) {
+    for (const profile of SHIPPED_NATIVE_PROFILES()) {
       const composition = shippedNativeProfileComposition('/dsh-test', profile, platform)
       for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
         plugins.add(row.plugin)
@@ -59,7 +59,7 @@ function nativeSdkDependencies(): Record<string, string> {
 function nativeCliPlugins(): string[] {
   const plugins = new Set<string>()
   for (const platform of ['linux', 'darwin', 'win32'] as const) {
-    for (const profile of SHIPPED_NATIVE_PROFILES) {
+    for (const profile of SHIPPED_NATIVE_PROFILES()) {
       const composition = shippedNativeProfileComposition('/dsh-test', profile, platform)
       for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
         plugins.add(row.plugin)

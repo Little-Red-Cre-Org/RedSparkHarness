@@ -16,6 +16,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
+import { setCliPackageRoot } from '@deepseek-ai/dsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'
@@ -208,6 +209,10 @@ async function serveShellAsset(request: Request): Promise<Response> {
 
 async function main(): Promise<void> {
   const resources = runtimeResources()
+  // Template resolution defaults to this module's own package, which the bundle replaces with the
+  // Desktop application; name the installed CLI so the composition builders read its manifest.
+  // `resources.dsh` is the runtime root, so the CLI package sits one node_modules level below it.
+  setCliPackageRoot(join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh'))
   const paths = resolveDesktopPaths()
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile

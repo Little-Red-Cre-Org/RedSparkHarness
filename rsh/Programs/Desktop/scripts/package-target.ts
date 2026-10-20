@@ -260,8 +260,11 @@ function runPnpm(
   if (pnpmEntry === undefined || pnpmEntry === '') {
     throw new Error('desktop package: invoke this script through a pnpm package command')
   }
+  // pnpm points `npm_execpath` at a platform shim on Windows, and a shim cannot be handed to
+  // Node as a script. Run the shim directly there; the JavaScript entry runs under this Node.
+  const viaNode = pnpmEntry.endsWith('.js') || pnpmEntry.endsWith('.mjs') || pnpmEntry.endsWith('.cjs')
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [pnpmEntry, ...args], {
+    const child = spawn(viaNode ? process.execPath : pnpmEntry, viaNode ? [pnpmEntry, ...args] : [...args], {
       cwd,
       env,
       stdio: 'inherit',

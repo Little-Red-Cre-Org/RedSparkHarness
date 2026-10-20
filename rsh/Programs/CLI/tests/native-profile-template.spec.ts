@@ -61,7 +61,7 @@ it('maps standard profile names to native compositions and preserves existing le
       ['rsh', 'native-tui'],
     ] as const
     for (const [name, nativeName] of mappings) {
-      expect(SHIPPED_NATIVE_PROFILES).toContain(name)
+      expect(SHIPPED_NATIVE_PROFILES()).toContain(name)
       const profile = shippedNativeProfileComposition(home, name, 'win32')
       const nativeProfile = shippedNativeProfileComposition(home, nativeName, 'win32')
       expect(profile.installations.find(row => row.id === 'app')?.plugin)
@@ -481,7 +481,7 @@ it('declares every shipped template plugin as a CLI runtime dependency', async (
     optionalDependencies: Record<string, string>
   }
   const runtime = { ...cli.dependencies, ...cli.optionalDependencies }
-  for (const name of SHIPPED_NATIVE_PROFILES) {
+  for (const name of SHIPPED_NATIVE_PROFILES()) {
     for (const platform of ['linux', 'win32'] as const) {
       for (const row of shippedNativeProfileComposition('/tmp/rsh-deps', name, platform).installations) {
         expect(runtime, `${name}/${platform}`).toHaveProperty([row.plugin])

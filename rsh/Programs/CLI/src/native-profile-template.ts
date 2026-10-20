@@ -14,13 +14,26 @@ const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
   rsh: 'native-tui',
 }
 
-const nativeProfileTemplates = cliNativeProfileTemplates()
-if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
-  throw new Error('dsh: CLI package must declare its native profile templates')
+/**
+ * Profile names whose first-use compositions ship with the CLI.
+ *
+ * Read on demand rather than at module load. A host that bundles this module cannot resolve the
+ * CLI package from its own location, so a load-time manifest read would throw there even when it
+ * never asks for a template.
+ * @returns the declared `dsh.nativeProfileTemplates` names.
+ */
+function shippedNativeProfiles(): readonly string[] {
+  const declared = cliNativeProfileTemplates()
+  if (!Array.isArray(declared) || declared.some(name => typeof name !== 'string' || name === '')) {
+    throw new Error('dsh: CLI package must declare its native profile templates')
+  }
+  return declared as readonly string[]
 }
 
 /** Profile names whose first-use compositions ship with the CLI. */
-export const SHIPPED_NATIVE_PROFILES: readonly string[] = nativeProfileTemplates
+export function SHIPPED_NATIVE_PROFILES(): readonly string[] {
+  return shippedNativeProfiles()
+}
 
 const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application', config: { maxLiveTextChars: 100000, maxLiveEvents: 100000 } },
@@ -92,8 +105,26 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
 ] as const
 
+/**
+ * Root of the CLI package whose manifest declares the shipped profile templates.
+ *
+ * Defaults to this module's own package. A host that bundles this module into its own program
+ * cannot use that default: `import.meta.url` then describes the host's bundle, and the host's
+ * `package.json` declares no templates. Such a host names its CLI package through
+ * {@link setCliPackageRoot} before it builds a profile.
+ */
+let cliPackageRoot: string | undefined
+
+/**
+ * Point template resolution at one CLI package.
+ * @param root - absolute path of the installed CLI package directory.
+ */
+export function setCliPackageRoot(root: string): void {
+  cliPackageRoot = root
+}
+
 function cliRuntimeRoot(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), '..')
+  return cliPackageRoot ?? resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
 
 /**
@@ -108,7 +139,7 @@ function cliNativeProfileTemplates(): unknown {
 }
 
 function isShippedNativeProfile(name: string): boolean {
-  return SHIPPED_NATIVE_PROFILES.includes(name)
+  return SHIPPED_NATIVE_PROFILES().includes(name)
 }
 
 function isHeadlessProfile(profile: string): boolean {
