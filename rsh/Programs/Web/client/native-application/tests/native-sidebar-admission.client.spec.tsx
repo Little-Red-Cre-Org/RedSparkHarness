@@ -174,6 +174,7 @@ async function harness(baselineGate: Promise<void> = Promise.resolve()) {
     path: 'C:\\Work\\New', home: 'C:\\Work\\New', entries: [], crumbs: [
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
+    roots: [{ name: 'C:', path: 'C:\\' }],
   }))
   const reorderWorkspace = vi.fn(async (
     id: NativeWorkspace['workspaceId'], before?: NativeWorkspace['workspaceId'],

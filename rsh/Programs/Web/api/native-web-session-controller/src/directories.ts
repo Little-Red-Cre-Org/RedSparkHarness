@@ -19,6 +19,28 @@ function fullyQualified(path: string): boolean {
     : posix.isAbsolute(path)
 }
 
+/**
+ * Every filesystem volume this host exposes as a browsing root.
+ *
+ * Windows has no single root above the drive letters, so `\\` cannot reach `D:\` from `C:\`.
+ * Listing the volumes makes each drive one jump target. POSIX has one root and reports it alone.
+ * @returns absolute roots, in display order.
+ */
+async function browsingRoots(): Promise<readonly { readonly name: string; readonly path: string }[]> {
+  if (process.platform !== 'win32') return [{ name: '/', path: '/' }]
+  const roots: { name: string; path: string }[] = []
+  for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    const drive = `${letter}:\\`
+    try {
+      await stat(drive)
+      roots.push({ name: `${letter}:`, path: drive })
+    } catch {
+      // An absent drive letter is not a volume; a probe failure is not user-facing here.
+    }
+  }
+  return roots
+}
+
 function crumbs(target: string): NativeDirectoryListing['crumbs'] {
   const result: { name: string; path: string }[] = []
   let current = target
@@ -74,7 +96,10 @@ export class NativeWebDirectoryService {
         const entries = (await Promise.all(items.map(item => entry(path, item))))
           .filter((item): item is NativeDirectoryEntry => item !== undefined)
           .sort((left, right) => left.name.localeCompare(right.name))
-        return { ok: true, value: { path, home: homedir(), entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
+        const listing: NativeDirectoryListing = {
+          path, home: homedir(), entries, crumbs: crumbs(path), roots: await browsingRoots(),
+        }
+        return { ok: true, value: listing }
       }
       if (endpoint === 'directories/create-directory') {
         const request = createRequest.parse(payload)

@@ -35,7 +35,7 @@ export async function runCli(): Promise<void> {
   switch (invocation.mode) {
     case 'profile': {
       const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
-      if (invocation.fromDefaultProfile !== undefined && SHIPPED_NATIVE_PROFILES.includes(invocation.profile)) {
+      if (invocation.fromDefaultProfile !== undefined && SHIPPED_NATIVE_PROFILES().includes(invocation.profile)) {
         throw new Error('native profile cannot use --from-default-profile')
       }
       ensureShippedNativeProfile(invocation.profile)

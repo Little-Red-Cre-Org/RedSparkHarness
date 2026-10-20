@@ -9,6 +9,6 @@ export type {
 } from './native-profile-loader.ts'
 export { profileDirectoryRuntime, profileDirectoryReloadMode } from './native-profile-config.ts'
 export type { NativeProfileConfig } from './native-profile-config.ts'
-export { shippedNativeProfileClientComposition, shippedNativeProfileComposition } from './native-profile-template.ts'
+export { setCliPackageRoot, shippedNativeProfileClientComposition, shippedNativeProfileComposition } from './native-profile-template.ts'
 export type { NativeProfileClientInstallation } from './native-profile-template.ts'
 export { migrateNativeLegacyConfig, validateNativeLegacyConfig } from './native-legacy-config.ts'

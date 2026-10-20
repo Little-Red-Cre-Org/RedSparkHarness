@@ -187,6 +187,7 @@ it.each([
     path: 'C:\\Work\\New', home: 'C:\\Work\\New', entries: [], crumbs: [
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
     ],
+    roots: [{ name: 'C:', path: 'C:\\' }],
   }))
   const reorderWorkspace = vi.fn(async (
     id: NativeWorkspace['workspaceId'], before?: NativeWorkspace['workspaceId'],
@@ -481,7 +482,7 @@ it.each([
     // The launch directory is not Home: Home stays the Host's home, so the trail reads Home › New.
     listDirectory.mockResolvedValueOnce({ path: 'C:\\Work\\New', home: 'C:\\Work', entries: [], crumbs: [
       { name: 'C:', path: 'C:\\' }, { name: 'Work', path: 'C:\\Work' }, { name: 'New', path: 'C:\\Work\\New' },
-    ] })
+    ], roots: [{ name: 'C:', path: 'C:\\' }] })
     fireEvent.click(screen.getByRole('button', { name: 'Choose workspace' }))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Add workspace…' }))
     const browser = await screen.findByRole('dialog', { name: 'Select Workspace Directory' })

@@ -45,6 +45,8 @@ export interface NativeDirectoryListing {
   readonly home: string
   readonly entries: readonly NativeDirectoryEntry[]
   readonly crumbs: readonly { readonly name: string; readonly path: string }[]
+  /** Volumes reachable as browsing roots; Windows reports one row per drive, POSIX the single root. */
+  readonly roots: readonly { readonly name: string; readonly path: string }[]
 }
 
 /** Native Workspace commands and the authoritative registry change stream. */
@@ -144,6 +146,7 @@ const directoryEntrySchema = z.strictObject({ name: z.string(), path: z.string()
 const directorySchema = z.strictObject({
   path: z.string(), home: z.string(), entries: z.array(directoryEntrySchema),
   crumbs: z.array(z.strictObject({ name: z.string(), path: z.string() })),
+  roots: z.array(z.strictObject({ name: z.string(), path: z.string() })),
 })
 
 function workspace(value: unknown): NativeWorkspace {

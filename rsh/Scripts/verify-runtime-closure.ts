@@ -172,7 +172,7 @@ function shippedProfilePlugins(root: string, targets: readonly string[]): Set<st
   const plugins = new Set<string>()
   for (const target of targets) {
     const platform = processPlatformForTarget(target)
-    for (const profile of SHIPPED_NATIVE_PROFILES) {
+    for (const profile of SHIPPED_NATIVE_PROFILES()) {
       const composition = shippedNativeProfileComposition(root, profile, platform)
       for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
         const name = barePackageName(row.plugin)
@@ -263,7 +263,7 @@ if (import.meta.main) {
     process.exitCode = 1
   } else {
     const description = target === 'native-cli'
-      ? `${SHIPPED_NATIVE_PROFILES.length} native CLI profile templates and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`
+      ? `${SHIPPED_NATIVE_PROFILES().length} native CLI profile templates and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`
       : `${result.presetCount} agent presets and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`
     console.log(`verify-runtime-closure: ${description}`)
   }
@@ -278,7 +278,7 @@ function missingNativeCliPlugins(
   const missing = new Map<string, Set<string>>()
   for (const target of targets) {
     const platform = processPlatformForTarget(target)
-    for (const profile of SHIPPED_NATIVE_PROFILES) {
+    for (const profile of SHIPPED_NATIVE_PROFILES()) {
       const composition = shippedNativeProfileComposition(root, profile, platform)
       const rows = [
         ...composition.installations,
