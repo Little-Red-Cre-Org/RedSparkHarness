@@ -120,12 +120,15 @@ describe('desktop core package set', () => {
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
+    // A compatibility-only edge may still resolve from the registry, because the Native
+    // assembly deliberately omits it. The Cordis kernel is no longer such an edge: the bridge
+    // ships it locally, so naming it here would be a package-set omission.
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@deepseek-ai/cordis@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
+        "packages:\n  '@deepseek-ai/dsh-app-boot@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
-    }).toThrow(/ignored compatibility optional @deepseek-ai\/cordis/u)
+    }).toThrow(/ignored compatibility optional @deepseek-ai\/dsh-app-boot/u)
   })
 
 })

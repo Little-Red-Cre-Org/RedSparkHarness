@@ -468,6 +468,13 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
     { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
       config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
   ])
+  expect(profile.installations.find(row => row.id === 'persona-standard')).toEqual({
+    id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard',
+    config: {
+      prefix: 'You are a coding agent powered by the {{model}} model.',
+      suffix: 'Your working directory is {{cwd}}.',
+    },
+  })
   if (profileName === 'native-web') {
     expect(profile.installations.find(row => row.id === 'permission-presets')).toEqual({
       id: 'permission-presets', plugin: '@deepseek-ai/dsh-permission-presets', scope: 'root',

@@ -16,9 +16,20 @@ export const DESKTOP_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host'
 /** Compatibility-only Host installed into profiles that select legacy Cordis bundles. */
 export const DESKTOP_COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
 
+/**
+ * Cordis runtime packages the Native assembly ships on purpose.
+ *
+ * The Cordis *kernel* is a service container, not the legacy Desktop assembly: a Native row can
+ * host a Cordis plugin through it (see `@deepseek-ai/dsh-cordis-bridge`) so one plugin ecosystem
+ * serves both runtimes. The loader and bundle packages below stay excluded, because they compose
+ * applications rather than host one plugin.
+ */
+export const CORDIS_RUNTIME_PACKAGES = [
+  '@deepseek-ai/cordis',
+] as const
+
 /** Optional package edges owned only by the legacy Cordis Desktop assembly. */
 export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
-  '@deepseek-ai/cordis',
   '@deepseek-ai/cordis-plugin-hmr',
   '@deepseek-ai/cordis-plugin-include',
   '@deepseek-ai/cordis-plugin-loader',
@@ -39,7 +50,6 @@ export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
   '@deepseek-ai/dsh-hooks-codex',
   '@deepseek-ai/dsh-invariants',
   '@deepseek-ai/dsh-jobs-local',
-  '@deepseek-ai/dsh-persona',
   '@deepseek-ai/dsh-rsh',
   '@deepseek-ai/dsh-sdk-app',
   '@deepseek-ai/dsh-sdk-minimal',

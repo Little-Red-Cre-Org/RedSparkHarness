@@ -192,6 +192,8 @@
       "@deepseek-ai/dsh-tool-pwsh": ["./rsh/Modules/Official/shell/tool-pwsh/src/index.ts"],
       "@deepseek-ai/dsh-shell-env": ["./rsh/Modules/Official/shell/shell-env/src/index.ts"],
       "@deepseek-ai/dsh-cordis-host-runner": ["./rsh/Modules/Official/extensions/cordis-host-runner/src/index.ts"],
+      "@deepseek-ai/dsh-cordis-bridge": ["./rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts"],
+      "@deepseek-ai/dsh-native-persona": ["./rsh/Engine/preset/native-persona/src/index.ts"],
       "@deepseek-ai/dsh-cordis-host-runner/types": ["./rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts"],
       "@deepseek-ai/dsh-command-feedback/types": ["./rsh/Modules/Official/feedback/command-feedback/src/types.ts"],
       "@deepseek-ai/dsh-goal/types": ["./rsh/Engine/goal/goal/src/types.ts"],
