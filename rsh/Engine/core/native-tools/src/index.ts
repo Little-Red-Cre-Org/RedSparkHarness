@@ -372,6 +372,7 @@ export class NativeToolRegistry {
   private readonly tools: NativeContributions<ToolRegistration>
   private readonly guards: NativeContributions<NativeToolGuard>
   private readonly restrictions: NativeContributions<CompiledToolRestriction>
+  private readonly presentations: NativeContributions<NativeToolMode>
   private readonly resultObservers: NativeContributions<NativeToolResultObserver>
   private readonly resultPolicies: NativeContributions<ResultPolicyRegistration>
   private readonly executionPolicies: NativeContributions<ExecutionPolicyRegistration>
@@ -409,11 +410,38 @@ export class NativeToolRegistry {
     this.settlementPolicies = new NativeContributions(scope)
     this.ptcLogPolicies = new NativeContributions(scope)
     this.restrictions = new NativeContributions(scope)
+    this.presentations = new NativeContributions(scope)
+  }
+
+  /**
+   * Shadow the Provider transport for one descendant scope and its descendants.
+   * @param mode - model transport for Agents in that scope.
+   * @param scope - descendant installation scope; the Provider scope uses the mode config.
+   * @returns an exact disposer for context.effect().
+   */
+  presentAs(mode: NativeToolMode, scope: NativeScope): () => void {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    if (mode !== 'native' && mode !== 'ptc' && mode !== 'both') {
+      throw new Error('native-tools: presentation mode must be native, ptc or both')
+    }
+    if (scope === this.scope) throw new Error('native-tools: presentation overrides require a descendant scope')
+    return this.presentations.register('mode', mode, scope)
+  }
+
+  /**
+   * Resolve the model transport for one Agent scope.
+   * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @returns the nearest descendant declaration, or the Provider mode.
+   */
+  modelModeFor(scope: NativeScope = this.scope): NativeToolMode {
+    if (scope === this.scope) return this.modelMode
+    return this.presentations.visible(scope).get('mode') ?? this.modelMode
   }
 
   /**
    * Filter inherited capabilities in a descendant scope; restrictions intersect along the ancestry.
-   * @param filter - allow and/or deny names belonging to inherited contributions; empty allow hides every inherited tool.
+   * @param filter - allow names must already be inherited; deny names also hide a tool an ancestor registers later.
+   * Empty allow hides every inherited tool.
    * @param scope - descendant installation scope; a Provider-wide restriction is forbidden.
    * @returns an exact idempotent disposer for context.effect().
    */
@@ -425,8 +453,8 @@ export class NativeToolRegistry {
     const inherited = this.tools.visible(scope.parent)
     const names = [...filter.allow ?? [], ...filter.deny ?? []]
     if (names.includes('run_code')) throw new Error('native-tools: restrict end capabilities rather than run_code transport')
-    const unknown = names.filter(name => !inherited.has(name))
-    if (unknown.length > 0) throw new Error(`native-tools: restriction names unknown inherited tools: ${unknown.join(', ')}`)
+    const unknownAllow = (filter.allow ?? []).filter(name => !inherited.has(name))
+    if (unknownAllow.length > 0) throw new Error(`native-tools: restriction names unknown inherited tools: ${unknownAllow.join(', ')}`)
     return this.restrictions.register(`restriction:${this.restrictionSequence++}`, {
       ...filter.allow === undefined ? {} : { allow: new Set(filter.allow) },
       ...filter.deny === undefined ? {} : { deny: new Set(filter.deny) },
@@ -744,8 +772,9 @@ export class NativeToolRegistry {
     return [...this.visible(scope).values()].map(entry => structuredClone(entry.schema))
   }
 
-  private acceptsModelName(name: string): boolean {
-    return this.modelMode === 'both' || (this.modelMode === 'ptc' ? name === 'run_code' : name !== 'run_code')
+  private acceptsModelName(name: string, scope?: NativeScope): boolean {
+    const mode = scope === undefined ? this.modelMode : this.modelModeFor(scope)
+    return mode === 'both' || (mode === 'ptc' ? name === 'run_code' : name !== 'run_code')
   }
 
   /**
@@ -754,11 +783,12 @@ export class NativeToolRegistry {
    * @returns detached schemas for the selected mode; PTC requires a visible run_code transport.
    */
   modelSchemas(scope?: NativeScope): ToolSchema[] {
+    const mode = this.modelModeFor(scope ?? this.scope)
     const schemas = this.schemas(scope)
-    if (this.modelMode === 'ptc' && !schemas.some(schema => schema.name === 'run_code')) {
+    if (mode === 'ptc' && !schemas.some(schema => schema.name === 'run_code')) {
       throw new Error('native-tools: ptc mode requires a visible run_code transport')
     }
-    return schemas.filter(schema => this.acceptsModelName(schema.name))
+    return schemas.filter(schema => this.acceptsModelName(schema.name, scope))
   }
 
   /**
@@ -886,8 +916,8 @@ export class NativeToolRegistry {
    * @returns the guarded contribution result for the application to record.
    */
   async executeModelCall(call: NativeToolExecution): Promise<NativeToolResult> {
-    if (!this.acceptsModelName(call.name)) {
-      throw new HarnessError(`native-tools: model tool ${call.name} is unavailable in ${this.modelMode} mode`, 'TOOL_DENIED')
+    if (!this.acceptsModelName(call.name, call.agent.scope)) {
+      throw new HarnessError(`native-tools: model tool ${call.name} is unavailable in ${this.modelModeFor(call.agent.scope)} mode`, 'TOOL_DENIED')
     }
     return this.execute(call)
   }

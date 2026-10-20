@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry accepts `mode: native | ptc | both` (default `both`). Native mode hides `run_code` from model calls, PTC mode exposes only that transport and requires a visible registered `run_code`, and both mode exposes all visible tools. Program bindings retain the same scoped capabilities in every mode. Unknown configuration fields fail activation.
+The `./native` entry accepts `mode: native | ptc | both` (default `both`). Native mode hides `run_code` from model calls, PTC mode exposes only that transport and requires a visible registered `run_code`, and both mode exposes all visible tools. A descendant scope shadows that selection with `presentAs(mode, scope)`; the nearest declaration wins, and a second declaration in the same scope fails. Program bindings retain the same scoped capabilities in every mode. Unknown configuration fields fail activation.
 
 Value contributions declare an output schema; the registry captures it, validates detached JSON and renders the canonical result. Scoped restrictions and guards run before approval and again before executor entry. Removing a contribution closes admission, cancels captured calls and drains their actual work before its disposer resolves. Result policies must delegate exactly once; finalizers finish before the application records the result. Only `acceptResult()` notifies result observers after that record is accepted. Sourced additional contexts remain separate from canonical JSON.
 

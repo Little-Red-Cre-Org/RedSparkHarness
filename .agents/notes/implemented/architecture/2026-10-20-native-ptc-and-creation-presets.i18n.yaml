@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-20-native-ptc-and-creation-presets.md
+2026-10-20-native-ptc-and-creation-presets.md: ddbe4d15c88000a8e8d00ccd1a8ef1d8c90f6352
+2026-10-20-native-ptc-and-creation-presets.zh.md: f2a594fcdd007f64d50ed721a6b79da22ff19210

@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口接受 `maxParallelSubCalls`（默认 `10`，正安全整数）及 `sdkPrompt`（默认 `false`，布尔值）。它要求 `tools`、`codeRuntime` 和 `fs`，可选读取 `sandboxPolicy` 及 `promptSections`。启用 `sdkPrompt` 必须选择提示词 Provider，并在 Consumer 作用域安装可撤销的 `tools:sdk` 段。profile 独立选择这些 Provider。所选运行时语言决定代码 schema 和 SDK 声明；Python 说明涵盖普通 JSON 参数、静态 TypedDict 声明、`asyncio.gather` 与 `print`，不支持的语言会拒绝安装。重复名称会失败，作用域可见性、参数校验、取消及释放均使用普通工具注册表。
+`./native` 入口接受 `maxParallelSubCalls`（默认 `10`，正安全整数）、`sdkPrompt`（默认 `false`，布尔值）、可选 `presentation`（`native`、`ptc` 或 `both`）以及可选 `denyTools`（工具名）。`presentation` 在子作用域调用 `tools.presentAs`。`denyTools` 在该作用域隐藏这些名称，包括祖先在本行激活之后才注册的工具；从未发布的名称不会隐藏任何工具，并拒绝 `run_code`。它要求 `tools`、`codeRuntime` 和 `fs`，可选读取 `sandboxPolicy` 及 `promptSections`。启用 `sdkPrompt` 必须选择提示词 Provider，并在 Consumer 作用域安装可撤销的 `tools:sdk` 段。profile 独立选择这些 Provider。所选运行时语言决定代码 schema 和 SDK 声明；Python 说明涵盖普通 JSON 参数、静态 TypedDict 声明、`asyncio.gather` 与 `print`，不支持的语言会拒绝安装。重复名称会失败，作用域可见性、参数校验、取消及释放均使用普通工具注册表。
 
 存在文件策略时必须使用执行沙箱约束的代码运行时，除非当前 Session 解析出的模式为 `danger-full-access`。`process-sandbox` 运行时要求显式策略，并在执行前从同一个 Session 解析有效工作区；Session 没有匹配工作区时会在进入 Provider 前拒绝。当前 Session 受限时会拒绝其他运行时。本模块不会替换 Provider 或扩大其资源限制与执行隔离策略。
 
@@ -44,7 +44,7 @@ schema 带来固定请求开销。启用 `sdkPrompt` 后，应用在进入模型
 
 #### KV Cache 影响
 
-安装或移除贡献会改变所选工具 schema 前缀。注册表的 `native` 模式隐藏该传输并省略其 SDK 段；`ptc` 仅公开传输，并在业务声明前加入只使用 run_code 的规则；`both` 保留直接业务 schema 和 SDK 段。
+安装或移除贡献会改变所选工具 schema 前缀。注册表的 `native` 模式隐藏该传输并省略其 SDK 段；`ptc` 仅公开传输，并在业务声明前加入只使用 run_code 的规则；`both` 保留直接业务 schema 和 SDK 段。子作用域的 `presentation` 为该作用域选择对应模式。
 
 ## 已知限制与后续工作
 
