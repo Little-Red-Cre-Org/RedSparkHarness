@@ -140,5 +140,3 @@ The discipline that follows: **a waterfall listener that only observes or annota
 The harness uses waterfalls for decisions that cooperating plugins may wrap or answer: [`agent/request`](../subsystems/core.md#agentrequest--waterfall) lets a plugin replace the model-call config, and [`approval/request`](../subsystems/approval.md#approvalrequest--waterfall) lets a policy answer instead of the user.
 
 Next: [Configuration](05-config.md) — plugin options from `cordis.yml`.
-
-[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

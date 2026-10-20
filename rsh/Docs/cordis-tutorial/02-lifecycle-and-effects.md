@@ -94,5 +94,3 @@ For a resource Cordis does not manage, acquire it inside `ctx.effect()` and retu
 One ordering caveat: disposers start in reverse registration order, but multiple **async** disposers run concurrently. If teardown steps must run in sequence, keep them in one disposer and await them there.
 
 Next: [Services](03-services.md) — how plugins share capabilities.
-
-[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
