@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The `./native` entry accepts `maxParallelSubCalls` (default `10`, positive safe integer) and `sdkPrompt` (default `false`, boolean). It requires `tools`, `codeRuntime`, and `fs`, and optionally reads `sandboxPolicy` and `promptSections`. Enabling `sdkPrompt` requires a prompt Provider and installs the reversible `tools:sdk` section in the Consumer's scope. The profile chooses these Providers independently. The selected runtime language determines the code schema and SDK declarations; Python instructions describe plain JSON arguments, static TypedDict declarations, `asyncio.gather` and `print`, while unsupported languages reject installation. Duplicate names fail and scoped visibility, parameter validation, cancellation, and disposal use the ordinary tool registry.
+The `./native` entry accepts `maxParallelSubCalls` (default `10`, positive safe integer), `sdkPrompt` (default `false`, boolean), optional `presentation` (`native`, `ptc`, or `both`), and optional `denyTools` (tool names). `presentation` calls `tools.presentAs` for a descendant scope. `denyTools` hides those names from that scope, including a tool an ancestor registers after this row activates; a name that is never published hides nothing, and `run_code` is rejected. It requires `tools`, `codeRuntime`, and `fs`, and optionally reads `sandboxPolicy` and `promptSections`. Enabling `sdkPrompt` requires a prompt Provider and installs the reversible `tools:sdk` section in the Consumer's scope. The profile chooses these Providers independently. The selected runtime language determines the code schema and SDK declarations; Python instructions describe plain JSON arguments, static TypedDict declarations, `asyncio.gather` and `print`, while unsupported languages reject installation. Duplicate names fail and scoped visibility, parameter validation, cancellation, and disposal use the ordinary tool registry.
 
 A file policy requires a sandbox-enforcing code runtime unless the current Session resolves to `danger-full-access`. A `process-sandbox` runtime requires an explicit policy and resolves its effective workspace from that same Session before execution; a Session without a matching workspace is rejected before entering the Provider. Other runtimes are rejected when the active Session policy is restricted. The runtime owns resource limits and execution containment; this module never substitutes another Provider or widens its policy.
 
@@ -44,7 +44,7 @@ The schema adds a fixed request cost. With `sdkPrompt`, the application records 
 
 #### KV Cache effect
 
-Installing or removing the contribution changes the selected tool-schema prefix. The registry's `native` mode hides this transport and omits its SDK section; `ptc` exposes only the transport and puts the run_code-only rule before business declarations; `both` keeps direct business schemas and the SDK section.
+Installing or removing the contribution changes the selected tool-schema prefix. The registry's `native` mode hides this transport and omits its SDK section; `ptc` exposes only the transport and puts the run_code-only rule before business declarations; `both` keeps direct business schemas and the SDK section. A descendant `presentation` selects that mode for its scope.
 
 ## Known Limitations and Deferred Work
 

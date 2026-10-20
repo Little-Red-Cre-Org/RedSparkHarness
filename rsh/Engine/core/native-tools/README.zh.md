@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口接受 `mode: native | ptc | both`（默认 `both`）。Native 模式对模型调用隐藏 `run_code`；PTC 模式只暴露该传输，并要求存在可见的已注册 `run_code`；both 模式暴露所有可见工具。各模式的程序绑定保留同一组按作用域可见的能力。未知配置字段会使激活失败。
+`./native` 入口接受 `mode: native | ptc | both`（默认 `both`）。Native 模式对模型调用隐藏 `run_code`；PTC 模式只暴露该传输，并要求存在可见的已注册 `run_code`；both 模式暴露所有可见工具。子作用域用 `presentAs(mode, scope)` 遮蔽该选择；最近的声明生效，同一作用域的第二次声明失败。各模式的程序绑定保留同一组按作用域可见的能力。未知配置字段会使激活失败。
 
 Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
 

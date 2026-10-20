@@ -303,6 +303,33 @@ it('registers ready user native preset folders under child scopes and lists thei
   } finally { await rm(home, { recursive: true, force: true }) }
 })
 
+it('marks a preset invalid when an enabled row requires a service the profile does not provide', async () => {
+  const { home, profileDir, installAnchor } = await fixture()
+  const directory = join(home, '.agent-presets', 'needs-prompt')
+  try {
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-preset-standing', ['agentPresets'], [])
+    await emptyNativePackage(profileDir, 'needs-prompt-plugin', ['promptSections'], [])
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(directory, 'preset.yml'), 'name: Needs prompt\n')
+    await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [
+      { id: 'persona', plugin: 'needs-prompt-plugin' },
+    ] }))
+    await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
+      formatVersion: 1, scopes: [{ id: 'root' }],
+      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'needs-prompt' } }],
+    }))
+    const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
+    expect(loaded.profile.installations.some(row => row.plugin === 'needs-prompt-plugin')).toBe(false)
+    const folders = (loaded.profile.installations.find(row => row.id === 'agent-presets')?.config as {
+      folders: { id: string; status: string; problem?: string }[]
+    }).folders
+    expect(folders.find(folder => folder.id === 'needs-prompt')).toMatchObject({
+      status: 'invalid', problem: 'plugin needs-prompt-plugin requires missing promptSections',
+    })
+  } finally { await rm(home, { recursive: true, force: true }) }
+})
+
 it.each(['preset:operator/tools', 'preset:operator'])('rejects native preset install id %s when it collides with the profile', async (collisionId) => {
   const { home, profileDir, installAnchor } = await fixture()
   const directory = join(home, '.agent-presets', 'operator')

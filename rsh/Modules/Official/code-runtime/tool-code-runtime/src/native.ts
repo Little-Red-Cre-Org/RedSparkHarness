@@ -1,6 +1,6 @@
 /** Reversible native run_code Consumer; the application owns its Session result. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createNativePtcDispatch, type NativeProjectedToolContribution } from '@deepseek-ai/dsh-native-tools'
+import { createNativePtcDispatch, type NativeProjectedToolContribution, type NativeToolMode } from '@deepseek-ai/dsh-native-tools'
 import type { CodeBindingNamespace, CodeRunResult } from '@deepseek-ai/dsh-code-runtime-definition'
 import { renderToolsSdkDeclarations } from '@deepseek-ai/dsh-native-tools/sdk-typescript'
 import { renderToolsSdkPyDeclarations } from '@deepseek-ai/dsh-native-tools/sdk-python'
@@ -15,12 +15,17 @@ import { renderCodeOutput } from '@deepseek-ai/dsh-native-tools/code-output'
 /** Canonical transport output; Provider completion values are exposed under result. */
 type CodeToolOutcome = Omit<CodeRunResult, 'value'> & { result?: CodeRunResult['value'] }
 
-function resolveConfig(input: unknown): { maxParallel: number; sdkPrompt: boolean } {
+function resolveConfig(input: unknown): {
+  maxParallel: number
+  sdkPrompt: boolean
+  presentation?: NativeToolMode
+  denyTools?: readonly string[]
+} {
   if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input))) {
     throw new Error('tool-code-runtime: configuration must be an object')
   }
   const fields = input as Record<string, unknown> | undefined
-  if (Object.keys(fields ?? {}).some(key => !['maxParallelSubCalls', 'sdkPrompt'].includes(key))) {
+  if (Object.keys(fields ?? {}).some(key => !['maxParallelSubCalls', 'sdkPrompt', 'presentation', 'denyTools'].includes(key))) {
     throw new Error('tool-code-runtime: unknown configuration field')
   }
   const maxParallel = fields?.maxParallelSubCalls ?? 10
@@ -29,7 +34,20 @@ function resolveConfig(input: unknown): { maxParallel: number; sdkPrompt: boolea
   }
   const sdkPrompt = fields?.sdkPrompt ?? false
   if (typeof sdkPrompt !== 'boolean') throw new Error('tool-code-runtime: sdkPrompt must be a boolean')
-  return { maxParallel, sdkPrompt }
+  const presentation = fields?.presentation
+  if (presentation !== undefined && presentation !== 'native' && presentation !== 'ptc' && presentation !== 'both') {
+    throw new Error('tool-code-runtime: presentation must be native, ptc or both')
+  }
+  const denyTools = fields?.denyTools
+  if (denyTools !== undefined && (!Array.isArray(denyTools) || denyTools.some(name => typeof name !== 'string' || name.length === 0))) {
+    throw new Error('tool-code-runtime: denyTools must be an array of tool names')
+  }
+  if (denyTools?.includes('run_code') === true) throw new Error('tool-code-runtime: denyTools cannot name run_code')
+  return {
+    maxParallel, sdkPrompt,
+    ...presentation === undefined ? {} : { presentation },
+    ...denyTools === undefined || denyTools.length === 0 ? {} : { denyTools },
+  }
 }
 
 /** Register run_code through the same scoped registry as other model tools. */
@@ -37,11 +55,16 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-tool-code-runtime', targets: ['host'],
   requires: ['tools', 'codeRuntime', 'fs'], optional: ['sandboxPolicy', 'promptSections'], provides: [],
   resolve(input) {
-    const { maxParallel, sdkPrompt } = resolveConfig(input)
+    const { maxParallel, sdkPrompt, presentation, denyTools } = resolveConfig(input)
     return (context) => {
       const runtime = context.require('codeRuntime')
       const tools = context.require('tools')
       const prompts = context.optional('promptSections')
+      if (presentation !== undefined) context.effect(tools.presentAs(presentation, context.scope))
+      if (denyTools !== undefined) {
+        if (context.scope.parent === undefined) throw new Error('tool-code-runtime: denyTools requires a descendant scope')
+        context.effect(tools.restrict({ deny: [...denyTools] }, context.scope))
+      }
       if (sdkPrompt && prompts === undefined) throw new Error('tool-code-runtime: sdkPrompt requires promptSections')
       if (runtime.language !== 'typescript' && runtime.language !== 'python') {
         throw new Error(`tool-code-runtime: unsupported codeRuntime language ${JSON.stringify(runtime.language)}`)
@@ -151,10 +174,11 @@ export const plugin: NativePlugin = {
         context.effect(prompts.register({
           name: 'tools:sdk', order: 0,
           text(scope = context.scope, renderContext) {
-            if (tools.modelMode === 'native') return ''
+            const mode = tools.modelModeFor(scope)
+            if (mode === 'native') return ''
             const schemas = [...(renderContext?.programSchemas
               ?? tools.sdkSchemas(scope).filter(schema => schema.name !== 'run_code'))]
-            return (tools.modelMode === 'ptc' ? 'Call tools only through `run_code`; business names below are program bindings.\n\n' : '')
+            return (mode === 'ptc' ? 'Call tools only through `run_code`; business names below are program bindings.\n\n' : '')
               + '## Writing code for run_code\n\n'
               + (python ? '`run_code` takes two required strings: `code`, the body of an async Python function, '
                 : '`run_code` takes two required strings: `code`, the body of an async TypeScript function (erasable syntax only), ')
