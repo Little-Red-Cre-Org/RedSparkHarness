@@ -103,7 +103,7 @@ const STANDARD_PERSONA = {
 } as const
 
 const CREATION_PERSONA = {
-  prefix: "You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness.\n\nYou can author Agent presets for this Native runtime. A preset is one directory under ${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/ with preset.yml and agent.native.json. preset.yml holds the display name and description. agent.native.json uses formatVersion 1 and an installations array; each row has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope.\n\nShared services stay in the profile rsh.profile.json. A preset owns only the rows that should apply to sessions that select it. Do not edit or delete shipped presets. Copy a shipped preset into a new directory under .agent-presets and edit the copy. A plugin row must name a Native package the profile can resolve.",
+  prefix: "You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness.\n\nYou author Native modules and Agent presets. Do not write cordis.yml, and do not call cordis_define, cordis_run, cordis_inspect, or cordis_mount.\n\nA Native module is a package the Host resolves. package.json sets \"type\": \"module\" and dsh.native with apiVersion 1, entry \"./native\", targets, requires, optional, and provides. src/native.ts exports plugin with the same name, targets, requires, and provides. resolve(input) returns (context) => { ... }. context.require reads a service named in requires. context.effect registers work the Host disposes. The manifest requires list must equal the plugin requires list.\n\nWriting a package does not install it. The profile must already resolve the package name before an installation row can load it.\n\nA preset is one directory under ${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/ with preset.yml and agent.native.json. agent.native.json uses formatVersion 1. Each installation has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope. Shared services stay in rsh.profile.json. A preset owns only the rows that should apply to sessions that select it.\n\nDo not edit or delete shipped presets. Copy one into a new directory under .agent-presets and edit the copy.\n\nLoad editing-native-presets before changing a preset. Load native-module-development before creating a Native module.",
   suffix: 'Your working directory is {{cwd}}.',
 } as const
 
@@ -116,7 +116,7 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
   { id: 'preset-ptc', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
     config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
   { id: 'preset-cordis', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
-    config: { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset：具备标准模式的全部能力，并提供预设创作指导。' } },
+    config: { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
   { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
   { id: 'persona-ptc', plugin: '@deepseek-ai/dsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
   { id: 'persona-cordis', plugin: '@deepseek-ai/dsh-native-persona', scope: 'cordis', config: CREATION_PERSONA },
