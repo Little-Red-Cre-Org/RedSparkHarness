@@ -1627,18 +1627,13 @@ importers:
 
   rsh/Core/runtime-diagnostics/cordis-bridge:
     dependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../vendor/cordis
-      '@deepseek-ai/dsh-native-prompt':
-        specifier: workspace:^
-        version: link:../../../Engine/core/native-prompt
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../native-runtime
-      '@deepseek-ai/dsh-system-prompt':
+    devDependencies:
+      '@deepseek-ai/cordis':
         specifier: workspace:^
-        version: link:../../../Engine/core/system-prompt
+        version: link:../../vendor/cordis
 
   rsh/Core/runtime-diagnostics/invariants:
     dependencies:
@@ -3697,12 +3692,22 @@ importers:
       '@deepseek-ai/dsh-cordis-bridge':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/cordis-bridge
+      '@deepseek-ai/dsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../core/native-prompt
       '@deepseek-ai/dsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../persona
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../core/system-prompt
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../Core/vendor/cordis
 
   rsh/Engine/preset/persona:
     dependencies:
