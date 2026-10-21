@@ -1,7 +1,7 @@
 /** Build and launch the unpackaged Electron shell against the current workspace. */
 
 import { spawn } from 'node:child_process'
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -53,13 +53,14 @@ async function runPackageScript(script: string, cwd: string): Promise<void> {
   await run(process.execPath, [packageManager, 'run', script], cwd)
 }
 
-async function launchElectron(home: string): Promise<void> {
+async function launchElectron(): Promise<void> {
   const require = createRequire(import.meta.url)
   const electron: unknown = require('electron')
   if (typeof electron !== 'string') throw new Error('desktop development: electron executable is unavailable')
   const mainPort = debugPort('DSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
   const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
   const hostPort = debugPort('DSH_DESKTOP_HOST_INSPECT_PORT', 9230)
+  const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
   const userData = join(DEVELOPMENT_ROOT, 'electron-user-data')
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
@@ -80,10 +81,7 @@ async function launchElectron(home: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({ options: {
-    'skip-build': { type: 'boolean', default: false },
-    'native-profile': { type: 'string' },
-  } })
+  const { values } = parseArgs({ options: { 'skip-build': { type: 'boolean', default: false } } })
   if (!values['skip-build']) {
     await runPackageScript('build', REPOSITORY_ROOT)
     await runPackageScript('build', APP_ROOT)
@@ -103,26 +101,14 @@ async function main(): Promise<void> {
     nodeVersion: process.versions.node,
     pnpmVersion,
   }
-  const projectDir = join(DEVELOPMENT_ROOT, 'project')
-  const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
-  await prepareDevelopmentProject({
-    projectDir,
+  prepareDevelopmentProject({
+    projectDir: join(DEVELOPMENT_ROOT, 'project'),
     cliDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'CLI'),
     hostDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'DesktopHost'),
     dependencyDir: join(REPOSITORY_ROOT, 'node_modules', '.pnpm', 'node_modules'),
     release,
-    home,
   })
-  if (values['native-profile'] !== undefined) {
-    const source = resolve(process.env.INIT_CWD ?? process.cwd(), values['native-profile'])
-    copyFileSync(join(source, 'rsh.profile.json'), join(projectDir, 'rsh.profile.json'))
-    copyFileSync(join(source, 'rsh.client.json'), join(projectDir, 'rsh.client.json'))
-    const manifestPath = join(projectDir, 'package.json')
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { dsh: { profile: Record<string, unknown> } }
-    manifest.dsh.profile = { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' }
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
-  }
-  await launchElectron(home)
+  await launchElectron()
 }
 
 main().catch((error: unknown) => {

@@ -1,0 +1,78 @@
+/** Localized labels shared by the bundled extension manifest and runtime. */
+const dictionaries = {
+  en: {
+    runFile: 'Run current file', runProject: 'Run project task', stopRun: 'Stop run',
+    runAlreadyRunning: 'This file or task is still running. Stop it before running again.',
+    runUnknown: 'This run does not belong to the current workspace.',
+    pythonExecutable: 'Python executable name or absolute path used by Run current file.',
+    cCompiler: 'GCC-compatible C compiler name or absolute path used by Run current file.',
+    cppCompiler: 'GCC-compatible C++ compiler name or absolute path used by Run current file.',
+    runCompilerMissing: 'Configure rsh.cCompiler (C) or rsh.cppCompiler (C++) with the installed gcc/g++ or clang/clang++ executable.',
+    runNoTasks: 'No project tasks are configured. Use Terminal > Configure Tasks to add a build/run task.',
+    javaExecutable: 'Java executable name or absolute path from the JDK used to run Java files.',
+    javacExecutable: 'Java compiler name or absolute path from the same JDK.',
+    runJavaMissing: 'Install a JDK and configure rsh.javaExecutable and rsh.javacExecutable to its java and javac executables.',
+    runTrust: 'Trust this workspace before running code.', runNoFile: 'Open a code file before running.',
+    runUseTask: 'Direct execution supports Python, Java, C and C++. For this file, select a project task or use its language extension.',
+    runPythonMissing: 'Set rsh.pythonExecutable to your Python interpreter.', runTaskMissing: 'The named project task was not found.',
+    runAiConfirm: 'RSH AI requests execution in the IDE terminal:', runDeclined: 'The user cancelled execution.',
+    runBridgeFailed: 'The AI terminal connection failed. Reopen the IDE to reconnect.',
+    autoSaveDelay: 'Auto-save delay in milliseconds. Integer from 100 to 10000; default 500. Each edit restarts the timer.',
+    autoSaveInvalid: 'Auto-save delay must be an integer from 100 to 10000 ms.',
+    saveFailed: 'Automatic saving did not finish. Check file permissions, conflicts, or choose a path for new files.',
+    returnRsh: 'Return to RSH',
+    newProject: 'New project', openProject: 'Open folder', newFile: 'New file',
+    projectLocation: 'Choose a parent folder for the new project', chooseLocation: 'Choose location',
+    projectName: 'Project folder name', invalidProjectName: 'Enter a valid folder name without path separators.',
+    applyCode: 'Apply code', discardCode: 'Discard preview', codePreview: 'Review AI code', wholeFile: 'Replace entire file', selectedCode: 'Replace selection',
+    proposalExpired: 'This code preview has expired.', proposalChanged: 'The target file changed. Create a new preview before applying.', codeEditFailed: 'The editor could not apply the code.',
+    conversation: 'RSH AI', tasks: 'Project tasks', coding: 'Coding', error: 'RSH workbench', newTask: 'New task',
+    addSelection: 'Add selection to task', selectionBusy: 'The task input is busy. Try adding the selection again after it finishes.',
+    selectionWorkspace: 'Wait for the task project to open, then add the selection again.',
+    workspaceFailed: 'Could not switch the editor project. Reopen the IDE before editing this task.',
+    workspacePending: 'The editor project switch is waiting. Finish the input operation and send or remove draft attachments first.',
+    diff: 'Recorded change fragments', before: 'Before', after: 'After', unknownBefore: 'Previous text not recorded',
+  },
+  zh: {
+    runFile: '运行当前文件', runProject: '运行项目任务', stopRun: '停止运行',
+    runAlreadyRunning: '此文件或任务仍在运行，请先停止再重新运行。',
+    runUnknown: '此运行记录不属于当前工作区。',
+    pythonExecutable: '运行当前文件使用的 Python 命令名或解释器绝对路径。',
+    cCompiler: '运行当前文件使用的兼容 GCC 的 C 编译器命令名或绝对路径。',
+    cppCompiler: '运行当前文件使用的兼容 GCC 的 C++ 编译器命令名或绝对路径。',
+    runCompilerMissing: '请在 rsh.cCompiler（C）或 rsh.cppCompiler（C++）中设置已安装的 gcc/g++ 或 clang/clang++ 路径。',
+    runNoTasks: '尚未配置项目任务，请通过“终端 → 配置任务”添加编译或运行任务。',
+    javaExecutable: '运行 Java 文件使用的 JDK 中 java 命令名或绝对路径。',
+    javacExecutable: '同一 JDK 中 javac 编译器的命令名或绝对路径。',
+    runJavaMissing: '请安装 JDK，并将 rsh.javaExecutable 和 rsh.javacExecutable 配置为其中的 java 和 javac。',
+    runTrust: '请先信任此工作区，再运行代码。', runNoFile: '请先打开代码文件。',
+    runUseTask: '直接运行支持 Python、Java、C 和 C++。此文件请选用项目任务或对应语言扩展运行。',
+    runPythonMissing: '请在 rsh.pythonExecutable 中设置 Python 解释器。', runTaskMissing: '未找到指定的项目任务。',
+    runAiConfirm: 'RSH AI 请求在 IDE 终端运行：', runDeclined: '用户取消了运行。',
+    runBridgeFailed: 'AI 终端连接失败，请重新打开 IDE。',
+    autoSaveDelay: '自动保存延迟（毫秒）。100–10000 的整数，默认 500；每次编辑重新计时。',
+    autoSaveInvalid: '自动保存延迟必须是 100–10000 ms 的整数。',
+    saveFailed: '自动保存未完成，请检查文件权限、内容冲突，或先为新文件选择保存路径。',
+    returnRsh: '返回 RSH',
+    newProject: '新建项目', openProject: '打开文件夹', newFile: '新建文件',
+    projectLocation: '选择新项目的保存位置', chooseLocation: '选择位置',
+    projectName: '项目文件夹名称', invalidProjectName: '请输入有效的文件夹名称，不能包含路径分隔符。',
+    applyCode: '应用代码', discardCode: '放弃预览', codePreview: '审核 AI 代码', wholeFile: '替换整个文件', selectedCode: '替换选区',
+    proposalExpired: '代码预览已失效。', proposalChanged: '目标文件已修改，请重新预览后再应用。', codeEditFailed: '编辑器未能应用代码。',
+    conversation: 'RSH AI', tasks: '项目任务', coding: '编码', error: 'RSH 工作台', newTask: '新建任务',
+    addSelection: '将选中代码加入任务', selectionBusy: '任务输入框正在处理内容，请稍后重新添加选中代码。',
+    selectionWorkspace: '请等待任务项目打开后，再添加选中代码。',
+    workspaceFailed: '编辑器项目切换失败，请重新打开 IDE 后再编辑此任务。',
+    workspacePending: '编辑器项目切换已暂缓。请等待输入操作结束，并先发送或移除草稿附件。',
+    diff: '修改记录片段', before: '修改前', after: '修改后', unknownBefore: '未记录原文',
+  },
+} as const
+
+/**
+ * Resolve RSH controls independently of upstream language-pack availability.
+ * @param locale - Desktop locale, or the upstream locale for standalone use.
+ * @returns labels for the supported locale.
+ */
+export function workbenchMessages(locale: string): typeof dictionaries[keyof typeof dictionaries] {
+  return locale.toLowerCase().startsWith('zh') ? dictionaries.zh : dictionaries.en
+}

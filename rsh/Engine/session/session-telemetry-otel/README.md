@@ -27,18 +27,14 @@ English | [中文](README.zh.md)
 
 Mount this plugin when a deployment should export session records through OpenTelemetry logs. Choose a mode, give the exporter an endpoint, and decide whether to mount redaction rules on the seam.
 
-Native Hosts select the package's `./native` entry in an explicit profile; shipped Native profile templates do not install it. The Native entry requires `launchEnvironment`, defaults to `FEEDBACK_ONLY`, and requires `exporter.url` unless config or the process hard-off disables it. A non-empty process `DSH_TELEMETRY_DISABLED` value forces `DISABLED` regardless of plugin config.
-
 ### Modes
 
 | `mode` | Behavior |
 |---|---|
 | `FEEDBACK_ONLY` | Default. Text feedback, rating creation/edit, note edit, and withdrawal release the unhanded prefix through that canonical feedback event; later records wait |
-| `DISABLED` | No OpenTelemetry provider, processor, or exporter is constructed; no telemetry record leaves the process. Cordis warns on live feedback; Native warns on committed feedback |
+| `DISABLED` | No coordinator, provider, processor, or exporter is constructed; no telemetry record leaves the process. Live feedback warns locally; cold mutations stay silent |
 
-The Native entry observes only durable `feedback/committed` notifications from the Native feedback providers. It applies the same sharing modes and export policy to both live-owner and cold-write commits.
-
-The Cordis TypeScript configuration uses the exported `SessionTelemetryMode` enum; the Native entry parses the same values from its profile configuration. `FULL` is rejected, not an alias. Both service APIs report `feedback-only` or `disabled`, not a delivery receipt. The `/feedback` acknowledgement confirms recording only.
+Programmatic TypeScript configuration uses the exported `SessionTelemetryMode` enum; raw string literals are not assignable. `FULL` is rejected, not an alias. The [`sharing` property](../session-telemetry/README.md#the-sharing-disclosure) reports `feedback-only` or `disabled`, not a delivery receipt. The `/feedback` acknowledgement confirms recording only.
 
 ### Minimal configuration
 
@@ -68,8 +64,6 @@ Direct `ctx.sessionTelemetry.emit()` calls are no-ops in every mode and cannot b
 
 Model requests, request headers, Session creation or adoption, restoration, and plugin mount or HMR do not authorize capture. Stored feedback alone triggers nothing. SDK scheduled flush and shutdown may finish batches authorized earlier, but never capture new records.
 
-Native Host shutdown closes commit admission, drains accepted feedback captures, and then shuts down the SDK exporter. The Native Web Host waits for its HTTP listener to finish admitted requests before its provider resources are released.
-
 ### What leaves the machine
 
 In uploading modes, records carry the complete `event.data` as the seam's `sessionTelemetry/record` waterfall returns it — message content, tool arguments and results, the system prompt and tool schemas, todo text, compaction summaries, feedback text, and the session `cwd`. Provider credentials never appear: adapter API keys are constructor parameters, not session events, so they are structurally absent from the log and therefore from telemetry. `DISABLED` constructs no SDK pipeline and hands no capture to a backend.
@@ -97,11 +91,10 @@ The backend is a thin adapter over the OTel JS SDK: it owns feedback authorizati
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: mode resolution, fail-closed validation, SDK pipeline wiring, coordinator composition, shutdown deadline |
-| [`src/native.ts`](src/native.ts) | Cordis-free Host provider: process hard-off, durable feedback commits, copied-record redaction, accepted-capture drain |
 
 ### Capture wiring
 
-The Cordis entry uses the on-demand coordinator with stored history included. The Native entry consumes a committed canonical prefix after feedback becomes durable, including cold writes that create no live Session or Agent. Each entry runs its copied candidate through the `session-telemetry/record` redaction waterfall before SDK emission. The Native provider keeps a process-local per-session cursor; it does not add a durable outbox or delivery watermark. Neither entry implements `flush()`; the SDK owns batching and export shutdown.
+The backend uses on-demand capture with stored history included. Only new own `feedback/record`, `feedback/message-put`, or `feedback/message-delete` events trigger live capture, bounded by that event. A cold `feedback/committed` notification supplies its committed canonical snapshot without publishing a live Session or Agent. Same-object handoff cursors suppress repeated capture. The backend implements no `flush()`; the SDK owns batching and shutdown drain.
 
 ### Field mapping
 
@@ -143,7 +136,7 @@ These limits define where SDK behavior governs and where export guarantees end. 
 - **Live-collector behavior belongs to the SDK exporter** — authentication, TLS, throttling, and other real OTLP deployment behavior follow the upstream SDK rather than a package-owned compatibility layer.
 - **Best-effort handoff** — new cold snapshots and a new feedback submission after restart can repeat prefixes; receivers deduplicate by Session id, format version, and event seq. There is no durable outbox, delivery watermark, automatic retry promise, or collector-acceptance guarantee. OTel and the opt-in DeepSeek API path can overlap. Withdrawal exports a deletion event, not remote erasure.
 
-- **Backend availability** — feedback committed while this plugin is disabled or unloaded is recorded locally but not automatically replayed when it returns. A commit must reach a mounted provider to authorize capture; stored feedback alone does not trigger export.
+- **Backend availability** — feedback submitted while this plugin is disabled or unloaded is recorded locally but not automatically replayed when it returns. Capture requires the subscriber to remain mounted until it observes the submission; unloading during a pending cold write can miss its post-flush notification.
 
 <a id="dev-note"></a>
 ### Dev Note

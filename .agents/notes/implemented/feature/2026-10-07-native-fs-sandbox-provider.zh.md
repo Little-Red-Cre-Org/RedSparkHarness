@@ -12,7 +12,7 @@ Native Web 与终端 profile 选择了 `@deepseek-ai/dsh-fs-sandbox`，但该包
 
 保留 Cordis `runtime` 入口，并在同一包中增加仅支持 Host 的 `native` 入口。Native 入口要求 Native `sandboxPolicy` 服务并提供唯一的 `fs` 服务。它继承现有 `LocalFileSystemBackend`，因此读取、目标身份、原子写入、观察版本、流与变更锁仍使用同一实现。
 
-Cordis 与 Native 写入和编辑调用同一目标检查，使用 `writableRoots` 以及现有规范化路径与文件系统身份包含关系实现。`read-only` 拒绝变更；`workspace-write` 重新解析、检查包含关系，并以 `FS_STALE_VERSION` 拒绝目标身份变化，否则返回调用方原目标。`danger-full-access` 不加路径围栏直接委托。Native 策略与工具层提供会话策略和审批决定；文件系统不能在其批准后替换为新解析出的目标。
+Cordis 与 Native 写入和编辑都会调用同一目标检查。该检查使用 `dsh-sandbox` 的 `writableRoots`，以及现有规范化路径与文件系统身份包含关系实现。`read-only` 拒绝变更，`workspace-write` 会在检查包含关系前重新解析目标，`danger-full-access` 则不加路径围栏直接委托。Native 入口不拥有会话策略或批准决策；Native 策略与工具层逐次提供这些值。
 
 Native 安装把取消信号连接到后端关闭，并由安装所有者等待关闭完成。提供方会从策略解析到后端 I/O 跟踪每个已接纳的写入与编辑；关闭开始后拒绝新变更、取消后端工作，并等待策略检查与本地操作都结束后再由 Native Host 所有者释放。
 

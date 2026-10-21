@@ -25,11 +25,9 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-本包导出共用的 `HarnessClient`、`DeepSeekHarness`、Session handle、结果与通知类型，以及 Native child Module 使用的 runtime seam。`NativeExternalOperationEvent` 导出的是 Engine canonical union，`NativeExternalOperationSessionEvent` 则是对应的 required-on-read `SessionEvent` envelope。它依赖具名的 [SDK wire protocol](../sdk-protocol/README.zh.md)、Core `ChildConnection` 和 canonical Native Subagent 类型包；native 入口只向 Native Host 类型面增加 `sdkChildRuntimeLauncher` service contract。launcher 仍由 Programs 实现，因此 Engine 包既不查找 `dsh`，也不接受调用方控制的 argv。
+本包导出共用的 `HarnessClient`、`DeepSeekHarness`、Session handle、结果与通知类型，以及 Native child Module 使用的 runtime seam。它依赖具名的 [SDK wire protocol](../sdk-protocol/README.zh.md) 和 Core `ChildConnection`；native 入口只向 Native Host 类型面增加 `sdkChildRuntimeLauncher` service contract。launcher 仍由 Programs 实现，因此 Engine 包既不查找 `dsh`，也不接受调用方控制的 argv。
 
 `createNativeSdkChildHarness` 将相同客户端实现绑定到 Program 选定的 runtime 与受管连接。运行在提示词前完成 protocol initialize 握手；若请求 `maxSteps`，Native server 必须协商出不高于请求值的正有效值。`maxTokens` 保持每次模型输出上限语义。Session cancel、steer、fork、通知订阅、EOF 处理与受管进程范围释放均复用同一实现。
-
-Native `HarnessSession.uploadFile(bytes, name?)` 在文件进入有序 Native 提示词或 steer 内容前持久化字节；其进程内回执绑定到该 Session，runtime 重启后必须重新上传。通用 wire 提示词类型保留 Cordis 兼容的持久内容与编码图像，而 `NativeSdkPromptContentBlock` 仅限文本、编码图像与文件回执。
 
 <a id="understand-the-implementation"></a>
 

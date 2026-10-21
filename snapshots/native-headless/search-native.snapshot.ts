@@ -67,7 +67,7 @@ it('records capped real searches with complete recovery artifacts and cold-repla
   })
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
   const model = join(modules, 'search-model'); mkdirSync(model)
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'search-model', version: '0.0.0', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'search-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

@@ -59,12 +59,10 @@ describe('npm resolution benchmark', () => {
     expect(publishWorkspaceRange('^4.0.0', '1.2.3')).toBe('^4.0.0')
   })
 
-  it.each(['.pnpm', 'p'])('combines installed metadata from the configured node_modules/%s store', (store) => {
+  it('combines installed metadata with current publishable workspace fields', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-npm-registry-index-'))
     roots.push(root)
-    mkdirSync(join(root, 'node_modules'), { recursive: true })
-    writeFileSync(join(root, 'node_modules/.modules.yaml'), `virtualStoreDir: ${store}\n`)
-    writeJson(root, `node_modules/${store}/external@2.0.0/node_modules/external/package.json`, {
+    writeJson(root, 'node_modules/.pnpm/external@2.0.0/node_modules/external/package.json', {
       name: 'external',
       version: '2.0.0',
       dependencies: { child: '^1.0.0' },

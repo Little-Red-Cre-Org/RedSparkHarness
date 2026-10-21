@@ -12,7 +12,6 @@ import {
   unlinkSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
 import { createDevelopmentProjectMetadata } from '../src/project-manager.ts'
 import type { DesktopRelease } from '../src/release.ts'
 
@@ -33,8 +32,6 @@ export interface DevelopmentProjectOptions {
   readonly dependencyDir: string
   /** Release identity written into the disposable project metadata. */
   readonly release: DesktopRelease
-  /** Isolated Harness home used by the Native profile template. */
-  readonly home: string
 }
 
 function readManifest(path: string): PackageManifest {
@@ -86,7 +83,7 @@ function mirrorDependencyLinks(sourceRoot: string, destinationRoot: string): voi
  * @param options - Project destination, CLI package, and release identity.
  * @returns the absolute project directory supplied by the caller.
  */
-export async function prepareDevelopmentProject(options: DevelopmentProjectOptions): Promise<string> {
+export function prepareDevelopmentProject(options: DevelopmentProjectOptions): string {
   const cliManifest = readManifest(join(options.cliDir, 'package.json'))
   if (cliManifest.name !== '@deepseek-ai/dsh' || cliManifest.version !== options.release.version) {
     throw new Error(
@@ -108,9 +105,8 @@ export async function prepareDevelopmentProject(options: DevelopmentProjectOptio
     throw new Error('desktop development: rsh/Programs/DesktopHost/lib/index.js is missing; run pnpm run build')
   }
 
-  const compression = await inspectSessionRootCompression(join(options.home, 'sessions')) ?? 'none'
   removeOwnedPath(options.projectDir)
-  createDevelopmentProjectMetadata(options.projectDir, options.release, options.home, compression)
+  createDevelopmentProjectMetadata(options.projectDir, options.release)
   const destinationModules = join(options.projectDir, 'node_modules')
   mkdirSync(destinationModules, { recursive: true })
   mirrorDependencyLinks(options.dependencyDir, destinationModules)

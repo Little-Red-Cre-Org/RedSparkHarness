@@ -10,8 +10,6 @@ English | [中文](README.zh.md)
 
 Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Compact display folds completed-turn process rows while keeping the final answer and independently useful context visible; packed historical Assistant runs remain collapsed. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.
 
-File-mention providers receive the viewed Session ID with the closing-turn owner, so links into inherited history can address the fork itself.
-
 ## Table of Contents
 
 - [Reference previews](#reference-previews)
@@ -30,6 +28,12 @@ File-mention providers receive the viewed Session ID with the closing-turn owner
 ## Reference previews
 
 Sent file references and skills confirmed by the message’s logged invocation open in the right Sidebar. File paths use the viewed Session; skill names resolve through its current input-trigger source. Both use the prose file-link dotted underline on hover or focus. Sessions, directories, and command labels remain non-navigating references.
+
+File-mention providers receive the viewed Session ID with the closing-turn owner, so links into inherited history can address the fork itself.
+
+Inside the Desktop IDE, Assistant code fences expose localized insert and review actions through the existing parent-bound channel; ordinary chat has no editor actions.
+
+In the Desktop IDE, the workbench claims file-link navigation and opens the file in Code OSS at the requested line. Relative paths still resolve against the viewed Session's working directory. Ordinary browser sessions retain the right Sidebar preview. Write/edit approval details display the correlated running call’s proposed path and literal text. Approval outcomes still use the existing pending interaction; displaying the proposal neither authorizes nor executes it.
 
 <a id="system-prompt-row"></a>
 ## System prompt row

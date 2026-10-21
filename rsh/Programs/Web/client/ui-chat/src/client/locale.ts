@@ -6,6 +6,8 @@ export const NS = 'chat'
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
   'view.chat': '对话',
+  'code.insert': '插入编辑器',
+  'code.preview': '查看差异并应用',
   'number.groupSeparator': ',',
   'duration.compactSeconds': '{seconds}秒',
   'duration.compactMinutes': '{minutes}分{seconds}秒',
@@ -117,6 +119,8 @@ export type ChatKey = keyof typeof zh
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
   'view.chat': 'Chat',
+  'code.insert': 'Insert into editor',
+  'code.preview': 'Review and apply',
   'number.groupSeparator': ',',
   'duration.compactSeconds': '{seconds}s',
   'duration.compactMinutes': '{minutes}m{seconds}s',

@@ -117,10 +117,15 @@ export function apply(ctx: Context): void {
             chatNode: key => chat.getSnapshot().nodes.source(key),
             chatNodeProcess: key => chat.getSnapshot().nodes.processSource(key),
           },
+          codeAction: typeof location !== 'undefined' && location.protocol === 'dsh-app:'
+            && location.hostname.startsWith('ide-') && new URL(location.href).searchParams.has('channel') && parent !== window
+            ? (mode, code, language) => {
+              parent.postMessage({ type: 'code-action', channel: new URL(location.href).searchParams.get('channel'), sessionId, mode, code,
+                ...(language === undefined ? {} : { language }) }, '*')
+            } : undefined,
           fileMentions: (owner: TurnTailOwnerProps) => ctx.get('chatFileMentions')?.forClosing(owner, sessionId),
-          // Files open in the right Sidebar, not in a desktop application: the
-          // content stays in the product, beside the conversation that produced
-          // it. A relative path, or an absolute one inside the session's
+          // The embedded workbench claims file links; otherwise the right
+          // Sidebar handles them. A relative path, or an absolute one inside the session's
           // workspace, is addressed under this session's scope,
           // `dsh-resource://file/session/<id>/<path>`; an absolute path
           // elsewhere keeps its absolute spelling in the same Session's address.
@@ -131,6 +136,7 @@ export function apply(ctx: Context): void {
           // its top or at line 400, so the same tab is revealed and told where
           // to land.
           openFile: async (path, options) => {
+            if (ctx.bail('workbench/open-file', { sessionId, path, ...options }) === true) return
             const cwd = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd
             const url = fileAddressFor(sessionId, cwd, path)
             if (options?.line === undefined) ctx.sidebarRight.openResource(url)

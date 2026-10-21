@@ -1,5 +1,5 @@
 ---
-description: "Shared Cordis-free React components for the dsh web client: controls, workspace rows, directory browsing, chat transcript and composer presentation, icons, Markdown, and agent-output cards."
+description: "Shared React UI atoms for the dsh web client: controls, icons, markdown and math rendering, and the terminal/read/diff/search/web output cards (zero Cordis)."
 kind: "package-library"
 ---
 
@@ -9,7 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-primitives` to build shared controls, sidebars, chat views, onboarding, and agent-output cards in the Web client. It includes workspace and Session rows, directory browsing, `SidebarPathBar`, Session file-tree rows and Markdown, code, HTML, and image previews, chat and composer layouts, icons, overlays, Settings forms, and safe Markdown, code, terminal, file, diff, search, web, and JSON rendering. Components use React and `--dsw-*` tokens, accept localized labels and data callbacks, and do not import Cordis.
+Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
+
+Code fences accept optional localized `editorActions` callbacks for insertion and preview. Both controls remain disabled while the fence streams; source text, including its trailing newline, is passed unchanged.
 
 ## Table of Contents
 
@@ -40,29 +42,14 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `Switch` | Two-state toggle, 36×20. `label` is required, so the control cannot ship unnamed. |
 | `Input` | Single-line text entry for search boxes and inline forms. |
 | `Menu` | Dropdown of items, separators, and group labels, with nested submenus. |
-| `ModelPicker` | Composer model and reasoning picker; the owner supplies its catalog, current selection, actions, and localized copy. Model and effort rows respect `locked` and selecting state; loading keeps an open menu visible. |
 | `Pill` | Selectable capsule button for view switchers and filters; takes `active` and `onClick`. |
 | `Tag` | Read-only capsule badge; `tone` selects one of eight palettes. |
 | `StateDot` | Status mark: `done`, `warning`, `ongoing`, `error`, or `idle`. `aria-hidden`, so the render site owns the name. |
-| `ProjectRowItem`, `SessionNodeItem`, `SearchResultItem` | Props-only Workspace and Session rows shared by the legacy and native sidebar compositions. Project and Session tree rows accept an owner-supplied `tabIndex`; Enter and Space activate them. `SessionNodeItem.allowRemove` hides the legacy confirmation action when its owner supports archive only. |
-| `WorkspaceSectionHeader`, `WorkspaceSectionEmpty` | Props-only Workspace section header and localized empty state shared by sidebar compositions. |
-| `DirectoryBrowser` | Callback-driven Miller-column directory picker with path navigation, folder creation, hidden-entry display, and owner-supplied localized copy. |
-| `SidebarPathBar` | Responsive path header shared by file panes and Session details; callers supply the path and trailing controls. |
-| `WorkspaceFileTreeRows` | Props-only directory and file rows shared by the legacy file-tree tab and Native Session details. The owner supplies listing state, labels, and open/toggle callbacks. |
-| `WorkspaceCodePreview`, `WorkspaceMarkdownPreview`, `WorkspaceHtmlPreview`, `WorkspaceImagePreview` | Cordis-free presentations shared by legacy document viewers and Native workspace previews; owners supply file contents, labels, and HTML related-file reads. |
-| `LoadingIndicator` | Localized loading status shared by file and document previews. |
 | `ConnectionIndicator` | Inline connection-recovery control across outage, retry, and recovered states. |
-| `ChatTranscript`, `ChatTurnGroup`, `ChatUserMessage`, `ChatAssistantMessage`, `ChatReasoningDisclosure`, `ChatContextMessage`, `ChatTurnActivity` | Shared turn grouping, transcript rhythm, message frames, collapsed reasoning and context rows, and running-turn label for legacy and Native chat views. |
-| `ChatMessageActionRow`, `ChatMessageCopyAction`, `ChatMessageActionMeta` | Shared message copy control and muted metadata row. |
-| `ChatComposerCard`, `ChatComposerToolbar`, `ChatComposerButton`, `ChatComposerSelect`, `ChatWelcome` | Shared composer surface and controls plus the branded empty-conversation hero. |
-| `ChatMascotHero` | Cordis-free mascot sprite, speech and animation presentation for welcome and floating chat placements. |
 | `DisclosureRow` | 24px compact disclosure that lays title and content side by side. |
 | `Modal` | Centered dialog over a page mask. |
-| `SettingsPanel` | Centered 1080×700 Settings dialog with localized navigation, close button, and page content. Tab and Shift+Tab stay within the dialog; closing restores focus to its opener. |
-| `ProviderEditor`, `CustomProviderCard`, `ModelListEditor`, `DeepSeekModelsEditor`, `EditorFooter` | Props-only API provider forms and model-list editors shared by Settings pages. |
 | `RiskConfirmation` | Sensitive action gated behind an explicit checkbox. |
-| `OnboardingSurface`, `OnboardingModal` | First-run stage and blocking modal chrome; both hold the application root inert while mounted. |
-| `WelcomeNoticeView`, `ModelOnboardingView` | Props-only welcome and provider setup content shared by legacy and Native first-run flows. |
+| `OnboardingSurface` | First-run stage that holds the application root inert. |
 | `Tooltip` | Hover text on a cloned anchor, placed right, bottom, or top. |
 | `HoverCard` | Hover preview the pointer can rest on and select from; optional copy button. |
 | `Toast` | Transient top-center banner held for the owner's `holdMs`. |
@@ -82,9 +69,7 @@ Writing your own component in your own package is fine when the need is genuinel
 
 ### Controls and icons
 
-The catalog above lists what each export is for; this section covers the behavior that props alone do not show. The `ic_ds_*` icon set and `FishLogo`/`BrandWordmark` marks fill brand and inline-icon slots. `FileTypeIcon` renders the traditional 28px Excel, folder, HTML, image, Markdown, generic, PDF, PPT, video, and Word glyphs, and uses the imported square technology artwork for the established 48 code and configuration categories. The import replaces artwork only: archive-only categories do not extend `CodeFileType`. `classifyFileType` applies exact filename, prefix, suffix, optional project-context, and extension rules in that order; React names win over TypeScript/JavaScript, Angular suffixes win over their base extension, and a Dart file becomes Flutter only when the supplied project files contain a `pubspec.yaml` with `flutter:`. Markdown and SVG remain traditional Markdown and image files. Office mappings include XLSM/Numbers as Excel, KEY as slides, and RTF/ODT/Pages as documents. `fileExtension` exposes the same basename and final-dot parsing for adjacent metadata labels. Traditional glyphs use a solid category-colored sheet with a white mark and translucent white corner; the generic file uses a grey sheet and darker grey corner. Callers may override the sheet color through `--dsh-file-type-icon-color`. The full-color technology artwork is the deliberate exception and retains its embedded palette. All glyphs are decorative and carry no label. `LinkIcon` remains the smaller leading glyph for clickable artifact links — globe, folder, code, image, document, or plain paper — while `classifyLinkPath` folds the shared file types into that existing six-category vocabulary. `ConnectionIndicator` renders a warning-colored disconnected action, a connecting label whose one-to-three dots advance every 500ms independently of retry timing, or a success-colored recovered status. Hover or keyboard focus shows only the reconnect action label, including while the connecting dots animate. Every state reserves the widest supplied label and uses fixed icon and text columns, so copy changes do not move or resize the control. Its owner supplies visibility, the recovery hold, localized labels, and the immediate-reconnect callback; the primitive uses no native title tooltip. `SettingsPanel` keeps navigation selection in its owner, takes page and header action nodes as props, and closes from its button, mask, or Escape. It cycles Tab and Shift+Tab across dialog controls and restores focus to the element that opened it. `useAnchoredPosition` and `useAnchoredMaxHeight` keep floating panels and bottom-anchored overlays clamped to the viewport and following their anchor. `HoverCard` keeps its portaled preview reachable across the anchor gap and can expose a copy button through the `copyText` prop. `Toast` holds for the window its owner names through `holdMs`, because how long a banner has to stay depends on how much there is to read; the same value drives its unmount timer and the stylesheet's fade delay, so the two cannot disagree. `rankByName` is the `/` menu's shared candidate ranker for the command and skill sources: the query must be a case-insensitive ordered subsequence of the name; prefix hits rank first, then alignment score, then source order. `Menu.autoFocus` focuses its first enabled item, supports Arrow Up/Down and Home/End navigation, and focuses the first button in the anchor on Escape; it is opt-in for action menus.
-
-The Models settings editors and onboarding views receive localized copy, schema operations and Host callbacks through props. Legacy and native pages share their markup and stylesheets without sharing a data layer.
+The catalog above lists what each export is for; this section covers the behavior that props alone do not show. The `ic_ds_*` icon set and `FishLogo`/`BrandWordmark` marks fill brand and inline-icon slots. `FileTypeIcon` renders the traditional 28px Excel, folder, HTML, image, Markdown, generic, PDF, PPT, video, and Word glyphs, and uses the imported square technology artwork for the established 48 code and configuration categories. The import replaces artwork only: archive-only categories do not extend `CodeFileType`. `classifyFileType` applies exact filename, prefix, suffix, optional project-context, and extension rules in that order; React names win over TypeScript/JavaScript, Angular suffixes win over their base extension, and a Dart file becomes Flutter only when the supplied project files contain a `pubspec.yaml` with `flutter:`. Markdown and SVG remain traditional Markdown and image files. Office mappings include XLSM/Numbers as Excel, KEY as slides, and RTF/ODT/Pages as documents. `fileExtension` exposes the same basename and final-dot parsing for adjacent metadata labels. Traditional glyphs use a solid category-colored sheet with a white mark and translucent white corner; the generic file uses a grey sheet and darker grey corner. Callers may override the sheet color through `--dsh-file-type-icon-color`. The full-color technology artwork is the deliberate exception and retains its embedded palette. All glyphs are decorative and carry no label. `LinkIcon` remains the smaller leading glyph for clickable artifact links — globe, folder, code, image, document, or plain paper — while `classifyLinkPath` folds the shared file types into that existing six-category vocabulary. `ConnectionIndicator` renders a warning-colored disconnected action, a connecting label whose one-to-three dots advance every 500ms independently of retry timing, or a success-colored recovered status. Hover or keyboard focus shows only the reconnect action label, including while the connecting dots animate. Every state reserves the widest supplied label and uses fixed icon and text columns, so copy changes do not move or resize the control. Its owner supplies visibility, the recovery hold, localized labels, and the immediate-reconnect callback; the primitive uses no native title tooltip. `useAnchoredPosition` and `useAnchoredMaxHeight` keep floating panels and bottom-anchored overlays clamped to the viewport and following their anchor. `HoverCard` keeps its portaled preview reachable across the anchor gap and can expose a copy button through the `copyText` prop. `Toast` holds for the window its owner names through `holdMs`, because how long a banner has to stay depends on how much there is to read; the same value drives its unmount timer and the stylesheet's fade delay, so the two cannot disagree. `rankByName` is the `/` menu's shared candidate ranker for the command and skill sources: the query must be a case-insensitive ordered subsequence of the name; prefix hits rank first, then alignment score, then source order. `Menu.autoFocus` focuses its first enabled item, supports Arrow Up/Down and Home/End navigation, and focuses the first button in the anchor on Escape; it is opt-in for action menus.
 
 ### Rendering agent output
 
@@ -93,7 +78,7 @@ The Models settings editors and onboarding views receive localized copy, schema 
 
 ### Localizing copy
 
-The components cannot read the application locale, so every piece of user-facing copy arrives through required label props or a translation callback. `DirectoryBrowser` takes its translation callback with the directory-browser key set; `ModelOnboardingView` takes the model-editor and onboarding key set; `WorkspaceFileTreeRows` and the workspace previews take complete localized labels; `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `SettingsPanel`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's copy interface.
+The atoms cannot read the application locale, so every piece of user-facing copy arrives through required label props. `HoverCard`, `TerminalBlock`, `JsonTree`, `CodeBlock`, `MarkdownText`, `JsonBlock`, `ConnectionIndicator`, `Modal`, `DiffBlock`, `ReadBlock`, `SearchBlock`, and `WebBlock` accept complete localized labels. The package owns no language fallback; omission fails typechecking, and each feature maps its typed `t` seat into the primitive's label interface.
 
 -----
 
@@ -103,7 +88,7 @@ The components cannot read the application locale, so every piece of user-facing
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The package owns Cordis-free React components styled through `--dsw-*` tokens. Feature owners provide directory listings, mutations, localized copy, and session data; the directory browser owns only its navigation and display state.
+The package enforces one separation: presentational React atoms with zero Cordis and zero slot knowledge, styled only through `--dsw-*` tokens, while every feature-specific concern (locale, session data, composition) stays in the composing plugin.
 
 ### Source map
 
@@ -115,16 +100,6 @@ The package owns Cordis-free React components styled through `--dsw-*` tokens. F
 | [`src/ReadBlock.tsx`](src/ReadBlock.tsx) / [`src/DiffBlock.tsx`](src/DiffBlock.tsx) | Read and diff cards |
 | [`src/SearchBlock.tsx`](src/SearchBlock.tsx) / [`src/WebBlock.tsx`](src/WebBlock.tsx) | Search and web-retrieval cards |
 | [`src/icons/`](src/icons/) | `ic_ds_*` glyph components and brand marks |
-| [`src/DirectoryBrowser.tsx`](src/DirectoryBrowser.tsx) | Callback-driven directory navigation dialog shared by browse and Native Workspace flows |
-| [`src/SidebarPathBar.tsx`](src/SidebarPathBar.tsx) | Token-styled path row shared by file panes and Session details |
-| [`src/WorkspaceFileTreeRows.tsx`](src/WorkspaceFileTreeRows.tsx) | Props-only tree rows and directory-first natural ordering |
-| [`src/WorkspaceFilePreview.tsx`](src/WorkspaceFilePreview.tsx) | Shared Cordis-free code, Markdown, HTML, and image rendering |
-| [`src/workspace-html.ts`](src/workspace-html.ts) / [`src/workspace-code-languages.ts`](src/workspace-code-languages.ts) | Bounded static HTML assets and shared code suffix mapping |
-| [`src/SettingsPanel.tsx`](src/SettingsPanel.tsx) | Cordis-free shared Settings navigation and dialog |
-| [`src/OnboardingSurface.tsx`](src/OnboardingSurface.tsx), [`src/OnboardingModal.tsx`](src/OnboardingModal.tsx) | Blocking first-run stage and modal chrome |
-| [`src/WelcomeNoticeView.tsx`](src/WelcomeNoticeView.tsx), [`src/ModelOnboardingView.tsx`](src/ModelOnboardingView.tsx) | Shared first-run welcome copy and provider setup form |
-| [`src/chat/`](src/chat/) | Shared transcript, composer, turn activity, welcome and mascot presentation |
-| [`src/models-settings/`](src/models-settings/) | Props-only provider forms, model editors and their shared stylesheet |
 | [`src/code-file-icon-artwork.ts`](src/code-file-icon-artwork.ts) | Embedded inner SVG markup for the 48 detailed code-file categories |
 | [`src/code-file-icon-artwork.manifest.json`](src/code-file-icon-artwork.manifest.json) | Design-export digests, included categories, and intentionally excluded artwork |
 | [`src/useAnchoredPosition.ts`](src/useAnchoredPosition.ts) / [`src/useAnchoredMaxHeight.ts`](src/useAnchoredMaxHeight.ts) | Floating-panel and overlay geometry hooks |

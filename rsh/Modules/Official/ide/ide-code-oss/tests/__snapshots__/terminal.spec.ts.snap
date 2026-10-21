@@ -1,0 +1,110 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`IDE MCP execution with connected executor=false 1`] = `
+{
+  "result": {
+    "content": [
+      {
+        "text": "IDE is not connected. Open the RSH IDE before running code.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+  "tools": [
+    {
+      "description": "Run the current Python, Java, C or C++ editor file (compiled languages build before execution) or a named project task in the visible RSH IDE terminal. The user confirms the actual file and workspace in the IDE. Use status for recorded exit codes and stop to request termination. Output is visible in the IDE terminal, not returned here; never invent output or claim success from a running status. Requires the IDE to be open. Background shell tools do not use this terminal.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "action": {
+            "enum": [
+              "file",
+              "task",
+              "status",
+              "stop",
+            ],
+            "type": "string",
+          },
+          "runId": {
+            "description": "Run identifier returned by this tool; required for stop.",
+            "type": "string",
+          },
+          "task": {
+            "description": "Exact configured project task name; required for action task.",
+            "type": "string",
+          },
+          "workspace": {
+            "description": "Absolute workspace directory for this conversation; must match an open IDE folder.",
+            "minLength": 1,
+            "type": "string",
+          },
+        },
+        "required": [
+          "action",
+          "workspace",
+        ],
+        "type": "object",
+      },
+      "name": "ide_run",
+    },
+  ],
+}
+`;
+
+exports[`IDE MCP execution with connected executor=true 1`] = `
+{
+  "result": {
+    "content": [
+      {
+        "text": "{"id":"run-1","state":"running","file":"hello.py"}",
+        "type": "text",
+      },
+    ],
+  },
+  "tools": [
+    {
+      "description": "Run the current Python, Java, C or C++ editor file (compiled languages build before execution) or a named project task in the visible RSH IDE terminal. The user confirms the actual file and workspace in the IDE. Use status for recorded exit codes and stop to request termination. Output is visible in the IDE terminal, not returned here; never invent output or claim success from a running status. Requires the IDE to be open. Background shell tools do not use this terminal.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "action": {
+            "enum": [
+              "file",
+              "task",
+              "status",
+              "stop",
+            ],
+            "type": "string",
+          },
+          "runId": {
+            "description": "Run identifier returned by this tool; required for stop.",
+            "type": "string",
+          },
+          "task": {
+            "description": "Exact configured project task name; required for action task.",
+            "type": "string",
+          },
+          "workspace": {
+            "description": "Absolute workspace directory for this conversation; must match an open IDE folder.",
+            "minLength": 1,
+            "type": "string",
+          },
+        },
+        "required": [
+          "action",
+          "workspace",
+        ],
+        "type": "object",
+      },
+      "name": "ide_run",
+    },
+  ],
+}
+`;

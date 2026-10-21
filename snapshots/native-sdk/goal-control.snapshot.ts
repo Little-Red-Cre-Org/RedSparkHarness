@@ -256,7 +256,7 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
     apiVersion: number; targets: string[]; requires: string[]; optional: string[]; provides: string[]
   } }
   writeFileSync(join(fixturePackage, 'native.mjs'), `export { plugin } from ${JSON.stringify(fixtureUrl)}\n`)
-  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-goal-control', version: '0.0.0', type: 'module',
+  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-goal-control', type: 'module',
     exports: { './package.json': './package.json', './native': './native.mjs' },
     dsh: { native: { apiVersion: plugin.apiVersion, entry: './native', targets: plugin.targets,
       requires: plugin.requires, optional: plugin.optional ?? [], provides: plugin.provides } } }))

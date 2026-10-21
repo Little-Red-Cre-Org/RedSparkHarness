@@ -1,21 +1,23 @@
 /**
  * Public vocabulary of Session-level feedback: the fixed category taxonomy,
  * the `feedback/record` event payload, and the `sessionFeedback.record`
- * Remote request and result types. The runtime category tuple is available
- * through this Cordis-free entry for Host and browser consumers.
+ * Remote request and result types. Types only; the runtime category tuple is
+ * exported by the package entry, and a browser plugin imports types alone
+ * because its bundle may not carry Host values.
  * @module @deepseek-ai/dsh-command-feedback/types
  */
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
-/** Durable feedback category ids in the order product surfaces present them. */
-export const FEEDBACK_CATEGORIES = [
-  'task-result', 'instruction-following', 'product-interaction', 'service-stability',
-  'resource-cost', 'security-privacy-permission', 'other',
-] as const
-
-/** One of the fixed feedback categories. */
-export type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number]
+/** One of the fixed feedback categories; the ids are durable log vocabulary. */
+export type FeedbackCategory =
+  | 'task-result'
+  | 'instruction-following'
+  | 'product-interaction'
+  | 'service-stability'
+  | 'resource-cost'
+  | 'security-privacy-permission'
+  | 'other'
 
 /**
  * One recorded human remark about a Session. Both members are optional: a
@@ -51,7 +53,7 @@ export interface SessionFeedbackRecordRequest {
 
 /** Stable postcondition of a recorded remark. */
 export interface SessionFeedbackRecordValue {
-  /** The selected recorder accepted the remark for the Session log. */
+  /** The remark is appended to the Session log; flushing follows the Session's own schedule. */
   readonly recorded: true
 }
 

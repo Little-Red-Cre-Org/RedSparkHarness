@@ -50,9 +50,6 @@
     "./adapter-directory": {
       "types": "./lib/types/adapter-directory.d.ts",
       "default": "./lib/adapter-directory.js"
-    },
-    "./responses-transport": {
-      "types": "./lib/types/responses-transport.d.ts"
     }
   },
   "files": [

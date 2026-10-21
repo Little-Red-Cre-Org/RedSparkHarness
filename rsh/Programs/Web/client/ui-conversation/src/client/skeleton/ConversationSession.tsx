@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import clsx from 'clsx'
+import { IconNewChatOutline16, IconChevronDownOutline14, IconPlusOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
@@ -58,7 +59,7 @@ function equalBreadcrumbs(left: readonly Breadcrumb[], right: readonly Breadcrum
  */
 export function ConversationSessionHeader({
   sessionId, useSession, useSessions, useConversation, useConversationViews, useStore,
-  renderSlot, open, selectView, t,
+  renderSlot, open, selectView, t, useWorkspaces, embeddedWorkbench = false, newSession,
 }: ConversationSessionHeaderProps) {
   const tabs = useConversationViews(value => value)
   const selectedId = useStore(s => s.view)
@@ -66,18 +67,45 @@ export function ConversationSessionHeader({
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
   const session = useSession(s => s)
   const conversation = useConversation(s => s)
-  const hideChrome = session.blank && conversationPhase(session, conversation) === 'blank'
+  const list = useSessions(s => s)
+  const workspaces = useWorkspaces(s => s)
+  const workspace = workspaces.items.find(row => row.sessionIds.includes(sessionId))
+  const choices = list.ids.flatMap((id) => {
+    const row = list.byId[id]
+    return row !== undefined && workspace?.sessionIds.includes(id)
+      && !workspaces.archivedSessionIds.includes(id) ? [row] : []
+  })
+  const hideChrome = !embeddedWorkbench && session.blank && conversationPhase(session, conversation) === 'blank'
 
   return (
     <header
-      className={clsx(css.header, hideChrome && css.headerHidden)}
+      className={clsx(css.header, hideChrome && css.headerHidden, embeddedWorkbench && css.headerEmbedded)}
       aria-hidden={hideChrome || undefined}
     >
       {!hideChrome && (
         <>
           <div className={css.titleRow}>
             <div className={css.titleCluster}>
-              <nav className={css.crumbs} aria-label={t('session.hierarchy')}>
+              {embeddedWorkbench ? <div className={css.sessionPicker}>
+                <div className={css.sessionSelectControl}>
+                  <span className={css.sessionIcon} aria-hidden="true"><IconNewChatOutline16 /></span>
+                  <select
+                    className={css.sessionSelect}
+                    aria-label={t('session.choose')}
+                    value={sessionId}
+                    onChange={(event) => {
+                      const selected = choices.find(row => row.id === event.target.value)
+                      if (selected !== undefined) open(selected.id)
+                    }}
+                  >
+                    {choices.map(row => <option key={row.id} value={row.id}>{row.displayTitle || t('session.new')}</option>)}
+                  </select>
+                  <span className={css.sessionChevron} aria-hidden="true"><IconChevronDownOutline14 /></span>
+                </div>
+                <button type="button" className={css.newSession} onClick={newSession}>
+                  <span aria-hidden="true"><IconPlusOutline16 size={14} /></span>{t('session.new')}
+                </button>
+              </div> : <nav className={css.crumbs} aria-label={t('session.hierarchy')}>
                 {ancestry.map((summary, index) => {
                   const last = index === ancestry.length - 1
                   const title = (
@@ -125,7 +153,7 @@ export function ConversationSessionHeader({
                   )
                 })}
                 {ancestry.length === 0 && <span className={css.crumbCurrent}>{sessionId}</span>}
-              </nav>
+              </nav>}
               <div className={css.headerActions}>
                 {renderSlot('conversation.session.header.actions', {})}
               </div>
@@ -133,9 +161,9 @@ export function ConversationSessionHeader({
             <div className={css.headerUtilities}>
               {renderSlot('conversation.session.header.utilities', {})}
             </div>
-            <div className={css.headerCorner} data-conversation-header-corner="">
+            {!embeddedWorkbench && <div className={css.headerCorner} data-conversation-header-corner="">
               {renderSlot('conversation.session.header.corner', {})}
-            </div>
+            </div>}
           </div>
           {tabs.length > 1 && (
             <div className={css.tabs} role="tablist">

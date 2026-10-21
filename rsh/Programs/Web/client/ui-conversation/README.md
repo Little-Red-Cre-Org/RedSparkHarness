@@ -14,7 +14,6 @@ English | [中文](README.zh.md)
 ## Table of Contents
 
 - [Conversation assembly](#conversation-assembly)
-- [Native target types](#native-target-types)
 - [Shell and standard props](#shell-and-standard-props)
 - [Temporary composer entries](#temporary-composer-entries)
 - [Model Experience](#model-experience)
@@ -34,13 +33,14 @@ A target becomes active when shell selection resolves it or when its source rece
 
 Target packages declaration-merge their snapshot and Location data maps, then register with `ctx.uiConversation.events.register(...)` and `ctx.uiConversation.views.register(...)`. A target reads its Session-owned source with `ctx.uiConversation.binding(binding).target(targetId)`. Registrations are Cordis effects and their returned disposers remove the contribution from the same registry. The shared request inspection serves every target: `ctx.uiConversation.inspectSystemPrompt(previous, event)` interprets system messages and positional replacements as immutable loaded-surface state. It selects the last nonempty surviving system node in surface order, retains only surviving replacement positions for chained rewrites, and withholds the prompt after an unindexed older endpoint until prepend replay supplies its order. Target-owned Definitions retain historical cards independently. `ctx.uiConversation.inspectRequestPrompt(previous, header, system)` classifies request changes against that effective prompt; ordinary messages and stream chunks require no system-state work.
 
-<a id="native-target-types"></a>
-## Native target types
-
-Native Client packages that implement Conversation targets import shared event, node, prompt, View, and image-rendering types from `@deepseek-ai/dsh-client-ui-conversation/native-types`. The entry contains type declarations and no runtime code.
+In the embedded IDE, the conversation title selects a non-archived conversation from the current project. **New conversation** reuses the existing Workspace navigation. These controls remain visible for blank conversations; the nested sidebar button is omitted.
 
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
+
+The composer writes a programmatically seeded draft to its existing persisted store when mounted. Its draft-persistence event lets the embedded IDE wait for that write before a project change restarts the extension host. Browser-owned unsent attachments and in-progress input operations postpone the editor project switch.
+
+The embedded IDE welcome screen uses compact typography without a background glow. The existing composer and Session binding remain mounted during editor navigation.
 
 The composer registers the File command action and owns its label, availability, and native file-dialog callback. Menu availability and invocation both consult the mounted composer's current attachment-intake policy. Unmounting or locking the composer disables that action; disposing the plugin removes its registration. The callback binding stays inside the input module.
 
@@ -131,7 +131,7 @@ None; Conversation assembly and browser input state do not alter provider-side p
 <a id="dev-note"></a>
 ### Dev Note
 
-The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers.
+The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers. Its `OpenFileOptions.diffs` carries recorded before/after fragments, with null prior text meaning unavailable; consumers must not interpret these fragments as applicable edits.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>
@@ -141,3 +141,5 @@ None.
 </details>
 
 **Runtime invariant:** No invariant companion is published because Conversation exposes only the placement-neutral `conversation.pet` declaration and owner placement; an occupant owns every character, asset, preference, and state rule. Conversation Definitions, target builders, and Views are already validated by their owning registries and the Slot ledger.
+
+The embedded session selector and new-conversation button share compact sizing and keyboard focus indicators. Mode controls wrap onto their own row.

@@ -1,0 +1,41 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Project toolbar: cancel 1`] = `
+{
+  "entries": [],
+  "errors": 0,
+  "mode": "cancel",
+  "switches": 0,
+}
+`;
+
+exports[`Project toolbar: create 1`] = `
+{
+  "entries": [
+    "example",
+  ],
+  "errors": 0,
+  "mode": "create",
+  "switches": 1,
+}
+`;
+
+exports[`Project toolbar: existing 1`] = `
+{
+  "entries": [
+    "example",
+  ],
+  "errors": 1,
+  "mode": "existing",
+  "switches": 0,
+}
+`;
+
+exports[`Project toolbar: open 1`] = `
+{
+  "entries": [],
+  "errors": 0,
+  "mode": "open",
+  "switches": 1,
+}
+`;

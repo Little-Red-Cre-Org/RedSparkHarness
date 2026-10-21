@@ -82,12 +82,8 @@ describe('desktop backend controller', () => {
 
   it('publishes preparation errors and permits retry', async () => {
     const f = fixture()
-    const fakeToken = 'desktop-projection-fake-token'
-    const rawIssue = { path: ['presets', `Authorization: Bearer ${fakeToken}`], message: fakeToken }
-    await expect(f.controller.start(async () => { throw Object.assign(new Error(fakeToken), { issues: [rawIssue] }) }))
-      .rejects.toThrow(fakeToken)
-    expect(f.controller.state).toEqual({ phase: 'error', errorType: 'Error' })
-    expect(JSON.stringify(f.controller.state)).not.toContain(fakeToken)
+    await expect(f.controller.start(async () => { throw new Error('invalid profile') })).rejects.toThrow('invalid profile')
+    expect(f.controller.state).toEqual({ phase: 'error', message: 'invalid profile' })
     expect(f.create).not.toHaveBeenCalled()
     f.ready.resolve()
     await f.controller.start(async () => {})
@@ -105,7 +101,7 @@ describe('desktop backend controller', () => {
     await f.stopping.promise
     f.exited.resolve()
     await rejected
-    expect(f.controller.state).toEqual({ phase: 'error', errorType: 'Error' })
+    expect(f.controller.state).toEqual({ phase: 'error', message: 'plugin failed' })
     expect(f.host.stop).toHaveBeenCalledTimes(1)
     await f.controller.close()
   })
@@ -115,7 +111,7 @@ describe('desktop backend controller', () => {
     f.ready.resolve()
     await f.controller.start(async () => {})
     f.fail(new Error('transport failed'))
-    expect(f.controller.state).toEqual({ phase: 'error', errorType: 'Error' })
+    expect(f.controller.state).toEqual({ phase: 'error', message: 'transport failed' })
     expect(f.controller.host).toBeUndefined()
     await f.stopping.promise
     const prepare = vi.fn(async () => {})
@@ -139,7 +135,7 @@ describe('desktop backend controller', () => {
     await f.stopping.promise
     f.exited.resolve()
     await rejected
-    expect(f.states).toEqual([{ phase: 'starting' }, { phase: 'error', errorType: 'Error' }])
+    expect(f.states).toEqual([{ phase: 'starting' }, { phase: 'error', message: 'immediate failure' }])
     await f.controller.close()
   })
 

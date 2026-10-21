@@ -126,6 +126,7 @@ function mount(
     composerBlock?: { reason: string }
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
+    embeddedWorkbench?: boolean
   } = {},
 ) {
   const root = sid('root')
@@ -168,6 +169,7 @@ function mount(
   const inputActions = wiring.actions
   const stop = vi.fn()
   const open = vi.fn()
+  const newSession = vi.fn()
   const slotCalls: string[] = []
   const lineageOwners: ConversationHeaderLineageOwnerProps[] = []
   const viewTabs = options.viewTabs ?? [
@@ -191,6 +193,8 @@ function mount(
     if (key === 'conversation.session.header') {
       return (
         <ConversationSessionHeader
+          embeddedWorkbench={options.embeddedWorkbench}
+          newSession={newSession}
           sessionId={SID}
           SessionProvider={({ children }) => children}
           useSession={useSession}
@@ -318,13 +322,24 @@ function mount(
   }
   const view = render(<ConversationRoot {...props} />)
   return {
-    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open,
+    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open, newSession,
     pickerOwner: () => pickerOwner,
     rerender: () => { view.rerender(<ConversationRoot {...props} />) },
   }
 }
 
 describe('Hero chrome', () => {
+  it.each([true, false])('keeps IDE conversation navigation visible when blank=%s', (blank) => {
+    const b = mount(sessionSnapshotOf({ blank }), [{ ...workspace('one'), sessionIds: [SID, sid('root')] }], undefined, { embeddedWorkbench: true })
+    const picker = b.view.getByRole('combobox', { name: '选择会话' })
+    expect(b.view.getAllByRole('option').map(option => option.textContent)).toEqual(['Root', 'Child'])
+    fireEvent.change(picker, { target: { value: 'root' } })
+    expect(b.open).toHaveBeenCalledWith('root')
+    fireEvent.click(b.view.getByRole('button', { name: /新建对话/ }))
+    expect(b.newSession).toHaveBeenCalledOnce()
+    expect(b.slotCalls).not.toContain('conversation.session.header.corner')
+    expect(picker.parentElement?.parentElement?.outerHTML).toMatchSnapshot()
+  })
   it('delegates the companion to the optional Conversation pet slot', () => {
     const renderSlot = vi.fn<HeroShellProps['renderSlot']>(key => key === 'conversation.pet' ? <div>Pet occupant</div> : null)
     const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)

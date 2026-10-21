@@ -79,6 +79,7 @@ const ABSENT_FILE_UPLOADS = {
 }
 
 interface WorkspaceNavigation {
+  startSession(): void
   openSession(sessionId: SessionId): void
   openWorkspace(
     workspaceId: Parameters<ConversationInjected['selectWorkspace']>[0],
@@ -282,7 +283,13 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => ({
       hooks: { conversationViews },
-      bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
+      bindDraftMirror: (write) => {
+        const shell = inputHub.shell(sessionId)
+        const unbind = shell.bindMirror(write)
+        write(shell.snapshot.draft)
+        ctx.emit('conversation/draft-persistence', sessionId, true)
+        return () => { unbind(); ctx.emit('conversation/draft-persistence', sessionId, false) }
+      },
       openView: (view, focus) => {
         activateView(sessionId, view)
         actions.openView(view, focus)
@@ -301,6 +308,9 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionHeaderInjected => ({
+      embeddedWorkbench: typeof location !== 'undefined' && location.protocol === 'dsh-app:'
+        && location.hostname.startsWith('ide-'),
+      newSession: () => { workspaceNavigation.startSession() },
       hooks: { conversationViews },
       open: (id) => { workspaceNavigation.openSession(id) },
       selectView: (view) => {

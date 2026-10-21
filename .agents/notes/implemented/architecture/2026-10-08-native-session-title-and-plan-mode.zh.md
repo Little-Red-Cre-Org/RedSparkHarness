@@ -26,7 +26,7 @@
 
 ## 结果
 
-Cordis 行为与测试不变；两个运行时执行相同的标题与计划决策。原生差异仅限于投递方式：计划指导是历史中的通知而非提示词段落；空闲时的 `/plan <消息>` 等待下一条提示，而不是唤醒一个 TUI 不显示的 turn；标题提供方调用只有在比主请求更久时才会延长 turn。Native Web controller 会在 profile 安装可选 Provider 时提供 plan-mode 状态和选择；`native-web` profile 仍未安装它，composer UI 仍为延期工作。`native-headless`、`native-sdk` 与 `native-acp` 中的标题界面以及原生标题命令也仍为延期工作。
+Cordis 行为与测试不变；两个运行时执行相同的标题与计划决策。原生差异仅限于投递方式：计划指导是历史中的通知而非提示词段落；空闲时的 `/plan <消息>` 等待下一条提示，而不是唤醒一个 TUI 不显示的 turn；标题提供方调用只有在比主请求更久时才会延长 turn。原生 Web 计划模式、`native-headless`、`native-sdk` 与 `native-acp` 中的标题界面以及原生标题命令仍为延期工作。
 
 在兼容性清单中，`dsh-plan-mode`、`dsh-session-title-llm`、`dsh-session-title-first-prompt-llm` 与 `dsh-session-title-all-prompts-llm` 从 `migration-required` 变为 `native-mixed`（154 → 150，75 → 79），`dsh-session-title` 仍为 `native-mixed` 并新增 `./native` 入口。直接 Cordis 使用数保持 1,783，因为 Cordis 入口作为同一核心之上的胶水层保留。
 

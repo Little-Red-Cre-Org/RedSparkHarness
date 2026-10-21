@@ -1,6 +1,5 @@
-export type {
-  ConvViewProps, MessageImageLoader, MessageImageSource, MessageImagesOwnerProps, RenderMessageImages,
-} from './native-types.ts'
+import type { MessageImageSource, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+export type { MessageImageSource, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
 /** Target-neutral Conversation slot declarations and composed component props. */
 import type { ReactNode, RefObject } from 'react'
 import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
@@ -74,6 +73,21 @@ export interface ComposerAttachmentsOwnerProps {
   /** Display-ready limits for the drop invitation. */
   dropLimits?: { readonly count: number; readonly size: string } | undefined
 }
+
+/** Message image group handed to the optional attachment presentation plugin. */
+export interface MessageImagesOwnerProps {
+  /** Durable references or submission-echo previews in source order. */
+  images: readonly MessageImageSource[]
+  /** Session-authorized image URL loader for the durable arm. */
+  loadImage: MessageImageLoader
+  /** Horizontal placement inside the owning record. */
+  align: 'start' | 'end'
+  /** Force every image into the compact message-attachment tile size. */
+  compact?: boolean
+}
+
+/** Slot-backed renderer used by Conversation targets without importing an attachment implementation. */
+export type RenderMessageImages = (owner: Omit<MessageImagesOwnerProps, 'loadImage'>) => ReactNode
 
 /** Selector hook over the current Session's assembled Conversation. */
 export type UseConversation = SnapshotSelectorHook<ConversationSnapshot>
@@ -221,6 +235,9 @@ export interface ConvViewOwnerProps {
   completeViewRequest: () => void
 }
 
+/** Base props of one target-owned Conversation View entry. */
+export type ConvViewProps = PropsRuntime<'conversation.view'>
+
 /** Business callbacks injected into the resident Conversation shell. */
 export interface ConversationInjected {
   /** Connect and open a blank Session in the selected Workspace. */
@@ -241,6 +258,10 @@ export interface ConversationSessionInjected {
 
 /** Business callbacks injected into the strict Session header. */
 export interface ConversationSessionHeaderInjected {
+  /** Embedded IDE headers retain navigation even for blank Sessions. */
+  readonly embeddedWorkbench?: boolean
+  /** Create or reuse a blank Session in the current Workspace. */
+  newSession?: () => void
   /** Package-owned View roster source bound only for the Conversation header. */
   readonly hooks: { readonly conversationViews: ObservableSnapshot<readonly ViewTab[]> }
   /** Select a Session through the Session Controller. */

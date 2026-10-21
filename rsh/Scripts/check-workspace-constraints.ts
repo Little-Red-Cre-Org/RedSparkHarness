@@ -11,14 +11,7 @@ import { pathToFileURL } from 'node:url'
 import { isPublicExperimentalPackageDirectory } from './experimental-package-policy.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
-import {
-  applicationDistributionDirectories,
-  mixedNativeEntryDirectories,
-  mixedNativeLibraryDirectories,
-  nativeCompatibilityOnlyPeers,
-  nativePackageDirectories,
-  nativeSafeSourceSubpaths,
-} from './native-package-policy.ts'
+import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, nativeSafeSourceSubpaths } from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 /** pnpm workspace manifests after the physical RSH migration. */
@@ -71,8 +64,6 @@ const standardReleaseMemberDirectory = new RegExp('^(?:' + [
 ].join('|') + ')$')
 /** Installable application assembled by electron-builder rather than published to npm. */
 const desktopApplicationDirectory = 'rsh/Programs/Desktop'
-/** Private compatibility assembly shipped only through the Desktop package set. */
-const privateDesktopAssemblyDirectory = 'rsh/Compatibility/DSH/boot/desktop-host-compatibility'
 const applicationPackageDirectories = new Set([
   'rsh/Programs/CLI',
   'rsh/Programs/Web/application',
@@ -83,11 +74,13 @@ const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@deepseek-ai/dsh-desktop-host': [
     'lib/*.js',
+    'config/desktop.cordis.patch.yml',
     'lib/types/**/*.d.ts',
   ],
-  // Sourcemaps stay out by payload policy; worker preview remains a separate
-  // private experimental surface.
-  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map'],
+  // Sourcemaps stay out by payload policy; the worker-preview surface
+  // (dist/preview.html and dist/preview/) backs private experimental
+  // packages and is not published.
+  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
 }
 
 /** The subset of package.json fields this constraint check cares about. */
@@ -161,12 +154,11 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
   '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
   '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
-  '@deepseek-ai/dsh-command-feedback': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-ide-code-oss': ['lib/native.js'],
   '@deepseek-ai/dsh-webhook-github': ['lib/native.js'],
   '@deepseek-ai/dsh-webhook': ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-permission-presets': ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js'],
@@ -176,50 +168,20 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-goal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-command-goal': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-codex-app-server': ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-subagent-claude-code': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-deepseek-llm-api-extensions': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-telemetry': ['lib/records.js'],
-  '@deepseek-ai/dsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
-  '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-skill': ['lib/native.js'],
-  '@deepseek-ai/dsh-message-feedback': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-archify': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-request-context': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs
   // them through its own CSS pipeline, so the sheets are published artifacts.
   // The glob covers whichever sheets a package emits; sourcemaps stay
   // unpublished, as everywhere else in the repository.
-  '@deepseek-ai/dsh-client-ui-tool': ['lib/native.js', 'lib/tool-renderer.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-approval': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-user-questions': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-tool': ['lib/tool-renderer.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
-  '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js', 'lib/native.js'],
+  '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js'],
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
-  '@deepseek-ai/dsh-web-compatibility': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
-  '@deepseek-ai/dsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
-  '@deepseek-ai/dsh-client-ui-sidebar-right': [
-    'lib/native.js',
-    'lib/native-ui.module.css',
-    'lib/native-files.module.css',
-  ],
-  '@deepseek-ai/dsh-client-ui-sidebar': ['lib/native.js', 'lib/client/SidebarRoot.module.css'],
-  '@deepseek-ai/dsh-client-ui-session': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-goal': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-workflow-run': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-theme': ['lib/styles'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],
@@ -229,11 +191,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-web-search-perplexity': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-web': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-authorization': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-deepseek-account': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-schedule': ['lib/native.js'],
   '@deepseek-ai/dsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
   '@deepseek-ai/dsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
   '@deepseek-ai/dsh-agent-presets': [
@@ -291,20 +250,12 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-acp-protocol': ['lib/shared-*.js'],
-  '@deepseek-ai/dsh-acp-child': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-native-session': [
-    'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
-    'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/native-*.js',
-    'lib/shared-*.js', 'lib/workspaces-*.js',
-  ],
-  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
+  '@deepseek-ai/dsh-client-native-session': ['lib/native.js', 'lib/follow-types.js', 'lib/model-controls.js', 'lib/human.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
@@ -327,20 +278,16 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js'],
-  '@deepseek-ai/dsh-session-query-sqlite': ['lib/core.js', 'lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-projection-cache': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-projection': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-session-query': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js'],
   '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
   '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-compaction': ['lib/native.js'],
   '@deepseek-ai/dsh-compaction-basic': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-compaction-tool-result-pruner': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-command-compact': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
   '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],
@@ -355,19 +302,16 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-terminal': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-tmux-context': ['lib/native.js', 'lib/shared-*.js'],
   // Legacy Cordis entries and native values share their pure implementations.
   '@deepseek-ai/dsh-session': ['lib/native.js', 'lib/event-validation.js'],
   '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-query': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-reference': ['lib/native.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
   '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
-  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/native-inspection.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/shared-*.js'],
   // The argv-prefix runner entry ships beside the lib as its own bundle;
   // sandbox-local resolves it through the package's ./runner export. tsdown
   // also shares its generated FFI code through a hashed runtime chunk.
@@ -391,13 +335,6 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
 const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
   // tsdown emits the SDK client's public entries and shared chunks together.
   '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
-  // This package must publish its exact RedSpark research license with its native entries.
-  '@deepseek-ai/dsh-acp-child': [
-    'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
-  ],
-  '@deepseek-ai/dsh-session-log-export': [
-    'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
-  ],
 }
 
 function sameStringList(actual: readonly string[] | undefined, expected: readonly string[]): boolean {
@@ -508,13 +445,12 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
 }
 
 function isReleaseMemberDirectory(dir: string): boolean {
-  if (dir === privateDesktopAssemblyDirectory) return false
   return standardReleaseMemberDirectory.test(dir) || isPublicExperimentalPackageDirectory(dir)
 }
 
 /** Whether a package belongs to the product library policy rather than an application root. */
 function isDshLibraryDirectory(dir: string): boolean {
-  return !applicationDistributionDirectories.has(dir) && [
+  return [
     'rsh/Core/',
     'rsh/Engine/',
     'rsh/Modules/Official/',
@@ -545,7 +481,6 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   const mixed = mixedNativeEntryDirectories.has(dir)
     || mixedNativeLibraryDirectories.has(dir)
     || nativeSafeSourceSubpaths.has(dir)
-  const compatibilityOnlyPeer = nativeCompatibilityOnlyPeers.get(dir)?.includes('@deepseek-ai/cordis') === true
   const errors: string[] = []
 
   if (native) {
@@ -562,9 +497,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   } else {
     if (peer === undefined) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
     if (dev === undefined) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
-    if (optionalPeer === true && !compatibilityOnlyPeer) {
-      errors.push(`${label}: compatibility package must keep the Cordis peer required`)
-    }
+    if (optionalPeer === true) errors.push(`${label}: compatibility package must keep the Cordis peer required`)
   }
 
   if (direct !== undefined) errors.push(`${label}: @deepseek-ai/cordis must not be a direct dependency`)
@@ -623,15 +556,6 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       || manifest.repository.url !== repositoryUrl
       || manifest.repository.directory !== expectedDirectory) {
       errors.push(`${label}: published Landlock package repository must use ${repositoryUrl} with directory ${expectedDirectory} for trusted publishing`)
-    }
-  } else if (dir === privateDesktopAssemblyDirectory) {
-    if (manifest.private !== true) {
-      errors.push(`${label}: private Desktop assembly must set "private": true`)
-    }
-    if (manifest.repository?.type !== 'git'
-      || manifest.repository.url !== publishedRepositoryUrl
-      || manifest.repository.directory !== dir) {
-      errors.push(`${label}: private Desktop assembly repository must use ${publishedRepositoryUrl} with directory ${dir}`)
     }
   } else if (isReleaseMemberDirectory(dir)) {
     // Release members state that they are publishable: npm refuses a private

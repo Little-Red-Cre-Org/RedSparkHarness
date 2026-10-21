@@ -1,5 +1,5 @@
 ---
-description: "通过共享聊天展示并使用选定 Session 权威的原生 Web 对话。"
+description: "使用选定 Session 权威的原生 Web 对话。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。Legacy 与 Native 视图共享 `ui-primitives` 中无 Cordis 的转录、composer、首次引导、Markdown、欢迎页与吉祥物展示；Native 页面继续使用自己的 Session 数据层，并依据 Session 记录呈现 Tool 结果、失败及嵌套调用。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输/历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
+`native-web` profile 使用此 Client 页面创建或恢复 Session、查看持久化历史，并通过 Host 发送消息。页面依据 Session 记录呈现根级 Tool 结果与失败；嵌套分派仍保留在原始历史中。模型和推理选项来自 Host 模型目录；页面会显示过期选择及传输或历史错误。已发布声明依赖列出的包；profile 还必须选择运行时贡献、renderer 和 `client-native-session` Host 操作。
 
 ## 目录
 
@@ -22,43 +22,27 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
+页面标明用途为网页会话。响应式导航区提供新建会话、选择会话与设置；主区域显示欢迎页或聊天记录与输入框。设置页共用应用作用域内的样式。样式随 Client 包交付，此 profile 无需单独样式表或 IDE 外壳。启动原生 Web Host 只输出访问地址，不打开浏览器。
+
 页面列出已存储 Session、创建空白 Session、选择持久化历史，并通过显式 resume 发送用户文本。取消期间页面保持忙碌，直至 Host 回复确认执行结算且历史刷新完成。安装释放会取消未完成调用，并等待其结算后释放视图控制器。控制器只保留呈现状态，不建立第二个 Session writer、Agent registry 或连接循环。
 
-只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。控制器通过 `keepDraft` 和 `takeDraft` 提供按 Session 保存 composer 草稿的接口。`ConversationError` 会在转录末尾显示本地化警告，默认折叠原始详情，并为凭据失败提供模型设置入口。
+只需视图状态控制器的消费者可从 `@deepseek-ai/dsh-client-native-application/controller` 导入 `NativeConversationController`；此 ESM 入口不会加载 React 页面安装器。其声明使用 native profile 必须提供的 `client-native-session` Consumer 类型。
 
-模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
+模型与推理强度选项来自 Host 模型目录，包括 Provider 失败；目录只提供发现信息，不作为准入白名单。发现结果不含当前记录路由时仍显示该路由。修改携带所呈现的持久化修订号，结算后刷新历史，并显示过期选择失败。已安装预设复用既有空白根锁与 epoch 切换；锁定的 Session 不能更换组合。
 
-转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。持久化用户文本使用共享右对齐气泡；除 `native-time-context` 提供的上下文外，非用户上下文使用折叠来源行，Native 转录不显示该上下文。助手文本使用共享 Markdown renderer，临时助手文本使用其流式模式。Native 视图按轮次分组可见消息和 Tool 调用卡片，包括嵌套调用，默认折叠助手推理，并为每条助手消息显示复制操作以及可用的 token 用量、耗时和事件时间。标题栏显示所选 Session 名称、模式和直属子 Session，并保留详情操作。标题下方的“对话”和“轨迹”标签页分别显示转录和内嵌账本；两者都保留输入框。输入框下方的弱化摘要行会在数据可用时显示已加载的轮次与助手步骤数、最近输出速率、token 总数和缓存命中率。读者位于末尾时，转录会跟随新事件和实时文本；向上滚动后暂停跟随，直至读者回到末尾。Tool 卡片复用共享 Native Tool、审批和问题展示；图片仍由 Native 渲染。传输和历史错误会显示；发送失败时保留草稿。
+转录复用共享 Session 的 append-origin 和消息投影规则。替换副本只用于模型；原始 Session 记录可通过折叠面板查看，包括工具结果、权限、中断及不透明 ignorable 事实。传输和历史错误会显示；发送失败时保留草稿。
 
-“轨迹”标签页使用 controller 已加载的事件历史显示共享记录表和时间线，其中包括持久化轮次与消息。它不增加 Host 操作，也不请求更早的历史页面。
-
-Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理选择器、圆形“+”图片选择器、权限菜单，以及可选的 Plan 切换按钮。模型选择器读取 Host 目录和所选 Session 的持久化意图，再调用既有选择操作。标题栏的模式标签仅在选择就绪、允许选择且未锁定时打开 Host 预设；否则显示静态标签。Host 返回内置权限 preset 原始 id 时，权限菜单显示本地化名称，其他 Host 名称保持原样。Plan 按钮显示已提交与待应用状态，并可在轮次运行期间继续使用；Host Provider 可用时才显示权限菜单。切换 Session 和轮次结算后，控制器会先依次读取两种控件值，再读取最终持久化历史；控件读取可能冷打开 Session 并追加 `session/end-seed`，因此实时跟随开始前显示的转录是最新的。修改失败时也会重新读取显示值。主页工作区选择器会列出已注册的工作区；列表为空时打开目录浏览器。选择工作区会连接其空白 Session；添加工作区会采用选定目录并连接。列表或连接失败会显示在选择器旁，采用目录失败会显示在目录浏览器中。只要存在可用的 Agent 预设，无 Session 的主页就会显示 Agent 预设选择器；每次 Workspace 启动操作都会捕获暂存选择，并在该操作的信任确认重试中保留；操作失败或被取代时会丢弃选择。只有该操作返回的 Session 加载出匹配且未锁定的模式控件后，才会应用预设。未选 Session 时，输入框会提示先选择工作区。标题会显示所选 Session 的模式，计划模式激活时还会显示 Plan 标签；直属子 Session 可从下拉菜单中打开。仅选中 Session 时才会显示 Session details。Native 页面不提供命令补全或消息反馈。
-
-恢复所选 Session 时，控制器会携带最近加载的事件序号调用 `session/attach`。如果 Host 轮次仍在运行，控制器会保留发送中和停止状态，恢复实时跟随，并接收待处理的审批或问题。之后控制器会重新读取持久历史；没有活动轮次时也会如此，这样在 attach 之前已结算的轮次仍会显示其最终事件。停止会取消轮次；页面卸载只会断开本地流和结算等待。
-
-本页面拥有运行中轮次时，Composer 可继续输入文字：Enter 或排队将消息加入下一轮，插话将消息加入下一模型步骤，Shift+Enter 换行。在 Composer 获得焦点时按 Escape 会请求取消轮次；若取消已在进行中或键盘事件处于输入法组合状态，则不会取消。页面保持打开期间，每个 Session 的文字和图片草稿都会保留，返回该 Session 时会恢复。待处理消息来自 Host submissions 快照，位于输入框上方，使用紧凑单行预览。右侧依次提供全文展开/折叠、文字编辑、改为插话和删除操作。拖拽排序尚缺 Host 契约，当前不可用。修改保留 requestId，等待 Host 确认后刷新收件箱；失败保留草稿。刷新拒绝旧事件前缀和过期会话选择的响应。轮次结算会保留为后续提交输入的文字。排队和插话暂仅支持文字，使用前需移除所选附件；已提供行内文字编辑，含附件时禁用编辑；侧边栏仍沿用运行中禁止切换会话的限制。
-
-当所选 Session 的已加载历史包含当前 goal 时，composer 堆栈会显示其目标、持久 phase 和已准入轮次进度，包括已完成的 goal。此条带为只读，也不显示进程本地 activation。
-
-配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。通用设置显示权限、语言、外观、会话字号、对话显示、繁忙发送行为和桌宠开关；Host 提供对应 namespace 时才显示相关设置行，语言和主题会即时生效，并通过 `settingsMutate` 保存已发布的偏好。应用壳启动时，Client 会读取 Host Settings 描述，并在打开 Settings 前应用已发布的语言、`ui-theme` 外观和字号偏好；若读取期间用户打开 Settings 或通过侧边栏更改语言或主题，启动结果会失效并跳过应用；若 namespace 缺失或读取失败，会保留对应服务的当前值。Composer 从 `ui-conversation.busyEnter` 读取繁忙发送行为，并在提交边界将 `queue`/`steer` 映射为 `queued`/`steering`。Host 未提供该 namespace 时，单一本地缓存使用旧设置值 `queue`/`steer`，Settings 读取成功后，通用设置以只读文字显示该值，并说明 Host 不保存此偏好。对话显示偏好会保存，但 NativeTranscript 尚未读取；桌宠开关会保存，但尚未控制 Native 吉祥物展示。通用设置把 JSON 用户覆盖、schema 详情、凭据和刷新操作收在折叠的“开发者选项”中。JSON 编辑保留 revision 检查、分批凭据读取、操作数限制、机密值脱敏和现有数组限制。凭据值只发送到 Host 保存，绝不回读。Host 报告存在本地配置文档时，页眉会显示“打开配置文件”。
-
-在「订阅模型」区域中，每个 Host 授权条目都有独立的一行，显示连接状态和登录操作；匹配的账户卡片显示在该行内。没有匹配授权条目的账户卡片仍显示在此区域。账户卡片显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits，以及 DeepSeek 身份和钱包余额；只有账户 key 与非空提供方身份仍匹配时，刷新失败才会保留已就绪数据并提示可能陈旧（ChatGPT 使用邮箱，DeepSeek 使用联系方式或姓名）。没有身份的成功读取结果只显示本次读取，不可用的余额不会显示为零。退出登录和授权完成后都会重新读取账户及授权流程。页面不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
-
-点击 Settings 按钮会打开居中模态框，提供通用设置、模型、插件和 Agent 预设导航；Native Schedule 列表仍由侧边栏“定时任务”入口打开，其空状态会提示用户让 Agent 创建任务。通用设置显示旧版风格的偏好行，并把 JSON 编辑器、凭据和刷新操作收在折叠的“开发者选项”中。模型页把 Host 提供方目录、设置与凭据状态合并到 API 模型编辑器中，并在「订阅模型」下保留授权流程和账户卡片。插件页提供终端、Agent 循环、Subagent 模型选择和 DeepSeek 网页搜索的暂存设置卡；Settings 字段通过带 revision 检查的路径修改保存，网页搜索密钥通过只写 Credentials 操作保存。若读取成功后 Host 仍未注册某张卡的 Settings namespace，卡片仍会显示，但不提供展开控件，并提示当前 Host 暂不支持配置。只读的「插件列表」标签读取 Host 插件及其生命周期状态，并默认折叠 `native-*` 和 `storage-*` 基础设施插件，用户点击显示或搜索时才列出。Agent 预设将内置项和自定义项分组为卡片，读取可用详情、复制就绪的文件预设、删除用户目录，并打开或显示其路径。Host 注册 `agent-presets` 设置命名空间时，模式切换开关通过它写入，且仅在允许切换模式时可通过就绪卡片设置默认预设。未注册时，开关由一条中性说明取代，卡片只能查看和复制。需要迁移或加载失败的预设归入折叠的“暂不可用的预设”分组，并使用中性标记。复制和删除失效事件会刷新名单。预设元数据和文件操作仍由 Host 管理。
+配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。Settings 页面读取选定 Host 发布的 schema 与经过校验的请求预算，以带 revision 检查的 JSON 编辑器修改用户覆盖，并根据 `credential-ref` 字段生成只写凭据控件。凭据引用按 Host 公布的上限分批读取并聚合；超过 `maxSettingsOperations` 的修改会在发送前拒绝，以保持每次 revision 检查写入的原子性。可新增、删除或替换不含机密值的对象项；隐藏机密值下方的可见修改按叶子路径写入，不安全的机密结构修改会被拒绝。数组按现有索引修改，不支持的数组结构修改会报错。凭据值只发送到 Host 保存，绝不回读。页面不新增持久化语言偏好或默认 profile 切换。
 
 React、Session、原生模型选择、Agent 预设、todo Client 值及原生 Session 错误类通过应用共享的 peer 实例解析。Session 数据类型仍仅用于类型；所选运行时 capability 提供 Session Consumer。已发布声明引用 `native-runtime`，因此它仍作为普通依赖。页面在运行时导入 `NativeSessionRpcError`，因此 `client-native-session` 作为 peer 与开发依赖，使页面与所选 Consumer 共用同一个构造器。
 
-native-web 首次使用组合选择此应用、renderer、Connection、Session Consumer 与六个可选 shell installer：locale、theme、Session 展示、layout、左侧栏和右侧详情栏。Host profile 还选择 Session 标题投影和首条 prompt 提供方；旧默认组合保持不变。
-
-首次启动时，页面显示版本化欢迎声明，并将确认状态保存在当前 origin 的 `localStorage`。之后页面读取选定 Host 的活动与可配置模型提供方、Settings namespace 和凭据状态；当没有可用的活动提供方时，共享提供方编辑器通过 `settingsMutate` 和 `credentialsSet` 写入。欢迎确认使用浏览器本地持久化；只要尚无可用提供方或用户尚未关闭本次引导，重载后就会再次出现模型配置步骤。应用根节点 inert 期间，引导页顶部仍提供原生语言与主题控件。
-
-可选 Native 壳通过声明的 Client capability 组合共享 frame、左侧 Session 导航、右侧 Session 详情、locale 与 theme。Session 行读取选定 Host 的持久标题投影；回退/提供方生成、重命名与刷新均通过该 Host 现有 Session 和 RootExecution 权威追加标题事实。Client 复用当前 Native Session controller 与布局 store，不新增第二 Session store。Controller 跟随 Host Session 列表的基线和增量；侧边栏使用其中的活动时间、运行、完成、子代理和待交互字段，并按 Host Workspace 注册表分组。Session 搜索与归档、Workspace 选择/创建/重命名/删除和目录选择均调用对应的 Native Host client。Sidebar 的 New Session 会在连接期间锁定 composer；连接完成后会等待 controller 正在执行的操作结束，再选择已连接的 Session；即使 controller 正在刷新，连接被拒绝时也会释放该锁。Composer 的 Workspace 选择器和添加操作会在连接期间锁定 Send；操作失败时会释放该锁，包括因 Workspace 不受信任而打开信任确认框的拒绝。Sidebar 的 New Session 遇到不受信任的 Workspace 拒绝时不会显示错误；controller 就绪后会清除选择。归档或删除当前选中的 Session 会将其从侧边栏隐藏，并切换到下一条可见行；如果没有下一条，则切换到上一条；没有其他行时会清空选择。Settings 固定在侧边栏底部，与紧凑 locale 和 theme 控件并列。
+native-web 首次使用组合只选择此应用、renderer、Connection 与 Session Consumer；旧默认组合保持不变。
 
 <a id="invariants"></a>
 
-带有 `canAllowSession: true` 的审批在允许一次和拒绝旁提供会话动作；其精确可复用范围由 Host 拥有。通用关闭和计划讨论通过 `cancel-questions` 取消整个待答问题批次，同时保持该轮活动。问题卡保留标题、详情、选项、多选和自定义文本。提交失败会保留请求并重新启用控件；只有捕获的同一会话和展示才能接收回答错误或释放提交锁。Host 移除帧负责清除 prompt。整轮取消仍是独立操作，并等待 Host 结算。重载会附着活动轮次并重放仍待处理的展示；已完成的 Session 会恢复持久决策与工具结果。
+待答工具审批提供允许一次与拒绝操作。问题卡保留标题、详情、选项、多选及自定义文本。提交失败保留待答请求；取消禁用输入，并在 Host 结算前保持执行忙碌。重载恢复持久化决策与工具结果事实，不恢复过期待答展示。
 
-图片上传使用公布的附件限额及选定 Session 的下一模型。composer 会接收表单内粘贴的图片，并通过 Host content prompt 支持仅发送图片。附件控件独占一行，位于编辑器和模型控件上方。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
+图片上传使用公布的附件限额及选定 Session 的下一模型。渲染器只展示持久化图片引用，并拥有每次读取、Blob URL 及卸载清理。重新加载从已记录 Session 再次读取图片。上传失败保留输入以便修正。
 
 任务面板读取权威 todo/write 快照，包括已接受的实时与恢复历史。每次替换完整列表，只在 turn/start 清空；turn/end 保留最后的计划。状态文案由 locale 提供，面板不修改任务。
 
@@ -69,10 +53,7 @@ native-web 首次使用组合选择此应用、renderer、Connection、Session C
 <a id="dev-note"></a>
 ## 开发备注
 
-生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；共享展示归属见[聊天展示决策](../../../../../.agents/notes/implemented/architecture/2026-10-12-shared-chat-presentation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)；提供方编辑与订阅行见[原生 Models 决策](../../../../../.agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.zh.md)；Agent 预设的详情与文件夹操作见[原生 Web Agent 预设管理决策](../../../../../.agents/notes/implemented/feature/2026-10-11-native-web-agent-preset-roster.zh.md)。
-
-
-Native 审批与问题限制见 [Native human interaction 决策](../../../../../.agents/notes/implemented/feature/2026-10-12-native-human-interactions.zh.md)；事件投影与持久化轮次计时见 [Native Trajectory 决策](../../../../../.agents/notes/implemented/bug-fix/2026-10-12-native-trajectory-turns.zh.md)。
+生命周期所有权见[对话决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-conversation.zh.md)；实时发送与结算见[跟随决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-web-session-follow.zh.md)；Settings 与 Credentials 界面见[原生 Settings 决策](../../../../../.agents/notes/implemented/architecture/2026-10-06-native-web-settings-credentials.zh.md)。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -91,14 +72,12 @@ Native 审批与问题限制见 [Native human interaction 决策](../../../../..
 
 Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其所属 Provider 的记录解析及上下文规则。
 
+<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
 
-<a id="known-limitations-and-deferred-work"></a>
+持久化事件在执行期间更新转录。临时助手输出独立显示，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
-持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
-
-- 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式标签、Plan 切换和权限菜单。在其他 profile 中，没有可选预设时模式标签显示为静态内容；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限菜单。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
-- 当前模型目录没有提供上下文窗口大小，因此用量摘要不显示上下文百分比。
-- 其他模型片段呈现仍属于独立工作。
-- 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑和其他插件的设置仍属于独立的原生 Client 工作。
+- 随附 native-web 模板具有模型选择，但没有常驻预设组合；自定义 profile 可安装这些组合。
+- 嵌套 Tool 调用层级及其他模型片段呈现仍属于独立工作。
+- 文件上传、完整 Sidebar、布局、浏览器授权流程、不透明凭据 grant 编辑及完整旧版插件 Settings 页面仍属于独立的原生 Client 迁移。
 - Settings owner 必须显式发布 schema 元数据；此页面不编辑隐藏的 `role('secret')` 值，也不创建授权 grant。

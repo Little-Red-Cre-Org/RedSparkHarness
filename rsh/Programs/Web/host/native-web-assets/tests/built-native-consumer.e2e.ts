@@ -7,31 +7,24 @@ import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 
 const PACKAGE_ROOT = fileURLToPath(new URL('../', import.meta.url))
-const ROUTES_ROOT = join(PACKAGE_ROOT, '../../../../Core/util/http-routes')
 
 it('loads the built native asset routes in an installed consumer without Cordis', () => {
   const home = mkdtempSync(join(tmpdir(), 'dsh-native-web-assets-'))
   try {
     const installed = join(home, 'node_modules', '@deepseek-ai', 'dsh-native-web-assets')
-    const routes = join(home, 'node_modules', '@deepseek-ai', 'dsh-http-routes')
     const frontend = join(home, 'node_modules', '@deepseek-ai', 'dsh-web-frontend')
     mkdirSync(join(installed, 'lib'), { recursive: true })
-    mkdirSync(join(routes, 'lib'), { recursive: true })
     mkdirSync(join(frontend, 'dist'), { recursive: true })
     copyFileSync(join(PACKAGE_ROOT, 'package.json'), join(installed, 'package.json'))
     copyFileSync(join(PACKAGE_ROOT, 'lib', 'index.js'), join(installed, 'lib', 'index.js'))
     for (const file of readdirSync(join(PACKAGE_ROOT, 'lib')).filter(name => /^shared-.*\.js$/u.test(name))) {
       copyFileSync(join(PACKAGE_ROOT, 'lib', file), join(installed, 'lib', file))
     }
-    copyFileSync(join(ROUTES_ROOT, 'package.json'), join(routes, 'package.json'))
-    for (const file of readdirSync(join(ROUTES_ROOT, 'lib')).filter(name => name === 'native.js' || /^shared-.*\.js$/u.test(name))) {
-      copyFileSync(join(ROUTES_ROOT, 'lib', file), join(routes, 'lib', file))
-    }
     writeFileSync(join(home, 'package.json'), '{"type":"module"}\n')
     writeFileSync(join(frontend, 'package.json'), JSON.stringify({
       name: '@deepseek-ai/dsh-web-frontend', exports: { './dist/*': './dist/*' },
     }))
-    writeFileSync(join(frontend, 'dist', 'index.html'), '<!doctype html><html><head></head><body><main>page</main></body></html>')
+    writeFileSync(join(frontend, 'dist', 'native.html'), '<!doctype html><html><head></head><body><main>page</main></body></html>')
     writeFileSync(join(frontend, 'dist', 'native.js'), 'globalThis.nativePage = true')
     writeFileSync(join(home, 'consumer.mjs'), [
       "import { createNativeDesktopAssetHandler } from '@deepseek-ai/dsh-native-web-assets'",
@@ -40,13 +33,9 @@ it('loads the built native asset routes in an installed consumer without Cordis'
       'const handler = createNativeDesktopAssetHandler(process.cwd(), bundle, "globalThis.nativeTransport = true")',
       'const page = await handler.fetch(new Request("https://dsh.example/"))',
       'const fallback = await handler.fetch(new Request("https://dsh.example/index.html"))',
-      'const nativeAlias = await handler.fetch(new Request("https://dsh.example/native.html"))',
-      'const nativeHead = await handler.fetch(new Request("https://dsh.example/native.html", { method: "HEAD" }))',
       'const asset = await handler.fetch(new Request("https://dsh.example/.dsh/native-client/profile.js"))',
       'const staticAsset = await handler.fetch(new Request("https://dsh.example/native.js"))',
       'if (page.status !== 200 || !(await page.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
-      '  || nativeAlias.status !== 200 || !(await nativeAlias.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
-      '  || nativeHead.status !== 200 || (await nativeHead.text()) !== ""',
       '  || !(await fallback.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
       '  || (await asset.text()) !== "export default true"',
       '  || (await staticAsset.text()) !== "globalThis.nativePage = true") process.exitCode = 1',

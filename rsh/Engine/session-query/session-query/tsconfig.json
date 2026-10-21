@@ -37,15 +37,6 @@
     },
     {
       "path": "../../session/session-projection-cache"
-    },
-    {
-      "path": "../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
-      "path": "../../core/native-agent/tsconfig.host.json"
-    },
-    {
-      "path": "../../core/native-session-execution/tsconfig.active-session-protocol.json"
     }
   ]
 }

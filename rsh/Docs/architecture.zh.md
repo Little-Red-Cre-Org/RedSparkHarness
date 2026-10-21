@@ -54,7 +54,7 @@ Python SDK 遵循相同的应用架构。其运行时 wheel 把普通 `dsh` CLI 
 
 [Electron 桌面应用](../Programs/Desktop/README.zh.md)在签名应用资源中携带精确版本的 dsh 生产运行时。保留的 `$DSH_HOME/profiles/desktop` 保存外部插件和指向宿主拥有包的链接；兼容升级保留插件文件并刷新这些链接，无需安装核心依赖。CLI profile 共享 `$DSH_HOME` 下受支持的产品数据，而可执行包、插件激活、锁文件和包管理器状态保持独立。
 
-Electron 通过内置的上游 Node.js 进程启动私有 Desktop Host 包；该包加载内置 dsh 后端、匹配的客户端图和已启用的 profile 插件。一元 RPC、Remote stream 与版本匹配的客户端资源经带版本的分帧字节管道传输，Node IPC 只保留生命周期控制，再通过安全的 `dsh-app://` 协议到达渲染进程；因此桌面组合不会开放 Web server 或 loopback 端口。只有壳自有 UI 能通过内置 pnpm 及其私有 `$DSH_HOME/desktop/pnpm/store` 执行插件事务。
+Electron 通过内置的上游 Node.js 进程启动私有 Desktop Host 包；该包加载内置 dsh 后端、匹配的客户端图和已启用的 profile 插件。一元 RPC、Remote stream 与版本匹配的客户端资源经带版本的分帧字节管道传输，Node IPC 只保留生命周期控制，再通过安全的 `dsh-app://` 协议到达渲染进程；桌面组合仅在用户打开共享网页时，通过经过认证的本地回环转发器提供对同一 Host 的浏览器访问。只有壳自有 UI 能通过内置 pnpm 及其私有 `$DSH_HOME/desktop/pnpm/store` 执行插件事务。
 
 ## 核心包
 
@@ -115,8 +115,6 @@ turn/end
 输入通过同一个 inbox 到达驱动器。有些消息会立即唤醒它；注入的上下文会留在 inbox 中，直到另一条消息将其唤醒。
 
 `agent/pre-step` 决定接纳的输入。监听器可以改写或拒绝已领取消息；首次领取被拒绝或为空时，关闭不含步骤的持久轮次。enter 决策可设置 `startsRequestSeries`：循环记录新的 `request/header`（原因为 `series`，或在封装同时变化时为携带 `startsSeries: true` 的 `change`）。包装监听器通过 `{ ...decision, messages }` 保留该声明。组装与 `step/start` 之后，`agent/request` 和 `prepareCall()` 先解析实际路由，再提交系统提示词与已接纳用户消息；在任一异步阶段取消都不会提交这两者。提示词准入依据已准备调用的能力，而非先前的 `request/context`。每次尝试同步协调同一份已渲染组装结果、仅在首次尝试追加用户消息、按需记录 header/context、派生并冻结请求，再通过绑定调用发起流式请求。重试不重复组装或 `agent/pre-step`。附接后的 surface 替换开启新请求序列，包括恢复后的首次 pre-step 中发生的替换；未变化的恢复延续序列。首次接纳的步骤在用户消息之前预留系统头节点，即使提示词为空（不产生协议消息）。提示词仅通过 `system/message` 历史传递：空渲染文本清除所有生效的系统节点，模型不再看到旧提示词；具备能力的路由可在缓存前缀之后追加非空更新；不具备能力的路由与新请求序列将非空提示词文本归并到首个系统节点，并为非空的后续系统节点记录空内容替换（[决策](../../.agents/notes/implemented/architecture/2026-09-02-system-prompt-as-surface-node.zh.md)；[决策规则](../Engine/core/agent-loop/README.zh.md#understand-the-implementation)）。
-
-Native Headless 的 root 与 delegated Program 共用 request-context 路径。Program 会先准备 instructions、time、tmux 与 request-context 贡献，再执行最终的同步准入检查；随后通过精确活动 Session owner，依次追加 step start、system 消息、已准入输入与 selection、instructions 及其他上下文消息、request-context 消息，以及 request header/context。该单一写入路径完成 flush 后，Program 才提交准备好的 Provider 状态或开始模型执行。Request-context Provider 从模型与 PTC 执行快照读取精确 registration identity，因此沿用同一 allowlist 和 delegation 限制，无需另建可见性目录。可见 Provider 必须有精确活动 owner；即使可见 Provider 集合为空，也会进入正常接受回调。被拒绝的准备状态不会提交；追加或 flush 一旦开始，owner 会排空写入而不回滚。详见 [request-context 子系统](subsystems/request-context.zh.md)与[接受决策](../../.agents/notes/implemented/architecture/2026-10-13-native-request-context-acceptance.zh.md)。
 
 循环发送不可变请求，同时保留实时取消能力。只有已由该循环完整冻结的消息对象身份才能复用冻结证明；[agent-loop](../Engine/core/agent-loop/README.zh.md)拥有请求构造规则。
 

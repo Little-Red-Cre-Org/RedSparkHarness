@@ -20,9 +20,6 @@
     },
     {
       "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
-    },
-    {
-      "path": "../../../../Core/util/crypto"
     }
   ]
 }

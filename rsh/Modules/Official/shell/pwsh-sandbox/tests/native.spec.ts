@@ -28,7 +28,6 @@ it('reports a confined denial and never falls back when the runner fails', async
   }
   const sandbox: ProcessSandbox = {
     confine: argv => ({ argv: ['test-runner', ...argv], enforcement: 'full', denialSignatures: ['permission denied'], runnerFailureRules: [] }),
-    confineChildProcess: argv => ({ argv: ['test-runner', ...argv], enforcement: 'full', denialSignatures: ['permission denied'], runnerFailureRules: [] }),
   }
   const services: NativePlugin = {
     apiVersion: 1, name: 'test-shell-services', targets: ['host'], requires: [],

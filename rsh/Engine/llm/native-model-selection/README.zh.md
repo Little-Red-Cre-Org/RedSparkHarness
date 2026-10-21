@@ -31,7 +31,7 @@ kind: "package-reference"
 
 准确的 Provider 解析验证拟选模型。唯一 Program writer 比较观察到的意图 revision，追加 `model/selection`，并在确认前 flush。解析可以并发进行；每个 owner 串行比较与持久化。调用方、Agent 与 Provider 取消会阻止准入，移除会排空已接纳操作。浏览器安全的 `./types` 投影包含继承的 fork 历史，不打开存储。
 
-若存在持久化的 model-selection 意图，选择捕获会保留它；否则最近的 `request/header` 提供 Session 的 Provider/模型路由，只有历史中没有路由时才使用当前 Program 路由默认值。旧 header 的解析后 controls 不会变成显式选择参数；其他参数继续遵循当前请求与确切 prepared Provider 默认值规则。[模型执行器](../../core/native-model-execution/README.zh.md) 一起捕获实际元数据与派发；[Headless 消费者](../../core/native-headless/README.zh.md) 在请求响应前记录这些 prepared 参数。此服务不拥有另一个 writer 或全局默认值。[决策](../../../../.agents/notes/implemented/architecture/2026-10-05-native-model-selection-and-prepared-dispatch.zh.md)。
+选择捕获将请求参数与建议默认值分开。[模型执行器](../../core/native-model-execution/README.zh.md) 一起捕获实际元数据与派发；[Headless 消费者](../../core/native-headless/README.zh.md) 在请求响应前记录这些 prepared 参数。旧 header 的有效默认值不会变成人类选择。此服务不拥有另一个 writer 或全局默认值。[决策](../../../../.agents/notes/implemented/architecture/2026-10-05-native-model-selection-and-prepared-dispatch.zh.md)。
 
 [持久选择投影](../../core/native-model-execution/src/model-selection.ts) 与 [选择准入](src/service.ts) 共用完整 Session 历史；Headless 使用 prepared dispatch 记录参数与路由提示。
 

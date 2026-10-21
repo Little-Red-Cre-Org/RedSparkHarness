@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { ChatAssistantMessage, JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
+import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownPathImages } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { AssistantBlock } from '../contract/snapshot.ts'
@@ -26,6 +26,8 @@ export function localPathMediaUrl(protocol: string, origin: string, value: strin
 }
 
 export interface AssistantMarkdownProps {
+  /** Explicit editor action inherited from the owning chat view. */
+  codeAction?: ChatNodeOwnerProps['codeAction']
   blocks: readonly AssistantBlock[]
   streaming: boolean
   /** Frozen partial of an aborted turn: rendered with a stopped marker. */
@@ -45,11 +47,17 @@ export interface AssistantMarkdownProps {
 /** Reasoning block as the Think variant summary row (figma 39:28304). */
 export const AssistantMarkdown = memo(function AssistantMarkdown({
   blocks, streaming, interrupted, renderMessageImages,
-  reasoningHidden = false, revealProcess, mentions, t,
+  reasoningHidden = false, revealProcess, mentions, codeAction, t,
 }: AssistantMarkdownProps) {
   // Stable per locale revision (t identity changes on switch): a fresh object
   // per render would rebuild MarkdownText's component table every chunk.
-  const labels = useMemo(() => markdownLabels(t), [t])
+  const labels = useMemo(() => {
+    const labels = markdownLabels(t)
+    if (codeAction !== undefined) labels.code.editorActions = {
+      insertLabel: t('code.insert'), previewLabel: t('code.preview'), run: codeAction,
+    }
+    return labels
+  }, [t, codeAction])
   // Local media paths in the closing prose rewrite to the same-origin file
   // API (policy re-validation lives host-side). The vocabulary identity is
   // stable per page load because MarkdownText memoizes on it.
@@ -131,10 +139,14 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
         )
     }
   }
-  return <ChatAssistantMessage streaming={streaming}>
-    {rendered}
-    {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
-  </ChatAssistantMessage>
+  return (
+    <div className={css.root} data-streaming={streaming || undefined}>
+      <div className={css.body}>
+        {rendered}
+        {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
+      </div>
+    </div>
+  )
 })
 
 function ProcessReasoning({ hidden, reveal, children }: {

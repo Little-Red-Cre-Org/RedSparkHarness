@@ -74,6 +74,8 @@ export interface ChatNodeTurnDataInjected {
 
 /** Stable owner currency delivered to a keyed Chat renderer. */
 export interface ChatNodeOwnerProps {
+  /** Explicit code-block actions in the enclosing IDE. */
+  codeAction?: ((mode: 'insert' | 'preview', code: string, language?: string) => void) | undefined
   cwd?: string | undefined
   /** Open the current source file of a skill referenced by a sent message. */
   openSkill: (name: string) => void
@@ -126,6 +128,8 @@ export interface ChatScrollPosition {
 
 /** Business callbacks injected into the Chat view. */
 export interface ChatViewInjected {
+  /** Explicit code-block actions in the enclosing IDE. */
+  codeAction?: ChatNodeOwnerProps['codeAction']
   hooks: {
     /** Persisted completed-Turn transcript presentation. */
     transcriptView: SnapshotStore<TranscriptViewMode>

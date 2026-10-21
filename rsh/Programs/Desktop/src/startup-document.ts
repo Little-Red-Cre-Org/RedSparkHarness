@@ -1,35 +1,42 @@
-/** Self-contained recovery document for an unavailable shell renderer or preload. */
+/** Self-contained Desktop preparation and recovery documents. */
 
-import { formatDesktopMessage } from './locale.ts'
-import type { DesktopLocale } from './locale.ts'
-import type { DesktopErrorState, DesktopErrorType } from './startup-error.ts'
+import type { DesktopLocale, DesktopMessages } from './locale.ts'
+
+const escape = (value: string): string => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;')
+
+/**
+ * Display IDE preparation in the workbench view until its navigation commits.
+ * @param messages - Shell-owned translations.
+ * @returns A self-contained document requiring no network requests or scripts.
+ */
+export function ideLoadingDocument(messages: DesktopMessages): string {
+  return `<!doctype html><html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>${escape(messages.ideWindowTitle)}</title>
+<style>
+:root{font-family:system-ui,"Segoe UI",sans-serif;color:#382c30;background:#fffafa}
+body{margin:0;min-height:100vh;display:grid;place-items:center}
+main{padding:40px;max-width:460px;text-align:center}
+.brand{color:#ba3150;font-size:13px;letter-spacing:.16em;margin-bottom:32px}
+.spinner{width:30px;height:30px;border:3px solid #f0dce2;border-top-color:#ba3150;border-radius:50%;margin:0 auto 24px;animation:spin 1s linear infinite}
+h1{font-size:24px;font-weight:600;margin:0 0 12px}p{color:#82747a;font-size:14px;line-height:1.8;margin:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-color-scheme:dark){:root{color:#eee5e8;background:#20191d}p{color:#b8a8af}.brand{color:#f19aae}.spinner{border-color:#50313d;border-top-color:#f19aae}}
+@media(prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style><main role="status"><div class="brand">REDSPARK HARNESS</div><div class="spinner" aria-hidden="true"></div>
+<h1>${escape(messages.ideLoading)}</h1><p>${escape(messages.ideLoadingDescription)}</p></main></html>`
+}
 
 /**
  * Render escaped diagnostics without depending on application resource files.
  * @param locale - Shell-owned translations.
- * @param failure - Sanitized failure type, optional configuration path, and optional local log path.
+ * @param message - Failure details displayed as plain text.
  * @param profileRecovery - Whether the initialized application can repair its profile.
  * @returns An HTML document suitable for an isolated emergency window.
  */
-export function startupFailureDocument(locale: DesktopLocale, failure: DesktopErrorState, profileRecovery = false): string {
-  const escape = (value: string): string => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;')
-  const errorTypes: Readonly<Record<DesktopErrorType, string>> = {
-    AggregateError: locale.messages.startupTypeAggregateError,
-    Error: locale.messages.startupTypeError,
-    RangeError: locale.messages.startupTypeRangeError,
-    SyntaxError: locale.messages.startupTypeSyntaxError,
-    TypeError: locale.messages.startupTypeTypeError,
-    UnknownError: locale.messages.startupTypeUnknownError,
-    ValidationError: locale.messages.startupTypeValidationError,
-  }
-  const details = [
-    formatDesktopMessage(locale.messages.startupErrorType, { type: errorTypes[failure.errorType] }),
-    ...failure.path === undefined ? [] : [formatDesktopMessage(locale.messages.startupErrorPath, { path: failure.path })],
-    ...failure.rule === undefined ? [] : [formatDesktopMessage(locale.messages.startupErrorRule, { rule: failure.rule })],
-    failure.logPath === undefined ? locale.messages.startupErrorLogAdvice
-      : formatDesktopMessage(locale.messages.startupErrorLogWritten, { path: failure.logPath }),
-  ].join('\n')
+export function startupFailureDocument(locale: DesktopLocale, message: string, profileRecovery = false): string {
   return `<!doctype html><html lang="${locale.id}"><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action dsh-recovery:">
 <title>${escape(locale.messages.startupFailed)}</title>
@@ -37,7 +44,7 @@ export function startupFailureDocument(locale: DesktopLocale, failure: DesktopEr
 <div class="window-drag" aria-hidden="true"></div>
 <main><h1>${escape(locale.messages.startupFailed)}</h1><p>${escape(locale.messages.startupReinstallAdvice)}</p>
 ${profileRecovery ? `<p>${escape(locale.messages.startupConfigurationAdvice)}</p>` : ''}
-<pre role="alert">${escape(details)}</pre>
+<pre role="alert">${escape(message)}</pre>
 <form action="dsh-recovery://restart"><button>${escape(locale.messages.restartApplication)}</button></form>
 ${profileRecovery ? `<form action="dsh-recovery://plugins"><button>${escape(locale.messages.disableThirdPartyPlugins)}</button></form>
 <form action="dsh-recovery://reset"><button>${escape(locale.messages.resetConfiguration)}</button></form>` : ''}

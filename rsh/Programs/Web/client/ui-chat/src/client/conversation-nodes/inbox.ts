@@ -1,5 +1,4 @@
 import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent/types'
 import type {
   ConversationNodeDefinition, ConversationPreviousContext,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -105,36 +104,22 @@ function applySplice(
   }
 }
 
-/** Apply the durable move that appends one queued identity to the next-step list. */
-function applyMove(previous: ConversationPreviousContext<InboxState> | undefined, messageId: string): InboxState {
-  const priorPending = previous?.state.pending ?? EMPTY_PENDING
-  const pending = materializePending(priorPending)
-  if (pending.includes(messageId)) throw new Error(`inbox-next-step: duplicate moved message "${messageId}"`)
-  return {
-    pending: { kind: 'splice', previous: priorPending, start: pending.length, removedCount: 0, inserted: [messageId] },
-    currentClaimed: withoutInserted(previous?.state.currentClaimed ?? EMPTY_CURRENT_CLAIMED, [messageId]),
-  }
-}
-
 const NEXT_STEP_INBOX_KIND = 'inbox-next-step'
 
 /** Persistent next-step Inbox state used to classify the current claimed batch as steering. */
 export const nextStepInboxDefinition: ConversationNodeDefinition<InboxState> = {
   kind: NEXT_STEP_INBOX_KIND,
   match: (event) => {
-    if (event.type === 'agent/inbox/moved') return { id: String(event.seq), role: 'start' }
     if (event.type === 'agent/inbox/spliced' && event.data.target === 'next-step') {
       return { id: String(event.seq), role: 'start' }
     }
     return null
   },
   start: (_context, match, reader) => {
-    const previous = reader.previous<InboxState>(NEXT_STEP_INBOX_KIND)
-    if (match.event.type === 'agent/inbox/moved') return applyMove(previous, String(match.event.data.messageId))
     if (match.event.type !== 'agent/inbox/spliced') {
       throw new Error('inbox-next-step start requires agent/inbox/spliced')
     }
-    return applySplice(previous, match.event.data)
+    return applySplice(reader.previous<InboxState>(NEXT_STEP_INBOX_KIND), match.event.data)
   },
   update: context => context.state,
   publication: () => 'none',

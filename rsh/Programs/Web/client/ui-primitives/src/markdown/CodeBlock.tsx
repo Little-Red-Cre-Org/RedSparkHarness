@@ -12,6 +12,8 @@ import css from './CodeBlock.module.css'
 export interface CodeBlockProps {
   /** The source text, rendered verbatim (trailing newline trimmed for display). */
   code: string
+  /** Localized, user-triggered editor actions; absent outside the IDE. */
+  editorActions?: { insertLabel: string; previewLabel: string; run: (mode: 'insert' | 'preview', code: string, language?: string) => void } | undefined
   /** Grammar hint (markdown fence info string or a fixed caller id); unknown = plain. */
   lang?: string | undefined
   /**
@@ -61,7 +63,9 @@ function renderLine(line: readonly HighlightSpan[], index: number): ReactNode {
   )
 }
 
-export function CodeBlock({ code, lang, streaming, className, contentRef, lineNumbers = false, copyLabel, copiedLabel }: CodeBlockProps) {
+export function CodeBlock({
+  code, lang, streaming, className, contentRef, lineNumbers = false, copyLabel, copiedLabel, editorActions,
+}: CodeBlockProps) {
   const trimmed = code.endsWith('\n') ? code.slice(0, -1) : code
   const sourceLines = lineNumbers ? trimmed.split('\n') : undefined
   const rootRef = useRef<HTMLDivElement>(null)
@@ -184,6 +188,10 @@ export function CodeBlock({ code, lang, streaming, className, contentRef, lineNu
         <div className={css.banner} data-code-block-banner>
           <div className={css.infostring}>{lang ?? ''}</div>
           <div className={css.action}>
+            {editorActions !== undefined && <>
+              <button type="button" className={css.copyButton} disabled={streaming} onClick={() => { editorActions.run('insert', code, lang) }}>{editorActions.insertLabel}</button>
+              <button type="button" className={css.copyButton} disabled={streaming} onClick={() => { editorActions.run('preview', code, lang) }}>{editorActions.previewLabel}</button>
+            </>}
             <button type="button" className={css.copyButton} onClick={onCopy}>
               {copied ? copiedLabel : copyLabel}
             </button>

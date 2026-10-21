@@ -56,7 +56,9 @@
 .action {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .copyButton {
@@ -67,6 +69,11 @@
   color: inherit;
   cursor: pointer;
   font: inherit;
+}
+
+.copyButton:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Consumers may turn the stable content node into a viewport without changing

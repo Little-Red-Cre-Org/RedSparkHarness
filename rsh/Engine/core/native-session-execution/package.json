@@ -47,9 +47,6 @@
     "./read-history": {
       "types": "./lib/types/read-history.d.ts",
       "default": "./lib/read-history.js"
-    },
-    "./active-session-protocol": {
-      "types": "./lib/types/active-session-protocol.d.ts"
     }
   },
   "files": [
@@ -68,9 +65,6 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-approval-definition": "workspace:^",
-    "@deepseek-ai/dsh-workspace-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
   }
 }

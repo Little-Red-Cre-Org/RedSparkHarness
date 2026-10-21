@@ -144,10 +144,9 @@ async function runNative(script: ScriptEntry[], policy: RetryPolicyConfig, signa
     const events: SessionEvent[] = []
     let persisted = 0
     const prepared = await execution.prepareStep({ provider: 'mock', model: 'mock' })
-    const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
     const outcome = await settle(execution.execute({
-      session, turn: 1, step: 1, prepared, options,
-      rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+      session, turn: 1, step: 1, prepared,
+      options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal },
       append: (event) => { events.push(event) }, persist: async () => { persisted = events.length },
     }))
     return { events: observed(events), requests: adapter.requests.length, outcome, persistedAll: persisted }
@@ -218,11 +217,9 @@ describe('native llm-retry lifecycle', () => {
     try {
       const session = nativeSession()
       const events: SessionEvent[] = []
-      const signal = controller.signal
-      const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
       const running = execution.execute({
         session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
-        options, rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: controller.signal },
         append: (event) => { events.push(event) }, persist: () => Promise.resolve(),
       })
       const outcome = expect(running).rejects.toThrow('stopped')
@@ -242,11 +239,9 @@ describe('native llm-retry lifecycle', () => {
     const adapter = new ScriptedAdapter([failure('SERVER'), text('never')], resolveRetryPolicy({ mode: 'normal', maxRetries: 2, backoff }, 'policy'))
     const { host, execution } = await nativeHost(adapter, plugin)
     const session = nativeSession()
-    const signal = new AbortController().signal
-    const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
     const running = execution.execute({
       session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
-      options, rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+      options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
       append: () => undefined, persist: () => Promise.resolve(),
     })
     const outcome = expect(running).rejects.toThrow('native-model-execution: model error: failed with SERVER')
@@ -272,12 +267,10 @@ describe('native llm-retry lifecycle', () => {
     const { host, execution } = await nativeHost(adapter, createNativeRetryPlugin({ random: () => 0.5 }), downstream)
     const session = nativeSession()
     const events: SessionEvent[] = []
-    const signal = new AbortController().signal
-    const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
     try {
       const outcome = await settle(execution.execute({
         session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
-        options, rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
         append: (event) => { events.push(event) }, persist: () => Promise.resolve(),
       }))
       expect(outcome.status).toBe('fulfilled')
@@ -308,12 +301,10 @@ describe('native llm-retry lifecycle', () => {
     const { host, execution } = await nativeHost(adapter, createNativeRetryPlugin({ random: () => 0.5 }), downstream)
     const session = nativeSession()
     const events: SessionEvent[] = []
-    const signal = new AbortController().signal
-    const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
     try {
       const outcome = await settle(execution.execute({
         session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
-        options, rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
         append: (event) => { events.push(event) }, persist: () => Promise.resolve(),
       }))
       expect(outcome.status).toBe('rejected')
@@ -348,15 +339,13 @@ describe('native llm-retry lifecycle', () => {
     const { host, execution, retryRequest } = await nativeHost(adapter, observingRetryPlugin)
     const session = nativeSession()
     const events: SessionEvent[] = []
-    const signal = new AbortController().signal
-    const options = { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal }
     const startedPersist = Promise.withResolvers<undefined>()
     const releasePersist = Promise.withResolvers<undefined>()
     let persisted = 0
     try {
       const running = execution.execute({
         session, turn: 1, step: 1, prepared: await execution.prepareStep({ provider: 'mock', model: 'mock' }),
-        options, rebuildOptions: () => ({ ...options, messages: session.deriveMessages() }),
+        options: { provider: 'mock', model: 'mock', messages: [], tools: [], sessionId: session.id, signal: new AbortController().signal },
         append: (event) => { events.push(event) },
         persist: async () => {
           persisted++

@@ -15,9 +15,7 @@ it('reports a repeated MCP discovery cursor and exits before starting a turn', a
     binScript: fileURLToPath(new URL('../../../../src/bin.ts', import.meta.url)),
     libBinScript: fileURLToPath(new URL('../../../../lib/bin.js', import.meta.url)),
     configPath,
-    binArgs: [
-      '--profile', 'legacy-headless', '--from-default-profile', 'headless', '--patch', configPath, 'unreachable task',
-    ],
+    binArgs: ['--profile', 'headless', '--patch', configPath, 'unreachable task'],
     tsconfigPath: fileURLToPath(new URL('../../../../../../../tsconfig.json', import.meta.url)),
     expectedExitCode: 1,
     env: {

@@ -31,15 +31,12 @@
         "approval",
         "codeRuntime",
         "timeContext",
-        "tmuxContext",
         "sessionExecution",
         "activeSessions",
         "modelSelection",
         "agentPresets",
         "workspaceRegistry",
-        "agentInstructions",
-        "attachments",
-        "requestContexts"
+        "agentInstructions"
       ],
       "provides": [
         "application",
@@ -69,24 +66,13 @@
   "license": "MIT",
   "devDependencies": {
     "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-native-approval": "workspace:^",
     "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-file-reference-local": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-request-context": "workspace:^",
-    "@deepseek-ai/dsh-file-reference": "workspace:^",
-    "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
-    "@deepseek-ai/dsh-tool-fs": "workspace:^",
-    "@deepseek-ai/dsh-tool-skill": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
-    "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^",
-    "zod": "^4.4.3"
+    "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
@@ -102,7 +88,6 @@
     "@deepseek-ai/dsh-approval-definition": "workspace:^",
     "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
-    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",
@@ -110,8 +95,6 @@
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-request-context-definition": "workspace:^"
+    "@deepseek-ai/dsh-agent-instructions": "workspace:^"
   }
 }

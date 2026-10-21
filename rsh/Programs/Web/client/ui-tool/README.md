@@ -62,7 +62,7 @@ The package realizes one dispatch rule: atomic Tool views are keyed by wire Tool
 ### Cards
 
 
-Every card is read in place in the call tree; there is no second, full-height presentation of a selected call. Row renderers share one pure card model for each terminal, read, diff, search, and web card, and the image card's gallery renders through the tool-owned `tool.call.images` slot. These models validate raw call arguments, result content, failure state, persisted metadata, Code Dispatch `parentCallId`, and Session path facts. Unsupported or malformed inputs use flattened Tool result text. A file-path summary opens the file through the owner's `openFile`, which the chat view routes to the right Sidebar's text preview; `inspect` opens the trajectory view. Card-specific limits and fallback rules for the terminal, diff, read, search, and web cards remain in [the ui-primitives README](../ui-primitives/README.md); the image card's model in this package carries its own fallback rules.
+Every card is read in place in the call tree; there is no second, full-height presentation of a selected call. Row renderers share one pure card model for each terminal, read, diff, search, and web card, and the image card's gallery renders through the tool-owned `tool.call.images` slot. These models validate raw call arguments, result content, failure state, persisted metadata, Code Dispatch `parentCallId`, and Session path facts. Unsupported or malformed inputs use flattened Tool result text. A file-path summary uses the owner's `openFile`; write/edit rows attach their recorded change fragments for a read-only IDE comparison, while browser conversations open the right Sidebar's file preview; `inspect` opens the trajectory view. Card-specific limits and fallback rules for the terminal, diff, read, search, and web cards remain in [the ui-primitives README](../ui-primitives/README.md); the image card's model in this package carries its own fallback rules.
 
 The terminal model uses `hasSpillNotice` from the browser-safe `@deepseek-ai/dsh-spill-policy/notice` entry, not an independent UI pattern. The [spill-policy README](../../../../Modules/Official/spill/spill-policy/README.md#shared-notice-ownership) owns notice formatting and recognition. This check conservatively selects generic output; matching text cannot authenticate its source, and replay leaves recorded result bytes untouched.
 </details>
@@ -105,7 +105,7 @@ These limits define the dispatch depth and the view ownership; they are current 
 <a id="dev-note"></a>
 ### Dev Note
 
-`./native` exposes the props-only `NativeToolCard` with shared call/result types, typed English/Chinese copy and existing file, terminal, search, diff and generic models. It reads recorded result metadata and recursively renders PTC sub-calls; it registers no Tool or Session service. Missing `openFile` and `inspect` props omit those actions. Its ESM and stylesheet artifacts are independent of the compatibility `./client` module-table entry.
+`./tool-renderer` exposes the Cordis-free `NativeToolCard` with the shared raw call/result types, typed English/Chinese copy and existing file, terminal, search, diff and generic models. It reads recorded result metadata; it registers no Tool or Session service. Missing `openFile` and `inspect` props omit those actions. Its ESM and stylesheet artifacts are independent of the compatibility `./client` module-table entry.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>

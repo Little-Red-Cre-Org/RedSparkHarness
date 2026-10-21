@@ -18,13 +18,12 @@
 
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
+import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
 import { UserQuestionError } from '@deepseek-ai/dsh-user-questions/native'
 import type {} from './common.ts'
@@ -50,43 +49,20 @@ interface NativePlanState {
   notice: { readonly id: MessageId; readonly active: boolean } | undefined
 }
 
-/** Read-only plan-mode state for one Session. */
+/** Read-only view of one agent's plan mode. */
 export interface NativePlanModeState {
+  /** Agent whose session is reported. */
+  readonly agent: NativeAgent
   /** Last logged plan mode. */
   readonly active: boolean
   /** Selected mode awaiting the next accepted step, when one is pending. */
   readonly pending?: boolean
 }
 
-/** Result of selecting plan mode through the Native Host. */
-export interface NativePlanModeSelection {
-  /** Last committed plan-mode value. */
-  readonly active: boolean
-  /** Selected value waiting for the next accepted step. */
-  readonly pending?: boolean
-  /** Outcome of this selection. */
-  readonly outcome: 'committed' | 'queued' | 'cancelled' | 'noop'
-}
-
-/** Native plan-mode capability over each attached root Session's logged and pending state. */
+/** Native plan-mode capability: observe logged and pending state without selecting it. */
 export interface NativePlanMode {
-  /** Read the state of every attached agent.
-   * @returns attached agents with their logged and pending plan mode.
-   */
-  states(): readonly (NativePlanModeState & { readonly agent: NativeAgent })[]
-  /** Read one exact attached root owner's logged and pending mode.
-   * @param owner - exact active root Session owner.
-   * @returns the owner's plan mode state.
-   * @throws when the owner is not attached to this plan-mode Provider.
-   */
-  state(owner: NativeActiveSessionOwner): NativePlanModeState
-  /** Select plan mode using the same pending-step rules as `/plan`.
-   * @param owner - exact active root Session owner.
-   * @param active - requested plan-mode state.
-   * @param signal - cancellation for queued guidance and durable writes.
-   * @returns the committed or pending state and selection outcome.
-   */
-  select(owner: NativeActiveSessionOwner, active: boolean, signal: AbortSignal): Promise<NativePlanModeSelection>
+  /** Read the state of every attached agent. */
+  states(): readonly NativePlanModeState[]
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {
@@ -248,28 +224,11 @@ export const plugin: NativePlugin = {
       })
       for (const owner of sessions.owners()) await attach(owner)
 
-      const planMode: NativePlanMode = {
+      context.provide('planMode', {
         states: () => [...states].map(([agent, { owner, state }]) => ({
           agent, ...selections.get(owner.session.id, view(owner, state)),
         })),
-        state(owner) {
-          const entry = states.get(owner.agent)
-          if (entry === undefined || entry.owner !== owner) throw new Error('plan-mode: exact root owner is not attached')
-          return selections.get(owner.session.id, view(owner, entry.state))
-        },
-        async select(owner, active, signal) {
-          const entry = states.get(owner.agent)
-          if (entry === undefined || entry.owner !== owner || !owner.writerAvailable) {
-            throw new Error('plan-mode: exact writable root owner is not attached')
-          }
-          signal.throwIfAborted()
-          const selection = selections.select(owner.session.id, view(owner, entry.state), active)
-          if (selection.outcome === 'committed') await owner.flush()
-          await reconcile(owner, entry.state, signal)
-          return { ...selections.get(owner.session.id, view(owner, entry.state)), outcome: selection.outcome }
-        },
-      }
-      context.provide('planMode', planMode)
+      } satisfies NativePlanMode)
 
       context.effect(tools.registerValueTool({
         schema: {
@@ -308,7 +267,7 @@ export const plugin: NativePlugin = {
 
       if (commands !== undefined) {
         context.effect(commands.register({
-          definitionId: brandString<CommandDefinitionId>('@deepseek-ai/dsh-plan-mode'),
+          definitionId: CommandDefinitionId('@deepseek-ai/dsh-plan-mode'),
           name: PLAN_COMMAND_NAME,
           description: PLAN_COMMAND_DESCRIPTION,
           input: { hint: PLAN_COMMAND_HINT, attachments: true },

@@ -5,8 +5,6 @@
  * Run: node fixture-server.ts
  */
 
-import { randomUUID } from 'node:crypto'
-import { appendFileSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -73,11 +71,6 @@ server.registerTool('admin.reset', {
 }, async () => ({
   content: [{ type: 'text', text: 'reset done' }],
 }))
-
-const lifecycleFile = process.env.MCP_FIXTURE_LIFECYCLE_FILE
-if (lifecycleFile !== undefined) {
-  appendFileSync(lifecycleFile, `${JSON.stringify({ event: 'start', pid: process.pid, nonce: randomUUID() })}\n`)
-}
 
 const transport = new StdioServerTransport()
 await server.connect(transport)

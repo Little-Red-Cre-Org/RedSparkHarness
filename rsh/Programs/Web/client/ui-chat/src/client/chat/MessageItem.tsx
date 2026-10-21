@@ -2,9 +2,7 @@ import { Fragment, memo, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import {
-  ChatUserMessage, fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
@@ -183,44 +181,50 @@ function UserStyleBubble({
   const truncated = (total: number): string => t('json.truncated', { total })
   const showBubble = text !== '' || rest.length > 0
   return (
-    <ChatUserMessage
-      pending={pending}
-      echo={echo}
-      attachments={attachments.length > 0 && (
-        <div className={css.attachmentRow} data-message-attachments>
-          {attachments.map((attachment, index) => attachment.type === 'image'
-            ? (
-              <Fragment key={`image:${index}`}>
-                {renderMessageImages({
-                  images: [attachment.image],
-                  align: 'end',
-                  compact: compactImages,
-                })}
-              </Fragment>
-            )
-            : (
-              <span key={`file:${index}`} className={css.fileCard} title={attachment.file.name}>
-                <FileTypeIcon path={attachment.file.name} className={css.fileIcon} />
-                <span className={css.fileContent}>
-                  <span className={css.fileName}>{attachment.file.name}</span>
-                  <span className={css.fileMeta}>
-                    {[fileExtension(attachment.file.name).toUpperCase().slice(0, 8), fileSizeText(attachment.file.bytes)]
-                      .filter(Boolean).join(' ')}
+    <div
+      className={css.userRow}
+      data-pending-steering={pending || undefined}
+      data-submission-echo={echo || undefined}
+    >
+      <div className={css.userStack}>
+        {attachments.length > 0 && (
+          <div className={css.attachmentRow} data-message-attachments>
+            {attachments.map((attachment, index) => attachment.type === 'image'
+              ? (
+                <Fragment key={`image:${index}`}>
+                  {renderMessageImages({
+                    images: [attachment.image],
+                    align: 'end',
+                    compact: compactImages,
+                  })}
+                </Fragment>
+              )
+              : (
+                <span key={`file:${index}`} className={css.fileCard} title={attachment.file.name}>
+                  <FileTypeIcon path={attachment.file.name} className={css.fileIcon} />
+                  <span className={css.fileContent}>
+                    <span className={css.fileName}>{attachment.file.name}</span>
+                    <span className={css.fileMeta}>
+                      {[fileExtension(attachment.file.name).toUpperCase().slice(0, 8), fileSizeText(attachment.file.bytes)]
+                        .filter(Boolean).join(' ')}
+                    </span>
                   </span>
                 </span>
-              </span>
-            ))}
-        </div>
-      )}
-      bubble={showBubble && <>
-        {projectUserText(text, referenceLabels, skillNames, 'skill', references)}
-        {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
-      </>}
-      summary={referenceLabels.length > 0
-        ? t('message.referenceSummary', { labels: referenceLabels.join(t('message.referenceSeparator')) })
-        : undefined}
-      actions={actions?.(text)}
-    />
+              ))}
+          </div>
+        )}
+        {showBubble && <div className={css.bubble}>
+          {projectUserText(text, referenceLabels, skillNames, 'skill', references)}
+          {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
+        </div>}
+        {referenceLabels.length > 0 && (
+          <div className={css.referenceSummary}>
+            {t('message.referenceSummary', { labels: referenceLabels.join(t('message.referenceSeparator')) })}
+          </div>
+        )}
+      </div>
+      {actions?.(text)}
+    </div>
   )
 }
 

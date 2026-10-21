@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Run editor file with workspace trusted=false 1`] = `
+{
+  "errors": [
+    "RSH workbench: Error: Trust this workspace before running code.",
+  ],
+  "executions": 0,
+  "saves": 0,
+  "stops": 0,
+  "trusted": false,
+}
+`;
+
+exports[`Run editor file with workspace trusted=true 1`] = `
+{
+  "errors": [],
+  "executions": 1,
+  "saves": 1,
+  "stops": 1,
+  "trusted": true,
+}
+`;

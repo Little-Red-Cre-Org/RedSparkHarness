@@ -4,15 +4,18 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../../Core/util/brand" },
-    { "path": "../../Core/util/launch-environment" },
-    { "path": "../../Core/runtime-diagnostics/native-runtime" },
-    { "path": "../../Engine/core/session" },
-    { "path": "../Web/host/native-web-assets" },
-    { "path": "../../Core/util/home-paths" },
-    { "path": "../../Engine/session/session-persistence-jsonl" },
-    { "path": "../CLI" }
+    {
+      "path": "../../Core/util/home-paths"
+    },
+    {
+      "path": "../CLI"
+    },
+    {
+      "path": "../../Modules/Official/ide/ide-code-oss"
+    }
   ]
 }

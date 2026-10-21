@@ -234,13 +234,10 @@ describe('gate graph validation', () => {
       scripts: Record<string, string>
     }
 
-    expect(subject.map(item => item.id)).toEqual([
-      'constraints', 'native-dependencies', 'package-dependencies', 'package-invariants',
-    ])
+    expect(subject.map(item => item.id)).toEqual(['constraints', 'native-dependencies', 'package-invariants'])
     expect(subject.map(item => item.displayCommand)).toEqual([
       'pnpm run constraints',
       'pnpm run verify-native-dependencies',
-      'pnpm run verify-package-dependencies',
       'pnpm run verify-package-invariants',
     ])
     expect(subject.every(item => item.needs === undefined)).toBe(true)
@@ -611,8 +608,8 @@ describe('Node 24 lane ownership', () => {
     expect(subject.find(item => item.id === 'built-bin-smoke')?.args).toEqual(
       expect.arrayContaining([
         'rsh/Core/subprocess/subprocess-local/tests/spawn-runner-built.e2e.ts',
-        'rsh/Compatibility/DSH/bridge/subagent-codex/tests/loader-composition.e2e.ts',
-        'rsh/Modules/Official/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
+        'rsh/Engine/subagent/subagent-codex/tests/loader-composition.e2e.ts',
+        'rsh/Engine/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
         'rsh/Modules/Community/experimental/agent-team/tests/built-lib.e2e.ts',
       ]),
     )

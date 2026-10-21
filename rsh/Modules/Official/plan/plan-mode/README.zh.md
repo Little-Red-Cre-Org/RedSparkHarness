@@ -70,8 +70,6 @@ agent 完成计划后，会以 markdown 形式、从标题开头书写计划并�
 
 `./native` 入口为原生 profile 提供同样的 `/plan` 命令、`exit_plan_mode` 工具与 `plan/mode` 日志。它依赖 `tools` 与 `activeSessions`，在组合了 `commands` 与 `userQuestions` 时使用它们，并提供只读的 `planMode` 视图。内置 `native-tui` profile 以与 Cordis 基础 bundle 相同的指导文本安装它。原生系统提示词在会话内不可变，因此指导以排队到下一步的计划模式通知送达：进入计划模式时先说明切换、再附上配置的 `section`，离开时只说明切换。智能体空闲时的切换立即记入日志；若在智能体运行前又切回，排队的通知会被撤回。空闲时的 `/plan <消息>` 会把消息排到你的下一条提示之前，而不是启动新的 turn。
 
-两个包入口都要求安装 `dsh-llm` 与 `dsh-user-questions` peer，因为它们会导入共享消息与错误值；Native `userQuestions` 服务在组合时仍可选。
-
 -----
 
 <a id="understand-the-implementation"></a>

@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AI code action: apply 1`] = `
+{
+  "error": undefined,
+  "previewTitle": "Review AI code — Replace entire file",
+  "text": "AI code",
+}
+`;
+
+exports[`AI code action: changed 1`] = `
+{
+  "error": "RSH workbench: Error: The target file changed. Create a new preview before applying.",
+  "previewTitle": "Review AI code — Replace entire file",
+  "text": "user edit",
+}
+`;
+
+exports[`AI code action: discard 1`] = `
+{
+  "error": undefined,
+  "previewTitle": "Review AI code — Replace entire file",
+  "text": "before",
+}
+`;
+
+exports[`AI code action: insert 1`] = `
+{
+  "error": undefined,
+  "previewTitle": undefined,
+  "text": "AI codebefore",
+}
+`;
