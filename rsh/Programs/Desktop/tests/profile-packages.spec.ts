@@ -1,12 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { createRequire } from 'node:module'
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { load as loadYaml } from 'js-yaml'
 import { pathToFileURL } from 'node:url'
 import { afterEach, expect, it } from 'vitest'
-import { createCompatibilityPluginProfile } from '../src/project-manager.ts'
+import { createPluginProfile } from '../src/project-manager.ts'
 import { linkDesktopHostPackages, unlinkDesktopHostPackages, validateDesktopPluginGraph } from '../src/profile-packages.ts'
 import { runtimeFixture, writePackage } from './runtime-fixture.ts'
 
@@ -15,64 +13,42 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'desktop-profile-'))
   roots.push(root)
   const dsh = join(root, 'dsh')
-  const runtime = runtimeFixture(dsh, '1.0.0', '24.17.0', true)
+  const runtime = runtimeFixture(dsh)
   const profile = join(root, 'profile')
-  createCompatibilityPluginProfile(profile)
+  createPluginProfile(profile)
   linkDesktopHostPackages(profile, dsh, runtime)
   return { root, dsh, runtime, profile }
 }
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
 
-it('keeps profile build approvals explicit while allowing esbuild', () => {
-  const { profile } = fixture()
-  const workspace = loadYaml(readFileSync(join(profile, 'pnpm-workspace.yaml'), 'utf8')) as {
-    readonly strictDepBuilds: boolean
-    readonly allowBuilds: Record<string, boolean>
-  }
-  expect(workspace.strictDepBuilds).toBe(true)
-  expect(workspace.allowBuilds).toEqual({
-    esbuild: true,
-    'node-pty': true,
-    koffi: true,
-    'fs-ext': true,
-    '@deepseek-ai/dsh-subprocess-local': true,
-    '@google/genai': false,
-    protobufjs: false,
-    'node-addon-require-builtin': false,
-  })
-})
-
 it('loads one shared ESM instance from both host and external plugin while keeping ordinary dependencies private', () => {
   const { dsh, runtime, profile } = fixture()
   writePackage(join(dsh, 'node_modules'), 'ordinary', {}, 'export default "host"')
-  writePackage(join(dsh, 'node_modules'), '@deepseek-ai/dsh-client-connection', {}, 'export const identity = {}')
   writePackage(join(profile, 'node_modules'), 'ordinary', {}, 'export default "plugin"')
   const plugin = writePackage(join(profile, 'node_modules'), 'plugin', {
-    peerDependencies: { '@deepseek-ai/dsh-client-connection': '^1.0.0' }, dependencies: { ordinary: '1.0.0' },
-  }, 'export { identity } from "@deepseek-ai/dsh-client-connection"; export { default as ordinary } from "ordinary"')
+    peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' }, dependencies: { ordinary: '1.0.0' },
+  }, 'export { identity } from "@deepseek-ai/cordis"; export { default as ordinary } from "ordinary"')
   validateDesktopPluginGraph(profile, dsh, runtime, ['plugin'])
-  expect(() => createRequire(join(dsh, 'package.json')).resolve('ordinary')).not.toThrow()
-  expect(createRequire(join(dsh, 'package.json')).resolve('ordinary')).not.toBe(createRequire(join(plugin, 'index.js')).resolve('ordinary'))
   const entry = join(dsh, 'check.mjs')
-  writeFileSync(entry, `import {identity} from '@deepseek-ai/dsh-client-connection'; import ordinary from 'ordinary'; import * as plugin from ${JSON.stringify(pathToFileURL(join(plugin, 'index.js')).href)}; console.log(JSON.stringify({same:identity===plugin.identity, host:ordinary, plugin:plugin.ordinary}))`)
+  writeFileSync(entry, `import {identity} from '@deepseek-ai/cordis'; import ordinary from 'ordinary'; import * as plugin from ${JSON.stringify(pathToFileURL(join(plugin, 'index.js')).href)}; console.log(JSON.stringify({same:identity===plugin.identity, host:ordinary, plugin:plugin.ordinary}))`)
   const output = execFileSync(process.execPath, [entry], { encoding: 'utf8', env: { ...process.env, NODE_OPTIONS: '', NODE_PATH: '' } })
   expect(JSON.parse(output)).toEqual({ same: true, host: 'host', plugin: 'plugin' })
 })
 it.each(['nested', 'alias'])('rejects a %s second copy of a host package', (placement) => {
   const { dsh, runtime, profile } = fixture()
   const plugin = writePackage(join(profile, 'node_modules'), 'plugin')
-  if (placement === 'nested') writePackage(join(plugin, 'node_modules'), '@deepseek-ai/dsh-client-connection')
-  else writePackage(join(profile, 'node_modules'), 'alias', { name: '@deepseek-ai/dsh-client-connection' })
+  if (placement === 'nested') writePackage(join(plugin, 'node_modules'), '@deepseek-ai/cordis')
+  else writePackage(join(profile, 'node_modules'), 'alias', { name: '@deepseek-ai/cordis' })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/duplicate or aliased/u)
 })
 it('rejects a host package declared as an ordinary dependency', () => {
   const { dsh, runtime, profile } = fixture()
-  writePackage(join(profile, 'node_modules'), 'plugin', { dependencies: { '@deepseek-ai/dsh-client-connection': '^1.0.0' } })
+  writePackage(join(profile, 'node_modules'), 'plugin', { dependencies: { '@deepseek-ai/cordis': '^1.0.0' } })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/peer dependency/u)
 })
 it('rejects incompatible peers only when the plugin is enabled', () => {
   const { dsh, runtime, profile } = fixture()
-  writePackage(join(profile, 'node_modules'), 'plugin', { peerDependencies: { '@deepseek-ai/dsh-client-connection': '^2.0.0' } })
+  writePackage(join(profile, 'node_modules'), 'plugin', { peerDependencies: { '@deepseek-ai/cordis': '^2.0.0' } })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/found 1.0.0/u)
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, []) }).not.toThrow()
 })

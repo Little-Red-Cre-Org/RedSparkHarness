@@ -6,7 +6,6 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
 import {
-  cordisHostingNativeReferences,
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
@@ -70,9 +69,7 @@ function exportSource(directory: string, exportName: string, exports: Record<str
   const types = (entry as Record<string, unknown>).types
   if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) return undefined
   const sourceRoot = resolve(directory, 'src')
-  const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length)
-  const sourceTs = resolve(sourceRoot, sourceRelative + '.ts')
-  const source = existsSync(sourceTs) ? sourceTs : resolve(sourceRoot, sourceRelative + '.tsx')
+  const source = resolve(sourceRoot, types.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts')
   const within = relative(sourceRoot, source)
   return within.startsWith('..') || isAbsolute(within) ? undefined : source
 }
@@ -250,10 +247,10 @@ export function collectNativeDependencyViolations(root: string): string[] {
       return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0] ?? specifier
     }
     const stylesheetReferenceAllowed = (owner: string, sourceFile: string, specifier: string): boolean => {
-      if (face !== 'client' || (!specifier.endsWith('.css') && !specifier.endsWith('.css?inline'))) return false
+      if (face !== 'client' || !specifier.endsWith('.css')) return false
       if (sourceFile.endsWith('.d.ts') && (specifier === '*.module.css' || specifier === '*.css')) return true
       if (specifier.startsWith('.')) {
-        const stylesheet = resolve(dirname(sourceFile), specifier.endsWith('?inline') ? specifier.slice(0, -'?inline'.length) : specifier)
+        const stylesheet = resolve(dirname(sourceFile), specifier)
         const path = relative(resolve(root, owner, 'src'), stylesheet)
         return !path.startsWith('..') && !isAbsolute(path) && existsSync(stylesheet)
       }
@@ -270,8 +267,6 @@ export function collectNativeDependencyViolations(root: string): string[] {
       options: ts.CompilerOptions,
     ): boolean => {
       if (specifier.startsWith('node:')) return true
-      const hostingReferences = cordisHostingNativeReferences.get(sourceOwner)
-      if (hostingReferences?.includes(specifier) === true) return true
       if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
       if (specifier.startsWith('@deepseek-ai/cordis-plugin-')) return false
       if (stylesheetReferenceAllowed(sourceOwner, sourceFile, specifier)) return true

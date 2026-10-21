@@ -12,32 +12,6 @@ export interface ProcessSandbox {
    * @returns enforcing runner argv and classification facts.
    */
   confine(argv: readonly string[], policy: SandboxPolicy): ConfinedArgv
-  /**
-   * Confine a fixed child runtime while exposing its selected cwd and private home.
-   * The launcher-owned `privateHome` is an additional writable path. Existing
-   * policy grants, including backend-managed temporary paths, remain in force.
-   * The selected cwd is visible and read-only unless an existing policy grant
-   * contains it.
-   * @param argv - the exact child program and arguments.
-   * @param policy - the child's resolved file-effect policy.
-   * @param paths - canonical child cwd and launcher-owned private home.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confineChildProcess(argv: readonly string[], policy: SandboxPolicy, paths: ProcessSandboxChildPaths): ConfinedArgv
-  /**
-   * Prepare and return the existing per-session writable temp root for a policy, when this backend owns one.
-   * @param policy - complete workspace-write policy for the owning session.
-   * @returns the runner temp root reused by {@link confine}, or `undefined` when this backend does not expose one.
-   */
-  prepareWritableTempRoot?(policy: SandboxPolicy): string | undefined
-}
-
-/** Canonical paths required to start one confined SDK child. */
-export interface ProcessSandboxChildPaths {
-  /** Existing canonical directory used as the child's process cwd. */
-  cwd: string
-  /** Existing canonical directory created and owned by the child launcher. */
-  privateHome: string
 }
 
 declare module '@deepseek-ai/dsh-native-runtime' {

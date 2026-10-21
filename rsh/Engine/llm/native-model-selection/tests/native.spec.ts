@@ -14,7 +14,6 @@ it('uses prepared defaults instead of advisory defaults and changes them after a
       if (unavailable) throw unavailableError
       return { model: { provider, id, name: id, defaultMaxTokens: cap,
         reasoning: { efforts: [{ id: ReasoningEffortId(effort), name: effort }], defaultEffort: ReasoningEffortId(effort) } },
-      supportsOutputTokenLimit: async () => true,
       async *stream(options) { requests.push(options); yield { type: 'finish', reason: { kind: 'stop' } } } } },
     async *stream() { throw new Error('prepared dispatch is required') },
   })
@@ -30,16 +29,9 @@ it('uses prepared defaults instead of advisory defaults and changes them after a
       expect(receipt.selected).toEqual({ provider: 'fixture', model: 'default' })
     }, new AbortController().signal)
     await first.roots.execute({ route: first.route, id, resume: true, message }, new AbortController().signal)
-    const legacyId = SessionId('prepared-selection-legacy-header')
-    await first.roots.execute({ route: first.route, id: legacyId, resume: false, message }, new AbortController().signal)
-    const legacyEvents = await readEvents(first.storage, legacyId)
-    expect(legacyEvents.some(event => event.type === 'model/selection')).toBe(false)
-    expect(legacyEvents.findLast(event => event.type === 'request/header')?.data.header.config)
-      .toMatchObject({ provider: 'fixture', model: 'default' })
   }
   finally { await first.close() }
-  const second = await fixture(advisory, { model: modelFor(512, 'low'), home: first.home,
-    defaultModelSelection: () => ({ provider: 'fixture', model: 'host-default-b', reasoningEffort: ReasoningEffortId('low') }) })
+  const second = await fixture(advisory, { model: modelFor(512, 'low'), home: first.home })
   try {
     unavailable = true
     await expect(second.roots.execute({ route: second.route, id, resume: true, message }, new AbortController().signal))
@@ -50,26 +42,11 @@ it('uses prepared defaults instead of advisory defaults and changes them after a
     unavailable = false
     await second.roots.execute({ route: second.route, id, resume: true }, new AbortController().signal)
     expect((await readEvents(second.storage, id)).filter(event => event.type === 'user/message' && event.data.source.kind === 'user')).toHaveLength(2)
-    expect(requests.map(request => [request.maxTokens, request.reasoningEffort]))
-      .toEqual([[256, 'high'], [256, 'high'], [512, 'low']])
+    expect(requests.map(request => [request.maxTokens, request.reasoningEffort])).toEqual([[256, 'high'], [512, 'low']])
     expect(requests.every(request => JSON.stringify(request.messages).includes('preserve workspace instructions.'))).toBe(true)
     const headers = (await readEvents(second.storage, id)).filter(event => event.type === 'request/header')
     expect(headers.map(event => [event.data.header.config.maxTokens, event.data.header.config.reasoningEffort]))
       .toEqual([[256, 'high'], [512, 'low']])
-    const legacyId = SessionId('prepared-selection-legacy-header')
-    const headless = second.headless
-    if (headless === undefined) throw new Error('selection fixture requires Headless application')
-    let preparedRoute: { provider: string; model: string } | undefined
-    await headless.executeRootTurn({ id: legacyId, resume: true,
-      prepareMessage: async (model) => {
-        preparedRoute = model
-        return createUserMessage({ content: [{ type: 'text', text: 'Use the restored Session route.' }], source: { kind: 'user' } })
-      } }, new AbortController().signal)
-    expect(preparedRoute).toEqual({ provider: 'fixture', model: 'default' })
-    const resumedLegacy = await readEvents(second.storage, legacyId)
-    expect(resumedLegacy.filter(event => event.type === 'request/header').at(-1)?.data.header.config)
-      .toMatchObject({ provider: 'fixture', model: 'default', maxTokens: 512, reasoningEffort: 'low' })
-    expect(requests.at(-1)).toMatchObject({ provider: 'fixture', model: 'default', maxTokens: 512, reasoningEffort: 'low' })
   } finally { await second.close() }
 })
 

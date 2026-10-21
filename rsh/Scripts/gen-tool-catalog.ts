@@ -450,7 +450,7 @@ const TOOL_PACKAGES: ToolPackage[] = [
     pkg: '@deepseek-ai/dsh-schedule',
     dir: 'schedule',
     source: 'rsh/Engine/schedule/schedule/src/tools.ts',
-    requires: ['ctx.tools', 'ctx.sessions (Cordis) or activeSessions (Native)', 'Session persistence', 'an exact live root Session owner'],
+    requires: ['ctx.tools', 'ctx.sessions', 'Session persistence', 'a future live root Agent'],
     writes: ['tool/call', 'schedule/change create or delete', 'tool/result'],
     async mount(ctx) {
       await ctx.plugin(SessionStore)
@@ -462,8 +462,8 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     scope: ctx => catalogChildScopes.get(ctx) as Agent,
     note:
-      'Cordis registers tools on root Agent scopes created after its overlay loads; the Native Host entry attaches to existing and future exact root Session owners before the first model request snapshot. '
-      + 'The first Native turn includes these schemas when its tool allowlist permits them. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, '
+      'Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. '
+      + 'Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, '
       + 'and discloses session-local delivery; '
       + 'management reads and mutations require the shared Session persistence barrier.',
   },

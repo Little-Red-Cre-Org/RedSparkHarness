@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The `host/` group provides the web GUI's plain HTTP server, the SPA dist server that serves the built Web shell, the workspace-directory picking seam with its native, browse, and adaptive composition packages, the open-in-app application probe and launch routes, the read-only plugin inventory projection, and the read-only Native schedule projection. All nine packages are product packages; the browser transport lives in [`client/`](../client/README.md), and the composed application is [`rsh/Programs/CLI`](../../CLI/README.md) booting the [`dsh-base` bundle](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) that serves the web app under `rsh/Programs/Web/application/`. The picker backends replace one another behind the shared seam.
+The `host/` group provides the web GUI's plain HTTP server, the SPA dist server that serves the built Web shell, the workspace-directory picking seam with its native, browse, and adaptive composition packages, the open-in-app application probe and launch routes, and the read-only plugin inventory projection. All eight packages are product packages; the browser transport lives in [`client/`](../client/README.md), and the composed application is [`rsh/Programs/CLI`](../../CLI/README.md) booting the [`dsh-base` bundle](../../../Compatibility/DSH/bundle/base/cordis.patch.yml) that serves the web app under `rsh/Programs/Web/application/`. The picker backends replace one another behind the shared seam.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ The `host/` group provides the web GUI's plain HTTP server, the SPA dist server 
 <a id="packages"></a>
 ## Packages
 
-Nine packages play the host roles; each package README owns its contract and configuration.
+Each package README owns its Host contract and configuration.
 
 | Package | Role | ctx key |
 |---|---|---|
@@ -34,7 +34,7 @@ Nine packages play the host roles; each package README owns its contract and con
 | [`directory-picker-auto/`](directory-picker-auto/README.md) | Host-adaptive chooser that mounts the matching backend at boot | mounts a backend |
 | [`open-in-app/`](open-in-app/README.md) | Application probe, icon, and launch routes opening the workspace directory in an installed application | consumes `ctx.webServer` |
 | [`plugin-inventory/`](plugin-inventory/README.md) | Read-only projection of current Loader entries | Remote `pluginInventory/list` |
-| [`native-schedule-controller/`](native-schedule-controller/README.md) | Read-only authenticated Native schedule list and follow endpoints | consumes `hostConnection` and `taskScheduler` |
+| [`native-ide/`](native-ide/README.md) | Native profile application opening the selected Code OSS workspace | consumes Native `ide` |
 
 -----
 

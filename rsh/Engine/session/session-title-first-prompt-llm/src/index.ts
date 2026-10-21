@@ -4,7 +4,6 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
   registerSessionTitleLlmProvider,
-  selectFirstPrompt,
   SessionTitleLlmConfigFields,
 } from '@deepseek-ai/dsh-session-title-llm'
 import type { SessionTitleLlmConfig } from '@deepseek-ai/dsh-session-title-llm'
@@ -33,5 +32,9 @@ export const Config: z<Config> = z.object({
  * @param config - required route, target, byte, token, and timeout policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  registerSessionTitleLlmProvider(ctx, config, name, 'first-prompt', selectFirstPrompt)
+  registerSessionTitleLlmProvider(ctx, config, name, 'first-prompt', (messages) => {
+    const first = messages[0]
+    if (first === undefined) throw new Error('first-prompt title provider requires one human message')
+    return [first]
+  })
 }

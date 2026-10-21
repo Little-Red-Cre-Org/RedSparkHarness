@@ -612,7 +612,6 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   CredentialRef: 'credentials.md',
   CredentialKey: 'credentials.md',
   CredentialInfo: 'credentials.md',
-  CredentialMetadataMigration: 'credentials.md',
   CredentialRecord: 'credentials.md',
   CredentialRecordEntry: 'credentials.md',
   CredentialRecordInfo: 'credentials.md',
@@ -806,10 +805,6 @@ export const CORDIS_CATALOG_POLICY: CordisCatalogPolicy = {
     '@deepseek-ai/dsh-http-routes',
     '@deepseek-ai/dsh-http-routes-cordis',
   ],
-  // This empty runtime feature-detection marker is not the Node type used by HttpRoute.
-  runtimeTypeExclusions: new Set([
-    '@deepseek-ai/dsh-experimental-webworker-runtime#ServerResponse',
-  ]),
   runtimeServiceExclusions: new Set(['cordisInspect', 'dynamicCordisRunner']),
   runtimeServices: [{
     key: 'timer',

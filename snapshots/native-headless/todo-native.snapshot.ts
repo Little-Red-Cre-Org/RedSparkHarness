@@ -62,7 +62,7 @@ it('commits todo replacement before the next model request and restores the same
   })
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
   const model = join(modules, 'todo-model'); mkdirSync(model)
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'todo-model', version: '0.0.0', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'todo-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

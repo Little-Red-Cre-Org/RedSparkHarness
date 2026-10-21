@@ -1,6 +1,6 @@
 version: 1
 scenario: cordis-inspect-jsdoc
-profile: legacy-headless
+profile: headless
 composition: advanced
 recording: authored
 header:

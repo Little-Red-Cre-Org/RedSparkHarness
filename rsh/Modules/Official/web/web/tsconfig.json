@@ -19,15 +19,6 @@
     },
     {
       "path": "../../../../Engine/llm/llm"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
-      "path": "../../../../Engine/core/native-tools/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Core/util/launch-environment"
     }
   ]
 }

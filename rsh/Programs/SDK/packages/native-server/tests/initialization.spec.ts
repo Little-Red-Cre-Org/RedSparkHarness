@@ -113,8 +113,8 @@ it('runs without the optional subagent Provider and drains admitted model work a
   const carrier: NativePlugin = {
     apiVersion: 1, name: 'minimal-sdk-carrier', targets: ['host'],
     requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
-    optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions',
-      'modelSelection', 'agentPresets', 'workspaceRegistry', 'commands'], provides: ['application', 'rootExecution'],
+    optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions',
+      'modelSelection', 'agentPresets', 'workspaceRegistry'], provides: ['application', 'rootExecution'],
     resolve: () => (context) => {
       carrierContext = context
       app = new NativeSdkApplication(context, { systemPrompt: 'fixture', maxSteps: 1 }, input, output)
@@ -146,13 +146,9 @@ it('runs without the optional subagent Provider and drains admitted model work a
     expect(await canceledReadiness).toBe(callerReason)
     const pendingReadiness = application.rootExecution.ready(new AbortController().signal)
     const initialized = response(1)
-    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
-      cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: 9,
-    } })}\n`)
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { cwd: workspace, provider: 'fixture', model: 'fixture' } })}\n`)
     const initialization = await initialized
-    expect(initialization.result, JSON.stringify(initialization)).toMatchObject({
-      serverInfo: { name: 'deepseek-harness-sdk-runtime' }, maxSteps: 1,
-    })
+    expect(initialization.result, JSON.stringify(initialization)).toMatchObject({ serverInfo: { name: 'deepseek-harness-sdk-runtime' } })
     await pendingReadiness
     const firstPrompt = response(2)
     input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
@@ -193,7 +189,6 @@ it('runs without the optional subagent Provider and drains admitted model work a
       const reader = await persistence.open(SessionId('minimal-sdk-session'), 'read')
       try {
         const events = (await reader.read()).events
-        expect(sessionEvents).toEqual(events)
         expect(events.filter(event => event.type === 'turn/end').map(event => event.data.reason.kind))
           .toEqual(['completed', 'aborted'])
         expect(events.find(event => event.type === 'assistant/message')).toMatchObject({ data: {

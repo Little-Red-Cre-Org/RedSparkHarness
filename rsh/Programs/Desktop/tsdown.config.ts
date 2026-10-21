@@ -12,16 +12,6 @@ export default defineConfig([
     clean: false,
     deps: { neverBundle: ['electron'] },
   },
-  {
-    entry: ['lib/types/native-host-preflight-worker.js'],
-    outDir: 'lib',
-    format: ['esm'],
-    platform: 'node',
-    target: 'es2024',
-    fixedExtension: false,
-    dts: false,
-    clean: false,
-  },
   ...(['preload', 'preload-app', 'preload-pet'] as const).map(name => ({
     // Sandboxed Electron preloads run as CommonJS even though the application package is ESM.
     entry: { [name]: `lib/types/${name}.js` },

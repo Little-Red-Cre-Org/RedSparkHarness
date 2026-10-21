@@ -20,11 +20,9 @@ The package that chooses a Client build input is the shipped profile, while a Ho
 
 Host-only packages join the same policy through a separate explicit list. The list contains `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-session`; source imports do not expand it.
 
-Application roots are classified by shipped output in [`native-package-policy.ts`](../../../../rsh/Scripts/native-package-policy.ts): `rsh/Programs/CLI` (`native-cli`), `rsh/Programs/Desktop` (`desktop-app`), `rsh/Programs/DesktopHost` (`desktop-host`), `rsh/Programs/Web/application` (`web-frontend`), and `rsh/Programs/SDK/python/sdk-runtime` (`python-runtime`). These roots assemble product distributions rather than publish reusable libraries, so library peer rules and package dependency discovery omit the exact application roots.
-
 ### Dependency sections
 
-Every covered package keeps `@deepseek-ai/cordis` in matching `peerDependencies` and `devDependencies`. Cordis is the shared plugin runtime whose identity the application controls. A mixed package with a separate native export may mark the peer optional only under the [native browser export decision](2026-09-23-native-browser-export-dependency-closure.md), which requires an isolated packed consumer. A compatibility-only package may mark an optional peer only when its exact package and peer appear in `nativeCompatibilityOnlyPeers` in [`native-package-policy.ts`](../../../../rsh/Scripts/native-package-policy.ts); [`verify-optional-dependency-imports.ts`](../../../../rsh/Scripts/verify-optional-dependency-imports.ts) rejects static loads from declared Cordis-free source closures while allowing compatibility entries only for registered package/peer pairs. For example, `dsh-typert-protocol` keeps its Cordis-backed runtime API on its compatibility path, while `dsh-host-directory-picker` exposes a Cordis-free `./types` source entry. Optional metadata does not make an entry that loads Cordis usable when Cordis is absent.
+Every covered package keeps `@deepseek-ai/cordis` in matching `peerDependencies` and `devDependencies`. Cordis is the shared plugin runtime whose identity the application controls. A mixed package with a separate native export may mark the peer optional only under the [native browser export decision](2026-09-23-native-browser-export-dependency-closure.md), which requires an isolated packed consumer.
 
 A workspace package reached by a runtime value import from the Host entry closure belongs only in `dependencies` when its complete runtime entry is listed in `duplicateSafePackages`, or when every imported runtime export appears in `safeHostDependencyExports`. The package-level list contains `@deepseek-ai/dsh-brand`, `@deepseek-ai/dsh-typert-protocol`, `@deepseek-ai/dsh-util-crypto`, and `@deepseek-ai/dsh-util-values`: their values are stateless, structurally recognized, or stored through versioned interoperable descriptors. The export table handles reviewed values from packages whose other exports cannot make the same guarantee.
 
@@ -33,8 +31,6 @@ An export whose constructor identity or module state must be shared appears in `
 Workspace imports used by the Client bundle, type-only imports, module augmentations, `dsh.client.inject`, and existing metadata-only peers belong only in `devDependencies`. Host runtime imports, including additional Node entries, follow the Host classification. [Browser third-party build inputs](2026-09-08-browser-third-party-build-inputs.md) governs ordinary third-party declarations; it partially supersedes their preservation in this decision. Workspace references use `workspace:^`.
 
 Some development relationships exist only in `dsh.client.inject` or TypeScript project references. The policy's `configurationOnlyDevDependencies` table names only those reviewed edges and keeps them in `devDependencies`.
-
-The [`verify-runtime-closure` package script](../../../../package.json) invokes [`verify-runtime-closure.ts`](../../../../rsh/Scripts/verify-runtime-closure.ts) for both the Python runtime and `--target native-cli`. The native target evaluates every shipped CLI profile for each platform, requires every selected plugin as a direct CLI `workspace:` dependency, and traverses the resulting workspace dependencies and reachable required workspace peers. It rejects missing profile packages, required Cordis edges, duplicate `dependencies` and `optionalDependencies`, and the CLI and web-app imports that pull Cordis root entries. This workspace check does not install tarballs or prove operation with optional peers omitted; a targeted packed-install check for the application distribution remains follow-up verification.
 
 The verifier reads source manifests and source files, so it runs on a clean tree without built `lib/`. Every selected Host face must have `src/index.ts`. An unclassified Host runtime export is a policy violation that blocks all `--fix` writes; a maintainer must review the export and classify it, change the source relationship, or change the package selection. Once source safety passes, `--fix` performs only the section and range changes implied by the classification and removes stale peer metadata.
 
@@ -86,13 +82,9 @@ The generated policy currently leaves 27 managed Host runtime edges in `dependen
 
 **Use the `"./client"` export as the Client-face roster.** A package may publish Client-facing types or a browser API without contributing a dynamically loaded row. Selecting that package broadens the migration to unrelated Host packages such as Goal, Session Title, and Todo. `dsh.client` identifies dynamic rows, while the `rsh/Programs/Web/client/` directory independently covers static Client inputs.
 
-**Apply library peer rules to application manifests.** Application roots assemble shipped distributions rather than publish reusable libraries; the native CLI has its own profile dependency-closure check.
-
 **Flatten every Host package.** This removes more peer work but expands the migration to packages whose individual benchmark result is negligible. The explicit Host list preserves the remaining peer contracts until measurement justifies another entry.
 
 **Move every Client-related declaration to development-only.** A dual-face package's Host value imports remain real Node loads. Omitting them from the published dependency graph makes the package depend on accidental hoisting by a profile.
-
-**Allow optional compatibility peers without source restrictions.** Optional metadata permits a consumer to omit the peer, so a native source entry that loads it could fail at runtime. Exact owner-and-peer registrations plus source-closure checks keep optional peers on compatibility paths.
 
 **Enforce a wall-clock threshold in CI.** Resolver time varies with machine load and metadata completion order. Deterministic manifest classification belongs in CI; timing remains a maintainer benchmark.
 

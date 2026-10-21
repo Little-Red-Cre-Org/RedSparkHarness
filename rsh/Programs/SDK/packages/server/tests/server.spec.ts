@@ -15,7 +15,7 @@ import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
 import SubagentRuntime, { type SubagentResult, type SubagentRunEndInfo } from '@deepseek-ai/dsh-subagent'
-import type { JsonRpcTransportPeer, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-sdk-protocol'
+import type { JsonRpcTransportPeer } from '@deepseek-ai/dsh-sdk-protocol'
 import { HarnessSdkJsonRpcServer } from '../src/index.ts'
 
 class FakeTransport implements JsonRpcTransportPeer {
@@ -255,30 +255,6 @@ describe('HarnessSdkJsonRpcServer', () => {
       { type: 'text', text: 'inspect' },
       { type: 'image', attachment: ref },
     ])
-    await server.shutdown()
-  })
-
-  it('keeps Native file receipts and uploads outside the legacy SDK server', async () => {
-    const followup = vi.fn<Agent['followup']>()
-    const agent = ({ id: SessionId('legacy-receipt'), followup } satisfies Pick<Agent, 'id' | 'followup'>) as unknown as Agent
-    const handle = { agent, dispose: vi.fn(() => Promise.resolve()) }
-    const create = vi.fn(async () => handle)
-    const ctx = {
-      on: vi.fn(() => () => undefined),
-      agents: { create, get: () => agent },
-      get: () => undefined,
-    } as unknown as Context
-    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
-    ;(server as unknown as { initialized: boolean }).initialized = true
-
-    await expect(server.prompt({
-      sessionId: 'legacy-receipt',
-      contentBlocks: [{ type: 'file', receiptId: 'receipt-1' as NativeStagedFileReceiptId }],
-    })).rejects.toThrow('SDK file receipts require the native-sdk profile')
-    await expect(server.handleRequest('session/upload-file', { sessionId: 'legacy-receipt', data: '' }))
-      .rejects.toThrow('unknown DeepSeek Harness SDK runtime method: session/upload-file')
-    expect(create).not.toHaveBeenCalled()
-    expect(followup).not.toHaveBeenCalled()
     await server.shutdown()
   })
 
@@ -989,42 +965,6 @@ describe('HarnessSdkJsonRpcServer', () => {
         })).rejects.toThrow('initialize reasoningEffort must be a non-empty string')
       }
       await server.shutdown()
-    } finally {
-      await ctx.fiber.dispose()
-    }
-  })
-
-  it('refuses the native-only step negotiation field before compatibility initialization', async () => {
-    const ctx = new Context()
-    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
-    try {
-      await expect(server.handleRequest('initialize', {
-        cwd: '.', provider: 'deepseek-official', model: 'model', maxSteps: 2,
-      })).rejects.toThrow('initialize maxSteps is supported only by the native-sdk profile')
-    } finally {
-      await ctx.fiber.dispose()
-    }
-  })
-
-  it('refuses the native-only tool ceiling before compatibility initialization', async () => {
-    const ctx = new Context()
-    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
-    try {
-      await expect(server.handleRequest('initialize', {
-        cwd: '.', provider: 'deepseek-official', model: 'model', allowedTools: ['read_file'],
-      })).rejects.toThrow('initialize allowedTools is supported only by the native-sdk profile')
-    } finally {
-      await ctx.fiber.dispose()
-    }
-  })
-
-  it('refuses the native-only write fence before compatibility initialization', async () => {
-    const ctx = new Context()
-    const server = new HarnessSdkJsonRpcServer(ctx, new FakeTransport())
-    try {
-      await expect(server.handleRequest('initialize', {
-        cwd: '.', provider: 'deepseek-official', model: 'model', workspaceWriteRoot: '.',
-      })).rejects.toThrow('initialize workspaceWriteRoot is supported only by the native-sdk profile')
     } finally {
       await ctx.fiber.dispose()
     }

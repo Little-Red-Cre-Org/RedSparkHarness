@@ -223,50 +223,6 @@ def test_mcp_smoke_accepts_the_external_server_result() -> None:
     )
 
 
-def test_sdk_failure_diagnostic_summarizes_errors_without_tool_arguments() -> None:
-    result = live_result(
-        final_response="code run failed\nCaptured output:\nfinal-private-output",
-        finish_reason="error",
-        events=[
-            {"type": "tool/call", "seq": 4, "data": {
-                "callId": "call-code-worker", "name": "run_code", "arguments": "private-model-arguments",
-            }},
-            {"type": "tool/result", "seq": 5, "data": {
-                "message": {"source": {"kind": "tool", "callId": "call-code-worker"}, "content": [{
-                    "type": "tool-result", "isError": True,
-                    "content": [{
-                        "type": "text",
-                        "text": "worker failed sk-keyless-smoke after return 6 * 7\nCaptured output:\ncaptured-private-output",
-                    }],
-                }]},
-                "error": {"name": "CodeRunFailedError", "code": "WORKER_FAILED"},
-            }},
-            {"type": "assistant/attempt", "seq": 6, "data": {"stream": [{
-                "type": "chunk", "chunk": {"type": "finish", "reason": {
-                    "kind": "error", "failure": {"code": "UPSTREAM", "status": 502,
-                                            "message": "Bearer private-secret"},
-                }},
-            }]}},
-            {"type": "turn/end", "seq": 7, "data": {"turn": 2, "reason": {
-                "kind": "error", "error": {"code": "UNKNOWN", "message": "provider rejected sk-keyless-smoke"},
-            }}},
-        ],
-    )
-
-    summary = SMOKE["sdk_run_diagnostic"](result)
-
-    assert "private-model-arguments" not in summary
-    assert "sk-keyless-smoke" not in summary
-    assert "private-secret" not in summary
-    assert "captured-private-output" not in summary
-    assert "final-private-output" not in summary
-    assert "code run failed" in summary
-    assert "WORKER_FAILED" in summary
-    assert "UPSTREAM" in summary
-    assert "<smoke input>" in summary
-    assert '"seq":5' in summary and '"is_error":true' in summary
-
-
 def test_advanced_snapshot_normalizes_catalog_child_creation_time() -> None:
     value = {
         "type": "subagent/catalog",

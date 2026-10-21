@@ -49,13 +49,13 @@ function fixture(content: string, dependency?: string): string {
   write(`${dir}/src/index.ts`, content)
   write(`${dir}/src/local.ts`, 'export interface Local {}')
   write('rsh/Core/vendor/cordis/src/index.ts', 'export interface Context {}')
-  write('rsh/Programs/SDK/packages/native-server/src/index.ts', 'export interface ProgramServer {}')
+  write('rsh/Programs/SDK/packages/protocol/src/index.ts', 'export interface Protocol {}')
   write('tsconfig.host.json', JSON.stringify({
     compilerOptions: {
       noLib: true, moduleResolution: 'bundler', module: 'esnext',
       paths: {
         'hidden-framework': ['./rsh/Core/vendor/cordis/src/index.ts'],
-        'hidden-program': ['./rsh/Programs/SDK/packages/native-server/src/index.ts'],
+        'hidden-program': ['./rsh/Programs/SDK/packages/protocol/src/index.ts'],
         'hidden-engine': ['./rsh/Engine/core/native-agent/src/index.ts'],
       },
     },
@@ -65,17 +65,17 @@ function fixture(content: string, dependency?: string): string {
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
     ])]
-      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]),
+      .map(owner => `${owner}/src/**/*.ts`),
   }))
   write('client.ts', 'export {}')
   write('tsconfig.client.json', JSON.stringify({
     compilerOptions: { noLib: true },
     include: ['client.ts', ...[...nativePackageDirectories]
       .filter(owner => owner.startsWith('rsh/Programs/Web/client/'))
-      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]), ...[
+      .map(owner => `${owner}/src/**/*.ts`), ...[
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
-    ].flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`])],
+    ].map(owner => `${owner}/src/**/*.ts`)],
   }))
   return root
 }
@@ -214,7 +214,6 @@ it('keeps a mixed Cordis and native package explicitly classified', () => {
     },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
-  writeFileSync(join(dir, 'src/backend.ts'), 'export {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
 })
 
@@ -231,17 +230,6 @@ it('checks a mixed native library export without an installer manifest', () => {
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/native-types.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Credential {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
-})
-
-it.each(['rsh/Programs/Web/client/ui-trajectory'])('checks a TSX native source in the compiler face for %s', (owner) => {
-  const root = fixture('export {}')
-  mkdirSync(join(root, owner, 'src'), { recursive: true })
-  writeFileSync(join(root, owner, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-client-ui-trajectory',
-    exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-  }))
-  writeFileSync(join(root, owner, 'src/native.tsx'), 'export {}')
-  expect(collectNativeDependencyViolations(root)).toEqual([])
 })
 
 it('checks a declared Cordis-free subpath in a mixed package', () => {
@@ -370,14 +358,4 @@ it('admits existing Client stylesheets while rejecting missing assets and Host s
   writeFileSync(join(host, 'index.ts'), 'import "./card.module.css"')
   writeFileSync(join(host, 'card.module.css'), '.card {}')
   expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./card.module.css'))).toBe(true)
-})
-
-it('admits only the Client producer’s explicit inline CSS query', () => {
-  const root = fixture('export {}')
-  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
-  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?inline"; export { css }')
-  writeFileSync(join(owner, 'theme.css'), '.root { color: red; }')
-  expect(collectNativeDependencyViolations(root)).toEqual([])
-  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?raw"; export { css }')
-  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./theme.css?raw'))).toBe(true)
 })

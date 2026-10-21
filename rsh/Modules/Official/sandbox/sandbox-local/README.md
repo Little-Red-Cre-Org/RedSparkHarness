@@ -42,7 +42,7 @@ Load the sandbox service and mount the provider; the defaults below are the sele
 
 | Field | Default | Meaning |
 |---|---|---|
-| `runnerCommand` | `[]` | Custom runner argv; the bwrap-compatible child profile includes `--chdir` and read-only/writable binds, full enforcement is asserted, and built-in selection and probes are skipped |
+| `runnerCommand` | `[]` | Custom runner argv; bwrap-compatible profile arguments are appended, full enforcement is asserted, and built-in selection and probes are skipped |
 | `runnerFailureSignatures` | `[]` | Case-insensitive stderr substrings identifying the custom runner's own failure dialect; required with `runnerCommand` |
 | `probeTimeoutMs` | `5,000` | Timeout for each functional probe of a competing runner candidate |
 
@@ -79,10 +79,6 @@ The `@deepseek-ai/node-addon-system/landlock-run` API supplies the platform laun
 The Seatbelt profile is allow-default with `(deny file-write*)` plus write allow-lists derived from the shared `writableRoots` helper, so exactly the mode's promised file effects are governed; every root is canonicalized because Seatbelt matches resolved paths (`/tmp` IS `/private/tmp`).
 
 The Windows rung keeps one deterministic write SID and standing ACE per workspace, while every live session/workspace pair gets a random private temp directory with a distinct SID and revocable ACE — sessions sharing a workspace share its intended write authority without inheriting one another's temp authority. A fresh provider always chooses a new temp path and SID, so crash residue cannot block or authorize a resumed session. The rung reports `partial` enforcement because the restricted token must retain Everyone and NTFS hard links alias one file object across paths.
-
-Native child confinement preserves the policy's existing writable roots and adds the caller's `privateHome`. bwrap applies read-only and writable binds and sets `cwd` with `--chdir`; Landlock and Seatbelt retain their policy grants while adding the child home. A configured `runnerCommand` must support the same bwrap-compatible child profile, including `--chdir` and its exact binds; its enforcement remains an operator assertion.
-
-On Windows, a `read-only` child gets a per-call grant for `privateHome` plus a runner-owned private temp directory; the ambient temp root receives no write grant. A `workspace-write` child requires a session and its home must stay beneath the provider-owned per-session temp root returned by `ProcessSandbox.prepareWritableTempRoot()`. The child launcher owns only its home directory; this provider retains and revokes the session temp grant. That method returns no path for configured custom runners, other selected backends, or agentless calls.
 
 ### Denial and runner-failure dialects
 

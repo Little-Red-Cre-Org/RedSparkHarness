@@ -1,6 +1,6 @@
 /** Active Session access and admission hooks backed by the Program's exclusive resident writer. */
 import type { NativeAgent, InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
 import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
 import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeContinuationSession } from './continuation-session.ts'
@@ -18,8 +18,6 @@ export interface NativeActiveSessionDriver {
   readonly rootOperations?: NativeRootSessionOperations | undefined
   /** Retain the existing root or child epoch. @returns exact idempotent retention release. */
   retain(): () => void
-  /** Retain background work without delaying a root's foreground result. @returns exact release. */
-  retainBackground(): () => void
   /**
    * Admit through the Program's sole inbox and optionally wake its existing driver.
    * @param message - identified input.
@@ -29,8 +27,6 @@ export interface NativeActiveSessionDriver {
    * @returns durable accepted identity.
    */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId>
-  /** Wake the existing driver after a committed inbox move. */
-  wake(): void
 }
 
 /** One active registry owner with drained hooks and no independent queue, writer or model loop. */
@@ -88,30 +84,11 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
     return history.events
   }
   /** @inheritdoc */
-  async readCommittedEvents(maxEvents?: number): Promise<readonly SessionEvent[]> {
-    this.assertAvailable()
-    const history = await this.owner.read(undefined, maxEvents)
-    this.assertAvailable()
-    return history.events
-  }
-  /** @inheritdoc */
   messages(target: InboxTarget): readonly UserMessage[] { this.assertAvailable(); return this.owner.messages(target) }
   /** @inheritdoc */
   enqueue(message: UserMessage, target: InboxTarget, wake: boolean, signal: AbortSignal): Promise<MessageId> {
     this.assertAdmitting()
     return this.driver.enqueue(message, target, wake, signal)
-  }
-  /** @inheritdoc */
-  editPendingText(id: MessageId, content: readonly TextBlock[], signal: AbortSignal): Promise<{ readonly kind: 'updated' | 'stale' }> {
-    const admissionSignal = this.admissionSignal(signal)
-    return this.owner.editPendingText(id, content, admissionSignal)
-  }
-  /** @inheritdoc */
-  async promotePending(id: MessageId, signal: AbortSignal): Promise<{ readonly kind: 'promoted' | 'stale' | 'not-promotable' }> {
-    const admissionSignal = this.admissionSignal(signal)
-    const result = await this.owner.promotePending(id, admissionSignal)
-    if (result.kind === 'promoted' && this.writerAvailable && this.admissionOpen && !this.driver.signal.aborted) this.driver.wake()
-    return result
   }
   /** @inheritdoc */
   remove(ids: readonly MessageId[], target: InboxTarget, signal: AbortSignal): Promise<void> {
@@ -121,12 +98,6 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   }
   /** @inheritdoc */
   retain(): () => void { this.assertAdmitting(); return this.driver.retain() }
-  /** @inheritdoc */
-  retainBackground(): () => void {
-    this.assertAdmitting()
-    if (this.invocation !== 'root') throw new Error('native-active-session: background retention requires a root owner')
-    return this.driver.retainBackground()
-  }
   /** @inheritdoc */
   onEvent(observer: (event: SessionEvent) => void): () => void { this.assertAdmitting(); return this.owner.onEvent(observer) }
   /** @inheritdoc */
@@ -183,11 +154,5 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
   private assertAdmitting(): void {
     this.assertAvailable()
     if (!this.admissionOpen) throw new Error('native-active-session: owner is detaching')
-  }
-  private admissionSignal(signal: AbortSignal): AbortSignal {
-    this.assertAdmitting()
-    const combined = AbortSignal.any([signal, this.driver.signal])
-    combined.throwIfAborted()
-    return combined
   }
 }

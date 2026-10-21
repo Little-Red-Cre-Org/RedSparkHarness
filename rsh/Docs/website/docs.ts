@@ -286,14 +286,6 @@ const cordisPrimerReference = pairedPages([
     section: { root: '概念', en: 'Concepts' },
     order: 1,
   },
-  {
-    source: 'rsh/Docs/native-config-migration.md',
-    route: 'reference/native-config-migration.md',
-    label: { root: '原生配置迁移', en: 'Native configuration migration' },
-    sidebar: { root: 'zh-reference', en: 'en-reference' },
-    section: { root: '概念', en: 'Concepts' },
-    order: 6,
-  },
 ])
 
 /**

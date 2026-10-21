@@ -32,8 +32,7 @@ export interface NativeModelSelectionOperations {
   /**
    * Capture one admitted root step before prompt assembly, headers, compaction and model dispatch.
    * @param owner - exact active root owner; explicit delegated configuration remains Program-owned.
-   * @param defaults - current Program request defaults; Session history supplies the route when present,
-   *   and recorded selection controls override matching default fields.
+   * @param defaults - complete explicit Program request defaults used when no choice exists.
    * @param signal - current step cancellation.
    * @returns requested controls, advisory resolved route and optional notice; the Program prepares final defaults and logs the notice.
    */

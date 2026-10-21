@@ -18,12 +18,6 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Core/util/workspace-path"
-    },
-    {
-      "path": "../native-session"
-    },
-    {
       "path": "../store"
     },
     {
@@ -31,9 +25,6 @@
     },
     {
       "path": "../ui-slots"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

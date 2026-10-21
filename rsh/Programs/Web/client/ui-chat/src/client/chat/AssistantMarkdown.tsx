@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { ChatAssistantMessage, JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
+import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownPathImages } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { AssistantBlock } from '../contract/snapshot.ts'
@@ -131,10 +131,14 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
         )
     }
   }
-  return <ChatAssistantMessage streaming={streaming}>
-    {rendered}
-    {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
-  </ChatAssistantMessage>
+  return (
+    <div className={css.root} data-streaming={streaming || undefined}>
+      <div className={css.body}>
+        {rendered}
+        {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
+      </div>
+    </div>
+  )
 })
 
 function ProcessReasoning({ hidden, reveal, children }: {

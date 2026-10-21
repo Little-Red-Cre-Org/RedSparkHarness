@@ -8,8 +8,6 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { SessionSeq } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import type { SessionTitleEvent } from './facts.ts'
-export type { SessionTitleEvent }
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-session-title'
 
@@ -28,7 +26,7 @@ export const inject = ['invariants']
  */
 function validate(
   session: Session,
-  event: SessionTitleEvent,
+  event: SessionEvent<'session/title'>,
   fail: InvariantFailure,
 ): void {
   const { source, messageSeqs } = event.data

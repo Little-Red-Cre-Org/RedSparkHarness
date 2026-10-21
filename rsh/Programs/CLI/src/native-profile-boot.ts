@@ -2,16 +2,11 @@
 import { watch, type FSWatcher } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { NativeApplication, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { installProxyFromEnvironment } from '@deepseek-ai/dsh-http-proxy'
-import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
+import type { NativeApplication } from '@deepseek-ai/dsh-native-runtime'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { loadNativeProfile, readNativeProfile, refuseLegacyPatch, replaceNativeProfile } from './native-profile-loader.ts'
+import { loadNativeProfile, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
-import { migrateNativeLegacyConfig } from './native-legacy-config.ts'
 import { createProcessShutdown } from './process-shutdown.ts'
-
-const SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
 
 function watchProfileFiles(files: readonly string[], changed: () => void, failed: (error: Error) => void): () => void {
   const directories = new Map<string, Set<string>>()
@@ -45,57 +40,16 @@ function isNativeRunAdmissionInterruption(error: unknown): boolean {
   )
 }
 
-/** The process proxy installation shared by overlapping native launches; the last owner releases it. */
-let sharedProxy: { owners: number; installed: Promise<() => Promise<void>> } | undefined
-
-async function acquireProxy(environment: Parameters<typeof installProxyFromEnvironment>[0]): Promise<() => Promise<void>> {
-  const shared = sharedProxy ??= { owners: 0, installed: installProxyFromEnvironment(environment,
-    (message) => { process.stderr.write(`dsh: ${message}\n`) }) }
-  shared.owners++
-  let dispose: () => Promise<void>
-  try {
-    dispose = await shared.installed
-  } catch (error) {
-    if (sharedProxy === shared) sharedProxy = undefined
-    throw error
-  }
-  return async () => {
-    if (--shared.owners > 0) return
-    if (sharedProxy === shared) sharedProxy = undefined
-    await dispose()
-  }
-}
-
-/** Check legacy launch configuration, migrate supported settings, then launch a native application.
- * Overlapping launches share the process proxy installation until the last Host has stopped.
- * @param options - selected profile, ordered JSON patches, app arguments, and optional Harness home.
- * @returns completion after application exit and complete Host teardown.
- * @throws when legacy configuration is unsupported or native profile startup fails.
- */
+/** Launch the selected native application and await complete host teardown. */
 export async function runNativeProfile(options: {
   profile: string
   patchFiles: readonly string[]
   args: readonly string[]
   home?: string
 }): Promise<void> {
-  const home = options.home ?? resolveDshHome()
-  const environment = loadLayeredEnv('dsh')
-  const profileDirectory = join(home, 'profiles', options.profile)
-  refuseLegacyPatch(join(profileDirectory, 'cordis.yml'))
-  const profile = readNativeProfile({ profile: options.profile, patchFiles: options.patchFiles, home })
-  await migrateNativeLegacyConfig({ profileName: options.profile,
-    installAnchor: fileURLToPath(import.meta.url), home, profile, patchFiles: options.patchFiles, environment })
-  const live = nativeProfileReloadMode(options.profile, home) === 'live'
   let application: NativeApplication | undefined
+  const home = options.home ?? resolveDshHome()
   const onApplication = (selected: NativeApplication): void => { application = selected }
-  let carrier: { readonly plugin: NativePlugin; readonly scope: string } | undefined
-  if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
-    const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
-    carrier = { plugin, scope: 'root' }
-  }
-  const disposeProxy = await acquireProxy(environment)
-  let proxyDisposal: Promise<void> | undefined
-  const releaseProxy = (): Promise<void> => proxyDisposal ??= disposeProxy()
   let loaded = await loadNativeProfile({
     profile: options.profile,
     patchFiles: options.patchFiles,
@@ -103,13 +57,9 @@ export async function runNativeProfile(options: {
     installAnchor: fileURLToPath(import.meta.url),
     onApplication,
     home,
-    environment,
-    ...(carrier === undefined ? {} : { carrier }),
-  }).catch(async (error: unknown) => {
-    await releaseProxy()
-    throw error
   })
   const { host } = loaded
+  const live = nativeProfileReloadMode(options.profile, home) === 'live'
   let stopping = false
   let reloadPending = false
   let reloadBusy = false
@@ -126,7 +76,6 @@ export async function runNativeProfile(options: {
     const stopped = host.stop()
     await reloadWork
     await stopped
-    await releaseProxy()
   })
   const rejectCandidate = (error: unknown): void => {
     process.stderr.write(`dsh: native profile reload rejected: ${error instanceof Error ? error.message : String(error)}\n`)
@@ -138,8 +87,6 @@ export async function runNativeProfile(options: {
       candidate = await loadNativeProfile({
         profile: options.profile, patchFiles: options.patchFiles, target: 'host',
         installAnchor: fileURLToPath(import.meta.url), home, previous: loaded, onApplication,
-        environment,
-        ...(carrier === undefined ? {} : { carrier }),
       })
     } catch (error) {
       if (!isStopping()) rejectCandidate(error)
@@ -224,11 +171,7 @@ export async function runNativeProfile(options: {
     process.removeListener('SIGINT', onInterrupt)
     stopping = true
     closeWatchers()
-    try {
-      await reloadWork
-      await host.stop()
-    } finally {
-      await releaseProxy()
-    }
+    await reloadWork
+    await host.stop()
   }
 }

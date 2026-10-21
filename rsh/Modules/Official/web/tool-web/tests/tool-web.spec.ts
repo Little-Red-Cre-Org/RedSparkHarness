@@ -25,7 +25,7 @@ import {
 } from '@deepseek-ai/dsh-tool-web'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { ToolResult } from '@deepseek-ai/dsh-tools'
-import { parseSearchArgs } from '../src/search-core.ts'
+import { parseSearchArgs } from '../src/search.ts'
 
 const testToolSignal = new AbortController().signal
 

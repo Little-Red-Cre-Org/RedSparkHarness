@@ -46,7 +46,7 @@ it('replays a human answer through the shipped native-headless profile and durab
     }
     const model = join(modules, 'question-fixture-model')
     mkdirSync(model)
-    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'question-fixture-model', version: '0.0.0', type: 'module',
+    writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'question-fixture-model', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['userQuestionBroker'], optional: [], provides: ['model'] } } }))
     writeFileSync(join(model, 'native.mjs'), `export const plugin = {

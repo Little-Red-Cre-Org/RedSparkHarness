@@ -13,8 +13,6 @@ kind: "package-reference"
 
 本包让用户浏览分组或扁平的 Session 列表、为新 Session 选择 Workspace，并通过添加、重命名、重排序、搜索、fork、归档和删除 Workspace 来管理 Workspace 与 Session。待处理交互显示为警告点，活动定时任务显示为闹钟标识，subagent 来源的 Session 则保持隐藏。规范化后仍有差异的文件夹路径会保留为独立 Workspace。添加 Workspace 需要组合目录选择器；没有目录选择器时，添加操作不可用。
 
-Workspace 与 Session 行、分区标题和空状态是来自 `ui-primitives` 的 props-only 共享组件；legacy 浏览器通过这些组件维持原有行为与展示。
-
 ## 目录
 
 - [使用本包](#use-this-package)

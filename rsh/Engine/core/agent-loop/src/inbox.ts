@@ -29,15 +29,6 @@ export const inboxProjectionDefinition = {
   stateSchema: inboxProjectionSchema,
   init: (): InboxState => ({ 'next-turn': [], 'next-step': [] }),
   apply(state: InboxState, event) {
-    if (event.type === 'agent/inbox/moved') {
-      const index = state['next-turn'].findIndex(message => message.id === event.data.messageId)
-      if (index < 0 || state['next-step'].some(message => message.id === event.data.messageId)) {
-        throw new Error(`invalid persisted inbox move at session seq ${event.seq}`)
-      }
-      const message = state['next-turn'][index]
-      if (message === undefined) throw new Error(`invalid persisted inbox move at session seq ${event.seq}`)
-      return { 'next-turn': state['next-turn'].toSpliced(index, 1), 'next-step': [...state['next-step'], message] }
-    }
     if (event.type !== 'agent/inbox/spliced') return state
     const splice = event.data
     try {
@@ -70,7 +61,7 @@ export const inboxProjectionDefinition = {
     viewSchema: inboxProjectionSchema as unknown as z.ZodType<InboxWireState>,
     view: (state: InboxState) => state as unknown as InboxWireState,
   },
-  stateVersion: 2,
+  stateVersion: 1,
 } satisfies ProjectionDefinition<'inbox', InboxState>
 
 /**

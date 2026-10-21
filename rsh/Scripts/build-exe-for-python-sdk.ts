@@ -9,33 +9,16 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, statSync } from 'node:fs'
-import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, unlink, writeFile } from 'node:fs/promises'
+import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { parseArgs } from 'node:util'
-import { coalesceStagedDshToolsPeer } from './coalesce-staged-dsh-tools.ts'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
 import { preservePnpmWorkspaceState } from './preserve-pnpm-workspace-state.ts'
-import { installedMatching, missingStagedNeighbours, OPTIONAL_EDGES_EXCLUDED_FOR, pruneStagedClosure } from './python-runtime-closure-prune.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 
 /** The closure manifest whose dependencies define the executable. */
 const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
-/**
- * CLI package that owns the executable entry. It is a closure leaf: its own manifest declares the
- * legacy superset, so the prune keeps the package without following those edges.
- */
-const CLI_PACKAGE = '@deepseek-ai/dsh'
-/**
- * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
- * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
- * unreachable legacy edge and must not reach the packaged runtime.
- */
-const PRESET_REQUIRED_CORDIS = new Set([
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-cordis-host-runner',
-  '@deepseek-ai/dsh-tool-cordis',
-])
 /** The sole executable entry inside the deployed closure. */
 const ENTRY_BIN = 'runtime-bootstrap.mjs'
 /** Python-visible executable basename. */
@@ -74,9 +57,6 @@ const ASSET_GLOBS = [
   'node_modules/**/*.wasm',
   'node_modules/**/*.yaml',
   'node_modules/**/*.yml',
-  // Keep platform-only package payloads visible to profile fallback classification.
-  'node_modules/**/*.exe',
-  'node_modules/**/bin/*',
   // web-app builds this path dynamically, so pkg cannot discover the static frontend.
   'node_modules/@deepseek-ai/dsh-web-frontend/dist/**/*',
   // skill-badge resolves both Markdown and image resources through import.meta.url.
@@ -324,18 +304,7 @@ class SingleExeBuild {
     if (this.cli.dryRun) await deploy()
     else await preservePnpmWorkspaceState(root, deploy)
     await this.restoreLegacyHoists()
-    await this.pruneToDeclaredClosure()
     await this.materializeStagedLinks()
-    if (this.cli.dryRun) {
-      console.log('build-exe-for-python-sdk: [dry-run] coalesce identical nested @deepseek-ai/dsh-tools peer copies')
-    } else {
-      // Pruning already removed nested copies of anything outside the closure. Coalescing a tree that
-      // still holds them requires each peer to resolve, which the pruned tree no longer guarantees.
-      const coalescedToolsCopies = await coalesceStagedDshToolsPeer(this.staging)
-      if (coalescedToolsCopies > 0) {
-        console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @deepseek-ai/dsh-tools peer copies.`)
-      }
-    }
     if (this.cli.dryRun) {
       for (const name of DEPLOY_ONLY_DOCS) console.log(`build-exe-for-python-sdk: [dry-run] rm -f ${join(this.staging, name)}`)
     } else {
@@ -388,44 +357,6 @@ class SingleExeBuild {
     }
   }
 
-  /**
-   * Remove staged packages the runtime manifest's closure cannot reach.
-   *
-   * `pnpm deploy` resolves the CLI package's own optional dependencies, so the staged tree carries
-   * the legacy Cordis assembly even when the closure manifest does not declare it. Pruning here keeps
-   * the packaged runtime equal to the declared closure instead of the CLI's superset.
-   */
-  private async pruneToDeclaredClosure(): Promise<void> {
-    const nodeModules = join(this.staging, 'node_modules')
-    if (this.cli.dryRun) {
-      console.log('build-exe-for-python-sdk: [dry-run] prune staged packages outside the declared closure')
-      return
-    }
-    const manifest = JSON.parse(await readFile(join(this.staging, 'package.json'), 'utf8')) as {
-      dependencies?: Record<string, string>
-    }
-    const declared = Object.keys(manifest.dependencies ?? {})
-    const result = pruneStagedClosure(nodeModules, declared, OPTIONAL_EDGES_EXCLUDED_FOR)
-    if (result.removed.length > 0) {
-      console.log(`build-exe-for-python-sdk: pruned ${result.removed.length} staged packages outside the declared closure.`)
-    }
-    // A retained nested tree is a copy the runtime resolves instead of the staging root, so the
-    // artifact keeps bytes this build cannot prove it could drop. Surface it rather than let a
-    // divergence accumulate unseen.
-    for (const entry of result.retainedNested ?? []) {
-      console.log(`build-exe-for-python-sdk: kept nested package divergent from the staging root: ${entry}.`)
-    }
-    const cordis = installedMatching(nodeModules, /cordis/u)
-    const unexpected = cordis.filter(name => !PRESET_REQUIRED_CORDIS.has(name))
-    if (unexpected.length > 0) {
-      throw new Error(`build-exe-for-python-sdk: staged closure still carries Cordis packages: ${unexpected.join(', ')}.`)
-    }
-    const missing = missingStagedNeighbours(nodeModules, [CLI_PACKAGE])
-    if (missing.length > 0) {
-      throw new Error(`build-exe-for-python-sdk: pruned staged closure lost required neighbours: ${missing.join(', ')}.`)
-    }
-  }
-
   /** Replace deploy-time package links with files and reject any remaining link. */
   private async materializeStagedLinks(): Promise<void> {
     if (this.cli.dryRun) {
@@ -444,16 +375,6 @@ class SingleExeBuild {
       }
       const destination = remaining
       const source = await realpath(destination)
-      if (
-        destination === join(nodeModules, DEPLOY_ROOT_PACKAGE)
-        && source === await realpath(resolve(root, 'rsh/Programs/SDK/python/sdk-runtime'))
-      ) {
-        // pnpm deploy may keep the private manifest's workspace self-link. It is
-        // not runtime content, and copying it below itself recurses indefinitely.
-        await unlink(destination)
-        remaining = await this.findSymlink(nodeModules)
-        continue
-      }
       const nestedNodeModules = join(source, 'node_modules')
       await rm(destination, { recursive: true, force: true })
       await cp(source, destination, {

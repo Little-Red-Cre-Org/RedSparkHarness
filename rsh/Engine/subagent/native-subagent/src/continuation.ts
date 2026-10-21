@@ -6,50 +6,11 @@ import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
 import { createUserMessage, type ContentBlock, type MessageId } from '@deepseek-ai/dsh-llm/native'
 import { SessionId, type Session } from '@deepseek-ai/dsh-session/native'
 import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation,
-  NativeSessionConfiguration, NativeSessionDelegationAuthority, NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeToolDelegationContext } from '@deepseek-ai/dsh-native-tools/types'
-import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData, type SubagentDelegationContext } from '@deepseek-ai/dsh-subagent-protocol'
+  NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
+import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData } from '@deepseek-ai/dsh-subagent-protocol'
 import type { NativeSubagentCatalogEntry, NativeSubagentFinished, NativeSubagentRequest } from './index.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }
-
-function minimumOptionalLimit(left: number | undefined, right: number | undefined): number | undefined {
-  return left === undefined ? right : right === undefined ? left : Math.min(left, right)
-}
-
-function restoreDelegationContext(stored: SubagentDelegationContext, authority: NativeSessionDelegationAuthority | undefined,
-  configuration: NativeSessionConfiguration, current: NativeToolDelegationContext | undefined,
-  parentCwd: string): NativeToolDelegationContext {
-  if (authority === undefined) {
-    throw new Error('native-subagent: inherited continuation requires current Native owner authority')
-  }
-  if (stored.cwd !== parentCwd || configuration.cwd !== parentCwd
-    || current !== undefined && (current.depth !== stored.depth || current.cwd !== stored.cwd)) {
-    throw new Error('native-subagent: inherited continuation context no longer matches its parent')
-  }
-  const maxDepth = Math.min(stored.maxDepth, current?.maxDepth ?? stored.maxDepth)
-  const maxTokens = minimumOptionalLimit(minimumOptionalLimit(stored.maxTokens, configuration.maxTokens), current?.maxTokens)
-  const reasoningEffort = current?.reasoningEffort ?? configuration.reasoningEffort
-  if (stored.depth + 1 > maxDepth) {
-    throw new Error('native-subagent: current authority no longer permits this inherited continuation depth')
-  }
-  return {
-    depth: stored.depth,
-    maxDepth,
-    cwd: configuration.cwd,
-    provider: current?.provider ?? configuration.provider,
-    model: current?.model ?? configuration.model,
-    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
-    maxSteps: Math.min(stored.maxSteps, configuration.maxSteps, current?.maxSteps ?? stored.maxSteps),
-    ...maxTokens === undefined ? {} : { maxTokens },
-    toolNames: stored.toolNames.filter(name => authority.toolNames.includes(name)
-      && (current === undefined || current.toolNames.includes(name))),
-    builtinToolNames: stored.builtinToolNames.filter(name => authority.builtinToolNames.includes(name)
-      && (current === undefined || current.builtinToolNames.includes(name))),
-    programToolNames: stored.programToolNames.filter(name => authority.programToolNames.includes(name)
-      && (current === undefined || current.programToolNames.includes(name))),
-  }
-}
 
 /** Own selected child handles; all durable history and queued input remain Program-owned. */
 export class NativeSubagentContinuations {
@@ -82,13 +43,8 @@ export class NativeSubagentContinuations {
       ...request.config.reasoningEffort === undefined ? {} : { agentReasoningEffort: request.config.reasoningEffort },
       ...request.persona === undefined ? {} : { persona: request.persona },
       ...request.toolFilter === undefined ? {} : { toolFilter: request.toolFilter },
-      ...request.delegationContext === undefined ? {} : { delegationContext: {
-        ...request.delegationContext,
-        maxDepth: request.maxDepth,
-      } },
     })
     const child = await operations.open({ id, resume: false, config: request.config, maxDepth: request.maxDepth,
-      ...request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext },
       prepare: (setup) => { this.prepare(request, setup) },
       onSettled: this.settlement(operations, request.agent, request.session, id, 0),
     }, signal)
@@ -114,13 +70,12 @@ export class NativeSubagentContinuations {
    * @param target - durable recipient.
    * @param content - authored input.
    * @param signal - pre-admission cancellation.
-   * @param delegationContext - current inherited authority when resuming a Native child.
    * @returns durably accepted message identity.
    */
   send(agent: NativeAgent, session: Session, target: SessionId, content: readonly ContentBlock[],
-    signal: AbortSignal, delegationContext?: NativeToolDelegationContext): Promise<MessageId> {
+    signal: AbortSignal): Promise<MessageId> {
     const previous = this.deliveries.get(target) ?? Promise.resolve()
-    const task = previous.then(() => this.deliver(agent, session, target, content, signal, delegationContext))
+    const task = previous.then(() => this.deliver(agent, session, target, content, signal))
     // Each caller receives its failure; the sequencing tail does not reject later deliveries.
     const tail = task.then(() => undefined, () => undefined)
     this.deliveries.set(target, tail)
@@ -129,7 +84,7 @@ export class NativeSubagentContinuations {
   }
 
   private async deliver(agent: NativeAgent, session: Session, target: SessionId, content: readonly ContentBlock[],
-    signal: AbortSignal, delegationContext?: NativeToolDelegationContext): Promise<MessageId> {
+    signal: AbortSignal): Promise<MessageId> {
     signal.throwIfAborted()
     const operations = this.operations(agent, session)
     const sender = this.children.get(session.id)
@@ -144,21 +99,12 @@ export class NativeSubagentContinuations {
     if (child === undefined) {
       const observed = await operations.observe(target, signal)
       if (typeof observed.header.cwd !== 'string' || observed.header.cwd !== session.header.cwd) throw new Error('native-subagent: stored child workspace differs from its parent')
-      if (observed.header.parentSession !== session.id) throw new Error('native-subagent: stored child does not name this direct parent')
       const descriptor = foldSubagentDescriptor(observed.events.slice(observed.inheritedEventCount))
       if (descriptor?.mode !== 'continuable' || descriptor.provider !== this.provider) throw new Error('native-subagent: child has no supported continuation for this Provider')
-      const execution = this.context.require('sessionExecution')
-      const inherited = descriptor.delegationContext === undefined ? undefined
-        : restoreDelegationContext(descriptor.delegationContext, execution.delegationAuthority(agent, session),
-          execution.configuration(agent, session), delegationContext, session.header.cwd)
-      const depth = inherited === undefined ? (session.header.delegationDepth ?? 0) + 1 : inherited.depth + 1
+      const depth = (session.header.delegationDepth ?? 0) + 1
       if (observed.header.delegationDepth !== depth) throw new Error('native-subagent: stored child depth differs from its direct parent')
-      if (inherited !== undefined && (depth <= (session.header.delegationDepth ?? 0) || depth > inherited.maxDepth)) {
-        throw new Error('native-subagent: stored child violates its inherited depth limits')
-      }
-      const request = this.resolveRestored(agent, session, observed, descriptor, depth, inherited)
-      const handle = await operations.open({ id: target, resume: true, config: request.config, maxDepth: request.maxDepth,
-        ...request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext },
+      const request = this.resolveRestored(agent, session, observed, descriptor, depth)
+      const handle = await operations.open({ id: target, resume: true, config: request.config, maxDepth: depth,
         prepare: (setup) => { this.prepare(request, setup) },
         onSettled: this.settlement(operations, agent, session, target, observed.events.length),
       }, signal)
@@ -188,12 +134,11 @@ export class NativeSubagentContinuations {
     for (const candidate of candidates) {
       signal.throwIfAborted()
       const id = candidate.path.at(-1) as SessionId
-      const parent = candidate.path.length === 1 ? session.id : candidate.path[candidate.path.length - 2] as SessionId
-      const position = scope === 'children' ? {} : { parent, depth: candidate.path.length }
+      const position = scope === 'children' ? {} : { parent: candidate.path.length === 1 ? session.id
+        : candidate.path[candidate.path.length - 2] as SessionId, depth: candidate.path.length }
       const inspected = await operations.inspect(candidate.path, signal)
       if (inspected.kind === 'diagnostic') { rows.push({ ...inspected, ...position }); continue }
       const observed = inspected.observation
-      const headerDepth = observed.header.delegationDepth ?? 0
       const own = observed.events.slice(observed.inheritedEventCount)
       let descriptor
       try { descriptor = foldSubagentDescriptor(own) }
@@ -204,15 +149,6 @@ export class NativeSubagentContinuations {
       }
       if (descriptor === undefined && own.some(event => event.type === 'subagent/descriptor')) {
         rows.push({ kind: 'diagnostic', id, reason: 'unsupported', ...position })
-        continue
-      }
-      if (descriptor?.mode === 'continuable'
-        && (observed.header.parentSession !== parent
-          || (descriptor.delegationContext === undefined
-            ? headerDepth !== inspected.parentDepth + 1
-            : headerDepth !== descriptor.delegationContext.depth + 1
-              || headerDepth <= inspected.parentDepth || headerDepth > descriptor.delegationContext.maxDepth))) {
-        rows.push({ kind: 'diagnostic', id, reason: 'corrupt', ...position })
         continue
       }
       if (descriptor?.mode === 'continuable' && descriptor.provider === this.provider) {
@@ -266,22 +202,17 @@ export class NativeSubagentContinuations {
   }
 
   private resolveRestored(agent: NativeAgent, session: Session, observed: NativeContinuationObservation,
-    descriptor: ContinuableSubagentDescriptorData, depth: number,
-    delegationContext?: NativeToolDelegationContext): NativeSubagentRequest {
-    const maxSteps = delegationContext === undefined ? observed.defaults.maxSteps
-      : Math.min(observed.defaults.maxSteps, delegationContext.maxSteps)
-    const maxTokens = minimumOptionalLimit(observed.defaults.maxTokens, delegationContext?.maxTokens)
-    return { agent, session, label: descriptor.label, prompt: [], maxDepth: delegationContext?.maxDepth ?? depth,
+    descriptor: ContinuableSubagentDescriptorData, depth: number): NativeSubagentRequest {
+    return { agent, session, label: descriptor.label, prompt: [], maxDepth: depth,
       config: { cwd: observed.header.cwd as string, builtinTools: false, systemPrompt: observed.defaults.systemPrompt,
-        maxSteps,
-        ...maxTokens === undefined ? {} : { maxTokens },
+        maxSteps: observed.defaults.maxSteps,
+        ...observed.defaults.maxTokens === undefined ? {} : { maxTokens: observed.defaults.maxTokens },
         provider: descriptor.agentProvider ?? observed.defaults.provider,
         model: descriptor.agentModel ?? observed.defaults.model,
         ...descriptor.agentReasoningEffort === undefined ? {} : { reasoningEffort: descriptor.agentReasoningEffort } },
       routeOverrides: {},
       ...descriptor.persona === undefined ? {} : { persona: descriptor.persona },
       ...descriptor.toolFilter === undefined ? {} : { toolFilter: descriptor.toolFilter },
-      ...delegationContext === undefined ? {} : { delegationContext },
     }
   }
 

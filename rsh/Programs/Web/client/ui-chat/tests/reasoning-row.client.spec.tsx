@@ -95,7 +95,7 @@ describe('ReasoningRow', () => {
     expect(view.queryByText('**Comparing checkout and merge bases**')).toBeNull()
 
     fireEvent.click(view.getByText('思考'))
-    expect(view.container.querySelector('[data-variant="think"][data-expanded]')?.textContent).toContain(text)
+    expect(view.container.querySelector('[class*="thinkBody"]')?.textContent).toBe(text)
   })
 
   it('expanded Think drops the inline summary and renders plain prose, no IN card', () => {
@@ -111,6 +111,6 @@ describe('ReasoningRow', () => {
     expect(view.getAllByText(/Inspect the session/)).toHaveLength(1)
     expect(view.queryByText('IN')).toBeNull()
     expect(view.container.querySelector('[class*="ioCard"]')).toBeNull()
-    expect(view.container.querySelector('[data-variant="think"][data-expanded]')?.textContent).toContain('Check persistence')
+    expect(view.container.querySelector('[class*="thinkBody"]')).not.toBeNull()
   })
 })

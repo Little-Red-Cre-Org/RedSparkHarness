@@ -10,11 +10,9 @@ import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import { createScope } from '@deepseek-ai/dsh-scope'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
 import AgentPresets, { mountPreset } from '@deepseek-ai/dsh-agent-presets'
 import DeepSeekLlmApiExtensionRegistry from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
 import * as PluginInventory from '../src/index.ts'
-import { plugin as NativePluginInventory } from '../src/native.ts'
 
 const contexts: Context[] = []
 const roots: string[] = []
@@ -70,59 +68,6 @@ describe('DeepSeek plugin package inventory', () => {
       body: { messages: [] }, signal: SIGNAL,
     })
     expect(disabledFields.fields).not.toHaveProperty('dsh_plugin_packages')
-  })
-
-  it('queries the active owner’s dynamic Native scope and owns its default-on registration', async () => {
-    expect(() => NativePluginInventory.resolve(null)).toThrow(/configuration must be an object/)
-    expect(() => NativePluginInventory.resolve({ unknown: true })).toThrow(/unknown native configuration field/)
-
-    const root = new NativeScope()
-    const agentScope = new NativeScope(root)
-    const sessionId = SessionId('native-agent-session')
-    const owner = { agent: { scope: agentScope }, session: { id: sessionId } }
-    const queries: NativeScope[] = []
-    let registration: { prepare(request: { sessionId?: string; signal: AbortSignal }): unknown } | undefined
-    let disposed = false
-    const services = new Map<string, unknown>([
-      ['deepseekLlmApiExtensions', {
-        register(scope: NativeScope, field: string, provider: typeof registration) {
-          expect(scope).toBe(root)
-          expect(field).toBe('dsh_plugin_packages')
-          registration = provider
-          return () => { disposed = true }
-        },
-      }],
-      ['pluginInventory', {
-        packages(scope: NativeScope) {
-          queries.push(scope)
-          return scope === agentScope ? [{
-            id: 'native-package-installation', scope: root.id,
-            package: { name: '@fixture/native-package', version: '2.3.4' },
-          }] : []
-        },
-      }],
-      ['activeSessions', { owners: () => [owner] }],
-    ])
-    let release: (() => void) | undefined
-    const context = {
-      scope: root,
-      require: (key: string) => services.get(key),
-      effect: (dispose: () => void) => { release = dispose },
-    }
-    const implementation = NativePluginInventory.resolve(undefined)
-    await implementation(context as never)
-
-    const signal = new AbortController().signal
-    const prepared = await registration?.prepare({ sessionId: String(sessionId), signal }) as {
-      readonly value: unknown
-    }
-    expect(queries).toEqual([agentScope])
-    expect(prepared.value).toEqual({
-      version: 1,
-      packages: [{ name: '@fixture/native-package', version: '2.3.4' }],
-    })
-    release?.()
-    expect(disposed).toBe(true)
   })
 
   it('reports active package versions once, retains parallel versions, and excludes inactive or loose entries', async () => {

@@ -12,47 +12,13 @@ import type {
   SessionId,
   SessionLogOffset,
   SessionSeq,
-  SessionSeqCursor,
   OptionalSessionSeq,
   SurfaceEvent,
-} from '@deepseek-ai/dsh-session/native'
-import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
-import type { SessionPersistenceRevision } from '@deepseek-ai/dsh-session-persistence/native'
-import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection/native'
+} from '@deepseek-ai/dsh-session'
+import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title'
 import type { SessionSearchCursor } from './cursor.ts'
 
 export type { SessionSearchCursor } from './cursor.ts'
-
-/** One immutable live or prepared Session cut retained for a caller's read lifetime. */
-export interface SessionObservation extends Disposable {
-  /** Whether the cut came from an attached Session or a retained preparation. */
-  readonly source: 'live' | 'prepared'
-  /** Immutable Session identity metadata. */
-  readonly header: SessionHeader
-  /** Exact fork-inherited event count paired with `header`. */
-  readonly inheritedEventCount: SessionLogOffset
-  /** Immutable contiguous events at the captured cursor. */
-  readonly events: readonly SessionEvent[]
-  /** Last observed event seq, or -1 for an empty log. */
-  readonly cursor: SessionSeqCursor
-  /** Durable source revision for a cold prepared observation. */
-  readonly revision?: SessionPersistenceRevision
-  /** Projection baseline at the same cursor, when requested and available. */
-  readonly projections?: ProjectionSnapshot
-  /**
-   * Retain the same immutable cut for another owner.
-   * @returns an independently disposable lease over this observation.
-   */
-  retain(): SessionObservation
-}
-
-/** Cancellation and projection selection for one exact observation. */
-export interface SessionObservationOptions {
-  /** Optional cancellation while resolving a cold source. */
-  readonly signal?: AbortSignal
-  /** Whether to compute every projection or leave projection state untouched. */
-  readonly projectionMode?: 'all' | 'none'
-}
 
 /** Whether an event is current model context, replaced context, or raw-log-only. */
 export type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
@@ -61,7 +27,7 @@ export type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
 export interface SessionRecord {
   /** Cloned session header selected from the live-preferred corpus. */
   header: SessionHeader
-  /** Whether the id currently exists in the selected runtime's live session authority. */
+  /** Whether the id currently exists in `ctx.sessions`. */
   live: boolean
   /** Whether the active persistence backend currently lists the id, including a created-but-unmaterialized session it already observes. */
   persisted: boolean
@@ -79,13 +45,13 @@ export interface SessionSurfaceSnapshot {
   events: SurfaceEvent[]
 }
 
-/** One detached observation of a logical session's complete raw log. */
+/** One validated detached observation of a logical session's complete raw log. */
 export interface SessionLogSnapshot {
   /** Cloned session header selected from the same observation as `events`. */
   session: SessionHeader
   /** Exact number of fork-inherited events in the observed log. */
   inheritedEventCount: SessionLogOffset
-  /** Cloned contiguous raw events; cold persisted logs include in-memory tail balancing and detached replay validation. */
+  /** Cloned contiguous raw events after in-memory interrupted-turn balancing and replay validation. */
   events: SessionEvent[]
 }
 

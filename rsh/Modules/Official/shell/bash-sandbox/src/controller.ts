@@ -12,7 +12,7 @@ export interface BashPolicy {
 /** Applies confinement to Bash commands and classifies runner outcomes. */
 export class SandboxBashController extends SandboxShellController {
   /** @param local - managed Bash executor. @param sandbox - confinement runner. @param policy - current sandbox policy. */
-  constructor(local: ShellCommands & { argv(spec: ShellExecSpec): readonly string[] }, sandbox: Pick<ProcessSandbox, 'confine'>, policy: BashPolicy) {
+  constructor(local: ShellCommands & { argv(spec: ShellExecSpec): readonly string[] }, sandbox: ProcessSandbox, policy: BashPolicy) {
     super(local, sandbox, policy, spec => local.argv(spec))
   }
 }

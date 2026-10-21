@@ -23,7 +23,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { isAbsolute, join, relative, sep } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   LAUNCHER_BIN,
@@ -31,15 +31,12 @@ import {
   launcherPath as landlockLauncherPath,
   probe as defaultProbeLandlock,
 } from '@deepseek-ai/node-addon-system/landlock-run'
-import { canonicalPath, SandboxUnavailableError } from '@deepseek-ai/dsh-sandbox/native'
-import type { ConfinedArgv, ConfinedSandboxMode, ProcessSandboxChildPaths, RunnerFailureRule, SandboxEnforcement, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
+import { SandboxUnavailableError } from '@deepseek-ai/dsh-sandbox/native'
+import type { ConfinedArgv, ConfinedSandboxMode, RunnerFailureRule, SandboxEnforcement, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/native'
 import { AclWriteGrant, assertTempRootOutsideWorkspace, tempWriteSid, workspaceWriteSid } from '@deepseek-ai/dsh-sandbox-windows-acl'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
-import {
-  bwrapChildProfileArgs, bwrapProfileArgs, landlockChildProfileArgs, landlockProfileArgs,
-  seatbeltChildProfileArgs, seatbeltProfileArgs,
-} from './profiles.ts'
+import { bwrapProfileArgs, landlockProfileArgs, seatbeltProfileArgs } from './profiles.ts'
 
 /** Local runner configuration. Omitted fields use the shipped selection defaults. */
 export interface Config {
@@ -245,11 +242,6 @@ function assertPositiveFinite(name: string, value: number): void {
   }
 }
 
-function containsPath(root: string, path: string): boolean {
-  const child = relative(root, path)
-  return child === '' || (child !== '..' && !child.startsWith(`..${sep}`) && !isAbsolute(child))
-}
-
 /**
  * The denial dialect each runner's kernel speaks — the case-insensitive stderr substrings a
  * denied file effect produces under it, carried on every wrap (the seam's
@@ -363,57 +355,6 @@ export class LocalSandboxBackend {
     }
   }
 
-  /**
-   * Wrap one fixed child with its selected cwd and launcher-owned private home.
-   * @param argv - the exact child program and arguments.
-   * @param policy - the child's resolved file-effect policy.
-   * @param paths - canonical child cwd and launcher-owned private home.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confineChildProcess(argv: readonly string[], policy: SandboxPolicy, paths: ProcessSandboxChildPaths): ConfinedArgv {
-    const privateHome = canonicalPath(paths.privateHome)
-    const childPaths = { cwd: canonicalPath(paths.cwd), privateHome }
-    if (policy.mode === 'read-only' && containsPath(privateHome, childPaths.cwd)) {
-      throw new Error('sandbox-local: a read-only child cwd cannot be inside its writable private home')
-    }
-    if (this.runnerCommand !== undefined) {
-      return {
-        argv: [...this.runnerCommand, ...bwrapChildProfileArgs(policy, childPaths), '--', ...argv],
-        enforcement: 'full',
-        denialSignatures: DENIAL_SIGNATURES.runnerCommand,
-        runnerFailureRules: [{ fatalSignatures: this.configuredRunnerFailureSignatures }],
-      }
-    }
-
-    const selected = this.selectRunner(policy.mode)
-    let runnerArgv: string[]
-    switch (selected.runner) {
-      case 'bwrap': runnerArgv = ['bwrap', ...bwrapChildProfileArgs(policy, childPaths)]; break
-      case 'landlock': runnerArgv = [this.landlockLauncher(), ...landlockChildProfileArgs(policy, childPaths)]; break
-      case 'seatbelt': runnerArgv = [this.seatbeltExec(), ...seatbeltChildProfileArgs(policy, childPaths)]; break
-      case 'windows-acl': runnerArgv = this.windowsAclChildArgv(policy, childPaths); break
-      default: runnerArgv = assertNever(selected.runner)
-    }
-    return {
-      argv: [...runnerArgv, '--', ...argv],
-      enforcement: selected.enforcement,
-      denialSignatures: DENIAL_SIGNATURES[selected.runner],
-      runnerFailureRules: RUNNER_FAILURE_RULES[selected.runner],
-    }
-  }
-
-  /**
-   * Prepare the existing session-owned Windows temp capability for `confine` to reuse.
-   * @param policy - complete per-call file policy.
-   * @returns the Windows session temp root when this backend owns one, otherwise `undefined`.
-   */
-  prepareWritableTempRoot(policy: SandboxPolicy): string | undefined {
-    if (this.runnerCommand !== undefined || policy.mode !== 'workspace-write' || policy.sessionId === undefined) return undefined
-    const selected = this.selectRunner(policy.mode)
-    if (selected.runner !== 'windows-acl') return undefined
-    return this.materializeAclGrant(policy.sessionId, policy.workspaceRoot).dir
-  }
-
   /** The selected rung's runner invocation (program + profile arguments) for one policy. */
   private runnerArgv(runner: SelectedRunner['runner'], policy: SandboxPolicy): string[] {
     switch (runner) {
@@ -423,22 +364,6 @@ export class LocalSandboxBackend {
       case 'windows-acl': return this.windowsAclRunnerArgv(policy)
       default: return assertNever(runner)
     }
-  }
-
-  /** Give a read-only SDK child its private home without enabling ambient temp writes. */
-  private windowsAclChildArgv(policy: SandboxPolicy, paths: ProcessSandboxChildPaths): string[] {
-    if (policy.mode === 'read-only') {
-      return this.windowsAclRunnerArgv({ mode: 'workspace-write', workspaceRoot: paths.privateHome })
-    }
-    const sessionId = policy.sessionId
-    if (sessionId === undefined) {
-      throw new SandboxUnavailableError(policy.mode, 'windows-acl requires a session-owned temp capability for a workspace-writing child')
-    }
-    const tempRoot = this.materializeAclGrant(sessionId, policy.workspaceRoot).dir
-    if (!containsPath(canonicalPath(tempRoot), paths.privateHome)) {
-      throw new SandboxUnavailableError(policy.mode, 'windows-acl child home is outside the session temp capability')
-    }
-    return this.windowsAclRunnerArgv(policy)
   }
 
   /**
@@ -655,7 +580,7 @@ export class LocalSandboxBackend {
     const builtEntry = this.internals.windowsAclRunnerEntry ?? fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-sandbox-windows-acl/runner'))
     if (existsSync(builtEntry)) return [process.execPath, builtEntry]
     const sourceEntry = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-sandbox-windows-acl/src/runner.ts'))
-    return [process.execPath, '--import', import.meta.resolve('tsx/esm'), sourceEntry]
+    return [process.execPath, '--import', 'tsx/esm', sourceEntry]
   }
 }
 

@@ -30,9 +30,6 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../core/native-model-execution/tsconfig.host.json"
-    },
-    {
       "path": "../subagent-protocol"
     },
     {

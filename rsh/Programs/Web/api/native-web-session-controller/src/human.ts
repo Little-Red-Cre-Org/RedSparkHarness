@@ -2,13 +2,13 @@
 import { randomUUID } from 'node:crypto'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeApprovalAnswererRequest, NativeApprovalAnswererResult } from '@deepseek-ai/dsh-approval-definition'
-import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
+import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
+import { parseUserQuestionAnswer, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
 import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'
 
 interface Pending {
-  feed: NativeSessionFeed
+  readonly feed: NativeSessionFeed
   readonly parseAnswer: (value: unknown) => unknown
   readonly agent: NativeAgent
   readonly prompt: NativeWebHumanPrompt
@@ -21,68 +21,39 @@ interface Pending {
 export class NativeWebHumanInteraction {
   private readonly pending = new Map<NativeWebHumanId, Pending>()
   private closed = false
-  /**
-   * @param capacity - maximum unanswered presentations across admitted Web turns.
-   * @param changed - notify the Session list when one pending presentation changes.
-   */
-  constructor(private readonly capacity: number, private readonly changed: (agent: NativeAgent) => void) {}
-
-  /** Move one Agent's unanswered presentations to its replacement feed.
-   * @param agent - exact root Agent whose turn is being reattached.
-   * @param feed - replacement presentation stream.
-   */
-  rebind(agent: NativeAgent, feed: NativeSessionFeed): void {
-    const pending = [...this.pending.values()].filter(entry => entry.agent === agent)
-    for (const entry of pending) entry.feed = feed
-    const first = pending[0]
-    if (first !== undefined) feed.push({ type: 'human', prompt: first.prompt })
-  }
-
-  /** @param agent - exact root Agent whose pending presentation is projected.
-   * @returns a redacted interaction kind, when the Agent awaits the user.
-   */
-  pendingKind(agent: NativeAgent): 'approval' | 'plan-review' | 'question' | undefined {
-    const prompt = [...this.pending.values()].find(entry => entry.agent === agent)?.prompt
-    if (prompt?.kind === 'approval') return 'approval'
-    if (prompt?.kind === 'questions') return prompt.questions.some(question => question.intent?.kind === 'plan-review')
-      ? 'plan-review' : 'question'
-    return undefined
-  }
+  /** @param capacity - maximum unanswered presentations across admitted Web turns. */
+  constructor(private readonly capacity: number) {}
 
   private ask(agent: NativeAgent, prompt: NativeWebHumanPrompt,
     signal: AbortSignal, feed: NativeSessionFeed, parseAnswer: (value: unknown) => unknown): Promise<unknown> {
     signal.throwIfAborted()
     if (this.closed || this.pending.size >= this.capacity) throw new Error('native Web human interaction is closed or at capacity')
     const outcome = Promise.withResolvers<unknown>()
-    const remove = (entry: Pending): void => {
-      this.pending.delete(entry.prompt.id)
+    const remove = (): void => {
+      this.pending.delete(prompt.id)
       signal.removeEventListener('abort', abort)
-      const activeFeed = entry.feed
-      activeFeed.push({ type: 'human-removed', id: entry.prompt.id })
-      this.changed(agent)
-      const next = [...this.pending.values()].find(pending => pending.feed === activeFeed)
-      if (next !== undefined && !this.closed) activeFeed.push({ type: 'human', prompt: next.prompt })
+      feed.push({ type: 'human-removed', id: prompt.id })
+      const next = [...this.pending.values()].find(entry => entry.feed === feed)
+      if (next !== undefined && !this.closed) feed.push({ type: 'human', prompt: next.prompt })
     }
-    const abort = (): void => { remove(entry); outcome.reject(signal.reason) }
+    const abort = (): void => { remove(); outcome.reject(signal.reason) }
     const entry: Pending = { feed, agent, prompt, signal, parseAnswer,
-      finish: (value) => { remove(entry); outcome.resolve(value) },
-      reject: (error) => { remove(entry); outcome.reject(error) } }
+      finish: (value) => { remove(); outcome.resolve(value) },
+      reject: (error) => { remove(); outcome.reject(error) } }
     this.pending.set(prompt.id, entry)
     signal.addEventListener('abort', abort, { once: true })
-    this.changed(agent)
     if ([...this.pending.values()].find(entry => entry.feed === feed) === entry) feed.push({ type: 'human', prompt })
     return outcome.promise
   }
 
   /** @param request - exact Provider-admitted approval.
    * @param feed - owning admitted turn's presentation stream.
-   * @returns one-call verdict or a request to remember the Provider-admitted Session scope, after presentation removal.
+   * @returns one-shot verdict after presentation removal.
    */
-  async approval(request: NativeApprovalAnswererRequest, feed: NativeSessionFeed): Promise<NativeApprovalAnswererResult> {
+  async approval(request: NativeApprovalAnswererRequest, feed: NativeSessionFeed): Promise<NativeApprovalOutcome> {
     return await this.ask(request.agent, { kind: 'approval', id: brandString<NativeWebHumanId>(randomUUID()),
-      toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
-      ...request.sessionGrant === undefined ? {} : { canAllowSession: true } },
-    request.signal, feed, value => value) as NativeApprovalAnswererResult
+      toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason } },
+    request.signal, feed, value => value) as NativeApprovalOutcome
   }
 
   /** @param request - exact root owner's questions and merged Provider cancellation.
@@ -106,14 +77,9 @@ export class NativeWebHumanInteraction {
     const answer = value as Record<string, unknown>
     if (entry.prompt.kind === 'approval') {
       if (Object.keys(answer).some(key => !['kind', 'outcome'].includes(key)) || answer.kind !== 'approval'
-        || answer.outcome !== 'allowed-once' && answer.outcome !== 'allowed-session' && answer.outcome !== 'rejected') throw new TypeError('native Web approval requires an allow or reject verdict')
-      if (answer.outcome === 'allowed-session' && entry.prompt.canAllowSession !== true) throw new TypeError('native Web approval has no reusable Session scope')
-      entry.finish(answer.outcome === 'allowed-session' ? { outcome: 'allowed-once', remember: 'session' } : answer.outcome)
+        || answer.outcome !== 'allowed-once' && answer.outcome !== 'rejected') throw new TypeError('native Web approval requires an allow or reject verdict')
+      entry.finish(answer.outcome)
     } else {
-      if (answer.kind === 'cancel-questions' && Object.keys(answer).length === 1) {
-        entry.reject(new UserQuestionError('the user cancelled ask_user_question', 'ASK_CANCELLED'))
-        return
-      }
       if (Object.keys(answer).some(key => !['kind', 'answer'].includes(key)) || answer.kind !== 'questions') throw new TypeError('native Web question answer has invalid fields')
       entry.finish(entry.parseAnswer(answer.answer))
     }

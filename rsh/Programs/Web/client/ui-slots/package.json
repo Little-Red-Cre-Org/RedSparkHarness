@@ -27,6 +27,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/react": "~18.3.1",
     "react": "^18.2.0"
   },
   "files": [
@@ -35,7 +36,6 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@types/react": "~18.3.1",
     "@deepseek-ai/dsh-client-store": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"
   }

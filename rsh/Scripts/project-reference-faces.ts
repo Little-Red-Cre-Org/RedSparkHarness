@@ -8,11 +8,6 @@ type ProjectFace = 'host' | 'client'
 
 interface ProjectReferenceConfig {
   readonly extends?: unknown
-  readonly compilerOptions?: {
-    readonly composite?: unknown
-    readonly declaration?: unknown
-    readonly emitDeclarationOnly?: unknown
-  }
   readonly references?: ReadonlyArray<{ readonly path?: unknown }>
 }
 
@@ -21,9 +16,9 @@ const WORKSPACE_MANIFESTS = ['rsh/**/package.json'] as const
 /**
  * Find references that enter the wrong leaf of a split Host/Client project.
  *
- * A single-config project is neutral and may participate in either graph. A
- * split target must use the matching face leaf or a same-face declaration-only
- * composite leaf.
+ * A single-config project is neutral and may participate in either graph. Once
+ * a package declares both face configs, every reachable reference must name
+ * the leaf matching the aggregate from which traversal began.
  *
  * @param root - Repository root containing both aggregate tsconfigs.
  * @returns Repo-relative diagnostics for every mismatched reference edge.
@@ -49,7 +44,7 @@ export function collectProjectReferenceFaceViolations(root: string): string[] {
           continue
         }
         const expected = resolve(splitRoot, `tsconfig.${face}.json`)
-        if (targetConfig !== expected && !isDeclarationOnlyFaceLeaf(root, targetConfig, face)) {
+        if (targetConfig !== expected) {
           violations.push(
             `${repoPath(root, configPath)}: Project Reference ${JSON.stringify(reference)} enters split project ${repoPath(root, splitRoot)} from a ${faceLabel(face)} config; reference ${JSON.stringify(repoPath(root, expected))} instead`,
           )
@@ -61,25 +56,6 @@ export function collectProjectReferenceFaceViolations(root: string): string[] {
   }
 
   return violations.sort()
-}
-
-function isDeclarationOnlyFaceLeaf(root: string, targetConfig: string, face: ProjectFace): boolean {
-  if (!existsSync(targetConfig)) return false
-  const config = projectConfig(root, targetConfig)
-  const compilerOptions = config.compilerOptions
-  return projectFace(root, targetConfig, config) === face
-    && compilerOptions?.composite === true
-    && compilerOptions.declaration === true
-    && compilerOptions.emitDeclarationOnly === true
-    && !effectiveNoEmit(targetConfig)
-}
-
-function effectiveNoEmit(configPath: string): boolean {
-  const parsed = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
-    ...ts.sys,
-    onUnRecoverableConfigFileDiagnostic: () => {},
-  })
-  return parsed === undefined || parsed.options.noEmit === true
 }
 
 function splitProjectRoots(root: string): string[] {

@@ -5,9 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
 import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials'
-import type { ProviderAuthInteraction } from '@earendil-works/pi-ai'
-import { authContextFrom, credentialStoreFrom, recordKeyFor, siwcRegistrationStoreFrom } from '../src/auth.ts'
-import { createSiwcOAuth } from '../src/siwc.ts'
+import { authContextFrom, credentialStoreFrom, recordKeyFor } from '../src/auth.ts'
 
 const CODEX = recordKeyFor('openai-codex')
 
@@ -32,83 +30,6 @@ describe('pi-ai credential store over harness records', () => {
     const store = credentialStoreFrom(await stored())
 
     await expect(store.read('openai-codex')).resolves.toBeUndefined()
-  })
-
-  it('migrates legacy SIWC registration before listing providers and keeps metadata out of record views', async () => {
-    const ctx = await stored()
-    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
-    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve({
-      kind: 'api-key',
-      key: 'siwc-registration-v1:{"extAgentHostId":"legacy-host-fixture"}',
-    }))
-
-    await expect(credentialStoreFrom(ctx).list()).resolves.toEqual([])
-    await expect(ctx.credentials.readMetadata(registrationKey)).resolves.toEqual({
-      extAgentHostId: 'legacy-host-fixture',
-    })
-    await expect(ctx.credentials.readRecord(registrationKey)).resolves.toBeUndefined()
-    await expect(ctx.credentials.describeRecord(recordKeyFor('openai-codex')))
-      .resolves.toEqual({ configured: false, writable: true })
-    await expect(ctx.credentials.listRecords()).resolves.toEqual([])
-  })
-
-  it('preserves a damaged legacy SIWC registration instead of generating a replacement identity', async () => {
-    const ctx = await stored()
-    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
-    const legacy = { kind: 'api-key' as const, key: 'siwc-registration-v1:{broken-json' }
-    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve(legacy))
-
-    await expect(credentialStoreFrom(ctx).list()).rejects.toThrow(/invalid and was preserved/)
-    await expect(ctx.credentials.readMetadata(registrationKey)).resolves.toBeUndefined()
-    await expect(ctx.credentials.readRecord(registrationKey)).resolves.toEqual(legacy)
-  })
-
-  it('preserves a legacy SIWC registration that conflicts with the saved OAuth grant', async () => {
-    const ctx = await stored()
-    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
-    const legacy = { kind: 'api-key' as const, key: 'siwc-registration-v1:{"extAgentHostId":"legacy-host-fixture","clientId":"legacy-client-fixture"}' }
-    const grant = {
-      kind: 'grant' as const,
-      payload: {
-        type: 'oauth', access: 'synthetic-access', refresh: 'synthetic-refresh', expires: 1,
-        siwc: 'chatgpt-plan', clientId: 'saved-client-fixture', issuer: 'https://auth.openai.com',
-        subject: 'synthetic-account', idToken: 'synthetic-id-token', extAgentHostId: 'saved-host-fixture', scopes: [],
-      },
-    }
-    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve(legacy))
-    await ctx.credentials.modifyRecord(CODEX, () => Promise.resolve(grant))
-
-    await expect(credentialStoreFrom(ctx).list()).rejects.toThrow(/conflicts with the authorized account/)
-    await expect(ctx.credentials.readMetadata(registrationKey)).resolves.toBeUndefined()
-    await expect(ctx.credentials.readRecord(registrationKey)).resolves.toEqual(legacy)
-    await expect(ctx.credentials.readRecord(CODEX)).resolves.toEqual(grant)
-  })
-
-  it('rejects login before browser authorization when the legacy identity conflicts with its saved grant', async () => {
-    const ctx = await stored()
-    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
-    const legacy = { kind: 'api-key' as const, key: 'siwc-registration-v1:{"extAgentHostId":"legacy-host-fixture","clientId":"legacy-client-fixture"}' }
-    const grant = {
-      kind: 'grant' as const,
-      payload: {
-        type: 'oauth', access: 'synthetic-access', refresh: 'synthetic-refresh', expires: 1,
-        siwc: 'chatgpt-plan', clientId: 'saved-client-fixture', issuer: 'https://auth.openai.com',
-        subject: 'synthetic-account', idToken: 'synthetic-id-token', extAgentHostId: 'saved-host-fixture', scopes: [],
-      },
-    }
-    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve(legacy))
-    await ctx.credentials.modifyRecord(CODEX, () => Promise.resolve(grant))
-    const interaction = {
-      signal: new AbortController().signal,
-      notify() { throw new Error('identity conflict must fail before browser authorization') },
-      prompt: async () => '',
-    } as ProviderAuthInteraction
-    const oauth = createSiwcOAuth(siwcRegistrationStoreFrom(ctx))
-
-    await expect(oauth.login(interaction, {})).rejects.toThrow(/conflicts with the authorized account/)
-    await expect(ctx.credentials.readMetadata(registrationKey)).resolves.toBeUndefined()
-    await expect(ctx.credentials.readRecord(registrationKey)).resolves.toEqual(legacy)
-    await expect(ctx.credentials.readRecord(CODEX)).resolves.toEqual(grant)
   })
 
   it('round-trips an api-key credential field by field', async () => {

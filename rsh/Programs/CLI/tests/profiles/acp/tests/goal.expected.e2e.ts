@@ -28,8 +28,7 @@ const refreshing = process.env.DSH_SNAPSHOT === 'refresh'
 const agent: AgentUnderTest = {
   binScript: fileURLToPath(new URL('../../../../src/bin.ts', import.meta.url)),
   configPath: fileURLToPath(new URL('../../../../../../../snapshots/acp/escalation-approved/cordis.yml', import.meta.url)),
-  profile: 'legacy-acp',
-  fromDefaultProfile: 'acp',
+  profile: 'acp',
   packageResolutionAnchor: fileURLToPath(new URL('../../../../package.json', import.meta.url)),
   tsconfigPath: fileURLToPath(new URL('../../../../../../../tsconfig.json', import.meta.url)),
 }
