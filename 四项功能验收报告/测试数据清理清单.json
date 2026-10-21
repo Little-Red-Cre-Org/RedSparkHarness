@@ -1,0 +1,40 @@
+{
+  "time": "2026-10-10T19:35:43.3338306+08:00",
+  "verifiedCleanupRoots": [
+    "E:\\redsparkHarness\\RedSparkHarness-image-understanding\\output\\playwright\\feature01-home",
+    "E:\\redsparkHarness\\RedSparkHarness-tool-groups\\output\\playwright\\tool-groups-home",
+    "C:\\Users\\12148\\AppData\\Local\\RedSparkHarness\\ide\\data-zero-budget-next",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791604149353",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791620259761",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791620405369",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791620673746",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791623549615",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791631827747",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791631942663",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-native-host",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\desktop-home",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\desktop-project",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\native-desktop-project",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\native-electron",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\native-ide-home",
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\workspace"
+  ],
+  "removedRootsThisPass": [
+    "E:\\redsparkHarness\\RedSparkHarness-zero-budget-next\\.cache\\zero-budget-validation\\chrome-profile-1791631942663"
+  ],
+  "filesThisPass": 7,
+  "junctionsUnlinkedThisPass": 0,
+  "bytesThisPass": 1099309,
+  "note": "Counts cover final cleanup pass only; initial pass was interrupted by a closing Chrome file lock.",
+  "rootsStillPresent": [],
+  "failures": [],
+  "preserved": [
+    "source code",
+    "regression fixtures",
+    "acceptance reports and screenshots",
+    "real user profiles and sessions",
+    "main worktree",
+    "backups"
+  ]
+}
