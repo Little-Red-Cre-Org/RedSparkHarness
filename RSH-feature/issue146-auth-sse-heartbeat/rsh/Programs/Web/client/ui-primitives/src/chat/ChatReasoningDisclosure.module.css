@@ -1,0 +1,77 @@
+.root {
+  display: flex;
+  flex-direction: column;
+}
+
+.root:not([data-expanded]) {
+  contain: size layout;
+  height: calc(24px + var(--dsh-content-font-delta, 0px));
+}
+
+.row { position: relative; overflow: hidden; }
+
+.root[data-state='running'] .row::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 300px;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-alias-bg-base) 60%, transparent) 55%, transparent 100%);
+  animation: dsh-reasoning-disclosure-sweep 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dsh-reasoning-disclosure-sweep {
+  0% { left: -300px; }
+  90%, 100% { left: 100%; }
+}
+
+.leading { flex-shrink: 0; }
+.chevron { color: var(--dsw-alias-label-secondary); }
+.title { font-weight: 400; }
+
+.separator {
+  flex: none;
+  width: 2px;
+  height: 2px;
+  margin: 0 8px;
+  border-radius: 1px;
+  background: var(--dsw-alias-label-caption);
+}
+
+.summary {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
+  white-space: nowrap;
+}
+
+.summaryText { display: block; overflow: hidden; text-overflow: ellipsis; }
+.summary[data-follow-end] { display: flex; justify-content: flex-end; }
+.summary[data-follow-end] .summaryText { flex: 0 0 auto; width: max-content; min-width: 100%; overflow: visible; text-align: start; text-overflow: clip; }
+
+.body {
+  padding: 4px 0 4px calc(22px + var(--dsh-content-font-delta, 0px));
+  color: var(--dsw-alias-label-tertiary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root[data-state='running'] .row::after { animation: none; }
+}

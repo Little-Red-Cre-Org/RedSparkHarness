@@ -1,0 +1,49 @@
+.../native/system/packages/darwin-arm64  | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["darwin"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+.../native/system/packages/darwin-x64    | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["darwin"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+.../native/system/packages/linux-arm64   | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+.../native/system/packages/linux-x64     | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+$ tsc -b && tsdown
+ℹ tsdown v0.22.2 powered by rolldown v1.1.1
+ℹ config file: E:\redsparkHarness\RedSparkHarness\rsh\Programs\Desktop\tsdown.config.ts 
+ℹ entry: lib/types/ide-extension.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: lib/types/main.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: lib/types/preload.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: lib/types/native-host-preflight-worker.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: lib/types/preload-app.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: lib/types/preload-pet.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ Build start
+ℹ [CJS] lib\preload-pet.cjs  1.67 kB │ gzip: 0.65 kB
+ℹ [CJS] 1 files, total: 1.67 kB
+ℹ [CJS] lib\preload.cjs  18.77 kB │ gzip: 6.39 kB
+ℹ [CJS] 1 files, total: 18.77 kB
+ℹ [CJS] lib\preload-app.cjs  18.29 kB │ gzip: 6.38 kB
+ℹ [CJS] 1 files, total: 18.29 kB
+✔ Build complete in 106ms
+✔ Build complete in 107ms
+✔ Build complete in 108ms
+ℹ [CJS] lib\ide-extension.cjs  21.60 kB │ gzip: 7.31 kB
+ℹ [CJS] 1 files, total: 21.60 kB
+✔ Build complete in 111ms
+ℹ [ESM] lib\native-host-preflight-worker.js  2.76 kB │ gzip: 1.20 kB
+ℹ [ESM] 1 files, total: 2.76 kB
+✔ Build complete in 114ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- zod
+ℹ [ESM] lib\main.js             252.62 kB │ gzip: 63.76 kB
+ℹ [ESM] lib\native-D-ibLnjf.js  123.15 kB │ gzip: 24.97 kB
+ℹ [ESM] 2 files, total: 375.77 kB
+✔ Build complete in 2042ms

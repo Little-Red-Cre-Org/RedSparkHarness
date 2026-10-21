@@ -1,0 +1,112 @@
+.panel { color: var(--dsw-alias-label-primary); max-width: 880px; width: 100%; padding-bottom: 24px; }
+.panel h2 { margin: 0 0 8px; font-size: 24px; }
+.panel h3 { margin: 26px 0 12px; font-size: 18px; }
+.panel p { line-height: 1.6; }
+.panel button, .panel input, .panel textarea, .panel select { font: inherit; box-sizing: border-box; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.header p, .muted, .context, .panel small { color: var(--dsw-alias-label-secondary, #777); }
+.panel button { border: 1px solid #cdbdc3; border-radius: 10px; padding: 8px 15px; background: transparent; color: inherit; cursor: pointer; flex-shrink: 0; }
+.panel button:disabled { opacity: .5; cursor: default; }
+.panel button:focus-visible, .panel input:focus-visible, .panel textarea:focus-visible, .panel select:focus-visible { outline: 2px solid #c71943; outline-offset: 2px; }
+.notice { background: #b91c3910; border-left: 3px solid #c71943; padding: 12px 16px; border-radius: 8px; font-size: 13px; }
+.field { display: flex; flex-direction: column; gap: 8px; font-size: 14px; min-width: 0; }
+.field input, .field textarea, .field select { border: 1px solid #cdbdc3; border-radius: 10px; padding: 10px 12px; width: 100%; color: inherit; background: transparent; }
+.field textarea { resize: vertical; min-height: 92px; }
+.context { display: flex; flex-direction: column; gap: 5px; overflow-wrap: anywhere; font-size: 12px; margin: 10px 0 20px; }
+.form { display: flex; flex-direction: column; gap: 16px; border: 1px solid #cdbdc360; border-radius: 16px; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.panel .primary { color: white; background: #bd1740; border-color: #bd1740; align-self: flex-end; min-width: 130px; }
+.card { border: 1px solid #cdbdc360; border-radius: 12px; margin: 12px 0; padding: 16px; overflow-wrap: anywhere; }
+.card summary { cursor: pointer; }
+.card p { white-space: pre-wrap; }
+.prompt { max-height: 120px; overflow: auto; }
+.badge, .count { border-radius: 20px; padding: 4px 10px; font-size: 12px; background: #b91c3910; flex-shrink: 0; }
+.actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+.confirm { padding-top: 8px; }
+.confirm button { margin-right: 8px; }
+.empty { text-align: center; padding: 22px 12px; border: 1px dashed #cdbdc3; border-radius: 12px; color: var(--dsw-alias-label-secondary, #777); }
+.error { color: #c32132; padding: 10px; overflow-wrap: anywhere; }
+.success { color: #248149; padding: 10px; }
+@media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .header { align-items: flex-start; } .form { padding: 14px; } }
+.reminderDialog { width: min(680px, calc(100vw - 48px)); max-height: calc(100vh - 48px); }
+.reminderContent { overflow-y: auto; min-height: 0; }
+.reminderContent, .panel .form {
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+.reminderEntry { position: relative; display: flex; flex: none; align-items: center; justify-content: center; gap: 8px; min-height: 38px; margin: 0 2px 8px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: 12px; padding: 8px 16px; background: var(--dsw-alias-button-elevated-fill); color: var(--dsw-alias-label-primary); cursor: pointer; font: inherit; font-size: 14px; font-weight: 500; }
+.reminderEntry svg { flex: none; color: #bd1740; }
+.reminderEntry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reminderEntry[data-wide=false] { width: 36px; height: 36px; min-height: 36px; align-self: flex-start; margin: 0 0 8px; padding: 0; border-color: transparent; background: transparent; }
+.reminderEntry[data-wide=false] strong { position: absolute; top: -3px; right: -5px; padding: 0 4px; font-size: 10px; }
+.reminderEntry:hover { background: #c7194310; }
+.reminderEntry strong { display: inline-block; border-radius: 20px; padding: 1px 7px; background: #c71943; color: white; font-size: 12px; }
+.reminderEntry:focus-visible { outline: 2px solid #c71943; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+.metrics > div, .metrics > button { border: 1px solid #cdbdc350; background: #b91c3905; border-radius: 14px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+.metrics span { color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.metrics strong { font-size: 24px; font-weight: 650; }
+.tabs { display: flex; gap: 5px; border-bottom: 1px solid #cdbdc350; margin: 20px 0; }
+.panel .tabs button { border: 0; border-radius: 8px 8px 0 0; padding: 12px 20px; color: var(--dsw-alias-label-secondary); }
+.panel .tabs button[aria-pressed=true] { color: #bd1740; background: #bd174009; box-shadow: inset 0 -2px #bd1740; }
+.environment { background: #b91c3904; padding: 14px 18px; border: 1px solid #cdbdc340; border-radius: 12px; margin-bottom: 18px; }
+.environment p { font-size: 12px; color: var(--dsw-alias-label-secondary); margin: 8px 0 0; }
+.sectionHeading { display: flex; align-items: center; gap: 12px; padding-top: 6px; }
+.sectionHeading > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: #bd17400c; color: #bd1740; font-size: 12px; }
+.panel .sectionHeading h3 { margin: 0 0 5px; font-size: 16px; }
+.sectionHeading small { font-size: 12px; }
+.modePicker { display: flex; background: #b91c3906; border-radius: 12px; padding: 4px; gap: 6px; }
+.panel .modePicker button { border-color: transparent; flex: 1; }
+.panel .modePicker button[aria-pressed=true] { background: var(--dsw-alias-bg-layer-2, white); border-color: #cdbdc360; color: #bd1740; box-shadow: 0 2px 5px #30101a08; }
+.checkRow { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.checkRow input { accent-color: #bd1740; }
+.panel .endHint { margin: 0; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.planPreview { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 14px; border-radius: 10px; background: #bd174007; font-size: 12px; }
+.planPreview strong { color: #bd1740; }
+.scheduleSummary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border: 1px solid #cdbdc350; border-radius: 12px; background: #bd174007; }
+.scheduleSummary strong { font-size: 13px; line-height: 1.6; font-weight: 500; }
+.scheduleSummary[data-error=true] strong { color: #c32132; }
+.panel .scheduleSummary button { padding: 7px 12px; font-size: 12px; white-space: nowrap; }
+.editorFooter { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 4px; }
+.editorFooter small { max-width: 65%; font-size: 12px; }
+.planTimes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; font-size: 12px; }
+.planTimes span { display: flex; flex-direction: column; gap: 6px; color: var(--dsw-alias-label-secondary); }
+.planTimes strong { color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 500; }
+@media (max-width: 720px) { .metrics > div, .metrics > button { padding: 12px; flex-direction: column; gap: 5px; } .tabs button { flex: 1; } .editorFooter { align-items: stretch; flex-direction: column; } .editorFooter small { max-width: none; } .planTimes { grid-template-columns: 1fr; } }
+.editorColumns { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.editorColumn { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.editorColumn .grid { grid-template-columns: 1fr; gap: 14px; }
+.editorColumn textarea { min-height: 88px; }
+.editorColumn .sectionHeading small { display: block; line-height: 1.5; }
+@media (max-width: 1050px) { .editorColumns { grid-template-columns: 1fr; } .editorColumn textarea { min-height: 92px; } }
+.createDialog { box-sizing: border-box; width: min(760px, calc(100vw - 48px)); max-height: calc(100dvh - 100px); }
+.createDialog .panel { padding-bottom: 0; }
+.panel .form { padding: 22px; gap: 20px; background: var(--dsw-alias-bg-layer-2, #fff); }
+.editorColumn + .editorColumn { border-top: 1px solid #cdbdc340; padding-top: 20px; }
+.panel .sectionHeading h3 { margin: 0; }
+.sectionHeading small { display: none !important; }
+.panel .modePicker button { min-width: 0; flex-shrink: 1; padding: 10px 12px; font-size: 14px; }
+.field input, .field select { min-height: 42px; }
+.field textarea { line-height: 1.6; }
+.field input::placeholder, .field textarea::placeholder { color: var(--dsw-alias-label-tertiary, #969099); }
+.editorFooter { border-top: 1px solid #cdbdc340; padding-top: 18px; }
+.panel .primary { border-radius: 12px; padding: 11px 24px; box-shadow: 0 4px 12px #bd17401a; }
+.panel button:hover:not(:disabled) { background: #bd17400a; }
+.panel .primary:hover:not(:disabled) { background: #a81337; }
+.actions { flex-wrap: wrap; }
+.createDialog .editorFooter { position: sticky; bottom: -1px; background: var(--dsw-alias-bg-layer-2, white); padding: 12px 0; }
+.createDialog .editorColumn { gap: 10px; }
+.createDialog .form { padding: 16px; }
+.createDialog .environment { padding: 12px 16px; margin-bottom: 14px; }
+.panel .metrics > button { position: relative; text-align: left; padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; transition: background .15s, border-color .15s; }
+.metrics > button strong { grid-row: 2; font-size: 28px; line-height: 1; }
+.metrics > button small { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 20px; opacity: .5; }
+.panel .metrics > button[aria-pressed=true] { background: #bd174009; border-color: #bd174060; box-shadow: inset 0 3px #bd1740; }
+.metrics > button[aria-pressed=true] span, .metrics > button[aria-pressed=true] small { color: #bd1740; }
+.tabs { padding: 4px; border: 0; border-radius: 12px; background: #b91c3906; gap: 4px; }
+.panel .tabs button { flex: 1; border-radius: 9px; padding: 10px 12px; font-size: 14px; }
+.panel .tabs button[aria-pressed=true] { box-shadow: 0 2px 6px #30101a0a; background: var(--dsw-alias-bg-layer-2, white); }
+.empty { border-style: solid; border-color: #cdbdc340; padding: 30px 16px; background: #b91c3903; font-size: 14px; }
+.panel .muted { font-size: 12px; margin: 8px 0 16px; }
+.centerActions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.panel .centerActions button { min-width: 0; padding: 9px 14px; font-size: 13px; }

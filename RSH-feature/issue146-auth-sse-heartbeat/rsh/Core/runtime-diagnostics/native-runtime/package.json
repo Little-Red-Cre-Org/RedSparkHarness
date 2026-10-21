@@ -1,0 +1,21 @@
+{
+  "name": "@deepseek-ai/dsh-native-runtime",
+  "description": "Portable RSH native plugin planning, scoped services and resource ownership",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Core/runtime-diagnostics/native-runtime"
+  },
+  "type": "module",
+  "dependencies": { "@deepseek-ai/dsh-brand": "workspace:^" },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/types/**/*.d.ts"],
+  "license": "MIT"
+}

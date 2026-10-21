@@ -1,0 +1,1008 @@
+/**
+ * Generic pi-ai-backed implementation of the Harness LLM seam.
+ *
+ * Each resolution produces one **immutable** snapshot — the profiles plus a
+ * `Models` collection holding the `Provider` each route built — and an
+ * operation captures a whole snapshot before its first `await`. A
+ * configuration change builds a *new* collection rather than mutating the one
+ * in use, because `Models.streamSimple()` is lazy: it resolves the provider
+ * when the stream is first consumed, which is after the credential await, so a
+ * mutated collection would let a request that started under one configuration
+ * finish under another — or fail with a provider that no longer exists. This is
+ * what makes the seam's per-step call freeze (`llm.prepareCall()`) hold all the
+ * way down: switching models mid-reply takes effect on the next step, never
+ * inside the one in flight.
+ *
+ * A route naming a credential reference still resolves it through the harness
+ * seam and passes it as the request's `apiKey` option, which pi-ai treats as
+ * the highest-priority auth override — that is what keeps the fail-loud
+ * reference semantics. Everything that override does not cover reaches pi-ai
+ * through the collection's own auth: the credential store holds the records a
+ * login wrote and a refresh rotates, and the auth context answers the ambient
+ * questions a provider asks while resolving. Both are stable across snapshots,
+ * so a configuration change rebuilds the collection without forgetting who is
+ * signed in.
+ *
+ * @module dsh-llm-pi-ai/adapter
+ */
+
+import { createAssistantMessageEventStream, createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'
+import { adjustMaxTokensForThinking } from '@earendil-works/pi-ai/api/simple-options'
+import type {
+  Api,
+  AssistantMessageEventStream,
+  AuthResult,
+  AuthContext,
+  CredentialStore,
+  Model,
+  Models,
+  ModelThinkingLevel,
+  MutableModels,
+  OAuthCredential,
+  Provider,
+  RefreshModelsContext,
+  SimpleStreamOptions,
+  ThinkingLevel,
+  TranscriptContext,
+} from '@earendil-works/pi-ai'
+import {
+  attributionHeaders,
+  contentHasImage,
+  LlmAdapter,
+  LlmError,
+  ReasoningEffortId,
+} from '@deepseek-ai/dsh-llm/native'
+import type {
+  GenerateOptions,
+  ImageAttachmentAccess,
+  LlmModelInfo,
+  LlmProviderInfo,
+  LlmResolvedModelInfo,
+  PreparedAdapterCall,
+  ReasoningEffortId as ReasoningEffortIdType,
+  ResolvedRetryPolicy,
+  StreamChunk,
+} from '@deepseek-ai/dsh-llm/native'
+import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
+import type { ResolvedPiAiProviderProfile } from './config.ts'
+import { catalogProvider } from './catalog.ts'
+import { toPiContext } from './context.ts'
+import { fetchCodexModels } from './discovery.ts'
+import { createSiwcOAuth, isSiwcCredential, siwcResponsesPayload } from './siwc.ts'
+import { createNativeCodexResponsesCapture } from './native-responses.ts'
+import type { CodexAccountIdentity } from './native-responses.ts'
+import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
+import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'
+import { toStreamChunks } from './stream.ts'
+
+/** One resolution's frozen view: the profiles and the collection built from them. */
+interface PiAiSnapshot {
+  /** The resolved profiles this collection was built from, used as its identity. */
+  profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>
+  /** Providers for exactly those profiles; never mutated once published. */
+  models: Models
+  /** In-flight Codex catalog refreshes keyed by provider; concurrent callers share one. */
+  refreshes: Map<string, Promise<void>>
+  /** Identity captured atomically with this snapshot's account catalog. */
+  codexIdentity: { value: CodexAccountIdentity | undefined; error?: unknown }
+}
+
+/** The public OpenAI route's auth result pinned to one prepared call. */
+interface PreparedOpenAiAuth {
+  apiKey: string | undefined
+  result: AuthResult | undefined
+}
+
+/** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
+export interface PiAiAdapterOptions {
+  /** Current validated profiles by provider route; called once per operation. */
+  profiles: () => ReadonlyMap<string, ResolvedPiAiProviderProfile>
+  /**
+   * Resolve the credential for one already-resolved profile; called once per
+   * stream call and frozen for that call. `undefined` defers to the route's own
+   * pi-ai auth, which for an installed catalog route is its provider-native
+   * ambient discovery; the plugin allows that only for a profile naming no
+   * credential at all, because a named reference that misses throws `LlmError`
+   * `MISSING_CREDENTIAL` rather than falling back.
+   */
+  resolveApiKey: (provider: string, profile: ResolvedPiAiProviderProfile) => Promise<string | undefined>
+  /**
+   * Resolve headers owned by a route's authenticated account.
+   * @param provider - selected route identity.
+   * @param profile - resolved route configuration.
+   * @param signal - request cancellation.
+   * @returns per-request account headers, or undefined when the route has no account authority.
+   */
+  resolveRequestHeaders?: (
+    provider: string, profile: ResolvedPiAiProviderProfile, signal?: AbortSignal,
+  ) => Promise<Readonly<Record<string, string>> | undefined>
+  /**
+   * Record SIWC usage observations from the public Responses transport.
+   * @param identity - issuer and subject from the grant used for this request.
+   * @param observation - quota, credit and plan values read from the response.
+   * @param replaceQuotas - whether the observation contains the complete header quota set.
+   * @returns nothing; the callback retains the observation for account usage reads.
+   */
+  onCodexUsage?: (
+    identity: CodexUsageIdentity, observation: CodexUsageObservation, replaceQuotas: boolean,
+  ) => void
+  /**
+   * How every collection this adapter builds resolves auth the request-level
+   * `apiKey` override does not cover. Required rather than optional: a
+   * collection built without them gets pi-ai's in-memory default store, which
+   * is empty at every boot and discarded on every configuration change, so a
+   * route whose only method is a login would report itself unconfigured on
+   * every request no matter how often the human signed in.
+   */
+  auth: PiAiAuthInjection
+  /** Resolve the optional durable attachment service at request time. */
+  resolveAttachments?: () => AttachmentOperations | undefined
+  /** Bridge one attachment reference into the current model-tool execution world. */
+  resolveImageAccess?: (attachments: AttachmentOperations, ref: ImageAttachmentRef) => ImageAttachmentAccess | undefined
+  /**
+   * Observe one assistant history message degrading to provider-neutral
+   * conversion because its stored replay state is unusable by this build.
+   */
+  onReplayDegrade?: (detail: { provider: string; model: string; reason: string }) => void
+}
+
+/** The two auth injectables a pi-ai collection is built with. */
+export interface PiAiAuthInjection {
+  /** Durable storage for credentials pi-ai itself writes: logins, and the refreshes it runs under its own lock. */
+  credentials: CredentialStore
+  /** Ambient lookups a provider performs while resolving its own auth. */
+  authContext: AuthContext
+  /** Durable SIWC registration identity, stored separately from OAuth grants. */
+  siwcRegistration: import('./siwc.ts').SiwcRegistrationStore
+}
+
+/** Copy profile stream knobs into pi-ai's common option vocabulary. */
+function profileOptions(
+  profile: ResolvedPiAiProviderProfile,
+  reasoning: ModelThinkingLevel | undefined,
+  apiKey: string | undefined,
+): SimpleStreamOptions {
+  const enabledReasoning: ThinkingLevel | undefined = reasoning === 'off' ? undefined : reasoning
+  return {
+    ...apiKey === undefined ? {} : { apiKey },
+    ...enabledReasoning === undefined ? {} : { reasoning: enabledReasoning },
+    ...profile.thinkingBudgets === undefined ? {} : { thinkingBudgets: profile.thinkingBudgets },
+    ...profile.cacheRetention === undefined ? {} : { cacheRetention: profile.cacheRetention },
+    ...profile.transport === undefined ? {} : { transport: profile.transport },
+    ...profile.timeoutMs === undefined ? {} : { timeoutMs: profile.timeoutMs },
+    ...profile.websocketConnectTimeoutMs === undefined ? {} : { websocketConnectTimeoutMs: profile.websocketConnectTimeoutMs },
+    // The agent recovery layer owns visible attempts; one adapter call is one SDK attempt.
+    maxRetries: 0,
+  }
+}
+
+/**
+ * The profile default this exact model can actually take, for DESCRIBING it.
+ * A configured level the model does not support yields none rather than
+ * throwing: `resolveModel` builds the model catalog, and a catalog that fails
+ * takes its whole provider out of every picker — so one mis-set profile field
+ * would hide every model on the route, including the ones that support the
+ * level. The request path still refuses, which is where a bad configuration
+ * belongs: describing what a model can do must not fail because a deployment
+ * asked it for something it cannot.
+ * @param model - the resolved model descriptor.
+ * @param effort - the profile's configured level, if any.
+ * @returns the level when this model supports it, otherwise undefined.
+ */
+function describableReasoningLevel(
+  model: Model<Api>,
+  effort: ReasoningEffortIdType | ModelThinkingLevel | undefined,
+): ModelThinkingLevel | undefined {
+  if (effort === undefined) return undefined
+  return getSupportedThinkingLevels(model).some(level => level === effort)
+    ? effort as ModelThinkingLevel
+    : undefined
+}
+
+/** Validate an explicit Harness/profile effort without invoking pi-ai's clamp. */
+function resolveReasoningLevel(
+  model: Model<Api>,
+  effort: ReasoningEffortIdType | ModelThinkingLevel | undefined,
+): ModelThinkingLevel | undefined {
+  if (effort === undefined) return undefined
+  const supported = getSupportedThinkingLevels(model)
+  if (supported.some(level => level === effort)) return effort as ModelThinkingLevel
+  throw new LlmError(
+    `pi-ai provider "${model.provider}" model "${model.id}" does not support reasoning effort "${effort}"`,
+    'UNSUPPORTED_REASONING_EFFORT',
+  )
+}
+
+/** Whether pi-ai's selected protocol can keep a request's output limit from widening. */
+function supportsOutputTokenLimit(
+  model: Model<Api>,
+  profile: ResolvedPiAiProviderProfile,
+  maxTokens: number,
+  reasoning: ModelThinkingLevel | undefined,
+): boolean {
+  if (maxTokens < 1) return false
+  switch (model.api) {
+    case 'openai-codex-responses': return false
+    case 'openai-responses': {
+      const compat = model.compat
+      const supportsMaxOutputTokens = compat === undefined || !('supportsMaxOutputTokens' in compat)
+        || (compat.supportsMaxOutputTokens ?? true)
+      return supportsMaxOutputTokens && maxTokens >= 16
+    }
+    case 'azure-openai-responses': return maxTokens >= 16
+    case 'anthropic-messages': {
+      const compat = model.compat
+      const forceAdaptiveThinking = compat !== undefined && 'forceAdaptiveThinking' in compat
+        && (compat.forceAdaptiveThinking ?? false)
+      if (forceAdaptiveThinking || reasoning === undefined || reasoning === 'off') return true
+      return adjustMaxTokensForThinking(maxTokens, model.maxTokens, reasoning, profile.thinkingBudgets).maxTokens <= maxTokens
+    }
+    case 'bedrock-converse-stream':
+      if (reasoning === undefined || reasoning === 'off' || !isBedrockClaude(model) || supportsBedrockAdaptiveThinking(model)) return true
+      return adjustMaxTokensForThinking(maxTokens, model.maxTokens, reasoning, profile.thinkingBudgets).maxTokens <= maxTokens
+    case 'openai-completions':
+    case 'google-generative-ai':
+    case 'google-vertex':
+    case 'mistral-conversations':
+    case 'pi-messages': return true
+    default: return false
+  }
+}
+
+/** Match pi-ai 1.0.0's private Bedrock model routing predicates for max-token adjustment. */
+function isBedrockClaude(model: Model<Api>): boolean {
+  const id = model.id.toLowerCase()
+  const name = model.name.toLowerCase()
+  return id.includes('anthropic.claude') || id.includes('anthropic/claude')
+    || name.includes('anthropic.claude') || name.includes('anthropic/claude') || name.includes('claude')
+}
+
+/** Match pi-ai 1.0.0's private adaptive-thinking classifier used by Bedrock dispatch. */
+function supportsBedrockAdaptiveThinking(model: Model<Api>): boolean {
+  return [model.id, model.name].flatMap((value) => {
+    const lower = value.toLowerCase()
+    return [lower, lower.replace(/[\s_.:]+/g, '-')]
+  }).some(value => value.includes('opus-4-6') || value.includes('opus-4-7') || value.includes('opus-4-8')
+    || value.includes('opus-5') || value.includes('sonnet-4-6') || value.includes('sonnet-5') || value.includes('fable-5'))
+}
+
+/** Whether pi-ai omits max_output_tokens for its public OpenAI Responses route and effective auth. */
+function omitsOpenAiResponsesOutputLimit(
+  model: Model<Api>,
+  apiKey: string | undefined,
+  headers: Readonly<Record<string, string | null>> | undefined,
+): boolean {
+  const hasAuthHeader = Object.entries(headers ?? {}).some(([name, value]) =>
+    (name.toLowerCase() === 'authorization' || name.toLowerCase() === 'cf-aig-authorization')
+      && value !== null && value.trim().length > 0)
+  const effectiveApiKey = apiKey || (hasAuthHeader ? 'unused' : undefined)
+  return model.api === 'openai-responses' && model.provider === 'openai'
+    && model.baseUrl === OPENAI_RESPONSES_BASE_URL
+    && effectiveApiKey !== undefined && !effectiveApiKey.startsWith('sk-')
+}
+
+/** Whether an OpenAI Responses auth result can change the endpoint used for its output-cap decision. */
+function outputLimitDependsOnApiKey(model: Model<Api>): boolean {
+  return model.api === 'openai-responses' && model.provider === 'openai'
+}
+
+/**
+ * Selectable reasoning efforts for one model, or nothing at all.
+ *
+ * A model that carries no reasoning metadata — every hand-declared one, and
+ * every catalog model pi-ai marks as non-reasoning — is reported by pi-ai as
+ * supporting the single level `off`. Passing that through would offer a control
+ * that cannot do what it says: `off` is translated to *omitting* the reasoning
+ * option, which for such a model is byte-for-byte the same request as naming no
+ * effort — so a provider whose own default is to think would keep thinking with
+ * `off` selected. Omitting `reasoning` entirely is the seam's way of saying the
+ * capability is unavailable, which leaves the surface offering only the
+ * provider's default.
+ * @param model - the resolved model descriptor.
+ * @param defaultLevel - the profile's configured effort, already validated.
+ * @returns the `reasoning` field, or an empty object when none can be offered.
+ */
+function reasoningInfo(
+  model: Model<Api>,
+  defaultLevel: ModelThinkingLevel | undefined,
+): Pick<LlmResolvedModelInfo, 'reasoning'> | Record<string, never> {
+  if (!model.reasoning) return {}
+  const levels = getSupportedThinkingLevels(model)
+  return {
+    reasoning: {
+      efforts: levels.map(level => ({
+        id: ReasoningEffortId(level),
+        name: `${level.charAt(0).toUpperCase()}${level.slice(1)}`,
+      })),
+      ...defaultLevel === undefined ? {} : { defaultEffort: ReasoningEffortId(defaultLevel) },
+    },
+  }
+}
+
+/** Merge deployment headers while removing case-insensitive attribution collisions. */
+function requestHeaders<T extends string | null>(
+  headers: Readonly<Record<string, T>> | undefined,
+): Record<string, T | string> {
+  const attribution = attributionHeaders()
+  const reserved = new Set(Object.keys(attribution).map(name => name.toLowerCase()))
+  return {
+    ...Object.fromEntries(Object.entries(headers ?? {}).filter(([name]) => !reserved.has(name.toLowerCase()))),
+    ...attribution,
+  }
+}
+
+const CODEX_SUBSCRIPTION_ROUTE = 'openai-codex'
+const OPENAI_RESPONSES_BASE_URL = 'https://api.openai.com/v1'
+
+/** pi-ai requires numeric rates; the Harness does not publish these internal placeholders. */
+const NO_MODEL_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+
+/** pi-ai recognizes Sign in with ChatGPT on its OpenAI provider identity. */
+function asChatGptPlanModel(model: Model<Api>): Model<Api> {
+  return { ...model, provider: 'openai', api: 'openai-responses', baseUrl: OPENAI_RESPONSES_BASE_URL }
+}
+
+/**
+ * The Harness routes this account as `openai-codex` while pi-ai streams it as
+ * `openai`. History goes out under the transport identity so pi-ai replays it as
+ * same-model output, and results come back under the route identity so the
+ * stored replay state matches its assistant source.
+ */
+function asOpenAiContext(context: TranscriptContext): TranscriptContext {
+  return {
+    ...context,
+    messages: context.messages.map(message => message.role === 'assistant' && message.provider === CODEX_SUBSCRIPTION_ROUTE
+      ? { ...message, provider: 'openai' }
+      : message),
+  }
+}
+
+function asCodexRouteEvents(events: AssistantMessageEventStream): AssistantMessageEventStream {
+  const relabeled = createAssistantMessageEventStream()
+  void (async () => {
+    for await (const event of events) {
+      if ('partial' in event) event.partial.provider = CODEX_SUBSCRIPTION_ROUTE
+      if ('message' in event) event.message.provider = CODEX_SUBSCRIPTION_ROUTE
+      if ('error' in event) event.error.provider = CODEX_SUBSCRIPTION_ROUTE
+      relabeled.push(event)
+    }
+    relabeled.end()
+  })()
+  return relabeled
+}
+
+/** Account-scoped SIWC catalog over the public OpenAI Responses API. */
+function codexSubscriptionProvider(
+  base: Provider,
+  auth: PiAiAuthInjection,
+  catalogIdentity: { value: CodexAccountIdentity | undefined; error?: unknown },
+): Provider {
+  const openai = catalogProvider('openai')
+  if (openai === undefined) throw new Error('llm-pi-ai: installed pi-ai catalog has no OpenAI Responses provider')
+
+  const oauth = createSiwcOAuth(auth.siwcRegistration)
+  let currentModels: readonly Model<Api>[] = []
+
+  return {
+    ...base,
+    auth: { ...base.auth, oauth },
+    baseUrl: OPENAI_RESPONSES_BASE_URL,
+    getModels: () => currentModels,
+    refreshModels: async (context: RefreshModelsContext): Promise<void> => {
+      if (!context.allowNetwork) return
+      if (!isSiwcCredential(context.credential)
+        || !context.credential.scopes.includes('chatgpt.tokens.use.direct')) {
+        throw new Error('OpenAI Codex model refresh requires the selected ChatGPT account OAuth sign-in')
+      }
+      let identity: CodexAccountIdentity | undefined
+      let identityError: unknown
+      try {
+        identity = codexIdentityOf(context.credential)
+      } catch (error: unknown) {
+        identityError = error
+      }
+      const entries = await fetchCodexModels(context.credential.access, context.signal)
+      const models = entries
+        .map(({ id, name }): Model<Api> => ({
+          id,
+          name,
+          api: 'openai-responses',
+          provider: CODEX_SUBSCRIPTION_ROUTE,
+          baseUrl: OPENAI_RESPONSES_BASE_URL,
+          // The public catalog documents slugs and display names, not model capabilities.
+          input: ['text'],
+          cost: NO_MODEL_COST,
+          reasoning: false,
+          contextWindow: 0,
+          maxTokens: 0,
+        }))
+      await context.publish({ update: () => {
+        currentModels = models
+        catalogIdentity.value = identity
+        catalogIdentity.error = identityError
+      } })
+    },
+    stream: (model, context, options) =>
+      asCodexRouteEvents(openai.stream(asChatGptPlanModel(model), asOpenAiContext(context), options)),
+    streamSimple: (model, context, options) =>
+      asCodexRouteEvents(openai.streamSimple(asChatGptPlanModel(model), asOpenAiContext(context), options)),
+  }
+}
+
+function codexIdentityOf(credential: unknown): CodexAccountIdentity {
+  if (!isSiwcCredential(credential) || !credential.scopes.includes('chatgpt.tokens.use.direct')) {
+    throw new LlmError('OpenAI Codex requires an active Sign in with ChatGPT account', 'INVALID_CREDENTIAL')
+  }
+  return {
+    issuer: credential.issuer,
+    subject: credential.subject,
+    clientId: credential.clientId,
+    extAgentHostId: credential.extAgentHostId,
+  }
+}
+
+/**
+ * pi-ai-backed multi-provider adapter. Each operation reads the current
+ * profiles, so a configuration change reaches the next request without a
+ * restart; model descriptors come from the collection those profiles built.
+ */
+export class PiAiAdapter extends LlmAdapter {
+  private snapshot: PiAiSnapshot | undefined
+  /** Cancels shared catalog refreshes of every snapshot when the adapter is disposed. */
+  private readonly lifetime = new AbortController()
+  /** Native transports stay tracked until their operation close has drained. */
+  private readonly nativeTransports = new Set<NativeResponsesTransport>()
+  /** Auth resolutions may own refreshes that must finish before adapter disposal. */
+  private readonly credentialResolutions = new Set<Promise<AuthResult | undefined>>()
+  private disposeResult: Promise<void> | undefined
+
+  constructor(private readonly config: PiAiAdapterOptions) {
+    super()
+  }
+
+  /** Discard the current provider collection after one of this adapter's credentials changes. */
+  invalidate(): void {
+    this.snapshot = undefined
+  }
+
+  /** Cancel catalog work and drain credentials and transports.
+   * @returns a promise that settles all credential and transport work before reporting a transport close failure.
+   */
+  dispose(): Promise<void> {
+    if (this.disposeResult !== undefined) return this.disposeResult
+    this.snapshot = undefined
+    const closing = [...this.nativeTransports].map(transport => transport.close())
+    this.lifetime.abort()
+    const credentialWork = [...this.credentialResolutions]
+    this.disposeResult = Promise.all([
+      Promise.allSettled(credentialWork),
+      Promise.allSettled(closing),
+    ]).then(([, results]) => {
+      for (const result of results) {
+        if (result.status !== 'rejected') continue
+        const failure: unknown = result.reason
+        if (failure instanceof Error) throw failure
+        throw new Error('llm-pi-ai failed to close a Native Responses transport')
+      }
+    })
+    return this.disposeResult
+  }
+
+  /** Track pi-ai auth work so cancellation stops waiting while disposal drains shared refreshes. */
+  private resolveProviderAuth(
+    snapshot: PiAiSnapshot,
+    provider: string | Model<Api>,
+    signal?: AbortSignal,
+    apiKey?: string,
+  ): Promise<AuthResult | undefined> {
+    this.lifetime.signal.throwIfAborted()
+    signal?.throwIfAborted()
+    const overrides = {
+      ...apiKey === undefined ? {} : { apiKey },
+    }
+    // Pi AI's string and Model overloads require this narrowing despite identical runtime dispatch.
+    // oxlint-disable-next-line sonarjs/no-all-duplicated-branches -- preserve the overload-specific argument type.
+    const work = typeof provider === 'string'
+      ? snapshot.models.getAuth(provider, overrides)
+      : snapshot.models.getAuth(provider, overrides)
+    this.credentialResolutions.add(work)
+    void work.then(
+      () => { this.credentialResolutions.delete(work) },
+      () => { this.credentialResolutions.delete(work) },
+    )
+    if (signal === undefined) return work
+    return new Promise<AuthResult | undefined>((resolve, reject) => {
+      const cleanup = (): void => { signal.removeEventListener('abort', onAbort) }
+      const onAbort = (): void => {
+        cleanup()
+        reject(signal.reason instanceof Error
+          ? signal.reason
+          : new Error('pi-ai auth resolution was cancelled', { cause: signal.reason }))
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) onAbort()
+      void work.then(
+        (auth) => { cleanup(); resolve(auth) },
+        (error: unknown) => {
+          cleanup()
+          reject(error instanceof Error ? error : new Error('pi-ai auth resolution failed', { cause: error }))
+        },
+      )
+    })
+  }
+
+  /**
+   * The snapshot for the current profiles. Resolution memoizes its result, so
+   * an unchanged configuration is recognized by identity; a changed one gets a
+   * brand-new collection, leaving any snapshot an operation already captured
+   * untouched for as long as that operation holds it.
+   */
+  private current(): PiAiSnapshot {
+    const profiles = this.config.profiles()
+    if (this.snapshot?.profiles === profiles) return this.snapshot
+    const models: MutableModels = createModels(this.config.auth)
+    const codexIdentity: { value: CodexAccountIdentity | undefined; error?: unknown } = { value: undefined }
+    for (const profile of profiles.values()) {
+      if (profile.piProvider !== undefined) {
+        models.setProvider(profile.provider === CODEX_SUBSCRIPTION_ROUTE
+          ? codexSubscriptionProvider(profile.piProvider, this.config.auth, codexIdentity)
+          : profile.piProvider)
+      }
+    }
+    this.snapshot = { profiles, models, refreshes: new Map(), codexIdentity }
+    return this.snapshot
+  }
+
+  /** The profile for one route within one snapshot, or the not-owned failure. */
+  private profileOf(snapshot: PiAiSnapshot, provider: string): ResolvedPiAiProviderProfile {
+    const profile = snapshot.profiles.get(provider)
+    if (profile === undefined) {
+      throw new LlmError(`pi-ai adapter does not own provider "${provider}"`, 'NO_ADAPTER')
+    }
+    return profile
+  }
+
+  /** The configured descriptor for one exact route/model pair within one snapshot. */
+  private modelOf(snapshot: PiAiSnapshot, provider: string, model: string): Model<Api> {
+    const profile = this.profileOf(snapshot, provider)
+    const failure = profile.modelErrors.get(model)
+      ?? (profile.piProvider === undefined ? profile.catalogError : undefined)
+    if (failure !== undefined) throw new LlmError(failure, 'INVALID_CONFIG')
+    const resolved = snapshot.models.getModel(provider, model)
+    if (resolved === undefined) {
+      throw new LlmError(`pi-ai provider "${provider}" has no configured model "${model}"`, 'UNKNOWN_MODEL')
+    }
+    return resolved
+  }
+
+  /** Load the public account catalog through this snapshot's saved OAuth authority. */
+  private async refreshCodexCatalog(
+    snapshot: PiAiSnapshot,
+    provider: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const auth = await this.resolveProviderAuth(snapshot, provider, signal)
+    signal?.throwIfAborted()
+    if (auth?.auth.apiKey === undefined || auth.auth.apiKey.length === 0) {
+      throw new LlmError('OpenAI Codex model discovery needs an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
+    }
+    // A later refresh aborts the earlier one inside pi-ai, so one snapshot shares one flight.
+    // The shared flight ignores the caller signal and stops only on dispose; discovery times the /models request out itself.
+    let refresh = snapshot.refreshes.get(provider)
+    if (refresh === undefined) {
+      refresh = snapshot.models.refresh({ providers: [provider], force: true, signal: this.lifetime.signal }).then((refreshed) => {
+        if (refreshed.aborted) throw new LlmError('pi-ai catalog refresh aborted', 'ABORTED')
+        const failure = refreshed.errors.get(provider)
+        if (failure !== undefined) throw failure
+      })
+      snapshot.refreshes.set(provider, refresh)
+      const clear = (): void => { snapshot.refreshes.delete(provider) }
+      void refresh.then(clear, clear)
+    }
+    if (signal === undefined) return refresh
+    signal.throwIfAborted()
+    const shared = refresh
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = (): void => { reject(signal.reason as Error) }
+      signal.addEventListener('abort', onAbort, { once: true })
+      shared.then(resolve, reject).finally(() => { signal.removeEventListener('abort', onAbort) })
+    })
+  }
+
+  /** A request can arrive before any model-directory surface has fetched the account catalog. */
+  private async ensureCodexCatalog(
+    snapshot: PiAiSnapshot,
+    provider: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (provider === CODEX_SUBSCRIPTION_ROUTE && snapshot.models.getModels(provider).length === 0) {
+      await this.refreshCodexCatalog(snapshot, provider, signal)
+    }
+  }
+
+  override providerInfo(provider: string): LlmProviderInfo {
+    // The configured name, not the route key: `displayName` exists so a
+    // deployment can label a route, and a label only the configuration surface
+    // reads would leave every selector showing the raw key.
+    return { id: provider, name: this.current().profiles.get(provider)?.displayName ?? provider }
+  }
+
+  override providerRetryPolicy(provider: string): ResolvedRetryPolicy | undefined {
+    return this.current().profiles.get(provider)?.retryPolicy
+  }
+
+  override async listModels(provider: string, signal?: AbortSignal): Promise<readonly LlmModelInfo[]> {
+    const snapshot = this.current()
+    this.profileOf(snapshot, provider)
+    if (provider === CODEX_SUBSCRIPTION_ROUTE) {
+      await this.refreshCodexCatalog(snapshot, provider, signal)
+    }
+    return snapshot.models.getModels(provider).map(model => ({
+      provider,
+      id: model.id,
+      name: model.name,
+      inputModalities: [...model.input],
+    }))
+  }
+
+  /**
+   * Resolve auth through the current pi-ai collection, including its OAuth refresh lock.
+   * @param provider - the configured pi-ai route whose authentication is read.
+   * @param signal - optional signal that stops waiting without cancelling credential refresh.
+   * @returns the provider auth result, or undefined when the collection has none.
+   */
+  getProviderAuth(provider: string, signal?: AbortSignal): Promise<AuthResult | undefined> {
+    const snapshot = this.current()
+    this.profileOf(snapshot, provider)
+    return this.resolveProviderAuth(snapshot, provider, signal)
+  }
+
+  override resolveModel(
+    provider: string,
+    model: string,
+    signal?: AbortSignal,
+  ): Promise<LlmResolvedModelInfo> {
+    return Promise.resolve().then(async () => {
+      const snapshot = this.current()
+      this.profileOf(snapshot, provider)
+      await this.ensureCodexCatalog(snapshot, provider, signal)
+      return this.modelInfo(snapshot, provider, model)
+    })
+  }
+
+  private modelInfo(snapshot: PiAiSnapshot, provider: string, model: string): LlmResolvedModelInfo {
+    const profile = this.profileOf(snapshot, provider)
+    const resolvedModel = this.modelOf(snapshot, provider, model)
+    const defaultLevel = describableReasoningLevel(resolvedModel, profile.reasoning)
+    // Only a cap the deployment configured is a request default; the
+    // catalog's `maxTokens` sizes the model and stops there.
+    const configuredMaxTokens = profile.configuredMaxTokens.get(model)
+    if (provider === CODEX_SUBSCRIPTION_ROUTE && configuredMaxTokens !== undefined) {
+      throw new LlmError(
+        'OpenAI Codex Sign in with ChatGPT does not support a configured output-token cap',
+        'UNSUPPORTED_OPTION',
+      )
+    }
+    return {
+      provider,
+      id: model,
+      name: resolvedModel.name,
+      inputModalities: [...resolvedModel.input],
+      ...resolvedModel.contextWindow > 0 ? { context: { contextWindow: resolvedModel.contextWindow } } : {},
+      ...configuredMaxTokens === undefined ? {} : { defaultMaxTokens: configuredMaxTokens },
+      ...reasoningInfo(resolvedModel, defaultLevel),
+    }
+  }
+
+  /** Build a request-local collection that records the grant used by its SIWC OAuth auth. */
+  private codexUsageModels(
+    snapshot: PiAiSnapshot,
+    captureIdentity: (identity: CodexUsageIdentity) => void,
+  ): MutableModels {
+    const provider = snapshot.models.getProvider(CODEX_SUBSCRIPTION_ROUTE)
+    if (provider === undefined || provider.auth.oauth === undefined) {
+      throw new Error('llm-pi-ai: OpenAI Codex provider has no SIWC OAuth auth')
+    }
+    const oauth = provider.auth.oauth
+    const models: MutableModels = createModels(this.config.auth)
+    models.setProvider({
+      ...provider,
+      auth: {
+        ...provider.auth,
+        oauth: {
+          ...oauth,
+          async toAuth(credential: OAuthCredential) {
+            if (isSiwcCredential(credential)) {
+              captureIdentity({ issuer: credential.issuer, subject: credential.subject })
+            }
+            return oauth.toAuth(credential)
+          },
+        },
+      },
+    })
+    return models
+  }
+
+  override prepareCall(
+    provider: string,
+    model: string,
+    signal?: AbortSignal,
+  ): Promise<PreparedAdapterCall> {
+    const snapshot = this.current()
+    return Promise.resolve().then(async () => {
+      this.lifetime.signal.throwIfAborted()
+      this.profileOf(snapshot, provider)
+      await this.ensureCodexCatalog(snapshot, provider, signal)
+      const modelInfo = this.modelInfo(snapshot, provider, model)
+      const selectedModel = this.modelOf(snapshot, provider, model)
+      const profile = this.profileOf(snapshot, provider)
+      let apiKey: Promise<string | undefined> | undefined
+      let openAiAuth: Promise<PreparedOpenAiAuth> | undefined
+      const resolvePreparedApiKey = (): Promise<string | undefined> => {
+        signal?.throwIfAborted()
+        apiKey ??= this.config.resolveApiKey(provider, profile).then((resolved) => {
+          signal?.throwIfAborted()
+          return resolved
+        })
+        return apiKey
+      }
+      const resolvePreparedOpenAiAuth = (): Promise<PreparedOpenAiAuth> => {
+        signal?.throwIfAborted()
+        openAiAuth ??= resolvePreparedApiKey().then(async (resolvedApiKey) => {
+          const result = await this.resolveProviderAuth(snapshot, selectedModel, signal, resolvedApiKey)
+          return { apiKey: resolvedApiKey ?? result?.auth.apiKey, result }
+        })
+        return openAiAuth
+      }
+      const supportsLimit = async (maxTokens: number, effort?: ReasoningEffortIdType): Promise<boolean> => {
+        if (provider === CODEX_SUBSCRIPTION_ROUTE || !supportsOutputTokenLimit(selectedModel, profile, maxTokens,
+          resolveReasoningLevel(selectedModel, effort ?? profile.reasoning))) return false
+        if (!outputLimitDependsOnApiKey(selectedModel)) return true
+        const auth = await resolvePreparedOpenAiAuth()
+        const requestModel = auth.result?.auth.baseUrl
+          ? { ...selectedModel, baseUrl: auth.result.auth.baseUrl }
+          : selectedModel
+        const headers = requestHeaders({ ...auth.result?.auth.headers, ...profile.headers })
+        return !omitsOpenAiResponsesOutputLimit(requestModel, auth.apiKey, headers)
+      }
+      const nativeResponses = provider === CODEX_SUBSCRIPTION_ROUTE
+        ? createNativeCodexResponsesCapture({
+          route: { provider, model },
+          endpoint: `${OPENAI_RESPONSES_BASE_URL}/responses`,
+          inputModalities: modelInfo.inputModalities ?? ['text'],
+          identity: snapshot.codexIdentity.value,
+          ...snapshot.codexIdentity.error === undefined ? {} : { identityError: snapshot.codexIdentity.error },
+          ...this.config.onCodexUsage === undefined ? {} : { onCodexUsage: this.config.onCodexUsage },
+          headers: requestHeaders(profile.headers),
+          timeoutMs: profile.timeoutMs,
+          streamIdleTimeoutMs: profile.streamIdleTimeoutMs,
+          lifetimeSignal: this.lifetime.signal,
+          readIdentity: async () => {
+            const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
+            return credential === undefined ? undefined : codexIdentityOf(credential)
+          },
+          resolveAuth: async () => {
+            const auth = await this.resolveProviderAuth(snapshot, CODEX_SUBSCRIPTION_ROUTE)
+            if (auth?.auth.apiKey === undefined) {
+              throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
+            }
+            const credential = await this.config.auth.credentials.read(CODEX_SUBSCRIPTION_ROUTE)
+            if (credential === undefined) {
+              throw new LlmError('OpenAI Codex Native Responses requires an active Sign in with ChatGPT account', 'MISSING_CREDENTIAL')
+            }
+            if (!isSiwcCredential(credential)) {
+              throw new LlmError('OpenAI Codex Sign in with ChatGPT credential changed before request forwarding', 'INVALID_CREDENTIAL')
+            }
+            const identity = codexIdentityOf(credential)
+            return { accessToken: credential.access, identity }
+          },
+          onTransport: (transport) => { this.nativeTransports.add(transport) },
+          onClose: (transport) => { this.nativeTransports.delete(transport) },
+        })
+        : undefined
+      return {
+        model: modelInfo,
+        supportsOutputTokenLimit: supportsLimit,
+        stream: options => this.streamWithSnapshot(options, snapshot, resolvePreparedApiKey, resolvePreparedOpenAiAuth),
+        ...nativeResponses === undefined ? {} : { nativeResponses },
+      }
+    })
+  }
+
+  stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    return this.streamWithSnapshot(options, this.current())
+  }
+
+  private async * streamWithSnapshot(
+    options: GenerateOptions,
+    snapshot: PiAiSnapshot,
+    resolvePreparedApiKey?: () => Promise<string | undefined>,
+    resolvePreparedOpenAiAuth?: () => Promise<PreparedOpenAiAuth>,
+  ): AsyncIterable<StreamChunk> {
+    if (options.stop !== undefined) {
+      throw new LlmError('llm-pi-ai does not support GenerateOptions.stop', 'UNSUPPORTED_OPTION')
+    }
+    // One capture per stream call, taken before any await: the profile, the
+    // model descriptor, and the collection all come from the same immutable
+    // snapshot, and the credential freezes with them. A configuration change
+    // mid-request builds a separate snapshot, so this request finishes under
+    // the one it started with and the next call picks up the new one.
+    const profile = this.profileOf(snapshot, options.provider)
+    if (options.provider === CODEX_SUBSCRIPTION_ROUTE) {
+      const unsupported = [
+        options.maxTokens === undefined ? undefined : 'maxTokens',
+        options.temperature === undefined ? undefined : 'temperature',
+        profile.configuredMaxTokens.has(options.model) ? 'configuredMaxTokens' : undefined,
+      ].filter((name): name is string => name !== undefined)
+      if (unsupported.length > 0) {
+        throw new LlmError(
+          `OpenAI Codex Sign in with ChatGPT does not support ${unsupported.join(', ')} on the public Responses route`,
+          'UNSUPPORTED_OPTION',
+        )
+      }
+    }
+    await this.ensureCodexCatalog(snapshot, options.provider, options.signal)
+    const model = this.modelOf(snapshot, options.provider, options.model)
+    const reasoning = resolveReasoningLevel(
+      model,
+      options.reasoningEffort ?? profile.reasoning,
+    )
+    const resolvedProfileApiKey = options.provider === CODEX_SUBSCRIPTION_ROUTE
+      ? undefined
+      : await (resolvePreparedApiKey === undefined
+        ? this.config.resolveApiKey(options.provider, profile)
+        : resolvePreparedApiKey())
+    const openAiAuth = options.provider !== CODEX_SUBSCRIPTION_ROUTE && outputLimitDependsOnApiKey(model)
+      ? await (resolvePreparedOpenAiAuth === undefined
+        ? this.resolveProviderAuth(snapshot, model, options.signal, resolvedProfileApiKey).then(result => ({
+          apiKey: resolvedProfileApiKey ?? result?.auth.apiKey,
+          result,
+        }))
+        : resolvePreparedOpenAiAuth())
+      : undefined
+    const apiKey = options.provider === CODEX_SUBSCRIPTION_ROUTE
+      ? undefined
+      : openAiAuth?.apiKey ?? resolvedProfileApiKey
+    const requestModel = openAiAuth?.result?.auth.baseUrl
+      ? { ...model, baseUrl: openAiAuth.result.auth.baseUrl }
+      : model
+    let providerHeaders: Readonly<Record<string, string>> | undefined
+    if (outputLimitDependsOnApiKey(model)) {
+      providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    }
+    const requestHeadersForCall = requestHeaders({
+      ...openAiAuth?.result?.auth.headers,
+      ...profile.headers,
+      ...providerHeaders,
+    })
+    if (options.maxTokens !== undefined
+      && (!supportsOutputTokenLimit(requestModel, profile, options.maxTokens, reasoning)
+        || omitsOpenAiResponsesOutputLimit(requestModel, apiKey, requestHeadersForCall))) {
+      throw new LlmError(
+        `pi-ai route "${options.provider}" cannot enforce maxTokens ${options.maxTokens}`,
+        'UNSUPPORTED_OPTION',
+      )
+    }
+    if (!outputLimitDependsOnApiKey(model)) {
+      providerHeaders = await this.config.resolveRequestHeaders?.(options.provider, profile, options.signal)
+    }
+    const onCodexUsage = options.provider === CODEX_SUBSCRIPTION_ROUTE ? this.config.onCodexUsage : undefined
+    let codexIdentity: CodexUsageIdentity | undefined
+    const streamModels = onCodexUsage === undefined
+      ? snapshot.models
+      : this.codexUsageModels(snapshot, (identity) => { codexIdentity = identity })
+
+    const consumer = new AbortController()
+    const upstream = options.signal === undefined
+      ? consumer.signal
+      : AbortSignal.any([options.signal, consumer.signal])
+    const streamIdleTimeoutMs = profile.streamIdleTimeoutMs
+    using watchdog = idleWatchdog(upstream, streamIdleTimeoutMs, 'LLM_STREAM_IDLE_TIMEOUT')
+
+    try {
+      const containsImage = options.messages.some(message => contentHasImage(message.content))
+      if (containsImage && !model.input.includes('image')) {
+        throw new LlmError(`pi-ai model "${model.id}" does not support image input`, 'UNSUPPORTED_CONTENT')
+      }
+      const attachments = containsImage ? this.config.resolveAttachments?.() : undefined
+      if (containsImage && attachments === undefined) {
+        throw new LlmError('pi-ai image input requires the durable attachment service', 'UNSUPPORTED_CONTENT')
+      }
+      const onReplayDegrade = (reason: string): void => {
+        this.config.onReplayDegrade?.({ provider: options.provider, model: options.model, reason })
+      }
+      const context = attachments === undefined
+        ? toPiContext(options, undefined, onReplayDegrade)
+        : await toPiContext({ ...options, signal: watchdog.signal }, {
+          attachments,
+          resolveImageAccess: ref => this.config.resolveImageAccess?.(attachments, ref),
+          maxRequestImageBytes: profile.maxRequestImageBytes,
+          requestImagePolicy: {
+            maxPixels: profile.requestImagePixelBudget,
+            maxBytes: profile.requestImageMaxBytes,
+          },
+        }, onReplayDegrade)
+      const events = options.provider === CODEX_SUBSCRIPTION_ROUTE
+        ? streamModels.stream(model as Model<'openai-responses'>, context, {
+          ...apiKey === undefined ? {} : { apiKey },
+          ...reasoning === undefined || reasoning === 'off' ? {} : { reasoningEffort: reasoning },
+          ...profile.timeoutMs === undefined ? {} : { timeoutMs: profile.timeoutMs },
+          transport: 'sse',
+          ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
+          maxRetries: 0,
+          signal: watchdog.signal,
+          onPayload: siwcResponsesPayload,
+          ...onCodexUsage === undefined ? {} : {
+            onResponse: (response) => {
+              const observation = parseCodexRateLimitHeaders(response.headers)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, true)
+              }
+            },
+            onProviderStreamEvent: (data) => {
+              const observation = parseCodexRateLimitEvent(data)
+              if (observation !== undefined && codexIdentity !== undefined) {
+                onCodexUsage(codexIdentity, observation, false)
+              }
+            },
+          },
+          // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
+          headers: requestHeaders({ ...profile.headers, ...providerHeaders }),
+        })
+        : snapshot.models.streamSimple(requestModel, context, {
+          ...profileOptions(profile, reasoning, apiKey),
+          ...options.temperature === undefined ? {} : { temperature: options.temperature },
+          ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
+          ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
+          ...openAiAuth?.result?.env === undefined ? {} : { env: openAiAuth.result.env },
+          signal: watchdog.signal,
+          // Profile headers are deployment-owned; Harness attribution names are Harness-owned and win collisions.
+          headers: requestHeaders({
+            ...openAiAuth?.result?.auth.headers,
+            ...profile.headers,
+            ...providerHeaders,
+          }),
+        })
+      const iterator = toStreamChunks(
+        events,
+        model.contextWindow > 0 ? model.contextWindow : undefined,
+        options.signal,
+        model.id,
+      )[Symbol.asyncIterator]()
+      let exhausted = false
+      try {
+        while (true) {
+          const result = await watchdog.next(iterator)
+          const timeout = timeoutOf(watchdog.signal, 'LLM_STREAM_IDLE_TIMEOUT')
+          if (timeout !== undefined) throw timeout
+          if (result.done) {
+            exhausted = true
+            return
+          }
+          yield result.value
+        }
+      } finally {
+        if (!exhausted) {
+          consumer.abort('pi-ai stream consumer stopped')
+          try {
+            await iterator.return(undefined)
+          } catch (_abortedSdkTeardown) {
+            // The stable signal already owns SDK termination; return-time abort cannot add an outcome.
+          }
+        }
+      }
+    } catch (error: unknown) {
+      if (timeoutOf(watchdog.signal, 'LLM_STREAM_IDLE_TIMEOUT') !== undefined) {
+        throw new LlmError(`pi-ai stream idle timeout after ${streamIdleTimeoutMs}ms`, 'TIMEOUT', { cause: error })
+      }
+      if (options.signal?.aborted) {
+        throw new LlmError('pi-ai request aborted by caller', 'ABORTED', { cause: error })
+      }
+      throw error
+    } finally {
+      consumer.abort('pi-ai stream consumer stopped')
+    }
+  }
+}

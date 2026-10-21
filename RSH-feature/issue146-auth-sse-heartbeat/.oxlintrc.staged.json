@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [".oxlintrc.json"],
+  "options": {
+    "typeAware": false
+  },
+  "ignorePatterns": [
+    "**/lib/**",
+    "**/node_modules/**",
+    "**/.sessions/**",
+    ".claude/**",
+    "**/.doc-typecheck-*/**",
+    "**/.node-next-types-*/**",
+    "rsh/Docs/website/.generated/**",
+    "rsh/Core/vendor/**",
+    "rsh/Core/native/**",
+    "**/*.js",
+    "**/*.mjs",
+    "**/*.config.ts",
+    "rsh/Programs/Web/client/tsdown.client.ts"
+  ]
+}

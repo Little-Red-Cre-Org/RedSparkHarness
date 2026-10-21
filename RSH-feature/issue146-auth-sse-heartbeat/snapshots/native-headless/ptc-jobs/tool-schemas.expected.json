@@ -1,0 +1,27 @@
+{
+  "initial": [
+    {
+      "name": "run_code",
+      "description": "Execute a TypeScript program against the available tools. Provide code as the body of an async function and a short description of what it does. Top-level await and return work; call the declared tools bindings for standard JSON results.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The body of an async TypeScript function; erasable syntax only."
+          },
+          "description": {
+            "type": "string",
+            "description": "A concise active-voice summary of what this program does."
+          }
+        },
+        "required": [
+          "code",
+          "description"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": []
+}

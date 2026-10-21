@@ -1,0 +1,291 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789991177856,
+      "cwd": "E:\\redsparkHarness\\RedSparkHarness",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 43,
+        "val": "Reply with exactly RSH_STREAM_OK"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 43,
+        "val": {
+          "first": {
+            "seq": 8,
+            "text": "Reply with exactly RSH_STREAM_OK"
+          },
+          "count": 1,
+          "lastSeq": 8
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 43,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 43,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 43,
+        "val": {
+          "current": {
+            "goal": {
+              "id": "goal-e4b0567d-413f-4bb0-a8b5-d63c436747cc",
+              "revision": 1,
+              "objective": "test",
+              "phase": "active",
+              "maxGoalRounds": 256
+            },
+            "roundsStarted": 0,
+            "createdAt": 1789991324717,
+            "updatedAt": 1789991324717
+          },
+          "seenGoalIds": [
+            "goal-e4b0567d-413f-4bb0-a8b5-d63c436747cc"
+          ],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 25603,
+            "outputTokens": 199,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 1,
+            "step": 2,
+            "buckets": {
+              "uncachedInputTokens": 12905,
+              "outputTokens": 96,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 43,
+        "val": {
+          "surfaceTokens": 7061,
+          "contextWindow": 262144,
+          "pressureTokens": 12905,
+          "sampledSurfaceTokens": 6993
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 43,
+        "val": {
+          "nodes": [
+            {
+              "seq": 7,
+              "heuristicTokens": 1177,
+              "system": true
+            },
+            {
+              "seq": 8,
+              "heuristicTokens": 16,
+              "system": false
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 4247,
+              "system": false
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 128,
+              "system": false
+            },
+            {
+              "seq": 11,
+              "heuristicTokens": 1295,
+              "system": false
+            },
+            {
+              "seq": 28,
+              "heuristicTokens": 41,
+              "system": false
+            },
+            {
+              "seq": 31,
+              "heuristicTokens": 54,
+              "system": false
+            },
+            {
+              "seq": 33,
+              "heuristicTokens": 35,
+              "system": false
+            },
+            {
+              "seq": 36,
+              "heuristicTokens": 68,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1177,
+            "toolsTokens": 6771,
+            "messageTokens": 5884
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 35,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 37
+          },
+          "lastTurn": 2
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 43,
+        "val": {
+          "turns": 1,
+          "steps": 2,
+          "llmMs": 201268,
+          "toolMs": 38,
+          "ttftMs": 198543,
+          "ttftSteps": 2,
+          "decodeMs": 2725,
+          "decodeTokens": 199,
+          "lastTurn": 1,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 4,
+              "prompt": "Reply with exactly RSH_STREAM_OK",
+              "response": "RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STREAM_OK RSH_STR…"
+            },
+            {
+              "turn": 2,
+              "seq": 40,
+              "prompt": "",
+              "response": ""
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 43,
+        "val": null
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 43,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 43,
+        "val": {
+          "lastUsed": {
+            "provider": "evomap",
+            "model": "evomap-deepseek-v4-flash"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 43,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1789991177960
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 43,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 43,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 43,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 43,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 43,
+        "val": null
+      }
+    }
+  }
+}

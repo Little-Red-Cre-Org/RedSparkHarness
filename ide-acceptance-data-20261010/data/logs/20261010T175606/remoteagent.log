@@ -1,0 +1,14 @@
+2026-10-10 17:56:06.345 [info] 
+
+
+
+
+2026-10-10 17:56:06.345 [info] [AgentHostChannel] Registered lazy IPC channel 'agentHostProxy' (upstream: \\.\pipe\vscode-ipc-168a29f0-3fe7-4f44-ab10-5806acaa49cf-sock)
+2026-10-10 17:56:06.345 [info] Extension host agent started. (validation: true)
+2026-10-10 17:56:13.392 [info] [127.0.0.1][0334661d][ManagementConnection] New connection established.
+2026-10-10 17:56:13.412 [info] [127.0.0.1][29c152c8][ExtensionHostConnection] New connection established.
+2026-10-10 17:56:13.412 [info] [127.0.0.1][29c152c8][ExtensionHostConnection] Starting extension host process...
+2026-10-10 17:56:13.427 [info] [127.0.0.1][29c152c8][ExtensionHostConnection] <42260> Launched Extension Host Process.
+2026-10-10 17:56:14.165 [info] [127.0.0.1][29c152c8][ExtensionHostConnection] <42260> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-10-10 17:56:35.243 [error] #1: https://raw.githubusercontent.com/EclipseFdn/publish-extensions/refs/heads/master/extension-control/extensions.json - error GET AggregateError [ETIMEDOUT]: 

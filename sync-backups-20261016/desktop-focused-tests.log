@@ -1,0 +1,10 @@
+
+ RUN  v4.1.8 E:/redsparkHarness/RedSparkHarness
+
+······························
+
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+   Start at  08:46:19
+   Duration  1.32s (transform 470ms, setup 50ms, import 101ms, tests 932ms, environment 0ms)
+

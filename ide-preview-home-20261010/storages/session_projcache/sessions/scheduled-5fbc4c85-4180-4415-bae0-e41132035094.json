@@ -1,0 +1,244 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789526625981,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 16,
+        "val": "[Scheduled] 喝水"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 16,
+        "val": {
+          "first": null,
+          "count": 0,
+          "lastSeq": null
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 16,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 16,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 16,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 1500,
+            "outputTokens": 24,
+            "cacheReadTokens": 5120,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 1,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 1500,
+              "outputTokens": 24,
+              "cacheReadTokens": 5120,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 16,
+        "val": {
+          "surfaceTokens": 1628,
+          "contextWindow": 272000,
+          "pressureTokens": 6620,
+          "sampledSurfaceTokens": 1615
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 16,
+        "val": {
+          "nodes": [
+            {
+              "seq": 8,
+              "heuristicTokens": 1423,
+              "system": true
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 68,
+              "system": false
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 13,
+              "heuristicTokens": 13,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1423,
+            "toolsTokens": 7417,
+            "messageTokens": 205
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 7,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 14
+          },
+          "lastTurn": 1
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 16,
+        "val": {
+          "turns": 1,
+          "steps": 1,
+          "llmMs": 3923,
+          "toolMs": 0,
+          "ttftMs": 3172,
+          "ttftSteps": 1,
+          "decodeMs": 751,
+          "decodeTokens": 24,
+          "lastTurn": 1,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 5,
+              "prompt": "",
+              "response": "💧该喝水啦！放下手头的事，喝几口水吧。"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 16,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 16,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 16,
+        "val": {
+          "lastUsed": {
+            "provider": "openai-codex",
+            "model": "gpt-6-astra"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 1,
+        "seq": 16,
+        "val": {
+          "blank": false,
+          "lastPromptAt": null
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 16,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 16,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 16,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 16,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 16,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

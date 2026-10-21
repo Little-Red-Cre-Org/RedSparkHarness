@@ -1,0 +1,61 @@
+---
+description: "The filesystem package group: the ctx.fs contract and providers, Native file-reference discovery, read-before-edit policy, and model-facing file and search tools."
+kind: "package-group"
+---
+
+# rsh/Modules/Official/fs
+
+English | [中文](README.zh.md)
+
+## Summary
+
+The `fs/` group gives agents durable, policy-governed file access: the filesystem service contract in `fs/`, the host and sandbox-enforcing backends in `fs-local/` and `fs-sandbox/`, the Native file-reference provider in `native-file-reference-local/`, the read-before-edit policy in `fs-observation-policy/`, and the model-facing tools in `tool-fs/` (`read`, `read_image`, `write`, `edit`) and `tool-fs-search/` (`glob`, `grep`). `fs-sandbox/` exposes both Cordis and Native provider entries. A deployment selects one backend, loads its matching sandbox policy, and registers the tool packages the model should see; the tools and their policy stay independent of the backend face. File I/O has no timeout; cancellation is best-effort at syscall boundaries.
+
+## Table of Contents
+
+- [Packages](#packages)
+- [Related documentation](#related-documentation)
+- [Dev Note](#dev-note)
+
+-----
+
+<a id="packages"></a>
+## Packages
+
+Nine local packages plus the remote sibling `fs-e2b` play the filesystem roles; the subsystem reference owns the exhaustive contracts and the error taxonomy. Their `dsh.runtime` declarations identify the Definition, Provider, Consumer, or policy role for the RSH runtime checks, while their `runtime` exports retain the existing Cordis lifecycle through `dsh-plugin-host`.
+
+| Package | Role | ctx key |
+|---|---|---|
+| [`fs/`](fs/README.md) | `ctx.fs` service contract: execution-world paths, bounded text I/O, and atomic mutations with an optional version guard | `ctx.fs` |
+| [`fs-local/`](fs-local/README.md) | Host-filesystem backend: reads, writes, and edits real files on the local machine | registers on `ctx.fs` |
+| [`fs-sandbox/`](fs-sandbox/README.md) | Cordis and Native sandbox-enforcing providers: fence writes and edits by the per-call mode while reads pass through | `ctx.fs` or Native `fs` service |
+| [`native-file-reference-local/`](native-file-reference-local/README.md) | Native local-workspace file-reference discovery over the selected filesystem service | Native `fileReferences` service |
+| [`e2b/fs-e2b`](../e2b/fs-e2b/README.md) | E2B-backed backend: file state lives in the remote execution world shared with the E2B subprocess provider | registers on `ctx.fs` |
+| [`fs-observation-policy/`](fs-observation-policy/README.md) | Read-before-edit policy: records observed presence or absence and guards write/edit through the `fs/*` events | `fs/*` listeners |
+| [`tool-fs/`](tool-fs/README.md) | Model-facing `read`, `read_image`, `write`, and `edit` tools plus their executor | registers on `ctx.tools` |
+| [`tool-fs-search/`](tool-fs-search/README.md) | Model-facing `glob` and `grep` discovery tools backed by the packaged ripgrep binary | registers on `ctx.tools` |
+| [`tool-str-replace-editor/`](tool-str-replace-editor/README.md) | Standalone `str_replace_editor` tool: `view`, `create`, `str_replace`, and `insert` over `ctx.fs` | registers on `ctx.tools` |
+| [`tool-present/`](tool-present/README.md) | Explicit immutable snapshots of delivered files | registers on `ctx.tools` |
+
+The policy is separate from the tools. The Cordis `fs-sandbox` Provider and its Native entry each require their matching policy provider and fail to load when it is absent; a deployment that wants unconfined writes must select `fs-local` explicitly. The sandbox fence and read-before-edit gate compose. `tool-fs-search` deliberately does not extend the provider contract — search is a process-backed ripgrep workflow, so filesystem backends stay free of a universal search API.
+
+-----
+
+<a id="related-documentation"></a>
+## Related documentation
+
+Start with the subsystem reference for the shared vocabulary and error taxonomy, then the decisions that shaped the family.
+
+- [Filesystem subsystem](../../../Docs/subsystems/filesystem.md) — targets, outcomes, guards, policy events, and the error taxonomy.
+- [Cross-family fs sandbox decision](../../../../.agents/notes/implemented/feature/2026-07-14-cross-family-fs-sandbox.md) — the shared sandbox mode fence over the filesystem seam.
+- [Portable execution world consumers decision](../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.md) — why the E2B backend shares the remote execution world.
+
+<a id="dev-note"></a>
+## Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

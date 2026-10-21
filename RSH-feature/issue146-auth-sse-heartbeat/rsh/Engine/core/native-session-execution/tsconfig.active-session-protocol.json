@@ -1,0 +1,29 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/protocol-runtime",
+    "declarationDir": "lib/types",
+    "tsBuildInfoFile": "lib/active-session-protocol.tsbuildinfo",
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
+  },
+  "include": [
+    "src/active-session-protocol.ts"
+  ],
+  "references": [
+    {
+      "path": "../native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../session"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    }
+  ]
+}

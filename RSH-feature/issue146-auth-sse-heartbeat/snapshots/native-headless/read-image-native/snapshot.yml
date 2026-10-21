@@ -1,0 +1,8 @@
+version: 1
+scenario: read-image-native
+profile: native-headless
+composition: native-read-image
+recording: authored
+header:
+  class: native-read-image
+  pin: true

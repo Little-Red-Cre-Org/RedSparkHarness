@@ -1,0 +1,13 @@
+/** Cordis-free Session values and event vocabulary for native consumers. */
+export * from './types.ts';
+export { SessionPreparation } from './preparation.ts';
+export type { SessionPreparationOptions } from './preparation.ts';
+export type { AssistantMessage, SystemMessage, ToolResultMessage, UserMessage } from '@deepseek-ai/dsh-llm/native';
+export { interruptedTurnClosers, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN } from './repair.ts';
+export type { SessionSurface, SurfaceFoldReplacement, SurfaceFoldResult } from './surface.ts';
+export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSurfaceEvent, isSurfaceEvent, isSurfaceEligibleType } from './surface.ts';
+export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts';
+export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts';
+export { adoptSessionEvent, snapshotSessionEvent, Session, SessionForkError, decodeSeqRanges, encodeSeqRanges } from './session-core.ts';
+export type { SessionForkSource, SessionForkErrorCode, SessionAppendInput, SessionAppendOptions } from './session-core.ts';
+//# sourceMappingURL=native.d.ts.map

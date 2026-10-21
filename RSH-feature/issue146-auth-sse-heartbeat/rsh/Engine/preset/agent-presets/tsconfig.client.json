@@ -1,0 +1,23 @@
+{
+  "extends": "../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/client.tsbuildinfo"
+  },
+  "include": [
+    "src/types.ts",
+    "src/preset.ts",
+    "src/display.ts",
+    "src/selection-events.ts",
+    "src/selection.ts"
+  ],
+  "references": [
+    { "path": "../../../Core/vendor/cordis" },
+    { "path": "../../../Core/typert/protocol" },
+    { "path": "../../session/session-projection" },
+    {
+      "path": "../../core/session"
+    }
+  ]
+}

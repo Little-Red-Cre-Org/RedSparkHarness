@@ -1,0 +1,338 @@
+/** Program-owned resident Session storage and durable pending-message projection. */
+import { interruptedTurnClosers, Session, type SessionEvent, type SessionHeader, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
+import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { InboxTarget } from '@deepseek-ai/dsh-native-agent'
+import { foldNativeInboxEvent, type NativeInboxState } from '@deepseek-ai/dsh-native-agent/inbox'
+import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+
+type Writer = Awaited<ReturnType<NativeSessionPersistenceOperations['open']>>
+type AppendObserver = (event: SessionEvent) => void
+
+/** One exclusive writer retained across a resident Agent's turns and inbox admissions. */
+export class NativeContinuationSession {
+  readonly pending: SessionEvent[] = []
+  private inbox: NativeInboxState = { 'next-turn': [], 'next-step': [] }
+  private readonly tracked = new Set<AppendObserver>()
+  private readonly accepted = new Set<AppendObserver>()
+  private rootOrigin: 'scheduled' | undefined
+  private persistence: Promise<void> = Promise.resolve()
+  private failure: { readonly error: unknown } | undefined
+  private closing: Promise<void> | undefined
+
+  private constructor(readonly session: Session, readonly writer: Writer, readonly initialEvents: readonly SessionEvent[]) {
+    for (const event of initialEvents) this.foldInbox(event)
+    const origins = initialEvents.filter(event => event.seq >= writer.inheritedEventCount && event.type === 'session/root-origin')
+    if (origins.length > 1) throw new Error('native-continuation: Session has duplicate root origin records')
+    if (origins.length > 0) this.rootOrigin = 'scheduled'
+  }
+
+  /**
+   * Adopt a Program-owned Session and writer without acquiring another handle.
+   * @param session - restored or freshly created Session already owned by the Program.
+   * @param writer - its exact exclusive writer.
+   * @param events - complete current prefix, including events awaiting initial persistence.
+   * @param pending - exact unpersisted tail already present in that prefix.
+   * @returns an owner using the same Session, writer and contiguous pending batch.
+   */
+  static adopt(session: Session, writer: Writer, events: readonly SessionEvent[],
+    pending: readonly SessionEvent[]): NativeContinuationSession {
+    const owner = new NativeContinuationSession(session, writer, events)
+    owner.pending.push(...pending)
+    return owner
+  }
+
+  /**
+   * Create one fresh resident Session without starting a model loop.
+   * @param storage - selected single-writer backend.
+   * @param header - validated child identity and lineage.
+   * @param signal - cancellation before write ownership is acquired.
+   * @returns the Program-owned resident writer and pending-message projection.
+   */
+  static async create(storage: NativeSessionPersistenceOperations, header: SessionHeader,
+    signal: AbortSignal): Promise<NativeContinuationSession> {
+    signal.throwIfAborted()
+    const writer = await storage.create(header, { signal })
+    try {
+      return new NativeContinuationSession(Session.create(header.id, undefined, header), writer, [])
+    } catch (error) { return closeAfterFailure(writer, error) }
+  }
+
+  /**
+   * Restore pending input and repair an interrupted turn under exclusive write ownership.
+   * @param storage - selected single-writer backend.
+   * @param id - existing durable Session identity.
+   * @param signal - creation-only cancellation, detached after restoration.
+   * @returns the same durable Session's resident writer and reconstructed pending messages.
+   */
+  static async restore(storage: NativeSessionPersistenceOperations, id: SessionHeader['id'], signal: AbortSignal): Promise<NativeContinuationSession> {
+    signal.throwIfAborted()
+    const writer = await storage.open(id, 'write', { signal })
+    try {
+      const stored = await writer.read(0, Number.MAX_SAFE_INTEGER, { signal })
+      const closers = interruptedTurnClosers(stored.events)
+      const events = [...stored.events, ...closers]
+      const restored: SessionEvent[] = []
+      const session = Session.fromRestore(id, events, writer.header, writer.inheritedEventCount, stored.eventState,
+        (event) => { restored.push(event) })
+      const owner = new NativeContinuationSession(session, writer, [...events, ...restored])
+      owner.pending.push(...closers, ...restored)
+      await owner.persist()
+      return owner
+    } catch (error) { return closeAfterFailure(writer, error) }
+  }
+
+  /** Whether either durable inbox destination has unclaimed input. */
+  get hasPending(): boolean { return this.inbox['next-turn'].length > 0 || this.inbox['next-step'].length > 0 }
+
+  /**
+   * @returns Whether this Session writer owns a persisted scheduled-root classification.
+   */
+  get scheduledRoot(): boolean { return this.rootOrigin === 'scheduled' }
+
+  /** Whether this writer owner has closed admission and started draining. */
+  get isClosing(): boolean { return this.closing !== undefined }
+
+  /**
+   * Read one detached pending-message list.
+   * @param target - destination to inspect.
+   * @returns pending messages in durable insertion order.
+   */
+  messages(target: InboxTarget): readonly UserMessage[] { return structuredClone(this.inbox[target]) }
+
+  /**
+   * Observe tracked appends for the selected policy projections.
+   * @param observer - synchronous policy recorder; it must not append or await persistence.
+   * @returns exact listener removal.
+   */
+  onTrack(observer: AppendObserver): () => void { this.tracked.add(observer); return () => { this.tracked.delete(observer) } }
+
+  /**
+   * Observe only backend-accepted events.
+   * @param observer - selected Program event observer; thrown errors are reported without failing durable writes.
+   * @returns exact listener removal.
+   */
+  onEvent(observer: AppendObserver): () => void { this.accepted.add(observer); return () => { this.accepted.delete(observer) } }
+
+  /**
+   * Track a Session-owner append in the single shared contiguous batch.
+   * @param event - exact event already appended by this Session owner.
+   */
+  track(event: SessionEvent): void {
+    this.assertOpen()
+    this.foldInbox(event)
+    this.pending.push(event)
+    for (const observer of this.tracked) observer(event)
+  }
+
+  /**
+   * Persist the scheduled root marker before publishing its active owner.
+   * @returns completion of the marker's storage durability barrier.
+   */
+  async markScheduledRoot(): Promise<void> {
+    this.assertOpen()
+    if (this.rootOrigin !== undefined) throw new Error('native-continuation: Session already has a root origin')
+    const event = this.session.appendBatch([{
+      type: 'session/root-origin', data: { origin: 'scheduled' }, opts: { ignorable: true },
+    }])[0]
+    if (event === undefined) throw new Error('native-continuation: root origin admission produced no event')
+    this.rootOrigin = 'scheduled'
+    this.track(event)
+    await this.persist()
+  }
+
+  /**
+   * Accept one identified input and resolve only after its durability barrier.
+   * @param message - validated identified message.
+   * @param target - pending destination selected by the caller.
+   * @param signal - cancellation checked before committing admission; later cancellation does not retract accepted input.
+   * @returns the durable accepted message identity.
+   */
+  async enqueue(message: UserMessage, target: InboxTarget, signal: AbortSignal): Promise<MessageId> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    if (this.inbox['next-turn'].some(pending => pending.id === message.id)
+      || this.inbox['next-step'].some(pending => pending.id === message.id)) {
+      throw new Error('native-continuation: message is already pending')
+    }
+    this.track(this.session.append('agent/inbox/spliced', { target, start: this.inbox[target].length, inserted: [message] }))
+    await this.persist()
+    return message.id
+  }
+
+  /** Replace one pending message's complete content with text blocks, preserving identity, source and position. */
+  async editPendingText(id: MessageId, content: readonly TextBlock[], signal: AbortSignal): Promise<{ readonly kind: 'updated' | 'stale' }> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    for (const target of ['next-step', 'next-turn'] as const) {
+      const index = this.inbox[target].findIndex(message => message.id === id)
+      if (index < 0) continue
+      const message = this.inbox[target][index]
+      if (message === undefined) throw new Error('native-continuation: located inbox message disappeared')
+      this.track(this.session.append('agent/inbox/spliced', { target, start: index, removedCount: 1,
+        inserted: [{ ...message, content: structuredClone([...content]) }], outcome: 'canceled' }))
+      await this.persist()
+      return { kind: 'updated' }
+    }
+    return { kind: 'stale' }
+  }
+
+  /** Move one pending queued message to the end of next-step as a single durable event. */
+  async promotePending(id: MessageId, signal: AbortSignal): Promise<{ readonly kind: 'promoted' | 'stale' | 'not-promotable' }> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    if (this.inbox['next-step'].some(message => message.id === id)) return { kind: 'not-promotable' }
+    if (!this.inbox['next-turn'].some(message => message.id === id)) return { kind: 'stale' }
+    this.track(this.session.append('agent/inbox/moved', { messageId: id }))
+    await this.persist()
+    return { kind: 'promoted' }
+  }
+
+  /**
+   * Claim steering and optionally one queued turn before model-visible projection.
+   * @param target - next-turn also consumes one queued turn; next-step consumes only steering.
+   * @returns claimed inputs after durable removal, steering before queued input.
+   */
+  async claim(target: InboxTarget): Promise<readonly UserMessage[]> {
+    this.assertOpen()
+    const messages = [...this.inbox['next-step'], ...target === 'next-turn' ? this.inbox['next-turn'].slice(0, 1) : []]
+    for (const [destination, count] of [['next-step', this.inbox['next-step'].length],
+      ['next-turn', target === 'next-turn' ? Math.min(1, this.inbox['next-turn'].length) : 0]] as const) {
+      if (count > 0) this.track(this.session.append('agent/inbox/spliced',
+        { target: destination, start: 0, removedCount: count, inserted: [] }))
+    }
+    await this.persist()
+    return messages
+  }
+
+  /**
+   * Claim or cancel exact captured input identities without removing concurrent admissions.
+   * @param ids - captured pending identities to remove.
+   * @param outcome - canceled attributes discarded inputs; omitted means claimed.
+   * @param signal - cancellation before committing removal.
+   * @returns completion of the selected writer's removal checkpoint.
+   */
+  async remove(ids: readonly MessageId[], outcome: 'canceled' | undefined, signal: AbortSignal): Promise<void> {
+    this.assertOpen()
+    signal.throwIfAborted()
+    this.removePending(ids, outcome)
+    await this.persist()
+  }
+
+  /** Record exact inbox removals in the current Session batch without awaiting its durability barrier. */
+  removePending(ids: readonly MessageId[], outcome: 'canceled' | undefined): void {
+    this.assertOpen()
+    const selected = new Set(ids)
+    for (const target of ['next-step', 'next-turn'] as const) {
+      const messages = this.inbox[target]
+      for (const [index, message] of [...messages.entries()].reverse()) {
+        if (!selected.has(message.id)) continue
+        this.track(this.session.append('agent/inbox/spliced', { target, start: index, removedCount: 1, inserted: [],
+          ...outcome === undefined ? {} : { outcome } }))
+      }
+    }
+  }
+
+  /** Cancel all unclaimed accepted input with durable cancellation attribution. @returns completion of the cancellation checkpoint. */
+  async discard(): Promise<void> {
+    this.assertOpen()
+    for (const target of ['next-step', 'next-turn'] as const) {
+      const removedCount = this.inbox[target].length
+      if (removedCount > 0) this.track(this.session.append('agent/inbox/spliced',
+        { target, start: 0, removedCount, inserted: [], outcome: 'canceled' }))
+    }
+    await this.persist()
+  }
+
+  /**
+   * Close an interrupted turn in both the retained Session and its writer.
+   * @param reason - selected driver's terminal cancellation or error.
+   * @returns completion of repair persistence before another resident turn may start.
+   */
+  async repair(reason: TurnEndReason): Promise<void> {
+    this.assertOpen()
+    const stored = await this.read()
+    for (const event of interruptedTurnClosers(stored.events)) {
+      switch (event.type) {
+        case 'tool/result':
+          this.track(this.session.append('tool/result', event.data,
+            { surfaceOp: 'append', ...event.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: event.sourceEventSeqs } }))
+          break
+        case 'step/end': this.track(this.session.append('step/end', event.data)); break
+        case 'turn/end': this.track(this.session.append('turn/end', { ...event.data, reason })); break
+        default: throw new Error(`native-continuation: unsupported interrupted closer ${event.type}`)
+      }
+    }
+    await this.persist()
+  }
+
+  /** Persist all tracked events in sequence and flush. @returns completion of the selected writer's durability barrier. */
+  persist(): Promise<void> {
+    const operation = this.persistence.then(async () => {
+      if (this.failure !== undefined) throw this.failure.error
+      const events = [...this.pending]
+      if (events.length > 0) {
+        await this.writer.append(events)
+        this.pending.splice(0, events.length)
+      }
+      await this.writer.flush()
+      for (const event of events) {
+        for (const observer of this.accepted) {
+          try { observer(event) } catch (error: unknown) {
+            console.error('native-continuation: accepted-event observer failed', error)
+          }
+        }
+      }
+    })
+    this.persistence = operation.catch((error: unknown) => { this.failure = { error } })
+    return operation
+  }
+
+  /**
+   * Read a durable prefix without racing this writer's next append or close.
+   * @param signal - optional caller cancellation; omitted cleanup reads drain without turn cancellation.
+   * @param maxEvents - optional exact prefix bound; omitted reads the complete current history.
+   * @returns the selected writer's validated current prefix.
+   */
+  read(signal?: AbortSignal, maxEvents?: number): Promise<Awaited<ReturnType<Writer['read']>>> {
+    this.assertOpen()
+    const operation = this.persist().then(() => this.writer.read(0, maxEvents ?? Number.MAX_SAFE_INTEGER,
+      signal === undefined ? {} : { signal }))
+    // Read failures belong to their caller; future writes retain the persistence failure latch independently.
+    this.persistence = operation.then(() => {}, () => {})
+    return operation
+  }
+
+  /** Close admission, drain accepted writes and release the only writer. @returns the memoized quiescent close transaction. */
+  close(): Promise<void> {
+    if (this.closing !== undefined) return this.closing
+    const completed = Promise.withResolvers<void>()
+    this.closing = completed.promise
+    void this.closeInternal().then(completed.resolve, completed.reject)
+    return completed.promise
+  }
+
+  private async closeInternal(): Promise<void> {
+    const outcomes: unknown[] = []
+    try { await this.persist() } catch (error: unknown) { outcomes.push(error) }
+    try { await this.writer.close() } catch (error: unknown) { outcomes.push(error) }
+    if (outcomes.length === 1) throw outcomes[0]
+    if (outcomes.length > 1) throw new AggregateError(outcomes, 'native-continuation: persistence and writer close failed')
+  }
+
+  private assertOpen(): void {
+    if (this.closing !== undefined) throw new Error('native-continuation: Session admission is closed')
+    if (this.failure !== undefined) throw this.failure.error
+  }
+
+  private foldInbox(event: SessionEvent): void {
+    try { this.inbox = foldNativeInboxEvent(this.inbox, event) }
+    catch (error: unknown) { throw new Error('native-continuation: invalid persisted inbox event', { cause: error }) }
+  }
+}
+
+async function closeAfterFailure(writer: Writer, error: unknown): Promise<never> {
+  try { await writer.close() } catch (cleanup: unknown) {
+    throw new AggregateError([error, cleanup], 'native-continuation: restoration and writer close failed')
+  }
+  throw error
+}

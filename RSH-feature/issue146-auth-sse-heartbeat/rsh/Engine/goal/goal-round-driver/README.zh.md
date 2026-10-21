@@ -1,0 +1,148 @@
+---
+description: "面向选择、组合或排查自动 Goal Round 的用户与维护者的同会话续行驱动器说明。"
+kind: "package-reference"
+---
+
+# @deepseek-ai/dsh-goal-round-driver
+
+[English](README.md) | 中文
+
+## 概述
+
+`dsh-goal-round-driver` 会在同一会话内自动继续 active goal，但前提是 agent（智能体）已空闲、续行已启用且配置的 Round 额度仍有剩余。每个 Round 都让模型获得另一次推进目标的机会；只有进入模型历史的 goal Round 才消耗额度，额度耗尽时会记录 blocker。驱动器本身没有配置：goal 定义 Round 上限，`dsh-tool-goal` 定义重复受阻后何时停止续行。若任务需要无人值守的多轮推进，应与 `dsh-goal` 和 `dsh-tool-goal` 一起挂载；若每一步都需要人工 steering（中途引导），则不要挂载。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [理解实现](#understand-the-implementation)
+- [进一步探索](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
+-----
+
+<a id="use-this-package"></a>
+## 使用本包
+
+当 active 的 goal 应在无人干预的情况下持续推进时，挂载 `dsh-goal-round-driver`。它与 goal 服务和 goal 工具组合使用：服务拥有状态，工具让模型控制状态，本包负责调度轮次。
+
+原生入口为定时工作提供 `goalContinuation.create(owner, request)`、`pause(owner, ref)` 与 `resume(owner, ref, additionalRounds, source)`。这些操作要求精确附加的 root owner 和本驱动器仍存活的 hooks。驱动器必须附加到提供 `rootOperations.interruptTurn` 的 Native root owner；缺少该操作时会在注册 hooks 或 Goal 输入前拒绝附加。驱动器忽略 delegated owner。状态通过 Goal 权威写入；pause 只会中止驱动器当前拥有的自动 Goal Round，恢复已耗尽轮数的 Goal 时按明确额度扩容并保留原标识。恢复必须明确提供 human 或 model 来源；paused Goal 只接受 human，不隐式提升模型权限。执行与持久化输入仍由 Program 拥有。
+
+### 组合方式
+
+把驱动器挂载在 goal 服务与 goal 工具旁边；驱动器本身不需要任何配置。
+
+```yaml
+- id: goal
+  name: '@deepseek-ai/dsh-goal'
+
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+- id: goal-round-driver
+  name: '@deepseek-ai/dsh-goal-round-driver'
+```
+
+`maxGoalRounds` 属于 goal 定义，面向模型的阻塞阈值属于 `dsh-tool-goal`；在驱动器中重复任一数值都可能产生分歧策略。
+
+### 每轮做什么
+
+当对应的活跃 agent 处于 idle，且存在 active、已启用续行、仍有容量的 goal 时，驱动器会排入一条 goal-round 提示词。它点明以 JSON 引用的目标、Round 编号与上限，并告诉模型以当前工作区、工具结果和持久状态为准。被接纳的 Round 会开启独立请求序列，因此 Chat 会在 goal 消息之前渲染其自包含请求 header。该 Round 以 goal 来源的用户消息进入历史；只有进入步骤的 goal 消息消耗上限，人类消息和陈旧预留不会消耗。goal 生命周期变更仍必须通过 `dsh-tool-goal` 的独立权限检查。
+
+### 何时停止续行
+
+Round 只在整个 agent 进入 idle 时启动；完成、暂停和阻塞会阻止续行。人类 `/goal pause` 会持久化暂停；仅当驱动器拥有当前自动 Goal turn 时才会中止该轮，人类发起的 turn 不会取消。模型发起的暂停会正常结束，包括 Goal-owned turn 后续 step 已接纳直接人类输入的情况。编辑通过 revision 栅栏使进行中的 Round 失效，驱动器会继续新 revision。驱动器也会在 turn 因 max tokens 结束、持久性写入失败、agent 被取消或 Round 上限耗尽时停止——达到上限时会以稳定代码 `round-limit` 记录 blocker。取消绝不会自动重启 Round：正在进行或已排队的 Goal 会在下一次 idle 时暂停；与 Goal 尝试无关的取消只会停用续行。
+
+### resume、fork 或卸载之后
+
+把驱动器挂载到现有 agent 上绝不会启用任何 goal 的续行；会话 resume 或 fork 后，active 的 goal 会保持停用续行，直到用户明确授权 resume——驱动器绝不会自行复活工作。卸载插件会停用 Goal、中止并排空当前 Round，且不再启动后续 Round。
+
+-----
+
+<a id="understand-the-implementation"></a>
+## 理解实现
+
+原生卸载先排空贡献回调，再排空 owner hooks。任一阶段失败都不会跳过另一阶段；只有两阶段均已结束后才聚合清理错误。重复卸载返回同一个 promise。
+
+<details>
+<summary>实现细节——点击展开</summary>
+
+本节解释驱动器如何在无竞态的情况下调度 Round；可观察行为已在[使用本包](#use-this-package)中说明。
+
+### 设计
+
+- **先预留，后准入。** idle 时驱动器为当前 `{ goalId, revision }` 预留 `roundsStarted + 1`，排入一条携带 goal 消息来源的 `<goal_round>` 提示词；只有进入步骤的 `user/message` 才会增加 `roundsStarted`。因陈旧而被拒绝的预留不会消耗 Round 编号。
+- **竞态防护。** `agent/pre-step` 监听器会在下游监听器前后验证完整的已领取记录与当前 goal，因此陈旧、已取消或竞争中的提示词会在其步骤进入前被拒绝。在预留前到达的人类工作会让自动工作让行，直到 agent 重新进入 idle。
+- **持久性检查点。** `goal/changed` 会产生持久性义务：排队工作前，驱动器会等待 `ctx.sessions.flush()`，并在等待后重新检查 goal revision 与竞争输入。通过 `agent/error` 到达的 flush 失败会停用续行，避免另一 Round 启动。
+- **fail-closed teardown。** Teardown 会关闭准入、停用所有活跃 goal 的续行、以 `parent` 原因取消进行中的工作，并在事件防护仍生效的情况下等待驱动器和 agent 完全停稳。
+
+### 源码地图
+
+| 文件 | 职责 |
+|---|---|
+| [`src/index.ts`](src/index.ts) | 插件入口：驱动器状态机、竞态防护、teardown |
+| [`src/prompt.ts`](src/prompt.ts) | 保留的 `<goal_round>` 续行提示词 |
+| [`src/invariant.ts`](src/invariant.ts) | 不变式伴生：goal-round 消息必须与包自有提示词一致 |
+
+### Round 提示词
+
+保留的提示词是一个文本块：前几行为 JSON 引用的目标与 `round/maxGoalRounds`，其后是工作指令。不变式伴生会从持久前缀重建 goal，并拒绝内容与该提示词不完全一致的任何 goal 来源消息。
+
+### 原生 profile
+
+原生 profile 选择 `./native` 并配置 `admissionOrder`（默认 `700`）。驱动器等待 Program 所有的空闲 checkpoint，预留持久化 Goal 消息，并在下游 step admission 完成后重新检查精确 id、revision、轮数与 activation。拒绝的陈旧输入在模型请求前按捕获的 id 移除，并发输入继续待处理。宿主暂停与驱动器卸载只中断当前 root turn，因此 root epoch 仍可继续使用，尚未领取的普通 inbox 消息会留到后续唤醒。完成、阻塞、取消和卸载通过 Program 释放 root 驻留，不会打开子 agent。
+
+</details>
+
+-----
+
+<a id="further-exploration"></a>
+## 进一步探索
+
+驱动器消费 goal 状态并把策略交由 goal 工具处理；需要了解周边约定与设计理由时阅读以下页面。
+
+- [goal 服务](../goal/README.zh.md)——本驱动器继续推进的 goal 状态与生命周期。
+- [goal 工具](../tool-goal/README.zh.md)——面向模型的工具及其执行时权限检查。
+
+-----
+
+<a id="model-experience"></a>
+## 模型体验
+
+### Goal Round 提示词
+
+#### 模型看到的内容
+
+每个已准入 Round 都是一段保留的用户角色 `<goal_round>` 块，其中点明完整目标与正数 Round 编号。更早的用户消息、goal 状态快照、assistant 输出与工具记录仍保留在同一会话历史中。
+
+#### Token 影响
+
+每个已准入 Round 会增加一个固定指令块和目标。后续请求会重新发送保留的 Round，直到压缩（compaction）将其遮蔽；不会创建新 agent，也不会复制对话前缀。
+
+#### KV Cache 影响
+
+在一个 epoch 内仅追加：每个已准入 Round 都会在可复用前缀后扩展现有对话。压缩可能替换派生历史后缀，并移动可复用边界。
+
+## 已知限制与延期工作
+
+<a id="known-limitations-and-deferred-work"></a>
+
+
+这些限制说明驱动器何时不合适或需要特别注意。它们是当前包约束，不是任务积压。
+
+- **没有独立评估器**——面向模型的 goal 策略会判断证据是否足以完成，以及 blocker 在语义上是否未变；评估器支持的认证仍保持暂缓。
+- **只在同一会话执行**——此包有意不 spawn 新 agent、不 fork 会话前缀，也不实现 Ralph 风格的独立尝试；该工作流属于单独的插件层。
+- **已接受队列的卸载竞态**——Cordis 插件卸载是异步的。已经被 agent inbox 接受的 goal 提示词可以在卸载开始前启动并消耗其 Round；teardown 随后会取消请求、停用 goal 的续行并等待完全停稳。不会再启动后续 Round。
+- **只有 Round 上限，不是资源预算**——token、货币、时间与提供方配额策略保持独立。对应的会话事件不会归属于 goal 消息，也不会映射为 goal 阻塞代码。
+- **异常情况不自动重试**——暂时性的提供方与持久化失败需要之后由用户授权 resume，而不会采用隐式重试策略。
+
+<a id="dev-note"></a>
+### 开发备注
+
+<details>
+<summary>维护者的工作上下文——点击展开</summary>
+
+本开发备注是维护者的工作上下文，明确不具权威性。开放且未决的方向：异常失败重试策略与逐轮评估器认证；两者按设计都留在本包之外。
+
+</details>

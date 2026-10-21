@@ -1,0 +1,35 @@
+# Agent Note: Native Web conversation uses the selected Host executor
+
+Status: implemented
+
+English | [中文](2026-10-05-native-web-conversation.zh.md)
+
+## Problem
+
+The native Web boot and Session RPC packages had no conversation consumer, so users could not create or resume a Session from the page.
+
+## Decision
+
+The native Client application consumes the existing Session RPC Consumer and supplies only conversation interaction and presentation. It creates or selects a persisted Session and submits human text through the sole Host turn executor. The selected renderer owns the React root; the application owns its view controller and outstanding calls.
+
+Restoration reads mode and permission controls before its final durable history snapshot. A control lookup can cold-open the Session and append `session/end-seed`; reading history afterward keeps the first live event contiguous with the displayed transcript.
+
+Cancellation changes the view to stopping without declaring readiness. The send operation remains pending through Host writer cleanup and durable history refresh. Application release aborts owned calls and awaits their settlement; removing React does not release execution ownership early.
+
+The running composer submits identified next-turn and next-step messages through the existing queue and steer Client methods. Only acknowledged Host snapshots populate pending rows; read generations, durable throughSeq cursors, and selection epochs prevent late responses from restoring removed requests or overwriting another Session. Pending mutations have an independent presentation busy flag and never settle the active turn. A failed text submission retains its request identity for an explicit retry of the same text and placement; a previously accepted or claimed identity is reconciled before retry. Removal and promotion refresh the authoritative snapshot, including stale mutation outcomes. The composer clears an initial send immediately and uses a draft generation so its late settlement cannot erase subsequently typed text.
+
+## Transcript and composition
+
+Human transcript rows use append-origin Session events and the shared message projection. Model-only replacements cannot erase conversation the user already saw. Raw durable records preserve tool and permission facts that the minimal page does not yet present as feature cards or interactive decisions.
+
+The first-use native Client roster contains installed Providers and Consumers only. The page owns a complete typed English/Chinese dictionary pair and accepts explicit locale configuration. Its Settings view consumes the selected Host's existing Settings and Credentials authorities through the same Connection; it creates neither authority and does not change the legacy default composition.
+
+## Alternatives considered
+
+**Polling history or status.** Polling cannot prove execution progress and adds an independent scheduling lifecycle. Settlement refresh reads durable records; realtime delivery is defined by the [following decision](2026-10-05-native-web-session-follow.md).
+
+## Consequences
+
+The page refreshes durable transcript after settlement. [Realtime following](2026-10-05-native-web-session-follow.md) uses the same admission and settlement authority; polling history or status would falsely present a guessed execution stream. The [package reference](../../../../rsh/Programs/Web/client/native-application/README.md) owns the supported interaction limits.
+
+The existing authenticated HTTP case exercises cancellation with delayed model cleanup through the conversation controller. The keyless native-web scenario exercises the built page through its shipped Client roster, records its user-visible transcript and restores that transcript after reload. Focused compiler and native dependency checks cover the changed Client and resolver declarations.

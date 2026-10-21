@@ -1,0 +1,29 @@
+{
+	"name": "native-ide-smoke",
+	"displayName": "RSH Native IDE Smoke",
+	"publisher": "rsh-local-verification",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"main": "./extension.js",
+	"extensionKind": [
+		"workspace"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "rsh.verifyNativeIde",
+				"title": "RSH: Verify Native IDE"
+			}
+		]
+	},
+	"__metadata": {
+		"installedTimestamp": 1791626332354,
+		"targetPlatform": "undefined",
+		"size": 1865
+	}
+}

@@ -1,0 +1,495 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1790066822343,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 215,
+        "val": "只回复 OK，不使用工具。只回"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 215,
+        "val": {
+          "first": {
+            "seq": 10,
+            "text": "只回复 OK，不使用工具。只回复 OK，不使用工具。"
+          },
+          "count": 16,
+          "lastSeq": 209
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 215,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 215,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 215,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 9223,
+            "outputTokens": 769,
+            "cacheReadTokens": 15381,
+            "cacheWriteTokens": 38290
+          },
+          "last": {
+            "turn": 16,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 3,
+              "outputTokens": 204,
+              "cacheReadTokens": 7859,
+              "cacheWriteTokens": 139
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 215,
+        "val": {
+          "surfaceTokens": 5341,
+          "contextWindow": 262144,
+          "pressureTokens": 8001,
+          "sampledSurfaceTokens": 5275
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 215,
+        "val": {
+          "nodes": [
+            {
+              "seq": 173,
+              "heuristicTokens": 1425,
+              "system": true
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 15,
+              "system": false
+            },
+            {
+              "seq": 11,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 26,
+              "heuristicTokens": 10,
+              "system": false
+            },
+            {
+              "seq": 27,
+              "heuristicTokens": 37,
+              "system": false
+            },
+            {
+              "seq": 39,
+              "heuristicTokens": 12,
+              "system": false
+            },
+            {
+              "seq": 40,
+              "heuristicTokens": 37,
+              "system": false
+            },
+            {
+              "seq": 66,
+              "heuristicTokens": 0,
+              "system": true
+            },
+            {
+              "seq": 54,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 55,
+              "heuristicTokens": 46,
+              "system": false
+            },
+            {
+              "seq": 68,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 69,
+              "heuristicTokens": 48,
+              "system": false
+            },
+            {
+              "seq": 72,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 81,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 82,
+              "heuristicTokens": 46,
+              "system": false
+            },
+            {
+              "seq": 85,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 92,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 115,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 138,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 139,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 172,
+              "heuristicTokens": 0,
+              "system": true
+            },
+            {
+              "seq": 152,
+              "heuristicTokens": 121,
+              "system": false
+            },
+            {
+              "seq": 153,
+              "heuristicTokens": 47,
+              "system": false
+            },
+            {
+              "seq": 163,
+              "heuristicTokens": 66,
+              "system": false
+            },
+            {
+              "seq": 174,
+              "heuristicTokens": 13,
+              "system": false
+            },
+            {
+              "seq": 175,
+              "heuristicTokens": 47,
+              "system": false
+            },
+            {
+              "seq": 178,
+              "heuristicTokens": 100,
+              "system": false
+            },
+            {
+              "seq": 185,
+              "heuristicTokens": 13,
+              "system": false
+            },
+            {
+              "seq": 186,
+              "heuristicTokens": 51,
+              "system": false
+            },
+            {
+              "seq": 193,
+              "heuristicTokens": 11,
+              "system": false
+            },
+            {
+              "seq": 194,
+              "heuristicTokens": 19,
+              "system": false
+            },
+            {
+              "seq": 201,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 202,
+              "heuristicTokens": 37,
+              "system": false
+            },
+            {
+              "seq": 209,
+              "heuristicTokens": 14,
+              "system": false
+            },
+            {
+              "seq": 210,
+              "heuristicTokens": 66,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1425,
+            "toolsTokens": 8043,
+            "messageTokens": 1070
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 208,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 211
+          },
+          "lastTurn": 16
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 215,
+        "val": {
+          "turns": 16,
+          "steps": 16,
+          "llmMs": 54943,
+          "toolMs": 0,
+          "ttftMs": 53354,
+          "ttftSteps": 8,
+          "decodeMs": 1589,
+          "decodeTokens": 769,
+          "lastTurn": 16,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 6,
+              "prompt": "只回复 OK，不使用工具。只回复 OK，不使用工具。",
+              "response": ""
+            },
+            {
+              "turn": 2,
+              "seq": 22,
+              "prompt": "只回复 OK。",
+              "response": ""
+            },
+            {
+              "turn": 3,
+              "seq": 35,
+              "prompt": "只回复 OK。用于连接测试。",
+              "response": ""
+            },
+            {
+              "turn": 4,
+              "seq": 50,
+              "prompt": "测试",
+              "response": ""
+            },
+            {
+              "turn": 5,
+              "seq": 63,
+              "prompt": "测试",
+              "response": "好的"
+            },
+            {
+              "turn": 6,
+              "seq": 77,
+              "prompt": "测试",
+              "response": "OK"
+            },
+            {
+              "turn": 7,
+              "seq": 89,
+              "prompt": "你好好",
+              "response": ""
+            },
+            {
+              "turn": 8,
+              "seq": 112,
+              "prompt": "测试",
+              "response": ""
+            },
+            {
+              "turn": 9,
+              "seq": 135,
+              "prompt": "测试",
+              "response": "OK"
+            },
+            {
+              "turn": 10,
+              "seq": 148,
+              "prompt": "为什么接收不了",
+              "response": ""
+            },
+            {
+              "turn": 11,
+              "seq": 160,
+              "prompt": "什么模型可以发送图片",
+              "response": ""
+            },
+            {
+              "turn": 12,
+              "seq": 169,
+              "prompt": "什么模型可以发送图片啊，为什么都不能发送",
+              "response": "需要使用支持**视觉/多模态输入**的模型，例如 GPT-4o、GPT-4.1、Claude 3/4、Gemini 1.5/2.x 等（具体取决于平台提供的模型）。 你这里显示“**image omitted because this m…"
+            },
+            {
+              "turn": 13,
+              "seq": 182,
+              "prompt": "你检测一下你内部的模型哪一个可以发送图片",
+              "response": "我无法直接查看你平台内部的完整模型目录或替你切换模型。就当前对话而言，系统明确显示： > 当前模型只接受文本，图片已被省略。 请在模型选择器中寻找带有 **Vision、视觉、多模态、图片理解** 标识的模型。通常 GPT-4o、GPT-…"
+            },
+            {
+              "turn": 14,
+              "seq": 190,
+              "prompt": "当前模型可以接受图片吗",
+              "response": "可以。当前模型支持接收并分析图片。请直接上传图片，我可以帮你识别其中的文字、内容或问题。"
+            },
+            {
+              "turn": 15,
+              "seq": 198,
+              "prompt": "不接受啊",
+              "response": "你说得对，刚才我的判断不准确，抱歉。 从系统提示看，当前模型实际是**文本模型**，你上传的图片会在发送给模型前被省略，所以我无法看到。请切换到带有 **Vision / 视觉 / 多模态 / 图片理解** 标识的模型后再上传。"
+            },
+            {
+              "turn": 16,
+              "seq": 206,
+              "prompt": "带有evomap里面的模型哪一个可以识别图片",
+              "response": "我无法查看你账号中 EvoMap 的完整模型目录，因此不能准确指定哪一个支持图片。 判断方法是：选择模型时查找带有 **Vision、VL、视觉、多模态、图片理解** 标识的版本。仅名称中有 **EvoMap** 或 **GPT** 不代…"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 215,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 215,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 215,
+        "val": {
+          "lastUsed": {
+            "provider": "evomap",
+            "model": "evomap-gpt-5.6-luna"
+          },
+          "pending": {
+            "provider": "openai-codex",
+            "model": "gpt-6-luna"
+          }
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 215,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1790166250438
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 215,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 215,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 215,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 215,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 215,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

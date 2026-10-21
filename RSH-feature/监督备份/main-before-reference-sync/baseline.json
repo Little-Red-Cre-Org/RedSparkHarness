@@ -1,0 +1,38 @@
+[
+  {
+    "Path": "rsh/Docs/user/guide/index.i18n.yaml",
+    "SHA256": "6D4932ABBA0E497265BC71127186B27BB49A6A9DA38109F2C194CB51D5E6CE2C"
+  },
+  {
+    "Path": "rsh/Docs/user/guide/index.md",
+    "SHA256": "4BB19B9F8BA0CED54C3F4BB88FBEAA2129DD8337C7ECC11B50B474F60585E209"
+  },
+  {
+    "Path": "rsh/Docs/user/guide/index.zh.md",
+    "SHA256": "EC95A46CE5CB49A283EDFEDEDC638A0429812CBC85310E33FECE42FF5D7B133F"
+  },
+  {
+    "Path": "rsh/Docs/website/docs.ts",
+    "SHA256": "0149AE9FE917DF767CEF143EADCF29D9BA43DED8EE869CB73C67C97E6CC26B01"
+  },
+  {
+    "Path": "rsh/Engine/context/file-reference-local/tests/search.spec.ts",
+    "SHA256": "BABDAB794BDD2504288B8212625A64E3838A3E07AD830A89E135B89C545805C1"
+  },
+  {
+    "Path": "rsh/Programs/Web/application/tests/reference-composer.e2e.ts",
+    "SHA256": "8CB35799B95CB84517E79B498B1EE6956A65A98079990A882BC93B720AC827B3"
+  },
+  {
+    "Path": "rsh/Programs/Web/application/tests/scaffold.ts",
+    "SHA256": "B4E07D9A6B30A0AF70AD4DE66F076DC77013CB26D39BF91077C9C22B14E798A9"
+  },
+  {
+    "Path": "rsh/Programs/Web/client/ui-reference/tests/browser-plugin.client.spec.ts",
+    "SHA256": "606259FA7E86B02EF577F406BBE5A6EE0AA05FD4B9DED4ACDCA36DA1A7643CCC"
+  },
+  {
+    "Path": "tsconfig.base.json",
+    "SHA256": "0348E582FF00733447403F49F8F7A3024F2B14A83BECFF91C10C1FC3863FC07C"
+  }
+]

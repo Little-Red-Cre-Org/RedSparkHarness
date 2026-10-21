@@ -1,0 +1,27 @@
+{
+  "name": "@deepseek-ai/dsh-http-routes",
+  "description": "Framework-neutral HTTP route definitions and shared route registry",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Core/util/http-routes"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./host": { "types": "./lib/types/host.d.ts", "default": "./lib/host.js" },
+    "./client": { "types": "./lib/types/client.d.ts", "default": "./lib/client.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/client.js", "lib/host.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "peerDependencies": { "@deepseek-ai/dsh-native-runtime": "workspace:^" },
+  "peerDependenciesMeta": { "@deepseek-ai/dsh-native-runtime": { "optional": true } },
+  "devDependencies": { "@deepseek-ai/dsh-native-runtime": "workspace:^" }
+}

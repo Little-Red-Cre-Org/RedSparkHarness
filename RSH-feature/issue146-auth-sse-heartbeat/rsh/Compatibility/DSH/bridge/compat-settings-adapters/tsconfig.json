@@ -1,0 +1,16 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../compat-settings-definition" },
+    { "path": "../../../../Engine/core/agent-loop" },
+    { "path": "../../../../Engine/core/agent-default-model" },
+    { "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json" },
+    { "path": "../../../../Engine/subagent/tool-subagent" }
+  ]
+}

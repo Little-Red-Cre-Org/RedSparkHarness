@@ -1,0 +1,36 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../../Core/util/native-command"
+    },
+    {
+      "path": "../../../../Core/util/launch-environment"
+    }
+  ]
+}

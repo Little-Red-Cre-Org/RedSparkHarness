@@ -1,0 +1,9 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" }
+  ]
+}

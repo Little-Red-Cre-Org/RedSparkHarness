@@ -1,0 +1,757 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "run_code",
+      "description": "Run one TypeScript program in an isolated worker thread.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "program": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "program"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_search",
+      "description": "Search prior sessions in the caller workspace and return the strongest matching event from each session.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Literal full-text query over prior session history."
+          },
+          "session_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional session ids to include."
+          },
+          "created_at_from": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 creation-time lower bound."
+          },
+          "created_at_to": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 creation-time upper bound."
+          },
+          "parent_session_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional direct parent session ids."
+          },
+          "include_root_sessions": {
+            "type": "boolean",
+            "description": "Include sessions with no parent in the parent filter."
+          },
+          "availability": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "live",
+                "persisted"
+              ]
+            },
+            "description": "Require at least one selected source availability."
+          },
+          "event_seq_from": {
+            "type": "integer",
+            "description": "Inclusive event sequence lower bound."
+          },
+          "event_seq_to": {
+            "type": "integer",
+            "description": "Inclusive event sequence upper bound."
+          },
+          "event_time_from": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 event-time lower bound."
+          },
+          "event_time_to": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 event-time upper bound."
+          },
+          "event_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Event types to include."
+          },
+          "event_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "current",
+                "shadowed",
+                "log-only"
+              ]
+            },
+            "description": "Event surfaces to include."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_event_search",
+      "description": "Search prior events in one authorized session; the current session excludes the step performing this call.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Target session id. Omit for the current session."
+          },
+          "query": {
+            "type": "string",
+            "description": "Literal full-text query over the target session."
+          },
+          "seq_from": {
+            "type": "integer",
+            "description": "Inclusive event sequence lower bound."
+          },
+          "seq_to": {
+            "type": "integer",
+            "description": "Inclusive event sequence upper bound."
+          },
+          "time_from": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 event-time lower bound."
+          },
+          "time_to": {
+            "type": "string",
+            "description": "Inclusive timezone-qualified ISO 8601 event-time upper bound."
+          },
+          "event_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Event types to include."
+          },
+          "surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "current",
+                "shadowed",
+                "log-only"
+              ]
+            },
+            "description": "Event surfaces to include."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_trace",
+      "description": "Read the authorized session lineage around one session, including complete visible ancestor and descendant relationships.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Target session id. Omit for the current session."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_event_trace",
+      "description": "Read every direct replacement and relationship to a cited source event for one event in an authorized session.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Target session id. Omit for the current session."
+          },
+          "seq": {
+            "type": "integer",
+            "description": "Target event sequence number."
+          }
+        },
+        "required": [
+          "seq"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_event_read",
+      "description": "Read one full unabridged event and optional neighboring raw-event summaries from an authorized session.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Target session id. Omit for the current session."
+          },
+          "seq": {
+            "type": "integer",
+            "description": "Target event sequence number."
+          },
+          "before": {
+            "type": "integer",
+            "description": "Number of preceding raw events to summarize. Omit for none."
+          },
+          "after": {
+            "type": "integer",
+            "description": "Number of following raw events to summarize. Omit for none."
+          }
+        },
+        "required": [
+          "seq"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_goal",
+      "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "create_goal",
+      "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "description": "The direct human completion objective."
+          },
+          "max_goal_rounds": {
+            "type": "number",
+            "description": "Optional positive safe-integer automatic round cap."
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_goal",
+      "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "edit",
+              "pause",
+              "resume",
+              "complete",
+              "blocked"
+            ]
+          },
+          "objective": {
+            "type": "string"
+          },
+          "max_goal_rounds": {
+            "type": "number"
+          },
+          "blocked_reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "revision",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow",
+      "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "whenToUse": {
+                "type": "string"
+              },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "script",
+          "meta"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ralph",
+      "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "description": "The immutable completion objective for every fresh Ralph round."
+          },
+          "maxRounds": {
+            "type": "integer",
+            "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_output",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "todo_write",
+      "description": "Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished).",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "todos"
+        ],
+        "properties": {
+          "todos": {
+            "type": "array",
+            "description": "The COMPLETE task list, replacing any previous list.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "content",
+                "status"
+              ],
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "What the task is — a short imperative line."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "in_progress",
+                    "completed"
+                  ],
+                  "description": "pending (not started) | in_progress (now) | completed (done)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "read",
+      "description": "Read a UTF-8 text file and return line-numbered content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to read, resolved by the filesystem backend."
+          },
+          "offset": {
+            "type": "number",
+            "description": "1-based first line to return. Defaults to 1."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of lines to return. Defaults to 2000."
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read_image",
+      "description": "Read a PNG/JPEG/WebP/GIF file and return the image itself. The current model must declare image input.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to the image file, resolved by the filesystem backend."
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write",
+      "description": "Create or fully replace a UTF-8 text file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to write, resolved by the filesystem backend."
+          },
+          "content": {
+            "type": "string",
+            "description": "Full UTF-8 text content to write."
+          },
+          "sandbox_permissions": {
+            "type": "string",
+            "enum": [
+              "workspace-write",
+              "danger-full-access"
+            ],
+            "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval."
+          },
+          "justification": {
+            "type": "string",
+            "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
+          }
+        },
+        "required": [
+          "file_path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "edit",
+      "description": "Edit an existing UTF-8 text file by replacing literal text.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to edit, resolved by the filesystem backend."
+          },
+          "old_string": {
+            "type": "string",
+            "description": "Literal text to replace. Must match exactly."
+          },
+          "new_string": {
+            "type": "string",
+            "description": "Literal replacement text. Use an empty string to delete the match."
+          },
+          "replace_all": {
+            "type": "boolean",
+            "description": "Replace all matches. Defaults to false; when false, old_string must appear exactly once."
+          },
+          "sandbox_permissions": {
+            "type": "string",
+            "enum": [
+              "workspace-write",
+              "danger-full-access"
+            ],
+            "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval."
+          },
+          "justification": {
+            "type": "string",
+            "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
+          }
+        },
+        "required": [
+          "file_path",
+          "old_string",
+          "new_string"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "glob",
+      "description": "Find files whose paths match a glob pattern. Returns matching file paths — never directories — including hidden and ignored files (VCS metadata directories are excluded). Up to 100 paths come back in modification-time order; a larger result returns the first 100 paths in modification-time order, says so, and reports where the complete sorted list was saved. This tool does not enumerate directory entries.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Glob pattern to match file paths against (e.g. \"**/*.ts\", \"src/**/*.test.js\"). A pattern with no \"/\" matches the basename at any depth, so \"*\" and \"*.ts\" both search the whole tree; include a separator to anchor the depth."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory to search in. Defaults to the session workspace; a relative path resolves against it."
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "grep",
+      "description": "Search file contents with a ripgrep regular expression. Returns matching lines with line numbers, grouped by file. Returns the first 250 matches inline; a capped result reports where the complete match list was saved. Use read on a matched file for surrounding context.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Regular expression to search for (ripgrep syntax)."
+          },
+          "path": {
+            "type": "string",
+            "description": "File or directory to search. Defaults to the session workspace; a relative path resolves against it."
+          },
+          "include": {
+            "type": "string",
+            "description": "One glob filter for which files to search (e.g. \"*.ts\", \"*.{js,jsx}\"). Not a list; negation is not supported."
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "web_search",
+      "description": "Search the web for current information. Provide 1–4 queries in the required queries array. Returns an optional summary answer and a list of source URLs.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "queries": {
+            "type": "array",
+            "description": "Required search queries; accepts 1–4 items and merges their results.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "queries"
+        ]
+      }
+    },
+    {
+      "name": "web_fetch",
+      "description": "Fetch the content of a specific HTTP(S) URL and return it decoded to text.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The HTTP(S) URL to fetch."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    {
+      "name": "pwsh",
+      "description": "Execute a fresh PowerShell command and return stdout, stderr, and an exit marker. Use native Windows paths and $env:NAME variables; pass workdir instead of cd. Nonzero exits are results, while process failures are errors. A file sandbox may deny access; inspect the denial marker and do not work around it. Set run_in_background for longer work; use job_output to read its live output and job_kill to stop it. On Windows, restricted execution uses ConstrainedLanguageMode and blocks unsafe named-pipe access. After a real denial, retry the exact command once with the narrowest wider sandbox_permissions and a one-sentence justification; the approval prompt asks the user. A rejected escalation is final for that command.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "PowerShell source to run in a fresh shell."
+          },
+          "description": {
+            "type": "string",
+            "description": "Brief description of the command for the user."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Foreground timeout in milliseconds, capped by the executor."
+          },
+          "workdir": {
+            "type": "string",
+            "description": "Working directory; relative paths use the Session workspace."
+          },
+          "run_in_background": {
+            "type": "boolean",
+            "description": "Start a managed job without a command timeout."
+          },
+          "sandbox_permissions": {
+            "type": "string",
+            "enum": [
+              "workspace-write",
+              "danger-full-access"
+            ],
+            "description": "Wider file-access mode for a denied command."
+          },
+          "justification": {
+            "type": "string",
+            "description": "One sentence explaining why the exact command needs wider access."
+          }
+        },
+        "required": [
+          "command",
+          "description"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": []
+}

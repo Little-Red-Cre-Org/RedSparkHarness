@@ -1,0 +1,91 @@
+$ tsx rsh/Scripts/build.ts
+$ tsx rsh/Core/native/system/scripts/build.ts --host-addon-only
+$ pnpm run build:lib:host && pnpm run build:lib:client
+$ tsx rsh/Scripts/workspace-files-remote.ts && node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
+rsh/Engine/core/native-agent/src/turn-boundary.ts(3,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Engine/session-query/session-query/src/native.ts(3,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Engine/session/session-telemetry-otel/src/native.ts(3,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/credentials/deepseek-account/src/details.ts(2,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/credentials/deepseek-account/src/details.ts(88,52): error TS7006: Parameter 'wallet' implicitly has an 'any' type.
+rsh/Modules/Official/credentials/deepseek-account/src/details.ts(89,56): error TS7006: Parameter 'wallet' implicitly has an 'any' type.
+rsh/Modules/Official/credentials/deepseek-account/src/native.ts(8,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/credentials/deepseek-account/src/protocol.ts(2,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/credentials/deepseek-account/src/protocol.ts(164,47): error TS7006: Parameter 'issue' implicitly has an 'any' type.
+rsh/Modules/Official/llm/llm-pi-ai/src/siwc.ts(7,46): error TS2307: Cannot find module 'jose' or its corresponding type declarations.
+rsh/Modules/Official/llm/llm-pi-ai/src/siwc.ts(8,36): error TS2307: Cannot find module 'jose' or its corresponding type declarations.
+rsh/Modules/Official/fs/native-file-reference-local/src/native.ts(2,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/fs/native-file-reference-local/src/native.ts(140,41): error TS7006: Parameter 'name' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/src/run.ts(18,8): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Compatibility/DSH/subagent/subagent-acp/src/run.ts(422,55): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/src/run.ts(431,61): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/src/run.ts(436,43): error TS7006: Parameter 'o' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/subagent-claude-code/src/controller.ts(17,8): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/subagent-claude-code/src/controller.ts(362,26): error TS7006: Parameter 'input' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/subagent-claude-code/src/process.ts(12,8): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/subagent-claude-code/src/run.ts(14,33): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/codex-app-server/src/responses-gateway.ts(1,30): error TS2307: Cannot find module 'eventsource-parser' or its corresponding type declarations.
+rsh/Modules/Official/subagent/codex-app-server/src/responses-gateway.ts(387,17): error TS7031: Binding element 'data' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/codex-app-server/src/responses-gateway.ts(387,30): error TS7031: Binding element 'eventName' implicitly has an 'any' type.
+rsh/Programs/Web/client/ui-primitives/src/workspace-rows/Rows.tsx(144,70): error TS2345: Argument of type '"ide.open"' is not assignable to parameter of type 'WorkspaceRowKey'.
+rsh/Programs/Web/host/native-schedule-controller/src/native.ts(2,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(3,65): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(12,8): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(173,69): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(203,22): error TS7006: Parameter 'option' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(204,36): error TS7006: Parameter 'option' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(334,71): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(380,59): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(468,13): error TS18046: 'initialize' is of type 'unknown'.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(469,70): error TS18046: 'initialize' is of type 'unknown'.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(490,30): error TS18046: 'created' is of type 'unknown'.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(493,48): error TS18046: 'created' is of type 'unknown'.
+rsh/Modules/Official/subagent/acp-child/src/native.ts(498,65): error TS18046: 'created' is of type 'unknown'.
+../RedSparkHarness-code-optimization/rsh/Modules/Official/llm/llm-pi-ai/src/adapter.ts(320,28): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(value: PreparedAdapterCall): Promise<PreparedAdapterCall>', gave the following error.
+    Argument of type '{ model: LlmResolvedModelInfo; stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>; }' is not assignable to parameter of type 'PreparedAdapterCall'.
+      Property 'supportsOutputTokenLimit' is missing in type '{ model: LlmResolvedModelInfo; stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>; }' but required in type 'PreparedAdapterCall'.
+  Overload 2 of 3, '(value: PreparedAdapterCall | PromiseLike<PreparedAdapterCall>): Promise<PreparedAdapterCall>', gave the following error.
+    Argument of type '{ model: LlmResolvedModelInfo; stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>; }' is not assignable to parameter of type 'PreparedAdapterCall | PromiseLike<PreparedAdapterCall>'.
+      Property 'supportsOutputTokenLimit' is missing in type '{ model: LlmResolvedModelInfo; stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>; }' but required in type 'PreparedAdapterCall'.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(84,8): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(239,43): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(240,51): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(244,44): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(245,47): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(245,55): error TS7031: Binding element 'client' implicitly has an 'any' type.
+rsh/Compatibility/DSH/subagent/subagent-acp/tests/mock-acp-server.ts(246,52): error TS7031: Binding element 'params' implicitly has an 'any' type.
+rsh/Engine/session-query/session-log-export/tests/archive.host.spec.ts(168,57): error TS2345: Argument of type 'import("E:/redsparkHarness/RedSparkHarness-code-optimization/rsh/Programs/Web/client/connection/src/browser-auth").BrowserAuth' is not assignable to parameter of type 'import("E:/redsparkHarness/RedSparkHarness/rsh/Programs/Web/client/connection/lib/types/browser-auth").BrowserAuth'.
+  Types have separate declarations of a private property 'secret'.
+rsh/Engine/session-query/session-log-export/tests/route.host.spec.ts(55,57): error TS2345: Argument of type 'import("E:/redsparkHarness/RedSparkHarness-code-optimization/rsh/Programs/Web/client/connection/src/browser-auth").BrowserAuth' is not assignable to parameter of type 'import("E:/redsparkHarness/RedSparkHarness/rsh/Programs/Web/client/connection/lib/types/browser-auth").BrowserAuth'.
+  Types have separate declarations of a private property 'secret'.
+rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/tests/local.e2e.ts(22,63): error TS2345: Argument of type 'LocalSandboxBackend' is not assignable to parameter of type 'ProcessSandbox'.
+  Property 'confineChildProcess' is missing in type 'LocalSandboxBackend' but required in type 'ProcessSandbox'.
+rsh/Modules/Official/llm/llm-pi-ai/tests/siwc.spec.ts(2,53): error TS2307: Cannot find module 'jose' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/tests/native.spec.ts(2,64): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/tests/native.spec.ts(3,74): error TS2307: Cannot find module '@agentclientprotocol/sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/acp-child/tests/native.spec.ts(85,60): error TS7031: Binding element 'peerClient' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/acp-child/tests/native.spec.ts(95,63): error TS7031: Binding element 'peerClient' implicitly has an 'any' type.
+rsh/Modules/Official/subagent/subagent-claude-code/tests/real-product.spec.ts(19,8): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/subagent-claude-code/tests/real-product.spec.ts(60,19): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/subagent-claude-code/tests/subagent-claude-code.spec.ts(12,8): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Modules/Official/subagent/subagent-claude-code/tests/subagent-claude-code.spec.ts(75,41): error TS2307: Cannot find module '@anthropic-ai/claude-agent-sdk' or its corresponding type declarations.
+rsh/Programs/CLI/tests/native-profile-template.spec.ts(24,3): error TS2353: Object literal may only specify known properties, and 'siwcRegistration' does not exist in type 'PiAiAuthInjection'.
+rsh/Programs/CLI/tests/native-profile-template.spec.ts(48,19): error TS2339: Property 'dispose' does not exist on type 'PiAiAdapter'.
+rsh/Programs/Web/client/ui-deliverables/tests/present-open.host.spec.ts(50,57): error TS2345: Argument of type 'import("E:/redsparkHarness/RedSparkHarness-code-optimization/rsh/Programs/Web/client/connection/src/browser-auth").BrowserAuth' is not assignable to parameter of type 'import("E:/redsparkHarness/RedSparkHarness/rsh/Programs/Web/client/connection/lib/types/browser-auth").BrowserAuth'.
+  Types have separate declarations of a private property 'secret'.
+[ELIFECYCLE] Command failed with exit code 2.
+[ELIFECYCLE] Command failed with exit code 2.
+E:\redsparkHarness\RedSparkHarness\rsh\Scripts\build.ts:27
+    throw new Error(`build: ${script} exited with ${String(result.status ?? result.signal)}`)
+          ^
+
+Error: build: build:lib exited with 2
+    at runScript (E:\redsparkHarness\RedSparkHarness\rsh\Scripts\build.ts:27:11)
+    at main (E:\redsparkHarness\RedSparkHarness\rsh\Scripts\build.ts:45:3)
+    at <anonymous> (E:\redsparkHarness\RedSparkHarness\rsh\Scripts\build.ts:53:23)
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.15.0
+[ELIFECYCLE] Command failed with exit code 1.

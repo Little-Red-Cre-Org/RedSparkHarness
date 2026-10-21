@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-09-native-file-reference-provider.md
+2026-10-09-native-file-reference-provider.md: 280cb3a3dc956b057af81665249cc0814587555a
+2026-10-09-native-file-reference-provider.zh.md: ee77c21716c9a2b373ea34f7030f70c93d9125c7

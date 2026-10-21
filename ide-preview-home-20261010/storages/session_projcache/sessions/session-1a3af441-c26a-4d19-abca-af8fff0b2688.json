@@ -1,0 +1,348 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789982523647,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 95,
+        "val": "测试"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 95,
+        "val": {
+          "first": {
+            "seq": 9,
+            "text": "测试"
+          },
+          "count": 7,
+          "lastSeq": 90
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 95,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 95,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 95,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 15917,
+            "outputTokens": 379,
+            "cacheReadTokens": 8896,
+            "cacheWriteTokens": 22293
+          },
+          "last": {
+            "turn": 7,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 7489,
+              "outputTokens": 9,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 95,
+        "val": {
+          "surfaceTokens": 1944,
+          "contextWindow": 272000,
+          "pressureTokens": 7489,
+          "sampledSurfaceTokens": 1934
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 95,
+        "val": {
+          "nodes": [
+            {
+              "seq": 75,
+              "heuristicTokens": 1423,
+              "system": true
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 15,
+              "heuristicTokens": 90,
+              "system": false
+            },
+            {
+              "seq": 22,
+              "heuristicTokens": 10,
+              "system": false
+            },
+            {
+              "seq": 23,
+              "heuristicTokens": 95,
+              "system": false
+            },
+            {
+              "seq": 32,
+              "heuristicTokens": 10,
+              "system": false
+            },
+            {
+              "seq": 33,
+              "heuristicTokens": 41,
+              "system": false
+            },
+            {
+              "seq": 36,
+              "heuristicTokens": 23,
+              "system": false
+            },
+            {
+              "seq": 43,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 44,
+              "heuristicTokens": 17,
+              "system": false
+            },
+            {
+              "seq": 52,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 66,
+              "heuristicTokens": 10,
+              "system": false
+            },
+            {
+              "seq": 76,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 77,
+              "heuristicTokens": 45,
+              "system": false
+            },
+            {
+              "seq": 90,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 92,
+              "heuristicTokens": 10,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1423,
+            "toolsTokens": 8043,
+            "messageTokens": 520
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 89,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 93
+          },
+          "lastTurn": 7
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 95,
+        "val": {
+          "turns": 7,
+          "steps": 7,
+          "llmMs": 97429,
+          "toolMs": 0,
+          "ttftMs": 88982,
+          "ttftSteps": 6,
+          "decodeMs": 8447,
+          "decodeTokens": 379,
+          "lastTurn": 7,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 5,
+              "prompt": "测试",
+              "response": "收到测试消息！系统运行正常，我已准备就绪。 我是运行在 DeepSeek Harness 上的编码代理，工作目录为 `E:\\RedSparkWorkspace`，当前文件沙箱权限为 **workspace-write**（可修改工作区内的…"
+            },
+            {
+              "turn": 2,
+              "seq": 19,
+              "prompt": "你是什么模型",
+              "response": "我是 **evomap-glm-5.2** 模型，运行在 DeepSeek Harness 平台上，担任编码代理（coding agent）的角色。 关于我的运行环境： - 🖥️ **工作目录**：`E:\\RedSparkWorkspa…"
+            },
+            {
+              "turn": 3,
+              "seq": 28,
+              "prompt": "你是什么模型",
+              "response": "我是 **evomap-gpt-5.6-terra**，作为 DeepSeek Harness 中的编码代理运行。"
+            },
+            {
+              "turn": 4,
+              "seq": 40,
+              "prompt": "厕所",
+              "response": "你是想找厕所、讨论厕所相关问题，还是只是随便测试一下？请告诉我具体需要。"
+            },
+            {
+              "turn": 5,
+              "seq": 49,
+              "prompt": "测试",
+              "response": "收到，测试正常。"
+            },
+            {
+              "turn": 6,
+              "seq": 72,
+              "prompt": "测试",
+              "response": ""
+            },
+            {
+              "turn": 7,
+              "seq": 87,
+              "prompt": "测试",
+              "response": "收到，测试正常。"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 95,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 95,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 95,
+        "val": {
+          "lastUsed": {
+            "provider": "openai-codex",
+            "model": "gpt-6-sol"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 95,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1791177545644
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 95,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 95,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 95,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 95,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 95,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

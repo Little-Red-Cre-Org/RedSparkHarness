@@ -1,0 +1,26 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "./lib/client.tsbuildinfo"
+  },
+  "include": [
+    "src/workspace-types.ts",
+    "src/types.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../../Engine/workspace/workspace-definition"
+    }
+  ]
+}

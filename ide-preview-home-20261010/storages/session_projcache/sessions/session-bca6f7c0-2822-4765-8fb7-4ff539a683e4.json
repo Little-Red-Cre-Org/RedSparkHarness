@@ -1,0 +1,327 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789312265133,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 79,
+        "val": "你好"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 79,
+        "val": {
+          "first": {
+            "seq": 8,
+            "text": "你好"
+          },
+          "count": 6,
+          "lastSeq": 66
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 79,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 79,
+        "val": "danger-full-access"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 79,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 14281,
+            "outputTokens": 576,
+            "cacheReadTokens": 13952,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 6,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 191,
+              "outputTokens": 215,
+              "cacheReadTokens": 6528,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 79,
+        "val": {
+          "surfaceTokens": 1894,
+          "contextWindow": 128000,
+          "pressureTokens": 6719,
+          "sampledSurfaceTokens": 1828
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 79,
+        "val": {
+          "nodes": [
+            {
+              "seq": 46,
+              "heuristicTokens": 1425,
+              "system": true
+            },
+            {
+              "seq": 8,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 21,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 33,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 34,
+              "heuristicTokens": 48,
+              "system": false
+            },
+            {
+              "seq": 37,
+              "heuristicTokens": 64,
+              "system": false
+            },
+            {
+              "seq": 47,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 48,
+              "heuristicTokens": 48,
+              "system": false
+            },
+            {
+              "seq": 51,
+              "heuristicTokens": 23,
+              "system": false
+            },
+            {
+              "seq": 58,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 59,
+              "heuristicTokens": 42,
+              "system": false
+            },
+            {
+              "seq": 66,
+              "heuristicTokens": 10,
+              "system": false
+            },
+            {
+              "seq": 67,
+              "heuristicTokens": 66,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1425,
+            "toolsTokens": 7127,
+            "messageTokens": 470
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 65,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 68
+          },
+          "lastTurn": 6
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 79,
+        "val": {
+          "turns": 6,
+          "steps": 6,
+          "llmMs": 13301,
+          "toolMs": 0,
+          "ttftMs": 12161,
+          "ttftSteps": 4,
+          "decodeMs": 1140,
+          "decodeTokens": 576,
+          "lastTurn": 6,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 4,
+              "prompt": "你好",
+              "response": ""
+            },
+            {
+              "turn": 2,
+              "seq": 18,
+              "prompt": "你好",
+              "response": ""
+            },
+            {
+              "turn": 3,
+              "seq": 29,
+              "prompt": "你好",
+              "response": "你好！👋 我是你的编程助手，当前工作目录是 `E:\\RedSparkWorkspace`。 我可以帮你做这些事： - **读代码 / 找文件** — 搜索、定位、理解现有工程结构 - **写代码 / 改代码** — 新建文件、重构、修…"
+            },
+            {
+              "turn": 4,
+              "seq": 43,
+              "prompt": "你好",
+              "response": "你好！😊 我在这儿，接下来想让我帮你做什么？可以直接告诉我需求，我来直接处理。"
+            },
+            {
+              "turn": 5,
+              "seq": 55,
+              "prompt": "你是谁",
+              "response": "我是你在这个会话中的 **AI 编码助手**，由本平台的 Codex-spark 模型驱动，专门帮你： - 查看/修改代码 - 运行命令和排查问题 - 设计和实现功能、修复 bug - 整理和解释项目情况 可以直接把你要做的任务告诉我。"
+            },
+            {
+              "turn": 6,
+              "seq": 63,
+              "prompt": "你能做什么",
+              "response": "当然可以，我可以帮你做很多与项目相关的事： - 阅读/分析仓库：定位文件、查找问题代码、理解业务逻辑 - 修改代码：修 bug、重构、补功能、优化性能 - 新建文件：脚本、配置、文档、测试等 - 运行与排错：执行命令、看日志、修复报错、测…"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 79,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 79,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "preset": "danger-full-access",
+          "sandbox": "danger-full-access",
+          "approval": "never",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 79,
+        "val": {
+          "lastUsed": {
+            "provider": "openai-codex",
+            "model": "gpt-5.3-codex-spark"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 1,
+        "seq": 79,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1789386858250
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 79,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 79,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 79,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 79,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 79,
+        "val": null
+      }
+    }
+  }
+}

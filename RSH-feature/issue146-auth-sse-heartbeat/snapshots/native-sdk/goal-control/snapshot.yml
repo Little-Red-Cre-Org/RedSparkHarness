@@ -1,0 +1,8 @@
+version: 1
+scenario: goal-control
+profile: native-sdk
+composition: native-sdk-goal-control
+recording: authored
+header:
+  class: native-sdk-goal-control
+  pin: true

@@ -1,0 +1,219 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789541946697,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 19,
+        "val": "[Scheduled] 每隔5分钟提醒我喝水，持续20分钟"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 19,
+        "val": {
+          "first": null,
+          "count": 0,
+          "lastSeq": null
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 19,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 19,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 19,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 0,
+            "outputTokens": 0,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "last": null
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 19,
+        "val": {
+          "surfaceTokens": 144
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 19,
+        "val": {
+          "nodes": [
+            {
+              "seq": 4,
+              "heuristicTokens": 36,
+              "system": false
+            },
+            {
+              "seq": 7,
+              "heuristicTokens": 36,
+              "system": false
+            },
+            {
+              "seq": 14,
+              "heuristicTokens": 36,
+              "system": false
+            },
+            {
+              "seq": 19,
+              "heuristicTokens": 36,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 0,
+            "toolsTokens": 0,
+            "messageTokens": 144
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": null,
+          "lastStepBoundary": null,
+          "lastTurn": 0
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 19,
+        "val": {
+          "turns": 0,
+          "steps": 0,
+          "llmMs": 0,
+          "toolMs": 0,
+          "ttftMs": 0,
+          "ttftSteps": 0,
+          "decodeMs": 0,
+          "decodeTokens": 0,
+          "lastTurn": null,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "turns": [],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 19,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 19,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 19,
+        "val": {
+          "lastUsed": null,
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 1,
+        "seq": 19,
+        "val": {
+          "blank": true,
+          "lastPromptAt": null
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 19,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 19,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 19,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": null
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 19,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 19,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

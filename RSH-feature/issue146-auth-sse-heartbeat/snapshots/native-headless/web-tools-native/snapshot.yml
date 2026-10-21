@@ -1,0 +1,8 @@
+version: 1
+scenario: web-tools-native
+profile: native-headless
+composition: native-web-tools
+recording: authored
+header:
+  class: native-web-tools
+  pin: true

@@ -1,0 +1,646 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_output",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "send_message",
+      "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "message"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "interrupt_agent",
+      "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_agents",
+      "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "children",
+              "descendants"
+            ],
+            "description": "children (default) or the complete descendant tree."
+          }
+        }
+      }
+    },
+    {
+      "name": "subagent",
+      "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "prompt"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "workflow",
+      "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "whenToUse": {
+                "type": "string"
+              },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "script",
+          "meta"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read",
+      "description": "Read a UTF-8 text file and return line-numbered content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to read, resolved by the filesystem backend."
+          },
+          "offset": {
+            "type": "number",
+            "description": "1-based first line to return. Defaults to 1."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of lines to return. Defaults to 2000."
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read_image",
+      "description": "Read a PNG/JPEG/WebP/GIF file and return the image itself. The current model must declare image input.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to the image file, resolved by the filesystem backend."
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write",
+      "description": "Create or fully replace a UTF-8 text file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to write, resolved by the filesystem backend."
+          },
+          "content": {
+            "type": "string",
+            "description": "Full UTF-8 text content to write."
+          }
+        },
+        "required": [
+          "file_path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "edit",
+      "description": "Edit an existing UTF-8 text file by replacing literal text.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Path to edit, resolved by the filesystem backend."
+          },
+          "old_string": {
+            "type": "string",
+            "description": "Literal text to replace. Must match exactly."
+          },
+          "new_string": {
+            "type": "string",
+            "description": "Literal replacement text. Use an empty string to delete the match."
+          },
+          "replace_all": {
+            "type": "boolean",
+            "description": "Replace all matches. Defaults to false; when false, old_string must appear exactly once."
+          }
+        },
+        "required": [
+          "file_path",
+          "old_string",
+          "new_string"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": [
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "read",
+        "description": "Read a UTF-8 text file and return line-numbered content.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_path": {
+              "type": "string",
+              "description": "Path to read, resolved by the filesystem backend."
+            },
+            "offset": {
+              "type": "number",
+              "description": "1-based first line to return. Defaults to 1."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of lines to return. Defaults to 2000."
+            }
+          },
+          "required": [
+            "file_path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "read_image",
+        "description": "Read a PNG/JPEG/WebP/GIF file and return the image itself. The current model must declare image input.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_path": {
+              "type": "string",
+              "description": "Path to the image file, resolved by the filesystem backend."
+            }
+          },
+          "required": [
+            "file_path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write",
+        "description": "Create or fully replace a UTF-8 text file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_path": {
+              "type": "string",
+              "description": "Path to write, resolved by the filesystem backend."
+            },
+            "content": {
+              "type": "string",
+              "description": "Full UTF-8 text content to write."
+            }
+          },
+          "required": [
+            "file_path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "edit",
+        "description": "Edit an existing UTF-8 text file by replacing literal text.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_path": {
+              "type": "string",
+              "description": "Path to edit, resolved by the filesystem backend."
+            },
+            "old_string": {
+              "type": "string",
+              "description": "Literal text to replace. Must match exactly."
+            },
+            "new_string": {
+              "type": "string",
+              "description": "Literal replacement text. Use an empty string to delete the match."
+            },
+            "replace_all": {
+              "type": "boolean",
+              "description": "Replace all matches. Defaults to false; when false, old_string must appear exactly once."
+            }
+          },
+          "required": [
+            "file_path",
+            "old_string",
+            "new_string"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  ]
+}

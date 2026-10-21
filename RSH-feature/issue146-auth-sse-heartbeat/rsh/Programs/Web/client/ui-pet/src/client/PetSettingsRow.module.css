@@ -1,0 +1,10 @@
+.group { display: flex; flex-direction: column; gap: 14px; padding: 18px 0; border-bottom: 0.5px solid var(--dsw-alias-border-l2); }
+.groupTitle { margin: 0; color: var(--dsw-alias-brand-text); font-size: 12px; line-height: 18px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.title { color: var(--dsw-alias-label-primary); font-size: 14px; line-height: 22px; }
+.description { color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.field { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--dsw-alias-label-primary); font-size: 13px; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.choices button { min-width: 76px; padding: 7px 14px; border: 0.5px solid var(--dsw-alias-border-l4); border-radius: 14px; background: transparent; color: var(--dsw-alias-label-primary); cursor: pointer; }
+.choices button:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.choices button[aria-pressed='true'] { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-state-business-tertiary); color: var(--dsw-alias-brand-text); }

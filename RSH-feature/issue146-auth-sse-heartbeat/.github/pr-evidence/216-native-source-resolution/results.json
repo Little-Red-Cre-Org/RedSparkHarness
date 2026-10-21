@@ -1,0 +1,668 @@
+{
+  "recordVersion": 1,
+  "implementationCommit": "a6e9c879f64c2179045242535f1881da9b59cada",
+  "baseCommit": "1d8d6b0d68af7446d38244b227ff6ddbf0840001",
+  "environment": {
+    "os": "Windows",
+    "node": "24.14.1",
+    "pnpm": "11.28.5"
+  },
+  "sourceConfigurationSha256": "4dddea818164e61722a5c6f6fa4b5d1043e3498cd543f2d410cdc01f9054811e",
+  "sourceImportsBeforeBuild": [
+    {
+      "specifier": "@deepseek-ai/dsh-compat-settings-adapters/agent-default-model",
+      "expectedSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-default-model.ts",
+      "actualSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-default-model.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "apply",
+        "default",
+        "name"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-compat-settings-adapters/agent-loop",
+      "expectedSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-loop.ts",
+      "actualSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-loop.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "apply",
+        "default",
+        "name"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-compat-settings-adapters/agent-presets",
+      "expectedSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-presets.ts",
+      "actualSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/agent-presets.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "apply",
+        "default",
+        "name"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-compat-settings-adapters/tool-subagent",
+      "expectedSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/tool-subagent.ts",
+      "actualSource": "rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/tool-subagent.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "apply",
+        "default",
+        "name"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-agent-default-model/compat-settings",
+      "expectedSource": "rsh/Engine/core/agent-default-model/src/compat-settings.ts",
+      "actualSource": "rsh/Engine/core/agent-default-model/src/compat-settings.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "agentDefaultModelSettingsOwner"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-agent-loop/compat-settings",
+      "expectedSource": "rsh/Engine/core/agent-loop/src/compat-settings.ts",
+      "actualSource": "rsh/Engine/core/agent-loop/src/compat-settings.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "agentLoopSettingsOwner"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-agent-presets/compat-settings",
+      "expectedSource": "rsh/Engine/preset/agent-presets/src/compat-settings.ts",
+      "actualSource": "rsh/Engine/preset/agent-presets/src/compat-settings.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "agentPresetsSettingsOwner"
+      ]
+    },
+    {
+      "specifier": "@deepseek-ai/dsh-tool-subagent/compat-settings",
+      "expectedSource": "rsh/Engine/subagent/tool-subagent/src/compat-settings.ts",
+      "actualSource": "rsh/Engine/subagent/tool-subagent/src/compat-settings.ts",
+      "libAbsent": true,
+      "sourceLoaded": true,
+      "exports": [
+        "subagentModelSelectionSettingsOwner"
+      ]
+    }
+  ],
+  "focused": {
+    "cordisConfigurations": 150,
+    "sourceTests": {
+      "files": 3,
+      "passed": 24,
+      "exitCode": 0
+    },
+    "quickDocumentation": {
+      "passed": 17,
+      "exitCode": 0
+    },
+    "lintExitCode": 0,
+    "preCommitExitCode": 0,
+    "prePushTypecheckExitCode": 0
+  },
+  "completeCheck": {
+    "command": "pnpm run check:all",
+    "total": 61,
+    "passed": 52,
+    "failed": 9,
+    "skipped": 0,
+    "exitCode": 1,
+    "durationSeconds": 1277.95,
+    "rawLogSha256": "73b154a6fe1750188e87c5393ee33ed8dec812bdb40cc8963425802d89941e69",
+    "gates": [
+      {
+        "id": "runtime-closure",
+        "command": "pnpm run verify-runtime-closure",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "cordis-config",
+        "command": "pnpm run verify-cordis-config",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "client-domain-graph",
+        "command": "pnpm run verify-client-domain-graph",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "test",
+        "command": "pnpm run test",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "approval-policy",
+        "command": "pnpm run test:approval-policy",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "issue-management",
+        "command": "pnpm run test:issue-management",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "duplication",
+        "command": "pnpm run duplication",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "snapshot",
+        "command": "pnpm run test:snapshot",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "expected-output",
+        "command": "pnpm run test:expected",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "build",
+        "command": "pnpm run build",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "build:web",
+        "command": "pnpm run build:web",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "rescope-vendor",
+        "command": "pnpm run rescope-vendor:check",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "publint",
+        "command": "pnpm run publint",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "constraints",
+        "command": "pnpm run constraints",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "native-dependencies",
+        "command": "pnpm run verify-native-dependencies",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-dependencies",
+        "command": "pnpm run verify-package-dependencies",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "application-entrypoints",
+        "command": "pnpm run verify-application-entrypoints",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "dsh-package-licenses",
+        "command": "pnpm run verify-dsh-package-licenses",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-invariants",
+        "command": "pnpm run verify-package-invariants",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "built-package-invariants",
+        "command": "pnpm run verify-built-package-invariants",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "node-next-types",
+        "command": "pnpm run verify-node-next-types",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "optional-dependency-imports",
+        "command": "pnpm run verify-optional-dependency-imports",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "client-packages",
+        "command": "pnpm run verify-client-packages",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "client-ui-i18n",
+        "command": "pnpm run verify-client-ui-i18n",
+        "status": "failed",
+        "exitCode": 1
+      },
+      {
+        "id": "no-bare-dispatcher",
+        "command": "pnpm run verify-no-bare-dispatcher",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "doc-typecheck",
+        "command": "pnpm run doc-typecheck:contracts-ready",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "docs-site-build",
+        "command": "pnpm run docs:build",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "doc-graphs",
+        "command": "pnpm run verify-doc-graphs",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "markdown-links",
+        "command": "pnpm run verify-md-links",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "type-equivalence",
+        "command": "pnpm run verify-type-equiv",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "cordis-catalog",
+        "command": "pnpm run verify-cordis-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "cordis-inspect-catalog",
+        "command": "pnpm run verify-cordis-inspect-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "mermaid",
+        "command": "pnpm run verify-mermaid",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "scoped-events",
+        "command": "pnpm run verify-scoped-events",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "translation-pairing",
+        "command": "pnpm run verify-translation-pairing",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "markdown-wrap",
+        "command": "pnpm run verify-md-wrap",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "client-catalog",
+        "command": "pnpm run verify-client-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "export-jsdoc",
+        "command": "pnpm run verify-export-jsdoc",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "tool-catalog",
+        "command": "pnpm run verify-tool-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "config-catalog",
+        "command": "pnpm run verify-config-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "persistence-catalog",
+        "command": "pnpm run verify-persistence-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "session-format-catalog",
+        "command": "pnpm run verify-session-format-catalog",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "public-repository-links",
+        "command": "pnpm run verify-public-repository-links",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "doc-refs",
+        "command": "pnpm run verify-doc-refs",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "subsystem-pages",
+        "command": "pnpm run verify-subsystem-pages",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-paths",
+        "command": "pnpm run verify-package-paths",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-groups",
+        "command": "pnpm run verify-package-groups",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "tsconfig-paths",
+        "command": "pnpm run verify-tsconfig-paths",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "config-source-ownership",
+        "command": "pnpm run verify-config-source-ownership",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-readme-summaries",
+        "command": "pnpm run verify-package-readme-summaries",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-readme-model-experience",
+        "command": "pnpm run verify-package-readme-model-experience",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "agent-note-classification",
+        "command": "pnpm run verify-agent-note-classification",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "agent-note-format",
+        "command": "pnpm run verify-agent-note-format",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "archived-agent-notes",
+        "command": "pnpm run verify-archived-agent-notes",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "skill-invocation-metadata",
+        "command": "pnpm run verify-skill-invocation-metadata",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "translation-prompt",
+        "command": "pnpm run verify-translation-prompt",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "doc-budgets",
+        "command": "pnpm run verify-doc-budgets",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "doc-standard-tests",
+        "command": "pnpm exec vitest run rsh/Scripts/doc-standard.spec.ts",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "docs-site-projection",
+        "command": "pnpm exec vitest run rsh/Scripts/project-doc-site.spec.ts rsh/Scripts/verify-doc-site-fragments.spec.ts rsh/Scripts/verify-doc-site-render.spec.ts",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "package-readme-limitations",
+        "command": "pnpm run verify-package-readme-limitations",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "id": "module-graph",
+        "command": "pnpm run verify-module-graph",
+        "status": "failed",
+        "exitCode": 1
+      }
+    ]
+  },
+  "unitAB": {
+    "selection": {
+      "files": [
+        "rsh/Core/subprocess/subprocess-local/tests/native-windows.spec.ts",
+        "rsh/Programs/CLI/tests/native-profile-loader.spec.ts",
+        "rsh/Programs/SDK/packages/client/tests/launch.spec.ts",
+        "rsh/Programs/Web/client/ui-primitives/tests/code-block.client.spec.tsx",
+        "rsh/Scripts/benchmark-npm-resolution.spec.ts",
+        "rsh/Scripts/gen-third-party-notices.spec.ts",
+        "rsh/Scripts/locale-dictionary-parity.spec.ts",
+        "rsh/Scripts/oxlint-contract.spec.ts",
+        "rsh/Scripts/session-fixture-layout.spec.ts",
+        "rsh/Scripts/verify-native-dependencies.spec.ts",
+        "rsh/Engine/session/session-persistence-jsonl/tests/content-admission.spec.ts",
+        "rsh/Engine/session/session-persistence-jsonl/tests/multi-edge-publication.spec.ts",
+        "rsh/Engine/session/session-persistence-jsonl/tests/v2-ptc-migration.spec.ts",
+        "rsh/Modules/Community/experimental/inspector/tests/port-selection.host.spec.ts",
+        "rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts",
+        "rsh/Programs/Web/client/ui-settings-general/tests/apply.client.spec.ts",
+        "rsh/Programs/Web/client/ui-settings-general/tests/shell.client.spec.ts",
+        "rsh/Scripts/change-scope.spec.ts",
+        "rsh/Scripts/translation-pairing-merge.spec.ts",
+        "rsh/Tests/test-support/client-runtime/tests/assembly-test-client.client.spec.ts"
+      ],
+      "importFailureFiles": [
+        "rsh/Programs/TUI/native-tui/tests/human.spec.ts",
+        "rsh/Programs/TUI/native-tui/tests/lifecycle.spec.ts",
+        "rsh/Programs/TUI/native-tui/tests/models.spec.ts",
+        "rsh/Programs/Web/client/ui-sidebar-documentpreview/tests/document-seat.client.spec.tsx"
+      ],
+      "names": [
+        "Windows Job native containment preserves missing-target and invalid-executable rejection errors",
+        "registers ready user native preset folders under child scopes and lists their summaries",
+        "SDK dsh launch resolution initializes the shipped Native profile through the real CLI source entry",
+        "highlightToHtml lazily loads every read-card grammar: plain first, highlighted after load",
+        "npm resolution benchmark isolates peer resolution from inherited npm configuration",
+        "npm resolution benchmark returns npm placement for two aliased package versions without requesting archives",
+        "THIRD_PARTY_NOTICES.md matches what the generator produces from the current manifests",
+        "shipped locale dictionaries declares the same keys in zh and en, so the single fallback locale always resolves",
+        "Oxlint executable contract accepts an ignored-only staged selection",
+        "Oxlint executable contract checks preserved TypeGraph syntax without type-aware analysis",
+        "Oxlint executable contract keeps staged validation project-free while preserving source rules",
+        "Oxlint executable contract preserves successful fix output channels",
+        "keeps every session-format JSONL fixture projected into canonical event layout",
+        "admits a strict native local and Node built-in edge",
+        "checks a declared Cordis-free subpath in a mixed package",
+        "checks a mixed native library export without an installer manifest",
+        "checks a TSX native source in the compiler face for rsh/Programs/Web/client/ui-trajectory",
+        "rejects a strict native source edge from rsh/Core/util/json-rpc-line: import type { Agent } from \"hidden-engine\"",
+        "resolves actual aliases and refuses non-native or missing owners: export type { Context } from \"../../../vendor/cordis/src/index.ts\"",
+        "resolves actual aliases and refuses non-native or missing owners: export type { Context } from \"missing-workspace-package\"",
+        "V2 admitted content publication (none) preserves 'compaction rawOutput' on read, publication, and fresh reopen",
+        "V1 multi-edge durable publication re-prepares populated history after source drift rejects stale publication (none)",
+        "V1 multi-edge durable publication re-prepares populated history after source drift rejects stale publication (zstd)",
+        "JSONL V2 PTC publication and restore publishes V3 without changing V2 bytes and preserves restored IDs, roles, content, and replay state",
+        "Inspector endpoint port selection advances from an occupied starting port and publishes the selected port",
+        "packed image keeps third-party runtime JavaScript published under src",
+        "packed image prepares the unchanged plugin-package inventory through Worker createRequire paths",
+        "ui-settings-general apply fills the five seats of the shell it declares, with the locale-following General label",
+        "ui-settings-general apply re-registers after a Loader rebuild of the declaring chain (stale disposers must not block)",
+        "ui-settings-general apply reads availability from the shared mirror and follows its reconnect refresh",
+        "ui-settings-general apply registers the zh/en settings dictionaries and frees the seats when its row unloads",
+        "ui-settings-general apply removes every seat and the item declaration when its row unloads",
+        "ui-settings-general apply the nav label thunk follows the active locale without re-registration",
+        "ui-settings-general apply withholds the Host document action off-loopback",
+        "ui-settings-general shell occupies sidebar.settings, declared by ui-sidebar, and declares every child slot",
+        "ui-settings-general shell projects onboarding entries into stable coordinator order",
+        "ui-settings-general shell projects the roster Connection control without copying its state; reconnect opens a new $events generation",
+        "ui-settings-general shell projects the section ledger: product sections in order, defaults for bare rows, stable snapshots",
+        "ui-settings-general shell re-registers after the declarer reloads: the cascade removes the shell, the rebuilt declaration takes it back",
+        "ui-settings-general shell unregisters the shell and collapses every child slot when its row unloads",
+        "change-scope renders deterministic versioned JSON",
+        "translation pairing merge composition leaves a staged merge when the pre-merge-commit hook rejects it",
+        "translation pairing merge composition runs as Git's custom driver and commits a clean composed record",
+        "translation pairing merge composition sees a paired link target added by the other branch",
+        "accepts Client bundle inputs from devDependencies but rejects them from Host runtime sources",
+        "checks the Cordis-free SDK client in its Host compiler face",
+        "rejects a classified mixed package without a resolvable native source entry",
+        "TestClient (jsdom) boots the whole web-app roster, connects, mounts, and disposes with nothing unmatched",
+        "TestClient (jsdom) boots with a provided row in place of the real plugin",
+        "TestClient (jsdom) fails loud by teardown at the latest when a boot-time endpoint has no fixture",
+        "TestClient (jsdom) mounts into a caller-supplied element and leaves it in place on dispose",
+        "TestClient (jsdom) reload rebuilds the declaring entry; unload collapses it"
+      ]
+    },
+    "baseline": [
+      {
+        "exitCode": 1,
+        "signal": null,
+        "failedCases": [
+          "|thread-safe| rsh/Scripts/benchmark-npm-resolution.spec.ts > npm resolution benchmark > returns npm placement for two aliased package versions without requesting archives",
+          "|thread-safe| rsh/Scripts/benchmark-npm-resolution.spec.ts > npm resolution benchmark > isolates peer resolution from inherited npm configuration",
+          "|thread-safe| rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts > packed image > keeps third-party runtime JavaScript published under src",
+          "|thread-safe| rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts > packed image > prepares the unchanged plugin-package inventory through Worker createRequire paths"
+        ],
+        "testFiles": "2 failed | 18 passed (20)",
+        "tests": "4 failed | 48 passed | 251 skipped (303)"
+      },
+      {
+        "exitCode": 0,
+        "signal": null,
+        "failedCases": [],
+        "testFiles": "4 passed (4)",
+        "tests": "12 passed (12)"
+      }
+    ],
+    "proposed": [
+      {
+        "exitCode": 1,
+        "signal": null,
+        "failedCases": [
+          "|thread-safe| rsh/Scripts/benchmark-npm-resolution.spec.ts > npm resolution benchmark > returns npm placement for two aliased package versions without requesting archives",
+          "|thread-safe| rsh/Scripts/oxlint-contract.spec.ts > Oxlint executable contract > checks preserved TypeGraph syntax without type-aware analysis",
+          "|thread-safe| rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts > packed image > keeps third-party runtime JavaScript published under src",
+          "|thread-safe| rsh/Modules/Community/experimental/webworker-packer/tests/image-loadable.spec.ts > packed image > prepares the unchanged plugin-package inventory through Worker createRequire paths"
+        ],
+        "testFiles": "3 failed | 17 passed (20)",
+        "tests": "4 failed | 48 passed | 251 skipped (303)"
+      },
+      {
+        "exitCode": 0,
+        "signal": null,
+        "failedCases": [],
+        "testFiles": "4 passed (4)",
+        "tests": "12 passed (12)"
+      }
+    ],
+    "firstComparisonDifference": [
+      "|thread-safe| rsh/Scripts/oxlint-contract.spec.ts > Oxlint executable contract > checks preserved TypeGraph syntax without type-aware analysis"
+    ],
+    "isolatedFollowup": {
+      "names": [
+        "Oxlint executable contract checks preserved TypeGraph syntax without type-aware analysis"
+      ],
+      "baseline": [
+        {
+          "exitCode": 0,
+          "signal": null,
+          "failedCases": [],
+          "testFiles": "1 passed (1)",
+          "tests": "1 passed | 13 skipped (14)"
+        }
+      ],
+      "proposed": [
+        {
+          "exitCode": 0,
+          "signal": null,
+          "failedCases": [],
+          "testFiles": "1 passed (1)",
+          "tests": "1 passed | 13 skipped (14)"
+        }
+      ],
+      "newFailures": []
+    }
+  },
+  "startup": {
+    "command": "node --import tsx/esm rsh/Programs/CLI/src/bin.ts --profile native-web",
+    "httpStatus": 200,
+    "bootState": "ready",
+    "pageErrors": [],
+    "alerts": [],
+    "passed": true,
+    "promptSent": false,
+    "modelCallMade": false,
+    "fixtureOrMockUsed": false,
+    "screenshot": {
+      "file": "native-official-startup.png",
+      "bytes": 326172,
+      "sha256": "03a121e50716e97b4bf7d7e2acd3c1724c750b1ee0b149cb965fff867b58c081",
+      "width": 1365,
+      "height": 900,
+      "capturedAtUtc": "2026-10-13T03:35:49.271Z"
+    }
+  }
+}

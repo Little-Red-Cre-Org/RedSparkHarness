@@ -1,0 +1,8 @@
+version: 1
+scenario: tool-results
+profile: native-headless
+composition: native-tool-results
+recording: authored
+header:
+  class: native-tool-results
+  pin: true

@@ -1,0 +1,6 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src/host.ts", "src/index.ts", "src/native.ts", "src/route-table.ts", "src/client.ts"],
+  "references": [{ "path": "../../runtime-diagnostics/native-runtime" }]
+}

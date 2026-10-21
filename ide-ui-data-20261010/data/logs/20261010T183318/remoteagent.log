@@ -1,0 +1,13 @@
+2026-10-10 18:33:18.326 [info] 
+
+
+
+
+2026-10-10 18:33:18.326 [info] [AgentHostChannel] Registered lazy IPC channel 'agentHostProxy' (upstream: \\.\pipe\vscode-ipc-2b6daa59-9b76-4e62-98f2-876388eaae93-sock)
+2026-10-10 18:33:18.326 [info] Extension host agent started. (validation: true)
+2026-10-10 18:33:24.353 [info] [127.0.0.1][50167ea4][ManagementConnection] New connection established.
+2026-10-10 18:33:24.369 [info] [127.0.0.1][ac7edb38][ExtensionHostConnection] New connection established.
+2026-10-10 18:33:24.370 [info] [127.0.0.1][ac7edb38][ExtensionHostConnection] Starting extension host process...
+2026-10-10 18:33:24.383 [info] [127.0.0.1][ac7edb38][ExtensionHostConnection] <51436> Launched Extension Host Process.
+2026-10-10 18:33:24.992 [info] [127.0.0.1][ac7edb38][ExtensionHostConnection] <51436> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+

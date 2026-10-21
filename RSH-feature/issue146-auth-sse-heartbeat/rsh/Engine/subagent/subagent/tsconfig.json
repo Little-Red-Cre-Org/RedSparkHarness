@@ -1,0 +1,81 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../core/scope"
+    },
+    {
+      "path": "../../core/system-prompt"
+    },
+    {
+      "path": "../../../Compatibility/DSH/bridge/compat-user-approval"
+    },
+    {
+      "path": "../../core/approval-definition"
+    },
+    {
+      "path": "../../preset/agent-presets/tsconfig.host.json"
+    },
+    {
+      "path": "../../../Modules/Official/sandbox/sandbox"
+    },
+    {
+      "path": "../../../Modules/Official/sandbox/sandbox-policy"
+    },
+    {
+      "path": "../../session/session-persistence/tsconfig.host.json"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../session/session-projection-cache"
+    },
+    {
+      "path": "../../session-query/session-query"
+    },
+    {
+      "path": "../../jobs/jobs"
+    },
+    {
+      "path": "../../../Core/typert/protocol"
+    },
+    {
+      "path": "../../../Core/util/time"
+    },
+    {
+      "path": "../../../Core/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../../Core/util/chunked-list"
+    },
+    {
+      "path": "../subagent-protocol"
+    }
+  ]
+}

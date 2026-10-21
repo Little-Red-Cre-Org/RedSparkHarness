@@ -1,0 +1,49 @@
+/** Cordis auth facade over the shared credential and launch-environment implementation. */
+import type { Context } from '@deepseek-ai/cordis'
+import type { AuthContext, CredentialStore } from '@earendil-works/pi-ai'
+import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import {
+  authContextFrom as createAuthContext,
+  credentialStoreFrom as createCredentialStore,
+  siwcRegistrationStoreFrom as createSiwcRegistrationStore,
+} from './auth-core.ts'
+import type { SiwcRegistrationStore } from './siwc.ts'
+export { RECORD_SCOPE, recordKeyFor } from './auth-core.ts'
+
+/**
+ * Forward pi-ai credential operations to the current scoped service.
+ * @param ctx - current credential service scope.
+ * @returns pi-ai storage with current service lookup on each operation.
+ */
+export function credentialStoreFrom(ctx: Context): CredentialStore {
+  return {
+    read: id => createCredentialStore(ctx.get('credentials')).read(id),
+    list: () => createCredentialStore(ctx.get('credentials')).list(),
+    modify: (id, mutate) => createCredentialStore(ctx.get('credentials')).modify(id, mutate),
+    delete: id => createCredentialStore(ctx.get('credentials')).delete(id),
+  }
+}
+
+/**
+ * Forward SIWC registration metadata operations to the current credential provider.
+ * @param ctx - current credential service scope.
+ * @returns metadata storage shared with the Native auth path.
+ */
+export function siwcRegistrationStoreFrom(ctx: Context): SiwcRegistrationStore {
+  return {
+    reconcile: migrate => createSiwcRegistrationStore(ctx.get('credentials')).reconcile(migrate),
+    modify: mutate => createSiwcRegistrationStore(ctx.get('credentials')).modify(mutate),
+  }
+}
+
+/**
+ * Resolve pi-ai ambient auth through the current credentials and launch snapshot.
+ * @param ctx - current credential and launch environment scope.
+ * @returns provider ambient auth queries.
+ */
+export function authContextFrom(ctx: Context): AuthContext {
+  return {
+    env: name => createAuthContext(ctx.get('credentials'), launchEnvironmentOf(ctx)).env(name),
+    fileExists: file => createAuthContext(ctx.get('credentials'), launchEnvironmentOf(ctx)).fileExists(file),
+  }
+}

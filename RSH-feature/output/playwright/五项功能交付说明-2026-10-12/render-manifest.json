@@ -1,0 +1,32 @@
+[
+  {
+    "id": "image",
+    "file": "01-图片理解.png",
+    "source": "E:/redsparkHarness/RedSparkHarness-image-understanding/output/playwright/optimization-live.png",
+    "caption": "真实产品截图 · 2026-10-12 · GPT-6 Luna 直传与原图追问"
+  },
+  {
+    "id": "reference",
+    "file": "02-文件-会话引用.png",
+    "source": "C:/Users/12148/.codex/visualizations/2026/10/10/01a12514-75c7-74d1-afd6-80766eefc3fc/reference-selected.png",
+    "caption": "真实产品历史截图 · 2026-10-10 · 草稿中的文件引用标签"
+  },
+  {
+    "id": "groups",
+    "file": "03-按需工具组.png",
+    "source": "E:/redsparkHarness/RedSparkHarness-tool-groups/output/playwright/feature03-tool-groups.png",
+    "caption": "真实 Native Web 历史截图 · 2026-10-10 · 离线固定回复模型"
+  },
+  {
+    "id": "browser",
+    "file": "04-浏览器只读.png",
+    "source": "E:/redsparkHarness/RedSparkHarness-zero-budget-next/.cache/zero-budget-validation/chrome-authorized.png",
+    "caption": "历史真实 Chrome 弹窗 · 2026-10-10 · 不能代表当前复验通过"
+  },
+  {
+    "id": "ide",
+    "file": "05-内置 IDE.png",
+    "source": "E:/redsparkHarness/RedSparkHarness-ide-integration/.artifacts/ide-acceptance-20261010/editor-save.png",
+    "caption": "隔离工作区真实截图 · 2026-10-10 · 编辑保存；非最新版全界面"
+  }
+]

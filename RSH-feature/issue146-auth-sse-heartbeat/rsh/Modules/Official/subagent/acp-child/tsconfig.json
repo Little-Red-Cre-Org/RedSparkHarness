@@ -1,0 +1,19 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Core/subprocess/subprocess" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Engine/llm/llm" },
+    { "path": "../../../../Engine/subagent/native-subagent" },
+    { "path": "../../../../Modules/Official/attachment/attachment" },
+    { "path": "../../../../Modules/Official/credentials/credentials" },
+    { "path": "../../../../Modules/Official/sandbox/sandbox" },
+    { "path": "../acp-protocol" }
+  ]
+}

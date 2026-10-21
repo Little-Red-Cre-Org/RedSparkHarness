@@ -1,0 +1,8 @@
+version: 1
+scenario: goal-continuation
+profile: native-headless
+composition: native-goal-continuation
+recording: authored
+header:
+  class: native-goal-continuation
+  pin: true

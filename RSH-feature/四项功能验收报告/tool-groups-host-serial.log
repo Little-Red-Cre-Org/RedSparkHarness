@@ -1,0 +1,1217 @@
+Started 2026-10-10T10:26:09.031Z
+Root E:\redsparkHarness\RedSparkHarness-tool-groups
+Projects 298
+
+1/298 rsh\Core\util\brand\tsconfig.json
+
+EXIT 0
+
+2/298 rsh\Core\runtime-diagnostics\native-runtime\tsconfig.json
+
+EXIT 0
+
+3/298 rsh\Core\vendor\cosmokit\tsconfig.json
+
+EXIT 0
+
+4/298 rsh\Core\vendor\cordis\tsconfig.json
+
+EXIT 0
+
+5/298 rsh\Core\util\http-proxy\tsconfig.json
+
+EXIT 0
+
+6/298 rsh\Core\util\home-paths\tsconfig.json
+
+EXIT 0
+
+7/298 rsh\Core\util\launch-environment\tsconfig.json
+
+EXIT 0
+
+8/298 rsh\Core\subprocess\subprocess\tsconfig.json
+
+EXIT 0
+
+9/298 rsh\Modules\Official\ide\ide-code-oss\tsconfig.json
+
+EXIT 0
+
+10/298 rsh\Programs\Web\host\native-ide\tsconfig.json
+
+EXIT 0
+
+11/298 rsh\Modules\Official\attachment\attachment\tsconfig.json
+
+EXIT 0
+
+12/298 rsh\Core\vendor\schemastery\tsconfig.json
+
+EXIT 0
+
+13/298 rsh\Core\runtime-diagnostics\invariants\tsconfig.json
+
+EXIT 0
+
+14/298 rsh\Core\util\timeout\tsconfig.json
+
+EXIT 0
+
+15/298 rsh\Core\util\crypto\tsconfig.json
+
+EXIT 0
+
+16/298 rsh\Core\util\values\tsconfig.json
+
+EXIT 0
+
+17/298 rsh\Core\typert\protocol\tsconfig.json
+
+EXIT 0
+
+18/298 rsh\Core\util\errors\tsconfig.json
+
+EXIT 0
+
+19/298 rsh\Engine\llm\llm\tsconfig.json
+
+EXIT 0
+
+20/298 rsh\Programs\TUI\terminal-ui\tsconfig.json
+
+EXIT 0
+
+21/298 rsh\Engine\core\scope\tsconfig.json
+
+EXIT 0
+
+22/298 rsh\Engine\core\session\tsconfig.json
+
+EXIT 0
+
+23/298 rsh\Engine\core\native-agent\tsconfig.host.json
+
+EXIT 0
+
+24/298 rsh\Engine\core\native-model-execution\tsconfig.host.json
+
+EXIT 0
+
+25/298 rsh\Engine\core\code-runtime-definition\tsconfig.json
+
+EXIT 0
+
+26/298 rsh\Engine\context\native-time-context\tsconfig.json
+
+EXIT 0
+
+27/298 rsh\Engine\core\native-tools\tsconfig.host.json
+
+EXIT 0
+
+28/298 rsh\Engine\core\native-prompt\tsconfig.json
+
+EXIT 0
+
+29/298 rsh\Modules\Official\sandbox\sandbox\tsconfig.json
+
+EXIT 0
+
+30/298 rsh\Modules\Official\sandbox\native-sandbox-policy\tsconfig.json
+
+EXIT 0
+
+31/298 rsh\Engine\core\approval-definition\tsconfig.json
+
+EXIT 0
+
+32/298 rsh\Compatibility\DSH\bridge\compat-plugin-host\tsconfig.json
+
+EXIT 0
+
+33/298 rsh\Modules\Official\fs\fs\tsconfig.json
+
+EXIT 0
+
+34/298 rsh\Engine\session\session-persistence\tsconfig.host.json
+
+EXIT 0
+
+35/298 rsh\Core\vendor\loader\tsconfig.json
+
+EXIT 0
+
+36/298 rsh\Core\vendor\include\tsconfig.json
+
+EXIT 0
+
+37/298 rsh\Engine\session\session-projection\tsconfig.json
+
+EXIT 0
+
+38/298 rsh\Engine\core\system-prompt\tsconfig.json
+
+EXIT 0
+
+39/298 rsh\Engine\core\agent\tsconfig.json
+
+EXIT 0
+
+40/298 rsh\Engine\core\tools\tsconfig.json
+
+EXIT 0
+
+41/298 rsh\Core\settings\settings-definition\tsconfig.json
+
+EXIT 0
+
+42/298 rsh\Compatibility\DSH\bridge\compat-settings-definition\tsconfig.json
+
+EXIT 0
+
+43/298 rsh\Modules\Official\settings\settings\tsconfig.json
+
+EXIT 0
+
+44/298 rsh\Core\util\atomic-write\tsconfig.json
+
+EXIT 0
+
+45/298 rsh\Engine\preset\agent-presets\tsconfig.host.json
+
+EXIT 0
+
+46/298 rsh\Engine\workspace\workspace-definition\tsconfig.json
+
+EXIT 0
+
+47/298 rsh\Engine\core\native-session-execution\tsconfig.host.json
+
+EXIT 0
+
+48/298 rsh\Core\storage\storage\tsconfig.json
+
+EXIT 0
+
+49/298 rsh\Core\storage\storage-domain\tsconfig.json
+
+EXIT 0
+
+50/298 rsh\Modules\Official\workspace\workspace\tsconfig.host.json
+
+EXIT 0
+
+51/298 rsh\Engine\llm\native-model-selection\tsconfig.host.json
+
+EXIT 0
+
+52/298 rsh\Engine\context\agent-instructions\tsconfig.json
+
+EXIT 0
+
+53/298 rsh\Engine\core\native-headless\tsconfig.json
+
+EXIT 0
+
+54/298 rsh\Modules\Official\interaction\native-approval\tsconfig.json
+
+EXIT 0
+
+55/298 rsh\Modules\Official\interaction\user-questions\tsconfig.host.json
+
+EXIT 0
+
+56/298 rsh\Modules\Official\interaction\commands\tsconfig.json
+
+EXIT 0
+
+57/298 rsh\Programs\TUI\native-tui\tsconfig.json
+
+EXIT 0
+
+58/298 rsh\Modules\Official\todo\tool-todo\tsconfig.json
+
+EXIT 0
+
+59/298 rsh\Modules\Official\credentials\credentials\tsconfig.json
+
+EXIT 0
+
+60/298 rsh\Programs\Web\host\directory-picker\tsconfig.json
+
+EXIT 0
+
+61/298 rsh\Core\settings\settings-definition\tsconfig.client.json
+
+EXIT 0
+
+62/298 rsh\Programs\Web\client\connection\tsconfig.client.json
+
+EXIT 0
+
+63/298 rsh\Engine\core\native-model-execution\tsconfig.client.json
+
+EXIT 0
+
+64/298 rsh\Engine\llm\native-model-selection\tsconfig.client.json
+
+EXIT 0
+
+65/298 rsh\Engine\preset\agent-presets\tsconfig.client.json
+
+EXIT 0
+
+66/298 rsh\Programs\Web\client\native-session\tsconfig.json
+
+EXIT 0
+
+67/298 rsh\Programs\Web\client\native-application\tsconfig.controller.json
+
+EXIT 0
+
+68/298 rsh\Modules\Official\code-runtime\tool-code-runtime\tsconfig.json
+
+EXIT 0
+
+69/298 rsh\Modules\Official\code-runtime\native-code-runtime\tsconfig.json
+
+EXIT 0
+
+70/298 rsh\Core\native\system\packages\entry\tsconfig.json
+
+EXIT 0
+
+71/298 rsh\Core\subprocess\win32-process\tsconfig.json
+
+EXIT 0
+
+72/298 rsh\Modules\Official\sandbox\sandbox-windows-acl\tsconfig.json
+
+EXIT 0
+
+73/298 rsh\Modules\Official\sandbox\sandbox-local\tsconfig.json
+
+EXIT 0
+
+74/298 rsh\Modules\Official\code-runtime\code-runtime-process-sandbox\tsconfig.json
+
+EXIT 0
+
+75/298 rsh\Core\util\http-routes\tsconfig.host.json
+
+EXIT 0
+
+76/298 rsh\Compatibility\DSH\bridge\http-routes-cordis\tsconfig.json
+
+EXIT 0
+
+77/298 rsh\Programs\Web\client\connection\tsconfig.host.json
+
+EXIT 0
+
+78/298 rsh\Engine\session\session-title\tsconfig.json
+
+EXIT 0
+
+79/298 rsh\Core\storage\storage-json\tsconfig.json
+
+EXIT 0
+
+80/298 rsh\Engine\session\session-projection-cache\tsconfig.json
+
+EXIT 0
+
+81/298 rsh\Engine\session-query\session-query\tsconfig.json
+
+EXIT 0
+
+82/298 rsh\Modules\Official\fs\tool-present\tsconfig.json
+
+EXIT 0
+
+83/298 rsh\Engine\core\agent-default-model\tsconfig.json
+
+EXIT 0
+
+84/298 rsh\Engine\context\file-reference\tsconfig.json
+
+EXIT 0
+
+85/298 rsh\Programs\Web\client\file-upload\tsconfig.host.json
+
+EXIT 0
+
+86/298 rsh\Modules\Official\sandbox\sandbox-policy\tsconfig.json
+
+EXIT 0
+
+87/298 rsh\Modules\Official\shell\shell\tsconfig.json
+
+EXIT 0
+
+88/298 rsh\Compatibility\DSH\bridge\compat-user-approval\tsconfig.json
+
+EXIT 0
+
+89/298 rsh\Modules\Official\interaction\permission-presets\tsconfig.json
+
+EXIT 0
+
+90/298 rsh\Engine\jobs\jobs\tsconfig.json
+
+EXIT 0
+
+91/298 rsh\Core\util\deque\tsconfig.json
+
+EXIT 0
+
+92/298 rsh\Core\util\native-command\tsconfig.json
+
+EXIT 0
+
+93/298 rsh\Modules\Official\skill\skill\tsconfig.json
+
+EXIT 0
+
+94/298 rsh\Core\util\time\tsconfig.json
+
+EXIT 0
+
+95/298 rsh\Core\util\chunked-list\tsconfig.json
+
+EXIT 0
+
+96/298 rsh\Engine\subagent\subagent-protocol\tsconfig.json
+
+EXIT 0
+
+97/298 rsh\Engine\subagent\subagent\tsconfig.json
+
+EXIT 0
+
+98/298 rsh\Core\typert\registry\tsconfig.json
+
+EXIT 0
+
+99/298 rsh\Programs\Web\api\session-controller\tsconfig.host.json
+
+EXIT 0
+
+100/298 rsh\Programs\Web\api\workspace-files\tsconfig.host.json
+
+EXIT 0
+
+101/298 rsh\Programs\Web\client\ui-deliverables\tsconfig.host.json
+
+EXIT 0
+
+102/298 rsh\Core\vendor\group\tsconfig.json
+
+EXIT 0
+
+103/298 rsh\Core\vendor\timer\tsconfig.json
+
+EXIT 0
+
+104/298 rsh\Core\vendor\hmr\tsconfig.json
+
+EXIT 0
+
+105/298 rsh\Core\vendor\logger-console\tsconfig.json
+
+EXIT 0
+
+106/298 rsh\Core\util\package-manifest\tsconfig.json
+
+EXIT 0
+
+107/298 rsh\Core\util\json-rpc-line\tsconfig.json
+
+EXIT 0
+
+108/298 rsh\Core\util\workspace-path\tsconfig.json
+
+EXIT 0
+
+109/298 rsh\Core\util\output-retention\tsconfig.json
+
+EXIT 0
+
+110/298 rsh\Modules\Official\attachment\attachment-local\tsconfig.json
+
+EXIT 0
+
+111/298 rsh\Modules\Official\llm\deepseek-llm-api-extensions\tsconfig.json
+
+EXIT 0
+
+112/298 rsh\Engine\llm\llm-retry\tsconfig.json
+
+EXIT 0
+
+113/298 rsh\Engine\compaction\compaction\tsconfig.json
+
+EXIT 0
+
+114/298 rsh\Engine\llm\token-meter\tsconfig.json
+
+EXIT 0
+
+115/298 rsh\Programs\Web\api\gateway\tsconfig.host.json
+
+EXIT 0
+
+116/298 rsh\Engine\goal\goal\tsconfig.host.json
+
+EXIT 0
+
+117/298 rsh\Modules\Official\extensions\cordis-host-runner\tsconfig.json
+
+EXIT 0
+
+118/298 rsh\Programs\Web\api\workspace-controller\tsconfig.host.json
+
+EXIT 0
+
+119/298 rsh\Programs\Web\api\remotes\tsconfig.host.json
+
+EXIT 0
+
+120/298 rsh\Modules\Official\credentials\authorization\tsconfig.json
+
+EXIT 0
+
+121/298 rsh\Programs\Web\api\settings-controller\tsconfig.json
+
+EXIT 0
+
+122/298 rsh\Core\typert\loader\tsconfig.json
+
+EXIT 0
+
+123/298 rsh\Engine\session\session-format\tsconfig.json
+
+EXIT 0
+
+124/298 rsh\Engine\session\session-format-v0-to-v1\tsconfig.json
+
+EXIT 0
+
+125/298 rsh\Engine\session\session-format-v1-to-v2\tsconfig.json
+
+EXIT 0
+
+126/298 rsh\Engine\session\session-format-v2-to-v3\tsconfig.json
+
+EXIT 0
+
+127/298 rsh\Engine\session\session-format-catalog\tsconfig.json
+
+EXIT 0
+
+128/298 rsh\Engine\session\session-checkpoint-policy\tsconfig.json
+
+EXIT 0
+
+129/298 rsh\Modules\Official\llm\session-log-deepseek\tsconfig.json
+
+EXIT 0
+
+130/298 rsh\Engine\session\session-persistence-jsonl\tsconfig.json
+
+EXIT 0
+
+131/298 rsh\Engine\session\session-stats\tsconfig.json
+
+EXIT 0
+
+132/298 rsh\Engine\session-query\session-query-sqlite\tsconfig.json
+
+EXIT 0
+
+133/298 rsh\Engine\session-query\session-log-export\tsconfig.host.json
+
+EXIT 0
+
+134/298 rsh\Modules\Official\settings\settings-file\tsconfig.json
+
+EXIT 0
+
+135/298 rsh\Modules\Official\credentials\credentials-local\tsconfig.json
+
+EXIT 0
+
+136/298 rsh\Engine\session-query\tool-session-query\tsconfig.json
+
+EXIT 0
+
+137/298 rsh\Core\storage\storage-sqlite\tsconfig.json
+
+EXIT 0
+
+138/298 rsh\Core\identity\anonymous-user-id\tsconfig.json
+
+EXIT 0
+
+139/298 rsh\Modules\Official\feedback\command-feedback\tsconfig.json
+
+EXIT 0
+
+140/298 rsh\Modules\Official\feedback\message-feedback\tsconfig.json
+
+EXIT 0
+
+141/298 rsh\Engine\session\session-title-llm\tsconfig.json
+
+EXIT 0
+
+142/298 rsh\Engine\session\session-title-first-prompt-llm\tsconfig.json
+
+EXIT 0
+
+143/298 rsh\Engine\session\session-title-all-prompts-llm\tsconfig.json
+
+EXIT 0
+
+144/298 rsh\Engine\session\session-turn-outline\tsconfig.json
+
+EXIT 0
+
+145/298 rsh\Engine\session\session-telemetry\tsconfig.json
+
+EXIT 0
+
+146/298 rsh\Engine\session\session-telemetry-otel\tsconfig.json
+
+EXIT 0
+
+147/298 rsh\Engine\goal\tool-goal\tsconfig.json
+
+EXIT 0
+
+148/298 rsh\Engine\goal\goal-round-driver\tsconfig.json
+
+EXIT 0
+
+149/298 rsh\Engine\goal\command-goal\tsconfig.json
+
+EXIT 0
+
+150/298 rsh\Modules\Official\automation\task-scheduler\tsconfig.json
+
+EXIT 0
+
+151/298 rsh\Engine\schedule\schedule\tsconfig.json
+
+EXIT 0
+
+152/298 rsh\Tests\test-support\loader-smoke\tsconfig.json
+
+EXIT 0
+
+153/298 rsh\Engine\context\time-context\tsconfig.json
+
+EXIT 0
+
+154/298 rsh\Engine\context\file-reference-local\tsconfig.json
+
+EXIT 0
+
+155/298 rsh\Engine\context\tmux-context\tsconfig.json
+
+EXIT 0
+
+156/298 rsh\Modules\Official\spill\spill\tsconfig.json
+
+EXIT 0
+
+157/298 rsh\Engine\context\session-reference\tsconfig.json
+
+EXIT 0
+
+158/298 rsh\Modules\Official\interaction\user-question-broker\tsconfig.json
+
+EXIT 0
+
+159/298 rsh\Engine\core\agent-tool-presentation\tsconfig.json
+
+EXIT 0
+
+160/298 rsh\Modules\Official\shell\shell-env\tsconfig.json
+
+EXIT 0
+
+161/298 rsh\Modules\Official\skill\archify\tsconfig.json
+
+EXIT 0
+
+162/298 rsh\Modules\Official\skill\skill-badge\tsconfig.json
+
+EXIT 0
+
+163/298 rsh\Modules\Official\skill\skill-filesystem\tsconfig.json
+
+EXIT 0
+
+164/298 rsh\Modules\Official\skill\tool-skill\tsconfig.json
+
+EXIT 0
+
+165/298 rsh\Modules\Official\interaction\tool-ask-user\tsconfig.json
+
+EXIT 0
+
+166/298 rsh\Engine\core\agent-loop\tsconfig.json
+
+EXIT 0
+
+167/298 rsh\Engine\core\native-jobs\tsconfig.json
+
+EXIT 0
+
+168/298 rsh\Core\subprocess\subprocess-local\tsconfig.json
+
+EXIT 0
+
+169/298 rsh\Modules\Official\e2b\e2b\tsconfig.json
+
+EXIT 0
+
+170/298 rsh\Modules\Official\e2b\subprocess-e2b\tsconfig.json
+
+EXIT 0
+
+171/298 rsh\Modules\Official\shell\shell-process-local\tsconfig.json
+
+EXIT 0
+
+172/298 rsh\Modules\Official\shell\shell-sandbox-core\tsconfig.json
+
+EXIT 0
+
+173/298 rsh\Modules\Official\terminal\terminal\tsconfig.json
+
+EXIT 0
+
+174/298 rsh\Modules\Official\shell\pwsh-local\tsconfig.json
+
+EXIT 0
+
+175/298 rsh\Modules\Official\terminal\terminal-bash\tsconfig.json
+
+EXIT 0
+
+176/298 rsh\Modules\Official\shell\tool-bash-persistent\tsconfig.json
+
+EXIT 0
+
+177/298 rsh\Modules\Official\shell\tool-pwsh-persistent\tsconfig.json
+
+EXIT 0
+
+178/298 rsh\Modules\Official\terminal\tool-terminal\tsconfig.json
+
+EXIT 0
+
+179/298 rsh\Compatibility\DSH\bridge\compat-code-runtime\tsconfig.json
+
+EXIT 0
+
+180/298 rsh\Modules\Community\experimental\code-runtime-python\tsconfig.json
+
+EXIT 0
+
+181/298 rsh\Modules\Official\code-runtime\code-runtime-worker-thread\tsconfig.json
+
+EXIT 0
+
+182/298 rsh\Modules\Official\llm\llm-deepseek\tsconfig.json
+
+EXIT 0
+
+183/298 rsh\Modules\Official\llm\llm-pi-ai\tsconfig.json
+
+EXIT 0
+
+184/298 rsh\Modules\Official\shell\bash-local\tsconfig.json
+
+EXIT 0
+
+185/298 rsh\Modules\Official\shell\pwsh-sandbox\tsconfig.json
+
+EXIT 0
+
+186/298 rsh\Engine\jobs\native-tool-jobs\tsconfig.json
+
+EXIT 0
+
+187/298 rsh\Modules\Official\shell\tool-pwsh\tsconfig.json
+
+EXIT 0
+
+188/298 rsh\Modules\Official\shell\bash-sandbox\tsconfig.json
+
+EXIT 0
+
+189/298 rsh\Modules\Official\shell\tool-bash\tsconfig.json
+
+EXIT 0
+
+190/298 rsh\Modules\Official\fs\fs-local\tsconfig.json
+
+EXIT 0
+
+191/298 rsh\Modules\Official\e2b\fs-e2b\tsconfig.json
+
+EXIT 0
+
+192/298 rsh\Modules\Official\fs\fs-observation-policy\tsconfig.json
+
+EXIT 0
+
+193/298 rsh\Modules\Official\fs\fs-sandbox\tsconfig.json
+
+EXIT 0
+
+194/298 rsh\Modules\Official\fs\tool-fs\tsconfig.json
+
+EXIT 0
+
+195/298 rsh\Modules\Official\fs\tool-fs-search\tsconfig.json
+
+EXIT 0
+
+196/298 rsh\Modules\Official\fs\tool-str-replace-editor\tsconfig.json
+
+EXIT 0
+
+197/298 rsh\Engine\compaction\compaction-tool-result-pruner\tsconfig.json
+
+EXIT 0
+
+198/298 rsh\Engine\compaction\compaction-basic\tsconfig.json
+
+EXIT 0
+
+199/298 rsh\Engine\compaction\command-compact\tsconfig.json
+
+EXIT 0
+
+200/298 rsh\Modules\Official\web\web\tsconfig.json
+
+EXIT 0
+
+201/298 rsh\Modules\Official\web\web-search-exa\tsconfig.json
+
+EXIT 0
+
+202/298 rsh\Modules\Official\web\web-search-perplexity\tsconfig.json
+
+EXIT 0
+
+203/298 rsh\Modules\Official\web\web-search-deepseek\tsconfig.json
+
+EXIT 0
+
+204/298 rsh\Modules\Official\web\web-fetch-http\tsconfig.json
+
+EXIT 0
+
+205/298 rsh\Modules\Official\guard\timeout-policy\tsconfig.json
+
+EXIT 0
+
+206/298 rsh\Modules\Official\web\tool-web\tsconfig.json
+
+EXIT 0
+
+207/298 rsh\Modules\Official\spill\spill-local\tsconfig.json
+
+EXIT 0
+
+208/298 rsh\Modules\Official\spill\spill-policy\tsconfig.json
+
+EXIT 0
+
+209/298 rsh\Tests\test-support\agent-loop-testkit\tsconfig.json
+
+EXIT 0
+
+210/298 rsh\Modules\Official\mcp\mcp-client\tsconfig.json
+
+EXIT 0
+
+211/298 rsh\Programs\ACP\packages\acp\tsconfig.json
+
+EXIT 0
+
+212/298 rsh\Compatibility\DSH\boot\cmdline\tsconfig.json
+
+EXIT 0
+
+213/298 rsh\Compatibility\DSH\bundle\acp-app\tsconfig.json
+
+EXIT 0
+
+214/298 rsh\Compatibility\DSH\bundle\base\tsconfig.json
+
+EXIT 0
+
+215/298 rsh\Compatibility\DSH\bundle\headless\tsconfig.json
+
+EXIT 0
+
+216/298 rsh\Compatibility\DSH\bundle\rsh\tsconfig.json
+
+EXIT 0
+
+217/298 rsh\Compatibility\DSH\bundle\sdk-app\tsconfig.json
+
+EXIT 0
+
+218/298 rsh\Compatibility\DSH\bundle\sdk-minimal\tsconfig.json
+
+EXIT 0
+
+219/298 rsh\Compatibility\DSH\boot\app-boot\tsconfig.json
+
+EXIT 0
+
+220/298 rsh\Programs\Web\host\frontend-static\tsconfig.json
+
+EXIT 0
+
+221/298 rsh\Programs\Web\host\webserver\tsconfig.json
+
+EXIT 0
+
+222/298 rsh\Compatibility\DSH\bundle\web-app\tsconfig.json
+
+EXIT 0
+
+223/298 rsh\Compatibility\DSH\bridge\compat-dsh-runtime\tsconfig.json
+
+EXIT 0
+
+224/298 rsh\Compatibility\DSH\bridge\compat-fs-local\tsconfig.json
+
+EXIT 0
+
+225/298 rsh\Compatibility\DSH\bridge\compat-fs-sandbox\tsconfig.json
+
+EXIT 0
+
+226/298 rsh\Compatibility\DSH\bridge\compat-fs-policy\tsconfig.json
+
+EXIT 0
+
+227/298 rsh\Compatibility\DSH\bridge\compat-tool-fs\tsconfig.json
+
+EXIT 0
+
+228/298 rsh\Engine\subagent\native-subagent\tsconfig.json
+
+EXIT 0
+
+229/298 rsh\Engine\subagent\tool-subagent\tsconfig.json
+
+EXIT 0
+
+230/298 rsh\Compatibility\DSH\bridge\compat-settings-adapters\tsconfig.json
+
+EXIT 0
+
+231/298 rsh\Engine\subagent\sdk-protocol\tsconfig.json
+
+EXIT 0
+
+232/298 rsh\Programs\SDK\packages\server\tsconfig.json
+
+EXIT 0
+
+233/298 rsh\Programs\ACP\packages\native-acp\tsconfig.json
+
+EXIT 0
+
+234/298 rsh\Programs\SDK\packages\native-server\tsconfig.json
+
+EXIT 0
+
+235/298 rsh\Tests\test-support\llm-replay\tsconfig.json
+
+EXIT 0
+
+236/298 rsh\Core\typert\generator\tsconfig.json
+
+EXIT 0
+
+237/298 rsh\Tests\test-support\session-snapshot\tsconfig.json
+
+EXIT 0
+
+238/298 rsh\Tests\test-support\llm-mock-server\tsconfig.json
+
+EXIT 0
+
+239/298 rsh\Programs\Web\client\modules\tsconfig.json
+
+EXIT 0
+
+240/298 rsh\Modules\Community\experimental\webworker-runtime\tsconfig.json
+
+EXIT 0
+
+241/298 rsh\Modules\Community\experimental\webworker-packer\tsconfig.json
+
+EXIT 0
+
+242/298 rsh\Modules\Community\experimental\inspector\tsconfig.host.json
+
+EXIT 0
+
+243/298 rsh\Engine\subagent\native-tool-subagent-list-agents\tsconfig.json
+
+EXIT 0
+
+244/298 rsh\Engine\subagent\tool-subagent-control\tsconfig.json
+
+EXIT 0
+
+245/298 rsh\Engine\subagent\subagent-in-process-driver\tsconfig.json
+
+EXIT 0
+
+246/298 rsh\Engine\subagent\subagent-spawn-in-process\tsconfig.json
+
+EXIT 0
+
+247/298 rsh\Engine\subagent\subagent-fork-in-process\tsconfig.json
+
+EXIT 0
+
+248/298 rsh\Engine\subagent\subagent-acp\tsconfig.json
+
+EXIT 0
+
+249/298 rsh\Engine\subagent\subagent-claude-code\tsconfig.json
+
+EXIT 0
+
+250/298 rsh\Engine\subagent\subagent-codex\tsconfig.json
+
+EXIT 0
+
+251/298 rsh\Engine\subagent\sdk-runtime\tsconfig.json
+
+EXIT 0
+
+252/298 rsh\Programs\SDK\packages\client\tsconfig.json
+
+EXIT 0
+
+253/298 rsh\Compatibility\DSH\subagent\subagent-dsh-sdk\tsconfig.json
+
+EXIT 0
+
+254/298 rsh\Engine\jobs\jobs-local\tsconfig.json
+
+EXIT 0
+
+255/298 rsh\Engine\jobs\tool-jobs\tsconfig.json
+
+EXIT 0
+
+256/298 rsh\Modules\Community\experimental\agent-team\tsconfig.json
+
+EXIT 0
+
+257/298 rsh\Modules\Community\experimental\tool-agent-team\tsconfig.json
+
+EXIT 0
+
+258/298 rsh\Modules\Community\experimental\agent-team-profile\tsconfig.json
+
+EXIT 0
+
+259/298 rsh\Modules\Community\experimental\agent-team-web-profile\tsconfig.json
+
+EXIT 0
+
+260/298 rsh\Engine\workflow\workflow\tsconfig.host.json
+
+EXIT 0
+
+261/298 rsh\Engine\workflow\workflow-worker-thread\tsconfig.json
+
+EXIT 0
+
+262/298 rsh\Engine\workflow\tool-workflow\tsconfig.json
+
+EXIT 0
+
+263/298 rsh\Engine\workflow\tool-ralph\tsconfig.json
+
+EXIT 0
+
+264/298 rsh\Modules\Official\webhook\webhook\tsconfig.json
+
+EXIT 0
+
+265/298 rsh\Modules\Official\webhook\webhook-github\tsconfig.json
+
+EXIT 0
+
+266/298 rsh\Modules\Official\webhook\webhook-github\tsconfig.host.json
+
+EXIT 0
+
+267/298 rsh\Modules\Official\plan\plan-mode\tsconfig.json
+
+EXIT 0
+
+268/298 rsh\Engine\preset\agent-preset-standing\tsconfig.host.json
+
+EXIT 0
+
+269/298 rsh\Engine\preset\persona\tsconfig.json
+
+EXIT 0
+
+270/298 rsh\Modules\Official\guard\repeat-tool-reminder\tsconfig.json
+
+EXIT 0
+
+271/298 rsh\Modules\Official\guard\tool-groups\tsconfig.json
+
+EXIT 0
+
+272/298 rsh\Modules\Official\extensions\tool-cordis\tsconfig.json
+
+EXIT 0
+
+273/298 rsh\Modules\Official\hooks\hook-protocol\tsconfig.json
+
+EXIT 0
+
+274/298 rsh\Modules\Official\hooks\hooks-claude-code\tsconfig.json
+
+EXIT 0
+
+275/298 rsh\Modules\Official\hooks\hooks-codex\tsconfig.json
+
+EXIT 0
+
+276/298 rsh\Programs\Web\host\directory-picker-auto\tsconfig.json
+
+EXIT 0
+
+277/298 rsh\Programs\Web\host\directory-picker-browse\tsconfig.json
+
+EXIT 0
+
+278/298 rsh\Programs\Web\host\directory-picker-native\tsconfig.json
+
+EXIT 0
+
+279/298 rsh\Programs\Web\client\store\tsconfig.json
+
+EXIT 0
+
+280/298 rsh\Programs\Web\client\ui-slots\tsconfig.json
+
+EXIT 0
+
+281/298 rsh\Programs\Web\client\ui-primitives\tsconfig.json
+
+EXIT 0
+
+282/298 rsh\Programs\Web\client\ui-dockkit\tsconfig.json
+
+EXIT 0
+
+283/298 rsh\Programs\Web\client\ui-renderer\tsconfig.json
+
+EXIT 0
+
+284/298 rsh\Programs\Web\client\web\tsconfig.json
+
+EXIT 0
+
+285/298 rsh\Programs\Web\host\native-web-assets\tsconfig.json
+
+EXIT 0
+
+286/298 rsh\Programs\Web\api\native-web-session-controller\tsconfig.json
+
+EXIT 0
+
+287/298 rsh\Programs\Web\host\native-web-host\tsconfig.json
+
+EXIT 0
+
+288/298 rsh\Programs\Web\host\open-in-app\tsconfig.json
+
+EXIT 0
+
+289/298 rsh\Programs\Web\host\plugin-inventory\tsconfig.json
+
+EXIT 0
+
+290/298 rsh\Modules\Official\llm\plugin-package-inventory-deepseek\tsconfig.json
+
+EXIT 0
+
+291/298 rsh\Modules\Official\subagent\sdk-child\tsconfig.json
+
+EXIT 0
+
+292/298 rsh\Modules\Official\lsp\lsp\tsconfig.json
+
+EXIT 0
+
+293/298 rsh\Modules\Official\lsp\lsp-stdio\tsconfig.json
+
+EXIT 0
+
+294/298 rsh\Modules\Official\lsp\tool-lsp\tsconfig.json
+
+EXIT 0
+
+295/298 rsh\Programs\CLI\tsconfig.json
+
+EXIT 0
+
+296/298 rsh\Programs\DesktopHost\tsconfig.json
+
+EXIT 0
+
+297/298 rsh\Programs\Desktop\tsconfig.json
+
+EXIT 0
+
+298/298 tsconfig.host.json
+
+<--- Last few GCs --->
+
+[46452:0000014D5B82A000]    27091 ms: Scavenge (interleaved) 1530.8 (1538.1) -> 1529.1 (1538.1) MB, pooled: 2 MB, 2.88 / 0.00 ms  (average mu = 0.143, current mu = 0.045) allocation failure; 
+[46452:0000014D5B82A000]    27751 ms: Mark-Compact 1531.0 (1538.6) -> 1529.5 (1543.3) MB, pooled: 0 MB, 652.45 / 0.00 ms  (average mu = 0.100, current mu = 0.085) allocation failure; scavenge might not succeed
+
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF668AA403F node::OnFatalError+1343
+ 2: 00007FF6696EFAA7 v8::Function::NewInstance+423
+ 3: 00007FF6694F04D7 v8::base::AddressSpaceReservation::AddressSpaceReservation+322071
+ 4: 00007FF6694F41E4 v8::base::AddressSpaceReservation::AddressSpaceReservation+337700
+ 5: 00007FF66950313C v8::internal::StrongRootAllocatorBase::deallocate_impl+16604
+ 6: 00007FF66950297B v8::internal::StrongRootAllocatorBase::deallocate_impl+14619
+ 7: 00007FF66A98A2AD v8::base::UnsignedDivisionByConstant<unsigned __int64>+2794653
+ 8: 00007FF6694EDFA0 v8::base::AddressSpaceReservation::AddressSpaceReservation+312544
+ 9: 00007FF6695087EA X509_STORE_set_cleanup+5098
+10: 00007FF669514C86 uv_timer_set_repeat+20694
+11: 00007FF6690E69C7 v8::String::Utf8Value::~Utf8Value+144199
+12: 00007FF66A83B33A v8::base::UnsignedDivisionByConstant<unsigned __int64>+1422634
+13: 0000014D00220A59 
+
+EXIT 134

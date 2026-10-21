@@ -1,0 +1,253 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "task_schedule",
+      "description": "Manage explicitly requested persistent scheduled Agent work: create, list, pause, resume, delete or history. Each due occurrence executes in an independent root Session with this Program route and permissions. Plans survive restart; missed recurring periods coalesce. Pause/delete stops future starts, not running work. Interrupted receipts are not replayed. Completed records an Agent turn, not verified code correctness. Personal reminder delivery is unavailable. Scheduled runs cannot schedule tasks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "list",
+              "pause",
+              "resume",
+              "delete",
+              "history"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "after_seconds": {
+            "type": "integer"
+          },
+          "end_at": {
+            "type": "string"
+          },
+          "every_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": [
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "task_schedule",
+        "description": "Manage explicitly requested persistent scheduled Agent work: create, list, pause, resume, delete or history. Each due occurrence executes in an independent root Session with this Program route and permissions. Plans survive restart; missed recurring periods coalesce. Pause/delete stops future starts, not running work. Interrupted receipts are not replayed. Completed records an Agent turn, not verified code correctness. Personal reminder delivery is unavailable. Scheduled runs cannot schedule tasks.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "create",
+                "list",
+                "pause",
+                "resume",
+                "delete",
+                "history"
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "after_seconds": {
+              "type": "integer"
+            },
+            "end_at": {
+              "type": "string"
+            },
+            "every_seconds": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "task_schedule",
+        "description": "Manage explicitly requested persistent scheduled Agent work: create, list, pause, resume, delete or history. Each due occurrence executes in an independent root Session with this Program route and permissions. Plans survive restart; missed recurring periods coalesce. Pause/delete stops future starts, not running work. Interrupted receipts are not replayed. Completed records an Agent turn, not verified code correctness. Personal reminder delivery is unavailable. Scheduled runs cannot schedule tasks.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "create",
+                "list",
+                "pause",
+                "resume",
+                "delete",
+                "history"
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "after_seconds": {
+              "type": "integer"
+            },
+            "end_at": {
+              "type": "string"
+            },
+            "every_seconds": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  ]
+}

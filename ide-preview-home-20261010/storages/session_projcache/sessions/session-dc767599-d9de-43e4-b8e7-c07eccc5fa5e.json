@@ -1,0 +1,319 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1791466643839,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 58,
+        "val": "编写 Hello World 程序"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 58,
+        "val": {
+          "first": {
+            "seq": 9,
+            "text": "写一个helloworld"
+          },
+          "count": 3,
+          "lastSeq": 53
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 58,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 58,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 58,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 18375,
+            "outputTokens": 195,
+            "cacheReadTokens": 40960,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 3,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 8829,
+              "outputTokens": 12,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 58,
+        "val": {
+          "surfaceTokens": 3290,
+          "contextWindow": 272000,
+          "pressureTokens": 8829,
+          "sampledSurfaceTokens": 3278
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 58,
+        "val": {
+          "nodes": [
+            {
+              "seq": 8,
+              "heuristicTokens": 1423,
+              "system": true
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 12,
+              "system": false
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 16,
+              "heuristicTokens": 21,
+              "system": false
+            },
+            {
+              "seq": 18,
+              "heuristicTokens": 1465,
+              "system": false
+            },
+            {
+              "seq": 21,
+              "heuristicTokens": 32,
+              "system": false
+            },
+            {
+              "seq": 23,
+              "heuristicTokens": 36,
+              "system": false
+            },
+            {
+              "seq": 26,
+              "heuristicTokens": 35,
+              "system": false
+            },
+            {
+              "seq": 28,
+              "heuristicTokens": 16,
+              "system": false
+            },
+            {
+              "seq": 31,
+              "heuristicTokens": 33,
+              "system": false
+            },
+            {
+              "seq": 34,
+              "heuristicTokens": 22,
+              "system": false
+            },
+            {
+              "seq": 37,
+              "heuristicTokens": 24,
+              "system": false
+            },
+            {
+              "seq": 44,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 45,
+              "heuristicTokens": 17,
+              "system": false
+            },
+            {
+              "seq": 53,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 55,
+              "heuristicTokens": 12,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1423,
+            "toolsTokens": 8043,
+            "messageTokens": 1867
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 52,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 56
+          },
+          "lastTurn": 3
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 58,
+        "val": {
+          "turns": 3,
+          "steps": 7,
+          "llmMs": 19363,
+          "toolMs": 1903,
+          "ttftMs": 17615,
+          "ttftSteps": 7,
+          "decodeMs": 1748,
+          "decodeTokens": 195,
+          "lastTurn": 3,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 5,
+              "prompt": "写一个helloworld",
+              "response": "已写好 `hello.py`，运行后会输出 `Hello, World!`。 运行命令：`python hello.py`"
+            },
+            {
+              "turn": 2,
+              "seq": 41,
+              "prompt": "代码区嗯",
+              "response": "```python print(\"Hello, World!\") ```"
+            },
+            {
+              "turn": 3,
+              "seq": 50,
+              "prompt": "你好",
+              "response": "你好！有什么我可以帮你的？"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 58,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 58,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 58,
+        "val": {
+          "lastUsed": {
+            "provider": "openai-codex",
+            "model": "gpt-6-sol"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 58,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1791625614828
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 58,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 58,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 58,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 58,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 58,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

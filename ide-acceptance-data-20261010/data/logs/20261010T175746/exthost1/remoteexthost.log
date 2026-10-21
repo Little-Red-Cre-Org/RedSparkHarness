@@ -1,0 +1,15 @@
+2026-10-10 17:57:58.271 [info] Extension host with pid 38232 started
+2026-10-10 17:57:58.271 [error] Error: EEXIST: file already exists, open 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock'
+2026-10-10 17:57:58.272 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Could not acquire lock, checking if the file is stale.
+2026-10-10 17:57:58.273 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': The pid 50852 appears to be gone.
+2026-10-10 17:57:58.278 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Deleting a stale lock.
+2026-10-10 17:57:58.322 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Lock acquired.
+2026-10-10 17:57:58.353 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-10-10 17:57:58.355 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-10-10 17:57:58.624 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*'
+2026-10-10 17:57:58.669 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-10-10 17:57:58.698 [info] ExtensionService#_doActivateExtension vscode.git, startup: false, activationEvent: '*'
+2026-10-10 17:57:58.698 [info] ExtensionService#_doActivateExtension rsh-local-verification.native-ide-smoke, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:57:58.868 [info] Eager extensions activated
+2026-10-10 17:57:58.869 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:57:58.869 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'

@@ -1,0 +1,78 @@
+$ tsx rsh/Scripts/run-gates.ts doc-quick
+run-gates: doc-quick running 17 gate(s) with 4 worker(s) from 16 available CPU(s), doc-quick cap 4.
+run-gates: start markdown links
+run-gates: start type equivalence
+run-gates: start translation pairing
+run-gates: start markdown wrap
+
+== FAILED type equivalence (2.18s) ==
+command: pnpm run verify-type-equiv
+outcome: exit 3221226505
+$ tsx rsh/Scripts/verify-type-equiv.ts
+[ELIFECYCLE] Command failed with exit code 3221226505.
+run-gates: start public repository links
+
+== FAILED translation pairing (2.23s) ==
+command: pnpm run verify-translation-pairing
+outcome: exit 134
+$ tsx rsh/Scripts/verify-translation-pairing.ts
+
+<--- Last few GCs --->
+
+[51024:000002285E1C1000]     1073 ms: Scavenge (interleaved) 22.7 (32.9) -> 15.3 (32.9) MB, pooled: 7 MB, 7.76 / 0.00 ms  (average mu = 0.998, current mu = 0.998) allocation failure; 
+[51024:000002285E1C1000]     1093 ms: Scavenge (interleaved) 23.2 (33.2) -> 15.8 (41.2) MB, pooled: 0 MB, 0.54 / 0.00 ms  (average mu = 0.998, current mu = 0.998) allocation failure; 
+
+FATAL ERROR: Committing semi space failed. Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F 
+ 2: 00007FF642EDFAA7 
+ 3: 00007FF642CE04D7 
+ 4: 00007FF642C78EFB 
+ 5: 00007FF642C5094E 
+ 6: 00007FF642CE2F72 
+ 7: 00007FF642CE1F27 
+ 8: 00007FF642CF2E52 
+ 9: 00007FF642CF297B 
+10: 00007FF64417A2AD 
+11: 00007FF642CDDFA0 
+12: 00007FF642CF87EA 
+13: 00007FF642D04C86 
+14: 00007FF6428D69C7 
+15: 000002281FE775FA 
+[ELIFECYCLE] Command failed with exit code 134.
+run-gates: start doc refs
+run-gates: PASS doc refs (6.80s)
+run-gates: start package groups
+run-gates: PASS package groups (1.20s)
+run-gates: start package README Summaries
+run-gates: PASS package README Summaries (1.79s)
+run-gates: start package README model experience
+run-gates: PASS markdown wrap (15.10s)
+run-gates: start agent note classification
+run-gates: PASS agent note classification (0.99s)
+run-gates: start agent note format
+run-gates: PASS agent note format (1.44s)
+run-gates: start archived agent notes
+run-gates: PASS package README model experience (7.85s)
+run-gates: start skill invocation metadata
+run-gates: PASS archived agent notes (2.97s)
+run-gates: start translation prompt
+run-gates: PASS skill invocation metadata (0.88s)
+run-gates: start doc budgets
+run-gates: PASS translation prompt (0.96s)
+run-gates: start documentation standard tests
+run-gates: PASS doc budgets (0.98s)
+run-gates: start package README limitations
+run-gates: PASS public repository links (22.90s)
+run-gates: PASS markdown links (26.68s)
+run-gates: PASS documentation standard tests (6.25s)
+run-gates: PASS package README limitations (7.80s)
+
+run-gates: 15 passed, 2 failed, 0 skipped in 29.55s.
+run-gates: unsuccessful gates:
+  - FAILED type equivalence (2.18s, exit 3221226505)
+    pnpm run verify-type-equiv
+  - FAILED translation pairing (2.23s, exit 134)
+    pnpm run verify-translation-pairing
+[ELIFECYCLE] Command failed with exit code 1.

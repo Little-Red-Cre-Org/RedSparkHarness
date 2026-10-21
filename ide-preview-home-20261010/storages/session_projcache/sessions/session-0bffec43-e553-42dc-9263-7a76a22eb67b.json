@@ -1,0 +1,267 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1791523350789,
+      "cwd": "E:\\redsparkHarness\\RedSparkHarness",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 25,
+        "val": "Review RedSparkHarness README"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 25,
+        "val": {
+          "first": {
+            "seq": 9,
+            "text": "E:/redsparkHarness/RedSparkHarness/README.md"
+          },
+          "count": 1,
+          "lastSeq": 9
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 25,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 25,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 25,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 13214,
+            "outputTokens": 50,
+            "cacheReadTokens": 11520,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 1,
+            "step": 2,
+            "buckets": {
+              "uncachedInputTokens": 1585,
+              "outputTokens": 21,
+              "cacheReadTokens": 11520,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 25,
+        "val": {
+          "surfaceTokens": 8313,
+          "contextWindow": 272000,
+          "pressureTokens": 13105,
+          "sampledSurfaceTokens": 8290
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 25,
+        "val": {
+          "nodes": [
+            {
+              "seq": 8,
+              "heuristicTokens": 1426,
+              "system": true
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 19,
+              "system": false
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 3926,
+              "system": false
+            },
+            {
+              "seq": 11,
+              "heuristicTokens": 128,
+              "system": false
+            },
+            {
+              "seq": 12,
+              "heuristicTokens": 1295,
+              "system": false
+            },
+            {
+              "seq": 18,
+              "heuristicTokens": 24,
+              "system": false
+            },
+            {
+              "seq": 20,
+              "heuristicTokens": 1472,
+              "system": false
+            },
+            {
+              "seq": 23,
+              "heuristicTokens": 23,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1426,
+            "toolsTokens": 8043,
+            "messageTokens": 6887
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 22,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 24
+          },
+          "lastTurn": 1
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 25,
+        "val": {
+          "turns": 1,
+          "steps": 2,
+          "llmMs": 6067,
+          "toolMs": 22,
+          "ttftMs": 5361,
+          "ttftSteps": 2,
+          "decodeMs": 706,
+          "decodeTokens": 50,
+          "lastTurn": 1,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 5,
+              "prompt": "E:/redsparkHarness/RedSparkHarness/README.md",
+              "response": "I’ve read `README.md`. What would you like me to do with it?"
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 25,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 25,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 25,
+        "val": {
+          "lastUsed": {
+            "provider": "openai-codex",
+            "model": "gpt-6-sol"
+          },
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 25,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1791623952783
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 25,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 25,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 25,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 25,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 25,
+        "val": null
+      }
+    }
+  }
+}

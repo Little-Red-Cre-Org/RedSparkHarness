@@ -1,0 +1,33 @@
+{
+  "formatVersion": 1,
+  "scopes": [
+    {
+      "id": "root"
+    }
+  ],
+  "installations": [
+    {
+      "id": "app",
+      "plugin": "@deepseek-ai/dsh-native-ide",
+      "scope": "root"
+    },
+    {
+      "id": "ide",
+      "plugin": "@deepseek-ai/dsh-ide-code-oss",
+      "scope": "root",
+      "config": {
+        "runtimeDirectory": "D:\\WpSystem\\S-1-5-21-3968831519-4257621155-1315733185-1001\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\RedSparkHarness\\ide\\runtime",
+        "workspaceDirectory": "E:\\redsparkHarness\\RedSparkHarness",
+        "dataDirectory": "D:\\WpSystem\\S-1-5-21-3968831519-4257621155-1315733185-1001\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\RedSparkHarness\\ide\\data",
+        "startupTimeoutMs": 30000,
+        "shutdownGraceMs": 1000,
+        "maxOutputBytes": 16384
+      }
+    },
+    {
+      "id": "subprocess",
+      "plugin": "@deepseek-ai/dsh-subprocess-local",
+      "scope": "root"
+    }
+  ]
+}

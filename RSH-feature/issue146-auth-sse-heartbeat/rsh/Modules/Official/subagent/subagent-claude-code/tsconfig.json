@@ -1,0 +1,46 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/types/.tsbuildinfo"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/subagent/subagent"
+    },
+    {
+      "path": "../../../../Core/subprocess/subprocess"
+    },
+    {
+      "path": "../../../../Core/util/timeout"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/subagent/native-subagent"
+    },
+    {
+      "path": "../../credentials/credentials"
+    },
+    {
+      "path": "../../sandbox/sandbox"
+    }
+  ]
+}

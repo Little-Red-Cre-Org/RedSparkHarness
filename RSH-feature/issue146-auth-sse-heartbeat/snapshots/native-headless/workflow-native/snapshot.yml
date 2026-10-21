@@ -1,0 +1,8 @@
+version: 1
+scenario: workflow-native
+profile: native-headless
+composition: native-workflow-native
+recording: authored
+header:
+  class: native-workflow-native
+  pin: true

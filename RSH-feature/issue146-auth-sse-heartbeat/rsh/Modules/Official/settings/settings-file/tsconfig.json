@@ -1,0 +1,36 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Core/util/atomic-write"
+    },
+    {
+      "path": "../../../../Core/util/home-paths"
+    },
+    {
+      "path": "../settings"
+    },
+    {
+      "path": "../../../../Core/settings/settings-definition"
+    }
+  ]
+}

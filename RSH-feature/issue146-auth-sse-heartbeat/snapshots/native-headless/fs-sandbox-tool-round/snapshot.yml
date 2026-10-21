@@ -1,0 +1,10 @@
+version: 1
+scenario: fs-sandbox-tool-round
+profile: native-headless
+composition: native-fs-sandbox-tool-round
+recording: authored
+header:
+  class: native-fs-sandbox-tool-round
+  pin: true
+workspace:
+  final: true

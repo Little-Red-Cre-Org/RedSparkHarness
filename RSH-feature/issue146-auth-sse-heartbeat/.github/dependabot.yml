@@ -1,0 +1,44 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    open-pull-requests-limit: 0
+    directory: "/"
+    exclude-paths:
+      # Vendored Cordis sources follow rsh/Core/vendor/README.md instead of registry updates.
+      - "rsh/Core/vendor/**"
+    schedule:
+      interval: "cron"
+      cronjob: "0 4 * * *"
+      timezone: "Asia/Shanghai"
+    cooldown:
+      default-days: 30
+    labels:
+      - "kind/dependency"
+      - "area/infra"
+
+  - package-ecosystem: "uv"
+    open-pull-requests-limit: 0
+    directory: "/python/sdk"
+    schedule:
+      interval: "cron"
+      cronjob: "0 4 * * *"
+      timezone: "Asia/Shanghai"
+    cooldown:
+      default-days: 30
+    labels:
+      - "kind/dependency"
+      - "area/infra"
+
+  - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 0
+    directory: "/"
+    schedule:
+      interval: "cron"
+      cronjob: "0 4 * * *"
+      timezone: "Asia/Shanghai"
+    cooldown:
+      default-days: 30
+    labels:
+      - "kind/dependency"
+      - "area/infra"

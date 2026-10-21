@@ -1,0 +1,84 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../../Modules/Official/todo/tool-todo"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    {
+      "path": "../../../../Engine/core/native-tools/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/authorization"
+    },
+    {
+      "path": "../native-session"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-sidebar"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
+      "path": "../../../../Engine/llm/native-model-selection/tsconfig.client.json"
+    },
+    {
+      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-tool"
+    },
+    {
+      "path": "../ui-approval"
+    },
+    {
+      "path": "../ui-user-questions"
+    },
+    {
+      "path": "../ui-attachment"
+    },
+    {
+      "path": "../ui-goal"
+    },
+    {
+      "path": "../ui-trajectory"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-workflow-run"
+    },
+    {
+      "path": "../../../../Core/util/crypto"
+    }
+  ]
+}

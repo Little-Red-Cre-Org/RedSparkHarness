@@ -1,0 +1,7 @@
+- region "订阅模型":
+  - heading "订阅模型" [level=3]
+  - paragraph: 选择订阅提供方并登录账号，登录成功后自动添加模型，无需填写 API 密钥。
+  - group "OpenAI Codex":
+    - text: OpenAI Codex 模型已添加
+    - button "重新登录"
+    - status: 已启用 Codex 模型。请在会话的模型选择器中选择 OpenAI Codex 下的模型，然后发送消息。

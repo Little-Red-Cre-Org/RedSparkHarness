@@ -1,0 +1,16 @@
+2026-10-10 18:33:25.515 [info] Extension host with pid 51436 started
+2026-10-10 18:33:25.516 [error] Error: EEXIST: file already exists, open 'e:\redsparkHarness\ide-ui-data-20261010\data\User\workspaceStorage\-249d809e\vscode.lock'
+2026-10-10 18:33:25.516 [info] Lock 'e:\redsparkHarness\ide-ui-data-20261010\data\User\workspaceStorage\-249d809e\vscode.lock': Could not acquire lock, checking if the file is stale.
+2026-10-10 18:33:25.517 [info] Lock 'e:\redsparkHarness\ide-ui-data-20261010\data\User\workspaceStorage\-249d809e\vscode.lock': The pid 53816 appears to be gone.
+2026-10-10 18:33:25.517 [info] Lock 'e:\redsparkHarness\ide-ui-data-20261010\data\User\workspaceStorage\-249d809e\vscode.lock': Deleting a stale lock.
+2026-10-10 18:33:25.536 [info] Lock 'e:\redsparkHarness\ide-ui-data-20261010\data\User\workspaceStorage\-249d809e\vscode.lock': Lock acquired.
+2026-10-10 18:33:25.602 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-10-10 18:33:25.603 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-10-10 18:33:25.758 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*'
+2026-10-10 18:33:25.785 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-10-10 18:33:25.814 [info] Eager extensions activated
+2026-10-10 18:33:25.816 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 18:33:25.817 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 18:33:25.817 [info] ExtensionService#_doActivateExtension redspark.rsh-workbench, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 18:33:25.932 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-10-10 18:33:25.932 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:jsonc'

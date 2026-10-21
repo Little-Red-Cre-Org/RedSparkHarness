@@ -1,0 +1,8 @@
+version: 1
+scenario: todo-native
+profile: native-headless
+composition: native-todo
+recording: authored
+header:
+  class: native-todo
+  pin: true

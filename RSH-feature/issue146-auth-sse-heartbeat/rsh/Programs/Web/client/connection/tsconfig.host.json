@@ -1,0 +1,49 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "files": [
+    "src/api-path.ts",
+    "src/api-request-trust.ts",
+    "src/browser-auth.ts",
+    "src/http-bridge.ts",
+    "src/native-http-bridge.ts",
+    "src/host-core.ts",
+    "src/native-host.ts",
+    "src/index.ts",
+    "src/loopback-hostname.ts",
+    "src/recovery-config.ts",
+    "src/rpc-host.ts",
+    "src/rpc-schema.ts",
+    "src/rpc.ts",
+    "src/native-request-owner.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../../../../Modules/Official/attachment/attachment"
+    },
+    {
+      "path": "../../../../Modules/Official/credentials/credentials"
+    },
+    {
+      "path": "../../../../Engine/core/session"
+    },
+    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" },
+    { "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis" },
+    {
+      "path": "../../../../Core/util/brand"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    }
+  ]
+}

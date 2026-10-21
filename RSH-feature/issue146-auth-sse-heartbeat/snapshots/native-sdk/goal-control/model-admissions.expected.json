@@ -1,0 +1,50 @@
+[
+  {
+    "input": "Start the controlled native SDK session.",
+    "round": null,
+    "outcome": "completed",
+    "retainedInputs": []
+  },
+  {
+    "input": "<goal_round>\nObjective: \"Complete the controlled Goal lifecycle.\"\nRound: 1/2\n\nContinue working toward the objective in this same session. Treat the current workspace, tool results, and durable session state as authoritative; inspect them instead of assuming earlier narration is still current. Make concrete progress and verify the result. Before claiming completion, gather evidence that the whole objective is achieved, read the current goal, and mark it complete. If work remains, leave the goal active for the next round. Follow the configured goal-tool policy before reporting a blocker.\n</goal_round>",
+    "round": 1,
+    "outcome": "interrupted",
+    "retainedInputs": []
+  },
+  {
+    "input": "Wake the parked SDK owner after the Goal pause settles.",
+    "round": null,
+    "outcome": "completed",
+    "retainedInputs": [
+      "Keep this ordinary human input through the Goal pause.",
+      "Wake the parked SDK owner after the Goal pause settles."
+    ]
+  },
+  {
+    "input": "Check the restored Goal before rearming it.",
+    "round": null,
+    "outcome": "completed",
+    "retainedInputs": [
+      "Keep this ordinary human input through the Goal pause.",
+      "Wake the parked SDK owner after the Goal pause settles."
+    ]
+  },
+  {
+    "input": "Explicitly resume the Goal after cold restore.",
+    "round": null,
+    "outcome": "completed",
+    "retainedInputs": [
+      "Keep this ordinary human input through the Goal pause.",
+      "Wake the parked SDK owner after the Goal pause settles."
+    ]
+  },
+  {
+    "input": "<goal_round>\nObjective: \"Complete the controlled Goal lifecycle.\"\nRound: 2/2\n\nContinue working toward the objective in this same session. Treat the current workspace, tool results, and durable session state as authoritative; inspect them instead of assuming earlier narration is still current. Make concrete progress and verify the result. Before claiming completion, gather evidence that the whole objective is achieved, read the current goal, and mark it complete. If work remains, leave the goal active for the next round. Follow the configured goal-tool policy before reporting a blocker.\n</goal_round>",
+    "round": 2,
+    "outcome": "completed",
+    "retainedInputs": [
+      "Keep this ordinary human input through the Goal pause.",
+      "Wake the parked SDK owner after the Goal pause settles."
+    ]
+  }
+]

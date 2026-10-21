@@ -1,0 +1,22 @@
+{
+  "extends": "../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/types/tsconfig.client.tsbuildinfo"
+  },
+  "include": [
+    "src/inbox.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/util/brand"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../session"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+2026-10-10 17:54:01.650 [info] 
+
+
+
+
+2026-10-10 17:54:01.650 [info] [AgentHostChannel] Registered lazy IPC channel 'agentHostProxy' (upstream: \\.\pipe\vscode-ipc-733ef513-bf85-46d4-806c-179b17b52798-sock)
+2026-10-10 17:54:01.650 [info] Extension host agent started. (validation: true)
+2026-10-10 17:54:10.369 [info] [127.0.0.1][ff603278][ManagementConnection] New connection established.
+2026-10-10 17:54:10.388 [info] [127.0.0.1][2312fdae][ExtensionHostConnection] New connection established.
+2026-10-10 17:54:10.389 [info] [127.0.0.1][2312fdae][ExtensionHostConnection] Starting extension host process...
+2026-10-10 17:54:10.403 [info] [127.0.0.1][2312fdae][ExtensionHostConnection] <53932> Launched Extension Host Process.
+2026-10-10 17:54:11.088 [info] [127.0.0.1][2312fdae][ExtensionHostConnection] <53932> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-10-10 17:54:32.246 [error] #1: https://raw.githubusercontent.com/EclipseFdn/publish-extensions/refs/heads/master/extension-control/extensions.json - error GET AggregateError [ETIMEDOUT]: 
+2026-10-10 17:54:56.603 [info] [127.0.0.1][ff603278][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...

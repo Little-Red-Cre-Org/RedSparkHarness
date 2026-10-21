@@ -1,0 +1,54 @@
+{
+  "name": "@deepseek-ai/dsh-compat-settings-adapters",
+  "description": "Owner-scoped Cordis adapters for optional Engine Settings sources",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Compatibility/DSH/bridge/compat-settings-adapters"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./agent-loop": { "types": "./lib/types/agent-loop.d.ts", "default": "./lib/agent-loop.js" },
+    "./agent-default-model": { "types": "./lib/types/agent-default-model.d.ts", "default": "./lib/agent-default-model.js" },
+    "./agent-presets": { "types": "./lib/types/agent-presets.d.ts", "default": "./lib/agent-presets.js" },
+    "./tool-subagent": { "types": "./lib/types/tool-subagent.d.ts", "default": "./lib/tool-subagent.js" },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/agent-loop.js",
+    "lib/agent-default-model.js",
+    "lib/agent-presets.js",
+    "lib/tool-subagent.js",
+    "lib/settings-entry-*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
+    "@deepseek-ai/dsh-agent-loop": "workspace:^",
+    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-tool-subagent": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-agent-loop": { "optional": true },
+    "@deepseek-ai/dsh-agent-default-model": { "optional": true },
+    "@deepseek-ai/dsh-agent-presets": { "optional": true },
+    "@deepseek-ai/dsh-tool-subagent": { "optional": true }
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
+    "@deepseek-ai/dsh-agent-loop": "workspace:^",
+    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-tool-subagent": "workspace:^"
+  }
+}

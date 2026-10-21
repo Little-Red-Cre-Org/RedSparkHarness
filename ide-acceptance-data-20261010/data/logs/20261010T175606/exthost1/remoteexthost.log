@@ -1,0 +1,15 @@
+2026-10-10 17:56:14.360 [info] Extension host with pid 42260 started
+2026-10-10 17:56:14.360 [error] Error: EEXIST: file already exists, open 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock'
+2026-10-10 17:56:14.360 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Could not acquire lock, checking if the file is stale.
+2026-10-10 17:56:14.360 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': The pid 53932 appears to be gone.
+2026-10-10 17:56:14.361 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Deleting a stale lock.
+2026-10-10 17:56:14.388 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Lock acquired.
+2026-10-10 17:56:14.424 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-10-10 17:56:14.425 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-10-10 17:56:14.577 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*'
+2026-10-10 17:56:14.604 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-10-10 17:56:14.630 [info] Eager extensions activated
+2026-10-10 17:56:14.630 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:56:14.630 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:56:14.769 [info] ExtensionService#_doActivateExtension vscode.git, startup: false, activationEvent: 'api', root cause: vscode.github
+2026-10-10 17:56:14.910 [info] ExtensionService#_doActivateExtension rsh-local-verification.native-ide-smoke, startup: false, activationEvent: 'onStartupFinished'

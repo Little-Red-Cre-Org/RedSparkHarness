@@ -1,0 +1,4 @@
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; user-select: none; }
+body { -webkit-app-region: drag; }
+#pet { position: absolute; bottom: 0; left: 36px; width: 168px; height: 224px; background-size: 400% 100%; background-repeat: no-repeat; filter: drop-shadow(0 8px 8px #65182433); }
+#status { position: absolute; top: 0; left: 14px; right: 14px; padding: 8px 12px; margin: 0; border: 1px solid #e8b7c1; border-radius: 12px; color: #a5213c; background: #fff8f8f2; font: 12px/1.5 system-ui, sans-serif; text-align: center; }

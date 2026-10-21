@@ -1,0 +1,8 @@
+version: 1
+scenario: text-turn
+profile: native-sdk
+composition: native-sdk-text-turn
+recording: authored
+header:
+  class: native-sdk-text-turn
+  pin: true

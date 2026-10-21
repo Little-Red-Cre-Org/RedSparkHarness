@@ -1,0 +1,34 @@
+{
+  "include": [
+    "src"
+  ],
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo",
+    "rootDir": "src"
+  },
+  "references": [
+    {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../core/native-agent/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-session-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/native-model-execution/tsconfig.host.json"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../llm"
+    },
+    {
+      "path": "../../../Core/util/values"
+    }
+  ]
+}

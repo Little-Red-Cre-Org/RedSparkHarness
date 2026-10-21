@@ -1,0 +1,40 @@
+/* Product aliases preserve semantic success, warning and error colors. */
+body {
+  --dsw-static-deepseek-50: #fff0f2;
+  --dsw-static-deepseek-100: #fce3e8;
+  --dsw-static-deepseek-200: #f6c2ce;
+  --dsw-static-deepseek-300: #ea9bac;
+  --dsw-static-deepseek-400: #d94a67;
+  --dsw-static-deepseek-450: #ce3554;
+  --dsw-static-deepseek-500: var(--sph-crimson);
+  --dsw-static-deepseek-600: #a81d36;
+  --dsw-static-deepseek-800: #542331;
+  --dsw-static-deepseek-900: #381d28;
+  --dsw-specific-sidebar-fill: var(--sph-blush);
+  --dsw-alias-bg-base: var(--sph-paper);
+  --dsw-alias-brand-primary: var(--sph-crimson);
+  --dsw-alias-brand-text: var(--sph-crimson);
+  --dsw-alias-brand-primary-new-colorprimary-new-color: var(--sph-crimson);
+  --dsw-alias-label-primary-bluish: var(--sph-crimson);
+  --dsw-alias-state-business-tertiary: var(--sph-blush);
+  --dsw-alias-bg-layer-1: var(--sph-paper);
+  --dsw-alias-bg-module-platform: var(--sph-blush);
+  --dsw-alias-label-primary: var(--sph-ink);
+  --dsw-alias-border-l4: var(--sph-line);
+  --dsw-alias-button-primary-fill: var(--sph-crimson);
+}
+
+body[data-ds-dark-theme] {
+  --dsw-specific-sidebar-fill: var(--sph-night-panel);
+  --dsw-alias-bg-base: var(--sph-night);
+  --dsw-alias-brand-primary: var(--sph-rose);
+  --dsw-alias-brand-text: var(--sph-rose);
+  --dsw-alias-brand-primary-new-colorprimary-new-color: var(--sph-rose);
+  --dsw-alias-label-primary-bluish: var(--sph-rose);
+  --dsw-alias-state-business-tertiary: var(--sph-night-panel);
+  --dsw-alias-bg-layer-1: var(--sph-night);
+  --dsw-alias-bg-module-platform: var(--sph-night-panel);
+  --dsw-alias-label-primary: var(--sph-paper);
+  --dsw-alias-border-l4: var(--sph-night-panel);
+  --dsw-alias-button-primary-fill: var(--sph-rose);
+}

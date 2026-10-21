@@ -1,0 +1,29 @@
+{
+  "name": "@deepseek-ai/dsh-approval-definition",
+  "description": "Framework-free approval identities, event vocabulary and consumer operations",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/core/approval-definition"
+  },
+  "type": "module",
+  "dsh": { "runtime": { "apiVersion": 1, "role": "definition", "capability": "approval" } },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./legacy": { "types": "./lib/types/legacy.d.ts", "default": "./lib/legacy.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/legacy.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^"
+  }
+}

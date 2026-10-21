@@ -1,0 +1,35 @@
+{
+  "extends": "../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/client.tsbuildinfo"
+  },
+  "include": [
+    "src/projection.ts",
+    "src/fold.ts",
+    "src/replay-runtime.ts",
+    "src/facts.ts",
+    "src/types.ts",
+    "src/client.ts",
+    "src/compatibility-events.ts",
+    "src/projection-types.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../Core/util/brand"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../session/session-projection"
+    }
+  ]
+}

@@ -1,0 +1,793 @@
+$ tsx rsh/Scripts/run-gates.ts doc-sync
+run-gates: doc-sync running 35 gate(s) with 4 worker(s) from 16 available CPU(s), doc-sync cap 4.
+run-gates: start doc-typecheck
+run-gates: start documentation build
+run-gates: start doc graphs
+run-gates: start markdown links
+
+== FAILED markdown links (4.48s) ==
+[ELIFECYCLE] Command failed with exit code 134.
+command: pnpm run verify-md-links
+outcome: exit 134
+$ tsx rsh/Scripts/verify-md-links.ts
+
+<--- Last few GCs --->
+
+[37004:000001ADD38F6000]     3606 ms: Scavenge (interleaved) 55.0 (88.6) -> 23.4 (88.6) MB, pooled: 0 MB, 0.61 / 0.00 ms  (average mu = 0.999, current mu = 0.999) allocation failure; 
+[37004:000001ADD38F6000]     3669 ms: Scavenge (interleaved) 55.0 (88.6) -> 24.7 (88.8) MB, pooled: 0 MB, 1.82 / 0.00 ms  (average mu = 0.999, current mu = 0.999) allocation failure; 
+
+FATAL ERROR: Zone Allocation failed - process out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F 
+ 2: 00007FF642EDFAA7 
+ 3: 00007FF642859986 
+ 4: 00007FF64241D458 
+ 5: 00007FF643AD8C77 
+ 6: 00007FF643AD7A42 
+ 7: 00007FF643AD2DC7 
+ 8: 00007FF643AD1F51 
+ 9: 00007FF643ACEA9E 
+10: 00007FF643ACE589 
+11: 00007FF643ACE044 
+12: 00007FF643ACD5D1 
+13: 00007FF643ACD32F 
+14: 00007FF6438DB0F6 
+15: 00007FF6438D3966 
+16: 00007FF6438D2DE0 
+17: 00007FF642E5376F 
+18: 00007FF642E187FD 
+19: 00007FF642E184F5 
+20: 00007FF6436C0C5F 
+21: 00007FF6421E2E0E 
+22: 00007FF642F34A36 
+23: 00007FF644195A73 
+24: 00007FFED62DCD87 
+25: 00007FFED788CAEC 
+run-gates: start type equivalence
+
+== FAILED doc-typecheck (4.60s) ==
+
+> @deepseek-ai/dsh-root@0.1.5-rc.2 build:lib:host
+> node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
+
+command: pnpm run doc-typecheck
+outcome: exit 134
+$ npm run build:lib:host && npm run doc-typecheck:contracts-ready
+npm warn Unknown user config "allow-scripts". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+<--- Last few GCs --->
+
+[48788:000001D405E0B000]     2872 ms: Scavenge (interleaved) 51.4 (68.8) -> 42.8 (70.0) MB, pooled: 0 MB, 5.45 / 0.04 ms  (average mu = 0.998, current mu = 0.998) allocation failure; 
+[48788:000001D405E0B000]     2955 ms: Scavenge (interleaved) 53.1 (71.0) -> 49.1 (76.7) MB, pooled: 7 MB, 18.41 / 0.01 ms  (average mu = 0.998, current mu = 0.998) allocation failure; 
+
+FATAL ERROR: Committing semi space failed. Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F 
+ 2: 00007FF642EDFAA7 
+ 3: 00007FF642CE04D7 
+ 4: 00007FF642C78EFB 
+ 5: 00007FF642C5094E 
+ 6: 00007FF642CE2F72 
+ 7: 00007FF642CE1F27 
+ 8: 00007FF642CF2E52 
+ 9: 00007FF642CF297B 
+[ELIFECYCLE] Command failed with exit code 134.
+10: 00007FF64417A2AD 
+11: 00007FF642CDDFA0 
+12: 00007FF642CF87EA 
+13: 00007FF642D04C86 
+14: 00007FF6428D69C7 
+15: 000001D43E577A10 
+run-gates: start cordis catalog
+
+[ELIFECYCLE] Command failed with exit code 1.
+== FAILED cordis catalog (1.26s) ==
+command: pnpm run verify-cordis-catalog
+outcome: exit 1
+$ tsx rsh/Scripts/gen-cordis-catalog.ts --check
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: spawn UNKNOWN
+    at ChildProcess.spawn (node:internal/child_process:441:11)
+    at Object.spawn (node:child_process:796:9)
+    at ensureServiceIsRunning (E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:2268:29)
+    at startSyncServiceWorker (E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:2474:19)
+    at Object.<anonymous> (E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:2515:3)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19) {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'spawn',
+  name: 'TransformError'
+}
+
+Node.js v24.15.0
+run-gates: start Cordis inspect catalog
+
+== FAILED Cordis inspect catalog (2.01s) ==
+command: pnpm run verify-cordis-inspect-catalog
+outcome: exit 3221226505
+$ tsx rsh/Scripts/gen-cordis-inspect-catalog.ts --check
+The system cannot execute the specified program.
+run-gates: start verify-mermaid
+
+== FAILED type equivalence (3.40s) ==
+[ELIFECYCLE] Command failed with exit code 3221226505.
+command: pnpm run verify-type-equiv
+outcome: exit 3221226505
+$ tsx rsh/Scripts/verify-type-equiv.ts
+run-gates: start scoped events
+
+== FAILED scoped events (1.34s) ==
+[ELIFECYCLE] Command failed with exit code 3221226505.
+command: pnpm run verify-scoped-events
+outcome: exit 3221226505
+$ tsx rsh/Scripts/gen-scoped-events.ts --check
+run-gates: start translation pairing
+
+[ELIFECYCLE] Command failed with exit code 3221226505.
+== FAILED documentation build (10.10s) ==
+command: pnpm run docs:build
+outcome: exit 3221226505
+$ tsx rsh/Docs/website/build.ts && pnpm run verify-doc-site-render && pnpm run verify-doc-site-fragments
+▲ [WARNING] Unrecognized target environment "es2024" [tsconfig.json]
+
+    tsconfig.base.json:6:14:
+      6 │     "target": "es2024",
+        ╵               ~~~~~~~~
+
+- building client + server bundles...
+run-gates: start markdown wrap
+
+== FAILED verify-mermaid (2.43s) ==
+command: pnpm run verify-mermaid
+outcome: exit 3221226505
+$ tsx rsh/Scripts/verify-mermaid.ts
+[ELIFECYCLE] Command failed with exit code 3221226505.
+run-gates: start client catalog
+
+== FAILED client catalog (1.61s) ==
+command: pnpm run verify-client-catalog
+outcome: exit 134
+$ tsx rsh/Scripts/gen-client-catalog.ts --check
+
+<--- Last few GCs --->
+
+[25040:00000205C3B22000]      205 ms: Scavenge 9.7 (13.4) -> 8.7 (17.9) MB, pooled: 0 MB, 0.79 / 0.01 ms  (average mu = 1.000, current mu = 1.000) allocation failure; 
+[25040:00000205C3B22000]      445 ms: Mark-Compact 20.8 (26.7) -> 17.5 (34.9) MB, pooled: 0 MB, 2.20 / 0.01 ms  (+ 0.0 ms in 2 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 182 ms) (average mu = 0.995, current mu = 0.9
+FATAL ERROR: Zone Allocation failed - process out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F 
+ 2: 00007FF642EDFAA7 
+ 3: 00007FF642859986 
+ 4: 00007FF64296C612 
+ 5: 00007FF64297CD99 
+ 6: 00007FF642979019 
+ 7: 00007FF64296BDA6 
+ 8: 00007FF64296B37D 
+ 9: 00007FF64297755B 
+10: 00007FF64296BAF2 
+11: 00007FF64297CD99 
+12: 00007FF642979019 
+13: 00007FF64296BDA6 
+14: 00007FF64296B37D 
+15: 00007FF64296AB3B 
+16: 00007FF64296A03C 
+17: 00007FF64296C942 
+18: 00007FF64296B2B7 
+19: 00007FF642969AAB 
+20: 00007FF642968DE6 
+21: 00007FF642993948 
+22: 00007FF642987960 
+23: 00007FF6429ABEE3 
+24: 00007FF64298C354 
+25: 00007FF642994DEB 
+26: 00007FF64298A82A 
+27: 00007FF64299B560 
+28: 00007FF64299A884 
+29: 00007FF6429A0204 
+30: 00007FF64299E68E 
+31: 00007FF64299B66B 
+32: 00007FF64299A83E 
+33: 00007FF6429A0204 
+34: 00007FF6429AB61F 
+35: 00007FF642994DEB 
+36: 00007FF6429942EA 
+37: 00007FF6429879E7 
+38: 00007FF642986BB4 
+39: 00007FF642985EA2 
+40: 00007FF642985B4A 
+41: 00007FF642981179 
+42: 00007FF642E5D4EF 
+43: 00007FF642E602F1 
+44: 00007FF642EE8F63 
+[ELIFECYCLE] Command failed with exit code 134.
+45: 00007FF6422B1563 
+46: 00007FF6422AFD0E 
+47: 00000205FC20F64D 
+run-gates: start export jsdoc
+
+== FAILED export jsdoc (1.92s) ==
+[ELIFECYCLE] Command failed with exit code 134.
+command: pnpm run verify-export-jsdoc
+outcome: exit 134
+$ tsx rsh/Scripts/verify-export-jsdoc.ts
+
+<--- Last few GCs --->
+
+[20112:000002544A160000]      822 ms: Mark-Compact 31.9 (64.2) -> 30.5 (63.9) MB, pooled: 0 MB, 2.64 / 0.00 ms  (+ 0.0 ms in 3 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 16 ms) (average mu = 0.994, current mu = 0.99
+FATAL ERROR: Zone Allocation failed - process out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F node::OnFatalError+1343
+ 2: 00007FF642EDFAA7 v8::Function::NewInstance+423
+ 3: 00007FF642859986 v8::SnapshotCreator::GetIsolate+56566
+ 4: 00007FF6426836CA SSL_CTX_get_client_CA_list+10634
+ 5: 00007FF642683593 SSL_CTX_get_client_CA_list+10323
+ 6: 00007FF6426831C2 SSL_CTX_get_client_CA_list+9346
+ 7: 00007FF6426831FB SSL_CTX_get_client_CA_list+9403
+ 8: 00007FF6426830E3 SSL_CTX_get_client_CA_list+9123
+ 9: 00007FF642683829 SSL_CTX_get_client_CA_list+10985
+10: 00007FF64267DD74 v8::internal::OptimizingCompileInputQueue::OptimizingCompileInputQueue+196644
+11: 00007FF642685E2E SSL_CTX_get_client_CA_list+20718
+12: 00007FF642685BA3 SSL_CTX_get_client_CA_list+20067
+13: 00007FF6426E90D4 SSL_CTX_get_client_CA_list+426900
+14: 00007FF6426E8D07 SSL_CTX_get_client_CA_list+425927
+15: 00007FF6426E7A87 SSL_CTX_get_client_CA_list+421191
+16: 00007FF6426E5DF6 SSL_CTX_get_client_CA_list+413878
+17: 00007FF6426BAB0B SSL_CTX_get_client_CA_list+237003
+18: 00007FF642732C76 SSL_CTX_get_client_CA_list+728886
+19: 00007FF642731990 SSL_CTX_get_client_CA_list+724048
+20: 00007FF64272F78A SSL_CTX_get_client_CA_list+715338
+21: 00007FF642E5376F EVP_MD_CTX_set_update_fn+200559
+22: 00007FF64273126B SSL_CTX_get_client_CA_list+722219
+23: 00007FF6436C0C5F v8::platform::DefaultJobHandle::UpdatePriority+591
+24: 00007FF6421E2E0E node::GetNodeReport+90430
+25: 00007FF642F34A36 uv_thread_detach+150
+26: 00007FF644195A73 v8::base::UnsignedDivisionByConstant<unsigned __int64>+2907235
+27: 00007FFED62DCD87 BaseThreadInitThunk+23
+28: 00007FFED788CAEC RtlUserThreadStart+44
+run-gates: start tool catalog
+
+== FAILED markdown wrap (5.37s) ==
+[ELIFECYCLE] Command failed with exit code 3221226505.
+command: pnpm run verify-md-wrap
+outcome: exit 3221226505
+$ tsx rsh/Scripts/verify-md-wrap.ts
+run-gates: start config catalog
+
+== FAILED config catalog (1.94s) ==
+command: pnpm run verify-config-catalog
+outcome: exit 1
+$ tsx rsh/Scripts/gen-config-catalog.ts --check
+fatal error: runtime: cannot allocate memory
+
+runtime stack:
+runtime.throw({0x7ff673f01366?, 0xb6085ff698?})
+	runtime/panic.go:1229 +0x4d fp=0xb6085ff658 sp=0xb6085ff628 pc=0x7ff6738d3d8d
+runtime.newArenaMayUnlock()
+	runtime/mheap.go:3022 +0xa5 fp=0xb6085ff698 sp=0xb6085ff658 pc=0x7ff67388d2c5
+runtime.newMarkBits(0x2e951e580000?)
+	runtime/mheap.go:2942 +0x12e fp=0xb6085ff6e0 sp=0xb6085ff698 pc=0x7ff67388cf8e
+runtime.(*mheap).initSpan(0x7ff67434d980, 0x20879cad470, 0x0, 0x58, 0x2e951e59e000, 0x1, 0x2e951e44c000?)
+	runtime/mheap.go:1493 +0x15f fp=0xb6085ff718 sp=0xb6085ff6e0 pc=0x7ff67388a8bf
+runtime.(*mheap).allocSpan(0x7ff67434d980, 0x1, 0x0, 0x58)
+	runtime/mheap.go:1393 +0x465 fp=0xb6085ff7c8 sp=0xb6085ff718 pc=0x7ff67388a565
+runtime.(*mheap).alloc.func1()
+	runtime/mheap.go:1017 +0x5c fp=0xb6085ff810 sp=0xb6085ff7c8 pc=0x7ff673889d5c
+runtime.systemstack(0x2e951e308000)
+	runtime/asm_amd64.s:562 +0x49 fp=0xb6085ff820 sp=0xb6085ff810 pc=0x7ff6738d9969
+
+goroutine 83 gp=0x2e951e44d0e0 m=5 mp=0x2e951e300008 [running]:
+runtime.systemstack_switch()
+	runtime/asm_amd64.s:516 +0x8 fp=0x2e951e636d48 sp=0x2e951e636d38 pc=0x7ff6738d9908
+runtime.(*mheap).alloc(0x7ff67438cc20?, 0x2e951e636e60?, 0x25?)
+	runtime/mheap.go:1011 +0x57 fp=0x2e951e636d90 sp=0x2e951e636d48 pc=0x7ff673889cb7
+runtime.(*mcentral).grow(0x2e951e636df8?)
+	runtime/mcentral.go:253 +0x36 fp=0x2e951e636dc0 sp=0x2e951e636d90 pc=0x7ff673872376
+runtime.(*mcentral).cacheSpan(0x7ff674362018)
+	runtime/mcentral.go:171 +0x454 fp=0x2e951e636e38 sp=0x2e951e636dc0 pc=0x7ff6738721f4
+runtime.(*mcache).refill(0x20879ca0108, 0xb0?)
+	runtime/mcache.go:205 +0x16b fp=0x2e951e636e78 sp=0x2e951e636e38 pc=0x7ff6738717cb
+runtime.(*mcache).nextFree(0x20879ca0108, 0x58)
+	runtime/malloc.go:1006 +0x7e fp=0x2e951e636eb0 sp=0x2e951e636e78 pc=0x7ff67386dcde
+runtime.mallocgcSmallScanHeader(0x2e951e820408?, 0x7ff673ecd3e0)
+	runtime/malloc.go:1627 +0x18e fp=0x2e951e636f08 sp=0x2e951e636eb0 pc=0x7ff67386e90e
+runtime.mallocgc(0xff0, 0x7ff673ecd3e0, 0x1)
+	runtime/malloc.go:1152 +0xac fp=0x2e951e636f38 sp=0x2e951e636f08 pc=0x7ff6738d1bcc
+runtime.growslice(0x2e951e451008, 0x0?, 0x0?, 0x0?, 0x7ff673ecd3e0)
+	runtime/slice.go:273 +0x507 fp=0x2e951e636fa8 sp=0x2e951e636f38 pc=0x7ff6738d5fe7
+github.com/evanw/esbuild/internal/js_parser.(*parser).parsePrefix(0x2e951e422008, 0x1, 0x0, 0x0)
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:3945 +0x3ef1 fp=0x2e951e637428 sp=0x2e951e636fa8 pc=0x7ff673b993d1
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseExprCommon(0x2e951e422008, 0x1, 0x0, 0x0)
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:4233 +0x35 fp=0x2e951e637478 sp=0x2e951e637428 pc=0x7ff673b9a2b5
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseExpr(...)
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:4224
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseAndDeclareDecls(0x2e951e422008, 0x16, {0x0, 0x1, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, ...})
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:5599 +0x314 fp=0x2e951e6375b8 sp=0x2e951e637478 pc=0x7ff673ba41f4
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseStmt(0x2e951e422008, {0x0, 0x1, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, ...})
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:7478 +0x4885 fp=0x2e951e637f18 sp=0x2e951e6375b8 pc=0x7ff673bb3125
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseStmt(0x2e951e422008, {0x0, 0x1, 0x1, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, ...})
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:7088 +0x681a fp=0x2e951e638878 sp=0x2e951e637f18 pc=0x7ff673bb50ba
+github.com/evanw/esbuild/internal/js_parser.(*parser).parseStmtsUpTo(0x2e951e422008, 0x0, {0x0, 0x1, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, ...})
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:8489 +0xe8 fp=0x2e951e6389d8 sp=0x2e951e638878 pc=0x7ff673bb8748
+github.com/evanw/esbuild/internal/js_parser.Parse({_, _, _, _, _, _}, {{{0x2e951e3cabad, 0x50}, {0x2e951e3cabad, 0x50}}, ...}, ...)
+	github.com/evanw/esbuild/internal/js_parser/js_parser.go:17808 +0x44f fp=0x2e951e639578 sp=0x2e951e6389d8 pc=0x7ff673c0116f
+github.com/evanw/esbuild/internal/cache.(*JSCache).Parse(_, {_, _, _, _, _, _}, {{{0x2e951e3cabad, 0x50}, {0x2e951e3cabad, ...}}, ...}, ...)
+	github.com/evanw/esbuild/internal/cache/cache_ast.go:170 +0x2da fp=0x2e951e639c78 sp=0x2e951e639578 pc=0x7ff673c48efa
+github.com/evanw/esbuild/internal/bundler.parseFile({{0x7ff673f38e10, 0x2e951e33e200}, {0x2e951e626460, 0x2e951e63e090, 0x2e951e63e0a8, 0x2e951e65e1a0, 0x6, 0x2e951e630f90}, 0x2e951e578008, 0x2e951e4f80c0, ...})
+	github.com/evanw/esbuild/internal/bundler/bundler.go:287 +0x1bd3 fp=0x2e951e63b600 sp=0x2e951e639c78 pc=0x7ff673c89e53
+github.com/evanw/esbuild/internal/bundler.(*scanner).maybeParseFile.gowrap1()
+	github.com/evanw/esbuild/internal/bundler/bundler.go:1633 +0x385 fp=0x2e951e63bfe0 sp=0x2e951e63b600 pc=0x7ff673c979c5
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e63bfe8 sp=0x2e951e63bfe0 pc=0x7ff6738db5a1
+created by github.com/evanw/esbuild/internal/bundler.(*scanner).maybeParseFile in goroutine 46
+	github.com/evanw/esbuild/internal/bundler/bundler.go:1633 +0xca9
+
+goroutine 1 gp=0x2e951e2bc000 m=0 mp=0x7ff674344680 [syscall]:
+runtime.cgocall(0x7ff6738620e0, 0x7ff6743449d0)
+	runtime/cgocall.go:167 +0x3e fp=0x2e951e2739b0 sp=0x2e951e273948 pc=0x7ff6738d129e
+syscall.syscalln(0x0?, 0x0?, {0x2e951e273a28?, 0xb6dee51c8166ea3f?, 0x0?})
+	runtime/syscall_windows.go:431 +0x4e fp=0x2e951e2739d0 sp=0x2e951e2739b0 pc=0x7ff6738d7ace
+syscall.SyscallN(0x9?, {0x2e951e273a28?, 0x2e951e30f650?, 0x7ff6738558c9?})
+	syscall/dll_windows.go:99 +0x1e fp=0x2e951e273a08 sp=0x2e951e2739d0 pc=0x7ff6739088fe
+syscall.readFile(0x314, {0x2e951e3a2000?, 0x4000, 0x30?}, 0x7ff673e2be40?, 0x2e951e269980?)
+	syscall/zsyscall_windows.go:1030 +0xba fp=0x2e951e273a80 sp=0x2e951e273a08 pc=0x7ff67390dd9a
+syscall.ReadFile(...)
+	syscall/syscall_windows.go:510
+internal/poll.(*FD).Read.func1(0x7ff674330520?)
+	internal/poll/fd_windows.go:586 +0x4a fp=0x2e951e273ac8 sp=0x2e951e273a80 pc=0x7ff67392b76a
+internal/poll.(*FD).execIO(0x2e951e334000, 0x72, 0x2e951e273c48)
+	internal/poll/fd_windows.go:304 +0x2c9 fp=0x2e951e273bc8 sp=0x2e951e273ac8 pc=0x7ff67392a729
+internal/poll.(*FD).Read(0x2e951e334000, {0x2e951e3a2000, 0x4000, 0x4000})
+	internal/poll/fd_windows.go:585 +0x290 fp=0x2e951e273c90 sp=0x2e951e273bc8 pc=0x7ff67392b450
+os.(*File).read(...)
+	os/file_posix.go:29
+os.(*File).Read(0x2e951e302030, {0x2e951e3a2000?, 0xa?, 0x2e951e3022e8?})
+	os/file.go:144 +0x4f fp=0x2e951e273cd0 sp=0x2e951e273c90 pc=0x7ff67393050f
+main.runService(0x1)
+	github.com/evanw/esbuild/cmd/esbuild/service.go:134 +0x37f fp=0x2e951e273df8 sp=0x2e951e273cd0 pc=0x7ff673d8355f
+main.main()
+	github.com/evanw/esbuild/cmd/esbuild/main.go:252 +0xb16 fp=0x2e951e273f48 sp=0x2e951e273df8 pc=0x7ff673d81d56
+runtime.main()
+	runtime/proc.go:290 +0x2c7 fp=0x2e951e273fe0 sp=0x2e951e273f48 pc=0x7ff67389efa7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e273fe8 sp=0x2e951e273fe0 pc=0x7ff6738db5a1
+
+goroutine 2 gp=0x2e951e2bc780 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2bffa8 sp=0x2e951e2bff88 pc=0x7ff6738d3eae
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.forcegchelper()
+	runtime/proc.go:375 +0xb8 fp=0x2e951e2bffe0 sp=0x2e951e2bffa8 pc=0x7ff67389f298
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2bffe8 sp=0x2e951e2bffe0 pc=0x7ff6738db5a1
+created by runtime.init.7 in goroutine 1
+	runtime/proc.go:363 +0x1a
+
+goroutine 3 gp=0x2e951e2bcb40 m=nil [GC sweep wait]:
+runtime.gopark(0x1?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2c1f88 sp=0x2e951e2c1f68 pc=0x7ff6738d3eae
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.bgsweep(0x2e951e254100)
+	runtime/mgcsweep.go:324 +0x151 fp=0x2e951e2c1fc8 sp=0x2e951e2c1f88 pc=0x7ff673886571
+runtime.gcenable.gowrap1()
+	runtime/mgc.go:214 +0x17 fp=0x2e951e2c1fe0 sp=0x2e951e2c1fc8 pc=0x7ff673877917
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2c1fe8 sp=0x2e951e2c1fe0 pc=0x7ff6738db5a1
+created by runtime.gcenable in goroutine 1
+	runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x2e951e2bcd20 m=nil [GC scavenge wait]:
+runtime.gopark(0x10000?, 0x7ff673f26f00?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2d1f78 sp=0x2e951e2d1f58 pc=0x7ff6738d3eae
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.(*scavengerState).park(0x7ff674343300)
+	runtime/mgcscavenge.go:425 +0x49 fp=0x2e951e2d1fa8 sp=0x2e951e2d1f78 pc=0x7ff673883fe9
+runtime.bgscavenge(0x2e951e254100)
+	runtime/mgcscavenge.go:658 +0x59 fp=0x2e951e2d1fc8 sp=0x2e951e2d1fa8 pc=0x7ff673884579
+runtime.gcenable.gowrap2()
+	runtime/mgc.go:215 +0x17 fp=0x2e951e2d1fe0 sp=0x2e951e2d1fc8 pc=0x7ff6738778d7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2d1fe8 sp=0x2e951e2d1fe0 pc=0x7ff6738db5a1
+created by runtime.gcenable in goroutine 1
+	runtime/mgc.go:215 +0xa5
+
+goroutine 18 gp=0x2e951e3081e0 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2cde20 sp=0x2e951e2cde00 pc=0x7ff6738d3eae
+runtime.runFinalizers()
+	runtime/mfinal.go:210 +0x107 fp=0x2e951e2cdfe0 sp=0x2e951e2cde20 pc=0x7ff6738768a7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2cdfe8 sp=0x2e951e2cdfe0 pc=0x7ff6738db5a1
+created by runtime.createfing in goroutine 1
+	runtime/mfinal.go:172 +0x3d
+
+goroutine 19 gp=0x2e951e3083c0 m=nil [cleanup wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2cff68 sp=0x2e951e2cff48 pc=0x7ff6738d3eae
+runtime.goparkunlock(...)
+	runtime/proc.go:468
+runtime.(*cleanupQueue).dequeue(0x7ff6743435e0)
+	runtime/mcleanup.go:522 +0xd4 fp=0x2e951e2cffa0 sp=0x2e951e2cff68 pc=0x7ff673873734
+runtime.runCleanups()
+	runtime/mcleanup.go:718 +0x45 fp=0x2e951e2cffe0 sp=0x2e951e2cffa0 pc=0x7ff673873da5
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2cffe8 sp=0x2e951e2cffe0 pc=0x7ff6738db5a1
+created by runtime.(*cleanupQueue).createGs in goroutine 1
+	runtime/mcleanup.go:672 +0xa5
+
+goroutine 20 gp=0x2e951e3085a0 m=nil [chan receive]:
+runtime.gopark(0x2e951e3340c0?, 0x7ff673865ef2?, 0x0?, 0x0?, 0x7ff67392c760?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2c3ee8 sp=0x2e951e2c3ec8 pc=0x7ff6738d3eae
+runtime.chanrecv(0x2e951e30a0e0, 0x2e951e2c3fb0, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x2e951e2c3f60 sp=0x2e951e2c3ee8 pc=0x7ff6738663ce
+runtime.chanrecv2(0x2e951e302038?, 0x2e951e51c000?)
+	runtime/chan.go:514 +0x12 fp=0x2e951e2c3f88 sp=0x2e951e2c3f60 pc=0x7ff673865f12
+main.runService.func1()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:98 +0x45 fp=0x2e951e2c3fe0 sp=0x2e951e2c3f88 pc=0x7ff673d839e5
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2c3fe8 sp=0x2e951e2c3fe0 pc=0x7ff6738db5a1
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:97 +0x1db
+
+goroutine 21 gp=0x2e951e308780 m=nil [sleep]:
+runtime.gopark(0x3d5881111c28c?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e3abf48 sp=0x2e951e3abf28 pc=0x7ff6738d3eae
+time.Sleep(0x3b9aca00)
+	runtime/time.go:363 +0x167 fp=0x2e951e3abfa0 sp=0x2e951e3abf48 pc=0x7ff6738d7da7
+main.runService.func3()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:124 +0x48 fp=0x2e951e3abfe0 sp=0x2e951e3abfa0 pc=0x7ff673d838c8
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e3abfe8 sp=0x2e951e3abfe0 pc=0x7ff6738db5a1
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:122 +0x30c
+
+goroutine 46 gp=0x2e951e308960 m=nil [chan receive]:
+runtime.gopark(0x2e951e6264d0?, 0x11400951e48da20?, 0x38?, 0x14?, 0x20879cb4910?)
+	runtime/proc.go:462 +0xce fp=0x2e951e48d9e8 sp=0x2e951e48d9c8 pc=0x7ff6738d3eae
+runtime.chanrecv(0x2e951e6af340, 0x2e951e48de48, 0x1)
+	runtime/chan.go:667 +0x4ae fp=0x2e951e48da60 sp=0x2e951e48d9e8 pc=0x7ff6738663ce
+runtime.chanrecv1(0x0?, 0x0?)
+	runtime/chan.go:509 +0x12 fp=0x2e951e48da88 sp=0x2e951e48da60 pc=0x7ff673865ef2
+github.com/evanw/esbuild/internal/bundler.(*scanner).scanAllDependencies(0x2e951e578488)
+	github.com/evanw/esbuild/internal/bundler/bundler.go:2185 +0x23d fp=0x2e951e48dfb8 sp=0x2e951e48da88 pc=0x7ff673c9d51d
+github.com/evanw/esbuild/internal/bundler.ScanBundle(_, {_, _, _, _, _, _}, {_, _}, 0x2e951e4f80c0, ...)
+	github.com/evanw/esbuild/internal/bundler/bundler.go:1508 +0xed9 fp=0x2e951e48e650 sp=0x2e951e48dfb8 pc=0x7ff673c959f9
+github.com/evanw/esbuild/pkg/api.transformImpl({_, _}, {0x0, 0x0, 0x0, 0x2e951e630e70, 0x0, 0x3, {0x0, 0x0}, ...})
+	github.com/evanw/esbuild/pkg/api/api_impl.go:1803 +0x13fb fp=0x2e951e48f980 sp=0x2e951e48e650 pc=0x7ff673d49b1b
+github.com/evanw/esbuild/pkg/api.Transform(...)
+	github.com/evanw/esbuild/pkg/api/api.go:478
+main.(*serviceType).handleTransformRequest(0x0?, 0x1, 0x2e951e269950)
+	github.com/evanw/esbuild/cmd/esbuild/service.go:1179 +0x3ce fp=0x2e951e48ff60 sp=0x2e951e48f980 pc=0x7ff673d8f32e
+main.(*serviceType).handleIncomingPacket.func3()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:242 +0x57 fp=0x2e951e48ffe0 sp=0x2e951e48ff60 pc=0x7ff673d881f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e48ffe8 sp=0x2e951e48ffe0 pc=0x7ff6738db5a1
+created by main.(*serviceType).handleIncomingPacket in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:240 +0x1772
+
+goroutine 5 gp=0x2e951e44c3c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x30?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e3a7f40 sp=0x2e951e3a7f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e3a7fc8 sp=0x2e951e3a7f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e3a7fe0 sp=0x2e951e3a7fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e3a7fe8 sp=0x2e951e3a7fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 66 gp=0x2e951e4be000 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x7ff673e6d780?)
+	runtime/proc.go:462 +0xce fp=0x2e951e3a9f40 sp=0x2e951e3a9f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e3a9fc8 sp=0x2e951e3a9f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e3a9fe0 sp=0x2e951e3a9fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e3a9fe8 sp=0x2e951e3a9fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 67 gp=0x2e951e4be1e0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e665f40 sp=0x2e951e665f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e665fc8 sp=0x2e951e665f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e665fe0 sp=0x2e951e665fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e665fe8 sp=0x2e951e665fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 68 gp=0x2e951e4be3c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e667f40 sp=0x2e951e667f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e667fc8 sp=0x2e951e667f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e667fe0 sp=0x2e951e667fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e667fe8 sp=0x2e951e667fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 69 gp=0x2e951e4be5a0 m=nil [GC worker (idle)]:
+runtime.gopark(0x2e951e5b0690?, 0x0?, 0x0?, 0x0?, 0x2e951e5aa940?)
+	runtime/proc.go:462 +0xce fp=0x2e951e585f40 sp=0x2e951e585f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e585fc8 sp=0x2e951e585f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e585fe0 sp=0x2e951e585fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e585fe8 sp=0x2e951e585fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 70 gp=0x2e951e4be780 m=nil [GC worker (idle)]:
+runtime.gopark(0x7ff673bba326?, 0x7ff673e6b680?, 0x0?, 0x43?, 0xf600000000?)
+	runtime/proc.go:462 +0xce fp=0x2e951e587f40 sp=0x2e951e587f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e587fc8 sp=0x2e951e587f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e587fe0 sp=0x2e951e587fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e587fe8 sp=0x2e951e587fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 71 gp=0x2e951e4be960 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e581f40 sp=0x2e951e581f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e581fc8 sp=0x2e951e581f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e581fe0 sp=0x2e951e581fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e581fe8 sp=0x2e951e581fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 72 gp=0x2e951e4beb40 m=nil [GC worker (idle)]:
+runtime.gopark(0x9?, 0x0?, 0x0?, 0x0?, 0x2e951e5d35d0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e583f40 sp=0x2e951e583f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e583fc8 sp=0x2e951e583f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e583fe0 sp=0x2e951e583fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e583fe8 sp=0x2e951e583fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 73 gp=0x2e951e4bed20 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x2e951e58df70?)
+	runtime/proc.go:462 +0xce fp=0x2e951e58df40 sp=0x2e951e58df20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e58dfc8 sp=0x2e951e58df40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e58dfe0 sp=0x2e951e58dfc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e58dfe8 sp=0x2e951e58dfe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 74 gp=0x2e951e4bef00 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0xd0?, 0xff?, 0x7ff673d881f7?)
+	runtime/proc.go:462 +0xce fp=0x2e951e58ff40 sp=0x2e951e58ff20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e58ffc8 sp=0x2e951e58ff40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e58ffe0 sp=0x2e951e58ffc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e58ffe8 sp=0x2e951e58ffe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 6 gp=0x2e951e2bd0e0 m=nil [GC worker (idle)]:
+runtime.gopark(0x3d588245438fc?, 0x0?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2d3f40 sp=0x2e951e2d3f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e2d3fc8 sp=0x2e951e2d3f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e2d3fe0 sp=0x2e951e2d3fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2d3fe8 sp=0x2e951e2d3fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 7 gp=0x2e951e2bd2c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x3d588245438fc?, 0x1?, 0x0?, 0x0?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e589f40 sp=0x2e951e589f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e589fc8 sp=0x2e951e589f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e589fe0 sp=0x2e951e589fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e589fe8 sp=0x2e951e589fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 8 gp=0x2e951e2bd4a0 m=nil [GC worker (idle)]:
+runtime.gopark(0x3d588245438fc?, 0x1?, 0x0?, 0x0?, 0x2e951e53e000?)
+	runtime/proc.go:462 +0xce fp=0x2e951e58bf40 sp=0x2e951e58bf20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+[ELIFECYCLE] Command failed with exit code 1.
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e58bfc8 sp=0x2e951e58bf40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e58bfe0 sp=0x2e951e58bfc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e58bfe8 sp=0x2e951e58bfe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 9 gp=0x2e951e2bd680 m=6 mp=0x2e951e500008 [GC mark termination]:
+runtime.systemstack_switch()
+	runtime/asm_amd64.s:516 +0x8 fp=0x2e951e2f1ea0 sp=0x2e951e2f1e90 pc=0x7ff6738d9908
+runtime.forEachP(...)
+	runtime/proc.go:2112
+runtime.gcMarkDone()
+	runtime/mgc.go:1042 +0x154 fp=0x2e951e2f1f40 sp=0x2e951e2f1ea0 pc=0x7ff673878654
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1912 +0x2d9 fp=0x2e951e2f1fc8 sp=0x2e951e2f1f40 pc=0x7ff67387a4f9
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e2f1fe0 sp=0x2e951e2f1fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2f1fe8 sp=0x2e951e2f1fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 10 gp=0x2e951e2bd860 m=nil [GC worker (idle)]:
+runtime.gopark(0x3d588245438fc?, 0x1?, 0xc4?, 0xbc?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2f3f40 sp=0x2e951e2f3f20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e2f3fc8 sp=0x2e951e2f3f40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e2f3fe0 sp=0x2e951e2f3fc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2f3fe8 sp=0x2e951e2f3fe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+
+goroutine 11 gp=0x2e951e2bda40 m=nil [GC worker (idle)]:
+runtime.gopark(0x3d588245438fc?, 0x1?, 0x98?, 0xb9?, 0x0?)
+	runtime/proc.go:462 +0xce fp=0x2e951e2edf40 sp=0x2e951e2edf20 pc=0x7ff6738d3eae
+runtime.gcBgMarkWorker(0x2e951e4ba000)
+	runtime/mgc.go:1791 +0xeb fp=0x2e951e2edfc8 sp=0x2e951e2edf40 pc=0x7ff67387a30b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	runtime/mgc.go:1695 +0x17 fp=0x2e951e2edfe0 sp=0x2e951e2edfc8 pc=0x7ff67387a1f7
+runtime.goexit({})
+	runtime/asm_amd64.s:1771 +0x1 fp=0x2e951e2edfe8 sp=0x2e951e2edfe0 pc=0x7ff6738db5a1
+created by runtime.gcBgMarkStartWorkers in goroutine 50
+	runtime/mgc.go:1695 +0x105
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: The service was stopped
+    at E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:999:38
+    at responseCallbacks.<computed> (E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:884:9)
+    at Socket.afterClose (E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\esbuild@0.28.1\node_modules\esbuild\lib\main.js:875:28)
+    at Socket.emit (node:events:521:24)
+    at endReadableNT (node:internal/streams/readable:1729:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  name: 'TransformError'
+}
+
+Node.js v24.15.0
+run-gates: start persistence catalog
+
+== FAILED persistence catalog (1.67s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-persistence-catalog
+outcome: exit 1
+$ tsx rsh/Scripts/gen-persistence-catalog.ts --check
+node:fs:561
+  return binding.open(
+                 ^
+
+Error: UNKNOWN: unknown error, open 'E:\redsparkHarness\RedSparkHarness\node_modules\.pnpm\micromark-core-commonmark@2.0.3\node_modules\micromark-core-commonmark\lib\character-escape.js'
+    at Object.openSync (node:fs:561:18)
+    at readFileSync (node:fs:445:35)
+    at getSourceSync (node:internal/modules/esm/load:37:14)
+    at defaultLoadSync (node:internal/modules/esm/load:153:34)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:776:12)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at load2 (file:///E:/redsparkHarness/RedSparkHarness/node_modules/.pnpm/tsx@4.22.4/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:5385)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at loadWithHooks (node:internal/modules/customization_hooks:374:18)
+    at #loadSync (node:internal/modules/esm/loader:793:14) {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'open',
+  path: 'E:\\redsparkHarness\\RedSparkHarness\\node_modules\\.pnpm\\micromark-core-commonmark@2.0.3\\node_modules\\micromark-core-commonmark\\lib\\character-escape.js'
+}
+
+Node.js v24.15.0
+run-gates: start Session format catalog
+
+== FAILED Session format catalog (1.98s) ==
+[ELIFECYCLE] Command failed with exit code 3221226505.
+command: pnpm run verify-session-format-catalog
+outcome: exit 3221226505
+$ tsx rsh/Scripts/gen-session-format-catalog.ts --check
+run-gates: start public repository links
+run-gates: PASS tool catalog (20.02s)
+run-gates: start doc refs
+run-gates: PASS doc refs (7.92s)
+run-gates: start subsystem pages
+run-gates: PASS subsystem pages (2.59s)
+run-gates: start package paths
+run-gates: PASS public repository links (29.67s)
+run-gates: start package groups
+run-gates: PASS package groups (1.23s)
+run-gates: start tsconfig paths
+run-gates: PASS translation pairing (44.30s)
+run-gates: start config source ownership
+run-gates: PASS config source ownership (1.50s)
+run-gates: start package README Summaries
+run-gates: PASS tsconfig paths (3.32s)
+run-gates: start package README model experience
+run-gates: PASS package README Summaries (1.89s)
+run-gates: start agent note classification
+run-gates: PASS agent note classification (1.25s)
+run-gates: start agent note format
+run-gates: PASS agent note format (1.81s)
+run-gates: start archived agent notes
+run-gates: PASS package paths (17.95s)
+run-gates: start skill invocation metadata
+run-gates: PASS skill invocation metadata (1.28s)
+run-gates: start translation prompt
+run-gates: PASS archived agent notes (4.61s)
+run-gates: start doc budgets
+run-gates: PASS translation prompt (1.18s)
+run-gates: start documentation standard tests
+run-gates: PASS doc budgets (1.13s)
+run-gates: start documentation site checks
+run-gates: PASS package README model experience (12.23s)
+run-gates: start package README limitations
+
+== FAILED package README limitations (2.54s) ==
+command: pnpm run verify-package-readme-limitations
+outcome: exit 134
+$ tsx rsh/Scripts/verify-package-readme-limitations.ts
+
+<--- Last few GCs --->
+
+[41840:0000012355912000]     1336 ms: Scavenge (interleaved) 22.7 (34.2) -> 16.2 (34.2) MB, pooled: 9 MB, 58.93 / 0.00 ms  (average mu = 0.996, current mu = 0.996) allocation failure; 
+
+FATAL ERROR: Zone Allocation failed - process out of memory
+----- Native stack trace -----
+
+ 1: 00007FF64229403F 
+ 2: 00007FF642EDFAA7 
+ 3: 00007FF642859986 
+ 4: 00007FF64367A505 
+ 5: 00007FF64367AD0B 
+ 6: 00007FF6426878F1 
+ 7: 00007FF642731883 
+ 8: 00007FF64272F78A 
+ 9: 00007FF642E5376F 
+10: 00007FF64273126B 
+11: 00007FF6436C0C5F 
+12: 00007FF6421E2E0E 
+13: 00007FF642F34A36 
+14: 00007FF644195A73 
+15: 00007FFED62DCD87 
+16: 00007FFED788CAEC RtlUserThreadStart+44
+[ELIFECYCLE] Command failed with exit code 134.
+run-gates: PASS documentation standard tests (9.34s)

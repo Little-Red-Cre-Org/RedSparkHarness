@@ -1,0 +1,38 @@
+<div class="_markdown_6f370c">
+  <div class="_block_812f05 md-code-block">
+    <div class="_bannerWrap_812f05">
+      <div class="_banner_812f05" data-code-block-banner="true">
+        <div class="_infostring_812f05">
+        <div class="_action_812f05">
+          <button class="_copyButton_812f05" type="button">
+            #text "复制"
+    <div class="_content_812f05" data-code-block-content="true">
+      <pre class="_plain_812f05">
+        <code>
+          #text "kept blank line follows\n"
+  <div class="_block_812f05 md-code-block">
+    <div class="_bannerWrap_812f05">
+      <div class="_banner_812f05" data-code-block-banner="true">
+        <div class="_infostring_812f05">
+          #text "ts"
+        <div class="_action_812f05">
+          <button class="_copyButton_812f05" type="button">
+            #text "复制"
+    <div class="_content_812f05" data-code-block-content="true">
+      <pre class="shiki css-variables" style="background-color: var(--shiki-background); color: var(--shiki-foreground);" tabindex="0">
+        <code>
+          <span class="line">
+            <span style="color: var(--shiki-token-keyword);">
+              #text "const"
+            <span style="color: var(--shiki-token-constant);">
+              #text " doubled"
+            <span style="color: var(--shiki-token-keyword);">
+              #text " ="
+            <span style="color: var(--shiki-token-constant);">
+              #text " true"
+          #text "\n"
+          <span class="line">
+          #text "\n"
+          <span class="line">
+  <p>
+    #text "after"

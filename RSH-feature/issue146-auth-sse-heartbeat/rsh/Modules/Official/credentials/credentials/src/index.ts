@@ -1,0 +1,257 @@
+/**
+ * Service Definition for the credential-reference capability seam (`ctx.credentials`). Settings and composition files carry
+ * *references* to secrets — environment-variable names — while providers own
+ * the actual values and their storage. Consumers resolve a reference once per
+ * operation, so a changed credential reaches the next operation without any
+ * plugin restart, and configuration surfaces describe a reference without
+ * ever seeing its value.
+ * @module @deepseek-ai/dsh-credentials
+ */
+
+import { Context, Service } from '@deepseek-ai/cordis'
+import type { CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef } from './types.ts'
+
+export type {
+  ApiKeyRecord, CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef, GrantRecord,
+} from './types.ts'
+
+export { credentialRef, isCredentialRefName, isCredentialKeySegment, credentialKey, parseCredentialKey, credentialKeyScope, credentialKeyId } from './credential-key.ts'
+
+/** One resolved credential value and the source layer that supplied it. */
+export interface ResolvedCredential {
+  /** The non-empty secret value. */
+  value: string
+  /** Provider-defined source layer id (the local provider uses `env`, `file`, `project-env`, and `user-env`). */
+  source: string
+}
+
+/** Presence and writability facts for one record, safe for configuration UIs — never the value. */
+export interface CredentialRecordInfo {
+  /**
+   * Whether a record is stored. Unlike a reference, presence alone answers
+   * this: an {@link ApiKeyRecord} carrying neither a key nor environment
+   * values states that its owner confirmed ambient authentication, which is
+   * configured, not blank.
+   */
+  configured: boolean
+  /** Discriminant of the stored record; absent while none is stored. */
+  kind?: CredentialRecord['kind']
+  /** Whether {@link CredentialProvider.modifyRecord} would currently succeed. */
+  writable: boolean
+}
+
+/** One stored record's address and tag, for enumeration — never its value. */
+export interface CredentialRecordEntry {
+  /** The record's address. */
+  key: CredentialKey
+  /** Discriminant of the stored record. */
+  kind: CredentialRecord['kind']
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    credentials: CredentialProvider
+  }
+}
+
+/**
+ * Abstract credential service over two key spaces that answer two questions.
+ *
+ * A {@link CredentialRef} answers "what is behind this environment-variable
+ * name", layered over the process environment, the provider-managed store, and
+ * `.env` files. One seam-wide rule binds that half: an empty stored value is
+ * absent everywhere — `resolve` skips it, `describe` reports it unconfigured —
+ * so a blank never masquerades as a configured secret.
+ *
+ * A {@link CredentialKey} answers "what credential does this plugin hold for
+ * this id". Nothing can layer here — an authorization grant has no
+ * environment to be read from — so presence of the record is the whole fact,
+ * and {@link modifyRecord} is the only write path because a correct write
+ * depends on the current value (a token refresh is read-decide-replace under
+ * one lock).
+ */
+export abstract class CredentialProvider extends Service {
+  constructor(ctx: Context) {
+    super(ctx, 'credentials')
+  }
+
+  /**
+   * Resolve one reference to its current value. Resolution is per call:
+   * consumers re-resolve at each operation and must not cache across
+   * operations — that per-operation read is what makes a changed credential
+   * reach the next operation without a restart.
+   * @param ref - the reference to resolve.
+   * @returns the value and its source, or `undefined` while unconfigured.
+   */
+  abstract resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined>
+
+  /**
+   * Describe one reference for configuration surfaces without exposing the
+   * value.
+   * @param ref - the reference to describe.
+   * @returns configured state, supplying source, and writability.
+   */
+  abstract describe(ref: CredentialRef): Promise<CredentialInfo>
+
+  /**
+   * Durably store one value in the provider-managed writable source. Rejects
+   * while a read-only source shadows the reference — the write would appear
+   * to succeed while resolution keeps returning the shadowing value — and
+   * rejects an empty value (use {@link unset}).
+   * @param ref - the reference to store.
+   * @param value - the non-empty secret value.
+   */
+  abstract set(ref: CredentialRef, value: string): Promise<void>
+
+  /**
+   * Remove one reference from the provider-managed writable source; removing
+   * an absent reference is a no-op. Rejects while a read-only source shadows
+   * the reference, like {@link set}.
+   * @param ref - the reference to remove.
+   */
+  abstract unset(ref: CredentialRef): Promise<void>
+
+  /**
+   * Read one stored record. The value is returned as its owner wrote it; a
+   * {@link GrantRecord} payload is not interpreted on the way out.
+   * @param key - the record to read.
+   * @returns the record, or `undefined` while none is stored.
+   */
+  abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+
+  /**
+   * Read JSON metadata owned by a plugin. Metadata is stored separately from
+   * credential records and never appears in {@link listRecords}.
+   * @param key - owner-scoped metadata address.
+   * @returns the JSON value, or `undefined` while absent.
+   */
+  abstract readMetadata(key: CredentialKey): Promise<unknown>
+
+  /**
+   * Read-decide-replace plugin-owned JSON metadata under the provider's write
+   * lock. Returning `undefined` leaves the current value unchanged.
+   * @param key - owner-scoped metadata address.
+   * @param mutate - decides the next JSON value from the current one.
+   * @returns the committed value, or the unchanged current value.
+   */
+  abstract modifyMetadata(
+    key: CredentialKey,
+    mutate: (current: unknown) => Promise<unknown>,
+  ): Promise<unknown>
+
+  /**
+   * Reconcile owner metadata with a legacy credential record under the same
+   * provider lock. The legacy record is removed only after metadata is durable
+   * and verified. The callback receives detached metadata and legacy values
+   * and can read detached sibling-record copies from that locked snapshot.
+   * @param key - address shared by the old record and new metadata value.
+   * @param migrate - validates detached values from the locked snapshot and chooses the durable metadata result.
+   * @returns the verified metadata value.
+   */
+  abstract migrateRecordToMetadata(
+    key: CredentialKey,
+    migrate: (
+      current: unknown,
+      legacy: CredentialRecord | undefined,
+      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
+    ) => Promise<CredentialMetadataMigration>,
+  ): Promise<unknown>
+
+  /**
+   * Describe one record for configuration surfaces without exposing its value.
+   * @param key - the record to describe.
+   * @returns presence, discriminant, and writability.
+   */
+  abstract describeRecord(key: CredentialKey): Promise<CredentialRecordInfo>
+
+  /**
+   * Enumerate every stored record's address and tag. Unlike the reference
+   * half, which has no enumeration because configuration surfaces learn which
+   * references exist from settings schemas, records have no such discovery
+   * path: a surface that cannot list them cannot show what a user is
+   * authorized for, nor find an orphan left by an uninstalled plugin.
+   * @returns every stored record, values excluded.
+   */
+  abstract listRecords(): Promise<readonly CredentialRecordEntry[]>
+
+  /**
+   * Serialized read-modify-write over one record — the only write path.
+   * `mutate` sees the record as it stands at the moment the write is
+   * exclusive, and returning `undefined` leaves the entry untouched. Exclusion
+   * holds across processes where the backing store supports it, which is what
+   * makes a token refresh safe: two processes rotating one refresh token
+   * concurrently would otherwise lose whichever wrote first.
+   * @param key - the record to modify.
+   * @param mutate - receives the current record and returns its replacement, or `undefined` to leave it.
+   * @returns the record after the write, or the current one when `mutate` declined.
+   */
+  abstract modifyRecord(
+    key: CredentialKey,
+    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+  ): Promise<CredentialRecord | undefined>
+
+  /**
+   * Remove one record; removing an absent record is a no-op.
+   * @param key - the record to remove.
+   */
+  abstract deleteRecord(key: CredentialKey): Promise<void>
+
+  /**
+   * Fan `credentials/reference-updated` out with contained listener failures: every
+   * listener runs, and a sync throw or async rejection is logged without
+   * changing the committed operation's outcome — except `INVARIANT`-coded
+   * failures, which rethrow after every listener ran (the rethrow reaches the
+   * caller only from synchronous listeners, so invariant checks on this event
+   * must not be async functions). Providers call this only after the write or
+   * reload actually committed, so a broken observer can never make a durable
+   * change look failed.
+   * @param ref - the reference whose stored value changed.
+   */
+  protected notifyUpdated(ref: CredentialRef): void {
+    this.fanOut('credentials/reference-updated', ref)
+  }
+
+  /**
+   * Fan `credentials/record-updated` out on exactly the terms
+   * {@link notifyUpdated} documents, for the record half of the seam.
+   * @param key - the record whose stored value changed.
+   */
+  protected notifyRecordUpdated(key: CredentialKey): void {
+    this.fanOut('credentials/record-updated', key)
+  }
+
+  /* jscpd:ignore-start -- deliberate symmetry with the settings seam's commit
+     fan-out: the contained-dispatch shape is the reviewed listener-lifecycle
+     contract, and extracting it would couple the two seams' event semantics. */
+  /** The contained dispatch both notifications run through; see {@link notifyUpdated}. */
+  private fanOut(event: 'credentials/reference-updated' | 'credentials/record-updated', subject: string): void {
+    let invariantFailure: unknown
+    const args = [event, subject]
+    for (const listener of this.ctx.events.dispatch('emit', args) as Array<(...listenerArgs: unknown[]) => unknown>) {
+      try {
+        const returned = listener(subject)
+        if (returned != null && typeof (returned as PromiseLike<unknown>).then === 'function') {
+          void Promise.resolve(returned as PromiseLike<unknown>).then(undefined, (error: unknown) => {
+            this.warnListenerFailure(event, subject, error)
+          })
+        }
+      } catch (error) {
+        if ((error as { code?: unknown } | null)?.code === 'INVARIANT') {
+          invariantFailure ??= error
+          continue
+        }
+        this.warnListenerFailure(event, subject, error)
+      }
+    }
+    if (invariantFailure !== undefined) throw invariantFailure as Error
+  }
+  /* jscpd:ignore-end */
+
+  /** Contained-listener diagnostic shared by the sync and async failure paths. */
+  private warnListenerFailure(event: string, subject: string, error: unknown): void {
+    this.ctx.logger.warn('credentials: a %s listener for "%s" failed', event, subject)
+    this.ctx.logger.warn(error)
+  }
+}
+
+export default CredentialProvider

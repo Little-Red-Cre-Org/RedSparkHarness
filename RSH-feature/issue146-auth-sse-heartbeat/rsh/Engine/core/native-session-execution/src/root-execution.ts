@@ -1,0 +1,272 @@
+/** Program-selected root execution with immutable routing and exact maintenance ownership. */
+import type { NativeAgentPresetFacts, NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { NativeRootRouteId } from './root-route.ts'
+export type { NativeRootRouteId } from './root-route.ts'
+import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import type { NativeActiveSessionOwner } from './active-session.ts'
+import type { NativeSessionConfiguration, NativeSessionTurnResult } from './index.ts'
+import type { SessionDeletionId, SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeSessionOwnerApproval } from './execution-policy.ts'
+import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { MessageId } from '@deepseek-ai/dsh-llm/native'
+
+/** Program-local identity returned for one staged file upload. */
+export type NativeStagedFileReceiptId = Branded<'NativeStagedFileReceiptId'>
+
+/** Opaque upload acknowledgement; it is not a durable attachment reference. */
+export interface NativeStagedFileReceipt {
+  readonly receiptId: NativeStagedFileReceiptId
+  readonly name: string
+  readonly bytes: number
+}
+
+/** File block admitted by this Program's receipt store. */
+export type NativeStagedFileBlock = Extract<UserMessage['content'][number], { readonly type: 'file' }>
+
+/** One initial message whose staged files retire only after the inbox event is durable. */
+export interface NativeStagedFileAdmission {
+  readonly message: UserMessage
+  /** Retire the reserved receipts after the exact message reaches the durable log. */
+  accepted(): void
+  /** Release a reservation only when failure is known to precede writer handoff. */
+  refused(): void
+  /** Quarantine an uncertain handoff; the bytes remain immutable and the caller must upload again. */
+  uncertain(): void
+}
+
+/** Shared Program-owned upload and receipt resolution for Native clients. */
+export interface NativeRootStagedFileOperations {
+  /** Store one streamed upload through the selected immutable attachment Provider.
+   * @param request - explicit Program route, existing Session identity, file chunks, and optional display name.
+   * @param signal - upload cancellation.
+   * @returns process-local receipt bound to this Program, route, and Session generation.
+   */
+  stageStream(request: {
+    readonly route: NativeRootRouteId
+    readonly id: SessionId
+    readonly data: AsyncIterable<Uint8Array>
+    readonly name?: string
+  }, signal: AbortSignal): Promise<NativeStagedFileReceipt>
+  /** Store one encoded upload through the selected immutable attachment Provider.
+   * @param request - explicit Program route, existing Session identity, canonical encoded bytes, and optional display name.
+   * @param signal - upload cancellation.
+   * @returns process-local receipt bound to this Program, route, and Session generation.
+   */
+  stageEncoded(request: {
+    readonly route: NativeRootRouteId
+    readonly id: SessionId
+    readonly data: string
+    readonly name?: string
+  }, signal: AbortSignal): Promise<NativeStagedFileReceipt>
+  /** Reserve staged files for an exact currently attached root owner.
+   * @param request - exact owner, selected receipts, cancellation, and ordered message builder.
+   * @returns a message lease whose settlement is controlled by the durable Session admission path.
+   */
+  prepare(request: {
+    readonly owner: NativeActiveSessionOwner
+    readonly receiptIds: readonly NativeStagedFileReceiptId[]
+    readonly signal: AbortSignal
+    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+  }): NativeStagedFileAdmission
+  /** Resolve and durably enqueue staged files through the existing owner and inbox writer.
+   * @param request - exact owner, selected receipts, destination, wake policy, cancellation, and ordered message builder.
+   * @returns the message identity after durable admission.
+   */
+  enqueue(request: {
+    readonly owner: NativeActiveSessionOwner
+    readonly receiptIds: readonly NativeStagedFileReceiptId[]
+    readonly target: 'next-turn' | 'next-step'
+    readonly wake: boolean
+    readonly signal: AbortSignal
+    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
+  }): Promise<MessageId>
+}
+
+/** Route-authorized recoverable storage mutations; no Agent or writer is created. */
+export interface NativeRootSessionDeletionOperations {
+  /** List retained deletions belonging to the selected route without activating Sessions.
+   * @param request - exact route and positive maximum matching receipt count; overflow rejects.
+   * @param signal - receipt scanning cancellation.
+   * @returns detached receipts without workspace paths.
+   */
+  list(request: { readonly route: NativeRootRouteId; readonly limit: number },
+    signal: AbortSignal): Promise<readonly SessionDeletionReceipt[]>
+  /** Remove an inactive Session from the live persistence namespace.
+   * @param request - exact Session identity and explicitly selected Program route.
+   * @param signal - cancellation before storage accepts the namespace move.
+   * @returns durable deletion receipt; original bytes remain recoverable.
+   */
+  delete(request: { readonly route: NativeRootRouteId; readonly id: SessionId },
+    signal: AbortSignal): Promise<SessionDeletionReceipt>
+  /** Restore retained bytes to an absent live identity under the same recorded workspace.
+   * @param request - retained receipt and explicitly selected Program route.
+   * @param signal - cancellation before storage accepts restoration.
+   * @returns original Session identity without activation or a new turn.
+   */
+  restore(request: { readonly route: NativeRootRouteId; readonly id: SessionDeletionId }, signal: AbortSignal): Promise<SessionId>
+}
+
+/** Immutable configuration owned by the selected Program, without transferable policy authority. */
+export interface NativeRootRoute {
+  readonly id: NativeRootRouteId
+  readonly configuration: Readonly<NativeSessionConfiguration>
+  /** Explicit admission for selecting registered Workspaces; absent disables dynamic selection. */
+  readonly workspaceSelection?: true
+  /** Registered Workspace selected by the Program; absent on its configured base route. */
+  readonly workspaceId?: WorkspaceId
+}
+
+/** Explicit root destination; restoration cannot replace an existing Agent or select another scope. */
+export interface NativeRootSessionRequest {
+  readonly route: NativeRootRouteId
+  readonly id: SessionId
+  readonly resume: boolean
+  /** Program-persisted admission origin for a scheduled root; other roots omit it. */
+  readonly rootOrigin?: 'scheduled'
+  /** Explicit fresh-root composition; restoration uses accepted historical selection. */
+  readonly preset?: string
+}
+
+/** One root input projected through the Program's existing executor and complete root epoch. */
+export interface NativeRootExecutionRequest extends NativeRootSessionRequest {
+  readonly message?: UserMessage
+  /**
+   * Issue process-local approval authority after this execution has attached its exact live Session owner. Cold restore
+   * cannot supply authority before attachment; the issuer must bind the callback's exact owner and recheck its parent
+   * route on every request. Durable policy remains a requirement, never proof.
+   * @param owner - attached root owner for this admitted turn.
+   * @returns current owner authority, or undefined when this route cannot authorize approvals.
+   */
+  readonly issueOwnerApproval?: (owner: NativeActiveSessionOwner) => NativeSessionOwnerApproval | undefined
+  /** Observe events only after the sole writer accepts their append. */
+  readonly onEvent?: (event: SessionEvent) => void
+}
+
+/** Fork one closed source turn into a fresh root using the selected Program configuration. */
+export interface NativeRootForkRequest {
+  readonly route: NativeRootRouteId
+  readonly source: SessionId
+  readonly id: SessionId
+  /** Existing source event whose containing turn must have a durable end; omitted selects the last closed turn. */
+  readonly atSeq?: SessionSeq
+}
+
+/** Program-level capability; Providers reuse their existing root executor and writer ownership. */
+export interface NativeRootExecutionOperations {
+  /** Upload and resolve process-local file receipts through the selected Program's attachment Provider. */
+  readonly stagedFiles: NativeRootStagedFileOperations
+  /** Available only when the selected persistence Provider supplies recoverable deletion. */
+  readonly deletions?: NativeRootSessionDeletionOperations
+  /**
+   * Wait until the Program has selected its actual immutable configuration and executor.
+   * @param signal - caller cancellation; Program shutdown also rejects pending readiness.
+   * @returns completion before resolving stored routes or admitting scheduled root work.
+   */
+  ready(signal: AbortSignal): Promise<void>
+  /**
+   * Resolve an explicitly configured route; unknown references fail before execution admission.
+   * @param id - selected Program route identity.
+   * @returns immutable route configuration bound to the existing Program policy scope.
+   */
+  resolve(id: NativeRootRouteId): Readonly<NativeRootRoute>
+  /**
+   * Read advertised dynamic routes without opening a Session or changing a domain.
+   * @returns accepted immutable Workspace routes; disabled selection advertises none.
+   */
+  workspaceRoutes(): readonly Readonly<NativeRootRoute>[]
+  /**
+   * Select an existing registered Workspace under the Program's explicit directory and policy admission.
+   * @param request - configured base route and branded Workspace identity; arbitrary cwd is not accepted.
+   * @param signal - caller cancellation combined with Program lifetime.
+   * @returns immutable route after canonical directory, policy and capacity validation.
+   */
+  selectWorkspace(request: { readonly baseRoute: NativeRootRouteId; readonly workspaceId: WorkspaceId },
+    signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
+  /**
+   * Create or reuse an existing directory as a Workspace after the selected Program's route policy admits its canonical path.
+   * @param request - configured base route and absolute existing directory; arbitrary paths outside route policy are rejected.
+   * @param signal - caller cancellation composed with Program lifetime.
+   * @returns immutable admitted route after Workspace registration and filesystem identity checks.
+   */
+  createWorkspaceRoute?(request: { readonly baseRoute: NativeRootRouteId; readonly path: string },
+    signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
+  /**
+   * Retire idle unowned root Agents before withdrawing the dynamic route. Active ownership and pending admissions block release;
+   * durable Session data remains. Cleanup failure rejects and keeps the route selected.
+   * @param id - branded dynamic route identity; the configured base route cannot be withdrawn.
+   * @param signal - caller cancellation before cleanup is accepted; accepted cleanup drains.
+   */
+  releaseWorkspace(id: NativeRootRouteId, signal: AbortSignal): Promise<void>
+  /**
+   * Capture routing from the exact currently attached root owner and its original registered Agent.
+   * @param owner - live Program-owned root Session; delegated or released owners are rejected.
+   * @returns the selected immutable Program route.
+   */
+  capture(owner: NativeActiveSessionOwner): Readonly<NativeRootRoute>
+  /** Close the exact attached root Agent epoch and drain its execution, retained work and writer.
+   * Callers must not await cancellation from inside the execution being closed.
+   * @param owner - live root owned by this Program; released or foreign owners are rejected.
+   * @returns completion after the original Agent registration and owned resources release; cleanup failures remain visible.
+   */
+  cancel(owner: NativeActiveSessionOwner): Promise<void>
+  /**
+   * Retire the exact Program-owned Agent after its root execution has settled, without deleting durable Session data.
+   * The former owner is identity evidence only; this operation never flushes or cancels it. The selected dynamic
+   * route, original root Agent, and durable Session identity must still match, with no live owner, epoch, admission,
+   * pending inbox, storage mutation, or other root operation. Repeated calls with the same owner share the same
+   * drain promise, including after success. Cancellation is checked before acceptance; accepted cleanup always drains.
+   * @param request - exact dynamic route, durable Session identity, and original Program-issued root owner.
+   * @param signal - caller cancellation before retirement acceptance.
+   * @returns completion after the exact Agent and all owned writer, observer, and execution resources release.
+   * @throws when the route or Agent changed, the owner is foreign/delegated, or any live work still owns the Session.
+   */
+  releaseIdle(request: { readonly route: NativeRootRouteId; readonly id: SessionId; readonly expectedOwner: NativeActiveSessionOwner },
+    signal: AbortSignal): Promise<void>
+  /**
+   * Run a fresh or restored root through the existing executor, including autonomous root settlement.
+   * @param request - explicit route and Session input; live identity conflicts are rejected.
+   * @param signal - caller cancellation combined with Program and Agent lifetimes.
+   * @returns settlement after the complete root epoch and its sole writer have released.
+   */
+  execute(request: NativeRootExecutionRequest, signal: AbortSignal): Promise<NativeSessionTurnResult>
+  /**
+   * Wait for the already admitted root epoch without creating an input or model turn.
+   * @param request - explicit route and Session whose Program-owned work is observed.
+   * @param signal - cancellation closes and drains the observed root epoch before rejection.
+   * @returns final root turn settlement, or undefined when no root turn has settled.
+   */
+  settle(request: Pick<NativeRootSessionRequest, 'route' | 'id'>,
+    signal: AbortSignal): Promise<NativeSessionTurnResult | undefined>
+  /**
+   * Execute an idle root transaction without manufacturing a turn or model request.
+   * @param request - explicit route and fresh or restored Session destination.
+   * @param operation - exact attached owner and effective cancellation; must not dispose its own execution.
+   * @param signal - caller cancellation combined with Program and Agent lifetimes.
+   * @returns callback value after durable persistence and idle transaction release.
+   */
+  maintenance<T>(request: NativeRootSessionRequest,
+    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T>
+  /**
+   * Copy a durable closed-turn prefix into a fresh root without sending an input or model request.
+   * @param request - selected route, readable source, fresh destination and optional source event anchor.
+   * @param signal - cancellation combined with Program and destination Agent lifetimes.
+   * @returns destination identity after its inherited marker and copied events are durable.
+   */
+  fork(request: NativeRootForkRequest, signal: AbortSignal): Promise<SessionId>
+  /**
+   * Select a composition in an existing blank root and replace its immutable Agent epoch.
+   * @param request - selected route, explicit preset and expected durable selection revision.
+   * @param signal - caller cancellation before acceptance; accepted facts survive activation failure.
+   * @returns accepted selection after old Agent drain and successor Agent registration.
+   */
+  selectPreset(request: NativeAgentPresetSelectionRequest & { readonly route: NativeRootRouteId },
+    signal: AbortSignal): Promise<NativeAgentPresetFacts>
+}
+
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices {
+    rootExecution: NativeRootExecutionOperations
+  }
+}

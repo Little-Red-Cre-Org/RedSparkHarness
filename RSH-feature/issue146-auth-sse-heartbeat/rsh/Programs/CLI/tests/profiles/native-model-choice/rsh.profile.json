@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "scopes": [
+    {
+      "id": "root"
+    }
+  ],
+  "installations": [
+    {
+      "id": "app",
+      "plugin": "@deepseek-ai/dsh-native-headless",
+      "scope": "root",
+      "config": {
+        "cwd": "PROFILE_PATCH_REQUIRED",
+        "provider": "selection-fixture",
+        "model": "first",
+        "systemPrompt": "Read fixture.txt, then continue with the selected model.",
+        "maxSteps": 3
+      }
+    },
+    {
+      "id": "agents",
+      "plugin": "@deepseek-ai/dsh-native-agent",
+      "scope": "root"
+    },
+    {
+      "id": "execution",
+      "plugin": "@deepseek-ai/dsh-native-session-execution",
+      "scope": "root"
+    },
+    {
+      "id": "model-execution",
+      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "scope": "root"
+    },
+    {
+      "id": "selection",
+      "plugin": "@deepseek-ai/dsh-native-model-selection",
+      "scope": "root"
+    },
+    {
+      "id": "credentials",
+      "plugin": "@deepseek-ai/dsh-credentials-local",
+      "scope": "root"
+    },
+    {
+      "id": "storage",
+      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "scope": "root"
+    },
+    {
+      "id": "fs",
+      "plugin": "@deepseek-ai/dsh-fs-local",
+      "scope": "root"
+    },
+    {
+      "id": "policy",
+      "plugin": "@deepseek-ai/dsh-fs-observation-policy",
+      "scope": "root"
+    },
+    {
+      "id": "model",
+      "plugin": "@deepseek-ai/dsh-llm-pi-ai",
+      "scope": "root"
+    },
+    {
+      "id": "selection-fixture",
+      "plugin": "native-selection-fixture",
+      "scope": "root"
+    }
+  ]
+}

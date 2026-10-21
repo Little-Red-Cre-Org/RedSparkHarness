@@ -1,0 +1,8 @@
+version: 1
+scenario: model-choice-native
+profile: native-headless
+composition: native-model-choice
+recording: authored
+header:
+  class: native-model-choice
+  pin: true

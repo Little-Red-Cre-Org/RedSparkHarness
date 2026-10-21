@@ -1,0 +1,111 @@
+{
+  "name": "@deepseek-ai/dsh-client-native-session",
+  "description": "Native Web Session client lifecycle",
+  "version": "0.1.5-rc.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Programs/Web/client/native-session"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./list-types": {
+      "types": "./lib/types/list-types.d.ts",
+      "default": "./lib/list-types.js"
+    },
+    "./package.json": "./package.json",
+    "./follow-types": {
+      "types": "./lib/types/follow-types.d.ts",
+      "default": "./lib/follow-types.js"
+    },
+    "./model-controls": {
+      "types": "./lib/types/model-controls.d.ts",
+      "default": "./lib/model-controls.js"
+    },
+    "./human": {
+      "types": "./lib/types/human.d.ts",
+      "default": "./lib/human.js"
+    },
+    "./schedule-types": {
+      "types": "./lib/types/schedule-types.d.ts",
+      "default": "./lib/schedule-types.js"
+    },
+    "./workspaces": {
+      "types": "./lib/types/workspaces.d.ts",
+      "default": "./lib/workspaces.js"
+    }
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientConnection"
+      ],
+      "optional": [],
+      "provides": [
+        "clientNativeSession",
+        "clientNativeSchedule",
+        "clientNativeWorkspace",
+        "clientNativeDirectoryPicker",
+        "clientNativeWorkspaceFiles"
+      ]
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/list-types.js",
+    "lib/follow-types.js",
+    "lib/model-controls.js",
+    "lib/human.js",
+    "lib/workspaces.js",
+    "lib/schedule-types.js",
+    "lib/native-*.js",
+    "lib/shared-*.js",
+    "lib/workspaces-*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "eventsource-parser": "^3.1.0",
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-commands": "workspace:^",
+    "@deepseek-ai/dsh-authorization": "workspace:^",
+    "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
+    "@deepseek-ai/dsh-command-feedback": "workspace:^",
+    "@deepseek-ai/dsh-message-feedback": "workspace:^"
+  },
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-session": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
+  }
+}

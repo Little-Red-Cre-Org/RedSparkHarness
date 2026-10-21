@@ -1,0 +1,62 @@
+- name: '@deepseek-ai/dsh-llm'
+- name: '@deepseek-ai/dsh-session'
+- name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: ./sessions
+- name: '@deepseek-ai/dsh-session-projection'
+- name: '@deepseek-ai/dsh-system-prompt'
+- name: '@deepseek-ai/dsh-tools'
+- name: '@deepseek-ai/dsh-agent'
+- name: '@deepseek-ai/dsh-goal'
+- name: '@deepseek-ai/dsh-goal-round-driver'
+- name: '@deepseek-ai/dsh-agent-loop'
+  config:
+    agents: []
+- name: '@deepseek-ai/dsh-subprocess-local'
+- name: '@deepseek-ai/dsh-sandbox-local'
+- name: '@deepseek-ai/dsh-sandbox-policy'
+- name: '@deepseek-ai/dsh-pwsh-sandbox'
+  disabled: !!js process.platform !== 'win32'
+- name: '@deepseek-ai/dsh-bash-sandbox'
+  disabled: !!js process.platform === 'win32'
+- name: '@deepseek-ai/dsh-user-approval'
+  config:
+    policy: never
+- name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    defaultPreset: read-only
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: never
+- name: '@deepseek-ai/dsh-session-title'
+  config:
+    fallbackMaxWords: 5
+    fallbackMaxBytes: 40
+    maxTitleBytes: 200
+- name: '@deepseek-ai/dsh-storage'
+- name: '@deepseek-ai/dsh-storage-json'
+  config:
+    root: ./storage
+- name: '@deepseek-ai/dsh-storage-domain'
+  config:
+    backend: json
+- name: '@deepseek-ai/dsh-workspace'
+- name: '@deepseek-ai/dsh-agent-presets'
+  config:
+    default: test
+    includeShippedRoot: false
+    includeUserRoot: false
+    roots:
+      - path: ./presets
+        trust: system
+- name: ./mock-model.ts
+- id: task-scheduler
+  name: ../../../src/index.ts
+  config:
+    path: !!js "process.cwd() + '/tasks.sqlite'"
+    pollMs: 100
+    runTimeoutMs: 10000
+    maxConcurrent: 1
+    historyLimit: 10
+    minEverySeconds: 300

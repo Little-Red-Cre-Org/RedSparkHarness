@@ -1,0 +1,1924 @@
+{
+  "initial": [
+    {
+      "name": "read_file",
+      "description": "Read a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Create or replace a UTF-8 file within the selected workspace.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_output",
+      "description": "Read retained live or final background job output and status; optionally wait for completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_list",
+      "description": "List background jobs owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "job_kill",
+      "description": "Request cancellation of one background job owned by this Agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "send_message",
+      "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "message"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "interrupt_agent",
+      "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_agents",
+      "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "children",
+              "descendants"
+            ],
+            "description": "children (default) or the complete descendant tree."
+          }
+        }
+      }
+    },
+    {
+      "name": "subagent",
+      "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "prompt"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "run_in_background": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "name": "workflow",
+      "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "whenToUse": {
+                "type": "string"
+              },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "script",
+          "meta"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ralph",
+      "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "description": "The immutable completion objective for every fresh Ralph round."
+          },
+          "maxRounds": {
+            "type": "integer",
+            "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_goal",
+      "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "create_goal",
+      "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "description": "The direct human completion objective."
+          },
+          "max_goal_rounds": {
+            "type": "number",
+            "description": "Optional positive safe-integer automatic round cap."
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_goal",
+      "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "edit",
+              "pause",
+              "resume",
+              "complete",
+              "blocked"
+            ]
+          },
+          "objective": {
+            "type": "string"
+          },
+          "max_goal_rounds": {
+            "type": "number"
+          },
+          "blocked_reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal_id",
+          "revision",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": [
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    [
+      {
+        "name": "read_file",
+        "description": "Read a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "write_file",
+        "description": "Create or replace a UTF-8 file within the selected workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_output",
+        "description": "Read retained live or final background job output and status; optionally wait for completion.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "wait": {
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_list",
+        "description": "List background jobs owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "job_kill",
+        "description": "Request cancellation of one background job owned by this Agent.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "send_message",
+        "description": "Send a message to your direct continuable child, or to your direct parent when you are a resident continuable child. Running children receive steering at their nearest step; idle or closed children resume a turn. This returns delivery confirmation, independently of any answer.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id",
+            "message"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "interrupt_agent",
+        "description": "Request cancellation of a live descendant's current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agent_id"
+          ],
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "list_agents",
+        "description": "List your continuable subagents by durable id and label. Status is running for current work, idle for a resident Agent between turns, and ready for a closed resumable Session. Descendants traverses ordinary Sessions and one-shot children in stable pre-order, adding parent and depth. Only direct children may receive send_message; deeper entries are interruption candidates. Listing grants no control permission. Unreadable children are diagnostics.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "children",
+                "descendants"
+              ],
+              "description": "children (default) or the complete descendant tree."
+            }
+          }
+        }
+      },
+      {
+        "name": "subagent",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "prompt"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "workflow",
+        "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "whenToUse": {
+                  "type": "string"
+                },
+                "phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "script",
+            "meta"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "ralph",
+        "description": "Run a foreground fresh-agent Ralph loop toward one immutable objective. Use only when the direct human explicitly asks for Ralph or fresh-agent iteration. Each round opens a new child with no parent conversation or prior child session; the shared workspace is long-term memory, and only a bounded structured report crosses rounds. The call returns when a worker reports completion or a concrete blocker, or at the round limit. Ordinary long-running same-session work belongs to goal tools.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The immutable completion objective for every fresh Ralph round."
+            },
+            "maxRounds": {
+              "type": "integer",
+              "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "create_goal",
+        "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "objective": {
+              "type": "string",
+              "description": "The direct human completion objective."
+            },
+            "max_goal_rounds": {
+              "type": "number",
+              "description": "Optional positive safe-integer automatic round cap."
+            }
+          },
+          "required": [
+            "objective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Update the exact Goal revision. edit, pause and resume require a direct top-level human turn. complete and blocked also accept the exact autonomous Goal round. blocked requires the configured minimum round count.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal_id": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "number"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "edit",
+                "pause",
+                "resume",
+                "complete",
+                "blocked"
+              ]
+            },
+            "objective": {
+              "type": "string"
+            },
+            "max_goal_rounds": {
+              "type": "number"
+            },
+            "blocked_reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "goal_id",
+            "revision",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  ]
+}

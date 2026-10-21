@@ -1,0 +1,219 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789545902498,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 13,
+        "val": "[Scheduled] 最终自动验收-周期21分钟"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 13,
+        "val": {
+          "first": null,
+          "count": 0,
+          "lastSeq": null
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 13,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 13,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 13,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 0,
+            "outputTokens": 0,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "last": null
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 13,
+        "val": {
+          "surfaceTokens": 160
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 13,
+        "val": {
+          "nodes": [
+            {
+              "seq": 4,
+              "heuristicTokens": 40,
+              "system": false
+            },
+            {
+              "seq": 9,
+              "heuristicTokens": 40,
+              "system": false
+            },
+            {
+              "seq": 11,
+              "heuristicTokens": 40,
+              "system": false
+            },
+            {
+              "seq": 13,
+              "heuristicTokens": 40,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 0,
+            "toolsTokens": 0,
+            "messageTokens": 160
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": null,
+          "lastStepBoundary": null,
+          "lastTurn": 0
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 13,
+        "val": {
+          "turns": 0,
+          "steps": 0,
+          "llmMs": 0,
+          "toolMs": 0,
+          "ttftMs": 0,
+          "ttftSteps": 0,
+          "decodeMs": 0,
+          "decodeTokens": 0,
+          "lastTurn": null,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "turns": [],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 13,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 13,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 13,
+        "val": {
+          "lastUsed": null,
+          "pending": null
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 1,
+        "seq": 13,
+        "val": {
+          "blank": true,
+          "lastPromptAt": null
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 13,
+        "val": null
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 13,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 13,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": null
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 13,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 13,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      }
+    }
+  }
+}

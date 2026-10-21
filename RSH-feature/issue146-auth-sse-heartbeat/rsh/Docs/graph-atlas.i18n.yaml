@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write rsh/Docs/graph-atlas.md
+graph-atlas.md: c3a532e190b224710e3be0091e333e9816da78f1
+graph-atlas.zh.md: d51796ab9091df2264bba471c48da91f148b9acc

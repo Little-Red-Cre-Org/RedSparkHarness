@@ -1,0 +1,22 @@
+{
+  "extends": "../../../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../agent-team" },
+    { "path": "../../../../Programs/Web/api/remotes/tsconfig.client.json" },
+    { "path": "../../../../Programs/Web/api/session-controller/tsconfig.client.json" },
+    { "path": "../../../../Programs/Web/client/locale" },
+    { "path": "../../../../Programs/Web/client/ui-conversation" },
+    { "path": "../../../../Programs/Web/client/ui-primitives" },
+    { "path": "../../../../Programs/Web/client/ui-renderer" },
+    { "path": "../../../../Programs/Web/client/ui-session" },
+    { "path": "../../../../Programs/Web/client/ui-slots" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Core/typert/protocol" }
+  ]
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"native.d.ts","sourceRoot":"","sources":["../../src/native.ts"],"names":[],"mappings":"AAAA,sEAAsE;AACtE,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,iCAAiC,CAAA;AACnE,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,YAAY,CAAA;AAGnD,OAAO,QAAQ,iCAAiC,CAAC;IAC/C,UAAU,cAAc;QAAG,WAAW,EAAE,iBAAiB,CAAA;KAAE;CAC5D;AAED,kFAAkF;AAClF,eAAO,MAAM,MAAM,EAAE,YAUpB,CAAA"}

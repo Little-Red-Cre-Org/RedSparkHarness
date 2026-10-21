@@ -1,0 +1,8 @@
+version: 1
+scenario: commands-presets
+profile: native-tui
+composition: native-terminal-commands-standing-presets
+recording: authored
+header:
+  class: native-terminal-commands-standing-presets
+  pin: true

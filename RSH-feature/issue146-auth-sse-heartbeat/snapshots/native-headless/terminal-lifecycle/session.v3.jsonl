@@ -1,0 +1,17 @@
+{"type":"session","version":3,"id":"{{session:1}}","createdAt":0,"cwd":"{{cwd}}","isSeeded":false,"delegationDepth":0}
+{"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"inserted":[{"source":{"kind":"user"},"content":[{"type":"text","text":"List my terminal sessions."}],"role":"user","id":"{{message:1}}"}]}}
+{"type":"turn/start","data":{"turn":1}}
+{"type":"agent/inbox/spliced","data":{"target":"next-turn","start":0,"removedCount":1,"inserted":[]}}
+{"type":"step/start","data":{"turn":1,"step":1}}
+{"type":"system/message","data":{"turn":1,"step":1,"message":{"role":"system","content":[{"type":"text","text":"{{system}}"}],"source":{"kind":"plugin","plugin":"native-headless"},"id":"{{message:2}}"}},"surfaceOp":"append"}
+{"type":"user/message","data":{"source":{"kind":"user"},"content":[{"type":"text","text":"List my terminal sessions."}],"role":"user","id":"{{message:1}}"},"surfaceOp":"append"}
+{"type":"request/header","data":{"header":{"config":{"provider":"fixture","model":"terminal-list"},"tools":"{{tools}}"},"reason":"initial"}}
+{"type":"request/context","data":{"provider":"fixture","model":"terminal-list"}}
+{"type":"assistant/message","data":{"turn":1,"step":1,"message":{"role":"assistant","content":[{"type":"tool-call","id":"terminal-list-1","name":"terminal_list","arguments":"{}"}],"source":{"kind":"model","provider":"fixture","model":"terminal-list"},"id":"{{message:3}}"},"stream":[{"type":"chunk","time":0,"chunk":{"type":"block-start","index":0,"blockType":"tool-call"}},{"type":"chunk","time":0,"chunk":{"type":"block-end","index":0,"block":{"type":"tool-call","id":"terminal-list-1","name":"terminal_list","arguments":"{}"}}},{"type":"chunk","time":0,"chunk":{"type":"finish","reason":{"kind":"tool-calls"}}}]},"surfaceOp":"append"}
+{"type":"tool/call","data":{"turn":1,"step":1,"callId":"terminal-list-1","name":"terminal_list","arguments":"{}"}}
+{"type":"tool/result","data":{"turn":1,"step":1,"message":{"source":{"kind":"tool","callId":"terminal-list-1"},"content":[{"type":"tool-result","toolCallId":"terminal-list-1","content":[{"type":"text","text":"(no terminal sessions)"}],"isError":false}],"role":"user","id":"{{message:4}}"}},"sourceEventSeqs":[9],"surfaceOp":"append"}
+{"type":"step/end","data":{"turn":1,"step":1}}
+{"type":"step/start","data":{"turn":1,"step":2}}
+{"type":"assistant/message","data":{"turn":1,"step":2,"message":{"role":"assistant","content":[{"type":"text","text":"No terminal sessions are open."}],"source":{"kind":"model","provider":"fixture","model":"terminal-list"},"id":"{{message:5}}"},"stream":[{"type":"chunk","time":0,"chunk":{"type":"block-start","index":0,"blockType":"text"}},{"type":"chunk","time":0,"chunk":{"type":"block-end","index":0,"block":{"type":"text","text":"No terminal sessions are open."}}},{"type":"chunk","time":0,"chunk":{"type":"finish","reason":{"kind":"stop"}}}]},"surfaceOp":"append"}
+{"type":"step/end","data":{"turn":1,"step":2}}
+{"type":"turn/end","data":{"turn":1,"reason":{"kind":"completed"}}}

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-native-search-and-spill.md
+2026-10-05-native-search-and-spill.md: d55facb5b1c135b27083d37a139fbaf31e6a687c
+2026-10-05-native-search-and-spill.zh.md: f891257f9521f7087e7dd90ad14ae8084b2d6cfe

@@ -1,0 +1,78 @@
+[
+  {
+    "Path": ".agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.i18n.yaml",
+    "SHA256": "3399DCAE798C57270A9058F706DA555AB31062A03B9D823978EE56CB17763CDC"
+  },
+  {
+    "Path": ".agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md",
+    "SHA256": "7582C6D80E2CEA91CDE0B1442355AABC82878DC492B7A2CD00991E0B0AAC9788"
+  },
+  {
+    "Path": ".agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md",
+    "SHA256": "1FABF6F8FED183E7A347C27129FB0BD144F5D1BAC0BB5B0D12F157CC58BFEACD"
+  },
+  {
+    "Path": "rsh/Docs/user/guide/index.i18n.yaml",
+    "SHA256": "6D4932ABBA0E497265BC71127186B27BB49A6A9DA38109F2C194CB51D5E6CE2C"
+  },
+  {
+    "Path": "rsh/Docs/user/guide/index.md",
+    "SHA256": "4BB19B9F8BA0CED54C3F4BB88FBEAA2129DD8337C7ECC11B50B474F60585E209"
+  },
+  {
+    "Path": "rsh/Docs/user/guide/index.zh.md",
+    "SHA256": "EC95A46CE5CB49A283EDFEDEDC638A0429812CBC85310E33FECE42FF5D7B133F"
+  },
+  {
+    "Path": "rsh/Modules/Official/sandbox/sandbox-windows-acl/tests/runner.spec.ts",
+    "SHA256": "04CFAC82A7063399597116858DABB9A6DA56993A9A3E4DA0A348D330E9296E12"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/README.i18n.yaml",
+    "SHA256": "2B7678F4EA3CFB28CF375E42E7B93B959F2E0AAC0047B5FE49284C8808224D83"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/README.md",
+    "SHA256": "9B5974226E5E2949702B9677E73433CCFF48292191A133D682D07A9671CA33D5"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/README.zh.md",
+    "SHA256": "2D0CB35E3D62A3095D46177053F84F51B8E0A908444F403E7528D98644573275"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/src/index.ts",
+    "SHA256": "4AB46958274FD0169142C6CFECB818C97BDCE2697A587ED968EC19C6C829AFDD"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/tests/fixtures/loader/driver.ts",
+    "SHA256": "E41EFEE0594BE46A6EFF8F1D935DB317EB875D258EABC3D3863E3489D69B8866"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts",
+    "SHA256": "86053AE2F730DA2EB01D1DC306A981D330EDB4797FD15F075ED95C6C068E30A3"
+  },
+  {
+    "Path": "rsh/Modules/Official/shell/tool-pwsh/tests/tools.spec.ts",
+    "SHA256": "3D70D5DF68F313FD80FE76D822C9863BAAAED35FC89EDF48ED2707AD5EAD5E68"
+  },
+  {
+    "Path": "rsh/Programs/Desktop/src/main.ts",
+    "SHA256": "B26B0C76938047728E3784F560B42563E683EFD4B20D80BC9B7DC02A71565088"
+  },
+  {
+    "Path": "rsh/Programs/Desktop/tests/main-startup.spec.ts",
+    "SHA256": "8FD9AA9D55E3F7F62207AAD9161139EF977C1A8B36C9EA7C2D5AEC818C14D280"
+  },
+  {
+    "Path": "rsh/Programs/Web/api/session-controller/tests/session-list-blank.host.spec.ts",
+    "SHA256": "3FF2AC3E3A35FB04666C7C8B16309BDEFDF5E06A6474FEF8482617649FA7C672"
+  },
+  {
+    "Path": "rsh/Programs/Web/application/tests/reference-composer.e2e.ts",
+    "SHA256": "8CB35799B95CB84517E79B498B1EE6956A65A98079990A882BC93B720AC827B3"
+  },
+  {
+    "Path": "tsconfig.base.json",
+    "SHA256": "0348E582FF00733447403F49F8F7A3024F2B14A83BECFF91C10C1FC3863FC07C"
+  }
+]

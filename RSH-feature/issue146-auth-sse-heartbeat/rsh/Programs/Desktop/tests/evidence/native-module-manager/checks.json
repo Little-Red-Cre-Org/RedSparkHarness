@@ -1,0 +1,88 @@
+{
+  "pr": "https://github.com/Little-Red-Cre-Org/RedSparkHarness/pull/230",
+  "reviewed_head": "c728e878d45ad346ca9db4a91a9343c2f09686a4",
+  "runtime": {
+    "node": "24.19.0",
+    "pnpm": "11.28.5"
+  },
+  "scope": "Renderer-only review fixes, regressions and evidence; no backend changes.",
+  "source_sha256": {
+    "rsh/Programs/Desktop/renderer/plugin-manager.js": "44e40d58976c5bc776a6e31cffcf2537b1180b3787e84dc88ab6a967872106e9",
+    "rsh/Programs/Desktop/tests/native-plugin-manager.spec.ts": "fbd582956c7d552d09842291e666c0aaad70f0c8945f798d9a645fd9d671b91e"
+  },
+  "findings": {
+    "P1": {
+      "confirmed": true,
+      "before": "Native backend.status()/subscribe() displayed raw backend.message, including synthetic config, path and pnpm diagnostic values.",
+      "fix": "Native mode clears prior diagnostics and renders only locale-owned phase/recovery copy. Legacy retains its existing raw diagnostic presentation.",
+      "regression": "keeps raw backend diagnostics out of Native initial status and subscriptions"
+    },
+    "P2": {
+      "confirmed": true,
+      "before": "After a listed Native inventory changed to wrong-profile, hidden Native required fields remained enabled and form.checkValidity() was false.",
+      "fix": "The legacy branch disables every Native-only control with dataset.unavailable=true, which setBusy(false) preserves.",
+      "regression": "submits the legacy form after Native inventory switches to wrong-profile",
+      "observations": [
+        "Native form begins invalid with empty required fields.",
+        "After fallback, a filled legacy package field makes form.checkValidity() true.",
+        "requestSubmit() reaches legacy.add() and never native.install().",
+        "Native controls remain disabled after the legacy request finishes."
+      ]
+    }
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run rsh/Programs/Desktop/tests/native-plugin-manager.spec.ts -t \"raw backend diagnostics|legacy form after Native\"",
+      "context": "New regressions with the renderer bytes from reviewed_head; renderer restored in finally.",
+      "exit_code": 1,
+      "result": "2 expected failures; 12 unselected tests skipped",
+      "log": "before-fix.log"
+    },
+    {
+      "command": "pnpm exec vitest run rsh/Programs/Desktop/tests/native-plugin-manager.spec.ts rsh/Programs/Desktop/tests/plugin-manager.spec.ts rsh/Programs/Desktop/tests/locale.spec.ts rsh/Programs/Desktop/tests/startup-renderer.spec.ts",
+      "context": "Fixed renderer and tests identified by source_sha256.",
+      "exit_code": 0,
+      "result": "4 files, 26 tests passed",
+      "log": "after-fix.log"
+    },
+    {
+      "command": "pnpm exec tsx rsh/Scripts/run-oxlint.ts rsh/Programs/Desktop/tests/native-plugin-manager.spec.ts",
+      "exit_code": 0,
+      "result": "Type-aware lint passed."
+    },
+    {
+      "command": "node --check rsh/Programs/Desktop/renderer/plugin-manager.js",
+      "exit_code": 0
+    },
+    {
+      "command": "pnpm run verify-export-jsdoc",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "prior_full_checks": {
+    "verified_head": "c728e878d45ad346ca9db4a91a9343c2f09686a4",
+    "lint": "passed",
+    "doc_sync": "35 gates passed",
+    "test_docs": "17 gates passed",
+    "normal_pre_push_typecheck": "passed"
+  },
+  "push_policy": "Normal pre-commit and pre-push hooks remain enabled. The updated head and final pre-push result are reported in PR metadata; no force, admin or bypass operation.",
+  "baseline_failures": {
+    "verify_client_ui_i18n": "35 unchanged Web copy findings, reproduced on clean main.",
+    "duplication": "94 identical clone records on branch and clean main."
+  },
+  "acceptance_gap": {
+    "real_packaged_electron": "NOT PERFORMED. JSDOM/VM fixtures do not substitute for packaged acceptance.",
+    "required": [
+      "Align formal Native type exports, IPC/preload facade, window entry, messageKey list and backend.retry conditions with the backend owner.",
+      "Use real Host and Client modules in packaged Electron through preload/IPC for list/install/remove/update/toggle/disableAll and post-change use.",
+      "Observe Client browser activation errors through the existing BootPage; applied does not prove browser mount."
+    ],
+    "owner": "Backend integration and subsequent packaged acceptance remain pending; keep PR draft and unmerged."
+  },
+  "diagnostic_seed": "All SECRET/config/path/pnpm values in these tests and logs are synthetic regression fixtures, not real credentials or real profile diagnostics."
+}

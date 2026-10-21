@@ -1,0 +1,312 @@
+diff --git a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.i18n.yaml b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.i18n.yaml
+index 63c16050..cc26a57e 100644
+--- a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.i18n.yaml
++++ b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md
+-2026-08-08-windows-acl-restricted-token-sandbox.md: f2c86323eed45431430de0788fe558c1d30e8798
+-2026-08-08-windows-acl-restricted-token-sandbox.zh.md: e9d0d4e2316e697d030d973ba6bc6b56968ccce5
++2026-08-08-windows-acl-restricted-token-sandbox.md: 7fd03b4adfea2babd2d5c9a3d1b38b369a524e66
++2026-08-08-windows-acl-restricted-token-sandbox.zh.md: c91fba4dfd9f28ebe7d3e62997bcd0ff5b6c9e64
+diff --git a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md
+index f2c86323..7fd03b4a 100644
+--- a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md
++++ b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.md
+@@ -36,6 +36,8 @@ Bought: write-only confinement with no new OS floor (`CreateRestrictedToken` pre
+ 
+ ## Testing
+ 
++The PowerShell tool teaches models to separate saved edits, assertion failures, and verification blocked by process startup. Its Node test guidance allows an explicitly disclosed in-sandbox run without test-process isolation only when isolation is not required, and never after rejected escalation. The original command remains unverified. This preserves the restricted-token policy rather than making all child processes unrestricted. Model instructions are guidance, not a deterministic completion validator. Tool-description snapshots pin both confined and ordinary compositions; the real runner checks passing and failing assertions without isolation and verifies that an outside-workspace write remains denied.
++
+ The product-visible Windows roster flip is win32-only, so keyless snapshots that must replay on macOS/Linux cannot cover it; bundle composition specs plus the win32 real-runner suites are the substitute evidence, and the CI Windows lane owns the assembled signal. `sandbox-local/tests/acl-grants.spec.ts` pins random temp allocation, per-session/workspace reuse, fork/workspace separation, crash-resume non-collision, paired argv SIDs, failure cleanup, and standing-versus-revocable lifecycle with Win32 mocked. On Windows, `workspace-sid.spec.ts` pins workspace/temp derivation and domain separation; `acl.spec.ts` pins real DACL lifecycle; and `runner.spec.ts` pins paired-SID validation, sibling temp denial under a shared workspace SID, per-call agentless temp creation/removal, TMP/TEMP rewriting, mode downgrade, Public denial, Everyone/hard-link partial boundaries, mode-specific PowerShell language behavior, and grandchild stdio. ARM64 and emulated x64 native runs own the architecture-specific acceptance evidence.
+ 
+ ## Related
+diff --git a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md
+index e9d0d4e2..c91fba4d 100644
+--- a/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md
++++ b/.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md
+@@ -36,6 +36,8 @@ landstrip 评估在实现前已被否决（未经实战检验；自建 launcher
+ 
+ ## 测试
+ 
++PowerShell 工具指引模型区分文件已保存、断言失败与进程启动受阻导致的验证未完成。Node 测试指引仅在不要求进程隔离时允许明确说明的沙箱内非隔离运行，且不允许在授权被拒绝后使用。原命令仍未验证。此方式保留受限令牌策略，不会将所有子进程改为不受限执行。模型指令是行为指导，不是确定性的完成判定器。工具描述快照覆盖受限和普通组合；真实 runner 检查非隔离模式下断言的通过与失败，并验证工作区外写入仍被拒绝。
++
+ 产品可见的 Windows 阵容切换仅存在于 win32，而必须在 macOS/Linux 上可重放的 keyless 快照无法覆盖它；替代证据是 bundle 组合 spec 加上 win32 真实 runner 套件，组装态信号由 CI 的 Windows lane 负责。`sandbox-local/tests/acl-grants.spec.ts` 在 mock Win32 的情况下钉住随机临时目录分配、按会话/工作区复用、fork/工作区分离、崩溃后恢复不冲突、成对 argv SID、失败清理，以及常驻/可回收生命周期。在 Windows 上，`workspace-sid.spec.ts` 钉住工作区/临时目录派生与域分离；`acl.spec.ts` 钉住真实 DACL 生命周期；`runner.spec.ts` 钉住成对 SID 验证、共享工作区 SID 时对同级会话临时目录的拒绝、无 agent 调用的逐调用临时目录创建/移除、TMP/TEMP 重写、模式降级、Public 拒绝、Everyone/硬链接部分边界、按模式区分的 PowerShell 语言行为与孙进程 stdio。ARM64 与模拟 x64 原生运行负责提供架构特定的验收证据。
+ 
+ ## Related
+diff --git a/rsh/Docs/user/guide/index.i18n.yaml b/rsh/Docs/user/guide/index.i18n.yaml
+index a00f7b62..868e0d5b 100644
+--- a/rsh/Docs/user/guide/index.i18n.yaml
++++ b/rsh/Docs/user/guide/index.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write rsh/Docs/user/guide/index.md
+-index.md: c6cc9e6c7ad05ba88ef662a3b9bcfa1f4671e7af
+-index.zh.md: 32e5434fc18857919212be11b36ef47880d1c09c
++index.md: 6d7b69b865e5846aa9f826645036c6e1ebce039f
++index.zh.md: 70a8a2880885d43e1f19fb16ccc1aac6ee234071
+diff --git a/rsh/Docs/user/guide/index.md b/rsh/Docs/user/guide/index.md
+index c6cc9e6c..6d7b69b8 100644
+--- a/rsh/Docs/user/guide/index.md
++++ b/rsh/Docs/user/guide/index.md
+@@ -24,6 +24,7 @@ The agent can read and edit workspace files, run commands, delegate work, and ma
+ 
+ ## Continue
+ 
++- [Reference local files and conversations](./file-references.md) — local selection, preview, and model-cost guidance.
+ - [Configure models](./providers.md)
+ - [Use the Python SDK](./python-sdk.md)
+ - [Use other CLI modes](../../../Programs/CLI/README.md)
+diff --git a/rsh/Docs/user/guide/index.zh.md b/rsh/Docs/user/guide/index.zh.md
+index 32e5434f..70a8a288 100644
+--- a/rsh/Docs/user/guide/index.zh.md
++++ b/rsh/Docs/user/guide/index.zh.md
+@@ -24,6 +24,7 @@ Agent（智能体）可以读取和编辑工作区文件、运行命令、委派
+ 
+ ## 继续使用
+ 
++- [引用本地文件与对话](./file-references.zh.md)——本地选择、预览及模型费用说明。
+ - [配置模型](./providers.zh.md)
+ - [使用 Python SDK](./python-sdk.zh.md)
+ - [使用其他 CLI 模式](../../../Programs/CLI/README.zh.md)
+diff --git a/rsh/Modules/Official/sandbox/sandbox-windows-acl/tests/runner.spec.ts b/rsh/Modules/Official/sandbox/sandbox-windows-acl/tests/runner.spec.ts
+index e27d6a0c..d26ae385 100644
+--- a/rsh/Modules/Official/sandbox/sandbox-windows-acl/tests/runner.spec.ts
++++ b/rsh/Modules/Official/sandbox/sandbox-windows-acl/tests/runner.spec.ts
+@@ -326,6 +326,31 @@ describe.skipIf(!isWin32 || !pwshAvailable())('windows-acl runner', () => {
+     }
+   }, 30_000)
+ 
++  it('runs Node assertions without process isolation while preserving failed assertions and filesystem denial', () => {
++    const testFile = join(writableDir, 'verification.test.cjs')
++    const run = () => runRunner([
++      '--workspace', writableDir, '--temp', isolatedTemp, '--mode', 'workspace-write',
++      '--', process.execPath, '--test', '--test-isolation=none', testFile,
++    ])
++    writeFileSync(testFile, [
++      "const { test } = require('node:test');",
++      "const assert = require('node:assert/strict');",
++      "const fs = require('node:fs');",
++      "test('arithmetic', () => assert.equal(2 * 3, 6));",
++      `test('outside write denied', () => assert.throws(() => fs.writeFileSync(${JSON.stringify(escapeFile)}, 'escape')));`,
++    ].join('\n'))
++    const passed = run()
++    expect(passed.status, passed.stderr).toBe(0)
++    expect(passed.stdout).toMatch(/pass 2/)
++    expect(passed.stdout).toMatch(/fail 0/)
++    expect(existsSync(escapeFile)).toBe(false)
++    writeFileSync(testFile, "require('node:test').test('failure', () => require('node:assert/strict').equal(2 * 3, 7));")
++    const failed = run()
++    expect(failed.status, failed.stderr).toBe(1)
++    expect(failed.stdout).toContain('ERR_ASSERTION')
++    expect(failed.stdout).toMatch(/fail 1/)
++  }, 30_000)
++
+   it('mode-downgrade leak regression: a STANDING workspace grant is inert under read-only and effective again on re-upgrade', () => {
+     // The reported defect: a session that materialized its grant in
+     // workspace-write keeps the ACE standing for the server lifetime. After
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/README.i18n.yaml b/rsh/Modules/Official/shell/tool-pwsh/README.i18n.yaml
+index c08af752..8a4e49ce 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/README.i18n.yaml
++++ b/rsh/Modules/Official/shell/tool-pwsh/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write rsh/Modules/Official/shell/tool-pwsh/README.md
+-README.md: 443bba5489d30e6ad9d0da6e90cf792db934ef1f
+-README.zh.md: 5fd8a26e5dc7fd6a8c0a4f16b136ea45d9c4b8dd
++README.md: 2fb6b2b94e83b1be35a36903f4d2d08547e3cd15
++README.zh.md: fd6768ad52c8822bb27f9343fdb0c6a07fc3ac3c
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/README.md b/rsh/Modules/Official/shell/tool-pwsh/README.md
+index 443bba54..2fb6b2b9 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/README.md
++++ b/rsh/Modules/Official/shell/tool-pwsh/README.md
+@@ -202,6 +202,8 @@ Append-only; newly visible content follows the reusable request prefix and does
+ 
+ ## Known Limitations and Deferred Work
+ 
++The model is instructed to distinguish saved edits from verified results and to report blocked, interrupted, skipped, and failing checks explicitly. These instructions guide generated summaries; they do not certify task completion. For Node tests blocked by child-process EPERM, an in-sandbox `--test-isolation=none` run is an option only when isolation is not required. Its result must identify the changed test mode and leave the original command unverified; rejected escalation cannot be bypassed this way.
++
+ <a id="known-limitations-and-deferred-work"></a>
+ 
+ 
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/README.zh.md b/rsh/Modules/Official/shell/tool-pwsh/README.zh.md
+index 5fd8a26e..fd6768ad 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/README.zh.md
++++ b/rsh/Modules/Official/shell/tool-pwsh/README.zh.md
+@@ -202,6 +202,8 @@ Non-zero exits are reported as `[exit code: N]` markers; investigate failures be
+ 
+ ## 已知限制与延期工作
+ 
++模型收到的指令要求区分文件已保存与验证已通过，并明确报告受阻、中断、跳过和失败的检查。这些指令引导生成的总结，不构成任务完成的程序判定。Node 测试因子进程 EPERM 受阻时，仅在不要求进程隔离的情况下，才可在同一沙箱内使用 `--test-isolation=none`。结果必须注明测试模式的变化，并保留原命令尚未验证的事实；授权被拒绝后不能借此绕过拒绝。
++
+ <a id="known-limitations-and-deferred-work"></a>
+ 
+ 
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/src/index.ts b/rsh/Modules/Official/shell/tool-pwsh/src/index.ts
+index 56be9c13..350fd7a8 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/src/index.ts
++++ b/rsh/Modules/Official/shell/tool-pwsh/src/index.ts
+@@ -112,6 +112,10 @@ function pwshDescription(backgroundEnabled: boolean, escalationModes: readonly S
+     + 'Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. '
+     + 'Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. '
+     + 'On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. '
++    + 'Report edits and verification separately. A saved edit is not proof that tests passed. '
++    + 'Only report a check as passed after inspecting its completed output and successful exit; a timeout, cancellation, startup error, or permission denial leaves verification incomplete. '
++    + 'If assertions fail, report the failures and continue fixing within the task scope; if execution is blocked, report the blocker and the checks still outstanding. '
++    + 'Name the command and scope actually checked, including skipped tests; do not open a summary with "fixed and verified" when verification is incomplete. '
+     + background
+   if (escalationModes.length === 0) return base
+   // The language-mode and named-pipe contracts below are Windows-restricted-token
+@@ -130,6 +134,10 @@ function pwshDescription(backgroundEnabled: boolean, escalationModes: readonly S
+     + 'work and PowerShell\'s own pipelines are unaffected. That EPERM is the documented boundary: '
+     + 'do not retry the command another way — escalate the exact command once or restructure it to '
+     + 'avoid capturing output. '
++    + 'For Node.js tests, `node --test` uses child processes and can hit this EPERM before assertions run; this does not establish a code regression. '
++    + 'When process isolation is not required by the task or tests, a supported `node --test --test-isolation=none` run can check assertions within the same sandbox. '
++    + 'Explicitly report that isolation was disabled and that the original command remains unverified; this is not equivalent coverage for process-isolation behavior. '
++    + 'Never change tests, ignore failures, disable the sandbox, or use this alternative after an escalation was rejected. '
+     + 'Attempting a command the sandbox may deny is safe and expected: run it and read the '
+     + 'marker rather than assuming the denial. When a command is denied and a wider mode would let it '
+     + 'succeed, escalate immediately in the same turn — the one sanctioned exception to a denial: retry '
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/tests/fixtures/loader/driver.ts b/rsh/Modules/Official/shell/tool-pwsh/tests/fixtures/loader/driver.ts
+index 6b68d720..e8d99229 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/tests/fixtures/loader/driver.ts
++++ b/rsh/Modules/Official/shell/tool-pwsh/tests/fixtures/loader/driver.ts
+@@ -56,6 +56,7 @@ try {
+   }
+ 
+   await writeFile('./pwsh-loader-report.json', JSON.stringify({
++    description: schema.description,
+     schemaHasRunInBackground: Object.hasOwn(schema.parameters.properties as object, 'run_in_background'),
+     promptHasMarkerSection: prompt?.text.includes('Non-zero exits are reported as `[exit code: N]` markers') === true,
+     // Normalize PowerShell's platform line endings (CRLF on Windows, LF elsewhere).
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts b/rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts
+index c47cd377..374421f9 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts
++++ b/rsh/Modules/Official/shell/tool-pwsh/tests/loader.spec.ts
+@@ -30,6 +30,7 @@ const configPath = fileURLToPath(new URL(
+ const repoTsconfig = fileURLToPath(new URL('../../../../../../tsconfig.json', import.meta.url))
+ 
+ interface PwshLoaderReport {
++  description: string
+   schemaHasRunInBackground: boolean
+   promptHasMarkerSection: boolean
+   foregroundText: string
+@@ -58,6 +59,7 @@ describe.skipIf(!hasPwsh)('tool-pwsh through a real Loader composition', () => {
+     })
+     expect(stderr).not.toContain('UNHANDLED')
+     expect(report).toBeDefined()
++    expect(report?.description).toMatchSnapshot('model-facing PowerShell instructions')
+     expect(report).toMatchObject({
+       schemaHasRunInBackground: true,
+       promptHasMarkerSection: true,
+diff --git a/rsh/Modules/Official/shell/tool-pwsh/tests/tools.spec.ts b/rsh/Modules/Official/shell/tool-pwsh/tests/tools.spec.ts
+index dbd1f13b..88f822e2 100644
+--- a/rsh/Modules/Official/shell/tool-pwsh/tests/tools.spec.ts
++++ b/rsh/Modules/Official/shell/tool-pwsh/tests/tools.spec.ts
+@@ -606,6 +606,10 @@ describe('sandbox escalation through ctx.approval', () => {
+     expect(schema.description).toContain('workspace-write stays in FullLanguage')
+     expect(schema.description).toContain('In both confined modes, programs cannot open named pipes')
+     expect(schema.description).toContain('fails with EPERM')
++    expect(schema.description).toMatchSnapshot('confined PowerShell verification guidance')
++    expect(schema.description).toContain('node --test --test-isolation=none')
++    expect(schema.description).toContain('the original command remains unverified')
++    expect(schema.description).toContain('A saved edit is not proof that tests passed')
+ 
+     for (const args of [
+       { command: 'Write-Output ok', description: 'd', sandbox_permissions: 'workspace-write' },
+diff --git a/rsh/Programs/Desktop/src/main.ts b/rsh/Programs/Desktop/src/main.ts
+index 558c5c16..e10c6d59 100644
+--- a/rsh/Programs/Desktop/src/main.ts
++++ b/rsh/Programs/Desktop/src/main.ts
+@@ -100,7 +100,7 @@ function developmentHostInspectPort(enabled: boolean): number | undefined {
+ 
+ function createWindow(preload: string, show = false): BrowserWindow {
+   const window = new BrowserWindow({
+-    icon: join(app.getAppPath(), 'renderer', 'redspark.png'),
++    icon: join(app.getAppPath(), 'renderer', process.platform === 'win32' ? 'redspark.ico' : 'redspark.png'),
+     width: 1280,
+     height: 840,
+     minWidth: 880,
+@@ -119,6 +119,14 @@ function createWindow(preload: string, show = false): BrowserWindow {
+       webSecurity: true,
+     },
+   })
++  if (process.platform === 'win32') {
++    window.setAppDetails({
++      appId: 'RedSpark.Harness',
++      appIconPath: join(app.getAppPath(), 'renderer', 'redspark.ico'),
++      appIconIndex: 0,
++      relaunchDisplayName: 'RedSpark Harness',
++    })
++  }
+   window.webContents.setWindowOpenHandler(({ url }) => {
+     const source = URL.parse(window.webContents.getURL())
+     const target = URL.parse(url)
+diff --git a/rsh/Programs/Desktop/tests/main-startup.spec.ts b/rsh/Programs/Desktop/tests/main-startup.spec.ts
+index 0b6d88b2..3b3ecb20 100644
+--- a/rsh/Programs/Desktop/tests/main-startup.spec.ts
++++ b/rsh/Programs/Desktop/tests/main-startup.spec.ts
+@@ -40,6 +40,7 @@ const harness = await vi.hoisted(async () => {
+     readonly show = vi.fn()
+     readonly focus = vi.fn()
+     readonly restore = vi.fn()
++    readonly setAppDetails = vi.fn()
+     readonly setTitleBarOverlay = vi.fn()
+     constructor(readonly options: { show: boolean }) { super(); windows.push(this) }
+     isDestroyed() { return this.destroyed }
+@@ -204,6 +205,12 @@ describe('desktop main startup', () => {
+     expect(invoke(DESKTOP_IPC.backendStatus)).toHaveProperty('message', expect.stringContaining('missing packaged Windows Bash file'))
+     expect(harness.hosts).toHaveLength(0)
+     expect(harness.windows).toHaveLength(1)
++    expect(harness.windows[0]!.setAppDetails).toHaveBeenCalledWith({
++      appId: 'RedSpark.Harness',
++      appIconPath: join('desktop-test-app', 'renderer', 'redspark.ico'),
++      appIconIndex: 0,
++      relaunchDisplayName: 'RedSpark Harness',
++    })
+     expect(harness.windows[0]!.urls).not.toContain('dsh-app://app/index.html')
+     writeFileSync(dll, '')
+     const retry = Promise.resolve(invoke(DESKTOP_IPC.backendRetry))
+diff --git a/rsh/Programs/Web/api/session-controller/tests/session-list-blank.host.spec.ts b/rsh/Programs/Web/api/session-controller/tests/session-list-blank.host.spec.ts
+index 23be2f36..8d273ffe 100644
+--- a/rsh/Programs/Web/api/session-controller/tests/session-list-blank.host.spec.ts
++++ b/rsh/Programs/Web/api/session-controller/tests/session-list-blank.host.spec.ts
+@@ -91,8 +91,6 @@ it('keeps a durable reminder journal visible without a model turn', async () =>
+     expect(session.snapshotEvents().some(event => event.type === 'turn/start')).toBe(false)
+   } finally { await ctx.fiber.dispose() }
+ })
+-
+-
+ it('does not turn ordinary plugin context into a conversation', async () => {
+   const { ctx, remote, attach } = await harness()
+   try {
+diff --git a/rsh/Programs/Web/application/tests/reference-composer.e2e.ts b/rsh/Programs/Web/application/tests/reference-composer.e2e.ts
+index 39c77862..69d5f4f2 100644
+--- a/rsh/Programs/Web/application/tests/reference-composer.e2e.ts
++++ b/rsh/Programs/Web/application/tests/reference-composer.e2e.ts
+@@ -135,6 +135,8 @@ describe.skipIf(MODE === 'record')('web e2e: file and session references through
+ 
+   beforeAll(async () => {
+     scaffold = await launchWebScaffold({})
++    // Seeded metadata uses portable paths so ARIA does not escape Windows separators.
++    scaffold.workspaceCwd = scaffold.workspaceCwd.replaceAll('\\', '/')
+     const targetCreatedAt = Date.now() - 60_000
+     await seedSession(scaffold, sourceSessionFixture(), SOURCE_SESSION_ID, undefined, { createdAt: targetCreatedAt - 1 })
+     await seedSession(scaffold, targetSessionFixture(), TARGET_SESSION_ID, undefined, { createdAt: targetCreatedAt })
+diff --git a/tsconfig.base.json b/tsconfig.base.json
+index 0e71fbed..ca294866 100644
+--- a/tsconfig.base.json
++++ b/tsconfig.base.json
+@@ -28,6 +28,7 @@
+     // not declaration path aliases, keep each package/vendor source compiled
+     // under its own tsconfig boundary.
+     "paths": {
++      "@deepseek-ai/dsh-compat-settings-definition/events": ["./rsh/Compatibility/DSH/bridge/compat-settings-definition/src/events.ts"],
+       "@deepseek-ai/dsh/native-profile": ["./rsh/Programs/CLI/src/native-profile.ts"],
+       "@deepseek-ai/dsh-desktop-host/native-host": ["./rsh/Programs/DesktopHost/src/native-host.ts"],
+       "@deepseek-ai/dsh-tool-todo/native": ["./rsh/Modules/Official/todo/tool-todo/src/native.ts"],

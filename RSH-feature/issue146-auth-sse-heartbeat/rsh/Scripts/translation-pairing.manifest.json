@@ -1,0 +1,13 @@
+{
+  "excluded": [
+    ".agents/notes/AGENTS.md",
+    ".agents/notes/implemented/AGENTS.md",
+    ".agents/notes/implemented/CLAUDE.md",
+    ".github/review-ownership/README.md",
+    "rsh/Docs/AGENTS.md",
+    "rsh/Docs/cordis-api/inherited.md",
+    "rsh/Docs/i18n/style-samples.md",
+    "rsh/Docs/i18n/terminology.md",
+    "rsh/Docs/i18n/translation-prompt.md"
+  ]
+}

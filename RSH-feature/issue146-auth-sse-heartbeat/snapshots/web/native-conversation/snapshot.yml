@@ -1,0 +1,8 @@
+version: 1
+scenario: native-conversation
+profile: web
+composition: native-web-conversation
+recording: authored
+header:
+  class: native-web-conversation
+  pin: true

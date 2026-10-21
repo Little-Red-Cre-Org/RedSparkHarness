@@ -1,0 +1,11 @@
+{
+  "name": "dsh-profile-native-ide",
+  "private": true,
+  "dsh": {
+    "profile": {
+      "runtime": "native",
+      "config": "rsh.profile.json",
+      "configReload": "startup"
+    }
+  }
+}

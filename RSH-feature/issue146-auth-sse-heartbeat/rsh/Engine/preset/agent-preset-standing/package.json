@@ -1,0 +1,36 @@
+{
+  "name": "@deepseek-ai/dsh-agent-preset-standing",
+  "description": "Native profile contribution for one standing Agent preset scope",
+  "version": "0.1.5-rc.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Engine/preset/agent-preset-standing"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["agentPresets"],
+      "optional": [],
+      "provides": []
+    }
+  }
+}

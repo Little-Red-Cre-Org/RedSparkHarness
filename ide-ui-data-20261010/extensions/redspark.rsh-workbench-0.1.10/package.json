@@ -1,0 +1,179 @@
+{
+	"name": "rsh-workbench",
+	"publisher": "redspark",
+	"version": "0.1.10",
+	"displayName": "RedSpark Harness",
+	"description": "RSH task conversations in the shared workbench",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"main": "./extension.cjs",
+	"extensionKind": [
+		"workspace"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		}
+	},
+	"contributes": {
+		"configuration": {
+			"title": "RSH",
+			"properties": {
+				"rsh.autoSaveDelay": {
+					"type": "integer",
+					"default": 500,
+					"minimum": 100,
+					"maximum": 10000,
+					"scope": "window",
+					"description": "%autoSaveDelay%"
+				}
+			}
+		},
+		"configurationDefaults": {
+			"workbench.colorTheme": "RSH Warm White",
+			"workbench.preferredLightColorTheme": "RSH Warm White",
+			"workbench.startupEditor": "none",
+			"workbench.secondarySideBar.defaultVisibility": "visible",
+			"workbench.editor.tabSizing": "shrink",
+			"editor.minimap.enabled": false,
+			"editor.fontSize": 14,
+			"editor.lineHeight": 24,
+			"window.title": "${rootName}${separator}RSH"
+		},
+		"themes": [
+			{
+				"label": "RSH Warm White",
+				"uiTheme": "vs",
+				"path": "./warm-white.json"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "rsh.conversation",
+				"key": "alt+1"
+			},
+			{
+				"command": "rsh.coding",
+				"key": "alt+2"
+			},
+			{
+				"command": "rsh.addSelection",
+				"key": "ctrl+alt+l",
+				"mac": "cmd+alt+l",
+				"when": "editorTextFocus && editorHasSelection"
+			}
+		],
+		"commands": [
+			{
+				"command": "rsh.applyCode",
+				"title": "%applyCode%",
+				"category": "RSH",
+				"icon": "$(check)"
+			},
+			{
+				"command": "rsh.discardCode",
+				"title": "%discardCode%",
+				"category": "RSH",
+				"icon": "$(close)"
+			},
+			{
+				"command": "rsh.return",
+				"title": "%returnRsh%",
+				"category": "RSH",
+				"icon": "$(arrow-left)"
+			},
+			{
+				"command": "rsh.conversation",
+				"title": "%conversation%",
+				"category": "RSH",
+				"icon": "$(comment-discussion)"
+			},
+			{
+				"command": "rsh.newTask",
+				"title": "%newTask%",
+				"category": "RSH",
+				"icon": "$(add)"
+			},
+			{
+				"command": "rsh.coding",
+				"title": "%coding%",
+				"category": "RSH",
+				"icon": "$(code)"
+			},
+			{
+				"command": "rsh.addSelection",
+				"title": "%addSelection%",
+				"category": "RSH"
+			}
+		],
+		"viewsContainers": {
+			"secondarySidebar": [
+				{
+					"id": "rsh",
+					"title": "RSH AI",
+					"icon": "$(comment-discussion)"
+				}
+			]
+		},
+		"views": {
+			"explorer": [
+				{
+					"id": "rsh.tasks",
+					"name": "%tasks%"
+				}
+			],
+			"rsh": [
+				{
+					"id": "rsh.ai",
+					"name": "RSH AI",
+					"type": "webview"
+				}
+			]
+		},
+		"menus": {
+			"editor/context": [
+				{
+					"command": "rsh.addSelection",
+					"when": "editorHasSelection",
+					"group": "rsh"
+				}
+			],
+			"view/title": [
+				{
+					"command": "rsh.newTask",
+					"when": "view == rsh.tasks || view == rsh.ai",
+					"group": "navigation"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "rsh.applyCode",
+					"when": "resourceScheme == rsh-proposal",
+					"group": "navigation@0"
+				},
+				{
+					"command": "rsh.discardCode",
+					"when": "resourceScheme == rsh-proposal",
+					"group": "navigation@1"
+				},
+				{
+					"command": "rsh.conversation",
+					"group": "navigation@1"
+				},
+				{
+					"command": "rsh.coding",
+					"group": "navigation@2"
+				}
+			]
+		}
+	},
+	"__metadata": {
+		"installedTimestamp": 1791628397657,
+		"targetPlatform": "undefined",
+		"size": 36697
+	}
+}

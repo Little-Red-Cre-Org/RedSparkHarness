@@ -1,0 +1,325 @@
+{
+  "version": 7,
+  "record": {
+    "identity": {
+      "formatVersion": 3,
+      "createdAt": 1789981739259,
+      "cwd": "E:\\RedSparkWorkspace",
+      "isSeeded": false,
+      "inheritedEventCount": 0
+    },
+    "rows": {
+      "title": {
+        "ver": 1,
+        "seq": 123,
+        "val": "测试"
+      },
+      "titleInput": {
+        "ver": 3,
+        "seq": 123,
+        "val": {
+          "first": {
+            "seq": 10,
+            "text": "测试"
+          },
+          "count": 6,
+          "lastSeq": 104
+        }
+      },
+      "llmRetry": {
+        "ver": 1,
+        "seq": 123,
+        "val": {}
+      },
+      "sandboxMode": {
+        "ver": 1,
+        "seq": 123,
+        "val": "workspace-write"
+      },
+      "goal": {
+        "ver": 6,
+        "seq": 123,
+        "val": {
+          "current": null,
+          "seenGoalIds": [],
+          "failure": null
+        }
+      },
+      "tokenUsage": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "totals": {
+            "uncachedInputTokens": 11861,
+            "outputTokens": 494,
+            "cacheReadTokens": 12736,
+            "cacheWriteTokens": 0
+          },
+          "last": {
+            "turn": 6,
+            "step": 1,
+            "buckets": {
+              "uncachedInputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0
+            }
+          }
+        }
+      },
+      "contextPressure": {
+        "ver": 4,
+        "seq": 123,
+        "val": {
+          "surfaceTokens": 2043,
+          "contextWindow": 262144,
+          "pressureTokens": 0,
+          "sampledSurfaceTokens": 2043
+        }
+      },
+      "contextBreakdown": {
+        "ver": 4,
+        "seq": 123,
+        "val": {
+          "nodes": [
+            {
+              "seq": 75,
+              "heuristicTokens": 1428,
+              "system": true
+            },
+            {
+              "seq": 10,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 11,
+              "heuristicTokens": 124,
+              "system": false
+            },
+            {
+              "seq": 23,
+              "heuristicTokens": 84,
+              "system": false
+            },
+            {
+              "seq": 32,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 33,
+              "heuristicTokens": 40,
+              "system": false
+            },
+            {
+              "seq": 43,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 51,
+              "heuristicTokens": 94,
+              "system": false
+            },
+            {
+              "seq": 58,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 67,
+              "heuristicTokens": 180,
+              "system": false
+            },
+            {
+              "seq": 76,
+              "heuristicTokens": 9,
+              "system": false
+            },
+            {
+              "seq": 77,
+              "heuristicTokens": 43,
+              "system": false
+            },
+            {
+              "seq": 104,
+              "heuristicTokens": 9,
+              "system": false
+            }
+          ],
+          "breakdown": {
+            "systemTokens": 1428,
+            "toolsTokens": 7417,
+            "messageTokens": 619
+          }
+        }
+      },
+      "turnBoundary": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "openTurnStartSeq": null,
+          "lastStepStartSeq": 103,
+          "lastStepBoundary": {
+            "kind": "end",
+            "seq": 121
+          },
+          "lastTurn": 6
+        }
+      },
+      "sessionStats": {
+        "ver": 1,
+        "seq": 123,
+        "val": {
+          "turns": 6,
+          "steps": 6,
+          "llmMs": 95641,
+          "toolMs": 0,
+          "ttftMs": 84248,
+          "ttftSteps": 3,
+          "decodeMs": 11393,
+          "decodeTokens": 494,
+          "lastTurn": 6,
+          "openStep": null,
+          "pendingCalls": {}
+        }
+      },
+      "turnOutline": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "turns": [
+            {
+              "turn": 1,
+              "seq": 6,
+              "prompt": "测试",
+              "response": "你好！👋 一切正常，我已经准备就绪。 我可以帮你完成各种任务，例如： - 📂 读取、创建或编辑文件 - 🔍 搜索文件和代码 - 🌐 搜索网络信息 - 💻 执行 PowerShell 命令 - 🤖 委派子代理处理复杂任务 - \ud83d…"
+            },
+            {
+              "turn": 2,
+              "seq": 28,
+              "prompt": "测试",
+              "response": ""
+            },
+            {
+              "turn": 3,
+              "seq": 40,
+              "prompt": "测试",
+              "response": "收到！✅ 我正常运行中，随时可以开始工作。 当前工作目录：`E:\\RedSparkWorkspace` 如果你想测试具体功能，可以试试： - 让我列出或读取工作区的文件 - 创建一个测试文件 - 运行一条命令 请告诉我接下来做什么？"
+            },
+            {
+              "turn": 4,
+              "seq": 55,
+              "prompt": "你是谁",
+              "response": "你好！我是一个 **AI 编程助手（coding agent）**，由 **evomap-glm-5.2** 模型驱动，运行在 DeepSeek Harness 平台上。 我可以直接在你的工作环境中帮你干活，比如： - 💻 **写代码…"
+            },
+            {
+              "turn": 5,
+              "seq": 72,
+              "prompt": "测试",
+              "response": ""
+            },
+            {
+              "turn": 6,
+              "seq": 101,
+              "prompt": "测试",
+              "response": ""
+            }
+          ],
+          "draft": ""
+        }
+      },
+      "agentPreset": {
+        "ver": 1,
+        "seq": 123,
+        "val": "standard"
+      },
+      "subagentCatalog": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "inheritedEventCount": 0
+        }
+      },
+      "subagentTiming": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "descriptorSeen": false,
+          "settledMs": 0
+        }
+      },
+      "subagent": {
+        "ver": 2,
+        "seq": 123,
+        "val": {}
+      },
+      "permissions": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "preset": "workspace-write",
+          "sandbox": "workspace-write",
+          "approval": "ask",
+          "seeded": true
+        }
+      },
+      "modelSelection": {
+        "ver": 2,
+        "seq": 123,
+        "val": {
+          "lastUsed": {
+            "provider": "evomap",
+            "model": "evomap-gemini-3.1-flash-image"
+          },
+          "pending": {
+            "provider": "evomap",
+            "model": "evomap-gemini-3.1-flash-image"
+          }
+        }
+      },
+      "sessionListMetadata": {
+        "ver": 3,
+        "seq": 123,
+        "val": {
+          "blank": false,
+          "lastPromptAt": 1789982822245
+        }
+      },
+      "imageLimits": {
+        "ver": 1,
+        "seq": 123,
+        "val": null
+      },
+      "inbox": {
+        "ver": 1,
+        "seq": 123,
+        "val": {
+          "next-turn": [],
+          "next-step": []
+        }
+      },
+      "todos": {
+        "ver": 2,
+        "seq": 123,
+        "val": null
+      },
+      "plan": {
+        "ver": 3,
+        "seq": 123,
+        "val": {
+          "active": false,
+          "wanted": null,
+          "running": null,
+          "activeAtLastHeader": false
+        }
+      },
+      "subagentModelSelectionPolicy": {
+        "ver": 1,
+        "seq": 123,
+        "val": null
+      }
+    }
+  }
+}

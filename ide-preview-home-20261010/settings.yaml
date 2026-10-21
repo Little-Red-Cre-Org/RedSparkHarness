@@ -1,0 +1,91 @@
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+llm-pi-ai:
+  providers:
+    y2y-deepseek:
+      displayName: Y2Y DeepSeek
+      apiKeyEnv: Y2Y_DEEPSEEK_API_KEY
+      api: openai-completions
+      baseURL: https://llm.y2y.io/v1
+      models:
+        - id: deepseek-v4-flash
+          name: deepseek-v4-flash
+        - id: deepseek-v4-pro
+          name: deepseek-v4-pro
+    openai-codex:
+      models:
+        - id: gpt-5.3-codex-spark
+        - id: gpt-5.4
+        - id: gpt-5.4-mini
+        - id: gpt-5.5
+        - id: gpt-5.6-luna
+        - id: gpt-5.6-sol
+        - id: gpt-5.6-terra
+        - id: gpt-6-astra
+        - id: gpt-6-sol
+          name: GPT-6 Sol
+          contextWindow: 272000
+          input: [ text, image ]
+          reasoningEfforts:
+            off: none
+            minimal: low
+            low: low
+            medium: medium
+            high: high
+            xhigh: xhigh
+            max: max
+        - id: gpt-6-luna
+          name: GPT-6 Luna
+          contextWindow: 272000
+          input: [ text, image ]
+          reasoningEfforts:
+            off: none
+            minimal: low
+            low: low
+            medium: medium
+            high: high
+            xhigh: xhigh
+            max: max
+    evomap:
+      displayName: EvoMap
+      apiKeyEnv: EVOMAP_API_KEY
+      api: openai-completions
+      baseURL: https://api.evomap.ai/v1
+      models:
+        - id: evomap-claude-opus-4-7
+          name: evomap-claude-opus-4-7
+        - id: evomap-claude-opus-4-8
+          name: evomap-claude-opus-4-8
+        - id: evomap-deepseek-v4-flash
+          name: evomap-deepseek-v4-flash
+        - id: evomap-gemini-2.5-flash-image
+          name: evomap-gemini-2.5-flash-image
+        - id: evomap-gemini-3-pro-image
+          name: evomap-gemini-3-pro-image
+        - id: evomap-gemini-3.1-flash-image
+          name: evomap-gemini-3.1-flash-image
+        - id: evomap-gemini-3.1-pro-preview
+          name: evomap-gemini-3.1-pro-preview
+        - id: evomap-glm-5.1
+          name: evomap-glm-5.1
+        - id: evomap-glm-5.2
+          name: evomap-glm-5.2
+        - id: evomap-gpt-5.6-luna
+          name: evomap-gpt-5.6-luna
+        - id: evomap-gpt-5.6-sol
+          name: evomap-gpt-5.6-sol
+        - id: evomap-gpt-5.6-terra
+          name: evomap-gpt-5.6-terra
+agent-default-model:
+  provider: openai-codex
+  model: gpt-6-sol
+ui-conversation:
+  busyEnter: queue
+ui-pet:
+  variant: chibi
+  desktopEnabled: false
+  enabled: true
+agent-presets:
+  default: standard
+ui-theme:
+  preference: system

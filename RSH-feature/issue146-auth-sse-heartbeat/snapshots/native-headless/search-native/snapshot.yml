@@ -1,0 +1,8 @@
+version: 1
+scenario: search-native
+profile: native-headless
+composition: native-search
+recording: authored
+header:
+  class: native-search
+  pin: true

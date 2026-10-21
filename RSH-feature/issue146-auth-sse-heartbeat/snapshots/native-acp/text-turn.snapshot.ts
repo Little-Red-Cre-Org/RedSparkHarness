@@ -1,0 +1,268 @@
+/** One recorded native ACP turn through the shipped dsh profile and standard protocol. */
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import { createHash } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { expect, it } from 'vitest'
+import { execa } from 'execa'
+import { NATIVE_ACP_SUBAGENT_METADATA_KEY } from '@deepseek-ai/dsh-acp-protocol'
+import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
+import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { requestImageHandleText } from '@deepseek-ai/dsh-llm/native'
+import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+
+const root = fileURLToPath(new URL('../../', import.meta.url))
+const scene = join(root, 'snapshots/native-acp/text-turn')
+const permissionScene = join(root, 'snapshots/native-acp/permissions-turn')
+const fixture = join(scene, 'session.v3.jsonl')
+
+it('replays a native ACP turn with exact model input, output and durable Session events', async () => {
+  const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
+  const answer = recorded?.find(event => event.type === 'assistant/message')
+  const task = 'say hello through native ACP'
+  const linkedText = `${task}\n[resource_link name="notes \\"draft\\"" uri="file:///reference.md"]\n`
+  const reply = answer?.type === 'assistant/message' && answer.data.message.content[0]?.type === 'text'
+    ? answer.data.message.content[0].text : 'native ACP snapshot reply'
+  const requests: Record<string, unknown>[] = []
+  let permissionTurn = false
+  let mcpTurn = false
+  const server = createServer((request, response) => {
+    let body = ''
+    request.setEncoding('utf8')
+    request.on('data', (chunk: string) => { body += chunk })
+    request.on('end', () => {
+      const payload = JSON.parse(body) as Record<string, unknown>
+      requests.push(payload)
+      response.writeHead(200, { 'content-type': 'text/event-stream' })
+      const messages = payload.messages as readonly { role: string }[]
+      const events = permissionTurn && messages.at(-1)?.role !== 'tool'
+        ? [{ choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'permission-proof-call', type: 'function',
+          function: mcpTurn ? { name: 'mcp__fixture__add', arguments: JSON.stringify({ a: 2, b: 3 }) }
+            : { name: 'write_file', arguments: JSON.stringify({ path: 'permission-proof.txt', content: 'approved\n' }) } }] } }] },
+          { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]
+        : [
+        { choices: [{ delta: { role: 'assistant', content: reply } }] },
+        { choices: [{ delta: {}, finish_reason: 'stop' }] },
+      ]
+      response.end(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n')
+    })
+  })
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+  const address = server.address()
+  if (address === null || typeof address === 'string') throw new Error('native-acp snapshot: missing model endpoint')
+  const home = mkdtempSync(join(tmpdir(), 'dsh-native-acp-snapshot-'))
+  const workspace = join(home, 'workspace')
+  const sessions = join(home, 'sessions')
+  const patch = join(home, 'model.patch.json')
+  mkdirSync(workspace)
+  writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
+    { id: 'app', config: { provider: 'fixture', model: 'fixture-model', systemPrompt: 'You are a native ACP fixture.', maxSteps: 2 } },
+    { id: 'storage', config: { root: sessions, compression: 'none' } },
+    { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
+      baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] },
+        { id: 'fixture-model-next', input: ['text', 'image'], reasoningEfforts: { off: null, high: 'high' } }] } } } },
+  ] }))
+  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
+    cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+    reject: false, timeout: 30_000, killSignal: 'SIGKILL',
+  })
+  const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
+  const output: Record<string, unknown>[] = []
+  const permissionRequests: Record<string, unknown>[] = []
+  transport.onNotification((method, params) => {
+    if (method === 'session/update') output.push(params.update as Record<string, unknown>)
+  })
+  transport.onRequest((method, params) => {
+    expect(method).toBe('session/request_permission')
+    expect(output.at(-1)).toMatchObject({ sessionUpdate: 'tool_call', toolCallId: 'permission-proof-call' })
+    expect(params.options).toMatchObject([{ optionId: 'allow-once', kind: 'allow_once' }, { optionId: 'reject-once', kind: 'reject_once' }])
+    permissionRequests.push(params)
+    return { outcome: { outcome: 'selected', optionId: 'allow-once' } }
+  })
+  transport.start()
+  const signal = AbortSignal.timeout(20_000)
+  try {
+    const policy = { version: 1, maxSteps: 2, maxTokens: 64, permissionMode: 'parent-relay' } as const
+    const policyMetadata = { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy }
+    const initialized = await transport.request('initialize', { protocolVersion: 1, clientCapabilities: {},
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } } }, signal)
+    expect(initialized).toMatchObject({ agentCapabilities: { promptCapabilities: { image: true } },
+      _meta: { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1,
+        capabilities: { maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] } } } })
+    const created = await transport.request('session/new', { cwd: workspace, mcpServers: [], _meta: policyMetadata }, signal) as {
+      sessionId: string; configOptions: { id: string; currentValue: string }[]; _meta?: Record<string, unknown> }
+    expect(created._meta).toEqual(policyMetadata)
+    expect(created.configOptions[0]?.currentValue).toBe(JSON.stringify(['fixture', 'fixture-model']))
+    await expect(transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: 'not-an-advertised-route' }, signal)).rejects.toThrow()
+    await transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'model', value: JSON.stringify(['fixture', 'fixture-model-next']) }, signal)
+    await transport.request('session/set_config_option', { sessionId: created.sessionId,
+      configId: 'reasoning_effort', value: 'high' }, signal)
+    const image = readFileSync(join(scene, 'image.png')).toString('base64')
+    const result = await transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'text', text: task }, { type: 'resource_link', name: 'notes "draft"', uri: 'file:///reference.md' },
+        { type: 'image', mimeType: 'image/png', data: image }, { type: 'text', text: ' Review the linked file.' }] }, signal)
+    expect(result).toMatchObject({ stopReason: 'end_turn' })
+    expect(output).toMatchObject([{ sessionUpdate: 'available_commands_update' }, { sessionUpdate: 'config_option_update' },
+      { sessionUpdate: 'config_option_update' },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
+      { sessionUpdate: 'usage_update', used: expect.any(Number), size: expect.any(Number) }])
+    const protocol = JSON.stringify(output.map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n'
+    await transport.request('session/close', { sessionId: created.sessionId }, signal)
+    const listed = await transport.request('session/list', { cwd: workspace }, signal) as { sessions: unknown[] }
+    expect(listed.sessions).toHaveLength(1)
+    const resumed = await transport.request('session/resume', { sessionId: created.sessionId, cwd: workspace, mcpServers: [] }, signal) as {
+      configOptions: { id: string; currentValue: string }[]; _meta?: Record<string, unknown> }
+    expect(resumed).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model-next']) },
+      { id: 'reasoning_effort', currentValue: 'high' }], _meta: policyMetadata })
+    expect(output).toHaveLength(8)
+    expect(output.slice(5)).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
+      { sessionUpdate: 'usage_update', used: expect.any(Number), size: expect.any(Number) },
+      { sessionUpdate: 'available_commands_update' }])
+    expect(requests).toHaveLength(1)
+    const request = requests[0]
+    if (request === undefined) throw new Error('native-acp snapshot: model request missing')
+    const physical = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))
+    if (physical === undefined) throw new Error('native-acp snapshot: durable Session missing')
+    const raw = readFileSync(join(sessions, String(physical)), 'utf8')
+    const imageEvent = parseSessionLog(raw).find(event => event.type === 'user/message')
+    const imageBlock = imageEvent?.type === 'user/message' ? imageEvent.data.content.find(block => block.type === 'image') : undefined
+    if (imageBlock?.type !== 'image') throw new Error('native-acp snapshot: durable image missing')
+    const ref = imageBlock.attachment
+    const digest = String(ref.attachmentId).slice('sha256:'.length)
+    const attachmentPath = join(home, 'attachments', 'v1', 'objects', digest.slice(0, 2), digest)
+    const storedImage = readFileSync(attachmentPath)
+    expect(`sha256:${createHash('sha256').update(storedImage).digest('hex')}`).toBe(ref.attachmentId)
+    const caption = requestImageHandleText(ref, ref, { readonlyPath: attachmentPath })
+    const stableCaption = requestImageHandleText(ref, ref, { readonlyPath: '{{attachment}}' })
+    expect(request).toMatchObject({ model: 'fixture-model-next', reasoning_effort: 'high', max_completion_tokens: policy.maxTokens })
+    const serialized = JSON.stringify({ model: request.model, reasoning_effort: request.reasoning_effort,
+      max_completion_tokens: request.max_completion_tokens,
+      messages: request.messages, tools: request.tools ?? [] }, null, 2)
+    expect(serialized.split(JSON.stringify(caption))).toHaveLength(2)
+    expect(request.messages).toMatchObject([{ role: 'developer' }, { role: 'user', content: [
+      { type: 'text', text: linkedText }, { type: 'text', text: caption },
+      { type: 'image_url', image_url: { url: `data:${ref.mediaType};base64,${storedImage.toString('base64')}` } },
+      { type: 'text', text: ' Review the linked file.' },
+    ] }])
+    const modelInput = serialized.replace(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n'
+    const context = { cwd: workspace, sessionIds: [] }
+    const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
+    const prompts = normalizedSystemPrompts(raw, context)
+    const schemas = normalizedToolSchemas(raw, context)
+    if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-acp snapshot: request header missing')
+    const systemPrompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
+    const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
+    if (process.env.DSH_SNAPSHOT === 'refresh') {
+      writeFileSync(join(scene, 'protocol.expected.json'), protocol)
+      writeFileSync(fixture, normalized)
+      writeFileSync(join(scene, 'model-request.expected.json'), modelInput)
+      writeFileSync(join(scene, 'system-prompt.expected.md'), systemPrompt)
+      writeFileSync(join(scene, 'tool-schemas.expected.json'), tools)
+    } else {
+      expect(protocol).toBe(readFileSync(join(scene, 'protocol.expected.json'), 'utf8'))
+      expect(normalized).toBe(readFileSync(fixture, 'utf8'))
+      expect(modelInput).toBe(readFileSync(join(scene, 'model-request.expected.json'), 'utf8'))
+      expect(systemPrompt).toBe(readFileSync(join(scene, 'system-prompt.expected.md'), 'utf8'))
+      expect(tools).toBe(readFileSync(join(scene, 'tool-schemas.expected.json'), 'utf8'))
+    }
+    const beforePermission = output.length
+    permissionTurn = true
+    const permissionFixture = join(permissionScene, 'session.v3.jsonl')
+    const permissionInput = existsSync(permissionFixture) ? parseSessionLog(readFileSync(permissionFixture, 'utf8'))
+      .filter(event => event.type === 'user/message' && event.data.source.kind === 'user').at(-1) : undefined
+    const permissionTask = permissionInput?.type === 'user/message' && permissionInput.data.content[0]?.type === 'text'
+      ? permissionInput.data.content[0].text : 'write permission-proof.txt after one-shot approval'
+    expect(await transport.request('session/prompt', { sessionId: created.sessionId,
+      prompt: [{ type: 'text', text: permissionTask }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    expect(readFileSync(join(workspace, 'permission-proof.txt'), 'utf8')).toBe(readFileSync(join(permissionScene,
+      'workspace.expected/permission-proof.txt'), 'utf8'))
+    expect(requests).toHaveLength(3)
+    const permissionLog = readFileSync(join(sessions, String(physical)), 'utf8')
+    const permissionEvents = parseSessionLog(permissionLog)
+    const policyEvents = permissionEvents.filter(event => event.type === 'execution/policy')
+    expect(policyEvents).toHaveLength(1)
+    expect(policyEvents[0]).toMatchObject({ data: { version: 1, maxSteps: policy.maxSteps, maxTokens: policy.maxTokens,
+      permission: { mode: 'require-approval', authority: 'session-owner' } } })
+    const policyRows = permissionLog.trim().split('\n').slice(1).map(line => JSON.parse(line) as { type: string; ignorable?: boolean })
+      .filter(event => event.type === 'execution/policy')
+    expect(policyRows).toHaveLength(1)
+    expect(policyRows[0]?.ignorable).not.toBe(true)
+    const toolCalls = permissionEvents.filter(event => event.type === 'tool/call')
+    expect(toolCalls).toHaveLength(1)
+    const permissionToolCall = toolCalls[0]
+    if (permissionToolCall === undefined) throw new Error('native-acp snapshot: parent-approved tool call missing')
+    expect(permissionToolCall).toMatchObject({ data: { name: 'write_file' } })
+    expect(permissionRequests).toHaveLength(1)
+    const permissionRequest = permissionRequests[0]
+    if (permissionRequest === undefined) throw new Error('native-acp snapshot: parent permission request missing')
+    expect(permissionRequest.sessionId).toBe(created.sessionId)
+    expect(permissionRequest.toolCall).toMatchObject({ toolCallId: permissionToolCall.data.callId })
+    expect(permissionEvents.filter(event => event.type === 'tool/result')).toHaveLength(1)
+    const approvals = permissionEvents.filter(event => event.type === 'native-approval/decided')
+    expect(approvals).toHaveLength(1)
+    expect(approvals[0]).toMatchObject({ data: { outcome: 'allowed-once' } })
+    expect(requests.slice(1)).toMatchObject([{ max_completion_tokens: policy.maxTokens }, { max_completion_tokens: policy.maxTokens }])
+    const expectations = {
+      'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([permissionLog])[0] ?? permissionLog, context, { identityMode: 'preserve' }),
+      'protocol.expected.json': JSON.stringify(output.slice(beforePermission).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
+      'model-request.expected.json': JSON.stringify(requests.slice(1).map(request => ({ model: request.model,
+        max_completion_tokens: request.max_completion_tokens, messages: request.messages, tools: request.tools ?? [] })), null, 2)
+        .replaceAll(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n',
+    }
+    for (const [name, expected] of Object.entries(expectations)) {
+      if (process.env.DSH_SNAPSHOT === 'refresh') {
+        mkdirSync(permissionScene, { recursive: true })
+        writeFileSync(join(permissionScene, name), expected)
+      } else expect(expected).toBe(readFileSync(join(permissionScene, name), 'utf8'))
+    }
+    const mcpScene = join(root, 'snapshots/native-acp/mcp-turn')
+    const mcpFixture = join(mcpScene, 'session.v3.jsonl')
+    const mcpInput = existsSync(mcpFixture) ? parseSessionLog(readFileSync(mcpFixture, 'utf8'))
+      .find(event => event.type === 'user/message' && event.data.source.kind === 'user') : undefined
+    const mcpTask = mcpInput?.type === 'user/message' && mcpInput.data.content[0]?.type === 'text'
+      ? mcpInput.data.content[0].text : 'add two and three with the Session MCP server'
+    const mcpCreated = await transport.request('session/new', { cwd: workspace, mcpServers: [{ name: 'fixture', command: process.execPath,
+      args: [join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')], env: [] }] }, signal) as { sessionId: string }
+    const beforeMcp = output.length
+    mcpTurn = true
+    expect(await transport.request('session/prompt', { sessionId: mcpCreated.sessionId,
+      prompt: [{ type: 'text', text: mcpTask }] }, signal)).toMatchObject({ stopReason: 'end_turn' })
+    const mcpPaths = readdirSync(sessions, { recursive: true }).filter(path => String(path).endsWith('session.v3.jsonl'))
+    const mcpLog = mcpPaths.map(path => readFileSync(join(sessions, String(path)), 'utf8'))
+      .find(log => (JSON.parse(log.split('\n')[0]!) as { id: string }).id === mcpCreated.sessionId)
+    if (mcpLog === undefined) throw new Error('native ACP MCP Session missing')
+    const mcpEvents = parseSessionLog(mcpLog)
+    expect(mcpEvents.filter(event => event.type === 'tool/call')).toMatchObject([{ data: { name: 'mcp__fixture__add' } }])
+    const mcpRequests = requests.slice(3).map(request => ({ model: request.model, messages: request.messages, tools: request.tools ?? [] }))
+    expect(mcpRequests).toHaveLength(2)
+    const mcpPrompts = normalizedSystemPrompts(mcpLog, context)
+    const mcpSchemas = normalizedToolSchemas(mcpLog, context)
+    if (mcpPrompts[0] === undefined || mcpSchemas[0] === undefined) throw new Error('native ACP MCP request header missing')
+    const mcpExpected = {
+      'session.v3.jsonl': normalizeSessionSnapshot(redactSessionSnapshotIds([mcpLog])[0] ?? mcpLog, context, { identityMode: 'preserve' }),
+      'protocol.expected.json': JSON.stringify(output.slice(beforeMcp).map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n',
+      'model-request.expected.json': JSON.stringify(mcpRequests, null, 2) + '\n',
+      'system-prompt.expected.md': formatSystemPromptSnapshot(mcpPrompts[0], mcpPrompts.slice(1)),
+      'tool-schemas.expected.json': formatToolSchemasSnapshot(mcpSchemas[0], mcpSchemas.slice(1)),
+    }
+    for (const [name, expected] of Object.entries(mcpExpected)) {
+      if (process.env.DSH_SNAPSHOT === 'refresh') {
+        mkdirSync(mcpScene, { recursive: true })
+        writeFileSync(join(mcpScene, name), expected)
+      } else expect(expected).toBe(readFileSync(join(mcpScene, name), 'utf8'))
+    }
+    await transport.request('session/close', { sessionId: mcpCreated.sessionId }, signal)
+  } finally {
+    child.stdin.end()
+    const exited = await child
+    transport.close()
+    expect(exited.exitCode, exited.stderr).toBe(0)
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    rmSync(home, { recursive: true, force: true })
+  }
+})

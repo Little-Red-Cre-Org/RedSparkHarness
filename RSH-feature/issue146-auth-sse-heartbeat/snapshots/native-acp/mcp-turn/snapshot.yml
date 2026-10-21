@@ -1,0 +1,9 @@
+version: 1
+scenario: mcp-turn
+profile: native-acp
+composition: native-acp-text-turn
+recording: authored
+header:
+  class: native-acp-text-turn
+  systemPromptSource: native-acp/mcp-turn
+  toolSchemasSource: native-acp/mcp-turn

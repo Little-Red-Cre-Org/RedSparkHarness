@@ -1,0 +1,15 @@
+2026-10-10 17:59:06.531 [info] Extension host with pid 41616 started
+2026-10-10 17:59:06.531 [error] Error: EEXIST: file already exists, open 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock'
+2026-10-10 17:59:06.532 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Could not acquire lock, checking if the file is stale.
+2026-10-10 17:59:06.533 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': The pid 38232 appears to be gone.
+2026-10-10 17:59:06.533 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Deleting a stale lock.
+2026-10-10 17:59:06.555 [info] Lock 'e:\redsparkHarness\ide-acceptance-data-20261010\data\User\workspaceStorage\4c39ae48\vscode.lock': Lock acquired.
+2026-10-10 17:59:06.648 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-10-10 17:59:06.649 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-10-10 17:59:06.845 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2026-10-10 17:59:06.909 [info] ExtensionService#_doActivateExtension rsh-local-verification.native-ide-smoke, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:59:06.991 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2026-10-10 17:59:06.991 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-10-10 17:59:07.323 [info] Eager extensions activated
+2026-10-10 17:59:07.323 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-10-10 17:59:07.324 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'

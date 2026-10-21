@@ -1,0 +1,23 @@
+{
+  "headings": [
+    "General",
+    "llm-pi-ai"
+  ],
+  "buttons": [
+    "Light",
+    "Dark",
+    "Follow system",
+    "−",
+    "+",
+    "Refresh settings",
+    "Save settings"
+  ],
+  "labels": [
+    "User overrides (JSON){ \"providers\": {} }"
+  ],
+  "alerts": [],
+  "notices": [
+    "Could not read the busy-send preference.",
+    "Settings saved; values were read back from the Host."
+  ]
+}

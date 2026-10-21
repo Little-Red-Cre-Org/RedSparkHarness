@@ -1,0 +1,8 @@
+version: 1
+scenario: native-session-core
+profile: desktop
+composition: native-desktop-session-core
+recording: authored
+header:
+  class: native-desktop-session-core
+  pin: true

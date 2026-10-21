@@ -1,0 +1,126 @@
+{
+  "unit": {
+    "name": "workspace",
+    "version": 2
+  },
+  "global": {
+    "initialized": true,
+    "workspaceIds": [
+      "74f0c2ea-f11a-476d-9738-add0fdb6c114",
+      "f1bfe170-0779-41b6-9402-980c62bdaced",
+      "2dc1c74c-e81c-4307-af37-e4721cdccc14"
+    ],
+    "archivedSessionIds": [
+      "scheduled-b550ea0e-e442-48ae-a953-b7dbcfa76d59",
+      "scheduled-1df0a5f1-872f-4432-90fd-3eecd832180e",
+      "session-bca6f7c0-2822-4765-8fb7-4ff539a683e4",
+      "scheduled-26beca7c-f780-4d78-a41b-bf580e9bf76e",
+      "scheduled-fd011739-3742-476d-951f-fc3b8b77834d",
+      "scheduled-e6b4fba0-b479-463a-93eb-6a71cc5e7e64",
+      "scheduled-5683340c-b58f-458f-a881-829335ac1ef4",
+      "scheduled-e8cd2686-5eae-40cc-bdff-64b7241f84f4",
+      "scheduled-bb0c153f-e219-4b7b-a887-97b2c47c8ce7",
+      "scheduled-0e4ca8d3-e841-4e3e-a87f-6a122f4de9c3",
+      "scheduled-a61af283-8228-43cd-a901-53a2925b176d",
+      "scheduled-df73af5b-fa18-4dbc-a822-625d70e3c324",
+      "scheduled-4165ae74-8077-46b6-96d6-f9920219bcdc",
+      "scheduled-9dfc5c28-4294-4e22-a03a-ef2ecfab2b63",
+      "scheduled-249d3d16-c525-491a-8967-08e4c5f0693c",
+      "scheduled-c798683e-128f-4ba1-9d34-49d9ac8dce81",
+      "scheduled-8b1a34d3-439a-4460-aa3a-89c75d5030e7",
+      "scheduled-c8176e1e-0fd8-411c-9d00-bd6418f1549c",
+      "scheduled-37f4888d-3b6b-4a1f-8502-bcec692d288a",
+      "scheduled-7bbb889c-2177-4055-80f1-4a64c6b9cb49",
+      "scheduled-aff88dee-dc2a-4503-a41d-5602183c7540",
+      "scheduled-dcba1ba4-d996-49d2-93a1-6f071fe462ef",
+      "scheduled-fd9dff28-634d-4f7d-800e-f41244a843a2",
+      "scheduled-45e5fe13-a7d5-4b1e-857f-09a99e9db0ad",
+      "scheduled-5fbc4c85-4180-4415-bae0-e41132035094",
+      "scheduled-90268fc1-7f03-48fb-9a0e-42de2f17170c",
+      "scheduled-d7e3cf67-1a5f-4c20-88fa-396e35a642a6",
+      "scheduled-a2fbcbe6-9d0a-45f0-9da2-d529a0a7d81a",
+      "scheduled-24c176f0-2b31-4e0f-9f66-add00a0b02b2",
+      "scheduled-07baba2f-c414-4b45-910b-bdf4e3a950ae",
+      "scheduled-8ec907ee-c72c-4285-9e52-d012cb5fc1c7",
+      "scheduled-72363277-2add-4800-81e9-41d645132ea0",
+      "scheduled-db623ac9-98a9-4783-b924-86b3f7d92a0a",
+      "scheduled-reminder-f1d470b9-658c-4f17-b0e0-d43eef85e754",
+      "scheduled-18472daa-d246-4376-9326-dedad5582593",
+      "scheduled-reminder-05e3f0a1-dba5-4ca2-b62b-7a3c00b8921d",
+      "scheduled-92409cbf-4a20-4dfd-8f2a-861bbd5d4eff",
+      "scheduled-reminder-dfdf59db-3b37-470b-9513-d62b5b99f3ee",
+      "scheduled-reminder-7738470f-cd9a-479e-ae18-f0ad739f27ce",
+      "scheduled-reminder-b681eb89-eb2d-490e-bd56-b53bb3867935",
+      "scheduled-reminder-381c961e-4f19-4b8c-9c7e-c60f84f72ed0",
+      "scheduled-reminder-75f09685-cebd-460a-a8ce-e190af33108b",
+      "session-8c7cd6c8-065a-48e2-9e67-8d21a679aa08",
+      "session-ff7a21ae-2c1e-4de5-8c7d-4458b9af3960",
+      "session-c3952211-9061-4239-be4e-3df3e6c4da83",
+      "scheduled-bca79790-6e78-4cf7-ad2f-263a0041bf08",
+      "scheduled-reminder-929d2d63-b8fc-445a-b5ac-657ff2d03a05",
+      "scheduled-e2c60ecf-75dc-4a79-bc07-b2e4d8179edc",
+      "session-d06c4a3e-7119-49e0-b475-be0b9dc03b50",
+      "session-b3640e8d-7e86-42a8-a307-2998ebe90e0b",
+      "session-55d347fa-4a56-43c1-952d-e62973d72926",
+      "session-51dce749-131a-4bff-ac62-25bf02d9e4be",
+      "scheduled-7ac555f0-ee0d-4851-970b-0708c978b793",
+      "session-02295e7e-6713-4cbe-8ba2-c9c041ed7849"
+    ]
+  },
+  "tables": {
+    "workspaces": {
+      "2dc1c74c-e81c-4307-af37-e4721cdccc14": {
+        "path": "E:\\RedSparkWorkspace",
+        "title": "RedSparkWorkspace",
+        "sessionIds": [
+          "session-dd7e6bc7-2149-4713-8c36-e28de82dc122",
+          "session-dc767599-d9de-43e4-b8e7-c07eccc5fa5e",
+          "session-179121b3-1e04-4d0f-ad4b-ae1eb6c888ad",
+          "session-1a3af441-c26a-4d19-abca-af8fff0b2688",
+          "session-d06c4a3e-7119-49e0-b475-be0b9dc03b50",
+          "session-55d347fa-4a56-43c1-952d-e62973d72926",
+          "scheduled-7ac555f0-ee0d-4851-970b-0708c978b793",
+          "scheduled-reminder-929d2d63-b8fc-445a-b5ac-657ff2d03a05",
+          "scheduled-e2c60ecf-75dc-4a79-bc07-b2e4d8179edc",
+          "scheduled-bca79790-6e78-4cf7-ad2f-263a0041bf08",
+          "scheduled-reminder-381c961e-4f19-4b8c-9c7e-c60f84f72ed0",
+          "session-b3640e8d-7e86-42a8-a307-2998ebe90e0b",
+          "scheduled-reminder-dfdf59db-3b37-470b-9513-d62b5b99f3ee",
+          "scheduled-reminder-7738470f-cd9a-479e-ae18-f0ad739f27ce",
+          "scheduled-reminder-05e3f0a1-dba5-4ca2-b62b-7a3c00b8921d",
+          "session-8c7cd6c8-065a-48e2-9e67-8d21a679aa08",
+          "scheduled-reminder-b681eb89-eb2d-490e-bd56-b53bb3867935",
+          "scheduled-92409cbf-4a20-4dfd-8f2a-861bbd5d4eff",
+          "session-ff7a21ae-2c1e-4de5-8c7d-4458b9af3960",
+          "scheduled-reminder-75f09685-cebd-460a-a8ce-e190af33108b",
+          "scheduled-reminder-f1d470b9-658c-4f17-b0e0-d43eef85e754",
+          "scheduled-18472daa-d246-4376-9326-dedad5582593",
+          "session-c3952211-9061-4239-be4e-3df3e6c4da83",
+          "session-fc45db71-eff4-4549-a7f3-b318d16cb345",
+          "session-8d11cfaa-76e6-4e9c-afa0-a6670dcee8c5",
+          "session-bca6f7c0-2822-4765-8fb7-4ff539a683e4"
+        ],
+        "createdAt": "2026-09-13T15:11:05.057Z",
+        "updatedAt": "2026-10-10T09:18:33.804Z"
+      },
+      "f1bfe170-0779-41b6-9402-980c62bdaced": {
+        "path": "E:\\redsparkHarness\\RedSparkHarness",
+        "title": "RedSparkHarness",
+        "sessionIds": [
+          "session-0bffec43-e553-42dc-9263-7a76a22eb67b"
+        ],
+        "createdAt": "2026-10-09T05:22:30.588Z",
+        "updatedAt": "2026-10-09T05:22:30.941Z"
+      },
+      "74f0c2ea-f11a-476d-9738-add0fdb6c114": {
+        "path": "C:\\Users\\12148\\Documents\\Downloads",
+        "title": "Downloads",
+        "sessionIds": [
+          "session-5faf8d24-ab8d-48f7-a4bb-41eaa236b558"
+        ],
+        "createdAt": "2026-10-09T05:28:07.480Z",
+        "updatedAt": "2026-10-09T05:28:07.727Z"
+      }
+    }
+  }
+}

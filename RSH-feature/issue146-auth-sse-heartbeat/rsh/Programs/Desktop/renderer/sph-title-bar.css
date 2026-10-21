@@ -1,0 +1,16 @@
+body { box-sizing: border-box; padding-top: 40px !important; }
+#sph-title-bar {
+  position: fixed; inset: 0 0 auto; height: 40px; z-index: 2147483647;
+  display: flex; align-items: center; box-sizing: border-box; padding: 0 148px 0 14px;
+  background: var(--dsw-alias-bg-base, #fff8f8); color: var(--dsw-alias-label-primary, #30232a);
+  font: 12px 'Segoe UI', sans-serif; -webkit-app-region: drag; user-select: none;
+}
+#sph-title-bar button {
+  -webkit-app-region: no-drag; display: inline-flex; align-items: center;
+  gap: 9px; height: 30px; margin: 0; border: 0; padding: 0 9px; border-radius: 6px;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+#sph-title-bar button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+#sph-title-bar button:focus-visible { outline: 2px solid #d93851; outline-offset: -2px; }
+#sph-title-bar .spark { width: 20px; height: 20px; object-fit: contain; }
+#sph-title-bar .chevron { opacity: .55; font-size: 10px; }

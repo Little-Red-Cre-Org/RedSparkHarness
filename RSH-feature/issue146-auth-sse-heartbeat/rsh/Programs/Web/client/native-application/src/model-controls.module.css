@@ -1,0 +1,62 @@
+.root {
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.select {
+  max-width: 180px;
+  border-radius: 999px;
+  corner-shape: round;
+}
+
+.plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  corner-shape: round;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.plan[data-active] {
+  background: var(--dsw-alias-state-warn-tertiary);
+  color: var(--dsw-alias-state-warn-label);
+  font-weight: 500;
+}
+
+.plan[data-pending] {
+  outline: 1px dashed currentColor;
+  outline-offset: -1px;
+}
+
+.plan:hover:not(:disabled) {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.plan:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-warn-label);
+  outline-offset: 2px;
+}
+
+.plan:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.planPending {
+  font-weight: 400;
+}

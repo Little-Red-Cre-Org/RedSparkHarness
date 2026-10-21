@@ -1,0 +1,11 @@
+# Install this package before adding its patch to a Web/Desktop profile.
+- insert:
+    - id: task-scheduler
+      name: '@deepseek-ai/dsh-task-scheduler'
+      config:
+        path: !!js dshHomePath('task-scheduler.sqlite')
+        pollMs: 1000
+        runTimeoutMs: 600000
+        maxConcurrent: 1
+        historyLimit: 50
+        minEverySeconds: 300
