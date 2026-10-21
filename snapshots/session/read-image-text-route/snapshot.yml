@@ -1,6 +1,6 @@
 version: 1
 scenario: read-image-text-route
-profile: legacy-headless
+profile: headless
 composition: image-text-route
 recording: authored
 header:

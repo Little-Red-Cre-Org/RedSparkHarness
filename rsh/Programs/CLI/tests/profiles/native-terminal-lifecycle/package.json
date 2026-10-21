@@ -1,5 +1,0 @@
-{
-  "name": "native-terminal-lifecycle-profile",
-  "private": true,
-  "dsh": { "profile": { "runtime": "native", "config": "rsh.profile.json" } }
-}

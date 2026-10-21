@@ -12,13 +12,9 @@ Harness 用户需要经过校验的架构与运行链路产物，但不应为普
 
 `@deepseek-ai/dsh-archify` 是发布的 `skill/` 插件，也是 `@deepseek-ai/dsh-base` 的直接依赖。它固定 `@tt-a1i/archify-dsh@0.1.0`，通过包 manifest 解析已安装的 `SKILL.md`，并暴露一个内置 `archify` provider。上游包拥有指令正文、schema、诊断、渲染器、示例、viewer 与 CLI。Harness 拥有 provider、路由策略、包版本、profile 组合和兼容性覆盖。
 
-Cordis provider 使用 `{ modelInvocable: false, userInvocable: true }`。因此通用模型目录与 `skill` 工具既不公布也不加载它，而 Cordis profile 保留既有直接 `/archify` 手势。包根插件在 `dsh-base` 中早于 `dsh-tool-skill` 注册，因此显式手势仍是最终注入指令，自动选择不会与之重复。
+provider 使用 `{ modelInvocable: false, userInvocable: true }`。因此通用模型目录与 `skill` 工具既不公布也不加载它，而已有的直接 `/archify` 手势仍然可用。插件在 `dsh-base` 中早于 `dsh-tool-skill` 注册，因此显式手势仍是最终注入指令，自动选择不会与之重复。
 
-共用匹配器会把所有符合条件的直接用户文本作为一个有界输入观察；所有文本块的合计长度必须落在可配置的 `maxUserTextChars` 内。超限文本会关闭自动路由，即使已观察前缀包含两个已配置短语族。未超限时，命中需同时包含动作短语和图表短语，且任何直接 `/archify` 手势都会跳过自动加载。手动 `/archify` 不受自动观察上限限制。
-
-Cordis 监听器在 `agent/pre-step` 运行。它原样返回普通请求，忽略所有非用户来源文本，并携带轮次 abort signal 解析匹配的胜出 scoped Skill。它追加一条带类型 `archify-auto-invocation` 来源的渲染指令消息，让选中的上游正文通过已有 `user/message` 事件对模型可见且可持久化，同时不改变 `agent-loop`、Session 格式版本、SDK、工具、presenter、凭据或沙箱策略。
-
-本包还通过 `./native` 导出无 Cordis 的 Native Host 插件。它注册相同的隐藏 Skill provider 与 shell 环境贡献者，并在启用 `autoInvoke` 时注册 `requestContexts` provider。该 provider 使用共用配置默认值和直接用户文本匹配器，携带 request scope、owner Session cwd 与 abort signal 解析胜出的 Skill；当该 Skill 仍允许用户调用时，它返回一条使用相同来源类型的指令消息。绝对包目录仅通过 `DSH_ARCHIFY_SKILL_DIR` 返回；指令正文与来源类型不包含该路径。导出此入口不会让随附 Cordis profile composition 自动选择 Native 入口。
+自动监听器只在 `agent/pre-step` 中读取已领取的直接用户文本，至多扫描可配置的 `maxUserTextChars`，并要求可配置动作和图表短语族同时命中。它原样返回普通请求，忽略所有非用户来源文本，并跳过任意直接 `/archify` 手势。命中后会携带轮次 abort signal 解析胜出的 scoped Skill，并追加一条带类型 `archify-auto-invocation` 来源的渲染指令消息。这会通过已有 `user/message` 事件让选中的上游正文对模型可见且可持久化，同时不改变 `agent-loop`、Session 格式版本、SDK、工具、presenter、凭据或沙箱策略。
 
 Archify 命令仍使用已有 shell、文件系统、权限和 `present` 能力。agent 校验候选文件、运行上游交付，并通过 `deliverables/presented` 记录已接受 JSON 与 HTML；不存在 Archify 专用工具或客户端卡片。
 
@@ -36,8 +32,8 @@ provider 会把已解析的上游目录作为受管理的 `DSH_ARCHIFY_SKILL_DIR
 
 ## 验证
 
-Cordis 兼容测试覆盖隐藏 provider 发现、未匹配与非用户绕过、自动注入、显式调用、部署控制、持久化 agent-loop 指令、真实 profile 启动、失败保留以及 `present` 记录。shell 回归从独立 Unicode 工作区执行渲染后的命令，读取清单中的 JSON 文件，并检查 showcase 交付。无密钥 `archify-auto-routing` headless 快照通过 `dsh --profile headless` 使用自有 PowerShell 请求头基线回放注入指令。Native SDK Archify snapshot 覆盖自动 request-context 注入、冷恢复后的手动 `/archify` 加载、两个 SDK 投影和持久化来源事件，并检查模型请求与 Session 日志不包含绝对安装路径。这些检查不能证明真实模型已完成 Godot 分析，也不能替代人工视觉审查。
+包测试覆盖隐藏 provider 发现、未匹配与非用户绕过、自动注入、显式调用、部署控制、持久化 agent-loop 指令、真实 profile 启动、失败保留以及 `present` 记录。shell 回归从独立 Unicode 工作区执行渲染后的命令，读取清单中的 JSON 文件，并检查 showcase 交付。无密钥 `archify-auto-routing` headless 快照通过 `dsh --profile headless` 使用自有 PowerShell 请求头基线回放注入指令。这些检查不能证明真实模型已完成 Godot 分析，也不能替代人工视觉审查。
 
 ## 后果
 
-Cordis 标准 base profile 都获得同一低开销能力，包括 Desktop 通过 base bundle 运行时闭包获得该能力。Native Host composition 可以显式安装导出的 `./native` 入口；导出本身不会改变随附 Native 默认配置。显式装配的 Native TUI 也可路由 `/archify`，前提是 composition 安装 Archify 和带有 request-context 注册的 Native `dsh-tool-skill` consumer。普通请求只执行有上限的内存文本检查；它们既不读取上游 Skill，也不会获得 Archify 目录项或指令。Cordis 或 Native TUI 用户都能使用 `/archify` 选择精确行为；部署也能通过后续 profile patch 禁用自动选择或替换短语列表。上游校验之后的视觉质量仍由人工检查，升级仍是显式依赖变更，并执行同一套路由、loader 和产物验收。
+所有基于标准 base 的 profile 都获得同一低开销能力，包括 Desktop 通过其 base-bundle 运行时闭包获得该能力。普通请求只执行有上限的内存文本检查；它们既不读取上游 Skill，也不会获得 Archify 目录项或指令。用户始终能使用 `/archify` 选择精确行为，部署也能通过后续 profile patch 禁用自动选择或替换短语列表。上游校验之后的视觉质量仍由人工检查，升级仍是显式依赖变更，并执行同一套路由、loader 和产物验收。

@@ -1,4 +1,4 @@
-/** Recorded ACP protocol behavior through an explicit legacy ACP profile. */
+/** Recorded ACP protocol behavior through the shipped `dsh --profile acp` interface. */
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -80,11 +80,9 @@ const scenarios: Scenario[] = controllerCases.map((controller) => {
 
 defineAcpSnapshotSuite({
   agent: {
-    binScript: fileURLToPath(new URL('../../rsh/Programs/CLI/src/bin.ts', import.meta.url)),
+    binScript: fileURLToPath(new URL('../../apps/cli/src/bin.ts', import.meta.url)),
     configPath: fileURLToPath(new URL('./escalation-approved/cordis.yml', import.meta.url)),
-    profile: 'legacy-acp',
-    fromDefaultProfile: 'acp',
-    packageResolutionAnchor: fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url)),
+    profile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: corpusDir,

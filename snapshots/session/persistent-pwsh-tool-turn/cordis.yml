@@ -66,9 +66,6 @@
   name: '@deepseek-ai/dsh-tool-goal'
   disabled: true
 
-- id: archify
-  disabled: true
-
 - id: skill
   name: '@deepseek-ai/dsh-skill'
   disabled: true

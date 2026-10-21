@@ -1,8 +1,0 @@
-version: 1
-scenario: credential-notification-native
-profile: native-headless
-composition: native-model-choice
-recording: authored
-header:
-  class: credential-notification-native
-  pin: true

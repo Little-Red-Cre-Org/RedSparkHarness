@@ -20,9 +20,9 @@ A business Service extends `TypertRemoteService` and declares callable methods w
 
 The Remote consumer projection contains `.d.ts`, `.d.ts.map`, and `.js` files. The `.d.ts` exposes only methods marked with a Remote decorator and refers to the business package's single public type symbols. The `.d.ts.map` navigates consumer API methods back to their Host business method implementations. The `.js` carries endpoint, parameter, Context, and Zod information for the same contract. At the assembly layer, the Browser Client mounts the required Remote JS contributions onto the Client Remote Service. The projection and Remote abstraction remain platform-independent so that a future TUI can reuse them.
 
-`@deepseek-ai/dsh-api-gateway`, located at `rsh/Programs/Web/api/gateway`, provides two symmetric faces: its default entry provides Host `ctx.typertGateway`, while its `/client` entry provides consumer-side `ctx.remote`. Each side consumes a locally generated `InvocationDescriptor` from the same model; descriptors are not sent over the wire. The Remote data protocol runs over Connection's shared `/api` RPC channel. The business calling interface does not change when Connection migrates from HTTP to WebSocket.
+`@deepseek-ai/dsh-api-gateway`, located at `packages/api/gateway`, provides two symmetric faces: its default entry provides Host `ctx.typertGateway`, while its `/client` entry provides consumer-side `ctx.remote`. Each side consumes a locally generated `InvocationDescriptor` from the same model; descriptors are not sent over the wire. The Remote data protocol runs over Connection's shared `/api` RPC channel. The business calling interface does not change when Connection migrates from HTTP to WebSocket.
 
-`@deepseek-ai/dsh-api-remotes`, located at `rsh/Programs/Web/api/remotes`, is the BFF layer above the Gateway. Its Host entry registers the application's forwarded Cordis event source and the Host facts carried by generation readiness; its `/client` entry selects the generated Remote contributions exposed by the application. The Client entry consumes the shared `TypertClientRemote` contract through Cordis rather than importing the concrete Gateway implementation.
+`@deepseek-ai/dsh-api-remotes`, located at `packages/api/remotes`, is the BFF layer above the Gateway. Its Host entry registers the application's forwarded Cordis event source and the Host facts carried by generation readiness; its `/client` entry selects the generated Remote contributions exposed by the application. The Client entry consumes the shared `TypertClientRemote` contract through Cordis rather than importing the concrete Gateway implementation.
 
 ## Components and Cordis services
 
@@ -506,7 +506,7 @@ The package topology is `api/remotes → api/gateway → client/connection → h
 
 ## Consequences
 
-Remote API types depend on generated `lib` declarations. Build and gate orchestration must finish the Host contract pass before compiling or semantically analyzing Host and Client consumers; an incorrect order makes a clean command depend on stale artifacts. Root Host compilation also reaches the workspace-files Client sources through its project references, where `remote.ts` imports the generated Remote declaration; `build:lib:host` generates it before Host typechecking, and the subsequent workspace Host bundle writes the complete Remote artifacts again.
+Remote API types depend on generated `lib` declarations. Build and gate orchestration must finish the Host contract pass before compiling or semantically analyzing Host and Client consumers; an incorrect order makes a clean command depend on stale artifacts.
 
 Source navigation requires a Remote package to publish both its declaration map and the `src` file referenced by the map. If package `files` omits either side, types still compile but consumer navigation stops at the generated DTS. The workspace manifest check must therefore treat both as one publication contract.
 

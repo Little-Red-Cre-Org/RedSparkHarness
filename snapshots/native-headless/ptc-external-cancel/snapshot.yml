@@ -1,8 +1,0 @@
-version: 1
-scenario: ptc-external-cancel
-profile: native-headless
-composition: native-ptc-external-cancel
-recording: authored
-header:
-  class: native-ptc-external-cancel
-  pin: true

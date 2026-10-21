@@ -41,7 +41,7 @@
   disabled: true
 
 - id: fs-sandbox
-  name: '@deepseek-ai/dsh-fs-sandbox/runtime'
+  name: '@deepseek-ai/dsh-fs-sandbox'
   disabled: true
 
 - id: tool-bash
@@ -54,9 +54,6 @@
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
-  disabled: true
-
-- id: archify
   disabled: true
 
 - id: skill
@@ -76,7 +73,7 @@
   disabled: true
 
 - id: tool-fs
-  name: '@deepseek-ai/dsh-tool-fs/runtime'
+  name: '@deepseek-ai/dsh-tool-fs'
   disabled: true
 
 - id: tool-fs-search
@@ -150,7 +147,6 @@
     - id: terminal-bash
       name: '@deepseek-ai/dsh-terminal-bash'
       config:
-        shellPath: !!js "process.env.DSH_TEST_BASH_PATH ?? (process.platform === 'win32' ? 'bash.exe' : '/bin/bash')"
         timeoutMs: 300000
 
     - id: persistent-bash

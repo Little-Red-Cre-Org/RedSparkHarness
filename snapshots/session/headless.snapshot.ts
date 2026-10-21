@@ -11,7 +11,7 @@ import ts from 'typescript'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import { releasedV0SessionFormatCodec } from '@deepseek-ai/dsh-session-format-v0-to-v1'
 import type { SessionFormatEvent, SessionFormatMigrationContext } from '@deepseek-ai/dsh-session-format'
-import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
+import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../scripts/snapshot-workspace-parent.ts'
 import {
   assertPersistedSessionVersion,
   assertSessionFixtureVersion,
@@ -55,11 +55,11 @@ import { parseSessionLog, prepareSessionSnapshotFixtureForComparison } from '@de
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const snapshotsRoot = fileURLToPath(new URL('./', import.meta.url))
-const dshBin = join(repoRoot, 'rsh/Programs/CLI/src/bin.ts')
+const dshBin = join(repoRoot, 'apps/cli/src/bin.ts')
 const tsconfigPath = join(repoRoot, 'tsconfig.json')
 const editingCordisSkill = join(
   repoRoot,
-  'rsh/Engine/preset/agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md',
+  'packages/preset/agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md',
 )
 
 type SnapshotMode = 'replay' | 'record' | 'refresh'
@@ -502,7 +502,7 @@ async function collectScenarios(): Promise<HeadlessScenario[]> {
     const manifestPath = join(dir, 'snapshot.yml')
     if (!existsSync(manifestPath)) continue
     const manifest = parseSnapshotManifest(await readFile(manifestPath, 'utf8'), manifestPath)
-    if (manifest.profile !== 'legacy-headless' || manifest.composition === undefined) continue
+    if (manifest.profile !== 'headless' || manifest.composition === undefined) continue
     if (manifest.recording === undefined || manifest.header === undefined) {
       throw new Error(`${entry.name}: a headless corpus manifest needs recording and header metadata`)
     }
@@ -876,7 +876,7 @@ describe('headless recorded-session snapshots', () => {
       || mode === 'record' && scenario.manifest.recording === 'authored'
       || mode === 'record' && scenario.manifest.sessionFormat !== undefined
     const scenarioTest = skipped ? it.skip : mode === 'replay' ? it.concurrent : it
-    scenarioTest(`${mode}s ${scenario.name} through dsh --profile legacy-headless`, async () => {
+    scenarioTest(`${mode}s ${scenario.name} through dsh --profile headless`, async () => {
       let fixtures = await fixtureSessions(scenario)
       const primaryFixture = fixtures[0]
       if (primaryFixture === undefined) throw new Error(`${scenario.name}: missing primary session fixture`)
@@ -919,7 +919,7 @@ describe('headless recorded-session snapshots', () => {
           binScript: dshBin,
           configPath: join(baseComposition.dir, 'cordis.yml'),
           binArgs: [
-            '--profile', 'legacy-headless', '--from-default-profile', 'headless',
+            '--profile', 'headless',
             ...patches.flatMap(file => ['--patch', file]),
             task,
           ],
@@ -953,8 +953,7 @@ describe('headless recorded-session snapshots', () => {
             await mkdir(join(cwd, patchRoot), { recursive: true })
             patchSources.forEach((source, index) => {
               if (source.endsWith('.snapshot.yml')) {
-                materializeProfilePatch(source, cwd, join(cwd, patchRoot), index,
-                  fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url)))
+                materializeProfilePatch(source, cwd, join(cwd, patchRoot), index)
               }
             })
             await seedWorkspace(scenario, cwd)

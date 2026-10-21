@@ -6,8 +6,6 @@ English | [中文](2026-08-15-client-shells-and-dynamic-packages.zh.md)
 
 > The [client plugin loading model](2026-07-23-client-plugin-loading-model.md) owns module arrival, Cordis lifecycle, and HMR. This note owns package placement, build faces, shared module requests, and npm dependency declarations; those decisions supersede the older package taxonomy and import-edge rules in the loading note.
 
-> The [Native Web package decision](2026-10-17-native-web-default-and-compatibility-browser-owner.md) owns the Native application default and the separate compatibility browser package.
-
 ## Problem
 
 Client npm dependency sections describe installation and development relationships, but they do not reliably describe bundle contents. Treating `dependencies`, `peerDependencies`, or `devDependencies` as implicit bundler instructions can inline a shared React or workspace identity, or leave a built library carrying unresolved child imports without the host that is meant to assemble them.
@@ -22,25 +20,24 @@ Shared UI libraries still expose synchronous TypeScript and React values to many
 
 | Layer | Members | Responsibility | Build and load form |
 | --- | --- | --- | --- |
-| Native Web application | `rsh/Programs/Web/application` | Owns the Native `index.html`, Vite configuration, dist chunks, and static assets | Assembles the Native browser output from built package exports |
-| Cordis compatibility shell | `rsh/Compatibility/DSH/web/frontend` | Owns `AppWebEntry`, the legacy page, `PLATFORM_MODULES`, and the worker-preview page | Builds the legacy page and preview into its own `dist/` from shared application source |
-| Native browser API | `rsh/Programs/Web/client/web` | Owns the framework-free boot page, Native module-system wiring, and renderer handoff | Cordis-free `staticLinked` `lib/index.js`; no `dsh.client` row |
-| Compatibility static assembly libraries | Cordis, `ui-primitives`, `ui-slots` | Supply shared module identities and direct value APIs to the compatibility shell | ESM `lib/index.js`, merged and chunked by Vite; not Loader entries |
-| Compatibility module bootstrap | `rsh/Programs/Web/client/modules` | Supplies the compatibility module table and its Cordis wrapper | Dynamic package with one ordinary `lib/client.js`; the host delivers its factory early |
-| Dynamic client packages | connection, `ui-renderer`, theme, and feature plugins | Participate in the compatibility application through Cordis services, slots, and effects | Declare `dsh.client`, emit self-registering `lib/client.js`, and remain host-graph entries |
+| Web compilation shell | `apps/web` | Owns `index.html`, Vite configuration, dist chunks, and static assets | Assembles final browser output from built package exports |
+| Startup kernel | `packages/client/web` | Owns the plain-DOM boot page, module-system wiring, Cordis settlement, and renderer handoff | `staticLinked` `lib/index.js`; no `dsh.client` row |
+| Static assembly libraries | Cordis, `ui-primitives`, `ui-slots` | Supply shared module identities and direct value APIs | ESM `lib/index.js`, merged and chunked by Vite; not Loader entries |
+| Module bootstrap | `packages/client/modules` | Supplies the client module table and its Cordis wrapper | Dynamic package with one ordinary `lib/client.js`; the host delivers its factory early |
+| Dynamic client packages | connection, `ui-renderer`, theme, and feature plugins | Participate through Cordis services, slots, and effects | Declare `dsh.client`, emit self-registering `lib/client.js`, and remain host-graph entries |
 
-`rsh/Programs/Web/client/web` publishes the Cordis-free Native browser API. `rsh/Compatibility/DSH/web/frontend` owns the Cordis peer and the legacy startup kernel. Both Web applications consume built package exports rather than aliases into workspace source.
+`packages/client/web` keeps Cordis as matching peer and development dependencies and uses modules and static UI packages as development compilation inputs. `apps/web` consumes built package exports rather than aliases into workspace source.
 
 The `staticLinked` preset leaves every bare specifier as an external import in `lib/index.js` and emits relative CSS assets beside it. The Vite host resolves and deduplicates those imports and decides final chunk boundaries. A static library therefore does not copy the host's bundling policy into its own artifact.
 
 ### Shared module requests
 
-Dynamic browser bundles implicitly externalize the compatibility baseline: `PLATFORM_MODULES` names compatibility-shell React, Cordis, and static UI identities, while `PRELOADED_CLIENT_EXTERNALS` is reserved for a dynamic identity that must arrive before compatibility boot and is currently empty. A package uses `dsh.client.external` only for an exact non-baseline value request. Type-only imports are erased and create no request; permitted third-party implementation libraries remain private bundle contents.
+Dynamic browser bundles implicitly externalize the common baseline: `PLATFORM_MODULES` names shell-seeded React, Cordis, and static UI identities, while `PRELOADED_CLIENT_EXTERNALS` is reserved for a dynamic identity that must arrive before shell boot and is currently empty. A package uses `dsh.client.external` only for an exact non-baseline value request. Type-only imports are erased and create no request; permitted third-party implementation libraries remain private bundle contents.
 
 A request has exactly two suppliers:
 
 1. The dynamic package row it names; a trailing `/client` aliases that package row.
-2. An exact key in the compatibility shell's static module table.
+2. An exact key in the shell's static module table.
 
 There is no general `dsh.client.provide` alias mechanism. Dynamic rows and static keys exhaust the real suppliers, while Cordis service provision remains independent. Graph composition rejects malformed or missing requests, self-requests, and synchronous request cycles, and orders dynamic suppliers before their consumers. `ClientModuleSystem.import()` and `prefetch()` recursively register those dynamic supplier factories before the consumer can materialize, so network timing cannot violate the synchronous request graph.
 
@@ -60,7 +57,7 @@ After the `immediately` tier has registered its factories, the kernel creates al
 
 ### Dependency declarations
 
-Every Cordis-governed dynamic Client package keeps Cordis in matching `peerDependencies` and `devDependencies`; Cordis is its only peer. Browser imports, type references, module augmentations, and `dsh.client.inject` are development inputs because the Client build and shipped profile supply their runtime identities. Native-only Client packages follow the Native package policy and do not declare Cordis. A package that also publishes a Host entry keeps that entry's runtime value imports in `dependencies`. [Published dependency faces](../process/2026-08-26-published-dependency-faces.md) owns package discovery, exceptions, and the explicit Host roster.
+Every Client package keeps Cordis in matching `peerDependencies` and `devDependencies`; Cordis is its only peer. Browser imports, type references, module augmentations, and `dsh.client.inject` are development inputs because the Client build and shipped profile supply their runtime identities. A package that also publishes a Host entry keeps that entry's runtime value imports in `dependencies`. [Published dependency faces](../process/2026-08-26-published-dependency-faces.md) owns package discovery, exceptions, and the explicit Host roster.
 
 Ordinary installed libraries remain `dependencies`: a dynamic build may bundle a private implementation, while a `staticLinked` library retains its bare import for the final host. Each build face decides externality independently from npm sections. Published file lists cover every runtime entry, relative asset, and declaration file reached by the artifact.
 
@@ -76,7 +73,7 @@ Ordinary installed libraries remain `dependencies`: a dynamic build may bundle a
 
 **Retain a general module-provider declaration.** Package rows and exact static keys already name all suppliers; aliases would add another ownership protocol without a third supply source.
 
-**Hardcode preload URLs in `rsh/Programs/Web/application/index.html`.** URLs and `rev` values belong to the host's current graph. Rewriting the served HTML keeps the queue, bundle URLs, and manifest on one graph revision.
+**Hardcode preload URLs in `apps/web/index.html`.** URLs and `rev` values belong to the host's current graph. Rewriting the served HTML keeps the queue, bundle URLs, and manifest on one graph revision.
 
 ## Consequences
 

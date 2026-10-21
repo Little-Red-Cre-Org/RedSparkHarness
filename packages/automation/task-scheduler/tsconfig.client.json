@@ -1,0 +1,43 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/client.tsbuildinfo"
+  },
+  "include": [
+    "src/client"
+  ],
+  "references": [
+    {
+      "path": "../../client/ui-renderer"
+    },
+    {
+      "path": "."
+    },
+    {
+      "path": "../../client/store"
+    },
+    {
+      "path": "../../client/ui-slots"
+    },
+    {
+      "path": "../../client/ui-settings"
+    },
+    {
+      "path": "../../client/locale"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../client/ui-sidebar"
+    },
+    {
+      "path": "../../client/ui-workspace"
+    },
+    {
+      "path": "../../client/ui-primitives"
+    }
+  ]
+}

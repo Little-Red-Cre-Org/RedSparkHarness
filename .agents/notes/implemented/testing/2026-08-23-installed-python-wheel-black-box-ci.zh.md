@@ -20,10 +20,6 @@ Python SDK 单元测试驱动 fake peer，而打包运行时工作流可以在�
 
 每个目标都会在安装后运行完整的打包运行时场景。一个本地 SSE mock 模型提供确定性输出，公开 SDK 则覆盖默认 SDK profile、有序 patch overlay、通过 `dsh plugin` 安装外部 bundle、持久 PTY 与 editor 行为、worker thread 代码与 workflow 执行、基于 ripgrep 的搜索、外部 stdio MCP 发现与执行、模型可见及持久化快照、Zstandard 持久化、直接 JSON-RPC 与关闭。Restart 快照针对同一持久化根目录启动两个完整 SDK 运行时进程，并固定其彼此隔离的模型历史、高层结果与独立持久日志。安装后运行取代 wheel 构建前的源码 SDK 运行，因此可执行文件与 wheel 包共同接受一次验证，而不是维护两套行为清单。
 
-`sdk-native` 场景必须使用 `--installed-wheel`，并通过已安装的 SDK 与运行时 wheel 默认选择的可执行载体，显式选择 `profile="native-sdk"`。本地 JSON patch 将 Native Provider 指向 SSE mock；该冒烟测试检查已完成的响应、context manager 关闭后的持久根 Session，以及子进程以零代码退出。使用 installed wheel 的 `all` 会包含此检查；源码 SDK 的 `all --exe` 保留 wheel 构建前的场景，不启动 Native。它证明所测产物与平台上的这条 Native SDK 路径，不代表更广泛的 P4 协议或平台矩阵。
-
-部署前，`verify-runtime-closure` 会从 CLI 随附的 `native-sdk` 组合中推导裸插件，并要求每个已发布运行时目标都将它们声明为直接工作区依赖。installed-wheel `sdk-native` 场景会通过公开 SDK 实际运行该打包 profile，并回放 canonical Native SDK Skills Session（`snapshots/native-sdk/skills`）：由第二个运行时进程恢复同一 Session，冒烟测试检查每个模型请求中的 Skill 指令和恢复后的 `skill` 工具消息，并确认 SDK 返回、持久化与 canonical 的 `skill` 工具结果一致。
-
 Linux 另外保留 manylinux 2.28 干净安装冒烟测试与 GLIBC 检查。macOS 保留部署目标与原生 helper 检查。这些平台约束补充共同黑盒行为，不能替代它。
 
 ### 真实 DeepSeek API
@@ -34,11 +30,11 @@ Fork 与 Dependabot 拉取请求永远不会获得仓库密钥。它们的原生
 
 ### 必需目标
 
-拉取请求的 `python-runtime` job 针对 Linux x64 与 Windows x64 调用可复用构建器；master 推送根据[仅 master 平台策略](../process/2026-09-06-master-only-platform-ci.zh.md)选择 Linux arm64 与两种 macOS 架构。其聚合结果仍是 `all checks passed` 的依赖项，因此任一原生载体失败、取消或缺失都会阻止必需判定通过。[sdk-runtime README](../../../../rsh/Programs/SDK/python/sdk-runtime/README.zh.md) 负责 Windows 目标及其 PowerShell 专属极简快照。
+拉取请求的 `python-runtime` job 针对 Linux x64 与 Windows x64 调用可复用构建器；master 推送根据[仅 master 平台策略](../process/2026-09-06-master-only-platform-ci.zh.md)选择 Linux arm64 与两种 macOS 架构。其聚合结果仍是 `all checks passed` 的依赖项，因此任一原生载体失败、取消或缺失都会阻止必需判定通过。[sdk-runtime README](../../../../python/sdk-runtime/README.zh.md) 负责 Windows 目标及其 PowerShell 专属极简快照。
 
 ## Existing decisions and supersession
 
-本决策取代已归档的[必需 Python 运行时拉取请求验证](../../archived/testing/2026-08-12-required-python-runtime-pull-request-ci.md)中的单目标拓扑，同时保留真实可执行文件、快照、wheel 包与干净安装必须在各选定目标的检查中相遇的要求。[rsh/Docs/architecture.md](../../../../rsh/Docs/architecture.zh.md) 负责启动应用与自定义接口；[单文件 Python SDK 运行时 distribution](../architecture/2026-07-10-single-file-executable-sdk-runtime-distribution.zh.md)继续负责 SEA 打包、原生 sidecar、wheel 包标签与发布产物。
+本决策取代已归档的[必需 Python 运行时拉取请求验证](../../archived/testing/2026-08-12-required-python-runtime-pull-request-ci.md)中的单目标拓扑，同时保留真实可执行文件、快照、wheel 包与干净安装必须在各选定目标的检查中相遇的要求。[docs/architecture.md](../../../../docs/architecture.zh.md) 负责启动应用与自定义接口；[单文件 Python SDK 运行时 distribution](../architecture/2026-07-10-single-file-executable-sdk-runtime-distribution.zh.md)继续负责 SEA 打包、原生 sidecar、wheel 包标签与发布产物。
 
 ## Alternatives considered
 
