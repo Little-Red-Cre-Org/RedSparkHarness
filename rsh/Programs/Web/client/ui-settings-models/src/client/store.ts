@@ -14,14 +14,13 @@ import type {
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { deriveModelCredentialRef as deriveKeyRef, modelProtocolChoices as protocolChoices } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
 
 /**
  * Any route key walks a dict schema to the same profile node, so the lookup
  * names one that cannot collide with a configured route.
  */
-export { deriveKeyRef, protocolChoices }
+const PROBE_ROUTE = '\u0000probe'
 
 /** One provider row after joining the configurable directory with live routes. */
 export interface ProviderDirectoryEntry {
@@ -111,6 +110,30 @@ export interface ModelsSettingsState {
  * @param provider - provider route id (e.g. `anthropic`, `minimax-cn`).
  * @returns the derived reference name (e.g. `MINIMAX_CN_API_KEY`).
  */
+export function deriveKeyRef(provider: string): string {
+  return `${provider.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_API_KEY`
+}
+
+/**
+ * The wire protocols a hand-declared route may name, read out of the owning
+ * namespace's own schema. This stays a schema read rather than a wire field so
+ * the choices the page offers cannot drift from the ones the adapter accepts:
+ * both come from the same `Config`.
+ * @param namespace - the namespace view whose schema declares the profile shape.
+ * @param schema - settings schema operations.
+ * @returns the protocol identifiers, or an empty list when the schema has none.
+ */
+export function protocolChoices(
+  namespace: SettingsNamespaceView | undefined,
+  schema: SettingsSchemaOperations,
+): string[] {
+  if (namespace === undefined) return []
+  const node = schema.nodeAtPath(schema.rehydrate(namespace.schema), ['providers', PROBE_ROUTE, 'api'])
+  const list = (node as { type?: string; list?: readonly { value?: unknown }[] } | undefined)
+  if (list?.type !== 'union' || list.list === undefined) return []
+  return list.list.map(entry => entry.value).filter((value): value is string => typeof value === 'string')
+}
+
 /** The credential reference a resolved profile names (its `apiKeyEnv` field). */
 function apiKeyEnvOf(
   namespace: SettingsNamespaceView | undefined,

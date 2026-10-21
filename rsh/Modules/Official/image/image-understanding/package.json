@@ -1,0 +1,33 @@
+{
+  "name": "@deepseek-ai/dsh-image-understanding",
+  "description": "Native question-directed image understanding for text-only primary models",
+  "version": "0.1.5-rc.2",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "rsh/Modules/Official/image/image-understanding"
+  },
+  "dsh": { "native": {
+    "apiVersion": 1, "entry": "./native", "targets": ["host"],
+    "requires": ["model", "modelExecution", "tools", "sessionPersistence"], "optional": [], "provides": ["imageUnderstanding"]
+  } },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence": "workspace:^",
+    "@deepseek-ai/dsh-session": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^"
+  }
+}

@@ -9,8 +9,7 @@ import {
   unlinkSync, writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { join } from 'node:path'
 import { withFileLock } from '@deepseek-ai/dsh-atomic-write'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -275,7 +274,6 @@ describe('loadProfile', () => {
     writeProfileManifest(stock, retiredManifest)
     loadProfile('t', 'headless', anchor, home)
     expect(readProfileManifest('t', stock).dsh?.profile).toEqual({
-      runtime: 'legacy',
       bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
       patchReload: 'startup',
     })
@@ -754,39 +752,6 @@ describe('healProfilesModuleFallback', () => {
     }
   })
 
-  it.skipIf(process.platform !== 'win32')('canonicalizes snapshot proxy URLs and preserves external entries', async () => {
-    const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' }, outside: {} })
-    const appDir = dirname(anchor)
-    const modulesDir = join(appDir, 'node_modules')
-    const outsideDir = join(modulesDir, 'outside')
-    const outsideManifest = JSON.parse(readFileSync(join(outsideDir, 'package.json'), 'utf8')) as Record<string, unknown>
-    outsideManifest.main = '../../outside.js'
-    writeFileSync(join(outsideDir, 'package.json'), JSON.stringify(outsideManifest))
-    writeFileSync(join(appDir, 'outside.js'), 'export const outside = true\n')
-    const home = tmp()
-    Object.defineProperty(process, 'pkg', {
-      configurable: true,
-      value: {
-        entrypoint: join(modulesDir, '__dsh-entry', 'main.js'),
-        defaultEntrypoint: '/snapshot/__dsh-entry/main.js',
-      },
-    })
-    try {
-      await healProfilesModuleFallback({ installAnchor: anchor, home })
-      const fallback = join(home, 'profiles', 'node_modules')
-      const bundleManifest = JSON.parse(readFileSync(join(fallback, 'bundle-a', 'package.json'), 'utf8')) as {
-        dsh: { moduleFallback: { targets: Record<string, string> } }
-      }
-      const outsideProxyManifest = JSON.parse(readFileSync(join(fallback, 'outside', 'package.json'), 'utf8')) as {
-        dsh: { moduleFallback: { targets: Record<string, string> } }
-      }
-      expect(bundleManifest.dsh.moduleFallback.targets['.']).toBe(pathToFileURL(join(modulesDir, 'bundle-a', 'index.js')).href)
-      expect(outsideProxyManifest.dsh.moduleFallback.targets['.']).toBe(pathToFileURL(join(appDir, 'outside.js')).href)
-    } finally {
-      delete (process as NodeJS.Process & { pkg?: unknown }).pkg
-    }
-  })
-
   it('resolves import-only exports from each package installation', async () => {
     const anchor = stageInstallation({
       'bundle-a': { patch: '[]\n', deps: { 'nested-esm': '0.0.0' } },
@@ -927,75 +892,13 @@ describe('healProfilesModuleFallback', () => {
     }
   })
 
-  it('omits platform asset packages without JavaScript entries', async () => {
-    for (const asset of [
-      { name: '@vscode/ripgrep-win32-x64', path: 'bin/rg.exe', files: ['bin/'] },
-      { name: '@esbuild/win32-x64', path: 'esbuild.exe' },
-    ]) {
-      const anchor = stageInstallation({}, asset.name)
-      const packageDir = dirname(anchor)
-      const manifest = JSON.parse(readFileSync(anchor, 'utf8')) as Record<string, unknown>
-      delete manifest.main
-      manifest.os = ['win32']
-      manifest.cpu = ['x64']
-      if (asset.files === undefined) delete manifest.files
-      else manifest.files = asset.files
-      writeFileSync(anchor, JSON.stringify(manifest))
-      rmSync(join(packageDir, 'index.js'))
-      const payload = join(packageDir, asset.path)
-      mkdirSync(dirname(payload), { recursive: true })
-      writeFileSync(payload, 'platform payload')
-      Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
-      try {
-        const home = tmp()
-        await healProfilesModuleFallback({ installAnchor: anchor, home })
-        expect(existsSync(join(home, 'profiles', 'node_modules', asset.name))).toBe(false)
-      } finally {
-        delete (process as NodeJS.Process & { pkg?: unknown }).pkg
-      }
-    }
-  })
-
-  it('keeps JavaScript-bearing and explicitly declared missing entries fatal for platform packages', async () => {
-    for (const mode of ['script', 'declared-main'] as const) {
-      const name = `platform-${mode}`
-      const anchor = stageInstallation({}, name)
-      const packageDir = dirname(anchor)
-      const manifest = JSON.parse(readFileSync(anchor, 'utf8')) as Record<string, unknown>
-      manifest.os = ['win32']
-      manifest.cpu = ['x64']
-      manifest.files = ['bin/']
-      if (mode === 'script') delete manifest.main
-      else manifest.main = './missing.js'
-      writeFileSync(anchor, JSON.stringify(manifest))
-      rmSync(join(packageDir, 'index.js'))
-      const payload = join(packageDir, 'bin', 'tool.exe')
-      mkdirSync(dirname(payload), { recursive: true })
-      writeFileSync(payload, 'platform payload')
-      if (mode === 'script') writeFileSync(join(packageDir, 'worker.js'), 'export const worker = true\n')
-      Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
-      try {
-        await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow(
-          'main entry is missing',
-        )
-      } finally {
-        delete (process as NodeJS.Process & { pkg?: unknown }).pkg
-      }
-    }
-  })
-
   it('fails loud on a missing legacy main entry', async () => {
     const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' } })
     const bundleDir = join(anchor, '..', 'node_modules', 'bundle-a')
     const manifest = JSON.parse(readFileSync(join(bundleDir, 'package.json'), 'utf8')) as Record<string, unknown>
     delete manifest.main
-    manifest.os = ['win32']
-    manifest.cpu = ['x64']
-    manifest.files = ['bin/']
     writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(manifest))
     rmSync(join(bundleDir, 'index.js'))
-    mkdirSync(join(bundleDir, 'bin'))
-    writeFileSync(join(bundleDir, 'bin', 'tool.exe'), 'platform payload')
     Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
     try {
       await expect(healProfilesModuleFallback({ installAnchor: anchor, home: tmp() })).rejects.toThrow('main entry is missing')
@@ -1005,27 +908,22 @@ describe('healProfilesModuleFallback', () => {
   })
 
   it('omits unavailable ESM exports and rejects malformed export targets', async () => {
-    for (const mode of ['missing', 'directory', 'absent-map', 'metadata-only', 'invalid', 'escape', 'null', 'null-subpath']) {
+    for (const mode of ['missing', 'directory', 'absent-map', 'invalid', 'escape', 'null', 'null-subpath']) {
       const anchor = stageInstallation({ 'bundle-a': { patch: '[]\n' } })
       const bundleDir = join(anchor, '..', 'node_modules', 'bundle-a')
       const manifest = JSON.parse(readFileSync(join(bundleDir, 'package.json'), 'utf8')) as Record<string, unknown>
       const target = mode === 'missing' ? './missing.js'
         : mode === 'directory' ? './mini'
           : '../outside.js'
-      manifest.exports = mode === 'metadata-only' ? { './package.json': './package.json' }
-        : mode === 'absent-map' ? null
-          : mode === 'null-subpath' ? { './bad': null }
-            : { '.': mode === 'null' ? null : { import: target } }
-      if (mode === 'metadata-only') {
-        delete manifest.main
-        rmSync(join(bundleDir, 'index.js'))
-      }
+      manifest.exports = mode === 'absent-map' ? null
+        : mode === 'null-subpath' ? { './bad': null }
+          : { '.': mode === 'null' ? null : { import: target } }
       writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(manifest))
       if (mode === 'directory') mkdirSync(join(bundleDir, 'mini'))
       Object.defineProperty(process, 'pkg', { configurable: true, value: {} })
       try {
         const home = tmp()
-        if (mode === 'missing' || mode === 'directory' || mode === 'absent-map' || mode === 'metadata-only') {
+        if (mode === 'missing' || mode === 'directory' || mode === 'absent-map') {
           await healProfilesModuleFallback({ installAnchor: anchor, home })
           expect(existsSync(join(home, 'profiles', 'node_modules', 'bundle-a'))).toBe(false)
         } else {

@@ -92,15 +92,11 @@ kind: "package-reference"
 
 ### 登录提供方
 
-pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。原生 Host 挂载可选 `authorization` 服务时也会提供这些流程。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。`openai-codex` 路由使用本应用单独注册的 Sign in with ChatGPT，并且只接受已存储的 OAuth grant；它不共用 Codex CLI 凭据，也不接受 API key 覆盖。其稳定 host ID 会在打开浏览器前保存，回调签发的 client ID 会在 token exchange 前保存；中断或取消后，这些注册 ID 会保留供后续尝试复用。OAuth grant 与轮换 refresh token 仍保存在 `openai-codex` 凭据记录中，注册元数据本身不是已配置的提供方或 API key。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
+pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
 
 ### 解析模型目录
 
-`openai-codex` 是 ChatGPT 计划订阅路由。其 OAuth 流程使用本应用的 SIWC 注册，并与推理共用同一持久化凭据存储；它不会使用 Codex CLI 凭据。账户实时返回的 `GET https://api.openai.com/v1/models` 目录提供可见 slug、显示名，以及存在时的 `context_window`；目录会将该值传入模型上下文元数据。普通 `stream()` 调用会把该 slug 发送到公开 Responses endpoint。已预备的 Codex 调用还会公开 `nativeResponses`，在发送完整投影请求前会将 system 消息映射为 developer，将未分组工具放入 `harness` 命名空间，并且仅给未指定命名空间的重放 function/custom-tool 调用分配该命名空间，同时保留已有命名空间组与调用的命名空间。Engine 会从确切的预备调用捕获该能力，用于 external Responses 操作。请求使用 SIWC bearer 与 Harness attribution headers 发往同一 `https://api.openai.com/v1/responses` endpoint，并返回原始 HTTP 响应。普通 `stream()` 与 `nativeResponses.forward()` 会使用请求 grant 身份报告额度标头和 `codex.rate_limits` 事件；Native 转发会保留响应字节。此传输拒绝图片输入，并将输出 token 上限报告为不受支持。登录诊断会显示 HTTP 状态与 OAuth error code、已授予的 scope 名称、无效凭据字段名，或 jose 验证 code 与 claim；不会显示 error description 或 token 值。没有已保存的 SIWC grant 时，此路由不会展示 pi-ai 的静态 Codex 目录。账户响应中不存在的上下文限制、输出上限、价格与 reasoning 控件不会从 pi-ai 静态 Codex 目录继承。其他已安装路由继续使用 pi-ai 目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
-
-SIWC 当前会签发 `name` 和 `email` 声明，但不会签发 `picture` 声明。只有未来的 ID token 提供有效的 HTTP(S) `picture` URL 时，Host 才会显示头像。
-
-共享 OAuth 注册与凭据 owner 见 [SIWC 提供方 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-codex-siwc-provider.zh.md)。两条 Responses 路由的真实账户登录、实时目录刷新与推理仍需凭据验证。
+已安装的 pi-ai 1.0 目录通过 `openai-codex` 提供当前 ChatGPT 订阅模型，包括 `gpt-6.1-sol`。显式模型列表会替换该目录；[模型选择升级指南](../../../../Docs/upgrade-guide/v0.1.5-rc.2/pi-ai-catalog/guide.zh.md) 说明了受限列表与 DeepSeek Flash ID。重放的工具参数使用 pi-ai 的 JSON 对象类型，持久化重放格式保持不变。
 
 profile 的 `models` 列表会替换而非扩展路由的已安装目录；每个条目从同 id 已安装模型取未设置字段的默认值，因此把路由收窄到两个模型、修正一个容量或添加比已安装目录更新的模型都是一行编辑。`modelOverrides` 无需该代价即可重塑个别已安装目录模型——修正一个模型，保留其余三十七个——当它与 `models` 列表并存、位于手工声明路由上、或点名目录未描述的模型时会被拒绝，因为静默不变的模型会成为别人日后寻找的拼写错误。
 
@@ -108,9 +104,7 @@ profile 的 `models` 列表会替换而非扩展路由的已安装目录；每�
 
 `reasoningEfforts` 声明模型可选择的 thinking 等级：每个键都是选择器提供的等级，其值是分派时在协议中发送的拼写，因此 `max: ultra` 可以为拥有自有词汇的网关重命名等级。省略该字段时保留已安装目录条目的能力；`false` 声明非推理模型。对于 pi-ai 无法识别的端点，`compat` 开关重塑请求——哪个角色携带系统提示词、哪个字段限制输出、thinking 等级如何传递——可逐路由、逐模型配置。条目与已安装目录都没有尺寸的模型，会采用路由的 `defaultContextWindow` 与 `defaultMaxTokens` 回退值。
 
-对于自托管 Chat Completions 端点，`thinkingTokenBudgetField` 选择推理预算参数，`vllmPriority` 在服务端启用优先级调度时设置整数调度优先级。模板参数接受 `$var: thinking.budget`。`openai-responses` 网关可设置 `supportsMaxOutputTokens: false` 来省略 `max_output_tokens`。ChatGPT 计划的 `openai-codex` 路由会在派发前拒绝不受支持的控件，包括输出 token 上限、temperature、prompt cache retention 与 WebSocket 传输。
-
-预备调用会报告其解析后模型与推理强度能否执行每个请求的 `maxTokens` 上限。ChatGPT 计划路由不报告输出上限支持，因此共享 LLM 运行时会拒绝此路由上的带上限请求。
+对于自托管 Chat Completions 端点，`thinkingTokenBudgetField` 选择推理预算参数，`vllmPriority` 在服务端启用优先级调度时设置整数调度优先级。模板参数接受 `$var: thinking.budget`。`openai-responses` 网关可设置 `supportsMaxOutputTokens: false` 来省略 `max_output_tokens`；Azure 与 Codex 传输会忽略这个共享兼容字段。这些控制均需显式启用；目录拥有的 Anthropic effort 和回退能力不是可配置开关。
 
 ### 运行时更改配置
 
@@ -118,7 +112,7 @@ profile 通过可选 settings seam 每次操作重新读取：base 与用户的 
 
 ### 从端点发现模型
 
-插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由直接由目录回答，不发网络请求；`openai-codex` 是例外：其账户范围目录会在 `listModels` 时刷新，配置发现则使用与推理相同的 SIWC access token 请求 `GET https://api.openai.com/v1/models`；界面仅显示 `models[]` 中 `visibility: "list"` 的条目，以 `slug` 作为请求 id，以 `display_name` 作为名称，并在存在时将 `context_window` 作为上下文元数据。其他目录未描述的路由才会经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义。模型列表网络请求设有 30 秒期限并响应取消。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `settings.yaml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。通用解析器接受标准 `data` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`settings.yaml` 仍然是决定路由服务内容的唯一事实。
+插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由直接由目录回答，不发网络请求；只有目录未描述的路由才会经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义；其列表 URL 接受带或不带末尾 `/v1` 的 API 根地址，因为网关文档两种写法都会发布，且只有该列表 URL 会归一化这一段，模型请求收到的仍是配置原样的 `baseURL`。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `settings.yaml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。解析器接受标准 `data` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数；Anthropic 的 `max_input_tokens` 与 `max_tokens` 会进入相同容量字段，即使对象条目点名了另一个规范 id，对象键仍是请求 id，原始类型的对象属性会被忽略，缺失的显示名则回退到该请求 id。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`settings.yaml` 仍然是决定路由服务内容的唯一事实。
 
 ### 失败与恢复
 
@@ -132,9 +126,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 原生安装
 
-有效的浏览器回调只有在 token 与 ID token 验证完成后才会收到成功页面；交换或验证失败时会收到通用文本。登录返回前会关闭 loopback 监听器并销毁其余连接。
-
-`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件、Fs、settings、authorization 与 DeepSeek 账户 Provider。挂载 authorization 时，它会注册共享的目录登录流程，包括 SIWC。已提交的 SIWC grant 会通过账户目录激活 `openai-codex`；已提交的 `deepseek-account/default` grant 会激活 `deepseek-account` 路由，并提供账户路由配置中的 `deepseek-flash` 与 `deepseek-v4-pro` 模型。两条路由都会出现在模型目录和可配置提供方列表中。成功的 `openai-codex` Responses 调用会检查用量标头和 `codex.rate_limits` 事件；Host 会按 grant 的 issuer 与 subject 在内存中保存快照。首次观察到快照前，`accounts.usage()` 返回 `USAGE_PENDING`；之后返回 grant 邮箱、额度窗口、可选额度余额以及事件报告的套餐。Host 重启后不会保留这些快照。`native` Host 选择初始模型时，如果账户目录请求失败，authorization service 会记录该 listener failure。DeepSeek 账户 token 由账户凭据所有者按已配置的推理 origin 解析；首个可用账户模型选择也会通过同一所有者检查当前 profile URL。路由会通过 `x-dsh-auth-token` 和 Anthropic 传输要求的 Bearer `Authorization` 请求头发送 token。挂载 `deepseekAccount` 后，`accounts.list()` 会加入账户资料状态，`accounts.balance()` 返回 CNY 和 USD 钱包，`accounts.signOut()` 会委托本地删除并尽力退出 Platform。Native 消费方从其所选 `credentials` service 接收记录更新。任一受支持账户更新都会触发 `accounts/changed`；记录更新会使适配器失效，因此后续目录查询会读取已提交的 grant。Host 启动期间，读取账户可用性时送达的账户更新会在发布模型服务前重新调和；设置值也会在安装不重放的监听器前重新读取。native composition base 在安装期间固定；已安装的 settings Provider 会实时应用已验证的 profile 编辑；Cordis 入口会逐请求解析 settings。Native composition 解析会在激活前校验配置中的提供方 profile（包括 Fetch 请求头规则）。Schema 校验错误会保留 Schemastery 原始 message 供本地诊断；存在安全路径时会附加包含安全序号路径的结构化 issue，并将字典键替换为其在输入中的位置。SIWC callback 最多等待十分钟，取消或超时后会关闭监听；token exchange、refresh、JWKS 与模型列表请求均使用可取消的 30 秒期限。元数据查询与 HTTP 流工作使用安装取消信号。移除时会关闭已接纳的迭代器、排空其工作，并等待已接纳的凭据刷新持久化；只有凭据解析与传输全部 settle 后才传播传输关闭失败。
+`./native` 入口使用相同的 PiAiAdapter、目录、图像序列化与凭据辅助函数，发布一个已选模型 Provider。它要求原生凭据和启动环境服务，并可选消费附件与 Fs。经过验证的配置在安装期间固定；Cordis 入口保留逐请求设置与交互授权。此入口不提供原生模型目录编辑或交互登录注册。元数据查询与 HTTP 流工作使用安装取消信号；移除时关闭已接纳的迭代器，并排空其实际工作。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -146,7 +138,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 ### 设计理念
 
-适配器建立在不可变快照与按操作解析之上。每个操作都会在第一次 `await` 前捕获整个快照——profile 加一个持有每条路由所构建 `Provider` 的 `createModels()` 集合——配置变更会构建新集合而非修改使用中的集合，因此在一个配置下开始的请求绝不会在另一个配置下结束。普通路由的凭据引用经 harness seam 解析，并以请求 `apiKey` 选项传入，pi-ai 将其视为最高优先级 auth 覆盖。`openai-codex` 订阅路由则通过该集合的 OAuth authority 取得 SIWC grant，并拒绝 key、header 或 endpoint 覆盖。凭据存储持有登录记录与刷新轮换（以 `llm-pi-ai/<provider id>` 寻址），auth context 回答提供方解析时提出的 ambient 问题。两者跨快照保持稳定，因此配置变更重建集合时不会忘记谁已登录。
+适配器建立在不可变快照与按操作解析之上。每个操作都会在第一次 `await` 前捕获整个快照——profile 加一个持有每条路由所构建 `Provider` 的 `createModels()` 集合——配置变更会构建新集合而非修改使用中的集合，因此在一个配置下开始的请求绝不会在另一个配置下结束。路由自己的凭据引用经 harness seam 解析，并以请求 `apiKey` 选项传入，pi-ai 将其视为优先级最高的 auth 覆盖——这正是明确失败引用语义的所在。该覆盖未覆盖的一切都经集合自身的 auth 到达 pi-ai：凭据存储持有登录写入、刷新轮换的记录（以 `llm-pi-ai/<provider id>` 寻址），auth context 回答提供方解析时提出的 ambient 问题。两者跨快照保持稳定，因此配置变更重建集合时不会忘记谁已登录。
 
 ### 源码地图
 
@@ -155,24 +147,17 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 | [`src/index.ts`](src/index.ts) | 插件入口：profile 解析、settings 接线、目录与路由注册 |
 | [`src/auth.ts`](src/auth.ts) | 覆盖 harness 凭据平面的凭据存储与 ambient auth context |
 | [`src/login.ts`](src/login.ts) | 面向提供登录的已安装提供方的授权流程 |
-| [`src/siwc.ts`](src/siwc.ts) | 本应用的 Sign in with ChatGPT OAuth 注册、回调、验证与刷新 |
-| [`src/native-responses.ts`](src/native-responses.ts) | 绑定账户的 Native Codex Responses 投影与原始 HTTP 传输 |
 | [`src/config.ts`](src/config.ts) | Profile schema、解析与可服务性校验 |
 | [`src/catalog.ts`](src/catalog.ts) | 已安装目录集成与漂移门禁 |
-| [`src/configurable-providers.ts`](src/configurable-providers.ts) | Cordis 与 Native Provider 共用的可配置目录投影 |
-| [`src/native.ts`](src/native.ts) | Native model、modelDirectory 与 modelSettings Provider |
 | [`src/provider.ts`](src/provider.ts) | 受支持协议表与提供方构建 |
 | [`src/context.ts`](src/context.ts) | Harness 到 pi-ai 的上下文转换、图片处理、回放恢复 |
 | [`src/stream.ts`](src/stream.ts) | 把 pi-ai 事件转换为 harness `StreamChunk` 值 |
-| [`src/rate-limits.ts`](src/rate-limits.ts) | 解析并保存观察到的 Codex 订阅用量 |
 | [`src/replay.ts`](src/replay.ts) | 带版本的 `ReplayEnvelope` 存储与校验 |
 | [`src/discovery.ts`](src/discovery.ts) | 面向配置界面的端点询问 |
 
 ### 注册与目录
 
-`openai-codex` 路由会在全新 collection 首次精确解析模型时加载账户目录，因此推理不依赖此前调用模型列表接口。
-
-插件会在可配置提供方目录中声明它能认证的每个已安装目录提供方，并加入当前 profile 声明的每条路由，因此配置界面可以在任何路由存在之前提供完整目录。有效账户凭据会把对应提供方路由加入模型目录；Codex 模型来自已登录账户目录，DeepSeek 账户模型来自账户路由配置。每个条目都携带 `declared`——pi-ai 是否在该键下不提供任何内容——因为只有适配器能区分手工声明路由与收窄目录路由。路由注册具有原子性：与其他适配器冲突的候选集合会让此前路由继续服务。零路由的裸挂载即休眠姿态：settings 分节提供 profile 前不注册任何内容，分节清空时路由随之消失。
+插件会在可配置提供方目录中声明它能认证的每个已安装目录提供方，并加入当前 profile 声明的每条路由，因此配置界面可以在任何路由存在之前提供完整目录。每个条目都携带 `declared`——pi-ai 是否在该键下不提供任何内容——因为只有适配器能区分手工声明路由与收窄目录路由。路由注册具有原子性：与其他适配器冲突的候选集合会让此前路由继续服务。零路由的裸挂载即休眠姿态：settings 分节提供 profile 前不注册任何内容，分节清空时路由随之消失。
 
 ### 回放与词汇
 
@@ -198,7 +183,7 @@ Settings 写入会在合并组合层与用户层后严格校验每个新增或�
 
 <a id="model-experience"></a>
 
-原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。`modelSettings.configurableProviders()` 与 Cordis 入口共用目录投影；`discover()` 使用相同的端点发现路径，调用方传入的 `apiKey` 仅存在于当前请求中。Profile 或 `llm-pi-ai` 凭据记录变化时会发出 `llm/adapters-updated`。随附的 DeepSeek 目录包含 `deepseek-flash` 和 `deepseek-v4-pro`。移除会先排空已接纳查询、凭据解析与 Native Responses 传输，再释放适配器；两组工作都结算后才会报告传输关闭失败。
+原生 `modelDirectory` 使用此安装准确的适配器与已配置路由。目录失败按 Provider 隔离；未列入广告的模型仍可通过实际路由解析。移除会先排空已接纳查询，再释放适配器。
 
 ## 模型体验
 
@@ -237,13 +222,12 @@ pi-ai 事件变成 harness 的推理、文本、工具调用、用量与 finish 
 这些限制说明适配器在哪里停止、由未来工作接续。它们是当前包约束，不是通用 pi-ai 对比或任务积压。
 
 - **`maxRequestImageBytes` 只计算 base64 图片载荷**——文本、工具、描述符与 JSON 结构在该上限之外，因此它必须留有余量地低于网关请求体上限。卸载是确定性请求投影，不会记录为会话事件。
-- **授权尝试只存在于发起它的进程中**——登录中途刷新页面会放弃该次尝试。SIWC 注册 ID 会跨尝试持久保留；退出登录只删除已存储的 grant 记录，不会告知签发方。
+- **登录只存在于发起它的进程中**——授权尝试不持久，因此登录中途刷新页面会放弃它，用户需要重新开始。退出登录是对已存储记录执行 `deleteRecord`，只在本地忘记它，不会告知签发方。
 - **提供方原生发现经本插件的 ambient context 回答**——不点名凭据的路由交由目录提供方自身解析，它会询问环境值（`AZURE_OPENAI_API_KEY`、`AWS_PROFILE` 及各提供方自有集合）与本地凭据文件。两个问题都在这里得到回答：凭据 seam 先于进程环境被查询，文件存在性则针对宿主进程的文件系统以 `~` 展开后检查。它做不到的是*读取*凭据文件内容——自行解析 `~/.aws/credentials` 的提供方会直接读取，不经该 seam。
 - **设置可以新增或覆盖路由，不能移除组合路由**——用户层覆盖组合 base，因此删除 `cordis.yml` 提供的提供方属于组合变更。
 - **分层合并对字典键没有删除**——base 声明的 `reasoningEfforts` 等级、`modelOverrides` 条目或 `compat` 字段可以被用户层覆盖，但不能被移除。
 - **`headers` 可以携带 redactor 永远看不到的凭据**——profile 解析会拒绝 Fetch 无法表示的名称与值，但该字典仍是纯字符串；以 `apiKeyEnv` 引用存储凭据。
-- **静态路由目录不会自行刷新**——大多数目录来自 `settings.yaml` 与已安装提供方；ChatGPT 计划路由例外，会在消费者请求模型时刷新账户目录。
-- **SIWC 真实账户行为尚未通过凭据验证**——composition fixture 覆盖公开目录与 Responses 请求 wiring；登录、账户模型可见性与用户推理仍需真实登录账户验证。
+- **路由目录不会自行刷新**——目录就是 `settings.yaml` 的内容；这里没有任何机制向提供方查询它提供的模型。
 - **Anthropic 模型发现最多读取 1,000 个模型**——请求使用 API 的最大页大小，但不会遍历 `has_more`；第一页之外的条目需要手工添加。
 - **每条路由一种协议格式**——混合协议目录路由无法承载另一协议格式的模型；把提供方拆到两个路由键是变通办法。
 - **模态声明不受校验**——声明 `image` 而其网关不支持的模型会在提示词准入后被提供方拒绝。持久图片仍留在历史中，同一误声明模型可能再次失败；切换到纯文本模型仍然可行，因为共享 LLM 运行时会针对该请求把图片引用投影为稳定文本。
@@ -261,7 +245,7 @@ pi-ai 事件变成 harness 的推理、文本、工具调用、用量与 finish 
 
 本开发备注是不具权威性的工作上下文：尚未决定的探索方向与维护者备注。已交付的行为与既定理由以上文、包代码和相关 Agent Note 为准。
 
-- 提供的协议集刻意窄于 pi-ai 的完整 API 集。Bedrock、Vertex 与 Azure 的授权仍在 key、endpoint 和 headers profile 契约之外。ChatGPT 计划路由使用本应用 SIWC grant 与公开 Responses endpoint；不支持的 profile 覆盖会被拒绝。
+- 提供的协议集合刻意比 pi-ai 的完整 API 集合更窄：Bedrock、Vertex、Azure 与 Codex 通过 profile 无法以密钥、端点与标头完整描述的流程认证；目录路由仍可经自有提供方到达它们，只有显式覆盖会被拒绝。Codex 可经授权流程的 OAuth grant 登录。
 - `compat` 开关集合由漂移门禁钉在 pi-ai 的 compat 类型上；上游升级若新增字段、为更多协议赋予 compat 类型或扩大值联合，会在有人分类前让构建失败。
 
 </details>

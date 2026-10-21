@@ -3,7 +3,7 @@ import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 import { SessionSeq } from '@deepseek-ai/dsh-session/native'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { Session, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { Session } from '@deepseek-ai/dsh-session/native'
 import type {} from '@deepseek-ai/dsh-session/types'
 
 /** Deployment policy applied before native answerers receive a request. */
@@ -35,20 +35,8 @@ export function NativeApprovalRequestId(value: string): NativeApprovalRequestId 
   return brandString<NativeApprovalRequestId>(value)
 }
 
-/** Closed operation outcomes returned by the native approval service. */
+/** Closed outcomes returned by a native approval answerer. */
 export type NativeApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
-
-/** One exact operation scope granted by the original owning Session. */
-export interface NativeApprovalSessionGrant {
-  /** Forked or copied history retains this original identity. */
-  readonly sessionId: SessionId
-  /** Fingerprint of validated parameters and the owner's resolved execution context. */
-  readonly scopeKey: string
-}
-
-/** A one-call verdict or the human's request to remember this exact Session scope. */
-export type NativeApprovalAnswererResult = NativeApprovalOutcome
-  | { readonly outcome: 'allowed-once'; readonly remember: 'session' }
 
 /** Complete native decision that the consuming application records exactly once. */
 export interface NativeApprovalDecision {
@@ -58,8 +46,6 @@ export interface NativeApprovalDecision {
   readonly policy: NativeApprovalPolicy
   /** Closed answer selected by policy or an answerer. */
   readonly outcome: NativeApprovalOutcome
-  /** Present only for a human-approved reusable scope; persisted by the consuming writer. */
-  readonly sessionGrant?: NativeApprovalSessionGrant
 }
 
 /** One native operation whose caller has already written its asked event. */
@@ -76,11 +62,6 @@ export interface NativeApprovalRequest {
   readonly callId?: ToolCallId
   /** User-facing reason supplied by the contribution or application. */
   readonly reason?: string
-  /** Program-owned scope matched only against the sole writer's durable prefix; never supplied by a human answer. */
-  readonly sessionGrant?: {
-    readonly grant: NativeApprovalSessionGrant
-    readonly previouslyGranted: boolean
-  }
   /** Cancels the unanswered request and prevents a late answer from applying. */
   readonly signal?: AbortSignal
 }
@@ -95,7 +76,7 @@ export interface NativeApprovalAnswererRequest extends NativeApprovalRequest {
 
 /** One native answerer claims a request with an outcome or returns undefined to delegate. */
 export type NativeApprovalAnswerer = (request: NativeApprovalAnswererRequest) =>
-  NativeApprovalAnswererResult | undefined | Promise<NativeApprovalAnswererResult | undefined>
+  NativeApprovalOutcome | undefined | Promise<NativeApprovalOutcome | undefined>
 
 /** Native service operations consumed by an application or tool registry. */
 export interface NativeApprovalServiceDefinition {
@@ -130,7 +111,6 @@ declare module '@deepseek-ai/dsh-session/types' {
       id: NativeApprovalRequestId
       policy: NativeApprovalPolicy
       outcome: NativeApprovalOutcome
-      sessionGrant?: NativeApprovalSessionGrant
     }
   }
 }

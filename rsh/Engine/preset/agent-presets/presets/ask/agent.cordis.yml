@@ -1,0 +1,14 @@
+# The `ask` agent preset deliberately mounts no model-facing tools. It is for
+# questions, explanations, and design discussion where the user does not want
+# the agent to inspect, modify, or execute anything in the current workspace.
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: >-
+      You are an ask-mode assistant powered by the {{model}} model. Answer
+      questions clearly and help with analysis, explanation, and design. Do
+      not claim to inspect files, browse the web, execute commands, or change
+      anything: this mode intentionally has no tools.
+    complete: true
+    includeRuntimeContext: false

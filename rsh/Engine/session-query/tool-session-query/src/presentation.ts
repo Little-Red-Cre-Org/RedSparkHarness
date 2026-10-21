@@ -12,12 +12,12 @@ import {
   type SessionLineageTrace,
   type SessionRecord,
   type SessionSearchHit,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@deepseek-ai/dsh-session-query'
 import type {
   SessionEvent,
   SessionId,
-} from '@deepseek-ai/dsh-session/native'
-import type { GenericCallView } from '@deepseek-ai/dsh-native-tools/presentation'
+} from '@deepseek-ai/dsh-session'
+import type { GenericCallView } from '@deepseek-ai/dsh-tools'
 import { workspaceAccess } from './workspace-access.ts'
 
 type TitleView = Awaited<ReturnType<typeof workspaceAccess.readTitle>>

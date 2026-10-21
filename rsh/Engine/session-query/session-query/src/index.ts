@@ -57,10 +57,8 @@ import {
   materializeSessionResultFilters,
 } from './filters.ts'
 import * as tracing from './tracing.ts'
-import type { SessionQueryOperations } from './definition.ts'
 
 export type * from './types.ts'
-export type { SessionQueryOperations } from './definition.ts'
 export { SessionSearchCursor } from './cursor.ts'
 export type { Config, SessionQueryErrorCode } from './config.ts'
 export {
@@ -85,7 +83,7 @@ export type { SessionObservation, SessionObservationOptions } from './observatio
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    sessionQuery: SessionQueryOperations
+    sessionQuery: SessionQueryEngine
   }
 }
 
@@ -96,7 +94,7 @@ declare module '@deepseek-ai/cordis' {
  * A backend implements full-text observation, reconciliation, ranking, cursor
  * generations, and query execution on the same `ctx.sessionQuery` service.
  */
-export abstract class SessionQueryEngine extends Service implements SessionQueryOperations {
+export abstract class SessionQueryEngine extends Service {
   static inject = ['sessions']
 
   private readonly _readWindowMax: number
@@ -179,18 +177,16 @@ export abstract class SessionQueryEngine extends Service implements SessionQuery
   /**
    * Read and replay-validate one complete logical session log without making it live.
    * @param sessionId - live or persisted session id to read.
-   * @param signal - optional cancellation for source resolution.
    * @returns cloned header and complete raw event log from one observation.
    * @throws when persistence, header compatibility, or replay validation fails.
    */
-  async readSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLogSnapshot> {
-    const loaded = await this._corpus.load(sessionId, signal)
-    Session.fromRestore(
+  async readSession(sessionId: SessionId): Promise<SessionLogSnapshot> {
+    const loaded = await this._corpus.load(sessionId)
+    Session.create(
       sessionId,
-      structuredClone(loaded.events),
-      structuredClone(loaded.header),
+      loaded.events,
+      loaded.header,
       loaded.inheritedEventCount,
-      'detached',
     )
     return {
       session: structuredClone(loaded.header),

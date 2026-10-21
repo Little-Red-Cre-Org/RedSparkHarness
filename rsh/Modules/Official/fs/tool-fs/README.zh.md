@@ -65,7 +65,7 @@ kind: "package-reference"
 
 ### 策略与沙箱行为
 
-Cordis 的 `read`、`read_image` 与 Native 的 `read_image` 路径授权完全由 `ctx.fs` 负责；Native `read` 还可读取当前 Session 中精确的 `FileBlock`，并通过选定附件提供方读取对应字节。媒体类型声明和文件签名只决定 `read_image` 是否接受该后端返回的字节。
+`read` 与 `read_image` 的路径授权完全由 `ctx.fs` 负责；媒体类型声明和文件签名只决定 `read_image` 是否接受该后端返回的字节。
 
 挂载策略插件后，`write` 与 `edit` 从 `fs/*` 意图槽位取得防护，因此未读目标或陈旧观察会以 `FS_NOT_OBSERVED` 或 `FS_STALE_VERSION` 及恢复指令失败。使用施加沙箱限制的后端（`fs-sandbox`）时，`write`/`edit` 还会公开 `sandbox_permissions` 与 `justification`；被拒绝的变更返回 `[sandbox: file access denied under <mode> mode]` 标记与同轮次升级提示，获批的重试可以在该次调用中加盖严格更宽的模式。
 
@@ -78,10 +78,6 @@ Cordis 的 `read`、`read_image` 与 Native 的 `read_image` 路径授权完全�
 ### 原生组合
 
 `./native` 入口将相同文件操作发布为 NativeTools 值工具。它要求已选中的 `fs`、`fsObservationPolicy` 和 `tools` 服务；写入与编辑始终使用该观测权威。可选附件存储启用 `read_image`，后者在接纳图像字节前通过已选原生模型 Provider 解析准确的 Session 模型。具有作用域的提示段落仅对消费代理的作用域可见。工具结果、图像引用与展示元数据在观察者接纳及后续模型输入之前，经过 Headless 的唯一 Session 写入者持久化。
-
-Native `read` 也接受当前 Session 中仍存在的 `FileBlock` 在执行世界中的路径。它会把路径解析到精确附件引用，通过提供方读取并校验字节流，然后应用相同的 UTF-8 行窗口与输出上限；工作区外的其他路径仍会被拒绝。`write` 与 `edit` 不会因此获得附件路径访问权限。
-
-Native `write` 与 `edit` 在普通审批前解析工作区根目录和文件目标，以 `sessionContext` 提供完整身份，并使用同一解析目标执行。这使所属 Session 应用能够记住精确的冻结操作。文件系统观察与访问限制仍然生效。沙箱升级使用既有的一次性 `requestApproval` 路径，不提供可复用范围。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -240,6 +236,8 @@ Use the edit tool for targeted changes to existing UTF-8 text files. It replaces
 仅追加；新增可见内容位于可复用请求前缀之后，不会使现有 KV Cache 条目失效。
 
 ## 已知限制与延期工作
+
+原生 `read_image` 在配置了 `imageUnderstanding` 时也接纳纯文本主模型路由。原生轮次执行器会在下一次主模型请求前持久化围绕当前问题的图片理解结果。原始图片结果仍保留在 Session 中，旧 Cordis 接纳行为不变。
 
 <a id="known-limitations-and-deferred-work"></a>
 

@@ -112,9 +112,8 @@ export class SandboxedFileSystem extends LocalFileSystem {
    * check-here-write-there TOCTOU). `read-only` denies; `workspace-write`
    * re-canonicalizes NOW (`resolve` realpaths the deepest existing ancestor,
    * reflecting a concurrently swapped symlink), requires containment under a
-   * writable root, rejects a changed identity with `FS_STALE_VERSION`, and
-   * returns the caller's original target; `danger-full-access` returns it
-   * unfenced. Throws the structured `FS_SANDBOX_DENIED` on
+   * writable root, and returns THAT fresh target; `danger-full-access` returns
+   * the caller's target unfenced. Throws the structured `FS_SANDBOX_DENIED` on
    * refusal — the tool layer maps it to the model-facing `[sandbox: …]` marker
    * and the escalation hint.
    */

@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话与 agent loop（智能体循环）、面向模型的工具、shell 与文件系统执行、Web 访问、subagent 等等。把本页当作顶层地图使用：先找到拥有某能力的组，再打开其 README 查看包列表。每个包都以 `@deepseek-ai/dsh-*` 为作用域、只属于一个组；每个组的 README 都是该能力系列的权威包映射。
+`rsh/` 按能力组织 `@deepseek-ai/dsh-*` npm 包，每个包只属于一个组。先在下表找到组，再打开其 README 查看权威包列表。
 
 ## 目录
 
@@ -36,6 +36,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`automation/`](Modules/Official/automation/README.zh.md) | 持久化计划与独立的 Agent 定时执行 |
 | [`feedback/`](Modules/Official/feedback/README.zh.md) | 人类反馈的采集与命令 |
 | [`identity/`](Core/identity/README.zh.md) | 共享匿名身份 |
+| [`image/`](Modules/Official/image/README.zh.md) | 原生的围绕问题的图片理解 |
 | [`llm/`](Engine/llm/README.zh.md) | LLM（大语言模型）能力：Engine 服务与[官方提供方包](Modules/Official/llm/README.zh.md) |
 | [`e2b/`](Modules/Official/e2b/README.zh.md) | E2B 远程运行时提供方 |
 | [`subprocess/`](Core/subprocess/README.zh.md) | 子进程 API 与进程树提供方 |
@@ -76,6 +77,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`cli/`](Programs/CLI/README.zh.md) | 仅通过 profile 启动的命令行应用入口 |
 | [`tui/`](Programs/TUI/README.zh.md) | 原生终端应用与共享展示 |
 | [`interaction/`](Modules/Official/interaction/README.zh.md) | 人机协作平面：批准／交互 seam、权限预设、命令、询问用户的工具 |
+| [`ide/`](Modules/Official/ide/README.zh.md) | 原生 Code OSS 工作台与扩展宿主集成 |
 | [`boot/`](Compatibility/DSH/boot/README.zh.md) | 共享的 app bin 启动粘合层 |
 | [`bridge/`](Compatibility/DSH/bridge/README.zh.md) | 由原生运行时 profile 选择的显式 Cordis 贡献 |
 | [`host/`](Programs/Web/host/README.zh.md) | web GUI 宿主半侧：API 网关 + HTTP 路由服务器 |

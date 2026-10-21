@@ -1,7 +1,6 @@
 /** Adapt a Remote relative read without changing its Session or Host path authority. */
 import type { RemoteResult } from '@deepseek-ai/dsh-api-remotes/client'
 import type { WorkspaceFileBytes } from '@deepseek-ai/dsh-api-workspace-files/types'
-import { htmlRelativePath } from '@deepseek-ai/dsh-client-ui-primitives'
 import { documentFileBytes } from '../rpc.ts'
 import type { ReadHtmlRelative } from './pack.ts'
 
@@ -15,13 +14,6 @@ import type { ReadHtmlRelative } from './pack.ts'
 export type ReadHtmlRelated = (address: string, relativePath: string, signal: AbortSignal) => Promise<RemoteResult<WorkspaceFileBytes>>
 
 /**
- * Decode and validate one HTML dependency path before the Host resolves it.
- * @param reference - URL from a supported HTML script or stylesheet attribute.
- * @returns the decoded workspace-relative dependency path.
- */
-export { htmlRelativePath }
-
-/**
  * Bind a package reader to the original HTML file's address.
  * @param readRelated - Remote reader using the Session in the root HTML address.
  * @param address - root HTML file address.
@@ -30,7 +22,11 @@ export { htmlRelativePath }
  */
 export function createReadHtmlRelative(readRelated: ReadHtmlRelated, address: string, lifetime: AbortSignal): ReadHtmlRelative {
   return async (reference, signal) => {
-    const path = htmlRelativePath(reference)
+    const suffix = reference.search(/[?#]/u)
+    const path = decodeURIComponent(suffix === -1 ? reference : reference.slice(0, suffix))
+    if (path.length === 0 || /^(?:[a-z][a-z\d+.-]*:|[/\\])/iu.test(path) || path.includes('\0') || path.includes('\\')) {
+      throw new Error('HTML dependency must use a relative file path')
+    }
     const combined = AbortSignal.any([lifetime, signal])
     combined.throwIfAborted()
     const result = await readRelated(address, path, combined)

@@ -35,10 +35,6 @@ Selection, timeline navigation, folding, and search cover the React-visible wind
 
 A fixed Overview above the ledger projects real record start/duration timing from left to right; Assistant spans divide recorded TTFT from decoding, and a 500 ms hover reveals exact clock and duration details. Dragging an interval focuses the ledger on every record active at any point in that inclusive range; wheel gestures zoom the time domain; a right-button click clears the selected interval, and a right-button drag pans an already zoomed viewport. The initial view and streaming updates stay at the tail; scrolling upward suspends following so new records do not interrupt inspection of earlier rows.
 
-### Native Client
-
-The `@deepseek-ai/dsh-client-ui-trajectory/native` entry exports the props-only table, timeline, and turn views plus `NativeTrajectoryView`. It projects durable turn and step lifecycle records, assistant attempts, messages and Tool results already held by the Native session controller. Failed turns without messages retain their own rows, and assistant duration uses the persisted step start. The native view displays the event window it receives and does not load earlier pages or durable image bytes.
-
 -----
 
 <a id="understand-the-implementation"></a>

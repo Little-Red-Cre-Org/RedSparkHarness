@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-authorization` 让配置 UI 或其他调用方通过人引导的登录、输入码或回答问题来获取凭据。每次尝试只把 notice 与 prompt 发送到发起它的界面。只有新凭据已存储时，它才报告 `authorized`；拒绝或撤销会报告 `cancelled`，而故障仍作为错误。失败帧与日志只带错误码；仅 `AuthorizationError` 或 `SIWC_*` `HarnessError` 附带其消息。当凭据无法通过配置提供时选择它。它需要凭据存储和一个定义可用授权方法的集成；本包自身不提供特定提供方的授权方法。
+`dsh-authorization` 让配置 UI 或其他调用方通过人引导的登录、输入码或回答问题来获取凭据。每次尝试只把 notice 与 prompt 发送到发起它的界面。只有新凭据已存储时，它才报告 `authorized`；拒绝或撤销会报告 `cancelled`，而故障仍作为错误。当凭据无法通过配置提供时选择它。它需要凭据存储和一个定义可用授权方法的集成；本包自身不提供特定提供方的授权方法。
 
 ## 目录
 
@@ -68,10 +68,6 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 
 每个凭据同时只允许一次尝试。交互随请求传入而非存放在注册表中，因此提问恰好抵达发问的那个页面；无头调用方传入一个直接拒绝的交互实现。当记录在尝试期间被提交并被观察到时，`begin()` 报告 `{ status: 'authorized' }`；当人拒绝或调用方撤销时，报告 `{ status: 'cancelled' }`。`cancel(key)` 从第二次调用撤销正在运行的尝试，服务于那种用第二次调用来响应「取消」按钮、却不持有第一次调用 signal 的请求/响应式传输。
 
-### 原生 Host 入口
-
-原生 Host 组合从 `@deepseek-ai/dsh-authorization/native` 导入 `plugin`，并与 credentials Provider 一起安装。`NativeAuthorization` 返回的尝试可通过 `frames()` 重放对话，供重新连接的界面恢复显示。取消、移除 flow 和释放 Provider 会等待 `run()` 及其已接纳的凭据写入完成后再释放键。
-
 ### 可能出错的地方
 
 - **没有 flow 的凭据是惰性的**——对没有任何 flow 认领的键调用 `begin()` 会抛出 `NO_FLOW`；被卸载插件遗留的记录可以删除，但无法重新授权。
@@ -102,13 +98,12 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition：flow 注册表、每键单尝试生命周期、交互路由、提交确认 |
-| [`src/native.ts`](src/native.ts) | Native Host Provider：帧重放、prompt 与排空式取消 |
 | [`src/types.ts`](src/types.ts) | 跨进程安全的词汇：方法、notice、prompt、结果、entry |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`authorization/settled` 点名的键必已释放 |
 
 ### 生命周期
 
-Cordis 服务每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。被撤销的尝试会立即结算，即使 flow 从未响应它的 signal——被遗弃的运行任其自行结束，而它若仍设法提交了一条记录，那也是一条人确实授权过的记录。键在 `authorization/settled` 触发之前释放，因此以启动下一次尝试来响应的监听器不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
+每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。被撤销的尝试会立即结算，即使 flow 从未响应它的 signal——被遗弃的运行任其自行结束，而它若仍设法提交了一条记录，那也是一条人确实授权过的记录。键在 `authorization/settled` 触发之前释放，因此以启动下一次尝试来响应的监听器不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
 
 ### 交互词汇
 
@@ -116,7 +111,7 @@ notice 是单向的，且从不携带机密：一条消息，以及可选的「�
 
 ### 提交确认
 
-Native 尝试期间，所选 `credentials` Provider 会在记录持久化提交后同步报告 flow 键；authorization 监听器会在写入返回前记录本次尝试已提交。Cordis 对应使用 `credentials/record-updated` 事件确认。`run()` 返回后，authorization 仍会重读 `describeRecord`，因为重新授权时记录可能早已存在，仅检查存在会让陈旧凭据冒充新鲜授权。本次尝试未提交就返回，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
+尝试期间，seam 监听该 flow 键上的 `credentials/record-updated`，`run()` 返回后再重读 `describeRecord`——确认提交确实发生在当下，因为在重新授权时记录早已存在，只看存在与否会让陈旧凭据冒充新鲜授权。未提交就返回的 flow，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
 
 </details>
 
@@ -151,7 +146,7 @@ Native 尝试期间，所选 `credentials` Provider 会在记录持久化提交�
 
 这些限制说明本包何时不合适或需要特别注意。它们是当前包约束，不是任务积压。
 
-- **尝试仅存于 Host 进程**——Host 重启后尝试不会保留。Native Web 路径中，浏览器断开或重载不会终止尝试；客户端可通过授权列表重新发现其 `attemptId` 并重新订阅可重放帧。Legacy Cordis Web Remote stream 与发起它的浏览器连接绑定，因此断开或重载会终止该尝试；可持久化的尝试需要本 seam 不具备的存储。
+- **flow 不可恢复**——一次尝试只存活于发起它的进程中，因此登录途中刷新浏览器会丢弃它，人需要重来；可持久的尝试需要一个本 seam 并不具备的存储。
 - **没有吊销**——登出即 `ctx.credentials.deleteRecord(key)`，它只遗忘本地记录而不通知签发方；需要服务端吊销的提供方没有可声明之处。
 - **没有 flow 的键是惰性的**——seam 只报告已注册的内容，因此被卸载插件遗留的记录可以删除但无法重新授权；识别这种孤儿记录由调用方负责，与 `listRecords()` 的情况相同。
 
@@ -163,6 +158,6 @@ Native 尝试期间，所选 `credentials` Provider 会在记录持久化提交�
 
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为、限制与既定理由以上文、包代码和相关 Agent Note 为准。
 
-上文限制点名的开放方向——可持久化的尝试、服务端吊销、孤儿记录发现——每一项落地前都需要各自的设计与存储。不变式伴生插件是唯一承重的运行时检查：结算时键必须已释放，因为卡死的键与繁忙的键无法区分，只有重启才能释放它。
+上文限制点名的开放方向——可恢复的尝试、服务端吊销、孤儿记录发现——每一项落地前都需要各自的设计与存储。不变式伴生插件是唯一承重的运行时检查：结算时键必须已释放，因为卡死的键与繁忙的键无法区分，只有重启才能释放它。
 
 </details>

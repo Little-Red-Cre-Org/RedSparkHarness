@@ -1,6 +1,6 @@
 version: 1
 scenario: hook-cc-invalid-matcher
-profile: legacy-headless
+profile: headless
 composition: default
 recording: authored
 header:

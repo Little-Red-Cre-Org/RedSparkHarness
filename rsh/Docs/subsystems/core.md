@@ -2,6 +2,8 @@
 
 English | [中文](core.zh.md)
 
+The native [image-understanding service](../../Engine/core/native-model-execution/README.md#configuration) defines `ImageUnderstandingConfig` (provider, model and response token cap), `ImageUnderstandingRequest` (original image, question, cancellation and durable recorder), and `ImageUnderstandingRecord` (image, question, instructions, route, text, optional usage and failure). Native headless consumes the service before text-only dispatch and for the scoped `understand_image` tool; the primary model route remains unchanged.
+
 The **core** subsystem is [`rsh/Engine/core`](../../Engine/core/README.md) — the packages every composition boots: the event-sourced session log, system-prompt assembly, the tool registry, the agent types, and the concrete loop that drives them. This page explains what the `agent`/`agent-loop` pair declares — how an agent is created and owned, and the `Agent` handle's delivery, cancellation, and interception contracts — plus the two type patterns every subsystem follows. The group's dedicated pages and the rest of the folder are indexed in the [subsystems README](README.md).
 
 ## The spine, package by package
@@ -348,73 +350,6 @@ type SessionStartSource = 'startup' | 'resume' | 'clear' | 'compact'
 A `Session` is an **append-only log** of typed `SessionEvent`s — the single source of truth. The LLM message history is *derived* from the log (`deriveMessages()`), not stored separately. Every entry carries a monotonic `seq`, a `time`, and a `type`-discriminated `data` payload; surface variants may also list cited earlier events in `sourceEventSeqs` and carry a `surfaceOp`.
 
 The `SessionEvent` envelope's exact conditional fields, the thirteen core event variants (`turn/start`, `turn/end`, `step/start`, `step/end`, `user/message`, `system/message`, `assistant/message`, `assistant/attempt`, `tool/call`, `tool/result`, `request/header`, `request/context`, `session/end-seed`), the `deriveMessages()` projection rules, the `TurnEndReason` reasons, and the execution-enclosure and standalone-event rules are on **[session.md](session.md)**. How the log is made durable — the `SessionPersistence` interface, JSONL provider, `session/flush` checkpoint, crash recovery, and `SessionHeader` — is on **[persistence.md](persistence.md)**.
-
-### Native Session execution policy
-
-These declarations separate the required, versioned `execution/policy` payload from the process-local approval capability tied to one exact Agent and Session.
-
-```ts type-equiv
-/** Permission handling required by one accepted Session execution policy. */
-type NativeSessionExecutionPermission =
-  | { readonly mode: 'deny' }
-  | { readonly mode: 'require-approval'; readonly authority: 'session-owner' }
-```
-
-```ts type-equiv
-/** Accepted limits applied to every turn and model output in one Session. */
-interface NativeSessionExecutionPolicy {
-  /** Durable policy vocabulary version. */
-  readonly version: 1
-  /** Maximum model/tool steps in each accepted turn; restoring or forking cannot raise it. */
-  readonly maxSteps: number
-  /** Optional maximum output tokens for every model request in the Session. */
-  readonly maxTokens?: number
-  /** Permission behavior; session-owner approval requires a live owner proof at execution time. */
-  readonly permission: NativeSessionExecutionPermission
-}
-```
-
-```ts type-equiv
-/** One requested approval scoped to a live Session-owner capability. */
-interface NativeSessionOwnerApprovalRequest {
-  /** Exact identity already durably recorded by `native-approval/asked`. */
-  readonly id: NativeApprovalRequestId
-  /** Exact model tool call awaiting approval. */
-  readonly callId: ToolCallId
-  /** Tool whose execution is blocked pending the owner decision. */
-  readonly toolName: string
-  /** Why this invocation needs approval. */
-  readonly reason?: string
-  /** Cancels this request when its turn, Session owner, or carrier closes. */
-  readonly signal: AbortSignal
-}
-```
-
-```ts type-equiv
-/**
- * Live approval capability issued by a trusted Program for one exact Session and Agent owner.
- *
- * The capability is process-local and is never stored in the Session log. Its issuer binds both object identities and the
- * owner lifetime; consumers must also match those identities to the active invocation before calling `authorize`. On
- * cold restore, the Program must establish an equivalent current parent approval route and issue a new capability. If
- * it cannot, the restored Session must refuse execution. Aborting `lifetime` revokes this capability; issuers must also
- * recheck their live owner and parent route on every request.
- */
-interface NativeSessionOwnerApproval {
-  /** Exact live Agent identity authorized by the owner. */
-  readonly agent: NativeAgent
-  /** Exact live Session object authorized by the owner. */
-  readonly session: Session
-  /** Owner and carrier lifetime; abortion revokes the capability. */
-  readonly lifetime: AbortSignal
-  /**
-   * Request an owner decision for one exact admitted tool invocation.
-   * @param request - tool identity, reason and turn cancellation.
-   * @returns the owner's closed decision; cancellation settles locally at once while the issuer tracks and drains the unanswered relay.
-   */
-  authorize(request: NativeSessionOwnerApprovalRequest): Promise<NativeApprovalOutcome>
-}
-```
 
 ## `ToolDefinition`
 

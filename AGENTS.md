@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## RSH-feature user architecture and acceptance requirements
+
+New image-understanding functionality must use the new Native plugin system and interfaces in `rsh/Modules/Official`; do not implement the new feature solely as built-in Engine configuration. Minimal existing Engine integration points are allowed, but the feature implementation and its NativePlugin must belong to the official module layer. Do not use Cordis or a Cordis compatibility bridge. Keep changes in this independent feature worktree, never copy them into `main` or deploy over the daily installation without explicit new authorization. Provide real entry-point/result screenshots and distinguish offline protocol verification from actual vision-model quality; do not claim recognition success from fixtures. See `E:/redsparkHarness/RSH-feature/最终验收报告要求.md`.
+
+Supervisor follow-up (2026-10-10 18:09): the missing `understand_image` canonical output schema was reproduced, then fixed in `src/tool.ts` and `src/native.ts` using `registerValueTool` and a string result schema. The existing follow-up test now exercises `run_code`; all four image cases pass. Preserve this fix when finalizing UI evidence and artifacts. Details: `E:/redsparkHarness/RSH-feature/监督记录.md`.
+
 DeepSeek Harness is an all-plugin Cordis agent harness. Read [rsh/Docs/architecture.md](rsh/Docs/architecture.md) before changing source packages under `rsh/`; follow [rsh/Docs/AGENTS.md](rsh/Docs/AGENTS.md) for documentation.
 
 ## Pre-stable APIs and released Session data

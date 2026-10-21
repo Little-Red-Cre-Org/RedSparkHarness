@@ -71,17 +71,6 @@ export abstract class FileSystemOperations {
   }
 
   /**
-   * Map an absolute path in this filesystem's execution world to the
-   * corresponding harness-host path when the host can access the same file.
-   * @param absolutePath - absolute path in this filesystem's execution world.
-   * @returns an absolute host path for the same file, or undefined when no mapping exists.
-   */
-  hostPathFor(absolutePath: string): string | undefined {
-    void absolutePath
-    return undefined
-  }
-
-  /**
    * Return the canonical `file:` URI for a target in this filesystem's
    * execution world. Backends own URI encoding because the host platform may
    * differ from the execution platform.

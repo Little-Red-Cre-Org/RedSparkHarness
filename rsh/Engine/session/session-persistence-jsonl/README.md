@@ -1,5 +1,5 @@
 ---
-description: "The shipped JSONL session-persistence backend for deployments and maintainers choosing, configuring, or debugging per-session durable logs, with plaintext or Zstandard encoding."
+description: "The shipped JSONL session-persistence backend for deployments and maintainers choosing, configuring, or debugging per-session durable logs with optional Zstandard compression."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-session-persistence-jsonl` stores each session in a current append-only JSONL log and retains immutable historical format generations — raw newline-delimited lines by default, checksummed Zstandard frames when `compression: 'zstd'` is selected. It serves the logical `SessionEvent` stream through persistence handles, so migration, decoding, and crash recovery stay internal. Choose it when consumers need a per-session file on disk; the default logs are readable as plain lines, and selecting `compression: 'zstd'` trades that readability for smaller artifacts. A root directory is the one required configuration; durability, lazy materialization, [supported historical-format migration](../session-format-catalog/README.md), and torn-tail crash recovery come with the backend.
+`dsh-session-persistence-jsonl` stores each session in a current append-only JSONL log and retains immutable historical format generations — checksummed Zstandard frames by default, raw newline-delimited lines when compression is disabled. It serves the current logical `SessionEvent` stream through persistence handles, so format migration, compression, historical decoding, and crash recovery remain storage-internal details. Choose it when consumers need a per-session file on disk; the logs are readable as plain lines when `compression: 'none'` is selected. A root directory is the one required configuration; durability, lazy materialization, [supported historical-format migration](../session-format-catalog/README.md), and torn-tail crash recovery come with the backend.
 
 ## Table of Contents
 
@@ -44,14 +44,14 @@ Recoverable deletion moves the entire Session directory into `.rsh-session-trash
 
 `root` is required and has no default: a `process.cwd()` default would scatter session files as the process's cwd changes. An existing root must be a readable directory; an absent root is created on first materialization.
 
-The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. `inspectSessionRootCompression(root)` reports the sole encoding among canonical live generations and retained deletion payloads, or `undefined` when none exist; mixed encodings and the obsolete flat live layout throw. The `./native-inspection` entry exports this read-only scan without loading the backend. The native host awaits open-handle closure when it removes the Provider.
+The `./native` entry supplies the same JSONL backend as a native `sessionPersistence` Provider. Its required `root` must be absolute; `compression` retains the same values and default. The native host awaits open-handle closure when it removes the Provider.
 
 The published native entry and CommonJS migration verifier run without Cordis installed; the package root remains the Cordis plugin entry.
 
 | Field | Default | Meaning |
 |---|---|---|
 | `root` | required | Root directory for all session files |
-| `compression` | `'none'` | Physical encoding: `'none'` newline-delimited UTF-8 text, or `'zstd'` checksummed frames |
+| `compression` | `'zstd'` | Physical encoding: `'zstd'` checksummed frames, or `'none'` newline-delimited UTF-8 text |
 
 Live-event write batching is not configuration: the batching window is the seam's internal scheduling policy inside each write handle.
 
@@ -85,7 +85,7 @@ The current-generation scanner applies the current codec owner’s structural ad
 
 ### Reading the logs
 
-`open(id, 'read'|'write')` selects the highest canonical generation. Current input follows the ordinary fast path. For historical input, a read open decodes and migrates the source once, validates the current logical result, and returns it without publishing a successor. A write open reuses that revision-keyed preparation when available, or performs the same preparation, then encodes a same-directory temporary file in bounded chunks, verifies it in a Worker Thread, rechecks the source revision, and publishes the current successor without overwrite before returning. The source remains byte-identical. Source drift after preparation rejects that write open without replacing the logical history already returned to readers; a later write open prepares the new revision. The backend marks decoded event graphs `shared-frozen` when it freezes them before memoization; handle reads and slices preserve that state, including empty slices. Only an unmaterialized pending log reports `detached`. `stat(id)` and `list()` select and translate only the highest generation header without reading event rows or starting migration; snapshots carry `sizeBytes` and a best-effort stat-derived revision for the selected file. By default the log is newline-delimited text an external reader can consume directly; a `compression: 'zstd'` artifact must be read through the backend.
+`open(id, 'read'|'write')` selects the highest canonical generation. Current input follows the ordinary fast path. For historical input, a read open decodes and migrates the source once, validates the current logical result, and returns it without publishing a successor. A write open reuses that revision-keyed preparation when available, or performs the same preparation, then encodes a same-directory temporary file in bounded chunks, verifies it in a Worker Thread, rechecks the source revision, and publishes the current successor without overwrite before returning. The source remains byte-identical. Source drift after preparation rejects that write open without replacing the logical history already returned to readers; a later write open prepares the new revision. The backend marks decoded event graphs `shared-frozen` when it freezes them before memoization; handle reads and slices preserve that state, including empty slices. Only an unmaterialized pending log reports `detached`. `stat(id)` and `list()` select and translate only the highest generation header without reading event rows or starting migration; snapshots carry `sizeBytes` and a best-effort stat-derived revision for the selected file. With `compression: 'none'`, the log is newline-delimited text an external reader can consume directly; the compressed default must be read through the backend.
 
 -----
 
@@ -103,7 +103,7 @@ The backend owns its complete storage runtime (`src/backend.ts` and `src/storage
 
 ### Physical encoding
 
-The default artifact is newline-delimited UTF-8 text. Selecting `compression: 'zstd'` stores a standard concatenation of independent [Zstandard frames](../../../../.agents/notes/implemented/architecture/2026-07-19-zstandard-jsonl-session-logs.md): one checksummed frame containing only the header line, then one checksummed frame per durable append batch, using Node's built-in Zstandard API at its default compression level (no level knob). The current format writes one event per row; `sourceEventSeqs` uses a lossless storage representation in which consecutive runs of at least three sequence numbers become `[start, end]` pairs, any other list stays verbatim, and reading expands the exact in-memory array. Historical migration reuses one Zstandard decoder, passes parsed rows through stateful format stages, and streams current records through one compression context in about 1 MiB main-thread slices while retaining only final current events, bounded decoder state, and the required sequence-remap table. Listing reads and validates only the header frame. Both encodings keep the same storage-form logical lines. A root belongs to one encoding: startup discovery and targeted lookup reject generations with the other suffix; format migration preserves the configured encoding, while compression conversion, mixed-root fallback, and dual write remain unsupported. Frozen v0 and v1 codecs retain their packed-row decoders solely for historical generations.
+The default artifact is a standard concatenation of independent [Zstandard frames](../../../../.agents/notes/implemented/architecture/2026-07-19-zstandard-jsonl-session-logs.md): one checksummed frame containing only the header line, then one checksummed frame per durable append batch, using Node's built-in Zstandard API at its default compression level (no level knob). The current format writes one event per row; `sourceEventSeqs` uses a lossless storage representation in which consecutive runs of at least three sequence numbers become `[start, end]` pairs, any other list stays verbatim, and reading expands the exact in-memory array. Historical migration reuses one Zstandard decoder, passes parsed rows through stateful format stages, and streams current records through one compression context in about 1 MiB main-thread slices while retaining only final current events, bounded decoder state, and the required sequence-remap table. Listing reads and validates only the header frame. `compression: 'none'` keeps the same storage-form logical lines without frame compression. A root belongs to one encoding: startup discovery and targeted lookup reject generations with the other suffix; format migration preserves the configured encoding, while compression conversion, mixed-root fallback, and dual write remain unsupported. Frozen v0 and v1 codecs retain their packed-row decoders solely for historical generations.
 
 ### Source map
 

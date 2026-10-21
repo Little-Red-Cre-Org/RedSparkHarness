@@ -2,6 +2,8 @@
 
 [English](core.md) | 中文
 
+原生[图片理解服务](../../Engine/core/native-model-execution/README.zh.md#configuration)定义 `ImageUnderstandingConfig`（提供方、模型及响应 token 上限）、`ImageUnderstandingRequest`（原图、问题、取消信号和持久记录回调），以及 `ImageUnderstandingRecord`（图片、问题、指令、路由、文本、可选用量和失败原因）。Native headless 在纯文本模型请求前及按作用域注册的 `understand_image` 工具中使用该服务，主模型路由保持不变。
+
 **核心**子系统即 [`rsh/Engine/core`](../../Engine/core/README.zh.md)，包含每个组合都会启动的包：事件溯源的会话日志、系统提示词组装、工具注册表、agent（智能体）类型，以及驱动它们的具体循环。本页说明 `agent`/`agent-loop` 这对包所声明的内容：agent 如何被创建与拥有，以及 `Agent` 句柄的投递、取消与拦截约定；本页还说明每个子系统都遵循的两个类型模式。该组的专属页面与目录其余部分见[子系统 README](README.zh.md)。
 
 ## 主干逐包速览
@@ -356,73 +358,6 @@ type SessionStartSource = 'startup' | 'resume' | 'clear' | 'compact'
 `Session` 是一份类型化 `SessionEvent` 的**仅追加日志**——唯一的真源。LLM 消息历史从日志*派生*（`deriveMessages()`），而非单独存储。每个条目携带单调的 `seq`、`time` 与按 `type` 判别的 `data` payload；surface 变体还可以在 `sourceEventSeqs` 中列出被引用的较早事件，并携带 `surfaceOp`。
 
 `SessionEvent` 信封的确切条件字段、十三种核心事件变体（`turn/start`、`turn/end`、`step/start`、`step/end`、`user/message`、`system/message`、`assistant/message`、`assistant/attempt`、`tool/call`、`tool/result`、`request/header`、`request/context`、`session/end-seed`）、`deriveMessages()` 投影规则、`TurnEndReason` 原因以及执行封闭和独立事件规则都在 **[session.md](session.zh.md)** 中。日志如何持久化——`SessionPersistence` 接口、JSONL provider、`session/flush` 检查点、崩溃恢复与 `SessionHeader`——则在 **[persistence.md](persistence.zh.md)** 中。
-
-### Native Session 执行 policy
-
-这些声明将必需的、带版本的 `execution/policy` payload 与绑定到精确 Agent 和 Session 的进程内 approval capability 区分开。
-
-```ts type-equiv
-/** Permission handling required by one accepted Session execution policy. */
-type NativeSessionExecutionPermission =
-  | { readonly mode: 'deny' }
-  | { readonly mode: 'require-approval'; readonly authority: 'session-owner' }
-```
-
-```ts type-equiv
-/** Accepted limits applied to every turn and model output in one Session. */
-interface NativeSessionExecutionPolicy {
-  /** Durable policy vocabulary version. */
-  readonly version: 1
-  /** Maximum model/tool steps in each accepted turn; restoring or forking cannot raise it. */
-  readonly maxSteps: number
-  /** Optional maximum output tokens for every model request in the Session. */
-  readonly maxTokens?: number
-  /** Permission behavior; session-owner approval requires a live owner proof at execution time. */
-  readonly permission: NativeSessionExecutionPermission
-}
-```
-
-```ts type-equiv
-/** One requested approval scoped to a live Session-owner capability. */
-interface NativeSessionOwnerApprovalRequest {
-  /** Exact identity already durably recorded by `native-approval/asked`. */
-  readonly id: NativeApprovalRequestId
-  /** Exact model tool call awaiting approval. */
-  readonly callId: ToolCallId
-  /** Tool whose execution is blocked pending the owner decision. */
-  readonly toolName: string
-  /** Why this invocation needs approval. */
-  readonly reason?: string
-  /** Cancels this request when its turn, Session owner, or carrier closes. */
-  readonly signal: AbortSignal
-}
-```
-
-```ts type-equiv
-/**
- * Live approval capability issued by a trusted Program for one exact Session and Agent owner.
- *
- * The capability is process-local and is never stored in the Session log. Its issuer binds both object identities and the
- * owner lifetime; consumers must also match those identities to the active invocation before calling `authorize`. On
- * cold restore, the Program must establish an equivalent current parent approval route and issue a new capability. If
- * it cannot, the restored Session must refuse execution. Aborting `lifetime` revokes this capability; issuers must also
- * recheck their live owner and parent route on every request.
- */
-interface NativeSessionOwnerApproval {
-  /** Exact live Agent identity authorized by the owner. */
-  readonly agent: NativeAgent
-  /** Exact live Session object authorized by the owner. */
-  readonly session: Session
-  /** Owner and carrier lifetime; abortion revokes the capability. */
-  readonly lifetime: AbortSignal
-  /**
-   * Request an owner decision for one exact admitted tool invocation.
-   * @param request - tool identity, reason and turn cancellation.
-   * @returns the owner's closed decision; cancellation settles locally at once while the issuer tracks and drains the unanswered relay.
-   */
-  authorize(request: NativeSessionOwnerApprovalRequest): Promise<NativeApprovalOutcome>
-}
-```
 
 ## `ToolDefinition`
 

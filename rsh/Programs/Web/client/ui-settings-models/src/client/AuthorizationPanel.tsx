@@ -6,8 +6,8 @@ import type {
   AuthorizationAttemptId, AuthorizationEntryView, AuthorizationFrame,
   AuthorizationPromptId, AuthorizationPromptView, ClientRemote,
 } from '@deepseek-ai/dsh-api-remotes/client'
-import { ModelsSettingsStyles as styles } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { en } from './locales.ts'
+import styles from './ModelsSection.module.css'
 
 type AuthorizationRemote = ClientRemote['authorization']
 

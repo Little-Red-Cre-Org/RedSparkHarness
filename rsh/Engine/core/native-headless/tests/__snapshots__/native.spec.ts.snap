@@ -1,0 +1,64 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`image understanding: direct 1`] = `
+{
+  "records": [],
+  "routes": [
+    "fixture",
+  ],
+}
+`;
+
+exports[`image understanding: failure 1`] = `
+{
+  "records": [
+    {
+      "error": "Image-understanding model did not complete successfully",
+      "question": "Diagnose this screenshot.",
+      "text": "",
+    },
+  ],
+  "routes": [
+    "vision",
+  ],
+}
+`;
+
+exports[`image understanding: follow-up 1`] = `
+{
+  "records": [
+    {
+      "error": undefined,
+      "question": "Diagnose this screenshot.",
+      "text": "visible error",
+    },
+    {
+      "error": undefined,
+      "question": "Read the error code exactly.",
+      "text": "Error TS2322",
+    },
+  ],
+  "routes": [
+    "vision",
+    "fixture",
+    "vision",
+    "fixture",
+  ],
+}
+`;
+
+exports[`image understanding: relay 1`] = `
+{
+  "records": [
+    {
+      "error": undefined,
+      "question": "Diagnose this screenshot.",
+      "text": "visible error",
+    },
+  ],
+  "routes": [
+    "vision",
+    "fixture",
+  ],
+}
+`;

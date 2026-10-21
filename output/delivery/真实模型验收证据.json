@@ -1,0 +1,135 @@
+{
+  "session": "fa3891d2-60d1-4890-a4af-069bf8005924",
+  "requests": [
+    {
+      "provider": "evomap",
+      "model": "evomap-deepseek-v4-flash",
+      "contextWindow": 262144
+    }
+  ],
+  "vision": [
+    {
+      "route": {
+        "provider": "openai-codex",
+        "model": "gpt-6-luna",
+        "maxTokens": 512
+      },
+      "text": "顶部编号：RSH-7319。蓝色正方形3个，橙色三角形2个。",
+      "usage": {
+        "inputTokens": 641,
+        "outputTokens": 30,
+        "totalTokens": 671
+      }
+    },
+    {
+      "route": {
+        "provider": "openai-codex",
+        "model": "gpt-6-luna",
+        "maxTokens": 512
+      },
+      "text": "下排不是圆形，而是两个橙色三角形。",
+      "usage": {
+        "inputTokens": 633,
+        "outputTokens": 19,
+        "totalTokens": 652
+      }
+    },
+    {
+      "route": {
+        "provider": "openai-codex",
+        "model": "gpt-6-luna",
+        "maxTokens": 512
+      },
+      "text": "下排是两个橙色三角形，尖角朝上。",
+      "usage": {
+        "inputTokens": 631,
+        "outputTokens": 20,
+        "totalTokens": 651
+      }
+    }
+  ],
+  "assistant": [
+    {
+      "seq": 12,
+      "usage": {
+        "inputTokens": 1137,
+        "outputTokens": 554,
+        "totalTokens": 1691
+      }
+    },
+    {
+      "seq": 22,
+      "usage": {
+        "inputTokens": 1726,
+        "outputTokens": 360,
+        "totalTokens": 2086
+      }
+    },
+    {
+      "seq": 27,
+      "usage": {
+        "inputTokens": 2132,
+        "outputTokens": 790,
+        "totalTokens": 2922
+      }
+    },
+    {
+      "seq": 34,
+      "usage": {
+        "inputTokens": 3018,
+        "outputTokens": 265,
+        "totalTokens": 3283
+      }
+    },
+    {
+      "seq": 45,
+      "usage": {
+        "inputTokens": 1415,
+        "outputTokens": 320,
+        "totalTokens": 3783,
+        "cacheReadTokens": 2048
+      }
+    },
+    {
+      "seq": 62,
+      "usage": {
+        "inputTokens": 3969,
+        "outputTokens": 278,
+        "totalTokens": 4247
+      }
+    },
+    {
+      "seq": 68,
+      "usage": {
+        "inputTokens": 2283,
+        "outputTokens": 31,
+        "totalTokens": 4362,
+        "cacheReadTokens": 2048
+      }
+    }
+  ],
+  "turns": [
+    {
+      "turn": 1,
+      "reason": {
+        "kind": "completed"
+      }
+    },
+    {
+      "turn": 2,
+      "reason": {
+        "kind": "error",
+        "error": {
+          "code": "STEP_LIMIT",
+          "message": "native-headless: model step limit reached"
+        }
+      }
+    },
+    {
+      "turn": 3,
+      "reason": {
+        "kind": "completed"
+      }
+    }
+  ]
+}

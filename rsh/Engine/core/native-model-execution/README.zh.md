@@ -23,13 +23,14 @@ kind: "package-reference"
 
 `./native` Provider 不接受配置。`execute` 调用需要开放的 Session、turn 与 step 编号、`GenerateOptions`，以及由 Session writer 拥有的追加和持久化回调。调用方负责构建请求、执行工具、关闭 turn 及管理存储生命周期。模型流必须以一条终止 `finish` 结束，之后不能再输出 chunk。终止原因为 error 或 aborted 时，服务记录 attempt 后让步骤失败，除非恢复策略重试它。
 
-每个请求还必须提供 `rebuildOptions`，用于从当前 Session 派生新选项。恢复策略替换可见 Session 表层并请求重试时，执行器会在派发前调用此回调；刷新后的选项必须继续匹配预备的模型控制。这样重试沿用同一路由，同时使用已替换的历史。
-
 `onRecovery(policy)` 安装恢复策略并返回其移除函数。失败的 attempt 记录后，策略收到规范化的失败、该路由的重试策略以及 Session writer 回调。重试策略来自模型的 `retryPolicy(provider)`；模型未声明时使用 LLM 运行时默认值。后注册的策略先运行；每个策略至多调用一次 `next()`，不调用而直接返回即认领该失败。`{ kind: 'retry' }` 决定会为同一步骤发起新的 attempt。抛出异常的适配器也以同样方式提交；没有策略重试时，重新抛出原始错误。已取消的请求不会提交给恢复。
 
 可选 `onChunk` 观察者接收同一次 dispatch 已接纳的流块。观察者失败会中断尝试并保留其已记录的部分流；观察者不会创建另一次模型请求或另一个 writer。
 
 已选模型 Provider 可以提供 `resolveModel` 来查询准确路由的元数据；缺少此能力时，图像工具会拒绝执行。`NativeAdapterModel` 使用安装取消信号转发实际 LLM Adapter，保留已接纳的元数据及流操作，并在移除期间关闭暂停的迭代器。失败或取消的 next 调用先关闭并排空其迭代器，再以原请求错误拒绝；迭代器清理失败保留给共享关闭 Promise 报告。此辅助类不提供模型目录或设置权威。可选图片定价操作转发相同已选适配器的既有同步定价；未声明定价的适配器不提供报价。
+
+
+本包定义可选的原生 `imageUnderstanding` 能力，由[官方图片理解插件](../../../Modules/Official/image/image-understanding/README.zh.md)提供实现。本包不内置视觉配置或实现。
 
 <a id="dev-note"></a>
 ## 开发备注
@@ -38,9 +39,7 @@ kind: "package-reference"
 
 <a id="model-experience"></a>
 
-`./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际，并会拒绝该代际无法按解析后的推理强度执行的 `maxTokens` 上限。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
-
-`captureResponsesOperation(step, route, maxTokens, signal, reasoningEffort)` 从确切的预备步骤捕获一条 transport 和嵌套代际能力。路由匹配时复用该步骤；路由变化时用 child controls 为所选模型只预备一次。返回的能力始终绑定该代际，并为每个嵌套操作捕获独立 transport。
+`./model-directory` 定义与 `NativeAdapterModelDirectory` 从同一已选适配器公开建议目录，不设置默认值存储。`prepareStep` 将解析后的参数与派发绑定到同一 Provider 代际。消费者在 `execute` 前持久化准确配置；其他执行器的 prepared 身份或不一致的派发参数会被拒绝。纯 `./model-selection` 叶子拥有持久选择词汇及历史投影。
 
 ## 模型体验
 
@@ -61,6 +60,5 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制和后续工作
 
-- 调用方仍拥有 turn 与 step 的顺序。已交付的 SDK 与 Web composition 都通过 Native Headless 使用此执行路径。
-- 预备的 adapter call 可以携带来自同一 Provider 代际的 `nativeResponses`。`captureResponses()` 要求路由与预备 handle 匹配；`captureResponsesOperation()` 会先为变化的路由只预备一次，再从该路由的确切 handle 捕获。已交付的 `llm-pi-ai` SIWC `openai-codex` 代际会为 Native external Responses 操作提供传输。缺少能力，或所选代际无法执行父级 `maxTokens` 上限时，capture 会拒绝；已交付 profile 模板仍默认选择进程内 subagent，且不会安装 Codex external driver。
+- 调用方仍拥有 turn 与 step 的顺序。原生 SDK 与 Web Consumer 尚待迁移。
 - 仓库过渡期间，本包 manifest 及 Session、LLM 依赖仍保留 Cordis。

@@ -109,7 +109,7 @@ it('runs the shipped native web rows without Cordis or the public network and re
   })
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
   const model = join(modules, 'web-model'); mkdirSync(model)
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'web-model', version: '0.0.0', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'web-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

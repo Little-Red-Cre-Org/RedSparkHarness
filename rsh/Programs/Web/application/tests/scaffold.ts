@@ -878,7 +878,7 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
 
 /**
  * Serialize a live session to the canonical raw session-JSONL layout — the
- * in-memory record-mode harvest, so the on-disk encoding never matters.
+ * in-memory record-mode harvest, so the on-disk zstd default never matters.
  */
 function rawSessionLog(session: Session): string {
   const encodedEvents = (session.snapshotEvents() as unknown as readonly SessionFormatEvent[])

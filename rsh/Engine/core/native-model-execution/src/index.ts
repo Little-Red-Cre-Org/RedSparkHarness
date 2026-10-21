@@ -1,13 +1,9 @@
 /** Native model execution and Session recording for a single Agent step. */
 import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, normalizeLlmFailure,
-  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ReasoningEffortId, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeResponsesGenerationCapture, NativeResponsesOperationCapture, NativeResponsesPreparedGeneration,
-  NativeResponsesRoute, NativeResponsesTransport } from './responses-transport.ts'
-export type { NativeResponsesGenerationCapture, NativeResponsesJsonValue, NativeResponsesRoute,
-  NativeResponsesOperationCapture, NativeResponsesPreparedGeneration, NativeResponsesTransport,
-  NativeResponsesTransportResponse } from './responses-transport.ts'
+import type { NativeImageUnderstandingOperations } from './image-understanding.ts'
 
 /** Streaming model selected by a native profile. */
 export interface NativeModel {
@@ -51,8 +47,6 @@ export interface NativeModelStepRequest {
   readonly turn: number
   readonly step: number
   readonly options: GenerateOptions
-  /** Rebuild the model options from the current Session after recovery replaces its visible surface. */
-  readonly rebuildOptions: () => GenerateOptions
   /** Request controls and dispatch captured before their Session header is persisted. */
   readonly prepared?: NativePreparedModelStep
   readonly append: (event: SessionEvent) => void
@@ -106,10 +100,19 @@ export interface NativeModelStepResult {
 
 /** Canonical native stream assembly and assistant-event recording. */
 export class NativeModelExecution {
-  private readonly prepared = new WeakMap<NativePreparedModelStep, {
-    readonly dispatch: (options: GenerateOptions) => AsyncIterable<StreamChunk>
-    readonly nativeResponses?: NativeResponsesGenerationCapture
-  }>()
+  private imageInterpreter: NativeImageUnderstandingOperations | undefined
+  /** Optional interpreter installed by the official NativePlugin. */
+  get imageUnderstanding(): NativeImageUnderstandingOperations | undefined { return this.imageInterpreter }
+  /** Install the image interpreter consumed by native Programs.
+   * @param service - the profile-selected interpreter.
+   * @returns exact removal owned by the plugin installation.
+   */
+  registerImageUnderstanding(service: NativeImageUnderstandingOperations): () => void {
+    if (this.imageInterpreter !== undefined) throw new Error('native-model-execution: image understanding is already installed')
+    this.imageInterpreter = service
+    return () => { if (this.imageInterpreter === service) this.imageInterpreter = undefined }
+  }
+  private readonly prepared = new WeakMap<NativePreparedModelStep, (options: GenerateOptions) => AsyncIterable<StreamChunk>>()
   private readonly recoveryPolicies: NativeModelRecoveryPolicy[] = []
   constructor(private readonly model: NativeModel) {}
 
@@ -148,92 +151,13 @@ export class NativeModelExecution {
       ...config.temperature === undefined ? {} : { temperature: config.temperature },
       ...config.stop === undefined ? {} : { stop: config.stop } }
     const resolved = info === undefined ? controls : resolveCallConfigWithModel(controls, info)
-    if (resolved.maxTokens !== undefined
-      && (captured === undefined || !await captured.supportsOutputTokenLimit(resolved.maxTokens, resolved.reasoningEffort))) {
-      throw new Error('native-model-execution: selected model generation cannot enforce maxTokens')
-    }
     const retryPolicy = this.retryPolicyFor(undefined, config.provider)
     signal?.throwIfAborted()
     const handle: NativePreparedModelStep = Object.freeze({ config: deepFreeze(structuredClone(resolved)),
       ...info === undefined ? {} : { modelInfo: deepFreeze(structuredClone(info)) },
       retryPolicy: deepFreeze(structuredClone(retryPolicy)) })
-    this.prepared.set(handle, { dispatch: captured === undefined ? this.model.stream.bind(this.model) : captured.stream.bind(captured),
-      ...captured?.nativeResponses === undefined ? {} : { nativeResponses: captured.nativeResponses } })
+    this.prepared.set(handle, captured === undefined ? this.model.stream.bind(this.model) : captured.stream.bind(captured))
     return handle
-  }
-
-  /** Capture Responses forwarding only from this executor's exact prepared model generation.
-   * @param handle - step handle returned by this executor.
-   * @param route - Engine-selected external model route.
-   * @param maxTokens - optional parent generation ceiling.
-   * @param signal - external operation cancellation.
-   * @param reasoningEffort - selected effort to validate against captured model metadata.
-   * @returns a captured transport owned until its external operation closes it.
-   */
-  async captureResponses(handle: NativePreparedModelStep, route: NativeResponsesRoute, maxTokens: number | undefined,
-    signal: AbortSignal, reasoningEffort?: ReasoningEffortId): Promise<NativeResponsesTransport> {
-    const prepared = this.prepared.get(handle)
-    if (prepared === undefined) throw new Error('native-model-execution: Responses capture requires this executor\'s prepared step')
-    if (route.provider !== handle.config.provider || route.model !== handle.config.model) {
-      throw new Error('native-model-execution: Responses route must match its prepared model generation')
-    }
-    if (handle.modelInfo !== undefined) {
-      resolveCallConfigWithModel({ provider: route.provider, model: route.model,
-        ...reasoningEffort === undefined ? {} : { reasoningEffort } }, handle.modelInfo)
-    }
-    const capture = prepared.nativeResponses
-    if (capture === undefined) throw new Error('native-model-execution: selected model generation has no captured Responses transport')
-    signal.throwIfAborted()
-    const transport = await capture.capture({ route, ...maxTokens === undefined ? {} : { maxTokens } }, signal)
-    try {
-      signal.throwIfAborted()
-      if (transport.route.provider !== route.provider || transport.route.model !== route.model) {
-        throw new Error('native-model-execution: captured Responses transport belongs to a different route')
-      }
-      if (maxTokens !== undefined && transport.outputTokenLimit !== 'supported') {
-        throw new Error('native-model-execution: captured Responses transport cannot enforce the parent maxTokens ceiling')
-      }
-      return transport
-    } catch (error: unknown) {
-      try { await transport.close() }
-      catch (cleanupError: unknown) {
-        throw new AggregateError([error, cleanupError], 'native-model-execution: rejected Responses capture failed to close')
-      }
-      throw error
-    }
-  }
-
-  /** Capture one external operation and retain its exact model generation for nested children.
-   * @param parent - exact prepared step selected by this executor.
-   * @param route - Engine-selected child route.
-   * @param maxTokens - optional child output-token ceiling.
-   * @param signal - parent and child operation cancellation.
-   * @param reasoningEffort - explicitly selected child reasoning effort.
-   * @returns an independent transport and a capability bound to the selected prepared generation.
-   */
-  async captureResponsesOperation(parent: NativePreparedModelStep, route: NativeResponsesRoute,
-    maxTokens: number | undefined, signal: AbortSignal, reasoningEffort?: ReasoningEffortId): Promise<NativeResponsesOperationCapture> {
-    if (!this.prepared.has(parent)) {
-      throw new Error('native-model-execution: Responses capture requires this executor\'s prepared step')
-    }
-    const handle = route.provider === parent.config.provider && route.model === parent.config.model
-      ? parent
-      : await this.prepareStep({ provider: route.provider, model: route.model,
-        ...reasoningEffort === undefined ? {} : { reasoningEffort },
-        ...maxTokens === undefined ? {} : { maxTokens } }, signal)
-    const transport = await this.captureResponses(handle, route, maxTokens, signal, reasoningEffort)
-    return { transport, generation: this.responsesGeneration(handle) }
-  }
-
-  private responsesGeneration(handle: NativePreparedModelStep): NativeResponsesPreparedGeneration {
-    if (!this.prepared.has(handle)) throw new Error('native-model-execution: Responses generation requires this executor\'s prepared step')
-    const route = Object.freeze({ provider: handle.config.provider, model: handle.config.model })
-    return Object.freeze({ route, capture: (request: {
-      readonly route: NativeResponsesRoute
-      readonly maxTokens?: number
-      readonly reasoningEffort?: ReasoningEffortId
-    }, signal: AbortSignal) => this.captureResponsesOperation(handle,
-      request.route, request.maxTokens, signal, request.reasoningEffort) })
   }
 
   /**
@@ -244,11 +168,9 @@ export class NativeModelExecution {
    * @returns the recorded assistant message and terminal reason.
    */
   async execute(request: NativeModelStepRequest): Promise<NativeModelStepResult> {
-    const { session, turn, step, append, persist } = request
-    let options = request.options
+    const { session, turn, step, options, append, persist } = request
     const handle = request.prepared
-    const prepared = handle === undefined ? undefined : this.prepared.get(handle)
-    const dispatch = handle === undefined ? this.model.stream.bind(this.model) : prepared?.dispatch
+    const dispatch = handle === undefined ? this.model.stream.bind(this.model) : this.prepared.get(handle)
     if (dispatch === undefined) throw new Error('native-model-execution: step was prepared by a different executor')
     if (handle !== undefined && !callConfigEquals(handle.config, options)) {
       throw new Error('native-model-execution: dispatch controls differ from the prepared request')
@@ -294,22 +216,13 @@ export class NativeModelExecution {
         // its normalized facts, and an unrecovered throw keeps its original error for the turn outcome.
         append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
         if (options.signal?.aborted === true) throw modelFailure.error
-        const generation = session.surface.replaceGeneration
         const action = await this.recover({
           session, turn, step, provider: options.provider, failure: normalizeLlmFailure(modelFailure.error),
           retryPolicy: this.retryPolicyFor(handle, options.provider),
           signal: options.signal ?? new AbortController().signal, append, persist,
         })
         options.signal?.throwIfAborted()
-        if (action?.kind === 'retry') {
-          if (session.surface.replaceGeneration !== generation) {
-            options = request.rebuildOptions()
-            if (handle !== undefined && !callConfigEquals(handle.config, options)) {
-              throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
-            }
-          }
-          continue
-        }
+        if (action?.kind === 'retry') continue
         throw modelFailure.error
       }
       if (assembler.finish.kind !== 'error' && assembler.finish.kind !== 'aborted') {
@@ -327,7 +240,6 @@ export class NativeModelExecution {
       const kind = assembler.finish.kind
       append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
       if (options.signal?.aborted === true) throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
-      const generation = session.surface.replaceGeneration
       const action = await this.recover({
         session, turn, step, provider: options.provider, failure,
         retryPolicy: this.retryPolicyFor(handle, options.provider),
@@ -336,12 +248,6 @@ export class NativeModelExecution {
       options.signal?.throwIfAborted()
       if (action?.kind !== 'retry') {
         throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
-      }
-      if (session.surface.replaceGeneration !== generation) {
-        options = request.rebuildOptions()
-        if (handle !== undefined && !callConfigEquals(handle.config, options)) {
-          throw new Error('native-model-execution: refreshed dispatch controls differ from the prepared request')
-        }
       }
     }
   }
@@ -394,3 +300,6 @@ export class NativeModelExecution {
 }
 
 export { NativeAdapterModel } from './adapter-model.ts'
+
+export { contentImages } from './image-understanding.ts'
+export type { ImageUnderstandingConfig, ImageUnderstandingRecord, ImageUnderstandingRequest, ImageUnderstandingProjection, NativeImageUnderstandingOperations } from './image-understanding.ts'

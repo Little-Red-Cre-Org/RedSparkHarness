@@ -10,10 +10,8 @@ import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/nativ
 import { credentialKey, credentialRef, isCredentialKeySegment } from '@deepseek-ai/dsh-credentials/native'
 import { createNativeSdkChildHarness, type NativeSdkChildRuntimeRequest } from '@deepseek-ai/dsh-sdk-runtime'
 import type { NativeSdkChildApprovalRelay } from '@deepseek-ai/dsh-sdk-runtime/native'
-import type { NativeSdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
+import type { SdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
 import type {} from '@deepseek-ai/dsh-attachment/native'
-
-type NativeSdkChildPromptBlock = Extract<NativeSdkPromptContentBlock, { type: 'text' | 'image' }>
 
 interface Config {
   readonly providerName: string
@@ -68,8 +66,8 @@ async function promptBlocks(
   context: NativeContext,
   blocks: readonly ContentBlock[],
   signal: AbortSignal,
-): Promise<NativeSdkChildPromptBlock[]> {
-  const output: NativeSdkChildPromptBlock[] = []
+): Promise<SdkPromptContentBlock[]> {
+  const output: SdkPromptContentBlock[] = []
   for (const block of blocks) {
     signal.throwIfAborted()
     if (block.type === 'text') {

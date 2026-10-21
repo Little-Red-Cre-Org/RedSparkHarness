@@ -1,165 +1,57 @@
-/** Native model picker and Session mode controls for the composer. */
-import { useEffect, useRef, useState } from 'react'
-import {
-  IconChevronDownOutline14, IconCloseFill14, IconShieldOutline16, Menu, ModelPicker, Pill,
-  type ModelPickerState,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+/** Model intent and blank-root composition menus use provider metadata and durable projections. */
 import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
+import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
 import type { ConversationLocaleKey } from './locales.ts'
-import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
-import css from './model-controls.module.css'
+import type { NativeConversationController } from './controller.ts'
 
-/** Show the selected Session's mode as a menu chip when the Host allows changes.
- * @param props - selected Session controls, preset action, and localized copy.
- * @returns mode chip and active Plan pill.
+/** Shared view reads and mutations stay with the existing conversation controller.
+ * @param props - selected controller and locale-owned copy.
+ * @returns current route, effort and installed composition choices.
  */
-export function ConversationModeLabel({ snapshot, selectPreset, t }: {
-  snapshot: ConversationSnapshot
-  selectPreset: NativeConversationController['selectPreset']
-  t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
-}) {
-  const [open, setOpen] = useState(false)
-  const trigger = useRef<HTMLButtonElement | null>(null)
-  const refocus = useRef(false)
-  const controls = snapshot.modeControls
-  const current = controls?.current
-  const name = current === null || current === undefined ? t('chatMode')
-    : controls?.options.find(option => option.id === current)?.name ?? current
-  const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
-  const canSelect = ready && controls !== undefined && controls.canSelect && !controls.locked
-  useEffect(() => { if (!canSelect) setOpen(false) }, [canSelect])
-  // The selection reload replaces the trigger with a static chip; refocus the trigger once it returns,
-  // unless the user has moved focus elsewhere meanwhile.
-  useEffect(() => {
-    if (!canSelect || !refocus.current) return
-    refocus.current = false
-    if (document.activeElement === document.body) trigger.current?.focus()
-  }, [canSelect])
-  const items = controls?.options.map(option => ({ id: option.id, label: option.name })) ?? []
-  return <>
-    <Menu className={css.modeMenu} open={open && canSelect} autoFocus compact portal items={items} selectedId={current ?? undefined}
-      onSelect={(id) => { setOpen(false); refocus.current = true; void selectPreset(id) }} onClose={() => { setOpen(false) }}
-      anchor={canSelect
-        ? <button ref={trigger} type="button" className={css.modeTrigger} aria-label={t('modeLabel', { name })}
-          aria-expanded={open}
-          onClick={() => { setOpen(value => !value) }}>
-          <span className={css.modeName}>{name}</span><IconChevronDownOutline14 />
-        </button>
-        : <span className={css.modeChip}>{name}</span>} />
-    {controls?.planMode.active === true ? <Pill active>{t('planLabel')}</Pill> : null}
-  </>
-}
-
-/** Render the catalog-backed model and reasoning picker.
- * @param props - selected Session state, model mutation actions, and localized copy.
- * @returns the model and reasoning picker.
- */
-export function ModelPickerControl({ snapshot, selectModel, refreshModelControls, t }: {
-  snapshot: ConversationSnapshot
-  selectModel: NativeConversationController['selectModel']
-  refreshModelControls: NativeConversationController['refreshModelControls']
-  t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
-}) {
+export function ModelControls({ controller, t }: { controller: NativeConversationController; t: (key: ConversationLocaleKey) => string }) {
+  const snapshot = controller.getSnapshot()
   const controls = snapshot.modelControls
-  const catalogUnavailable = controls === undefined || controls.catalog === null
   const selected = foldNativeModelSelectionState(snapshot.events).next ?? controls?.catalog?.default
+  const catalogModels = controls?.catalog?.groups.flatMap(group => group.models.map(model => ({
+    ...model, provider: group.id, providerName: group.name,
+  }))) ?? []
+  const current = selected === undefined ? undefined
+    : catalogModels.find(model => model.provider === selected.provider && model.id === selected.model)
+  const encode = (provider: string, model: string): string => JSON.stringify([provider, model])
   const ready = snapshot.state === 'ready' && snapshot.selected !== undefined
-  const canRetryCatalog = snapshot.state === 'ready' && catalogUnavailable
-  const state: ModelPickerState = {
-    current: selected ?? null,
-    groups: controls?.catalog?.groups ?? [],
-    failures: controls?.catalog?.failures ?? [],
-    status: snapshot.state === 'ready' ? 'ready' : controls === undefined ? 'loading' : 'selecting',
-    error: catalogUnavailable ? snapshot.error ?? null : null,
-  }
-  return <ModelPicker
-    available
-    locked={!canRetryCatalog && (!ready || !controls?.canSelectModel)}
-    state={state}
-    load={() => { void refreshModelControls() }}
-    select={async (selection) => {
-      await selectModel(selection)
-      return true
-    }}
-    t={t}
-  />
-}
-
-/** Render the selected Session's Plan and permission controls in the composer.
- * @param props - selected Session controls, mutation actions, and localized copy.
- * @returns the available composer controls.
- */
-export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset, t }: {
-  snapshot: ConversationSnapshot
-  selectPlanMode: NativeConversationController['selectPlanMode']
-  selectPermissionPreset: NativeConversationController['selectPermissionPreset']
-  t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
-}) {
-  const [open, setOpen] = useState(false)
-  const [selectingPlan, setSelectingPlan] = useState(false)
-  const permissionTrigger = useRef<HTMLButtonElement | null>(null)
-  const refocusPermission = useRef(false)
-  const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
-  const mode = snapshot.modeControls
-  const planMode = mode?.planMode
-  const permission = snapshot.permissionControls
-  const planSelectable = snapshot.selected !== undefined && snapshot.state !== 'loading' && snapshot.state !== 'closed'
-  const currentPermission = permission?.options.find(option => option.value === permission.currentValue)
-  const currentPermissionLabel = permission?.currentValue === null || permission?.currentValue === undefined
-    ? t('unavailable') : permissionLabel(permission.currentValue, currentPermission?.name ?? permission.currentValue, t)
-  useEffect(() => { if (!ready) setOpen(false) }, [ready])
-  // The trigger is disabled while the selection applies; refocus it once it is enabled again,
-  // unless the user has moved focus elsewhere meanwhile.
-  useEffect(() => {
-    if (!ready || !refocusPermission.current) return
-    refocusPermission.current = false
-    if (document.activeElement === document.body) permissionTrigger.current?.focus()
-  }, [ready])
-  return (
-    <div className={css.root} role="group" aria-label={t('modelControls')}>
-      <div className={css.row}>
-        {planMode?.available === true ? <button type="button" className={css.plan}
-          aria-label={t(planMode.active ? 'planModeOn' : 'planModeOff')}
-          aria-pressed={planMode.active} aria-busy={planMode.pending === true || selectingPlan}
-          data-active={planMode.active || undefined} data-pending={planMode.pending || undefined}
-          title={planMode.pending === true ? t('planPending') : t(planMode.active ? 'planModeOn' : 'planModeOff')}
-          disabled={!planSelectable || selectingPlan}
-          onClick={() => {
-            setSelectingPlan(true)
-            void selectPlanMode(!planMode.active).finally(() => { setSelectingPlan(false) })
-          }}>
-          {t('planLabel')}
-          {planMode.pending === true ? <span className={css.planPending}>{t('planPending')}</span> : null}
-          {planMode.active ? <IconCloseFill14 size={12} /> : null}
-        </button> : null}
-        {permission?.available === true ? <Menu className={css.permissionMenu} open={open} autoFocus compact side="top"
-          items={permission.options.map(option => ({
-            id: option.value,
-            label: permissionLabel(option.value, option.name, t),
-            icon: <IconShieldOutline16 size={14} />,
-          }))}
-          selectedId={permission.currentValue ?? undefined}
-          onSelect={(value) => {
-            setOpen(false)
-            if (value === permission.currentValue) permissionTrigger.current?.focus()
-            else { refocusPermission.current = true; void selectPermissionPreset(value) }
-          }}
-          onClose={() => { setOpen(false) }}
-          anchor={<button ref={permissionTrigger} type="button" className={css.permissionTrigger} title={currentPermission?.description}
-            disabled={!ready} onClick={() => { setOpen(value => !value) }}>
-            <IconShieldOutline16 size={14} />
-            <span className={css.permissionName}>{currentPermissionLabel}</span>
-            <IconChevronDownOutline14 />
-          </button>} /> : null}
-      </div>
-    </div>
-  )
-}
-
-function permissionLabel(value: string, name: string, t: (key: ConversationLocaleKey) => string): string {
-  if (name !== value) return name
-  if (value === 'read-only') return t('permissionReadOnly')
-  if (value === 'workspace-write') return t('permissionWorkspaceWrite')
-  if (value === 'danger-full-access') return t('permissionFullAccess')
-  return name
+  const preset = snapshot.header === undefined ? undefined : foldNativeAgentPresetFacts(snapshot.header, snapshot.events)
+  const efforts = current?.reasoning?.efforts ?? []
+  return <fieldset>
+    <legend>{t('modelControls')}</legend>
+    <label>{t('model')}<select aria-label={t('model')} disabled={!ready || !controls?.canSelectModel}
+      value={selected === undefined ? '' : encode(selected.provider, selected.model)}
+      onChange={(event) => {
+        const model = catalogModels.find(item => encode(item.provider, item.id) === event.target.value)
+        if (model !== undefined) void controller.selectModel({ provider: model.provider, model: model.id })
+      }}>
+      {selected === undefined ? <option value="">{t('unavailable')}</option> : current === undefined
+        ? <option value={encode(selected.provider, selected.model)}>{selected.provider} / {selected.model}</option> : null}
+      {catalogModels.map(model => <option key={encode(model.provider, model.id)} value={encode(model.provider, model.id)}>
+        {model.providerName} / {model.name}</option>)}
+    </select></label>
+    <label>{t('reasoning')}<select aria-label={t('reasoning')} disabled={!ready || !controls?.canSelectModel || selected === undefined}
+      value={selected?.reasoningEffort ?? ''} onChange={(event) => {
+        if (selected !== undefined) void controller.selectModel({ provider: selected.provider, model: selected.model,
+          ...event.target.value === '' ? {} : { reasoningEffort: event.target.value } })
+      }}>
+      <option value="">{t('providerDefault')}</option>
+      {selected?.reasoningEffort !== undefined && !efforts.some(effort => effort.id === selected.reasoningEffort)
+        ? <option value={selected.reasoningEffort}>{selected.reasoningEffort}</option> : null}
+      {efforts.map(effort => <option key={effort.id} value={effort.id}>{effort.name}</option>)}
+    </select></label>
+    <label>{t('preset')}<select aria-label={t('preset')} value={preset?.preset ?? ''}
+      disabled={!ready || preset?.locked !== false || controls?.presets.length === 0}
+      onChange={(event) => { void controller.selectPreset(event.target.value) }}>
+      {preset?.preset == null ? <option value="">{t('noPreset')}</option> : !controls?.presets.some(item => item.id === preset.preset)
+        ? <option value={preset.preset}>{preset.preset}</option> : null}
+      {controls?.presets.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+    </select></label>
+    <button disabled={snapshot.state !== 'ready'} onClick={() => { void controller.refreshModelControls() }}>{t('refreshModels')}</button>
+    {controls?.catalog?.failures.map(failure => <p key={failure.id} role="alert">{failure.name}: {failure.message}</p>)}
+  </fieldset>
 }

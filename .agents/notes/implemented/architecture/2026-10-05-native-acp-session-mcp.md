@@ -23,5 +23,3 @@ A second RPC client would duplicate the maintained MCP transport supervisor. Sha
 ## Consequences
 
 The explicit native ACP profile installs the existing tools Provider. Sibling Sessions can reuse server names and release their connections independently. Compatibility defaults and historical Session generations remain unchanged. MCP resources, prompts and unsupported transports are not added.
-
-Lifecycle checks probe fixture MCP child processes at Session close and MCP client disposal, and require the crashed child to be gone before reconnect. The ACP case also verifies that a sibling HTTP Session remains usable after the stdio Session closes.

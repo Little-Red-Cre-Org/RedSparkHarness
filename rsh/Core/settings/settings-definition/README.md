@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to share Settings service, namespace, descriptor, edit, and Native document-update event types between providers and consumers. The `/types` export holds wire-safe views; `/native` defines the Native service and augments `NativeServices` and `NativeEvents` without importing Cordis. The package defines interfaces only; providers own storage, resolved values, and event emission.
+Use this package to share Settings service, namespace, descriptor, and edit types between providers and consumers. The `/types` export holds wire-safe views; `/native` defines the Native service and augments `NativeServices` without importing Cordis. The package defines interfaces only; providers own storage and resolved values.
 
 ## Table of Contents
 
@@ -42,7 +42,7 @@ These imports resolve type contracts at compile time. They do not create a Setti
 <details>
 <summary>Declaration ownership — click to expand</summary>
 
-The root export defines the provider-neutral Settings service and registration scope. `/types` defines the namespace identity and JSON-safe values used by configuration surfaces. `/native` defines Native storage, service, descriptor, edit, and scope types, adds `NativeServices.settings`, and declares `settings/document-updated` with its namespace revision.
+The root export defines the provider-neutral Settings service and registration scope. `/types` defines the namespace identity and JSON-safe values used by configuration surfaces. `/native` defines Native storage, service, descriptor, edit, and scope types, and adds `NativeServices.settings` through module augmentation.
 
 | File | Role |
 |---|---|

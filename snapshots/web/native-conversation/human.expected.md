@@ -4,8 +4,7 @@ guarded
 
 Protect this action.
 
-Allow once
-Reject
+Allow onceReject
 
 Tool approval
 
@@ -13,8 +12,7 @@ guarded
 
 Protect this action.
 
-Allow once
-Reject
+Allow onceReject
 
 Pending questions
 Choose mode

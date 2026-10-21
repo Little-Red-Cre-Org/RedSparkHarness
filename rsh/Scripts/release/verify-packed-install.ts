@@ -2,9 +2,8 @@
  * Install packed tarballs into a throwaway consumer outside the repository and
  * drive the installed executable with plain Node.
  *
- * Every repository tarball the installed tree needs comes from `--from`, except
- * the optional native platform packages, which npm takes from the registry with
- * the external dependencies, as a normal install does. That matters beyond hermetic
+ * Every tarball the installed tree needs comes from `--from`, so the only
+ * registry traffic is for external dependencies. That matters beyond hermetic
  * verification: the harness packages declare the vendored framework as a peer,
  * those packages live in another release sequence, and this job must not depend
  * on the registry already carrying versions that match — one pull request may
@@ -18,11 +17,10 @@
  */
 
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
-import { execaSync } from 'execa'
 import { releaseFamily } from './families.ts'
 import { capture, isEntry } from './process.ts'
 import { packedIdentity } from './tarball.ts'
@@ -68,24 +66,19 @@ function packedDependencies(directories: readonly string[]): Map<string, { url: 
   return dependencies
 }
 
-/** Install every tarball under `--from`, drive the `--family` entry, and optionally run packed e2e. */
+/** Install every tarball under `--from` and drive the `--family` entry. */
 function main(): void {
   const { values } = parseArgs({
-    options: {
-      family: { type: 'string' },
-      from: { type: 'string', multiple: true },
-      'packed-e2e': { type: 'boolean', default: false },
-    },
+    options: { family: { type: 'string' }, from: { type: 'string', multiple: true } },
     allowPositionals: false,
   })
   if (values.family === undefined || values.from === undefined || values.from.length === 0) {
-    throw new Error('usage: verify-packed-install.ts --family <dsh|vendor> --from <packed directory> [--from ...] [--packed-e2e]')
+    throw new Error('usage: verify-packed-install.ts --family <dsh|vendor> --from <packed directory> [--from ...]')
   }
 
   const family = releaseFamily(values.family)
   const entry = family.installedEntry
   if (entry === undefined) {
-    if (values['packed-e2e']) throw new Error(`--packed-e2e requires a family with an installed executable; ${family.id} has none`)
     console.log(`release verify-packed-install: family ${family.id} publishes no executable, nothing to drive`)
     return
   }
@@ -95,41 +88,24 @@ function main(): void {
   const expected = packed.get(entry.packageName)
   if (expected === undefined) throw new Error(`${entry.packageName} is not among the packed tarballs`)
 
-  // Keep outside /tmp: Linux bwrap hides that install behind tmpfs, and /tmp is a sandbox writable root.
-  const consumerRoot = mkdtempSync(join(homedir(), `.dsh-packed-${family.id}-`))
+  const consumerRoot = mkdtempSync(join(tmpdir(), `dsh-packed-${family.id}-`))
   try {
     writeFileSync(join(consumerRoot, 'package.json'), `${JSON.stringify({
       name: `dsh-packed-install-${family.id}`,
       version: '0.0.0',
       private: true,
       dependencies: Object.fromEntries([...packed].map(([name, entryPacked]) => [name, entryPacked.url])),
-      devDependencies: { '@types/node': '^22.20.0' },
     }, null, 2)}\n`)
 
     const environment = consumerEnvironment(consumerRoot)
     console.log(`release verify-packed-install: installing ${String(packed.size)} tarball(s) into ${consumerRoot}`)
-    // Install optional platform packages as a consumer does: npm resolves
-    // node-addon-system-<platform> and sharp's @img/* packages from the public
-    // registry at versions selected by the packed entry and sharp. The
-    // node-addon-system family publishes independently through
-    // .github/workflows/node-addon-system-release.yml. The Landlock entry
-    // remains a plain dsh-sandbox-local dependency, so its tarball is supplied
-    // through --from.
-    const installArgs = [
-      'install',
-      '--no-audit',
-      '--no-fund',
-      '--include=dev',
-      '--package-lock=false',
-      '--loglevel=http',
-    ]
-    // execa resolves npm.cmd on Windows without re-adding host-only environment variables.
-    execaSync('npm', installArgs, {
-      cwd: consumerRoot,
-      env: environment,
-      extendEnv: false,
-      stripFinalNewline: false,
-    })
+    // Optional dependencies are omitted: the Landlock platform packages behind
+    // them need a musl toolchain and one build per architecture, and a consumer
+    // that cannot install them must still start — which is what optional means
+    // here. Their entry package is a plain dependency of dsh-sandbox-local, so
+    // its tarball is supplied through --from.
+    capture('npm', ['install', '--no-audit', '--no-fund', '--package-lock=false', '--omit=optional', '--loglevel=http'],
+      { cwd: consumerRoot, env: environment })
 
     const bin = join(consumerRoot, 'node_modules', ...entry.packageName.split('/'), entry.binPath)
     const version = capture(process.execPath, [bin, '--version'], { cwd: consumerRoot, env: environment })
@@ -137,34 +113,6 @@ function main(): void {
       throw new Error(`installed ${entry.packageName} --version reported ${JSON.stringify(version)}, expected ${expected.version}`)
     }
     console.log(`release verify-packed-install: installed ${entry.packageName} reports ${version}`)
-
-    if (values['packed-e2e']) {
-      const args = [
-        'exec',
-        'vitest',
-        'run',
-        '--config',
-        'vitest.e2e.config.ts',
-        '--reporter=verbose',
-        '--no-file-parallelism',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-jobs.e2e.ts',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-skills.e2e.ts',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-scheduled-reminder.e2e.ts',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-compat-bridge.e2e.ts',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-workflow.e2e.ts',
-        'rsh/Programs/CLI/tests/profiles/native-headless/tests/packed-code-runtime.e2e.ts',
-      ]
-      console.log('release verify-packed-install: running packed Jobs, Skills, scheduled-reminder, compat-bridge, Workflow, and '
-        + 'code-runtime e2e against the installed consumer')
-      execaSync('pnpm', args, {
-        cwd: root,
-        env: {
-          DSH_PACKED_DSH_BIN: bin,
-          DSH_PACKED_CONSUMER_ROOT: consumerRoot,
-        },
-        stdio: 'inherit',
-      })
-    }
   } finally {
     rmSync(consumerRoot, { recursive: true, force: true })
   }

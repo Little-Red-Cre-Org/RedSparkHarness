@@ -229,9 +229,7 @@ describe('headless stream-json snapshots', () => {
       tempDirPrefix: 'headless-snapshot-profile-',
       binScript: dshBinScript,
       configPath: headlessOverlayPath,
-      binArgs: [
-        '--profile', 'legacy-headless', '--from-default-profile', 'headless', '--patch', headlessOverlayPath, task,
-      ],
+      binArgs: ['--profile', 'headless', '--patch', headlessOverlayPath, task],
       tsconfigPath,
       env: {
         DSH_PERMISSION_MODE: 'danger-full-access',
@@ -263,10 +261,7 @@ describe('headless stream-json snapshots', () => {
       tempDirPrefix: 'headless-snapshot-profile-failure-',
       binScript: dshBinScript,
       configPath: headlessOverlayPath,
-      binArgs: [
-        '--profile', 'legacy-headless', '--from-default-profile', 'headless', '--patch', headlessOverlayPath,
-        'Trigger the keyless model failure.',
-      ],
+      binArgs: ['--profile', 'headless', '--patch', headlessOverlayPath, 'Trigger the keyless model failure.'],
       tsconfigPath,
       expectedExitCode: 1,
       env: {

@@ -1,5 +1,5 @@
 /** One recorded native SDK text turn through the shipped dsh profile and TypeScript client. */
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, chmodSync, realpathSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, chmodSync } from 'node:fs'
 import { execa } from 'execa'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -174,20 +174,18 @@ it('replays a native SDK turn with exact model input, output and durable Session
   const sessions = join(home, 'sessions')
   const patch = join(home, 'model.patch.json')
   mkdirSync(workspace)
-  const cwdAliases = [...new Set([workspace, realpathSync(workspace), realpathSync.native(workspace)]
-    .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]))]
-  const profile = join(home, 'profiles', 'sdk')
+  const profile = join(home, 'profiles', 'native-sdk')
   const fixturePackage = join(profile, 'node_modules', 'fixture-sdk-descendants')
   mkdirSync(fixturePackage, { recursive: true })
   const fixtureUrl = pathToFileURL(join(root, 'rsh/Programs/SDK/packages/native-server/tests/fixtures/descendants.mjs')).href
   const { plugin } = await import(fixtureUrl) as { plugin: { apiVersion: number; targets: string[];
     requires: string[]; optional: string[]; provides: string[] } }
   writeFileSync(join(fixturePackage, 'native.mjs'), `export { plugin } from ${JSON.stringify(fixtureUrl)}\n`)
-  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-descendants', version: '0.0.0', type: 'module',
+  writeFileSync(join(fixturePackage, 'package.json'), JSON.stringify({ name: 'fixture-sdk-descendants', type: 'module',
     exports: { './package.json': './package.json', './native': './native.mjs' },
     dsh: { native: { apiVersion: plugin.apiVersion, entry: './native', targets: plugin.targets,
       requires: plugin.requires, optional: plugin.optional, provides: plugin.provides } } }))
-  const composition = shippedNativeProfileComposition(home, 'sdk')
+  const composition = shippedNativeProfileComposition(home, 'native-sdk')
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-sdk-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
@@ -208,7 +206,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
-  const harness = new DeepSeekHarness({ dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+  const harness = new DeepSeekHarness({ profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
     dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
@@ -499,14 +497,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
     expect(coldRequest?.max_completion_tokens).not.toBe(128)
     const continuationFixture = join(scene, 'session.6.v3.jsonl')
     const normalizedContinuation = normalizeSessionSnapshot(redactSessionSnapshotIds([continuationLog])[0] ?? continuationLog,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(continuationFixture, normalizedContinuation)
     else expect(normalizedContinuation).toBe(readFileSync(continuationFixture, 'utf8'))
     const failedChildLog = logs.find(log => childTask(log, 'fail production child'))
     if (failedChildLog === undefined) throw new Error('native-sdk snapshot: failed child missing')
     expect(parseSessionLog(failedChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'error' } } })
     const normalizedFailed = normalizeSessionSnapshot(redactSessionSnapshotIds([failedChildLog])[0] ?? failedChildLog,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     const failedFixture = join(scene, 'session.4.v3.jsonl')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(failedFixture, normalizedFailed)
     else expect(normalizedFailed).toBe(readFileSync(failedFixture, 'utf8'))
@@ -514,7 +512,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     if (backgroundLog === undefined) throw new Error('native-sdk snapshot: background child missing')
     expect(parseSessionLog(backgroundLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
     const normalizedBackground = normalizeSessionSnapshot(redactSessionSnapshotIds([backgroundLog])[0] ?? backgroundLog,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     const backgroundFixture = join(scene, 'session.5.v3.jsonl')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(backgroundFixture, normalizedBackground)
     else expect(normalizedBackground).toBe(readFileSync(backgroundFixture, 'utf8'))
@@ -522,14 +520,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
     if (cancelledChildLog === undefined) throw new Error('native-sdk snapshot: cancelled child missing')
     expect(parseSessionLog(cancelledChildLog).at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'aborted' } } })
     const normalizedCancelled = normalizeSessionSnapshot(redactSessionSnapshotIds([cancelledChildLog])[0] ?? cancelledChildLog,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     const cancelledFixture = join(scene, 'session.3.v3.jsonl')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cancelledFixture, normalizedCancelled)
     else expect(normalizedCancelled).toBe(readFileSync(cancelledFixture, 'utf8'))
     const productionRaw = findLog(String(spawned))
     const productionEvents = parseSessionLog(productionRaw)
     expect(productionEvents.find(event => event.type === 'subagent/descriptor')?.data)
-      .toMatchObject({ version: 4, mode: 'one-shot', provider: 'spawn', label: 'production child' })
+      .toMatchObject({ version: 3, mode: 'one-shot', provider: 'spawn', label: 'production child' })
     expect(productionEvents.find(event => event.type === 'native-approval/decided')?.data)
       .toMatchObject({ policy: 'never', outcome: 'rejected' })
     expect(productionEvents.filter(event => event.type === 'tool/result').every(event => event.data.message.content[0]?.type === 'tool-result'
@@ -543,21 +541,21 @@ it('replays a native SDK turn with exact model input, output and durable Session
     expect(childRequest?.max_completion_tokens, JSON.stringify(childRequest)).toBe(128)
     const productionFixture = join(scene, 'session.2.v3.jsonl')
     const normalizedProduction = normalizeSessionSnapshot(redactSessionSnapshotIds([productionRaw])[0] ?? productionRaw,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(productionFixture, normalizedProduction)
     else expect(normalizedProduction).toBe(readFileSync(productionFixture, 'utf8'))
     const childRaw = findLog('sdk-recorded-child')
     expect(JSON.parse(childRaw.split('\n')[0] ?? '{}')).toMatchObject({ parentSession: 'sdk-recorded-fork', origin: 'subagent' })
     const normalizedChild = normalizeSessionSnapshot(redactSessionSnapshotIds([childRaw])[0] ?? childRaw,
-      { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
+      { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
     const childFixture = join(scene, 'session.1.v3.jsonl')
     if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(childFixture, normalizedChild)
     else expect(normalizedChild).toBe(readFileSync(childFixture, 'utf8'))
-    const context = { cwd: workspace, cwdAliases, sessionIds: [] }
+    const context = { cwd: workspace, sessionIds: [] }
     const catalogChildId = (JSON.parse(continuationLog.split('\n')[0] ?? '{}') as { id: string }).id
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context,
       { identityMode: 'preserve' }).replaceAll(catalogChildId, '{{session:2}}')
-    const forkContext = { cwd: workspace, cwdAliases, sessionIds: [] }
+    const forkContext = { cwd: workspace, sessionIds: [] }
     const normalizedFork = normalizeSessionSnapshot(redactSessionSnapshotIds([forkRaw])[0] ?? forkRaw,
       forkContext, { identityMode: 'preserve' })
     const forkRequest = requests[3]

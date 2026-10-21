@@ -5,30 +5,12 @@
  */
 
 import type {} from '@deepseek-ai/dsh-session/types'
-import type { ReasoningEffortId, ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm/native'
 
 /** Intersect inherited tool visibility while preserving contributions registered in the consuming scope. */
 export interface NativeToolRestriction {
   readonly allow?: readonly string[]
   readonly deny?: readonly string[]
-}
-
-/** Resolved logical lineage retained by tools executing for a product-owned child. */
-export interface NativeToolDelegationContext {
-  readonly depth: number
-  readonly maxDepth: number
-  readonly cwd: string
-  readonly provider: string
-  readonly model: string
-  readonly reasoningEffort?: ReasoningEffortId
-  readonly maxSteps: number
-  readonly maxTokens?: number
-  /** Direct model-callable names, including builtin functions selected by this exact child route. */
-  readonly toolNames: readonly string[]
-  /** Builtin names within toolNames, kept separate from same-named registry contributions. */
-  readonly builtinToolNames: readonly string[]
-  /** PTC-only business bindings admitted to programs, never promoted to direct model calls. */
-  readonly programToolNames: readonly string[]
 }
 
 /** Payload recorded when one nested PTC mode Tool dispatch starts. */

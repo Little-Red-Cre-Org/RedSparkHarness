@@ -2,53 +2,16 @@
 import { nativeWebHumanSchema, type NativeWebHumanAnswer, type NativeWebHumanId, type NativeWebHumanPrompt } from './human.ts'
 export type { NativeWebHumanAnswer, NativeWebHumanId, NativeWebHumanPrompt } from './human.ts'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
-import { z } from 'zod'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/types'
-import type {
-  WorkspaceDirectoryListing,
-  WorkspaceFileBytes,
-  WorkspaceFileRange,
-  WorkspaceFileStat,
-  WorkspaceFileText,
-  WorkspaceFileWatchFrame,
-} from '@deepseek-ai/dsh-api-workspace-files/native-types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
-import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
-  type NativeModeControls, type NativePermissionControls, type NativePlanModeSelection } from './composer-controls.ts'
-export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import { FEEDBACK_CATEGORIES, type SessionFeedbackRecordRequest, type SessionFeedbackRecordResult } from '@deepseek-ai/dsh-command-feedback/types'
-import type {
-  MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult, MessageFeedbackListRequest,
-  MessageFeedbackItem, MessageFeedbackListResult, MessageFeedbackPutRequest, MessageFeedbackPutResult,
-} from '@deepseek-ai/dsh-message-feedback/types'
-import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
-import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
-import { createNativeWorkspaceClients } from './workspaces.ts'
-import { NativeSessionRpcError } from './rpc-error.ts'
-export { NativeSessionRpcError } from './rpc-error.ts'
-import { nativeSubmissionRequestId as brandSubmissionRequestId } from './follow-types.ts'
-import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
-  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot,
-  NativeSubmissionRequestId as NativeSubmissionRequestIdType, NativeSessionFileReceipt, NativeSessionFileReceiptId,
-  NativeSessionInputPart,
-  NativeSessionSubmissionPart } from './follow-types.ts'
-export { nativeSubmissionRequestId } from './follow-types.ts'
-export type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
-  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionUpdate,
-  NativeSessionFileReceipt, NativeSessionFileReceiptId, NativeSessionInputPart, NativeSessionSubmissionPart } from './follow-types.ts'
-export type {
-  NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
-  NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
-} from './workspaces.ts'
 export type { NativeModelControls } from './model-controls.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
@@ -60,16 +23,6 @@ export interface NativeImageUpload {
   readonly name?: string
 }
 
-/** Raw browser body streamed to the selected Native Program. */
-export interface NativeFileUpload {
-  readonly data: Blob | ReadableStream<Uint8Array>
-  readonly name?: string
-}
-
-interface NativeFileUploadGlobal {
-  __DSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
-}
-
 /** Original durable image identity from the Session message protocol. */
 export type NativeSessionImage = Extract<SessionEventMap['user/message']['content'][number], { type: 'image' }>['attachment']
 
@@ -77,84 +30,15 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
-    /** Read-only Native schedule catalog selected by the browser composition. */
-    clientNativeSchedule: NativeScheduleClient
-    /** Native Workspace RPC Consumer selected by the browser composition. */
-    clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
-    /** Native directory chooser and browser selected by the browser composition. */
-    clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
-    /** Session-root-scoped Native file listing, preview and observation client. */
-    clientNativeWorkspaceFiles: NativeWorkspaceFilesClient
   }
 }
 
 import type { NativeSessionFollowFrame } from './follow-types.ts'
 export type { NativeSessionFollowFrame } from './follow-types.ts'
-import type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
-export type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
-import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
-export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
-}
-
-/** Read-only browser access to persisted scheduled work. */
-export interface NativeScheduleClient {
-  /**
-   * List active, paused, and failed scheduled plans.
-   * @param signal - caller cancellation.
-   * @returns safe plan metadata without prompts or captured execution configuration.
-   */
-  list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
-  /**
-   * Follow one complete baseline and subsequent schedule changes.
-   * @param signal - caller cancellation; abort closes the stream cleanly.
-   * @returns baseline, upsert, and remove frames from the Host.
-   */
-  follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
-}
-
-/** Read-only file tree and preview operations scoped to one Session workspace. */
-export interface NativeWorkspaceFilesClient {
-  /** @param sessionId - Session whose workspace root owns the path.
-   * @param path - workspace-relative directory path; `.` names the root.
-   * @param signal - caller cancellation.
-   * @returns bounded direct children and whether the Host cut the listing.
-   */
-  list(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceDirectoryListing>
-  /** @param sessionId - Session whose workspace root owns the path.
-   * @param path - workspace-relative file path.
-   * @param signal - caller cancellation.
-   * @returns file identity, version and byte size when known.
-   */
-  stat(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceFileStat>
-  /** @param sessionId - Session whose workspace root is observed.
-   * @param signal - required follow cancellation.
-   * @returns readiness and instrumented filesystem observations within that root.
-   */
-  follow(sessionId: SessionId, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame>
-  /** @param sessionId - Session whose workspace root owns the path.
-   * @param path - workspace-relative UTF-8 text file path.
-   * @param range - 1-based line offset and page limit.
-   * @param signal - caller cancellation.
-   * @returns one line page with freshness and end-of-file metadata.
-   */
-  read(sessionId: SessionId, path: string, range: WorkspaceFileRange, signal?: AbortSignal): Promise<WorkspaceFileText>
-  /** @param sessionId - Session whose workspace root owns the path.
-   * @param path - workspace-relative regular file path.
-   * @param signal - caller cancellation.
-   * @returns complete base64 bytes under the Host file-size cap.
-   */
-  readAll(sessionId: SessionId, path: string, signal?: AbortSignal): Promise<WorkspaceFileBytes>
-  /** @param sessionId - Session whose workspace root owns both paths.
-   * @param path - workspace-relative base file path.
-   * @param relativePath - related file path from the base file's directory.
-   * @param signal - caller cancellation.
-   * @returns complete base64 bytes under the Host file-size cap.
-   */
-  readRelated(sessionId: SessionId, path: string, relativePath: string, signal?: AbortSignal): Promise<WorkspaceFileBytes>
 }
 
 /** Redacted Settings registration returned by the native Host configuration RPC. */
@@ -179,25 +63,8 @@ export interface NativeSettingsDescriptor {
   readonly revision: number
 }
 
-/** One Host installation and its lifecycle state; configuration and failure messages stay on the Host. */
-export interface NativePluginInventoryEntry {
-  readonly id: string
-  readonly name: string
-  readonly scope: string
-  readonly state: 'planned' | 'activating' | 'ready' | 'draining' | 'failed' | 'disposed'
-  /** Which lifecycle step failed, when the installation failed. */
-  readonly failure?: 'activation' | 'cleanup'
-}
-
-/** Installations of the running Host in dependency order. */
-export interface NativePluginInventory {
-  readonly entries: readonly NativePluginInventoryEntry[]
-}
-
 /** Settings views and the Host-validated request budgets used by the Client. */
 export interface NativeSettingsDescription {
-  /** Whether the Host has a local settings document `settingsOpenDocument` can open. */
-  readonly hasDocument: boolean
   /** Registered, redacted Settings namespaces. */
   readonly namespaces: readonly NativeSettingsDescriptor[]
   /** Per-request limits enforced by the selected Host. */
@@ -207,45 +74,6 @@ export interface NativeSettingsDescription {
     /** Maximum operations accepted by one atomic Settings mutation. */
     readonly maxSettingsOperations: number
   }
-}
-
-/** File-backed and profile-installed preset choices advertised by the Host. */
-export interface NativeAgentPresetList {
-  /** Fresh-session default, or null when no preset Registry is installed. */
-  readonly default: string | null
-  /** Ready standing choices and file folders that need attention or installation. */
-  readonly presets: readonly {
-    /** Preset id. */
-    readonly id: string
-    /** Display name. */
-    readonly name: string
-    /** Optional display description. */
-    readonly description?: string
-    /** Folder trust, or `profile` for a profile-only composition. */
-    readonly source: 'profile' | 'system' | 'user'
-    /** Native folder or standing composition status. */
-    readonly status: 'ready' | 'needs-migration' | 'invalid'
-    /** Short reason when a folder cannot be installed. */
-    readonly problem?: string
-  }[]
-}
-
-/** Native preset metadata and optional raw composition file returned by the Host. */
-export interface NativeAgentPresetDocument {
-  /** Preset id. */
-  readonly id: string
-  /** Profile-only, shipped or user-authored source. */
-  readonly source: 'profile' | 'system' | 'user'
-  /** Composition file status. */
-  readonly status: 'ready' | 'needs-migration' | 'invalid'
-  /** Display name. */
-  readonly name: string
-  /** Optional display description. */
-  readonly description?: string
-  /** Raw `agent.native.json` text when the folder has a composition file. */
-  readonly content?: string
-  /** Short reason when the folder cannot be installed. */
-  readonly problem?: string
 }
 
 /** One path-addressed Settings edit. */
@@ -265,203 +93,25 @@ export interface NativeCredentialInfo {
   readonly writable: boolean
 }
 
-/** Safe metadata for one Host-registered authorization flow. */
-export interface NativeAuthorizationEntry {
-  /** Allowlisted credential record key. */
-  readonly key: string
-  /** User-facing flow name. */
-  readonly label: string
-  /** Flow methods in preference order. */
-  readonly methods: readonly AuthorizationMethod[]
-  /** Whether the credential record is configured. */
-  readonly configured: boolean
-  /** Whether the credential provider accepts writes. */
-  readonly writable: boolean
-  /** Current attempt identity, when the flow is running. */
-  readonly attemptId?: string
-}
-
-/** Safe account summary returned by the selected Host. */
-export interface NativeAccountSummary {
-  readonly key: string
-  readonly provider: 'openai-codex' | 'deepseek-account'
-  readonly status: 'signed-out' | 'ready' | 'unavailable'
-  readonly identity: {
-    readonly email: string | null
-    readonly contact: string | null
-    readonly name: string | null
-    readonly avatarUrl: string | null
+/** Structured rejection from one native Host RPC endpoint. */
+export class NativeSessionRpcError extends Error {
+  /** @param code - stable native RPC failure code.
+   * @param message - Host refusal message.
+   * @param details - safe, endpoint-specific failure facts.
+   */
+  constructor(readonly code: string, message: string, readonly details: object) {
+    super(message)
+    this.name = 'NativeSessionRpcError'
   }
-  readonly plan: string | null
 }
-
-/** Provider route advertised by the selected Native model adapter. */
-export interface NativeLlmProviderInfo {
-  readonly id: string
-  readonly name: string
-}
-
-/** Configurable provider entry and optional diagnostic from the selected adapter. */
-export interface NativeConfigurableModelProvider {
-  readonly provider: string
-  readonly displayName: string
-  readonly settingsNs: string
-  readonly settingsPath: readonly string[]
-  readonly declared?: boolean
-  readonly error?: string
-}
-
-/** One draft endpoint interrogation; apiKey is used only for this request. */
-export interface NativeModelDiscoveryRequest {
-  readonly provider?: string
-  readonly baseURL?: string
-  readonly api?: string
-  readonly apiKey?: string
-}
-
-/** Candidate model metadata returned by endpoint discovery. */
-export interface NativeDiscoveredModel {
-  readonly id: string
-  readonly name?: string
-  readonly contextWindow?: number
-  readonly maxTokens?: number
-}
-
-/** Notification-only event that tells Settings pages which view to reread. */
-export type NativeSettingsEvent =
-  | { readonly type: 'settings/document-updated'; readonly namespace: string; readonly revision: number }
-  | { readonly type: 'credentials/reference-updated'; readonly ref: string }
-  | { readonly type: 'llm/adapters-updated' }
-  | { readonly type: 'agent-presets/updated' }
-  | { readonly type: 'accounts/changed'; readonly key: string }
-
-/** Provider-reported quota window, with reset time in Unix seconds. */
-export interface NativeQuotaWindow {
-  readonly usedPercent: number
-  readonly windowSeconds: number | null
-  readonly resetsAt: number | null
-}
-
-/** Provider-reported quota group. */
-export interface NativeQuota {
-  readonly name: string
-  readonly primary: NativeQuotaWindow | null
-  readonly secondary: NativeQuotaWindow | null
-}
-
-/** Account usage, including the absent-provider response used by this RPC. */
-export type NativeAccountUsage =
-  | {
-    readonly status: 'ready'
-    readonly email: string | null
-    readonly plan: string | null
-    readonly quotas: readonly NativeQuota[]
-    readonly credits: { readonly unlimited: boolean; readonly balance: string | null } | null
-  }
-  | { readonly status: 'signed-out' }
-  | { readonly status: 'failed'; readonly reason: string }
-  | { readonly status: 'unsupported' }
-
-/** Account wallet balance, retained as a decimal string. */
-export interface NativeAccountWallet {
-  readonly currency: 'CNY' | 'USD'
-  readonly balance: string
-}
-
-/** Account balance or the account operation's status. */
-export type NativeAccountBalance =
-  | { readonly status: 'ready'; readonly wallets: readonly NativeAccountWallet[]; readonly bonusWallets: readonly NativeAccountWallet[] }
-  | { readonly status: 'signed-out' | 'failed' | 'unsupported' }
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
-  /** Record human Session feedback through the Host's durable log writer.
-   * @param request - Session id, optional remark and category.
-   * @param signal - caller cancellation before the append is admitted.
-   * @returns durable acknowledgement or a missing-live-Session result.
-   */
-  sessionFeedbackRecord(request: SessionFeedbackRecordRequest, signal?: AbortSignal): Promise<SessionFeedbackRecordResult>
-  /** List feedback for a persisted Session.
-   * @param request - target Session.
-   * @param signal - caller cancellation.
-   * @returns current immutable message ratings or a missing-Session result.
-   */
-  messageFeedbackList(request: MessageFeedbackListRequest, signal?: AbortSignal): Promise<MessageFeedbackListResult>
-  /** Create or replace feedback for one assistant message.
-   * @param request - target, desired value and observed item version.
-   * @param signal - caller cancellation before the mutation is admitted.
-   * @returns durable item or an explicit business failure.
-   */
-  messageFeedbackPut(request: MessageFeedbackPutRequest, signal?: AbortSignal): Promise<MessageFeedbackPutResult>
-  /** Delete message feedback after observing its current version.
-   * @param request - Session, message and observed version.
-   * @param signal - caller cancellation before the mutation is admitted.
-   * @returns durable absence or an explicit business failure.
-   */
-  messageFeedbackDelete(request: MessageFeedbackDeleteRequest, signal?: AbortSignal): Promise<MessageFeedbackDeleteResult>
-  /** List native preset folders and installed standing compositions.
-   * @param signal - caller cancellation.
-   * @returns current preset catalog; empty with a null default when no Registry is installed.
-   */
-  agentPresetsList(signal?: AbortSignal): Promise<NativeAgentPresetList>
-  /** Read one preset's metadata and raw native composition file.
-   * @param id - preset id.
-   * @param signal - caller cancellation.
-   * @returns Host-owned preset details; profile-only compositions have no file content.
-   */
-  agentPresetRead(id: string, signal?: AbortSignal): Promise<NativeAgentPresetDocument>
-  /** Copy one file-backed preset into the Host's user preset directory.
-   * @param from - source preset id.
-   * @param id - new directory id.
-   * @param name - optional display name.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host writes the copy.
-   */
-  agentPresetCopy(
-    from: string, id: string, name?: string, signal?: AbortSignal,
-  ): Promise<void>
-  /** Delete one user-authored preset.
-   * @param id - preset id.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host removes its directory.
-   */
-  agentPresetDelete(id: string, signal?: AbortSignal): Promise<void>
-  /** Report whether the Host can open a preset folder in its file manager.
-   * @param signal - caller cancellation.
-   * @returns Host-local opener availability.
-   */
-  agentPresetsCanOpenDirectory(signal?: AbortSignal): Promise<boolean>
-  /** Open one user preset folder or return its Host-local path.
-   * @param id - user preset id.
-   * @param signal - caller cancellation.
-   * @returns whether the Host opened the folder, or its path for display.
-   */
-  agentPresetOpenDirectory(
-    id: string, signal?: AbortSignal,
-  ): Promise<{ readonly opened: true } | { readonly opened: false; readonly path: string }>
   /** Describe schema-published Settings namespaces and Host request budgets.
    * @param signal - caller cancellation.
    * @returns the registered views and validated limits for bounded reads and atomic writes.
    */
   settingsDescribe(signal?: AbortSignal): Promise<NativeSettingsDescription>
-  /**
-   * Read the running Host's plugin installations for the Plugins page.
-   * @param signal - caller cancellation.
-   * @returns installation names, scopes and lifecycle states.
-   */
-  pluginInventoryList(signal?: AbortSignal): Promise<NativePluginInventory>
-  /**
-   * Read every routable model for model pickers outside a Session.
-   * @param signal - caller cancellation.
-   * @returns the Host catalog, or null when no model directory is installed.
-   */
-  modelCatalog(signal?: AbortSignal): Promise<NativeModelControls['catalog']>
-  /**
-   * Open the Host's local settings document in its text editor.
-   * @param signal - caller cancellation.
-   * @returns confirmation once the editor command was accepted.
-   */
-  settingsOpenDocument(signal?: AbortSignal): Promise<{ readonly opened: true }>
   /** Apply Settings path edits against the revision the page displayed.
    * @param namespace - registered Settings namespace.
    * @param ops - path-addressed user-layer edits.
@@ -472,30 +122,6 @@ export interface NativeSessionClient {
   settingsMutate(
     namespace: string, ops: readonly NativeSettingsPathOp[], expectedRevision: number, signal?: AbortSignal,
   ): Promise<NativeSettingsDescriptor>
-  /** List live provider routes from the selected Host model directory.
-   * @param signal - caller cancellation.
-   * @returns provider ids and display names; empty when the Host has no model directory.
-   */
-  modelsListProviders(signal?: AbortSignal): Promise<readonly NativeLlmProviderInfo[]>
-  /** List configurable provider routes and catalog diagnostics from the selected Host.
-   * @param signal - caller cancellation.
-   * @returns configurable provider entries; empty when the Host has no model settings provider.
-   */
-  modelsListConfigurableProviders(signal?: AbortSignal): Promise<readonly NativeConfigurableModelProvider[]>
-  /** Discover candidate models from the current Settings draft.
-   * @param settingsNs - Settings namespace that owns discovery.
-   * @param request - endpoint and optional one-request API key.
-   * @param signal - caller cancellation.
-   * @returns deduplicated candidate metadata projected for the Settings page.
-   */
-  modelsDiscover(
-    settingsNs: string, request: NativeModelDiscoveryRequest, signal?: AbortSignal,
-  ): Promise<readonly NativeDiscoveredModel[]>
-  /** Watch Settings, credential-reference and model-adapter invalidations.
-   * @param signal - caller cancellation; abort closes the stream cleanly.
-   * @returns notification frames without Settings or credential values.
-   */
-  settingsEvents(signal: AbortSignal): AsyncIterable<NativeSettingsEvent>
   /** Describe credential refs declared by the active Settings schemas.
    * @param refs - schema-discovered reference names.
    * @param signal - caller cancellation.
@@ -515,72 +141,6 @@ export interface NativeSessionClient {
    * @returns completion acknowledgement.
    */
   credentialsUnset(ref: string, signal?: AbortSignal): Promise<void>
-  /** List allowlisted authorization flows without reading credential records.
-   * @param signal - caller cancellation.
-   * @returns safe flow labels, methods and credential presence facts.
-   */
-  authorizationList(signal?: AbortSignal): Promise<readonly NativeAuthorizationEntry[]>
-  /** List supported Host accounts without returning credential values.
-   * @param signal - caller cancellation.
-   * @returns safe account summaries; empty when the Host has no account provider.
-   */
-  accountsList(signal?: AbortSignal): Promise<readonly NativeAccountSummary[]>
-  /** Read provider-reported usage for one configured account key.
-   * @param key - allowlisted credential record key.
-   * @param signal - caller cancellation.
-   * @returns usage status and quota metadata without tokens.
-   */
-  accountsUsage(key: string, signal?: AbortSignal): Promise<NativeAccountUsage>
-  /** Read account balance for one configured account key.
-   * @param key - allowlisted credential record key.
-   * @param signal - caller cancellation.
-   * @returns balance status; unsupported when no provider is installed.
-   */
-  accountsBalance(key: string, signal?: AbortSignal): Promise<NativeAccountBalance>
-  /** Sign out of one configured account key.
-   * @param key - allowlisted credential record key.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host deletes its account credential record.
-   */
-  accountsSignOut(key: string, signal?: AbortSignal): Promise<void>
-  /** Start one allowlisted flow independently of the caller's page lifetime.
-   * @param key - allowlisted credential key.
-   * @param method - optional flow method id.
-   * @param signal - caller cancellation while the Host admits the attempt.
-   * @returns the current attempt identity.
-   */
-  authorizationBegin(key: string, method?: string, signal?: AbortSignal): Promise<{ readonly attemptId: string }>
-  /** Watch replayable authorization frames until this iteration ends.
-   * @param key - allowlisted credential key.
-   * @param attemptId - current attempt identity.
-   * @param signal - ends this frame iteration without cancelling the attempt.
-   * @returns secret-free frames from the beginning of the attempt.
-   */
-  authorizationFrames(key: string, attemptId: string, signal: AbortSignal): AsyncIterable<AuthorizationFrame>
-  /** Submit a value to one open authorization prompt.
-   * @param key - allowlisted credential key.
-   * @param attemptId - current attempt identity.
-   * @param promptId - open prompt identity.
-   * @param value - text or selected option id.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host accepts the answer.
-   */
-  authorizationAnswer(key: string, attemptId: string, promptId: string, value: string, signal?: AbortSignal): Promise<void>
-  /** Decline one open authorization prompt.
-   * @param key - allowlisted credential key.
-   * @param attemptId - current attempt identity.
-   * @param promptId - open prompt identity.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host accepts the decline.
-   */
-  authorizationDecline(key: string, attemptId: string, promptId: string, signal?: AbortSignal): Promise<void>
-  /** Cancel an authorization attempt and wait for its Host drain.
-   * @param key - allowlisted credential key.
-   * @param attemptId - current attempt identity.
-   * @param signal - caller cancellation while waiting for the Host reply.
-   * @returns completion after the attempt releases its key.
-   */
-  authorizationCancel(key: string, attemptId: string, signal?: AbortSignal): Promise<void>
   /** Fetch verified bytes of an image recorded in the selected Session.
    * @param sessionId - recorded Session identity.
    * @param image - image reference obtained from its validated history.
@@ -601,32 +161,6 @@ export interface NativeSessionClient {
    * @returns current Host capability availability and provider-owned choices.
    */
   modelControls(signal?: AbortSignal): Promise<NativeModelControls>
-  /** Read the selected Session's current mode, mode choices and plan-mode state.
-   * @param sessionId - selected stored Session.
-   * @param signal - caller cancellation.
-   * @returns Host mode facts and installed choices.
-   */
-  modeControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativeModeControls>
-  /** Select plan mode through the Host's durable and pending-step state machine.
-   * @param sessionId - selected stored Session.
-   * @param active - requested plan-mode state.
-   * @param signal - caller cancellation.
-   * @returns the Host's committed or pending state and outcome.
-   */
-  selectPlanMode(sessionId: SessionId, active: boolean, signal?: AbortSignal): Promise<NativePlanModeSelection>
-  /** Read the selected Session's current standing permission policy and choices.
-   * @param sessionId - selected stored Session.
-   * @param signal - caller cancellation.
-   * @returns Host permission controls, or an unavailable result when no Provider is installed.
-   */
-  permissionControls(sessionId: SessionId, signal?: AbortSignal): Promise<NativePermissionControls>
-  /** Select a standing permission preset without answering pending one-shot approvals.
-   * @param sessionId - selected stored Session.
-   * @param preset - configured permission preset id.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host persists the policy.
-   */
-  selectPermissionPreset(sessionId: SessionId, preset: string, signal?: AbortSignal): Promise<void>
   /** Persist a Session-local model/effort intent against its last observed revision.
    * @param sessionId - selected stored Session.
    * @param request - complete model choice and expected durable intent revision.
@@ -640,53 +174,15 @@ export interface NativeSessionClient {
    * @returns completion after old Agent drain and accepted successor activation.
    */
   selectPreset(request: NativeAgentPresetSelectionRequest, signal?: AbortSignal): Promise<void>
-  /** Execute one exact registered slash command on the selected idle Session owner.
-   * @param sessionId - selected stored Session.
-   * @param line - complete slash command line.
-   * @param signal - caller cancellation; the Host drains the command before settlement.
-   * @returns the durable command lifecycle identity and normalized outcome.
-   */
-  executeCommand(sessionId: SessionId, line: string, signal?: AbortSignal): Promise<CommandExecution>
-  /** List slash commands available to the selected Session's exact Program root owner.
-   * @param sessionId - selected stored Session.
-   * @param signal - caller cancellation.
-   * @returns visible command descriptions and optional input hints and attachment support.
-   */
-  commands(sessionId: SessionId, signal?: AbortSignal): Promise<readonly CommandDescriptor[]>
-  /** Cancel owned prompts, streams and uploads, then wait for their settlement.
+  /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
   close(): Promise<void>
   /**
    * @param signal - caller cancellation.
-   * @returns Session rows ordered by latest activity.
+   * @returns stored Session headers.
    */
-  list(signal?: AbortSignal): Promise<readonly NativeSessionListItem[]>
-  /**
-   * Follow the Host list after its complete ordered baseline.
-   * @param signal - ends this iteration without changing Session state.
-   * @returns baseline, upsert and removal frames from the selected Host.
-   */
-  follow(signal: AbortSignal): AsyncIterable<NativeSessionListFrame>
-  /**
-   * Search Session titles and current recorded message text in bounded Host pages.
-   * @param query - non-empty literal search text.
-   * @param cursor - continuation returned by the preceding page.
-   * @param signal - caller cancellation.
-   * @returns matching Session titles and message snippets.
-   */
-  search(query: string, cursor?: string, signal?: AbortSignal): Promise<NativeSessionSearchPage>
-  /**
-   * Archive one Session through the selected Workspace registry.
-   * @param sessionId - stored Session identity.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host records the archive.
-   */
-  archive(sessionId: SessionId, signal?: AbortSignal): Promise<void>
-  /** Pin a title through the selected Host Session owner. */
-  renameTitle(sessionId: SessionId, title: string, signal?: AbortSignal): Promise<void>
-  /** Deliberately unpin and regenerate through the selected Host provider or fallback. */
-  refreshTitle(sessionId: SessionId, signal?: AbortSignal): Promise<void>
+  list(signal?: AbortSignal): Promise<readonly SessionHeader[]>
   /**
    * @param signal - caller cancellation.
    * @returns a durably created blank Session.
@@ -702,129 +198,20 @@ export interface NativeSessionClient {
     readonly events: readonly SessionEvent[]
     readonly inheritedEventCount: number
   }>
-  /** Stream immutable file bytes for one existing Session without opening its Agent.
-   * @param sessionId - existing Session whose selected Program route owns the receipt.
-   * @param file - Blob or one-shot byte stream and optional display name.
-   * @param signal - caller cancellation during transport and storage admission.
-   * @returns process-local receipt consumed by a later prompt, queue, or steer operation.
-   */
-  uploadFile(sessionId: SessionId, file: NativeFileUpload, signal?: AbortSignal): Promise<NativeSessionFileReceipt>
-  /** Submit one identified prompt to the active Session's next-turn inbox.
-   * @param sessionId - selected Session.
-   * @param prompt - non-empty text to run after the active turn.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted queue placement; Host failures retain the request id in error details.
-   */
-  queue(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Submit one identified prompt to the active Session's next-step inbox.
-   * @param sessionId - selected Session.
-   * @param prompt - non-empty text for the next model step.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted steering placement; Host failures retain the request id in error details.
-   */
-  steer(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Submit ordered text, encoded images and staged files to the next-turn inbox.
-   * @param sessionId - selected Session.
-   * @param content - ordered text, encoded image and file receipt parts.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted queue placement; Host failures retain the request id in error details.
-   */
-  queueContent(sessionId: SessionId, content: readonly NativeSessionSubmissionPart[], requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Submit ordered text, encoded images and staged files to the next-step inbox.
-   * @param sessionId - selected Session.
-   * @param content - ordered text, encoded image and file receipt parts.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted steering placement; Host failures retain the request id in error details.
-   */
-  steerContent(sessionId: SessionId, content: readonly NativeSessionSubmissionPart[], requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Remove one identified request that is still waiting in a Host inbox.
-   * @param sessionId - selected Session.
-   * @param requestId - stable identity supplied when the request was queued or steered.
-   * @param signal - caller cancellation.
-   * @returns completion after the Host persists the removal.
-   */
-  dequeue(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, signal?: AbortSignal): Promise<void>
-  /** Read accepted submissions still waiting in either Host inbox.
-   * @param sessionId - selected Session.
-   * @param signal - caller cancellation.
-   * @returns pending requests reconstructed from one durable event prefix.
-   */
-  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<NativeSubmissionsSnapshot>
-  /** Replace all text content on one still-pending request without changing its id or placement.
-   * @param sessionId - selected Session.
-   * @param requestId - stable identity supplied when the request was queued or steered.
-   * @param text - complete replacement text.
-   * @param signal - caller cancellation.
-   * @returns `updated` after durability, or `stale` after prior removal or claim.
-   */
-  editSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, text: string,
-    signal?: AbortSignal): Promise<NativeSubmissionEditResult>
-  /** Move one still-queued request to the next model-step inbox.
-   * @param sessionId - selected Session.
-   * @param requestId - stable identity supplied when the request was queued.
-   * @param signal - caller cancellation.
-   * @returns the durable move, `stale` after removal, or `not-promotable` when already steering.
-   */
-  promoteSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionPromotionResult>
   /**
    * @param sessionId - selected identity.
    * @param text - human input.
    * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
+   * @param signal - abort cancels and drains this turn.
+   * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
-   * @param onFollowError - background follow failure after turn settlement, when present.
-   * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void, lastSeq?: number, detach?: AbortSignal,
-    onAccepted?: () => void): Promise<{
+    observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[]): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
-  /** Start or resume a turn with ordered text, image uploads, and staged files.
-   * @param sessionId - selected identity.
-   * @param content - ordered input; file parts must use receipts from this Program and Session.
-   * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
-   * @param onFollowError - background follow failure after turn settlement, when present.
-   * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
-   * @returns durable turn settlement.
-   */
-  promptContent(sessionId: SessionId, content: readonly NativeSessionInputPart[], resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void, onFollowError?: (error: unknown) => void, lastSeq?: number,
-    detach?: AbortSignal, onAccepted?: () => void): Promise<{
-    readonly exitCode: number
-    readonly answer?: string
-  }>
-  /** Resume a running Host turn from durable history and any pending human presentation.
-   * @param sessionId - selected identity.
-   * @param lastSeq - highest event already present in the selected view.
-   * @param observe - required synchronous presentation observer.
-   * @param signal - explicit turn cancellation.
-   * @param onFollowError - report a failure after the turn has settled.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @returns durable turn settlement, or `undefined` when no turn is running.
-   */
-  attach(sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void,
-    detach?: AbortSignal): Promise<{ readonly exitCode: number; readonly answer?: string } | undefined>
   /**
    * @param sessionId - selected identity.
    * @param signal - caller cancellation.
@@ -866,12 +253,12 @@ function settingsDescriptor(value: unknown): NativeSettingsDescriptor {
 function settingsDescription(value: unknown): NativeSettingsDescription {
   const data = fields(value)
   const limits = fields(data.limits)
-  if (!Array.isArray(data.namespaces) || typeof data.hasDocument !== 'boolean'
+  if (!Array.isArray(data.namespaces)
     || typeof limits.maxCredentialRefsPerRead !== 'number' || !Number.isSafeInteger(limits.maxCredentialRefsPerRead) || limits.maxCredentialRefsPerRead < 1
     || typeof limits.maxSettingsOperations !== 'number' || !Number.isSafeInteger(limits.maxSettingsOperations) || limits.maxSettingsOperations < 1) {
     throw new TypeError('invalid native Settings description')
   }
-  return { hasDocument: data.hasDocument, namespaces: data.namespaces.map(settingsDescriptor), limits: {
+  return { namespaces: data.namespaces.map(settingsDescriptor), limits: {
     maxCredentialRefsPerRead: limits.maxCredentialRefsPerRead,
     maxSettingsOperations: limits.maxSettingsOperations,
   } }
@@ -888,132 +275,6 @@ function credentialInfo(value: unknown): NativeCredentialInfo {
     ...data.source === undefined ? {} : { source: data.source } }
 }
 
-const authorizationEntrySchema = z.strictObject({
-  key: z.string(), label: z.string(),
-  methods: z.array(z.strictObject({ id: z.string(), label: z.string() })),
-  configured: z.boolean(), writable: z.boolean(), attemptId: z.string().optional(),
-})
-const accountSummarySchema = z.strictObject({
-  key: z.string(), provider: z.enum(['openai-codex', 'deepseek-account']), status: z.enum(['signed-out', 'ready', 'unavailable']),
-  identity: z.strictObject({
-    email: z.string().nullable(), contact: z.string().nullable(), name: z.string().nullable(), avatarUrl: z.string().nullable(),
-  }),
-  plan: z.string().nullable(),
-})
-const quotaWindowSchema = z.strictObject({
-  usedPercent: z.number(), windowSeconds: z.number().nullable(), resetsAt: z.number().nullable(),
-})
-const quotaSchema = z.strictObject({
-  name: z.string(), primary: quotaWindowSchema.nullable(), secondary: quotaWindowSchema.nullable(),
-})
-const accountUsageSchema = z.discriminatedUnion('status', [
-  z.strictObject({ status: z.literal('ready'), email: z.string().nullable(), plan: z.string().nullable(),
-    quotas: z.array(quotaSchema), credits: z.strictObject({ unlimited: z.boolean(), balance: z.string().nullable() }).nullable() }),
-  z.strictObject({ status: z.literal('signed-out') }),
-  z.strictObject({ status: z.literal('failed'), reason: z.string() }),
-  z.strictObject({ status: z.literal('unsupported') }),
-])
-const accountWalletSchema = z.strictObject({ currency: z.enum(['CNY', 'USD']), balance: z.string() })
-const accountBalanceSchema = z.discriminatedUnion('status', [
-  z.strictObject({ status: z.literal('ready'), wallets: z.array(accountWalletSchema), bonusWallets: z.array(accountWalletSchema) }),
-  z.strictObject({ status: z.literal('signed-out') }),
-  z.strictObject({ status: z.literal('failed') }),
-  z.strictObject({ status: z.literal('unsupported') }),
-])
-const scheduledJobSchema = z.strictObject({
-  id: z.string().min(1), sessionId: z.string().min(1), title: z.string(),
-  state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
-  nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
-  lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
-})
-const scheduleFrameSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
-  z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
-  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
-])
-const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
-const nativeAgentPresetListSchema = z.strictObject({
-  default: z.string().nullable(),
-  presets: z.array(z.strictObject({
-    id: z.string().min(1), name: z.string(), description: z.string().optional(),
-    source: z.enum(['profile', 'system', 'user']),
-    status: z.enum(['ready', 'needs-migration', 'invalid']), problem: z.string().optional(),
-  })),
-})
-const nativeAgentPresetDocumentSchema = z.strictObject({
-  id: z.string().min(1), source: z.enum(['profile', 'system', 'user']),
-  status: z.enum(['ready', 'needs-migration', 'invalid']), name: z.string(),
-  description: z.string().optional(), content: z.string().optional(), problem: z.string().optional(),
-})
-const configurableModelProviderSchema = z.strictObject({
-  provider: z.string(), displayName: z.string(), settingsNs: z.string(), settingsPath: z.array(z.string()),
-  declared: z.boolean().optional(), error: z.string().optional(),
-})
-const discoveredModelSchema = z.strictObject({
-  id: z.string().min(1), name: z.string().optional(), contextWindow: z.number().optional(), maxTokens: z.number().optional(),
-})
-const settingsEventSchema = z.discriminatedUnion('type', [
-  z.strictObject({
-    type: z.literal('settings/document-updated'), namespace: z.string(),
-    revision: z.number().int().nonnegative().refine(Number.isSafeInteger),
-  }),
-  z.strictObject({ type: z.literal('credentials/reference-updated'), ref: z.string() }),
-  z.strictObject({ type: z.literal('llm/adapters-updated') }),
-  z.strictObject({ type: z.literal('agent-presets/updated') }),
-  z.strictObject({ type: z.literal('accounts/changed'), key: z.string() }),
-])
-const listItemSchema = z.strictObject({
-  header: z.unknown(), titleProjection: z.unknown(),
-  titleActions: z.strictObject({ rename: z.boolean(), refresh: z.boolean() }).optional(),
-  updatedAt: z.number().int().nonnegative().refine(Number.isSafeInteger), blank: z.boolean(),
-  running: z.boolean(), completed: z.boolean(), runningSubagentCount: z.number().int().nonnegative().refine(Number.isSafeInteger),
-  pendingInteraction: z.strictObject({ kind: z.enum(['approval', 'plan-review', 'question']) }).optional(),
-  workspaceId: z.string().min(1).optional(), hasActiveSchedule: z.boolean(),
-})
-const listFrameSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('baseline'), items: z.array(listItemSchema) }),
-  z.strictObject({ type: z.literal('upsert'), item: listItemSchema }),
-  z.strictObject({ type: z.literal('remove'), sessionId: z.string().min(1) }),
-])
-const searchPageSchema = z.strictObject({
-  items: z.array(z.strictObject({
-    sessionId: z.string().min(1), title: z.string(), workspaceId: z.string().min(1).optional(),
-    cwd: z.string().optional(), snippet: z.string().optional(),
-  })),
-  cursor: z.string().optional(),
-})
-const authorizationFrameSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('notice'), notice: z.strictObject({
-    message: z.string(), url: z.string().optional(), code: z.string().optional(),
-  }) }),
-  z.strictObject({ type: z.literal('prompt'), promptId: z.string(), prompt: z.discriminatedUnion('kind', [
-    z.strictObject({ kind: z.literal('text'), message: z.string(), placeholder: z.string().optional() }),
-    z.strictObject({ kind: z.literal('secret'), message: z.string(), placeholder: z.string().optional() }),
-    z.strictObject({ kind: z.literal('select'), message: z.string(), options: z.array(z.strictObject({
-      id: z.string(), label: z.string(), description: z.string().optional(),
-    })) }),
-  ]) }),
-  z.strictObject({ type: z.literal('prompt-closed'), promptId: z.string() }),
-  z.strictObject({ type: z.literal('settled'), settlement: z.enum(['authorized', 'cancelled', 'failed']),
-    code: z.string().optional(), message: z.string().optional() }),
-])
-
-function scheduleJob(value: unknown): NativeScheduledJob {
-  const job = scheduledJobSchema.parse(value)
-  const { nextRunAt, lastRunAt, ...metadata } = job
-  return { ...metadata, sessionId: job.sessionId as SessionId,
-    ...(nextRunAt === undefined ? {} : { nextRunAt }), ...(lastRunAt === undefined ? {} : { lastRunAt }) }
-}
-
-function scheduleFrame(value: unknown): NativeScheduleFrame {
-  const frame = scheduleFrameSchema.parse(value)
-  switch (frame.type) {
-    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
-    case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
-    case 'remove': return frame
-  }
-}
-
 function header(value: unknown): SessionHeader {
   const data = fields(value)
   if (typeof data.id !== 'string' || data.id.length === 0 || data.version !== SESSION_FORMAT_VERSION
@@ -1022,158 +283,11 @@ function header(value: unknown): SessionHeader {
   return data as unknown as SessionHeader
 }
 
-function listItem(value: unknown): NativeSessionListItem {
-  const data = listItemSchema.parse(value)
-  const projection = fields(data.titleProjection)
-  const titleProjection: NativeSessionTitleProjection = projection.status === 'resolved' && typeof projection.title === 'string'
-    && projection.title.length > 0 ? { status: 'resolved', title: projection.title }
-    : projection.status === 'absent' ? { status: 'absent' }
-      : projection.status === 'unavailable' ? { status: 'unavailable' }
-        : (() => { throw new TypeError('invalid native Session title projection') })()
-  return {
-    header: header(data.header), titleProjection,
-    ...data.titleActions === undefined ? {} : { titleActions: data.titleActions },
-    updatedAt: data.updatedAt, blank: data.blank, running: data.running, completed: data.completed,
-    runningSubagentCount: data.runningSubagentCount,
-    ...data.pendingInteraction === undefined ? {} : { pendingInteraction: data.pendingInteraction },
-    ...data.workspaceId === undefined ? {} : { workspaceId: data.workspaceId as Branded<'WorkspaceId'> },
-    hasActiveSchedule: data.hasActiveSchedule,
-  }
-}
-
-function listFrame(value: unknown): NativeSessionListFrame {
-  const frame = listFrameSchema.parse(value)
-  if (frame.type === 'baseline') return { type: 'baseline', items: frame.items.map(listItem) }
-  if (frame.type === 'upsert') return { type: 'upsert', item: listItem(frame.item) }
-  return { type: 'remove', sessionId: frame.sessionId as SessionId }
-}
-
-const pluginInventorySchema = z.strictObject({ entries: z.array(z.strictObject({
-  id: z.string(), name: z.string(), scope: z.string(),
-  state: z.enum(['planned', 'activating', 'ready', 'draining', 'failed', 'disposed']),
-  failure: z.enum(['activation', 'cleanup']).optional(),
-})) }) as unknown as z.ZodType<NativePluginInventory>
-const nativeCommandCatalogSchema = z.strictObject({ commands: z.array(z.strictObject({
-  definitionId: z.string().optional(), name: z.string().min(1), description: z.string().min(1),
-  input: z.strictObject({ hint: z.string(), attachments: z.boolean().optional() }).optional(),
-})) }) as unknown as z.ZodType<{ readonly commands: readonly CommandDescriptor[] }>
-const workspaceFileStatSchema = z.strictObject({
-  absolutePath: z.string().min(1), version: z.string().min(1),
-  bytes: z.number().int().refine(Number.isSafeInteger).nonnegative().optional(),
-})
-const workspaceDirectoryListingSchema = z.strictObject({
-  path: z.string(),
-  entries: z.array(z.strictObject({
-    name: z.string(), type: z.enum(['file', 'directory', 'other']),
-    size: z.number().int().refine(Number.isSafeInteger).nonnegative().optional(),
-  })),
-  truncated: z.boolean(),
-})
-const workspaceFileTextSchema = workspaceFileStatSchema.extend({
-  offset: z.number().int().refine(Number.isSafeInteger).positive(), text: z.string(),
-  lines: z.number().int().refine(Number.isSafeInteger).nonnegative(), eof: z.boolean(),
-}) as z.ZodType<WorkspaceFileText>
-const workspaceFileBytesSchema = workspaceFileStatSchema.extend({
-  offset: z.literal(0), data: z.string(), eof: z.literal(true),
-}) as z.ZodType<WorkspaceFileBytes>
-const workspaceFileWatchFrameSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('ready') }),
-  z.strictObject({ kind: z.literal('change'), change: z.union([
-    z.strictObject({ absolutePath: z.string().min(1), version: z.string().min(1) }),
-    z.strictObject({ absolutePath: z.string().min(1), absent: z.literal(true) }),
-  ]) }),
-]) as z.ZodType<WorkspaceFileWatchFrame>
-const messageFeedbackItemSchema = z.strictObject({
-  messageId: z.string().min(1), rating: z.enum(['positive', 'negative']), note: z.string().optional(),
-  category: z.enum(FEEDBACK_CATEGORIES).optional(), version: z.uuid(),
-  createdAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-}).refine(item => item.updatedAt >= item.createdAt) as unknown as z.ZodType<MessageFeedbackItem>
-const feedbackSessionMissingSchema = z.strictObject({ code: z.literal('session-not-found'), sessionId: z.string().min(1) })
-const feedbackConflictSchema = z.strictObject({ code: z.literal('version-conflict'), current: messageFeedbackItemSchema.nullable() })
-const feedbackTargetMissingSchema = z.strictObject({ code: z.literal('target-not-found'), sessionId: z.string().min(1), messageId: z.string().min(1) })
-const feedbackMutationErrorSchema = z.discriminatedUnion('code', [feedbackSessionMissingSchema,
-  feedbackConflictSchema, feedbackTargetMissingSchema, z.strictObject({ code: z.literal('note-blank') }),
-  z.strictObject({ code: z.literal('note-too-large'), maxBytes: z.number().int().positive(), actualBytes: z.number().int().positive() })])
-
-function feedbackReply<T>(
-  value: unknown,
-  success: z.ZodType<T>,
-): { readonly ok: true; readonly value: T } | {
-  readonly ok: false
-  readonly error: z.infer<typeof feedbackMutationErrorSchema>
-} {
-  const data = fields(value)
-  if (data.ok === true) return z.strictObject({ ok: z.literal(true), value: success }).parse(value)
-  return z.strictObject({ ok: z.literal(false), error: feedbackMutationErrorSchema }).parse(value)
-}
-
-function resolveApiUrl(endpoint: string): URL {
-  const pageLocation = Reflect.get(globalThis, 'location') as unknown
-  const origin = typeof pageLocation === 'object' && pageLocation !== null
-    && 'origin' in pageLocation && typeof pageLocation.origin === 'string' && pageLocation.origin !== 'null'
-    ? pageLocation.origin : 'http://dsh.internal'
-  return new URL(`/api/${endpoint}`, origin)
-}
-
 function decodeReply(endpoint: string, value: unknown): unknown {
-  if (endpoint === 'session/file-upload') {
-    const receipt = z.strictObject({ receiptId: z.string().min(1), name: z.string(), bytes: z.number().int().nonnegative() }).parse(value)
-    return { ...receipt, receiptId: brandString<NativeSessionFileReceiptId>(receipt.receiptId) }
-  }
-  if (endpoint === 'feedback/session-record') {
-    const reply = z.union([
-      z.strictObject({ ok: z.literal(true), value: z.strictObject({ recorded: z.literal(true) }) }),
-      z.strictObject({ ok: z.literal(false), error: feedbackSessionMissingSchema }),
-    ]).parse(value)
-    return reply
-  }
-  if (endpoint === 'feedback/message-list') {
-    return feedbackReply(value, z.strictObject({ items: z.array(messageFeedbackItemSchema) }))
-  }
-  if (endpoint === 'feedback/message-put') {
-    return feedbackReply(value, messageFeedbackItemSchema)
-  }
-  if (endpoint === 'feedback/message-delete') {
-    return feedbackReply(value, z.strictObject({ absent: z.literal(true) }))
-  }
-  if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
-  if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
-  if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
-    if (fields(value).updated !== true) throw new TypeError('invalid native Agent preset write acknowledgement')
-    return undefined
-  }
-  if (endpoint === 'agent-presets/can-open-directory') {
-    if (typeof value !== 'boolean') throw new TypeError('invalid native Agent preset directory capability')
-    return value
-  }
-  if (endpoint === 'agent-presets/open-directory') {
-    const data = fields(value)
-    if (data.opened === true) return { opened: true }
-    if (data.opened === false && typeof data.path === 'string') return { opened: false, path: data.path }
-    throw new TypeError('invalid native Agent preset directory response')
-  }
-  if (endpoint === 'models/providers') {
-    if (!Array.isArray(value)) throw new TypeError('native model provider list must be an array')
-    return value.map(item => llmProviderSchema.parse(item))
-  }
-  if (endpoint === 'models/configurable-providers') {
-    if (!Array.isArray(value)) throw new TypeError('native configurable model provider list must be an array')
-    return value.map(item => configurableModelProviderSchema.parse(item))
-  }
-  if (endpoint === 'models/discover') {
-    if (!Array.isArray(value)) throw new TypeError('native discovered model list must be an array')
-    return value.map(item => discoveredModelSchema.parse(item))
-  }
   if (endpoint === 'settings/describe') {
     return settingsDescription(value)
   }
   if (endpoint === 'settings/mutate') return settingsDescriptor(value)
-  if (endpoint === 'plugins/inventory') return pluginInventorySchema.parse(value)
-  if (endpoint === 'settings/open-document') {
-    if (fields(value).opened !== true) throw new TypeError('invalid native settings document open reply')
-    return { opened: true }
-  }
   if (endpoint === 'credentials/describe') {
     const data = fields(value)
     return Object.fromEntries(Object.entries(data).map(([ref, info]) => [ref, credentialInfo(info)]))
@@ -1182,102 +296,19 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     if (fields(value).updated !== true) throw new TypeError('invalid native credential write acknowledgement')
     return undefined
   }
-  if (endpoint === 'authorization/list') {
-    if (!Array.isArray(value)) throw new TypeError('native authorization list must be an array')
-    return value.map(item => authorizationEntrySchema.parse(item))
-  }
-  if (endpoint === 'accounts/list') {
-    if (!Array.isArray(value)) throw new TypeError('native account list must be an array')
-    return value.map(item => accountSummarySchema.parse(item))
-  }
-  if (endpoint === 'accounts/usage') return accountUsageSchema.parse(value)
-  if (endpoint === 'accounts/balance') return accountBalanceSchema.parse(value)
-  if (endpoint === 'accounts/sign-out') {
-    if (fields(value).updated !== true) throw new TypeError('invalid native account sign-out acknowledgement')
-    return undefined
-  }
   if (endpoint === 'session/model-controls') return nativeModelControlsSchema.parse(value)
-  if (endpoint === 'session/mode-controls') return nativeModeControlsSchema.parse(value)
-  if (endpoint === 'session/permission-controls') return nativePermissionControlsSchema.parse(value)
-  if (endpoint === 'session/select-plan-mode') return nativePlanModeSelectionSchema.parse(value)
-  if (endpoint === 'session/commands') return nativeCommandCatalogSchema.parse(value)
-  if (endpoint === 'session/files/list') return workspaceDirectoryListingSchema.parse(value)
-  if (endpoint === 'session/files/stat') return workspaceFileStatSchema.parse(value)
-  if (endpoint === 'session/files/read') return workspaceFileTextSchema.parse(value)
-  if (endpoint === 'session/files/read-all' || endpoint === 'session/files/read-related') {
-    return workspaceFileBytesSchema.parse(value)
-  }
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
-    return value.map(listItem)
-  }
-  if (endpoint === 'session/search') {
-    const page = searchPageSchema.parse(value)
-    return { items: page.items.map(item => ({
-      sessionId: item.sessionId as SessionId, title: item.title,
-      ...item.workspaceId === undefined ? {} : { workspaceId: item.workspaceId as Branded<'WorkspaceId'> },
-      ...item.cwd === undefined ? {} : { cwd: item.cwd },
-      ...item.snippet === undefined ? {} : { snippet: item.snippet },
-    })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
-  }
-  if (endpoint === 'session/queue' || endpoint === 'session/steer') return submissionAcknowledgement(value)
-  if (endpoint === 'session/dequeue') {
-    const data = fields(value)
-    if (Object.keys(data).length !== 1 || typeof data.requestId !== 'string' || data.requestId.length === 0) {
-      throw new TypeError('invalid native Session dequeue acknowledgement')
-    }
-    return undefined
-  }
-  if (endpoint === 'session/submission/edit') return submissionEditResult(value)
-  if (endpoint === 'session/submission/promote') return submissionPromotionResult(value)
-  if (endpoint === 'session/submissions') {
-    const data = fields(value)
-    if (Object.keys(data).length !== 2 || !Array.isArray(data.submissions)
-      || typeof data.throughSeq !== 'number' || !Number.isSafeInteger(data.throughSeq) || data.throughSeq < -1) {
-      throw new TypeError('invalid native Session submissions snapshot')
-    }
-    return { throughSeq: data.throughSeq === -1 ? -1 : SessionSeq(data.throughSeq),
-      submissions: data.submissions.map(pendingSubmission) }
+    return value.map(header)
   }
   const data = fields(value)
   switch (endpoint) {
-    case 'session/command': {
-      const result = fields(data.result)
-      if (typeof data.commandId !== 'string' || data.commandId.length === 0
-        || result.kind !== 'success' && result.kind !== 'error'
-        || result.text !== undefined && typeof result.text !== 'string'
-        || result.kind === 'error' && typeof result.text !== 'string'
-        || result.sourceEventSeq !== undefined && (typeof result.sourceEventSeq !== 'number'
-          || !Number.isSafeInteger(result.sourceEventSeq) || result.sourceEventSeq < 0)) {
-        throw new TypeError('invalid native Session command result')
-      }
-      return data
-    }
     case 'session/answer-human':
       if (data.answered !== true) throw new TypeError('invalid native human answer acknowledgement')
-      break
-    case 'authorization/begin':
-      if (typeof data.attemptId !== 'string') throw new TypeError('invalid native authorization attempt')
-      break
-    case 'authorization/answer':
-      if (data.answered !== true) throw new TypeError('invalid native authorization answer acknowledgement')
-      return undefined
-    case 'authorization/decline':
-      if (data.declined !== true) throw new TypeError('invalid native authorization decline acknowledgement')
-      return undefined
-    case 'authorization/cancel':
-      if (data.cancelled !== true) throw new TypeError('invalid native authorization cancellation acknowledgement')
-      return undefined
-    case 'session/rename-title':
-    case 'session/refresh-title':
-      if (data.changed !== true) throw new TypeError('invalid native Session title acknowledgement')
       break
     case 'session/select-model':
     case 'session/select-preset':
       if (data.changed !== true) throw new TypeError('invalid native Session selection acknowledgement')
-      break
-    case 'session/select-permission':
-      if (data.changed !== true) throw new TypeError('invalid native permission selection acknowledgement')
       break
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
@@ -1288,17 +319,9 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/start':
       if (typeof data.admissionId !== 'string' || data.admissionId.length === 0) throw new TypeError('invalid native Session admission')
       break
-    case 'session/attach':
-      if (data.admissionId !== null && (typeof data.admissionId !== 'string' || data.admissionId.length === 0)) {
-        throw new TypeError('invalid native Session admission')
-      }
-      break
     case 'session/create':
       if (typeof data.sessionId !== 'string' || data.sessionId.length === 0) throw new TypeError('invalid native Session identity')
       break
-    case 'session/archive':
-      if (data.archived !== true) throw new TypeError('invalid native Session archive acknowledgement')
-      return undefined
     case 'session/prompt':
     case 'session/await':
       if (typeof data.exitCode !== 'number' || !Number.isSafeInteger(data.exitCode)
@@ -1317,17 +340,6 @@ function decodeReply(endpoint: string, value: unknown): unknown {
 
 function followFrame(value: unknown): NativeSessionFollowFrame {
   const data = fields(value)
-  if (data.type === 'baseline' && typeof data.sessionId === 'string' && data.sessionId.length > 0
-    && typeof data.fromSeq === 'number' && Number.isSafeInteger(data.fromSeq) && data.fromSeq >= -1
-    && typeof data.throughSeq === 'number' && Number.isSafeInteger(data.throughSeq) && data.throughSeq >= data.fromSeq
-    && Object.keys(data).length === 4) {
-    return { type: 'baseline', sessionId: data.sessionId as SessionId, fromSeq: data.fromSeq, throughSeq: data.throughSeq }
-  }
-  if (data.type === 'submission-update' && (data.status === 'accepted' || data.status === 'rejected' || data.status === 'settled')
-    && typeof data.requestId === 'string' && data.requestId.length > 0 && Object.keys(data).length === 3) {
-    return { type: 'submission-update', status: data.status, requestId: brandSubmissionRequestId(data.requestId) }
-  }
-  if (data.type === 'title-updated' && Object.keys(data).length === 1) return { type: 'title-updated' }
   if (data.type === 'human' && Object.keys(data).length === 2) return { type: 'human', prompt: nativeWebHumanSchema.parse(data.prompt) as NativeWebHumanPrompt }
   if (data.type === 'human-removed' && typeof data.id === 'string' && data.id.length > 0 && Object.keys(data).length === 2) return { type: 'human-removed', id: data.id as NativeWebHumanId }
   if (data.type === 'event' && Object.keys(data).length === 2) {
@@ -1338,44 +350,6 @@ function followFrame(value: unknown): NativeSessionFollowFrame {
   if (data.type === 'text' && typeof data.text === 'string' && Object.keys(data).length === 2) return { type: 'text', text: data.text }
   if ((data.type === 'text-start' || data.type === 'settled') && Object.keys(data).length === 1) return { type: data.type }
   throw new TypeError('native Session follow: invalid frame')
-}
-
-function submissionAcknowledgement(value: unknown): NativeSubmissionAcknowledgement {
-  const data = fields(value)
-  if (typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
-    || Object.keys(data).length !== 3) throw new TypeError('invalid native Session pending submission')
-  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted' }
-}
-
-function pendingSubmission(value: unknown): NativePendingSubmission {
-  const data = fields(value)
-  if (typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
-    || Object.keys(data).length !== 4) throw new TypeError('invalid native Session pending submission')
-  const message = parseSessionEvent({ type: 'user/message', seq: 0, time: 0, data: data.message, surfaceOp: 'append' }, 0)
-  if (message.type !== 'user/message' || message.data.id !== data.requestId) {
-    throw new TypeError('native Session pending submission identity does not match its message')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted', message: message.data }
-}
-
-function submissionEditResult(value: unknown): NativeSubmissionEditResult {
-  const data = fields(value)
-  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.outcome !== 'updated' && data.outcome !== 'stale') {
-    throw new TypeError('invalid native Session submission edit result')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
-}
-
-function submissionPromotionResult(value: unknown): NativeSubmissionPromotionResult {
-  const data = fields(value)
-  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.outcome !== 'promoted' && data.outcome !== 'stale' && data.outcome !== 'not-promotable') {
-    throw new TypeError('invalid native Session submission promotion result')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
 }
 
 function objectConfig(input: unknown): Record<string, unknown> {
@@ -1398,239 +372,78 @@ export function createNativeSessionClient(
   const shutdown = new AbortController()
   const lifetime = installationSignal === undefined ? shutdown.signal : AbortSignal.any([installationSignal, shutdown.signal])
   const pendingPrompts = new Set<Promise<unknown>>()
-  const pendingFollows = new Set<Promise<void>>()
-  const pendingListFollows = new Set<Promise<void>>()
-  const pendingUploads = new Set<Promise<unknown>>()
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
     if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
     return decodeReply(endpoint, result.value) as T
   }
-  type TurnResult = { readonly exitCode: number; readonly answer?: string }
-  function trackPrompt<T>(pending: Promise<T>): Promise<T> {
-    pendingPrompts.add(pending)
-    const settled = (): void => { pendingPrompts.delete(pending) }
-    void pending.then(settled, settled)
-    return pending
-  }
-  async function runTurn(
-    sessionId: SessionId, admissionId: NativeSessionAdmissionId, signal: AbortSignal | undefined,
-    observe: ((frame: NativeSessionFollowFrame) => void) | undefined,
-    onFollowError: ((error: unknown) => void) | undefined, lastSeq: number, detach: AbortSignal | undefined,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
+  async function prompt(
+    sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
+    images?: readonly NativeImageUpload[],
+  ) {
+    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+    accepted.throwIfAborted()
+    const responseOperation = rpc.response
+    if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+    const following = new AbortController()
+    // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
+    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined,
+      ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
-    let turnSettled = false
-    const wasTurnSettled = (): boolean => turnSettled
-    let followFailure: unknown
-    const following = new AbortController()
-    const cancel = (): void => {
-      following.abort(signal?.reason)
-      if (!turnSettled) {
-        cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
-        // Settlement reports cancellation failures after the original turn's response has drained.
-        void cancellation.then(() => undefined, () => undefined)
-      }
+    const abort = (): void => {
+      following.abort(accepted.reason)
+      cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
+      // Settlement reports cancellation failures after the original turn's response has drained.
+      void cancellation.then(() => undefined, () => undefined)
     }
-    const detachFollow = (): void => { following.abort(detachSignal.reason) }
-    signal?.addEventListener('abort', cancel, { once: true })
-    detachSignal.addEventListener('abort', detachFollow, { once: true })
-    if (signal?.aborted) cancel()
-    if (detachSignal.aborted) detachFollow()
-    let followComplete = false
-    const isFollowComplete = (): boolean => followComplete
-    let followWork: Promise<void> | undefined
-    const responseOperation = rpc.response
+    accepted.addEventListener('abort', abort, { once: true })
+    if (accepted.aborted) abort()
     try {
+      let followFailure: { error: unknown } | undefined
       if (observe !== undefined && responseOperation !== undefined) {
-        const activeFollow = (async () => {
-          try {
-            const response = await responseOperation('/api', 'native-session/follow', { sessionId, admissionId }, following.signal)
-            if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-              throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
-            }
-            let terminal = false
-            let baseline: Extract<NativeSessionFollowFrame, { type: 'baseline' }> | undefined
-            const events = response.body.pipeThrough(new TextDecoderStream())
-              .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-            let nextSeq: number | undefined
-            for await (const { data } of events) {
-              const frame = followFrame(JSON.parse(data))
-              if (terminal) throw new Error('native Session follow: output after settlement')
-              if (baseline === undefined) {
-                if (frame.type !== 'baseline' || frame.sessionId !== sessionId || frame.fromSeq !== lastSeq) {
-                  throw new Error('native Session follow: first frame does not match the admitted Session cursor')
-                }
-                baseline = frame
-                nextSeq = frame.fromSeq + 1
-              } else if (frame.type === 'baseline') throw new Error('native Session follow: duplicate baseline')
-              if (frame.type === 'event') {
-                if (nextSeq === undefined || frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
-                nextSeq = frame.event.seq + 1
-              }
-              if (frame.type === 'settled') {
-                if (nextSeq === undefined || nextSeq - 1 < baseline.throughSeq) {
-                  throw new Error('native Session follow: settled before baseline history completed')
-                }
-                terminal = true
-              }
-              observe(frame)
-            }
-            if (!terminal) throw new Error('native Session follow: EOF before settlement')
-          } catch (error: unknown) {
-            if (!wasTurnSettled() && !detachSignal.aborted && !signal?.aborted) {
-              followFailure = error
-              following.abort(error)
-            }
-            else {
-              try { onFollowError?.(error) }
-              catch (callbackError: unknown) { console.error('native Session follow error observer failed:', callbackError) }
-            }
+        try {
+          const response = await responseOperation('/api', 'native-session/follow', { sessionId, admissionId }, following.signal)
+          if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+            throw new Error(`native Session follow: invalid response HTTP ${response.status}`)
           }
-        })().finally(() => { followComplete = true })
-        followWork = activeFollow
-        pendingFollows.add(activeFollow)
-        void activeFollow.then(() => { pendingFollows.delete(activeFollow) })
+          let terminal = false
+          const events = response.body.pipeThrough(new TextDecoderStream())
+            .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+          let nextSeq: number | undefined
+          for await (const { data } of events) {
+            const frame = followFrame(JSON.parse(data))
+            if (terminal) throw new Error('native Session follow: output after settlement')
+            if (frame.type === 'event') {
+              if (nextSeq !== undefined && frame.event.seq !== nextSeq) throw new Error('native Session follow: event sequence gap')
+              nextSeq = frame.event.seq + 1
+            }
+            if (frame.type === 'settled') terminal = true
+            observe(frame)
+          }
+          if (!terminal) throw new Error('native Session follow: EOF before settlement')
+        } catch (error: unknown) {
+          if (!accepted.aborted) { followFailure = { error }; abort() }
+        }
       }
-
-      const settlementWork = call<TurnResult>('session/await', { sessionId, admissionId }, detachSignal, false)
-        .then((value) => { turnSettled = true; return { status: 'fulfilled' as const, value } },
-          (reason: unknown) => {
-            if (detachSignal.aborted) return { status: 'detached' as const, reason: detachSignal.reason as unknown }
-            turnSettled = true
-            return { status: 'rejected' as const, reason }
-          })
-      if (followWork !== undefined) {
-        const first = await Promise.race([followWork.then(() => 'follow' as const), settlementWork.then(() => 'settlement' as const)])
-        if (first === 'follow') await followWork
-      }
-      const settlement = await settlementWork
-      if (isFollowComplete() && followWork !== undefined) await followWork
-      if (settlement.status === 'detached') throw settlement.reason
+      const [settlement] = await Promise.allSettled([call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)])
       const controls = await Promise.allSettled(cancellation === undefined ? [] : [cancellation])
-      const errors: unknown[] = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected'
-        ? [outcome.reason as unknown] : [])
-      if (followFailure !== undefined) errors.unshift(followFailure)
+      const errors = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason as unknown] : [])
+      if (followFailure !== undefined) errors.unshift(followFailure.error)
       if (errors.length === 1) throw errors[0]
       if (errors.length > 1) throw new AggregateError(errors, 'native Session settlement and cancellation failed')
       if (settlement.status === 'rejected') throw settlement.reason
       return settlement.value
-    } finally {
-      if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId)
-      signal?.removeEventListener('abort', cancel)
-      if (followWork === undefined || isFollowComplete()) detachSignal.removeEventListener('abort', detachFollow)
-      else void followWork.then(() => { detachSignal.removeEventListener('abort', detachFollow) })
-    }
-  }
-  async function runPrompt(
-    sessionId: SessionId, input: { readonly text: string; readonly images?: readonly NativeImageUpload[] }
-      | { readonly content: readonly NativeSessionInputPart[] }, resume: boolean,
-    signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    onFollowError?: (error: unknown) => void, lastSeq = -1, detach?: AbortSignal, onAccepted?: () => void,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    signal?.throwIfAborted()
-    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
-      throw new TypeError('native Session Client: invalid follow cursor')
-    }
-    if (observe !== undefined && rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, resume,
-      follow: observe !== undefined, ...observe === undefined ? {} : { lastSeq },
-      ...'content' in input ? { content: input.content } : { text: input.text, ...input.images === undefined ? {} : { images: input.images } } },
-    detachSignal, false)
-    onAccepted?.()
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
-  }
-  async function attach(
-    sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void, detach?: AbortSignal,
-  ): Promise<TurnResult | undefined> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    if (!Number.isSafeInteger(lastSeq) || lastSeq < -1) throw new TypeError('native Session Client: invalid follow cursor')
-    if (rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId | null }>(
-      'session/attach', { sessionId, lastSeq }, detachSignal, false)
-    if (admissionId === null) return undefined
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
+    } finally { if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId); accepted.removeEventListener('abort', abort) }
   }
   return {
-    sessionFeedbackRecord: (request, signal) => call<SessionFeedbackRecordResult>('feedback/session-record', request, signal),
-    messageFeedbackList: (request, signal) => call<MessageFeedbackListResult>('feedback/message-list', request, signal),
-    messageFeedbackPut: (request, signal) => call<MessageFeedbackPutResult>('feedback/message-put', request, signal),
-    messageFeedbackDelete: (request, signal) => call<MessageFeedbackDeleteResult>('feedback/message-delete', request, signal),
-    agentPresetsList: signal => call('agent-presets/list', {}, signal),
-    agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
-    async agentPresetCopy(from, id, name, signal) {
-      await call('agent-presets/copy', { from, id, ...(name === undefined ? {} : { name }) }, signal)
-    },
-    async agentPresetDelete(id, signal) { await call('agent-presets/delete', { id }, signal) },
-    agentPresetsCanOpenDirectory: signal => call('agent-presets/can-open-directory', {}, signal),
-    agentPresetOpenDirectory: (id, signal) => call('agent-presets/open-directory', { id }, signal),
     settingsDescribe: signal => call('settings/describe', {}, signal),
-    async settingsOpenDocument(signal) {
-      await call('settings/open-document', {}, signal)
-      return { opened: true }
-    },
-    pluginInventoryList: signal => call('plugins/inventory', {}, signal),
-    async modelCatalog(signal) {
-      return (await call<NativeModelControls>('session/model-controls', {}, signal)).catalog
-    },
     settingsMutate: (namespace, ops, expectedRevision, signal) =>
       call('settings/mutate', { ns: namespace, ops, expectedRevision }, signal),
-    modelsListProviders: signal => call('models/providers', {}, signal),
-    modelsListConfigurableProviders: signal => call('models/configurable-providers', {}, signal),
-    modelsDiscover: (settingsNs, request, signal) => call('models/discover', { settingsNs, request }, signal),
     credentialsDescribe: (refs, signal) => call('credentials/describe', { refs }, signal),
     async credentialsSet(ref, value, signal) { await call('credentials/set', { ref, value }, signal) },
     async credentialsUnset(ref, signal) { await call('credentials/unset', { ref }, signal) },
-    authorizationList: signal => call('authorization/list', {}, signal),
-    accountsList: signal => call('accounts/list', {}, signal),
-    accountsUsage: (key, signal) => call('accounts/usage', { key }, signal),
-    accountsBalance: (key, signal) => call('accounts/balance', { key }, signal),
-    async accountsSignOut(key, signal) { await call('accounts/sign-out', { key }, signal) },
-    authorizationBegin: (key, method, signal) => call('authorization/begin', { key, ...(method === undefined ? {} : { method }) }, signal),
-    async *authorizationFrames(key, attemptId, signal) {
-      const responseOperation = rpc.response
-      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-      const accepted = AbortSignal.any([lifetime, signal])
-      const response = await responseOperation('/api', 'native-session/authorization', { key, attemptId }, accepted)
-      if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-        throw new Error(`native authorization frames: invalid response HTTP ${response.status}`)
-      }
-      const frames = response.body.pipeThrough(new TextDecoderStream())
-        .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-      for await (const { data } of frames) yield authorizationFrameSchema.parse(JSON.parse(data)) as AuthorizationFrame
-    },
-    async *settingsEvents(signal) {
-      const accepted = AbortSignal.any([lifetime, signal])
-      const responseOperation = rpc.response
-      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-      try {
-        const response = await responseOperation('/api', 'native-session/settings-events', {}, accepted)
-        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-          throw new Error(`native settings events: invalid response HTTP ${response.status}`)
-        }
-        const frames = response.body.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-        for await (const { data } of frames) yield settingsEventSchema.parse(JSON.parse(data))
-      } catch (error: unknown) {
-        if (accepted.aborted) return
-        throw error
-      }
-    },
-    async authorizationAnswer(key, attemptId, promptId, value, signal) {
-      await call('authorization/answer', { key, attemptId, promptId, value }, signal)
-    },
-    async authorizationDecline(key, attemptId, promptId, signal) {
-      await call('authorization/decline', { key, attemptId, promptId }, signal)
-    },
-    async authorizationCancel(key, attemptId, signal) {
-      await call('authorization/cancel', { key, attemptId }, signal)
-    },
     async image(sessionId, image, signal) {
       const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
       accepted.throwIfAborted()
@@ -1645,9 +458,7 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0 || pendingUploads.size > 0) {
-        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows, ...pendingUploads])
-      }
+      await Promise.allSettled([...pendingPrompts])
     },
     async answerHuman(sessionId, id, answer, signal) {
       const admissionId = admissions.get(sessionId)
@@ -1655,216 +466,38 @@ export function createNativeSessionClient(
       await call('session/answer-human', { sessionId, admissionId, id, answer }, signal)
     },
     list: signal => call('session/list', {}, signal),
-    async *follow(signal) {
-      const responseOperation = rpc.response
-      if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-      const following = new AbortController()
-      const accepted = AbortSignal.any([lifetime, signal, following.signal])
-      const completed = Promise.withResolvers<void>()
-      pendingListFollows.add(completed.promise)
-      const finish = (): void => {
-        following.abort()
-        completed.resolve(undefined)
-        pendingListFollows.delete(completed.promise)
-      }
-      accepted.addEventListener('abort', finish, { once: true })
-      if (accepted.aborted) finish()
-      try {
-        const response = await responseOperation('/api', 'native-session/list-follow', {}, accepted)
-        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-          throw new Error(`native Session list follow: invalid response HTTP ${response.status}`)
-        }
-        const frames = response.body.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-        for await (const { data } of frames) yield listFrame(JSON.parse(data))
-      } catch (error: unknown) {
-        if (!accepted.aborted) throw error
-      } finally {
-        accepted.removeEventListener('abort', finish)
-        finish()
-      }
-    },
-    search: (query, cursor, signal) => call('session/search', { query, ...(cursor === undefined ? {} : { cursor }) }, signal),
-    async archive(sessionId, signal) { await call('session/archive', { sessionId }, signal) },
-    async renameTitle(sessionId, title, signal) { await call('session/rename-title', { sessionId, title }, signal) },
-    async refreshTitle(sessionId, signal) { await call('session/refresh-title', { sessionId }, signal) },
     modelControls: signal => call('session/model-controls', {}, signal),
-    modeControls: (sessionId, signal) => call('session/mode-controls', { sessionId }, signal),
-    selectPlanMode: (sessionId, active, signal) => call('session/select-plan-mode', { sessionId, active }, signal),
-    permissionControls: (sessionId, signal) => call('session/permission-controls', { sessionId }, signal),
-    async selectPermissionPreset(sessionId, preset, signal) {
-      await call('session/select-permission', { sessionId, preset }, signal)
-    },
     async selectModel(sessionId, request, signal) {
       await call('session/select-model', { sessionId, ...request }, signal)
     },
     async selectPreset({ id, ...request }, signal) {
       await call('session/select-preset', { sessionId: id, ...request }, signal)
     },
-    executeCommand: (sessionId, line, signal) => call('session/command', { sessionId, line }, signal),
-    commands: async (sessionId, signal) => (await call<{ readonly commands: readonly CommandDescriptor[] }>(
-      'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
-    uploadFile(sessionId, file, signal) {
-      const uploading = (async () => {
-        const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
-        accepted.throwIfAborted()
-        const query = new URLSearchParams({ sessionId })
-        if (file.name !== undefined) query.set('name', file.name)
-        const endpoint = `native-session/file-upload?${query.toString()}`
-        const headers = { 'content-type': 'application/octet-stream' }
-        const request: RequestInit & { duplex?: 'half' } = { method: 'POST', headers, body: file.data, signal: accepted,
-          ...(file.data instanceof ReadableStream ? { duplex: 'half' as const } : {}) }
-        const uploadFetch = (globalThis as NativeFileUploadGlobal).__DSH_FILE_UPLOAD__?.fetch
-        let response: Response
-        if (uploadFetch !== undefined) {
-          response = await uploadFetch(resolveApiUrl(endpoint), request)
-        } else {
-          const responseOperation = rpc.response
-          if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no streaming Fetch operation')
-          response = await responseOperation('/api', endpoint, undefined, accepted, {
-            method: 'POST', headers, body: file.data, ...(file.data instanceof ReadableStream ? { duplex: 'half' } : {}),
-          })
-        }
-        if (!response.ok) throw new Error(`native Session file upload failed with HTTP ${String(response.status)}`)
-        const envelope = fields(await response.json())
-        if (envelope.ok === false) {
-          const failure = fields(envelope.error)
-          if (typeof failure.code !== 'string' || typeof failure.message !== 'string') {
-            throw new TypeError('native Session file upload returned an invalid failure')
-          }
-          throw new NativeSessionRpcError(failure.code, failure.message,
-            typeof failure.details === 'object' && failure.details !== null ? failure.details : {})
-        }
-        if (envelope.ok !== true) throw new TypeError('native Session file upload returned an invalid result')
-        return decodeReply('session/file-upload', envelope.value) as NativeSessionFileReceipt
-      })()
-      pendingUploads.add(uploading)
-      const settled = (): void => { pendingUploads.delete(uploading) }
-      void uploading.then(settled, settled)
-      return uploading
-    },
-    queue: (sessionId, prompt, requestId, signal) =>
-      call('session/queue', { sessionId, prompt, requestId }, signal),
-    steer: (sessionId, prompt, requestId, signal) =>
-      call('session/steer', { sessionId, prompt, requestId }, signal),
-    queueContent: (sessionId, content, requestId, signal) =>
-      call('session/queue', { sessionId, content, requestId }, signal),
-    steerContent: (sessionId, content, requestId, signal) =>
-      call('session/steer', { sessionId, content, requestId }, signal),
-    editSubmission: (sessionId, requestId, text, signal) =>
-      call('session/submission/edit', { sessionId, requestId, text }, signal),
-    promoteSubmission: (sessionId, requestId, signal) =>
-      call('session/submission/promote', { sessionId, requestId }, signal),
-    async dequeue(sessionId, requestId, signal) {
-      await call('session/dequeue', { sessionId, requestId }, signal)
-    },
-    async submissions(sessionId, signal) {
-      return call<NativeSubmissionsSnapshot>('session/submissions', { sessionId }, signal)
-    },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { text, ...(images === undefined ? {} : { images }) }, resume,
-        signal, observe, onFollowError, lastSeq, detach, onAccepted))
-    },
-    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq, detach,
-        onAccepted))
-    },
-    attach(sessionId, lastSeq, observe, signal, onFollowError, detach) {
-      return trackPrompt(attach(sessionId, lastSeq, observe, signal, onFollowError, detach))
+    prompt(sessionId, text, resume, signal, observe, images) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images)
+      pendingPrompts.add(pending)
+      const settled = (): void => { pendingPrompts.delete(pending) }
+      void pending.then(settled, settled)
+      return pending
     },
     cancel: (sessionId, signal) => call('session/cancel', { sessionId }, signal),
     status: (sessionId, signal) => call('session/status', { sessionId }, signal),
   }
 }
 
-function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
-  lifetime: AbortSignal): NativeScheduleClient {
-  return {
-    async list(signal) {
-      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
-      const result = await rpc.call('/api', 'schedules/list', {}, accepted)
-      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
-      if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
-      return result.value.map(scheduleJob)
-    },
-    async *follow(signal) {
-      const accepted = AbortSignal.any([lifetime, signal])
-      const responseOperation = rpc.response
-      if (responseOperation === undefined) throw new Error('native schedule Client: selected carrier has no Fetch response operation')
-      try {
-        const response = await responseOperation('/api', 'schedules/follow', {}, accepted)
-        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-          throw new Error(`native schedules follow: invalid response HTTP ${response.status}`)
-        }
-        const events = response.body.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-        for await (const { data } of events) yield scheduleFrame(JSON.parse(data))
-        if (!accepted.aborted) throw new Error('native schedules follow: stream ended')
-      } catch (error: unknown) {
-        if (!accepted.aborted) throw error
-      }
-    },
-  }
-}
-
-function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
-  lifetime: AbortSignal): NativeWorkspaceFilesClient {
-  async function call<T>(endpoint: string, payload: object, signal?: AbortSignal): Promise<T> {
-    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
-    const result = await rpc.call('/api', endpoint, payload, accepted)
-    if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
-    return decodeReply(endpoint, result.value) as T
-  }
-  return {
-    list: (sessionId, path, signal) => call('session/files/list', { sessionId, path }, signal),
-    stat: (sessionId, path, signal) => call('session/files/stat', { sessionId, path }, signal),
-    read: (sessionId, path, range, signal) => call('session/files/read', { sessionId, path, range }, signal),
-    readAll: (sessionId, path, signal) => call('session/files/read-all', { sessionId, path }, signal),
-    readRelated: (sessionId, path, relativePath, signal) =>
-      call('session/files/read-related', { sessionId, path, relativePath }, signal),
-    async *follow(sessionId, signal) {
-      const accepted = AbortSignal.any([lifetime, signal])
-      const responseOperation = rpc.response
-      if (responseOperation === undefined) throw new Error('native Workspace Files Client: selected carrier has no Fetch response operation')
-      try {
-        const response = await responseOperation('/api', 'native-session/files-follow', { sessionId }, accepted)
-        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-          throw new Error(`native Workspace Files follow: invalid response HTTP ${response.status}`)
-        }
-        const frames = response.body.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-        for await (const { data } of frames) yield workspaceFileWatchFrameSchema.parse(JSON.parse(data))
-        if (!accepted.aborted) throw new Error('native Workspace Files follow: stream ended')
-      } catch (error: unknown) {
-        if (!accepted.aborted) throw error
-      }
-    },
-  }
-}
-
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
-  requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker',
-    'clientNativeWorkspaceFiles'],
+  requires: ['clientConnection'], provides: ['clientNativeSession'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
     return (context) => {
-      const rpc = context.require('clientConnection').rpc
-      const client = createNativeSessionClient(rpc, config, context.signal)
-      const schedules = createNativeScheduleClient(rpc, config, context.signal)
-      const workspaceFiles = createNativeWorkspaceFilesClient(rpc, config, context.signal)
-      const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
+      const client = createNativeSessionClient(context.require('clientConnection').rpc, config, context.signal)
       context.own(() => client.close())
-      context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
-      context.provide('clientNativeSchedule', schedules)
-      context.provide('clientNativeWorkspaceFiles', workspaceFiles)
-      context.provide('clientNativeWorkspace', clients.workspace)
-      context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }
   },
 }

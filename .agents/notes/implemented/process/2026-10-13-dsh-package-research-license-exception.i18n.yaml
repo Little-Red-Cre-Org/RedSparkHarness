@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-10-13-dsh-package-research-license-exception.md
-2026-10-13-dsh-package-research-license-exception.md: 7872541d64595d7191a7df55a96e6ca5c70f96e2
-2026-10-13-dsh-package-research-license-exception.zh.md: 7930463238bb199bfb63c9b121031ab95d1369ae

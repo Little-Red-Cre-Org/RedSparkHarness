@@ -1,8 +1,8 @@
 /** Composer takeover for one pending approval waterfall. */
 import { useState, type ReactNode } from 'react'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ApprovalComposerProps, PendingApproval } from './contract/slots.ts'
-import { ApprovalCard } from '../ApprovalCard.tsx'
+import css from './ApprovalPanel.module.css'
 
 /**
  * Render one pending approval and its optional Tool-owned detail.
@@ -20,7 +20,7 @@ export function ApprovalPanel(props: ApprovalComposerProps) {
 function ApprovalFlow({ pending, detail, t }: {
   pending: PendingApproval
   detail: ReactNode
-  t: TranslateNS<'approval'>
+  t: ApprovalComposerProps['t']
 }) {
   const [answered, setAnswered] = useState(false)
   const answer = (outcome: 'allowed-once' | 'rejected'): void => {
@@ -28,7 +28,28 @@ function ApprovalFlow({ pending, detail, t }: {
     void pending.answer(outcome).catch(() => { setAnswered(false) })
   }
   return (
-    <ApprovalCard presentationKey={pending.key} toolName={pending.toolName} reason={pending.reason}
-      detail={detail} t={t} disabled={answered} onAnswer={answer} />
+    <div className={css.root} data-approval-key={pending.key}>
+      <div className={css.card}>
+        <div className={css.strip}><span className={css.dot} />{t('waiting')}</div>
+        <div
+          className={css.body}
+          data-approval-scroll=""
+          tabIndex={0}
+          role="group"
+          aria-label={t('detail.aria')}
+        >
+          <div className={css.headline}>{pending.reason ?? t('escalation', { toolName: pending.toolName })}</div>
+          {detail !== null && <div className={css.command}>{detail}</div>}
+        </div>
+        <div className={css.actionRow}>
+          <Button variant="outline" className={css.reject} disabled={answered} onClick={() => { answer('rejected') }}>
+            {t('reject')}
+          </Button>
+          <Button variant="primary" disabled={answered} onClick={() => { answer('allowed-once') }}>
+            {t('allowOnce')}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }

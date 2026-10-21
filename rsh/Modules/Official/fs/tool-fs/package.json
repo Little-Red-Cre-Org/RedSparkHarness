@@ -33,7 +33,8 @@
         "model",
         "sandboxPolicy",
         "approval",
-        "promptSections"
+        "promptSections",
+        "imageUnderstanding"
       ],
       "provides": []
     }
@@ -97,6 +98,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-plugin-host": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
       "optional": true
     },
     "@deepseek-ai/dsh-sandbox-policy": {

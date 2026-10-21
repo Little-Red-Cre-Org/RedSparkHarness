@@ -29,6 +29,8 @@ import { createWorkspaceViewStore } from './stores.ts'
 import { WorkspaceBrowser } from './rows/WorkspaceBrowser.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
+import { connectWorkbench } from './workbench.ts'
+import { captureIdeDraft, desktopIde, restoreIdeDraft } from './desktop-ide.ts'
 
 export type { UiWorkspace } from './navigation.ts'
 export type {
@@ -75,6 +77,22 @@ export function apply(ctx: Context): void {
   const workspaces = ctx.get('workspaces') as IWorkspaces
   const uiWorkspace = new UiWorkspaceService(
     ctx, ctx.remote.directoryPicker, workspaces, sessions)
+  const desktop = desktopIde()
+  const busyMessage = (): string => ctx.locale.bind('workspace')('ide.inputBusy')
+  let openIde: WorkspaceBrowserInjected['openIde']
+  ctx.inject(['conversation'], (inner) => {
+    if (desktop !== undefined) {
+      openIde = workspaceId => desktop.open({
+        ...captureIdeDraft(workspaceId, sessions, workspaces, inner.conversation, busyMessage()),
+        locale: ctx.locale.getSnapshot().active,
+      })
+      inner.effect(() => desktop.subscribe(value => restoreIdeDraft(
+        value, sessions, workspaces, uiWorkspace, inner.conversation, busyMessage(),
+      )), 'ui-workspace: desktop conversation handoff')
+      inner.effect(() => () => { openIde = undefined }, 'ui-workspace: desktop IDE entry')
+    }
+    inner.effect(() => connectWorkbench(sessions, workspaces, uiWorkspace, inner.conversation, inner), 'ui-workspace: embedded workbench navigation')
+  })
   ctx.slots.provideRoot({ hooks: { workspaces: workspaces.list } })
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-workspace: dictionaries')
 
@@ -120,6 +138,10 @@ export function apply(ctx: Context): void {
           // Fork or child-rename failure keeps the current selection.
         })
     },
+    ...(desktop === undefined ? {} : { openIde: (workspaceId) => {
+      if (openIde === undefined) return Promise.reject(new Error(busyMessage()))
+      return openIde(workspaceId)
+    } }),
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {

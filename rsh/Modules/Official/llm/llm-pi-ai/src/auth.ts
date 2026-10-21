@@ -2,12 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { AuthContext, CredentialStore } from '@earendil-works/pi-ai'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import {
-  authContextFrom as createAuthContext,
-  credentialStoreFrom as createCredentialStore,
-  siwcRegistrationStoreFrom as createSiwcRegistrationStore,
-} from './auth-core.ts'
-import type { SiwcRegistrationStore } from './siwc.ts'
+import { authContextFrom as createAuthContext, credentialStoreFrom as createCredentialStore } from './auth-core.ts'
 export { RECORD_SCOPE, recordKeyFor } from './auth-core.ts'
 
 /**
@@ -21,18 +16,6 @@ export function credentialStoreFrom(ctx: Context): CredentialStore {
     list: () => createCredentialStore(ctx.get('credentials')).list(),
     modify: (id, mutate) => createCredentialStore(ctx.get('credentials')).modify(id, mutate),
     delete: id => createCredentialStore(ctx.get('credentials')).delete(id),
-  }
-}
-
-/**
- * Forward SIWC registration metadata operations to the current credential provider.
- * @param ctx - current credential service scope.
- * @returns metadata storage shared with the Native auth path.
- */
-export function siwcRegistrationStoreFrom(ctx: Context): SiwcRegistrationStore {
-  return {
-    reconcile: migrate => createSiwcRegistrationStore(ctx.get('credentials')).reconcile(migrate),
-    modify: mutate => createSiwcRegistrationStore(ctx.get('credentials')).modify(mutate),
   }
 }
 

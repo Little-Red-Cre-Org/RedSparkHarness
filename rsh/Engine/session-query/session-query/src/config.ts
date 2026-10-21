@@ -1,6 +1,6 @@
 /** Public configuration and typed failures for the combined session-query service. */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@deepseek-ai/dsh-llm'
 
 /** Default maximum `before`/`after` raw-event window. */
 export const SESSION_QUERY_READ_WINDOW_MAX = 50
@@ -40,7 +40,6 @@ export type SessionQueryErrorCode =
   | 'SESSION_QUERY_INVALID_SURFACE'
   | 'SESSION_QUERY_INVALID_WINDOW'
   | 'SESSION_QUERY_PERSISTENCE_FAILED'
-  | 'SESSION_QUERY_PROVIDER_CLOSED'
   | 'SESSION_QUERY_SEARCH_DISABLED'
   | 'SESSION_QUERY_SESSION_NOT_FOUND'
   | 'SESSION_QUERY_STALE_CURSOR'

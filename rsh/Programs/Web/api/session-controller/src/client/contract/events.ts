@@ -1,9 +1,23 @@
 /** Observable contiguous Session event window consumed by domain assemblers. */
 import { notifySubscribers, type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { LlmAttemptId } from '@deepseek-ai/dsh-llm/brand'
+import type { LlmAttemptId, StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { AssistantLiveChunkEvent } from '../../client-event-types.ts'
-export type { AssistantLiveChunkEvent, SessionEventLike } from '../../client-event-types.ts'
+
+/** Client-only live chunk presentation; `seq` orders the transient row between durable Session seqs. */
+export interface AssistantLiveChunkEvent {
+  readonly type: 'assistant/live-chunk'
+  readonly seq: number
+  readonly time: number
+  readonly data: {
+    readonly attemptId: LlmAttemptId
+    readonly turn: number
+    readonly step: number
+    readonly chunk: StreamChunk
+  }
+}
+
+/** Current durable Session event or one client-only live chunk presentation. */
+export type SessionEventLike = SessionEvent | AssistantLiveChunkEvent
 
 /** Client history entry retaining its coarse transport discriminator. */
 export type SessionEventLikeEntry =

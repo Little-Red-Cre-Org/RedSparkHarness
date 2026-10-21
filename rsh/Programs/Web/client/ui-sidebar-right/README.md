@@ -9,14 +9,13 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The right Sidebar hosts per-Session tabs in a resizable docked or fullscreen panel. Cordis composition provides tab navigation, resource previews, layout controls, and expand/collapse. Native composition reuses this package's entry for read-only Session details and, when its optional workspace-file client is present, a file tree and document preview.
+The right Sidebar: where the docking kit meets this product. It holds one docking surface per session, draws it as one edge-anchored panel in the frame's right column in either of two presentations, puts the expand button in the conversation header, and owns the navigation controller (`ctx.sidebarRight`), the tab-type registry (`ctx.sidebarRightTabs`), and the Tab domain that tells each open tab how it was navigated to and how long it lives.
 
 ## Table of Contents
 
 - [What lives here, and what does not](#what-lives-here-and-what-does-not)
 - [Presentations](#presentations)
 - [The expand button](#the-expand-button)
-- [Native Session details](#native-session-details)
 - [State](#state)
 - [Extension seats](#extension-seats)
 - [`ctx.sidebarRight`](#ctxsidebarright)
@@ -56,13 +55,6 @@ While the panel is hidden, one button in the conversation header's corner seat (
 The panel takes the conversation's ground colour and content font sizes rather than a raised layer of its own: it is a column of the page, not a card over it.
 
 The `rightbar` entry is a root-scoped controller. It reads `usePanelInfo` and mounts the Session-scoped `rightbar.session` subtree only while the Conversation is selected. Switching to a global panel hides the right Sidebar and releases its frame track without deleting the Session's tab state.
-
-<a id="native-session-details"></a>
-## Native Session details
-
-Native profile uses the package's Native entry and rightbar slot. Overview reads the selected Session header and roster; Activity counts turns, messages, tool calls, and token usage from durable history, then displays the latest provider, model, and request context. `SidebarPathBar` presents the working directory.
-
-When `clientNativeWorkspaceFiles` is available, Files lists workspace-relative directories lazily and Preview opens a selected file. Reopening a directory refreshes its listing through the existing generation guard. Text and source pages use `read`; page line counts preserve empty lines and a zero-line EOF adds no separator. Markdown and code reuse the Cordis-free renderers in `ui-primitives`. HTML, images, and PDF use `readAll`; directly referenced relative HTML scripts and stylesheets use `readRelated` and run inside an opaque sandboxed iframe. `follow` reloads expanded directories; a changed version or removal of the current absolute file path or a loaded HTML dependency refreshes its preview. Read responses register the actual absolute paths and versions. Observations received while a read is pending are checked against its response before publication; reading the same version does not trigger another refresh. An unchanged HTML document retains missing dependency identities for recreation; a new document version retires its previous dependency identities. Unrelated and same-version observations retain loaded pages. A failed read has no resolved identity; while the preview is failed, a present-file observation outside the known identities retries it. Absence observations and matching known versions do not cause that retry. A failed response also checks observations received while it was pending, before they are discarded. Successful previews keep the identity/version filter. Pagination belongs to that preview's read lifetime, so old page replies cannot append content or errors after a same-path refresh. When the optional service is absent, only Overview and Activity appear. Native uses no Cordis tabs or legacy plugin entries; the legacy tree and preview adapters use the same props-only row and document presentations. Trajectory and turn inspection remain outside this panel.
 
 <a id="state"></a>
 ## State

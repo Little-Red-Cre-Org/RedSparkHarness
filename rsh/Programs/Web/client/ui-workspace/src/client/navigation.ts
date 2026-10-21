@@ -10,6 +10,7 @@ import type {
   IWorkspaces, WorkspaceId, WorkspaceView,
 } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 
 /** Workspace archive and directory operations consumed by Client UI domains. */
@@ -70,6 +71,14 @@ export interface UiWorkspace {
 }
 
 declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * Claim a user-requested file link in the enclosing IDE.
+     * @param request - originating Session, file path and optional one-based line.
+     * @mode bail
+     */
+    'workbench/open-file'(request: { sessionId: SessionId; path: string } & OpenFileOptions): true | undefined
+  }
   interface Context {
     /** Cross-Controller Workspace navigation and directory UI capability. */
     uiWorkspace: UiWorkspace

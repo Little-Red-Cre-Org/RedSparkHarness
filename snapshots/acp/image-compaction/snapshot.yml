@@ -1,6 +1,6 @@
 version: 1
 scenario: image-compaction
-profile: legacy-acp
+profile: acp
 composition: image-compaction
 recording: authored
 header:
