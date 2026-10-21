@@ -10,7 +10,7 @@ import {
   type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePackageInstallation,
   type NativePackageProvenance, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
-import { launchEnvironmentProvider, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import { launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
 import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
@@ -191,24 +191,17 @@ export function nativeProfileChildSupportInstallations(profile: NativeProfileCon
   return installations
 }
 
-function jsonFile(path: string, patch = false): unknown {
+function jsonFile(path: string): unknown {
   try { return JSON.parse(readFileSync(path, 'utf8')) as unknown }
-  catch (error) {
-    throw new Error(`native profile cannot read JSON ${path}${patch ? '; native --patch accepts only {formatVersion:1, installations:[…]} JSON' : ''}`, { cause: error })
-  }
+  catch (error) { throw new Error(`native profile cannot read JSON ${path}`, { cause: error }) }
 }
 
-/** Reject a nonempty Cordis patch file at a native CLI-owned path.
- * @param path - patch file to inspect.
- * @returns nothing when the file is empty or absent.
- * @throws when the file contains a Cordis patch layer.
- */
-export function refuseLegacyPatch(path: string): void {
+function refuseLegacyPatch(path: string): void {
   if (!existsSync(path)) return
   const lines = readFileSync(path, 'utf8').split(/\r?\n/)
   const content = lines.filter(line => !line.trimStart().startsWith('#')).join('').trim()
   if (content !== '' && content !== '[]') {
-    throw new Error(`native profile cannot apply Cordis patch ${path}; migrate it to rsh.profile.json installations or remove that layer explicitly; see rsh/Docs/native-config-migration.md`)
+    throw new Error(`native profile cannot apply Cordis patch ${path}; migrate or remove that layer explicitly`)
   }
 }
 
@@ -245,22 +238,6 @@ function scopeAncestry(profile: NativeProfileConfig, scopeId: string): string[] 
     current = scope.parent
   }
   return ancestry
-}
-
-/** Find the nearest active installation of a plugin visible from a profile scope.
- * @param profile - expanded native profile composition.
- * @param scopeId - scope where the consumer is installed.
- * @param plugin - provider package to find.
- * @returns the nearest active installation, or undefined when no ancestor installs it.
- */
-export function nearestNativeProfileInstallation(profile: NativeProfileConfig, scopeId: string,
-  plugin: string): NativeProfileConfig['installations'][number] | undefined {
-  for (const scope of scopeAncestry(profile, scopeId)) {
-    const installation = profile.installations.find(row => row.scope === scope
-      && row.plugin === plugin && row.disabled !== true)
-    if (installation !== undefined) return installation
-  }
-  return undefined
 }
 
 /**
@@ -491,7 +468,7 @@ export function readNativeProfile(options: {
   if (options.profileDir === undefined) refuseLegacyPatch(join(home, 'cordis.patch.yml'))
   refuseLegacyPatch(join(profileDir, 'desktop.cordis.yml'))
   const base = parseNativeProfileConfig(jsonFile(join(profileDir, 'rsh.profile.json')))
-  return applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file), true)))
+  return applyNativeProfilePatches(base, options.patchFiles.map(file => jsonFile(resolve(file))))
 }
 
 /**
@@ -511,14 +488,12 @@ export async function loadNativeProfile(options: {
   containedRoots?: readonly string[]
   /** Private carrier contribution installed in the selected profile scope. */
   carrier?: { readonly plugin: NativePlugin; readonly scope: string }
-  /** Frozen launch environment shared with CLI preflight and process policy. */
-  environment?: LaunchEnvironmentSnapshot
   /** Previous load whose unchanged scope and installation identities should survive a reload. */
   previous?: LoadedNativeProfile
   onApplication?: (application: NativeApplication) => void
 }): Promise<LoadedNativeProfile> {
   const home = options.home ?? resolveDshHome()
-  const environment = options.target === 'host' ? options.environment ?? loadLayeredEnv('dsh') : undefined
+  const environment = options.target === 'host' ? loadLayeredEnv('dsh') : undefined
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   let profile = readNativeProfile({
     profile: options.profile, patchFiles: options.patchFiles, home,

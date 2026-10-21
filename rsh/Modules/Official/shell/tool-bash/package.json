@@ -48,7 +48,6 @@
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-agent": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true },
     "@deepseek-ai/dsh-shell-env": { "optional": true },
     "@deepseek-ai/dsh-sandbox-policy": { "optional": true },
     "@deepseek-ai/dsh-system-prompt": { "optional": true },

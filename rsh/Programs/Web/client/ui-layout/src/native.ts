@@ -59,7 +59,6 @@ export const plugin: NativePlugin = {
       selectPanel: (id) => { layout.selectPanel(id) },
       beginNavigation: () => layout.beginNavigation(),
       toggleSidebar: () => { layout.toggleSidebar() },
-      collapseNarrow: () => { layout.collapseNarrow() },
       openRightbar: (track, fullscreen) => { layout.openRightbar(track, fullscreen) },
       closeRightbar: () => { layout.closeRightbar() },
       layoutInfo,

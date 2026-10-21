@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "chunks",
+    "chunks": [
+      { "type": "block-start", "index": 0, "blockType": "tool-call" },
+      { "type": "tool-call-delta", "index": 0, "id": "ide-proposal", "name": "write", "argumentsDelta": "{\"file_path\":\"main.ts\",\"content\":\"const value = 2;\\n\",\"sandbox_permissions\":\"workspace-write\",\"justification\":\"Create the proposed main.ts after approval.\"}" },
+      { "type": "block-end", "index": 0, "block": { "type": "tool-call", "id": "ide-proposal", "name": "write", "arguments": "{\"file_path\":\"main.ts\",\"content\":\"const value = 2;\\n\",\"sandbox_permissions\":\"workspace-write\",\"justification\":\"Create the proposed main.ts after approval.\"}" } },
+      { "type": "finish", "reason": { "kind": "tool-calls" } }
+    ]
+  },
+  {
+    "kind": "chunks",
+    "chunks": [
+      { "type": "block-start", "index": 0, "blockType": "text" },
+      { "type": "text-delta", "index": 0, "text": "The requested operation has settled." },
+      { "type": "block-end", "index": 0, "block": { "type": "text", "text": "The requested operation has settled." } },
+      { "type": "finish", "reason": { "kind": "stop" } }
+    ]
+  }
+]

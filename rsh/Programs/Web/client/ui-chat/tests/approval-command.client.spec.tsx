@@ -4,7 +4,7 @@ import type { ChatSnapshot, UseChat } from '@deepseek-ai/dsh-client-ui-chat/clie
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { ApprovalCommand, commandOf } from '../src/client/chat/ApprovalCommand.tsx'
+import { ApprovalCommand, commandOf, fileChangeOf } from '../src/client/chat/ApprovalCommand.tsx'
 import { apply as nodeApply } from '../src/index.ts'
 
 function props(
@@ -29,6 +29,17 @@ describe('commandOf', () => {
 })
 
 describe('ApprovalCommand', () => {
+  it.each([
+    { name: 'edit', args: { file_path: 'main.ts', old_string: 'value = 1', new_string: 'value = 2' }, expected: 'main.ts\n- value = 1\n+ value = 2' },
+  ])('previews the correlated $name without applying it', ({ name, args, expected }) => {
+    const call = { callId: 'call-1', name, argsRaw: JSON.stringify(args) }
+    const view = render(<ApprovalCommand {...props([{ kind: 'tool-call', data: { root: call } }])} />)
+    expect(view.container.textContent).toBe(expected)
+    expect(fileChangeOf({ ...call, argsRaw: '{' })).toBeUndefined()
+    expect(fileChangeOf({ ...call, argsRaw: 'null' })).toBeUndefined()
+    view.unmount()
+  })
+
   it('renders the running correlated Tool command', () => {
     render(<ApprovalCommand {...props([
       { kind: 'assistant-step', data: {} },

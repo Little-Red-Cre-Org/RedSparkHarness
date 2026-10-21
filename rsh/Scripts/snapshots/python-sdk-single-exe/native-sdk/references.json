@@ -12,9 +12,5 @@
   "stagedFiles": {
     "sessionId": "sdk-staged-files",
     "session": "../../../../../snapshots/native-sdk/staged-files/session.v3.jsonl"
-  },
-  "skills": {
-    "sessionId": "sdk-native-skills",
-    "session": "../../../../../snapshots/native-sdk/skills/session.v3.jsonl"
   }
 }

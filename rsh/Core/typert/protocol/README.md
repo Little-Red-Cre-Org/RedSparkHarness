@@ -27,8 +27,6 @@ With `dsh-typert-protocol`, business packages can expose Host methods to Remote 
 
 This package is for business-package and assembly maintainers who expose Host capabilities to Remote clients. It is a declarations library: mark methods, bind services, and let the generated pipeline and the Gateway do the rest.
 
-Cordis is an optional peer: the package root imports Cordis to define `TypertRemoteService`, while `./types` imports it only in declarations. Consumers loading the root must provide Cordis; type-checking declarations that mention `Context` or `Events` also requires Cordis types.
-
 ### Exposing a Host method
 
 A business package marks a public instance method with `@Remote` (or `@RemoteScope(key)` when the receiver comes from a scoped Context), and the owning service either extends `TypertRemoteService` or declares a `typertRemote` binding through `bindTypertRemote()`:

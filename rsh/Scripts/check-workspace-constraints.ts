@@ -11,14 +11,7 @@ import { pathToFileURL } from 'node:url'
 import { isPublicExperimentalPackageDirectory } from './experimental-package-policy.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
-import {
-  applicationDistributionDirectories,
-  mixedNativeEntryDirectories,
-  mixedNativeLibraryDirectories,
-  nativeCompatibilityOnlyPeers,
-  nativePackageDirectories,
-  nativeSafeSourceSubpaths,
-} from './native-package-policy.ts'
+import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, nativeSafeSourceSubpaths } from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
 /** pnpm workspace manifests after the physical RSH migration. */
@@ -71,8 +64,6 @@ const standardReleaseMemberDirectory = new RegExp('^(?:' + [
 ].join('|') + ')$')
 /** Installable application assembled by electron-builder rather than published to npm. */
 const desktopApplicationDirectory = 'rsh/Programs/Desktop'
-/** Private compatibility assembly shipped only through the Desktop package set. */
-const privateDesktopAssemblyDirectory = 'rsh/Compatibility/DSH/boot/desktop-host-compatibility'
 const applicationPackageDirectories = new Set([
   'rsh/Programs/CLI',
   'rsh/Programs/Web/application',
@@ -83,11 +74,13 @@ const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@deepseek-ai/dsh-desktop-host': [
     'lib/*.js',
+    'config/desktop.cordis.patch.yml',
     'lib/types/**/*.d.ts',
   ],
-  // Sourcemaps stay out by payload policy; worker preview remains a separate
-  // private experimental surface.
-  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map'],
+  // Sourcemaps stay out by payload policy; the worker-preview surface
+  // (dist/preview.html and dist/preview/) backs private experimental
+  // packages and is not published.
+  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
 }
 
 /** The subset of package.json fields this constraint check cares about. */
@@ -161,12 +154,12 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
   '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
   '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
   '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
   '@deepseek-ai/dsh-command-feedback': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-ide-code-oss': ['lib/native.js'],
   '@deepseek-ai/dsh-webhook-github': ['lib/native.js'],
   '@deepseek-ai/dsh-webhook': ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-permission-presets': ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js'],
@@ -184,8 +177,6 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-telemetry': ['lib/records.js'],
-  '@deepseek-ai/dsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/types-*.js'],
   '@deepseek-ai/dsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
   '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
@@ -206,7 +197,6 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
   '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
-  '@deepseek-ai/dsh-web-compatibility': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
   '@deepseek-ai/dsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
   '@deepseek-ai/dsh-client-ui-sidebar-right': [
     'lib/native.js',
@@ -304,7 +294,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
   '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
+  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/native-*.js', 'lib/*.css'],
   '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
   '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
@@ -367,7 +357,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
-  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/native-inspection.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/shared-*.js'],
   // The argv-prefix runner entry ships beside the lib as its own bundle;
   // sandbox-local resolves it through the package's ./runner export. tsdown
   // also shares its generated FFI code through a hashed runtime chunk.
@@ -508,13 +498,12 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
 }
 
 function isReleaseMemberDirectory(dir: string): boolean {
-  if (dir === privateDesktopAssemblyDirectory) return false
   return standardReleaseMemberDirectory.test(dir) || isPublicExperimentalPackageDirectory(dir)
 }
 
 /** Whether a package belongs to the product library policy rather than an application root. */
 function isDshLibraryDirectory(dir: string): boolean {
-  return !applicationDistributionDirectories.has(dir) && [
+  return [
     'rsh/Core/',
     'rsh/Engine/',
     'rsh/Modules/Official/',
@@ -545,7 +534,6 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   const mixed = mixedNativeEntryDirectories.has(dir)
     || mixedNativeLibraryDirectories.has(dir)
     || nativeSafeSourceSubpaths.has(dir)
-  const compatibilityOnlyPeer = nativeCompatibilityOnlyPeers.get(dir)?.includes('@deepseek-ai/cordis') === true
   const errors: string[] = []
 
   if (native) {
@@ -562,9 +550,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
   } else {
     if (peer === undefined) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
     if (dev === undefined) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
-    if (optionalPeer === true && !compatibilityOnlyPeer) {
-      errors.push(`${label}: compatibility package must keep the Cordis peer required`)
-    }
+    if (optionalPeer === true) errors.push(`${label}: compatibility package must keep the Cordis peer required`)
   }
 
   if (direct !== undefined) errors.push(`${label}: @deepseek-ai/cordis must not be a direct dependency`)
@@ -623,15 +609,6 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       || manifest.repository.url !== repositoryUrl
       || manifest.repository.directory !== expectedDirectory) {
       errors.push(`${label}: published Landlock package repository must use ${repositoryUrl} with directory ${expectedDirectory} for trusted publishing`)
-    }
-  } else if (dir === privateDesktopAssemblyDirectory) {
-    if (manifest.private !== true) {
-      errors.push(`${label}: private Desktop assembly must set "private": true`)
-    }
-    if (manifest.repository?.type !== 'git'
-      || manifest.repository.url !== publishedRepositoryUrl
-      || manifest.repository.directory !== dir) {
-      errors.push(`${label}: private Desktop assembly repository must use ${publishedRepositoryUrl} with directory ${dir}`)
     }
   } else if (isReleaseMemberDirectory(dir)) {
     // Release members state that they are publishable: npm refuses a private

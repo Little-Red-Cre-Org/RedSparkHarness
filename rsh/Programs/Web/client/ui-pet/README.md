@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 This plugin turns the RedSpark mascot into an optional Agent-state display. It owns the durable desktop-pet preference, registers the built-in Kitsune character with normal and chibi variants, occupies `conversation.pet` in the welcome hero and active Conversation, and adds General > Personalization > Desktop pet controls. The shared Cordis-free `ChatMascotHero` owns sprite layout and motion presentation; this plugin supplies its selected character, activity and localized copy. `ui-conversation` only declares and places the slot, so it does not know any character, asset, setting, or state rule.
 
+In the embedded IDE, the welcome character occupies a compact avatar-sized area without decorative effects or a speech bubble. The full welcome presentation remains available outside the IDE.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

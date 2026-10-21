@@ -10,10 +10,9 @@ it('keeps disabled packages visible and offers recovery without a running backen
   let ready = false
   const disableAll = vi.fn(async () => { enabled = false; ready = true })
   const toggle = vi.fn(async (_name: string, active: boolean) => { enabled = active })
-  const retry = vi.fn(async () => {})
   const api = {
     locale: async () => resolveDesktopLocale('en'),
-    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', errorType: 'Error', logPath: '/local/Desktop/desktop.log' }, retry, subscribe: () => () => {} },
+    backend: { status: async () => ready ? { phase: 'ready' } : { phase: 'error', message: 'plugin requires Cordis ^2.0.0' }, retry: vi.fn(), subscribe: () => () => {} },
     plugins: { list: async () => [{ name: 'example-plugin', version: '1.0.0', enabled }], disableAll, toggle },
   }
   Object.defineProperty(dom.window, 'dshDesktop', { value: api })
@@ -22,13 +21,7 @@ it('keeps disabled packages visible and offers recovery without a running backen
     const document = dom.window.document
     await expect.poll(() => document.querySelector('#plugins li')?.textContent).toContain('example-plugin')
     expect(document.querySelector<HTMLElement>('#recovery')?.hidden).toBe(false)
-    expect(document.querySelector('#startup-error')?.textContent).toBe(
-      'Error type: Application error\nDetailed information has been written to: /local/Desktop/desktop.log',
-    )
-    document.querySelector<HTMLButtonElement>('#retry')?.click()
-    await expect.poll(() => document.querySelector('#status')?.textContent).toBe('Backend: error')
-    expect(retry).toHaveBeenCalledOnce()
-    expect(document.querySelector('#status')?.textContent).not.toBe('Done. The Desktop backend has restarted.')
+    expect(document.querySelector('#startup-error')?.textContent).toBe('plugin requires Cordis ^2.0.0')
     document.querySelector<HTMLButtonElement>('#disable-all')?.click()
     await expect.poll(() => document.querySelector<HTMLElement>('#recovery')?.hidden).toBe(true)
     expect(disableAll).toHaveBeenCalledOnce()

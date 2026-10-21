@@ -42,6 +42,10 @@ Native Client packages that implement Conversation targets import shared event, 
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
 
+The composer writes a programmatically seeded draft to its existing persisted store when mounted. Its draft-persistence event lets the embedded IDE wait for that write before a project change restarts the extension host. Browser-owned unsent attachments and in-progress input operations postpone the editor project switch.
+
+The embedded IDE welcome screen uses compact typography without a background glow. The existing composer and Session binding remain mounted during editor navigation.
+
 The composer registers the File command action and owns its label, availability, and native file-dialog callback. Menu availability and invocation both consult the mounted composer's current attachment-intake policy. Unmounting or locking the composer disables that action; disposing the plugin removes its registration. The callback binding stays inside the input module.
 
 Claimed commands retain their identity and highlight when only their arguments and trailing separator are deleted; editing the command name releases the claim. The same rules apply to every command and locale, including `/goal`, `/目标`, `/plan`, and `/计划`. Command hints and ordinary placeholders remain hidden throughout IME composition and reappear only after the editor commits the final text and the corresponding input is empty.
@@ -131,7 +135,7 @@ None; Conversation assembly and browser input state do not alter provider-side p
 <a id="dev-note"></a>
 ### Dev Note
 
-The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers.
+The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers. Its `OpenFileOptions.diffs` carries recorded before/after fragments, with null prior text meaning unavailable; consumers must not interpret these fragments as applicable edits.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>

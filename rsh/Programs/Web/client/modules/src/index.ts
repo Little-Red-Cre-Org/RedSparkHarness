@@ -502,7 +502,8 @@ export class ClientModuleRegistry extends Service {
   /** One prior graph generation covers a request racing the HMR recomposition that replaced its URL. */
   private previousBatchResponses = new Map<string, { body: Buffer; contentType: string }>()
   private flushQueued = false
-  private composed: WebBootGraph
+  private composed: WebBootGraph | undefined
+  private composedTable = new Map<string, WebPluginRecord>()
 
   /**
    * Build the service: subscribe, seed, and run the activation flush.
@@ -529,7 +530,7 @@ export class ClientModuleRegistry extends Service {
     // current entries, flushed synchronously (nothing async between subscribe,
     // seed, and flush).
     for (const entry of ctx.loader.entries()) this.dirty.add(entry.options.name)
-    this.composed = this.compose()
+    this.invalidateGraph()
     const failures: Error[] = []
     this.flush(err => failures.push(err))
     if (failures.length > 0) {
@@ -545,16 +546,17 @@ export class ClientModuleRegistry extends Service {
     if (ctx.get('webServer') === undefined) ctx.inject(['webServer'], registerWebCarrier)
     else registerWebCarrier(ctx)
     ctx.on('webserver/index-inject', (table) => {
-      table.push(...bootInjections(this.composed))
+      table.push(...bootInjections(this.graph()))
     })
   }
 
   /**
-   * Current composed entry graph (stable object between changes).
+   * Current entry graph; materialize bundle bytes on first read after a change.
+   * Repeated reads return the same object until the next accepted graph change.
    * @returns the graph served as `window.__DSH_BOOT__`.
    */
   graph(): WebBootGraph {
-    return this.composed
+    return this.composed ??= this.compose()
   }
 
   /**
@@ -614,7 +616,7 @@ export class ClientModuleRegistry extends Service {
     record.bundle = bundle
     if (sourceMap === undefined) delete record.sourceMap
     else record.sourceMap = sourceMap
-    this.composed = this.compose()
+    this.invalidateGraph()
     for (const notify of this.rebuildListeners) {
       // Containment: rebuilt() runs inside the HMR watch callback — a
       // throwing subscriber must not kill the poll or skip later subscribers.
@@ -649,15 +651,22 @@ export class ClientModuleRegistry extends Service {
     return () => { this.graphListeners.delete(listener) }
   }
 
+  private invalidateGraph(): void {
+    // Invalid updates keep the last accepted records available to readers.
+    orderByModuleGraph([...this.table.values()].map(record => record.entry))
+    this.composedTable = new Map(this.table)
+    this.composed = undefined
+  }
+
   private compose(): WebBootGraph {
-    const entries = orderByModuleGraph([...this.table.values()].map(record => record.entry))
+    const entries = orderByModuleGraph([...this.composedTable.values()].map(record => record.entry))
     const bootstrap = PARSER_PRELOAD_IDS
-      .map(id => this.table.get(id))
+      .map(id => this.composedTable.get(id))
       .filter((record): record is WebPluginRecord => record !== undefined)
     const bootstrapIds = new Set(bootstrap.map(record => record.entry.id))
     const application = entries
       .filter(entry => !bootstrapIds.has(entry.id))
-      .map(entry => this.table.get(entry.id))
+      .map(entry => this.composedTable.get(entry.id))
       .filter((record): record is WebPluginRecord => record !== undefined)
     const artifacts: BatchArtifact[] = []
     for (const records of partitionComboRecords(bootstrap)) {
@@ -679,7 +688,7 @@ export class ClientModuleRegistry extends Service {
       })
     }
     const responses = new Map(batchResponses)
-    for (const record of this.table.values()) {
+    for (const record of this.composedTable.values()) {
       const artifact = buildCombo([record], record.entry.rev)
       responses.set(artifact.url, {
         body: artifact.script,
@@ -958,9 +967,8 @@ export class ClientModuleRegistry extends Service {
       }
     }
     if (!changed) return
-    let composed: WebBootGraph
     try {
-      composed = this.compose()
+      this.invalidateGraph()
     } catch (error) {
       // An unorderable module graph is a property of the whole table, not of
       // the arriving package, so it surfaces here: aggregated into the
@@ -969,7 +977,6 @@ export class ClientModuleRegistry extends Service {
       onError(error as Error)
       return
     }
-    this.composed = composed
     this.notifyGraphChanged()
   }
 
@@ -979,6 +986,7 @@ export class ClientModuleRegistry extends Service {
     body?: Buffer
   } {
     if (method !== 'GET' && method !== 'HEAD') return { status: 405 }
+    this.graph()
     const requestUrl = new URL(url, 'http://x')
     const resourceUrl = `${requestUrl.pathname}${requestUrl.search}`
     const response = this.responses.get(resourceUrl) ?? this.previousBatchResponses.get(resourceUrl)

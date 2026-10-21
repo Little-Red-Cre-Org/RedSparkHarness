@@ -252,18 +252,6 @@ function PluginCard({
     })
   }
 
-  if (loaded && !loading && row === undefined && !describeFailed) {
-    return <li className={css.card}>
-      <div className={`${css.header} ${css.headerStatic}`}>
-        <span className={css.headText}>
-          <span className={css.name}>{t(plugin.titleKey)}</span>
-          <span className={css.description}>{t(plugin.descriptionKey)}</span>
-          <span className={css.notice}>{t('settingsPluginHostGap')}</span>
-        </span>
-      </div>
-    </li>
-  }
-
   return <li className={`${css.card} ${open ? css.cardOpen : ''}`}>
     <button type="button" className={css.header} aria-expanded={open}
       aria-label={`${t(open ? 'settingsPluginCollapse' : 'settingsPluginExpand')}: ${t(plugin.titleKey)}`}
@@ -278,7 +266,8 @@ function PluginCard({
     {open ? <div className={css.body}>
       {!loaded ? loading ? <p className={css.notice} role="status">{t('settingsPluginLoading')}</p> : null
         : row === undefined ? loading
-          ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p> : null
+          ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p>
+          : describeFailed ? null : <p className={css.notice} role="status">{t('settingsPluginHostGap')}</p>
           : <>
             {revisionUnread ? <p className={css.notice} role="status">{t('settingsPluginRefreshPending')}</p> : null}
             {plugin.namespace === 'subagent-model-selection' ? <>

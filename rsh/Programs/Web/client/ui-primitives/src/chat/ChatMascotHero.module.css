@@ -7,6 +7,38 @@
   z-index: 4;
 }
 
+/* Keep the interactive character without taking editor-sized space in the IDE. */
+:global([data-rsh-workbench]) .stage[data-placement='hero'] {
+  width: 76px;
+  height: 80px;
+}
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .character {
+  width: 56px;
+  height: 76px;
+}
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .orbit,
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .spark,
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .sparkSmall,
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .speech,
+:global([data-rsh-workbench]) .stage[data-placement='hero'] .pause {
+  display: none;
+}
+
+:global([data-rsh-workbench]) .stage[data-placement='floating'] {
+  width: 64px;
+  height: 80px;
+  right: 12px;
+}
+:global([data-rsh-workbench]) .stage[data-placement='floating'] .character {
+  width: 56px;
+  height: 76px;
+}
+:global([data-rsh-workbench]) .stage[data-placement='floating'] .orbit,
+:global([data-rsh-workbench]) .stage[data-placement='floating'] .spark,
+:global([data-rsh-workbench]) .stage[data-placement='floating'] .sparkSmall {
+  display: none;
+}
+
 .stage[data-placement='floating'] {
   position: absolute;
   right: 24px;

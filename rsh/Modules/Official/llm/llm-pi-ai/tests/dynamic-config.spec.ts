@@ -337,7 +337,7 @@ describe('request-level dynamic profiles', () => {
 
     await expect(ctx.settings.update(NS, {
       providers: { openai: { headers: { 'bad header name': 'value' } } },
-    })).rejects.toThrow(/provider #0 header #0 is not valid for Fetch/)
+    })).rejects.toThrow(/provider "openai" header "bad header name" is not valid for Fetch/)
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai'])
   })
 

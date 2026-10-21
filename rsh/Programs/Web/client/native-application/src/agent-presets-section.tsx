@@ -213,102 +213,34 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
   const statusText = (status: NativeAgentPresetList['presets'][number]['status']): string =>
     t(status === 'ready' ? 'agentPresetsReady' : status === 'needs-migration' ? 'agentPresetsNeedsMigration' : 'agentPresetsBroken')
   const dialogProps = css.dialog === undefined ? {} : { className: css.dialog }
-  const unavailable = presets?.presets.filter(preset => preset.status !== 'ready') ?? []
-  const renderCard = (preset: NativeAgentPresetList['presets'][number]): ReactNode => {
-    const isDefault = preset.id === presets?.default
-    const isReady = preset.status === 'ready'
-    const selectionDisabled = !settingsAvailable || !modeSelectionEnabled || settingsWriting
-    const selectionLabel = !isReady ? statusText(preset.status)
-      : isDefault ? t('agentPresetsDefault')
-        : settingsLoadState === 'absent' ? t('agentPresetsSettingUnavailable')
-          : settingsLoadState === 'failed' ? t('agentPresetsSettingsReadFailed')
-            : !settingsAvailable ? t('agentPresetsSettingsRefreshing')
-              : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
-    const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
-    return <li key={preset.id} className={[
-      css.card,
-      !isReady ? css.cardUnavailable : undefined,
-      isDefault ? css.cardActive : undefined,
-      !modeSelectionEnabled && settingsLoadState !== 'absent' && !isDefault && isReady ? css.cardSelectionDisabled : undefined,
-    ].filter(Boolean).join(' ')}>
-      <button
-        type="button"
-        className={css.cardMain}
-        aria-pressed={isDefault}
-        disabled={isDefault || (isReady && selectionDisabled)}
-        aria-disabled={!isReady}
-        aria-label={`${selectionLabel}: ${preset.name}`}
-        title={selectionLabel}
-        onClick={() => {
-          if (!isReady || !modeSelectionEnabled || settingsWriting) return
-          void writeSetting(['default'], preset.id)
-        }}
-      >
-        <span className={css.cardHead}>
-          <span className={css.cardName}>{preset.name}</span>
-          {!isReady ? <Tag tone={preset.status === 'needs-migration' ? 'neutral' : 'warning'}>
-            {preset.status === 'needs-migration' ? t('agentPresetsNeedsMigration') : t('agentPresetsBrokenBadge')}
-          </Tag> : null}
-          <Tag>{t(sourceTag)}</Tag>
-          {isDefault ? <Tag tone="solid" className={css.cardDefault}>{t('agentPresetsDefault')}</Tag> : null}
-        </span>
-        <span className={css.cardDesc}>{preset.description ?? t('agentPresetsNoDescription')}</span>
-        {!isReady && preset.problem !== undefined
-          ? <span className={css.cardProblem} role="alert">{preset.problem}</span> : null}
-        <code className={css.cardId}>{preset.id}</code>
-      </button>
-      <div className={css.cardFoot}>
-        <button type="button" className={css.iconButton}
-          data-tip={t('agentPresetsView')} aria-label={`${t('agentPresetsView')}: ${preset.name}`}
-          onClick={() => { void openDetails(preset.id) }}><IconBrowseOutline16 /></button>
-        {preset.source !== 'profile' && isReady ? <button type="button" className={css.iconButton}
-          data-tip={t('agentPresetsDuplicate')} aria-label={`${t('agentPresetsDuplicate')}: ${preset.name}`}
-          onClick={() => { setCopy({ from: preset.id, id: '', name: '', saving: false, error: null }) }}>
-          <IconCopyOutline16 />
-        </button> : null}
-        {preset.source === 'user' ? <>
-          <button type="button" className={css.iconButton}
-            data-tip={t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}
-            aria-label={`${t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}: ${preset.name}`}
-            onClick={() => { void openLocation(preset.id) }}><IconFolderOpenOutline16 /></button>
-          <button type="button" className={`${css.iconButton} ${css.iconDanger}`}
-            data-tip={t('agentPresetsDelete')} aria-label={`${t('agentPresetsDelete')}: ${preset.name}`}
-            onClick={() => { setPendingDelete(preset.id) }}><IconTrashOutline16 /></button>
-        </> : null}
-      </div>
-      {revealedPaths[preset.id] === undefined ? null : <p className={css.revealedPath}>
-        <span>{t('agentPresetsPath')}</span><code>{revealedPaths[preset.id]}</code>
-      </p>}
-    </li>
-  }
 
   return <section className={css.section}>
     <h2 className={css.title}>{t('settingsAgentPresets')}</h2>
     <p className={css.intro}>{t('agentPresetsIntro')}</p>
-    {settingsLoadState === 'absent' ? <p className={css.hostGap} role="note">{t('agentPresetsHostGap')}</p> : <>
-      <div className={css.pickerPreference}>
-        <div className={css.pickerPreferenceCopy}>
-          <span className={css.pickerPreferenceTitleRow}>
-            <span className={css.pickerPreferenceTitle}>{t('agentPresetsShowPicker')}</span>
-            <Tag>{t('agentPresetsBeta')}</Tag>
-          </span>
-          <p className={css.pickerPreferenceDescription}>{t('agentPresetsShowPickerDescription')}</p>
-          {settingsLoadState === 'failed' ? <div className={css.settingsReadFailure} role="alert">
-            <span>{t('agentPresetsSettingsReadFailed')}</span>
-            {settingsError === null ? null : <span>{settingsError}</span>}
-            <Button type="button" size="sm" variant="outline" onClick={() => { void reloadSettings.current?.() }}>
-              {t('retry')}
-            </Button>
-          </div> : null}
-        </div>
-        <Switch
-          checked={modeSelectionEnabled}
-          label={t('agentPresetsShowPicker')}
-          disabled={!settingsAvailable || settingsWriting}
-          onChange={(next) => { void writeSetting(['modeSelectionEnabled'], next) }}
-        />
+    <div className={css.pickerPreference}>
+      <div className={css.pickerPreferenceCopy}>
+        <span className={css.pickerPreferenceTitleRow}>
+          <span className={css.pickerPreferenceTitle}>{t('agentPresetsShowPicker')}</span>
+          <Tag>{t('agentPresetsBeta')}</Tag>
+        </span>
+        <p className={css.pickerPreferenceDescription}>{t('agentPresetsShowPickerDescription')}</p>
+        {settingsLoadState === 'absent' ? <p className={css.hostGap}>{t('agentPresetsHostGap')}</p> : null}
+        {settingsLoadState === 'failed' ? <div className={css.settingsReadFailure} role="alert">
+          <span>{t('agentPresetsSettingsReadFailed')}</span>
+          {settingsError === null ? null : <span>{settingsError}</span>}
+          <Button type="button" size="sm" variant="outline" onClick={() => { void reloadSettings.current?.() }}>
+            {t('retry')}
+          </Button>
+        </div> : null}
       </div>
-    </>}
+      <Switch
+        checked={modeSelectionEnabled}
+        label={t('agentPresetsShowPicker')}
+        disabled={!settingsAvailable || settingsWriting}
+        title={settingsLoadState === 'absent' ? t('agentPresetsHostGap') : undefined}
+        onChange={(next) => { void writeSetting(['modeSelectionEnabled'], next) }}
+      />
+    </div>
     {loading ? <p role="status">{t('agentPresetsLoading')}</p> : null}
     {failed ? <p className={css.error} role="alert">{t('agentPresetsLoadFailed')}</p> : null}
     {error === null ? null : <p className={css.error} role="alert">{error}</p>}
@@ -319,21 +251,81 @@ export function AgentPresetsSection({ actions, t }: AgentPresetsSectionProps): R
         ['built-in', 'agentPresetsBuiltInGroup'],
         ['custom', 'agentPresetsCustomGroup'],
       ] as const).map(([group, heading]) => {
-        const rows = presets.presets.filter(preset => preset.status === 'ready'
-          && (group === 'custom' ? preset.source === 'user' : preset.source !== 'user'))
+        const rows = presets.presets.filter(preset => group === 'custom' ? preset.source === 'user' : preset.source !== 'user')
         if (rows.length === 0) return null
         return <section className={css.group} key={group}>
           <h3 className={css.groupHead}>{t(heading)}</h3>
           <ul className={css.cards}>
-            {rows.map(renderCard)}
+            {rows.map((preset) => {
+              const isDefault = preset.id === presets.default
+              const isReady = preset.status === 'ready'
+              const selectionDisabled = !settingsAvailable || !modeSelectionEnabled || settingsWriting
+              const selectionLabel = !isReady ? statusText(preset.status)
+                : isDefault ? t('agentPresetsDefault')
+                  : settingsLoadState === 'absent' ? t('agentPresetsSettingUnavailable')
+                    : settingsLoadState === 'failed' ? t('agentPresetsSettingsReadFailed')
+                      : !settingsAvailable ? t('agentPresetsSettingsRefreshing')
+                        : modeSelectionEnabled ? t('agentPresetsSetDefault') : t('agentPresetsEnablePickerToSetDefault')
+              const sourceTag = preset.source === 'user' ? 'agentPresetsCustomTag' : 'agentPresetsBuiltInTag'
+              return <li key={preset.id} className={[
+                css.card,
+                !isReady ? css.cardBroken : undefined,
+                isDefault ? css.cardActive : undefined,
+                !modeSelectionEnabled && !isDefault && isReady ? css.cardSelectionDisabled : undefined,
+              ].filter(Boolean).join(' ')}>
+                <button
+                  type="button"
+                  className={css.cardMain}
+                  aria-pressed={isDefault}
+                  disabled={isDefault || (isReady && selectionDisabled)}
+                  aria-disabled={!isReady}
+                  aria-label={`${selectionLabel}: ${preset.name}`}
+                  title={selectionLabel}
+                  onClick={() => {
+                    if (!isReady || !modeSelectionEnabled || settingsWriting) return
+                    void writeSetting(['default'], preset.id)
+                  }}
+                >
+                  <span className={css.cardHead}>
+                    <span className={css.cardName}>{preset.name}</span>
+                    {!isReady ? <Tag tone="danger" className={css.brokenBadge}>
+                      {preset.status === 'needs-migration' ? t('agentPresetsNeedsMigration') : t('agentPresetsBrokenBadge')}
+                    </Tag> : null}
+                    <Tag>{t(sourceTag)}</Tag>
+                    {isDefault ? <Tag tone="solid" className={css.cardDefault}>{t('agentPresetsDefault')}</Tag> : null}
+                  </span>
+                  <span className={css.cardDesc}>{preset.description ?? t('agentPresetsNoDescription')}</span>
+                  {!isReady && preset.problem !== undefined
+                    ? <span className={css.cardProblem} role="alert">{preset.problem}</span> : null}
+                  <code className={css.cardId}>{preset.id}</code>
+                </button>
+                <div className={css.cardFoot}>
+                  <button type="button" className={css.iconButton}
+                    data-tip={t('agentPresetsView')} aria-label={`${t('agentPresetsView')}: ${preset.name}`}
+                    onClick={() => { void openDetails(preset.id) }}><IconBrowseOutline16 /></button>
+                  {preset.source !== 'profile' && isReady ? <button type="button" className={css.iconButton}
+                    data-tip={t('agentPresetsDuplicate')} aria-label={`${t('agentPresetsDuplicate')}: ${preset.name}`}
+                    onClick={() => { setCopy({ from: preset.id, id: '', name: '', saving: false, error: null }) }}>
+                    <IconCopyOutline16 />
+                  </button> : null}
+                  {preset.source === 'user' ? <>
+                    <button type="button" className={css.iconButton}
+                      data-tip={t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}
+                      aria-label={`${t(canOpenDirectory ? 'agentPresetsOpenFolder' : 'agentPresetsShowLocation')}: ${preset.name}`}
+                      onClick={() => { void openLocation(preset.id) }}><IconFolderOpenOutline16 /></button>
+                    <button type="button" className={`${css.iconButton} ${css.iconDanger}`}
+                      data-tip={t('agentPresetsDelete')} aria-label={`${t('agentPresetsDelete')}: ${preset.name}`}
+                      onClick={() => { setPendingDelete(preset.id) }}><IconTrashOutline16 /></button>
+                  </> : null}
+                </div>
+                {revealedPaths[preset.id] === undefined ? null : <p className={css.revealedPath}>
+                  <span>{t('agentPresetsPath')}</span><code>{revealedPaths[preset.id]}</code>
+                </p>}
+              </li>
+            })}
           </ul>
         </section>
       })}
-      {unavailable.length === 0 ? null : <details className={css.group}>
-        <summary className={css.groupHead}>{t('agentPresetsUnavailableGroup')} ({unavailable.length})</summary>
-        <p className={css.intro}>{t('agentPresetsUnavailableHint')}</p>
-        <ul className={css.cards}>{unavailable.map(renderCard)}</ul>
-      </details>}
     </> : null}
 
     <Modal open={detailId !== null} onClose={() => { detailRequest.current = null; setDetailId(null) }}

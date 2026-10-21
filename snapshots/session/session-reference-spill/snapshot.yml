@@ -1,6 +1,6 @@
 version: 1
 scenario: session-reference-spill
-profile: legacy-headless
+profile: headless
 composition: session-reference-spill
 recording: authored
 header:

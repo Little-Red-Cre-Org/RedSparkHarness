@@ -19,28 +19,6 @@ function fullyQualified(path: string): boolean {
     : posix.isAbsolute(path)
 }
 
-/**
- * Every filesystem volume this host exposes as a browsing root.
- *
- * Windows has no single root above the drive letters, so `\\` cannot reach `D:\` from `C:\`.
- * Listing the volumes makes each drive one jump target. POSIX has one root and reports it alone.
- * @returns absolute roots, in display order.
- */
-async function browsingRoots(): Promise<readonly { readonly name: string; readonly path: string }[]> {
-  if (process.platform !== 'win32') return [{ name: '/', path: '/' }]
-  const roots: { name: string; path: string }[] = []
-  for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
-    const drive = `${letter}:\\`
-    try {
-      await stat(drive)
-      roots.push({ name: `${letter}:`, path: drive })
-    } catch {
-      // An absent drive letter is not a volume; a probe failure is not user-facing here.
-    }
-  }
-  return roots
-}
-
 function crumbs(target: string): NativeDirectoryListing['crumbs'] {
   const result: { name: string; path: string }[] = []
   let current = target
@@ -89,17 +67,13 @@ export class NativeWebDirectoryService {
       if (endpoint === 'directories/list') {
         const request = listRequest.parse(payload)
         if (request.path !== undefined && !fullyQualified(request.path)) throw new Error('Directory path must be fully qualified')
-        // No path opens where the Host was launched; `home` still shortens displayed paths.
-        const path = resolve(request.path ?? process.cwd())
+        const path = resolve(request.path ?? homedir())
         const items = await readdir(path, { withFileTypes: true })
         accepted.throwIfAborted()
         const entries = (await Promise.all(items.map(item => entry(path, item))))
           .filter((item): item is NativeDirectoryEntry => item !== undefined)
           .sort((left, right) => left.name.localeCompare(right.name))
-        const listing: NativeDirectoryListing = {
-          path, home: homedir(), entries, crumbs: crumbs(path), roots: await browsingRoots(),
-        }
-        return { ok: true, value: listing }
+        return { ok: true, value: { path, entries, crumbs: crumbs(path) } satisfies NativeDirectoryListing }
       }
       if (endpoint === 'directories/create-directory') {
         const request = createRequest.parse(payload)

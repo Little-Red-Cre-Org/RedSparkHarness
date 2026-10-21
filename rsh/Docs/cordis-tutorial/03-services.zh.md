@@ -94,3 +94,5 @@ export function apply(ctx: Context) {
 每个应用中的服务名称共用一个扁平命名空间。请为自有服务添加有辨识度的前缀或命名空间（harness 已占用 `tools` 和 `llm` 等普通名称）；[子系统页面](../subsystems/core.zh.md)上生成的 `cordis-surface` 区块列出 harness 注册的每个名称。
 
 下一章：[事件](04-events.zh.md)：无需共享服务即可通信。
+
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

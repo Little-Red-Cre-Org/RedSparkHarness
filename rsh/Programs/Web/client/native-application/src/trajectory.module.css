@@ -1,8 +1,18 @@
-.panel {
-  display: flex;
-  flex: 1 1 auto;
-  width: 100%;
-  min-width: 0;
+.dialog {
+  width: min(1180px, 100%);
+  height: min(90vh, 900px);
+  max-height: calc(100dvh - 48px);
+  padding-bottom: 16px;
+}
+
+.content {
+  flex: 1;
   min-height: 0;
-  overflow: hidden;
+}
+
+.content > div:last-child {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  padding: 0 16px;
 }

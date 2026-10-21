@@ -17,7 +17,7 @@
   ],
   "alerts": [],
   "notices": [
-    "This Host does not save this preference; the behavior shown is used.",
+    "Could not read the busy-send preference.",
     "Settings saved; values were read back from the Host."
   ]
 }

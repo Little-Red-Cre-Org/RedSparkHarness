@@ -45,6 +45,7 @@ describe('SDK dsh launch resolution', () => {
       : [
         '--import', import.meta.resolve('tsx/esm'), resolve(bin, '..', '..', 'src/bin.ts'),
         '--profile', 'sdk',
+        '--patch', resolve(bin, '..', '..', 'src/sdk-source.cordis.patch.yml'),
       ])
     expect(launch.initializeTimeoutMs).toBe(30_000)
     expect(launch.description).toBe('dsh profile "sdk"')
@@ -91,40 +92,76 @@ describe('SDK dsh launch resolution', () => {
   it('falls back to the same package source entry through an absolute tsx loader', () => {
     const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js' }, { version: '1.0.0' })
     const sourceBin = join(pair.root, 'src/bin.ts')
+    const sourcePatch = join(pair.root, 'src/sdk-source.cordis.patch.yml')
     const sourceTsconfig = join(pair.root, 'tsconfig.json')
     mkdirSync(join(pair.root, 'src'))
     writeFileSync(sourceBin, '')
+    writeFileSync(sourcePatch, '[]\n')
     writeFileSync(sourceTsconfig, '{}\n')
 
     expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
-      sourceLoaderUrl: 'file:///tsx-loader.mjs',
+      dshHome: pair.root, sourceLoaderUrl: 'file:///tsx-loader.mjs',
     }))
       .toEqual({
         nodeArgs: ['--import', 'file:///tsx-loader.mjs', sourceBin],
+        patches: [sourcePatch],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
       })
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl))
+    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, { dshHome: pair.root }))
       .toEqual({
         nodeArgs: ['--import', import.meta.resolve('tsx/esm'), sourceBin],
+        patches: [sourcePatch],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
       })
   })
 
-  it('uses the source entry without profile runtime prediction', () => {
-    const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js' }, { version: '1.0.0' })
+  it('uses a Native source entry without requiring or passing the Cordis YAML patch', () => {
+    const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js',
+      dsh: { nativeProfileTemplates: ['native-sdk'] } }, { version: '1.0.0' })
     const sourceBin = join(pair.root, 'src/bin.ts')
     const sourceTsconfig = join(pair.root, 'tsconfig.json')
     mkdirSync(join(pair.root, 'src'))
     writeFileSync(sourceBin, '')
     writeFileSync(sourceTsconfig, '{}\n')
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, { sourceLoaderUrl: 'file:///tsx-loader.mjs' }))
+    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
+      dshHome: pair.root, profile: 'native-sdk', sourceLoaderUrl: 'file:///tsx-loader.mjs',
+    }))
       .toEqual({
         nodeArgs: ['--import', 'file:///tsx-loader.mjs', sourceBin],
+        patches: [],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
       })
   })
 
-  it('initializes the default SDK profile through the real CLI source entry', async () => {
+  it.each([
+    { profile: 'custom-sdk', marker: { runtime: 'native', config: 'rsh.profile.json' }, patch: false },
+    { profile: 'native-custom', marker: {}, patch: true },
+  ] as const)('uses the profile marker rather than its spelling for $profile', ({ profile, marker, patch }) => {
+    const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js' }, { version: '1.0.0' })
+    const home = mkdtempSync(join(tmpdir(), 'dsh-sdk-profile-runtime-'))
+    cleanups.push(home)
+    const profileDir = join(home, 'profiles', profile)
+    mkdirSync(profileDir, { recursive: true })
+    writeFileSync(join(profileDir, 'package.json'), JSON.stringify({ dsh: { profile: marker } }))
+    const sourceBin = join(pair.root, 'src/bin.ts')
+    const sourcePatch = join(pair.root, 'src/sdk-source.cordis.patch.yml')
+    const sourceTsconfig = join(pair.root, 'tsconfig.json')
+    mkdirSync(join(pair.root, 'src'))
+    writeFileSync(sourceBin, '')
+    writeFileSync(sourceTsconfig, '{}\n')
+    if (patch) writeFileSync(sourcePatch, '[]\n')
+
+    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
+      profile, dshHome: home, environment: {}, sourceLoaderUrl: 'file:///tsx-loader.mjs',
+    }))
+      .toEqual({
+        nodeArgs: ['--import', 'file:///tsx-loader.mjs', sourceBin],
+        patches: patch ? [sourcePatch] : [],
+        environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
+      })
+  })
+
+  it('initializes the shipped Native profile through the real CLI source entry', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-sdk-native-source-home-'))
     cleanups.push(home)
     const cliManifestUrl = new URL('../../../../CLI/package.json', import.meta.url).href
@@ -141,17 +178,19 @@ describe('SDK dsh launch resolution', () => {
     const source = resolveDshNodeLaunchFromManifests(
       pathToFileURL(sourceManifestPath).href,
       clientManifestUrl,
-      { sourceLoaderUrl: import.meta.resolve('tsx/esm') },
+      { profile: 'native-sdk', dshHome: home, environment: {}, sourceLoaderUrl: import.meta.resolve('tsx/esm') },
     )
+    expect(source.patches).toEqual([])
+
     const launch: RuntimeProcessOptions = {
       command: process.execPath,
-      args: [...source.nodeArgs, '--profile', 'sdk'],
+      args: [...source.nodeArgs, '--profile', 'native-sdk'],
       environment: () => ({ ...process.env, DSH_HOME: home, ...source.environment }),
-      description: 'dsh profile "sdk" source entry',
+      description: 'dsh profile "native-sdk" source entry',
       initializeTimeoutMs: 30_000,
       shutdownTimeoutMs: 5_000,
     }
-    const client = new HarnessClient({}, launch)
+    const client = new HarnessClient({ profile: 'native-sdk' }, launch)
     try {
       const initialized = await client.initialize({
         cwd: process.cwd(), provider: 'deepseek-official', model: 'deepseek-v4-flash',
@@ -168,19 +207,20 @@ describe('SDK dsh launch resolution', () => {
     mkdirSync(join(pair.root, 'lib'))
     writeFileSync(bin, '')
 
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl)).toEqual({
+    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, { dshHome: pair.root })).toEqual({
       nodeArgs: [bin],
+      patches: [],
       environment: {},
     })
   })
 
-  it.each([0, 1])('fails loud when a source launch is missing required file set %s', (presentCount) => {
+  it.each([0, 1, 2])('fails loud when a source launch is missing required file set %s', (presentCount) => {
     const pair = manifestPair({ version: '1.0.0', bin: 'lib/bin.js' }, { version: '1.0.0' })
     mkdirSync(join(pair.root, 'src'))
-    const sourceFiles = ['src/bin.ts', 'tsconfig.json']
+    const sourceFiles = ['src/bin.ts', 'src/sdk-source.cordis.patch.yml', 'tsconfig.json']
     for (const source of sourceFiles.slice(0, presentCount)) writeFileSync(join(pair.root, source), '')
     expect(() => resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
-      sourceLoaderUrl: 'file:///tsx-loader.mjs',
+      dshHome: pair.root, sourceLoaderUrl: 'file:///tsx-loader.mjs',
     }))
       .toThrow('is missing its built executable')
   })

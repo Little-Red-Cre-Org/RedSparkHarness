@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-19-desktop-host-teardown-and-nested-prune.md
-2026-10-19-desktop-host-teardown-and-nested-prune.md: 78a7033cc0a1c92896c56f10341148bae29272dc
-2026-10-19-desktop-host-teardown-and-nested-prune.zh.md: 63eab77631f60e198339a45300b1d93f542f57a6

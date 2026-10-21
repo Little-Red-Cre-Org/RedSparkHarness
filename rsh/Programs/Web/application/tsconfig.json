@@ -1,5 +1,5 @@
 {
-  "extends": "../../../../tsconfig.base.client.json",
+  "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "lib/types",
@@ -10,7 +10,6 @@
       "DOM.Iterable"
     ],
     "types": [
-      "client-build-environment",
       "node"
     ]
   },
@@ -23,7 +22,6 @@
   // this client-registered project must not also hold them (one program
   // cannot see both sides of the cordis Context merges).
   "exclude": [
-    "tests/native-browser-graph.spec.ts",
     "tests/native-conversation.e2e.ts",
     "tests/native-question-cancel.e2e.ts",
     "tests/native-session-grant.e2e.ts",
@@ -124,16 +122,10 @@
   ],
   "references": [
     {
-      "path": "../../../Modules/Community/experimental/webworker-runtime/tsconfig.client.json"
-    },
-    {
       "path": "../client/store"
     },
     {
       "path": "../client/web"
-    },
-    {
-      "path": "../../../Compatibility/DSH/web/frontend"
     },
     {
       "path": "../client/modules"

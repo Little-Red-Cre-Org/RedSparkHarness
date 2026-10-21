@@ -42,21 +42,17 @@ export const EXCLUDE_WORKSPACE: readonly string[] = [
 /**
  * Image paths that belong to the PAGE, not to the worker's loader.
  *
- * Most packages' `lib/client.js` is their browser module-table bundle behind
- * the `./client` export. The page evaluates those files with its own wrapper,
- * which has no ambient-store parameter. The shared HTTP route renderer is a
- * worker module despite its client subpath and is listed separately below.
- * Transforming page bundles would inject calls they cannot resolve, so they
- * ship untransformed apart from their trailing debugger-name line.
+ * A package's `lib/client.js` is its browser bundle behind the `./client`
+ * export: the page's own module system evaluates it with its own wrapper,
+ * which has no ambient-store parameter. Transforming those bodies would
+ * inject calls the page cannot resolve, so they ship untransformed — their
+ * only change is the trailing debugger-name line every JavaScript entry
+ * gains — and the manifest's all-or-nothing claim stays true, because the
+ * worker loader never evaluates them (the tunnel serves them as bytes).
  */
 export const PAGE_ASSETS: readonly string[] = [
   'node_modules/*/lib/client.js',
   'node_modules/@*/*/lib/client.js',
-]
-
-/** Client-path JavaScript that is a worker module rather than a served page bundle. */
-export const WORKER_RUNTIME_CLIENTS: readonly string[] = [
-  'node_modules/@deepseek-ai/dsh-http-routes/lib/client.js',
 ]
 
 /**

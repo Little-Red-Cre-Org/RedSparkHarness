@@ -49,8 +49,7 @@ async function routeBuiltApplication(page: Page, boot?: unknown): Promise<void> 
       await route.fulfill({ status: 200, contentType: 'text/javascript', body: PLUGIN_SOURCE })
       return
     }
-    const pathname = decodeURIComponent(url.pathname)
-    const target = resolve(DIST_ROOT, pathname === '/native.html' || pathname === '/' ? './index.html' : `.${pathname}`)
+    const target = resolve(DIST_ROOT, `.${decodeURIComponent(url.pathname)}`)
     if (target !== DIST_ROOT && !target.startsWith(`${DIST_ROOT}${sep}`)) {
       await route.fulfill({ status: 403 })
       return

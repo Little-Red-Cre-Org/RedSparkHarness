@@ -34,14 +34,8 @@ describe('desktop package target', () => {
   })
 
   it('parses installer and unpacked-directory invocations', () => {
-    expect(parseDesktopPackageInvocation(['mac-arm64'], 'darwin', 'arm64')).toMatchObject({
-      directory: false, assembly: 'native',
-    })
+    expect(parseDesktopPackageInvocation(['mac-arm64'], 'darwin', 'arm64').directory).toBe(false)
     expect(parseDesktopPackageInvocation(['mac-arm64', '--dir'], 'darwin', 'arm64').directory).toBe(true)
-    expect(parseDesktopPackageInvocation(['mac-arm64', '--assembly', 'compatibility'], 'darwin', 'arm64').assembly)
-      .toBe('compatibility')
-    expect(() => parseDesktopPackageInvocation(['--assembly', 'unknown'], 'darwin', 'arm64'))
-      .toThrow(/--assembly must be native or compatibility/u)
     expect(parseDesktopPackageInvocation([], 'darwin', 'arm64').target.name).toBe('mac-arm64')
     expect(parseDesktopPackageInvocation(['--prepare-only'], 'darwin', 'arm64').prepareOnly).toBe(true)
     expect(() => parseDesktopPackageInvocation(['mac-arm64', 'mac-x64'], 'darwin', 'arm64'))

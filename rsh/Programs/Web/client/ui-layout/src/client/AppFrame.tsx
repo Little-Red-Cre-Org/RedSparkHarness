@@ -23,6 +23,7 @@ import type { PanelInfo } from './service.ts'
 import type { SessionTitleSource } from './DocumentTitle.tsx'
 import { computeColumns, RIGHTBAR_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
 import { DocumentTitle } from './DocumentTitle.tsx'
+import { connectWorkbenchAppearance } from './workbench-appearance.ts'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
 
@@ -31,6 +32,7 @@ type UseCurrentSessionTitle = SnapshotSelectorHook<string | undefined>
 type FrameProps = PropsRenderSlots<'sidebar' | 'main' | 'rightbar' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
   & PropsLocale<'common'>
+  & { readonly embeddedWorkbench?: boolean }
   & { usePanelInfo: SnapshotSelectorHook<PanelInfo> }
 
 /** Props delivered by the ordinary Cordis Client composition. */
@@ -41,7 +43,7 @@ export type NativeAppFrameProps = FrameProps & { useCurrentSessionTitle: UseCurr
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol} data-center-col>{props.children}</div>
+  return <div className={css.centerCol}>{props.children}</div>
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
@@ -140,7 +142,7 @@ export function NativeAppFrame({ useCurrentSessionTitle, ...props }: NativeAppFr
       usePanelInfo={props.usePanelInfo} />} />
 }
 
-function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, documentTitle }: FrameProps & {
+function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, documentTitle, embeddedWorkbench = false }: FrameProps & {
   documentTitle: ReactNode
 }) {
   const layoutInfo = useStore(state => state.layoutInfo)
@@ -179,14 +181,11 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
   const sidebarPreference = sidebarCollapsed
     ? 0
     : layoutInfo.sidebar === 0 ? SIDEBAR_DEFAULT : layoutInfo.sidebar
-  const sidebarOverlay = narrow && layoutInfo.narrowExpanded
   const rightbarPreference = layoutInfo.rightbar ?? viewport * RIGHTBAR_DEFAULT_RATIO
   // Opening on a narrow frame collapses the left sidebar. Eligibility must
   // include that space before the occupant's first shown report arrives.
-  const normal = computeColumns(viewport,
-    sidebarOverlay || (!layoutInfo.rightbarShown && narrow) ? 0 : sidebarPreference, rightbarPreference)
-  const cols = computeColumns(viewport, sidebarOverlay ? 0 : sidebarPreference, layoutInfo.rightbarTrack ? rightbarPreference : 0)
-  const sidebarWidth = sidebarOverlay ? SIDEBAR_DEFAULT : cols.sidebar
+  const normal = computeColumns(viewport, !layoutInfo.rightbarShown && narrow ? 0 : sidebarPreference, rightbarPreference)
+  const cols = computeColumns(viewport, sidebarPreference, layoutInfo.rightbarTrack ? rightbarPreference : 0)
   const colsRef = useRef(cols)
   colsRef.current = cols
   const rightbarWidth = useRef(normal.rightbar)
@@ -211,56 +210,25 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
   }, [actions])
   const sidebar = useMemo(() => renderSlot('sidebar', {
     collapsed: sidebarCollapsed,
-    width: sidebarWidth,
-  }), [renderSlot, sidebarCollapsed, sidebarWidth])
+    width: cols.sidebar,
+  }), [renderSlot, sidebarCollapsed, cols.sidebar])
   const main = useMemo(() => (
     <MainPanel usePanelInfo={usePanelInfo} renderSlot={renderSlot} />
   ), [usePanelInfo, renderSlot])
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
-
-  // The narrow drawer is modal: the columns beneath it go inert, focus moves into it, and
-  // closing returns focus to the element that opened it while that element is still mounted.
-  const drawerRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    if (!sidebarOverlay) return
-    const frame = frameRef.current as HTMLDivElement
-    const drawer = drawerRef.current as HTMLDivElement
-    const opener = document.activeElement
-    const background = frame.querySelectorAll(':scope > [data-center-col], :scope > [data-rightbar-col]')
-    for (const element of background) element.setAttribute('inert', '')
-    if (!drawer.contains(document.activeElement)) drawer.focus()
-    // Escape closes the drawer and Tab keeps focus inside it, also when focus fell to body;
-    // an open menu, a nested modal, or a control that already handled the key owns it.
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || document.querySelector('[role="menu"], [aria-modal="true"]:not([data-sidebar-overlay])') !== null) return
-      if (e.key === 'Escape') actions.collapseNarrow()
-      if (e.key !== 'Tab') return
-      const focusable = drawer.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')
-      const active = document.activeElement
-      const [edge, wrap] = e.shiftKey ? [focusable[0], focusable[focusable.length - 1]] : [focusable[focusable.length - 1], focusable[0]]
-      if (drawer.contains(active) && wrap !== undefined && active !== edge && !(e.shiftKey && active === drawer)) return
-      e.preventDefault()
-      const target = wrap ?? drawer
-      target.focus()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      for (const element of background) element.removeAttribute('inert')
-      const active = document.activeElement
-      if (active !== null && active !== document.body && !drawer.contains(active)) return
-      if (opener instanceof HTMLElement) opener.focus()
-    }
-  }, [sidebarOverlay, actions])
+    if (embeddedWorkbench && frameRef.current !== null) return connectWorkbenchAppearance(frameRef.current)
+    return undefined
+  }, [embeddedWorkbench])
 
   return (
     <div
       ref={frameRef}
       className={css.frame}
+      data-rsh-workbench={embeddedWorkbench || undefined}
       style={{
         gridTemplateColumns:
-          `${cols.sidebar}px minmax(0, 1fr) ${cols.rightbar}px`,
+          `${embeddedWorkbench ? 0 : cols.sidebar}px minmax(0, 1fr) ${cols.rightbar}px`,
       }}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-rightbar-collapsed={cols.rightbar === 0 || undefined}
@@ -269,15 +237,9 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
       data-dragging={dragging || undefined}
     >
       {documentTitle}
-      <div ref={drawerRef} className={css.sidebarCol} data-sidebar-overlay={sidebarOverlay || undefined}
-        style={sidebarOverlay ? { width: sidebarWidth } : undefined}
-        {...sidebarOverlay && {
-          role: 'dialog', 'aria-modal': true, 'aria-label': t('sidebar'), tabIndex: -1,
-        }}>
-        {sidebar}
+      <div className={css.sidebarCol} aria-hidden={embeddedWorkbench || undefined}>
+        {embeddedWorkbench ? null : sidebar}
       </div>
-      {sidebarOverlay && <button type="button" className={css.narrowBackdrop} aria-label={t('close')} tabIndex={-1}
-        onClick={actions.collapseNarrow} />}
       <>
         <CenterColumn>{main}</CenterColumn>
         <RightbarColumn>
@@ -288,7 +250,7 @@ function AppFrameBody({ useStore, usePanelInfo, actions, renderSlot, t, document
         {overlays}
       </div>
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && !sidebarOverlay && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+      {!embeddedWorkbench && !sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
       {layoutInfo.rightbarShown && !layoutInfo.rightbarFullscreen && normal.rightbar > 0 && (
         <DragHandle side="rightbar" left={viewport - normal.rightbar} onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd} />
       )}

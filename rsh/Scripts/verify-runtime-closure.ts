@@ -1,18 +1,15 @@
 /**
- * Verify that the Python runtime or native CLI manifest supplies its shipped
- * compositions and every required workspace peer in its dependency graph.
+ * Verify that the executable deploy manifest supplies every plugin referenced
+ * by shipped agent presets and the native-sdk profile, plus every required
+ * workspace peer in its dependency graph.
  */
-import { globSync, readFileSync } from 'node:fs'
+import { globSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { isCordisGroupEntry, loadCordisYaml } from './cordis-yaml.ts'
 import { PACKAGE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
-import {
-  SHIPPED_NATIVE_PROFILES,
-  shippedNativeProfileClientComposition,
-  shippedNativeProfileComposition,
-} from '../Programs/CLI/src/native-profile-template.ts'
+import { shippedNativeProfileComposition } from '../Programs/CLI/src/native-profile-template.ts'
 
 interface PackageManifest {
   name?: string
@@ -35,20 +32,6 @@ interface RuntimePlatform {
 type RuntimePlatformManifest = Record<string, RuntimePlatform>
 
 const AGENT_PRESET_GLOB = 'rsh/Engine/preset/agent-presets/presets/*/agent.cordis.yml'
-const PYTHON_RUNTIME_MANIFEST = 'rsh/Programs/SDK/python/sdk-runtime/package.json'
-/**
- * CLI package that owns the executable entry inside the Python runtime.
- *
- * Its own manifest declares the full legacy superset, so it is retained as a leaf rather than
- * walked; the runtime closure supplies every peer it needs.
- */
-const CLI_MANIFEST_PACKAGE = '@deepseek-ai/dsh'
-const CLI_MANIFEST = 'rsh/Programs/CLI/package.json'
-const NATIVE_CLI_ROOT_IMPORTS = [
-  ['rsh/Programs/CLI/src/bin.ts', '@deepseek-ai/dsh-app-boot', '@deepseek-ai/dsh-launch-environment/layers'],
-  ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@deepseek-ai/dsh-subprocess', '@deepseek-ai/dsh-subprocess/native'],
-] as const
-type RuntimeClosureTarget = 'python-runtime' | 'native-cli'
 
 export interface RuntimeClosureResult {
   failures: string[]
@@ -57,55 +40,36 @@ export interface RuntimeClosureResult {
 }
 
 /**
- * Check a runtime manifest against its shipped profile compositions and required workspace peers.
+ * Check that the runtime manifest contains every shipped-preset and native-sdk plugin and workspace peer.
  * @param root repository root containing the runtime manifest and shipped presets.
  * @param manifestPath runtime manifest path relative to {@link root}.
- * @param target selects the Python compatibility runtime or the native CLI dependency closure.
  * @returns the discovered preset count, reachable workspace package count, and violations.
  */
 export async function verifyRuntimeClosure(
   root: string,
-  manifestPath = PYTHON_RUNTIME_MANIFEST,
-  target: RuntimeClosureTarget = 'python-runtime',
+  manifestPath = 'rsh/Programs/SDK/python/sdk-runtime/package.json',
 ): Promise<RuntimeClosureResult> {
   const runtimeManifest = await loadManifest(resolve(root, manifestPath))
   const runtimeName = runtimeManifest.name ?? manifestPath
   const workspace = await loadWorkspacePackages(root)
   const runtimeDependencies = runtimeManifest.dependencies ?? {}
   const platforms = await loadJson<RuntimePlatformManifest>(resolve(root, 'rsh/Programs/SDK/python/sdk-runtime/platforms.json'))
-  const presetPaths = target === 'python-runtime' ? globSync(AGENT_PRESET_GLOB, { cwd: root }).sort() : []
+  const presetPaths = globSync(AGENT_PRESET_GLOB, { cwd: root }).sort()
   const targets = Object.keys(platforms).sort()
   const parents = new Map<string, string | undefined>()
   const queue: string[] = []
-  const failures: string[] = []
-
-  if (target === 'native-cli') {
-    for (const dependency of Object.keys(runtimeDependencies).sort()) {
-      if (runtimeManifest.optionalDependencies?.[dependency] !== undefined) {
-        failures.push(`${runtimeName} -> ${dependency} is declared in both dependencies and optionalDependencies`)
-      }
-    }
-  }
 
   for (const dependency of Object.keys(runtimeDependencies).sort()) {
-    if (target === 'native-cli' && isCordisPackage(dependency)) {
-      failures.push(`${runtimeName} -> required Cordis dependency ${dependency}`)
-      continue
-    }
     if (!workspace.has(dependency)) continue
     parents.set(dependency, undefined)
     queue.push(dependency)
   }
 
+  const failures: string[] = []
+  if (presetPaths.length === 0) failures.push(`no agent presets matched ${AGENT_PRESET_GLOB}`)
   if (targets.length === 0) failures.push('rsh/Programs/SDK/python/sdk-runtime/platforms.json defines no runtime targets')
-  if (target === 'python-runtime') {
-    if (presetPaths.length === 0) failures.push(`no agent presets matched ${AGENT_PRESET_GLOB}`)
-    failures.push(...await missingPresetPlugins(root, runtimeDependencies, presetPaths, targets))
-    failures.push(...missingNativeSdkPlugins(root, runtimeDependencies, targets))
-  } else {
-    failures.push(...missingNativeCliPlugins(root, runtimeDependencies, targets, workspace))
-    failures.push(...await nativeCliRootImportViolations(root))
-  }
+  failures.push(...await missingPresetPlugins(root, runtimeDependencies, presetPaths, targets))
+  failures.push(...missingNativeSdkPlugins(root, runtimeDependencies, targets))
   for (let index = 0; index < queue.length; index += 1) {
     const packageName = queue[index]
     if (packageName === undefined) continue
@@ -113,48 +77,22 @@ export async function verifyRuntimeClosure(
     if (current === undefined) continue
     const peers = current.manifest.peerDependencies ?? {}
     const peerMeta = current.manifest.peerDependenciesMeta ?? {}
-    const dependencies = current.manifest.dependencies ?? {}
-    if (target === 'native-cli') {
-      for (const dependency of Object.keys(dependencies).sort()) {
-        if (current.manifest.optionalDependencies?.[dependency] !== undefined) {
-          failures.push(`${formatChain(runtimeName, packageName, parents)} -> ${dependency} is declared in both dependencies and optionalDependencies`)
-        }
-      }
-    }
     for (const peer of Object.keys(peers).sort()) {
-      if (peerMeta[peer]?.optional === true) continue
-      if (target === 'native-cli') {
-        if (isCordisPackage(peer)) {
-          failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis peer ${peer}`)
-          continue
-        }
-      }
-      if (!workspace.has(peer)) continue
+      if (!workspace.has(peer) || peerMeta[peer]?.optional === true) continue
       if (runtimeDependencies[peer]?.startsWith('workspace:') === true) continue
       failures.push(`${formatChain(runtimeName, packageName, parents)} -> ${peer}`)
     }
-    const packageDependencies = target === 'native-cli'
-      ? dependencies
-      : { ...dependencies, ...current.manifest.optionalDependencies }
-    for (const dependency of Object.keys(packageDependencies).sort()) {
-      if (target === 'native-cli' && isCordisPackage(dependency)) {
-        failures.push(`${formatChain(runtimeName, packageName, parents)} -> required Cordis dependency ${dependency}`)
-        continue
-      }
-      if (parents.has(dependency)) continue
-      // A non-workspace dependency is packaging payload the wheel must still ship. Recording it as
-      // reached keeps the equality check from reporting it as an uncovered declaration, while the
-      // traversal below only walks workspace manifests.
+    const dependencies = {
+      ...current.manifest.dependencies,
+      ...current.manifest.optionalDependencies,
+    }
+    for (const dependency of Object.keys(dependencies).sort()) {
+      if (!workspace.has(dependency) || parents.has(dependency)) continue
       parents.set(dependency, packageName)
       queue.push(dependency)
     }
   }
 
-  if (target === 'python-runtime') {
-    failures.push(...uncoveredRuntimeDependencies(
-      runtimeName, runtimeDependencies, queue, workspace, parents, shippedProfilePlugins(root, targets),
-    ))
-  }
   return {
     failures,
     presetCount: presetPaths.length,
@@ -162,162 +100,22 @@ export async function verifyRuntimeClosure(
   }
 }
 
-/**
- * Collect every plugin a shipped profile or agent preset mounts directly.
- * @param root - repository root.
- * @param targets - runtime platform targets from the platform manifest.
- * @returns bare package names used as closure roots.
- */
-function shippedProfilePlugins(root: string, targets: readonly string[]): Set<string> {
-  const plugins = new Set<string>()
-  for (const target of targets) {
-    const platform = processPlatformForTarget(target)
-    for (const profile of SHIPPED_NATIVE_PROFILES()) {
-      const composition = shippedNativeProfileComposition(root, profile, platform)
-      for (const row of [...composition.installations, ...shippedNativeProfileClientComposition(profile)]) {
-        const name = barePackageName(row.plugin)
-        if (name !== undefined) plugins.add(name)
-      }
-    }
-  }
-  for (const presetPath of globSync(AGENT_PRESET_GLOB, { cwd: root }).sort()) {
-    const document = loadCordisYaml(readFileSync(resolve(root, presetPath), 'utf8'))
-    if (!Array.isArray(document)) continue
-    // A plugin is a root when any packaged target activates it; the wheel serves every target.
-    const processPlatforms = new Set(targets.map(target => processPlatformForTarget(target)))
-    for (const processPlatform of processPlatforms) {
-      for (const plugin of activeBarePluginPackages(document, processPlatform)) plugins.add(plugin)
-    }
-  }
-  return plugins
-}
-
-/**
- * Report manifest dependencies the shipped closure never reaches.
- *
- * A superset passes the missing-plugin checks while still shipping the legacy assembly, so the
- * manifest must equal the reachable closure rather than merely contain it.
- * @param runtimeName - manifest name used in diagnostics.
- * @param runtimeDependencies - the manifest's declared dependencies.
- * @param reachable - packages the closure walked from the shipped profiles and presets.
- * @param workspace - workspace package index.
- * @param parents - discovery parent per package, used for the chain in diagnostics.
- * @returns one failure per dependency outside the closure.
- */
-function uncoveredRuntimeDependencies(
-  runtimeName: string,
-  runtimeDependencies: Readonly<Record<string, string>>,
-  reachable: readonly string[],
-  workspace: ReadonlyMap<string, WorkspacePackage>,
-  parents: ReadonlyMap<string, string | undefined>,
-  profileRoots: ReadonlySet<string>,
-): string[] {
-  const visited = new Set(reachable)
-  const failures: string[] = []
-  // The traversal starts from every declared root, so `visited` alone proves nothing. A dependency
-  // is justified only when some retained package, or a shipped profile row, names it as an edge.
-  const edgeTargets = new Set<string>()
-  for (const [name, current] of workspace) {
-    if (!visited.has(name)) continue
-    for (const target of Object.keys(current.manifest.dependencies ?? {})) edgeTargets.add(target)
-    for (const target of Object.keys(current.manifest.optionalDependencies ?? {})) edgeTargets.add(target)
-    const meta = current.manifest.peerDependenciesMeta ?? {}
-    for (const target of Object.keys(current.manifest.peerDependencies ?? {})) {
-      if (meta[target]?.optional === true) continue
-      edgeTargets.add(target)
-    }
-  }
-  for (const dependency of Object.keys(runtimeDependencies).sort()) {
-    // The CLI package owns the executable entry the runtime ships; its own manifest is the legacy
-    // superset and is not part of the closed graph. Retained peers are edges of retained packages.
-    if (dependency === CLI_MANIFEST_PACKAGE) continue
-    if (profileRoots.has(dependency)) continue
-    if (edgeTargets.has(dependency)) continue
-    if (parents.get(dependency) !== undefined) continue
-    failures.push(`${runtimeName} -> ${dependency} is declared but no shipped profile or retained package requires it`)
-  }
-  return failures
-}
-
 if (import.meta.main) {
   const root = resolve(import.meta.dirname, '..', '..')
   const { values } = parseArgs({
     args: process.argv.slice(2),
-    options: {
-      manifest: { type: 'string' },
-      target: { type: 'string' },
-    },
+    options: { manifest: { type: 'string' } },
   })
-  const target = values.target ?? 'python-runtime'
-  if (target !== 'python-runtime' && target !== 'native-cli') {
-    throw new Error(`verify-runtime-closure: unknown target ${JSON.stringify(target)}`)
-  }
-  const manifestPath = values.manifest ?? (target === 'native-cli' ? CLI_MANIFEST : PYTHON_RUNTIME_MANIFEST)
-  const result = await verifyRuntimeClosure(root, manifestPath, target)
+  const result = await verifyRuntimeClosure(root, values.manifest)
   if (result.failures.length > 0) {
-    const description = target === 'native-cli'
-      ? 'native CLI profile packages, Cordis-free required edges, or required workspace peers are invalid'
-      : 'shipped profile plugins or required workspace peers are missing from rsh/Programs/SDK/python/sdk-runtime dependencies'
-    console.error(`verify-runtime-closure: ${description}:`)
+    console.error('verify-runtime-closure: shipped profile plugins or required workspace peers are missing from rsh/Programs/SDK/python/sdk-runtime dependencies:')
     for (const failure of result.failures) console.error(`  ${failure}`)
     process.exitCode = 1
   } else {
-    const description = target === 'native-cli'
-      ? `${SHIPPED_NATIVE_PROFILES().length} native CLI profile templates and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`
-      : `${result.presetCount} agent presets and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`
-    console.log(`verify-runtime-closure: ${description}`)
+    console.log(
+      `verify-runtime-closure: ${result.presetCount} agent presets and ${result.workspacePackageCount} workspace packages form a closed runtime dependency graph.`,
+    )
   }
-}
-
-function missingNativeCliPlugins(
-  root: string,
-  runtimeDependencies: Readonly<Record<string, string>>,
-  targets: readonly string[],
-  workspace: ReadonlyMap<string, WorkspacePackage>,
-): string[] {
-  const missing = new Map<string, Set<string>>()
-  for (const target of targets) {
-    const platform = processPlatformForTarget(target)
-    for (const profile of SHIPPED_NATIVE_PROFILES()) {
-      const composition = shippedNativeProfileComposition(root, profile, platform)
-      const rows = [
-        ...composition.installations,
-        ...shippedNativeProfileClientComposition(profile),
-      ]
-      for (const row of rows) {
-        const plugin = barePackageName(row.plugin)
-        if (plugin === undefined) continue
-        const isWorkspacePackage = workspace.has(plugin)
-        const version = runtimeDependencies[plugin]
-        if (isWorkspacePackage && version?.startsWith('workspace:') === true) continue
-        let declaration = ''
-        if (!isWorkspacePackage) declaration = ' [workspace package not found]'
-        else if (version !== undefined) declaration = ` [CLI dependency is ${JSON.stringify(version)}; expected workspace:]`
-        const key = `${plugin}${declaration}`
-        const profiles = missing.get(key) ?? new Set<string>()
-        profiles.add(`${profile} (${target})`)
-        missing.set(key, profiles)
-      }
-    }
-  }
-  return [...missing.entries()].map(([plugin, profiles]) =>
-    `${[...profiles].sort().join(', ')} -> ${plugin}`)
-}
-
-async function nativeCliRootImportViolations(root: string): Promise<string[]> {
-  const failures: string[] = []
-  for (const [sourcePath, specifier, replacement] of NATIVE_CLI_ROOT_IMPORTS) {
-    const source = await readFile(resolve(root, sourcePath), 'utf8')
-    const escaped = specifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    if (new RegExp(`(?:\\bfrom\\s*|\\bimport\\s*\\(\\s*)(['"])${escaped}\\1`).test(source)) {
-      failures.push(`${sourcePath}: import ${specifier} pulls its Cordis root entry; use ${replacement}`)
-    }
-  }
-  return failures
-}
-
-function isCordisPackage(packageName: string): boolean {
-  return packageName.startsWith('@deepseek-ai/cordis')
 }
 
 async function missingPresetPlugins(

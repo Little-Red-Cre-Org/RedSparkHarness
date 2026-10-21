@@ -77,7 +77,7 @@ This section explains the design decisions behind the plugin and points at the c
 
 ### Scope and composition
 
-The package has separate Cordis and Native Host entries. `src/index.ts` keeps the Cordis overlay, requiring its agent, session, tool, and persistence services and installing on root Agents created after it loads. `src/native.ts` requires `activeSessions` and `tools`, attaches to existing and future exact root Session owners, and rejects calls from delegated Agents or another Session. The Cordis and invariant entries own the Cordis-only peers; package metadata keeps those peers optional for Native-only consumers. Both entries reuse the same durable event fold and serialized management operations. Neither entry installs on child Agents.
+The package has separate Cordis and Native Host entries. `src/index.ts` keeps the Cordis overlay, requiring its agent, session, tool, and persistence services and installing on root Agents created after it loads. `src/native.ts` requires `activeSessions` and `tools`, attaches to existing and future exact root Session owners, and rejects calls from delegated Agents or another Session. Both entries reuse the same durable event fold and serialized management operations. Neither entry installs on child Agents.
 
 Time-context is not a Schedule dependency. The official Web overlay mounts `@deepseek-ai/dsh-time-context` so the model can interpret natural language in the browser's request-local zone, but the model must still pass an explicit offset or `time_zone` to `schedule_create`; Schedule never imports or infers from model context.
 

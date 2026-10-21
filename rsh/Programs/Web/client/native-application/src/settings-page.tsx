@@ -18,7 +18,6 @@ import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
-import { applyNativeSettingsPreferences } from './settings-preferences.ts'
 import {
   announcePendingDefaultChanged, readPendingDefault, type BusyEnterBehavior,
 } from './pending-default.ts'
@@ -382,7 +381,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string>()
   const [error, setError] = useState<string>()
-  const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
   const [accountsError, setAccountsError] = useState<string>()
@@ -395,8 +393,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const refreshes = useRef(0)
   const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
-  const translate = useRef(t)
-  translate.current = t
 
   const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
     const request = ++accountRefreshes.current
@@ -436,10 +432,15 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
         const reset = resetDrafts.current
         if (reset) resetDrafts.current = false
         setLimits(description.limits)
-        setDescribeFailed(false)
         setNamespaces(rows)
         onDocumentAvailabilityChange?.(description.hasDocument)
-        applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
+        const localePreference = rows.find(row => row.namespace === 'locale')?.value.preference
+        if (localePreference === 'en' || localePreference === 'zh') setLocale(localePreference)
+        const themeSettings = rows.find(row => row.namespace === 'ui-theme')
+        const preference = themeSettings?.value.preference
+        if (preference === 'light' || preference === 'dark' || preference === 'system') setThemePreference(preference)
+        const fontSize = themeSettings?.value.fontSize
+        if (typeof fontSize === 'number') setFontSize(fontSize)
         const conversation = rows.find(row => row.namespace === 'ui-conversation')
         const busyEnter = conversation === undefined
           ? readPendingDefault() : conversation.value.busyEnter as BusyEnterBehavior
@@ -461,19 +462,18 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
           if (latest()) setCredentials(aggregate)
         }
         catch (cause: unknown) {
-          if (latest()) { setCredentialError(requestError(cause, translate.current, 'native/credentials')); setCredentials({}) }
+          if (latest()) { setCredentialError(requestError(cause, t, 'native/credentials')); setCredentials({}) }
         }
       }
       return true
     } catch (cause: unknown) {
       if (latest()) {
         resetDrafts.current = false
-        setDescribeFailed(true)
-        setError(requestError(cause, translate.current, 'native/settings'))
+        setError(requestError(cause, t, 'native/settings'))
       }
       return false
     } finally { if (latest()) setLoading(false) }
-  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference])
+  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference, t])
 
   // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
   const authorizationSettled = useCallback(async (): Promise<boolean> => {
@@ -566,8 +566,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     try {
       const updated = await actions.settingsMutate(row.namespace, [{ op: 'set', path, value }], row.revision)
       setNamespaces(current => current.map(candidate => candidate.namespace === row.namespace ? updated : candidate))
-      setDrafts(current => current[row.namespace] === pretty(row.user)
-        ? { ...current, [row.namespace]: pretty(updated.user) } : current)
+      setDrafts(current => ({ ...current, [row.namespace]: pretty(updated.user) }))
       if (row.namespace === 'ui-conversation' && path[0] === 'busyEnter') {
         announcePendingDefaultChanged(value as BusyEnterBehavior)
         setPendingDefault(value as BusyEnterBehavior)
@@ -621,8 +620,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const transcript = namespaces.find(row => row.namespace === 'ui-chat')
   const conversation = namespaces.find(row => row.namespace === 'ui-conversation')
   const pet = namespaces.find(row => row.namespace === 'ui-pet')
-  // Only a completed, successful describe without ui-conversation proves the Host lacks the preference.
-  const busySendHostGap = conversation === undefined && limits !== undefined && !loading && !describeFailed
   const selectBusyEnter = (value: BusyEnterBehavior): void => {
     if (conversation === undefined) return
     void mutateField(conversation, ['busyEnter'], value)
@@ -707,16 +704,13 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     <div className={css.row}>
       <div className={css.rowText}><div className={css.title}>{t('settingsBusyEnter')}</div>
         <div className={css.description}>{t('settingsBusyEnterDescription')}</div>
-        {conversation === undefined ? <div className={css.description} role="status">
-          {t(busySendHostGap ? 'busySendPreferenceHostGap' : 'busySendPreferenceUnavailable')}</div> : null}</div>
-      {busySendHostGap ? <span className={css.fixedValue}>
-        {t(pendingDefault === 'steer' ? 'settingsBusyEnterSteer' : 'settingsBusyEnterQueue')}
-      </span> : <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
+        {conversation === undefined ? <div className={css.description} role="status">{t('busySendPreferenceUnavailable')}</div> : null}</div>
+      <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
         disabled={saving !== undefined || conversation === undefined}
         onChange={(event) => { selectBusyEnter(event.target.value as BusyEnterBehavior) }}>
         <option value="queue">{t('settingsBusyEnterQueue')}</option>
         <option value="steer">{t('settingsBusyEnterSteer')}</option>
-      </select>}
+      </select>
     </div>
     {pet === undefined ? null : <section className={css.pet} aria-labelledby="native-settings-personalization">
       <h3 id="native-settings-personalization">{t('settingsPersonalization')}</h3>
@@ -731,7 +725,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     {notice === undefined ? null : <p role="status">{notice}</p>}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     <details className={css.advanced}>
-      <summary><span>{t('settingsAdvanced')}</span><span className={css.description}>{t('settingsAdvancedDescription')}</span></summary>
+      <summary>{t('settingsAdvanced')}</summary>
       {refreshButton}
       {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
       {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}

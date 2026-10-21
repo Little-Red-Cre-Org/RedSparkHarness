@@ -140,20 +140,13 @@ export type NativeDesktopErrorCode = 'wrong-profile' | 'invalid-request' | 'stal
   | 'unsupported-module' | 'package-immutable' | 'not-found' | 'dependency-conflict' | 'busy'
   | 'host-stop-failed' | 'package-operation-failed' | 'profile-invalid' | 'host-start-failed' | 'recovery-required'
 
-/** Configuration field and rule reported by a composition validation failure. */
-export interface NativeDesktopValidationDiagnostic {
-  readonly path: string
-  readonly rule: string
-}
-
-/** Stable operation category with optional composition validation diagnostics. */
+/** Safe operation error without config values, paths, or package-manager output. */
 export interface NativeDesktopOperationError {
   readonly code: NativeDesktopErrorCode
   readonly messageKey: string
   readonly backend: NativeDesktopBackendProjection
   readonly currentRevision?: NativeDesktopRevision
   readonly blockedBy?: readonly NativeDesktopInstallationKey[]
-  readonly diagnostic?: NativeDesktopValidationDiagnostic
 }
 
 /** Refusal or post-handoff recovery result for a Native profile mutation. */
@@ -175,14 +168,12 @@ export class NativeDesktopOperationFailure extends Error {
    * @param afterHandoff - Whether Host admission has stopped and writes may have begun.
    * @param currentRevision - Current inventory token returned with a stale-revision refusal.
    * @param blockedBy - Installation identities that prevent a requested row change.
-   * @param diagnostic - Safe configuration field and rule from structured validation data.
    */
   constructor(
     readonly code: NativeDesktopErrorCode,
     readonly afterHandoff = false,
     readonly currentRevision?: NativeDesktopRevision,
     readonly blockedBy?: readonly NativeDesktopInstallationKey[],
-    readonly diagnostic?: NativeDesktopValidationDiagnostic,
   ) {
     super(code)
     this.name = 'NativeDesktopOperationFailure'

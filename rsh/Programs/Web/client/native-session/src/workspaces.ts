@@ -41,12 +41,8 @@ export interface NativeDirectoryEntry {
 /** One directory level and its filesystem ancestry. */
 export interface NativeDirectoryListing {
   readonly path: string
-  /** Host home directory, used to shorten displayed paths. */
-  readonly home: string
   readonly entries: readonly NativeDirectoryEntry[]
   readonly crumbs: readonly { readonly name: string; readonly path: string }[]
-  /** Volumes reachable as browsing roots; Windows reports one row per drive, POSIX the single root. */
-  readonly roots: readonly { readonly name: string; readonly path: string }[]
 }
 
 /** Native Workspace commands and the authoritative registry change stream. */
@@ -64,7 +60,7 @@ export interface NativeWorkspaceClient {
    * @returns the canonical Workspace row and whether this call created it.
    */
   create(
-    input: { readonly path: string; readonly trust?: boolean }, signal?: AbortSignal,
+    input: { readonly path: string }, signal?: AbortSignal,
   ): Promise<{ readonly workspace: NativeWorkspace; readonly created: boolean }>
   /** @param workspaceId - registered Workspace.
    * @param title - proposed display title.
@@ -106,7 +102,7 @@ export interface NativeWorkspaceClient {
    * @param signal - caller cancellation.
    * @returns a reusable blank Session or a newly created blank Session id.
    */
-  connectWorkspace(workspaceId: WorkspaceId, signal?: AbortSignal, trust?: boolean): Promise<{ readonly sessionId: SessionId }>
+  connectWorkspace(workspaceId: WorkspaceId, signal?: AbortSignal): Promise<{ readonly sessionId: SessionId }>
   /** @returns completion after active follow requests have been cancelled. */
   close(): Promise<void>
 }
@@ -117,7 +113,7 @@ export interface NativeDirectoryPickerClient {
    * @returns the selected directory, or null when the operator cancels.
    */
   pick(signal?: AbortSignal): Promise<string | null>
-  /** @param path - absolute directory; omission lists the Host launch directory.
+  /** @param path - absolute directory; omission lists the host home directory.
    * @param signal - caller cancellation.
    * @returns direct children and filesystem breadcrumbs.
    */
@@ -144,9 +140,7 @@ const frameSchema = z.discriminatedUnion('type', [
 ])
 const directoryEntrySchema = z.strictObject({ name: z.string(), path: z.string(), kind: z.enum(['directory', 'file']) })
 const directorySchema = z.strictObject({
-  path: z.string(), home: z.string(), entries: z.array(directoryEntrySchema),
-  crumbs: z.array(z.strictObject({ name: z.string(), path: z.string() })),
-  roots: z.array(z.strictObject({ name: z.string(), path: z.string() })),
+  path: z.string(), entries: z.array(directoryEntrySchema), crumbs: z.array(z.strictObject({ name: z.string(), path: z.string() })),
 })
 
 function workspace(value: unknown): NativeWorkspace {
@@ -263,10 +257,8 @@ export function createNativeWorkspaceClients(
       const result = await call<{ workspaceIds: string[] }>('workspaces/search', { query }, signal)
       return z.array(z.string()).parse(result.workspaceIds).map(id => brandString<WorkspaceId>(id))
     },
-    async connectWorkspace(workspaceId, signal, trust) {
-      const result = await call<{ sessionId: string }>('workspaces/connect', {
-        workspaceId, ...trust === undefined ? {} : { trust },
-      }, signal)
+    async connectWorkspace(workspaceId, signal) {
+      const result = await call<{ sessionId: string }>('workspaces/connect', { workspaceId }, signal)
       return { sessionId: brandString<SessionId>(z.string().min(1).parse(result.sessionId)) }
     },
     async close() {
