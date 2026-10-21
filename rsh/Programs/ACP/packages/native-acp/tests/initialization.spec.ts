@@ -7,16 +7,7 @@ import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepse
 import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
-import { NATIVE_ACP_SUBAGENT_METADATA_KEY, nativeAcpSubagentPolicyMetadata, nativeAcpSubagentServerMetadata,
-  nativeAcpSubagentPermissionRequestMetadata, readNativeAcpSubagentClientCapabilities,
-  readNativeAcpSubagentPermissionRequest, readNativeAcpSubagentPolicy,
-  readNativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
 import { NativeAcpApplication, plugin as nativeAcpPlugin } from '../src/native.ts'
-
-it.each([null, Number.MAX_SAFE_INTEGER + 1])('rejects invalid sessionListPageSize %s', (pageSize) => {
-  expect(() => nativeAcpPlugin.resolve({ provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1,
-    sessionListPageSize: pageSize })).toThrow('native ACP: sessionListPageSize must be a positive safe integer')
-})
 
 const inactiveSessions: NativeActiveSessionOperations = {
   register: async () => async () => {}, owner: () => undefined, owners: () => [],
@@ -27,68 +18,6 @@ const inactiveSessionsPlugin: NativePlugin = {
   apiVersion: 1, name: 'initialization-active-sessions', targets: ['host'], requires: [], provides: ['activeSessions'],
   resolve: () => (context) => { context.provide('activeSessions', inactiveSessions) },
 }
-
-it('reads versioned ACP capabilities and session policy metadata without claiming persistence', () => {
-  const clientMetadata = { [NATIVE_ACP_SUBAGENT_METADATA_KEY]: { version: 1, permissionRelay: true } }
-  const policy = { version: 1, maxSteps: 4, maxTokens: 128, permissionMode: 'parent-relay' } as const
-  expect(readNativeAcpSubagentClientCapabilities(clientMetadata)).toEqual({ permissionRelay: true })
-  expect(readNativeAcpSubagentClientCapabilities(undefined)).toBeUndefined()
-  expect(readNativeAcpSubagentClientCapabilities(null)).toBeUndefined()
-  expect(readNativeAcpSubagentClientCapabilities({})).toBeUndefined()
-  expect(readNativeAcpSubagentPolicy({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy })).toEqual(policy)
-  expect(readNativeAcpSubagentPolicy({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-    version: 1, maxSteps: 4, permissionMode: 'deny',
-  } })).toEqual({ version: 1, maxSteps: 4, permissionMode: 'deny' })
-  expect(readNativeAcpSubagentPolicy({})).toBeUndefined()
-  expect(nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
-    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] }))
-    .toEqual({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-      version: 1, capabilities: { permissionRequestIdentity: true, maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] },
-    } })
-  const serverMeta = nativeAcpSubagentServerMetadata({ permissionRequestIdentity: true,
-    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] })
-  expect(readNativeAcpSubagentServerCapabilities(serverMeta)).toEqual({ permissionRequestIdentity: true,
-    maxSteps: true, maxTokens: true, permissionModes: ['deny', 'parent-relay'] })
-  expect(readNativeAcpSubagentServerCapabilities(undefined)).toBeUndefined()
-  expect(() => readNativeAcpSubagentServerCapabilities({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-    version: 1, capabilities: { permissionRequestIdentity: false, maxSteps: true, maxTokens: true, permissionModes: ['parent-relay'] },
-  } })).toThrow('capabilities.permissionRequestIdentity must be true')
-  expect(nativeAcpSubagentPolicyMetadata(policy)).toEqual({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: policy })
-  const permissionRequest = { sessionId: 'child-session', requestId: 'parent-request', toolName: 'write_file', toolCallId: 'child-call' }
-  const permissionMetadata = nativeAcpSubagentPermissionRequestMetadata(permissionRequest)
-  expect(readNativeAcpSubagentPermissionRequest(permissionMetadata)).toEqual(permissionRequest)
-  expect(readNativeAcpSubagentPermissionRequest(undefined)).toBeUndefined()
-  expect(() => readNativeAcpSubagentPermissionRequest({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-    version: 1, permissionRequest: { ...permissionRequest, toolName: '' },
-  } })).toThrow('toolName must be a nonempty trimmed string')
-  expect(() => readNativeAcpSubagentPermissionRequest({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: {
-    version: 1, permissionRequest: { ...permissionRequest, extra: true },
-  } })).toThrow('permissionRequest.extra is unsupported')
-})
-
-it('rejects unsupported ACP metadata versions, fields, permissions, and ceilings', () => {
-  const extension = (value: Record<string, unknown>) => ({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: value })
-  expect(() => readNativeAcpSubagentClientCapabilities('metadata'))
-    .toThrow('initialize._meta must be an object')
-  expect(() => readNativeAcpSubagentPolicy({ [NATIVE_ACP_SUBAGENT_METADATA_KEY]: [] }))
-    .toThrow('session/new._meta.com.deepseek.ai/dsh-native-subagent must be an object')
-  expect(() => readNativeAcpSubagentClientCapabilities(extension({ version: 2, permissionRelay: true })))
-    .toThrow('version must be 1')
-  expect(() => readNativeAcpSubagentClientCapabilities(extension({ version: 1, permissionRelay: 'yes' })))
-    .toThrow('permissionRelay must be boolean')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 2, maxSteps: 4, permissionMode: 'deny' })))
-    .toThrow('version must be 1')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 1, permissionMode: 'deny' })))
-    .toThrow('session/new native-subagent metadata.maxSteps is required')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 1, maxSteps: 0, permissionMode: 'deny' })))
-    .toThrow('maxSteps must be a positive safe integer')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 1, maxSteps: 4, permissionMode: 'allow' })))
-    .toThrow('permissionMode is unsupported')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 1, maxSteps: 4, maxTokens: 0, permissionMode: 'deny' })))
-    .toThrow('maxTokens must be a positive safe integer')
-  expect(() => readNativeAcpSubagentPolicy(extension({ version: 1, maxSteps: 4, permissionMode: 'deny', fallback: true })))
-    .toThrow('fallback is unsupported')
-})
 
 it('rejects ACP installation before activation without its active Session Provider', () => {
   const scope = new NativeScope()
@@ -151,7 +80,7 @@ it('drains model initialization after EOF before releasing its Provider', async 
     provides: ['application', 'rootExecution'],
     resolve: () => (context) => {
       app = new NativeAcpApplication(context, { provider: 'fixture', model: 'fixture', systemPrompt: 'fixture', maxSteps: 1,
-        maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000, sessionListPageSize: 100 }, input, output)
+        maxPendingPermissions: 32, mcpToolCallTimeoutMs: 60_000 }, input, output)
       context.provide('application', app)
       context.provide('rootExecution', app.rootExecution)
     },

@@ -1,6 +1,6 @@
 /**
  * Keyless snapshot coverage for the TypeScript SDK path: each scenario spawns
- * the real `dsh --profile legacy-sdk` runtime through
+ * the real `dsh --profile sdk` runtime through
  * `@deepseek-ai/dsh-sdk-client`, drives one turn over stdio JSON-RPC,
  * and pins the SDK `RunResult`, the complete notification stream, and the
  * persisted session logs. Replay serves recorded model
@@ -9,7 +9,7 @@
  * fixtures and rewrites expected outputs.
  */
 
-import { existsSync, realpathSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, delimiter, join } from 'node:path'
@@ -61,7 +61,6 @@ import {
   type SdkPromptContentBlock,
 } from '@deepseek-ai/dsh-sdk-client'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import { initProfile, PROFILE_TEMPLATES, resolveProfileDir } from '@deepseek-ai/dsh-app-boot'
 
 const corpusRoot = fileURLToPath(new URL('../', import.meta.url))
 const snapshotPackageAnchor = fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url))
@@ -161,11 +160,6 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
   },
 }
 
-function initializeSdkCompatibilityProfile(home: string, name: 'sdk' | 'legacy-sdk'): void {
-  const template = PROFILE_TEMPLATES.sdk
-  initProfile(resolveProfileDir(name, home), template.bundles, template.patchReload)
-}
-
 interface CorpusScenario {
   readonly key: string
   readonly name: string
@@ -202,7 +196,7 @@ async function collectCorpus(): Promise<CorpusScenario[]> {
 const corpus = await collectCorpus()
 const scenarioByKey = new Map(corpus.map(scenario => [scenario.key, scenario]))
 const sdkScenarios = corpus
-  .filter(scenario => scenario.manifest.profile === 'legacy-sdk')
+  .filter(scenario => scenario.manifest.profile === 'sdk')
   .sort((left, right) => left.name.localeCompare(right.name))
 const compositionOwners = new Map<string, CorpusScenario>()
 const headerPins = new Map<string, CorpusScenario>()
@@ -320,15 +314,12 @@ function assembledRuntimeContexts(log: PersistedLog): string[] {
   })
 }
 
-function contextOf(
-  logs: readonly { content: string; header: Record<string, unknown> }[],
-  cwd: string,
-  cwdAliases: string[],
-): NormalizeContext {
+function contextOf(logs: readonly { content: string; header: Record<string, unknown> }[], cwd: string): NormalizeContext {
   return {
     sessionIds: logs.flatMap(log => typeof log.header.id === 'string' ? [log.header.id] : []),
     cwd,
-    cwdAliases,
+    // Sandbox policy text embeds the allocated workspace as a JSON string.
+    cwdAliases: [JSON.stringify(cwd).slice(1, -1), ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : [])],
   }
 }
 
@@ -530,7 +521,7 @@ function authoredPatches(scenario: CorpusScenario, replaying: boolean): string[]
   ]
 }
 
-/** One SDK-controlled recorded scenario against a fresh `dsh --profile legacy-sdk` subprocess. */
+/** One SDK-controlled recorded scenario against a fresh `dsh --profile sdk` subprocess. */
 async function runScenario(scenario: CorpusScenario): Promise<{
   results: RunResult[]
   notifications: HarnessNotification[]
@@ -539,22 +530,9 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   initialWorkspace: WorkspaceSnapshotEntry[]
   finalWorkspace: WorkspaceSnapshotEntry[]
   cwd: string
-  cwdAliases: string[]
 }> {
   const cwd = await mkdtemp(join(tmpdir(), `sdk-snapshot-${scenario.name}-`))
-  // Sandbox policy text embeds the allocated workspace as a JSON string.
-  const cwdAliases = [...new Set([
-    ...[cwd, realpathSync(cwd), realpathSync.native(cwd)]
-      .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]),
-    ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : []),
-  ])]
   const dshHome = join(cwd, '.dsh')
-  initializeSdkCompatibilityProfile(dshHome, 'legacy-sdk')
-  if (scenario.name === 'subagent-dsh-sdk-diagnostic') {
-    for (const childName of ['foreground', 'background']) {
-      initializeSdkCompatibilityProfile(join(dshHome, 'children', childName), 'sdk')
-    }
-  }
   const sessionsRoot = join(dshHome, 'sessions')
   const replayFixtures = recording ? [] : await hydrateReplayFixtures(scenario, cwd)
   const fixtureContents = await Promise.all((await fixtureFiles(scenario)).map(file => readFile(file, 'utf8')))
@@ -572,7 +550,6 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     const childHome = join(cwd, '.child-dsh')
     const childPatch = materializeProfilePatch(assertions.dshSdkChild.config, cwd, patchRoot, patches.length)
     await mkdir(childHome, { recursive: true })
-    initializeSdkCompatibilityProfile(childHome, 'sdk')
     childSessionsRoot = join(childHome, 'sessions')
     childEnvironment = {
       DSH_TEST_CHILD_PATCHES: JSON.stringify([childPatch]),
@@ -610,7 +587,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   }
 
   const harness = new DeepSeekHarness({
-    profile: 'legacy-sdk',
+    profile: 'sdk',
     patches,
     dshHome,
     processCwd: cwd,
@@ -681,7 +658,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     const finalWorkspace = await captureWorkspaceSnapshot(cwd, {
       ignoredRootEntries: RUNTIME_WORKSPACE_ENTRIES,
     })
-    return { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd, cwdAliases }
+    return { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd }
   } finally {
     await harness.close()
     await rm(cwd, { recursive: true, force: true })
@@ -808,13 +785,11 @@ async function verifyHeaders(
 
 describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
   for (const scenario of sdkScenarios) {
-    // Stock Git Bash (MSYS) cannot start under the Windows restricted-token sandbox.
-    const scenarioTest = (recording
-      && (scenario.manifest.recording === 'authored' || scenario.manifest.sessionFormat !== undefined))
-      || (process.platform === 'win32' && scenario.manifest.platform === 'posix')
+    const scenarioTest = recording
+      && (scenario.manifest.recording === 'authored' || scenario.manifest.sessionFormat !== undefined)
       ? it.skip
       : it
-    scenarioTest(`${mode}s ${scenario.name} through dsh --profile legacy-sdk`, async () => {
+    scenarioTest(`${mode}s ${scenario.name} through dsh --profile sdk`, async () => {
       const scenarioDir = scenario.dir
       const retained = scenario.manifest.sessionFormat !== undefined
       const notificationsExpectedPath = join(scenarioDir, retained ? 'notifications.current.expected.jsonl' : 'notifications.expected.jsonl')
@@ -830,13 +805,13 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         expect(writerFiles, 'native writer oracle inventory').toEqual(retained
           ? files.map((_, index) => writerSnapshotName(index)).sort() : [])
       }
-      const { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd, cwdAliases } = await runScenario(scenario)
+      const { results, notifications, observedMethods, logs, initialWorkspace, finalWorkspace, cwd } = await runScenario(scenario)
       const ordered = orderLogs(
         logs,
         recording ? logs.length : files.length,
         assertions.dshSdkChild !== undefined,
       )
-      const actualContext = contextOf(ordered, cwd, cwdAliases)
+      const actualContext = contextOf(ordered, cwd)
       if (assertions.expectedFinalResponse !== undefined) {
         expect(results.at(-1)?.finalResponse, `${scenario.name}: final response`).toBe(assertions.expectedFinalResponse)
         const parent = ordered[0]

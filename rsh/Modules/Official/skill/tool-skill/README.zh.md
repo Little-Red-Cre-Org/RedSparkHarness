@@ -47,8 +47,6 @@ agent 可以在会话期间发现并加载 skill。在首次请求前，如果�
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-skill)是每个受支持字段的穷尽式真源。
 
-Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-context 提供方一起选择本包的 `./native` 入口。Native 消费方提供 `skillInvocations` 供手动 Skill 路由使用：调用方必须传入同一个 `requestContexts` 注册表、该 consumer 的安装 scope 必须包含所选 Agent scope，并且精确的 request-context 注册必须在加载前后仍是最近的可见胜者，才会接受允许用户调用的 Skill。匹配的指令通过共享 request-context 服务准备；目录发布仍会检查本轮捕获的精确 `skill` 工具注册。
-
 ### 模型得到什么
 
 - **会话目录。** 当存在模型可调用 skill 且 `skill` 工具可见时，agent 会在首次请求前收到一条持久的用户角色消息，列出每个 skill 的名称与有长度上限的描述；该消息告诉模型在着手任务前先用工具加载 skill，且绝不能仅凭摘要推断指令。
@@ -78,8 +76,7 @@ Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-c
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis 插件入口：工具注册、目录与手势 pre-step 监听器、渲染与 digest |
-| [`src/native.ts`](src/native.ts) | Native Host 消费方，使用捕获的工具可见性与 request-context 写入器 |
+| [`src/index.ts`](src/index.ts) | 插件入口：工具注册、目录与手势 pre-step 监听器、渲染与 digest |
 | — | 不发布运行时不变式伴生入口；这个面向模型的适配器没有独立的生命周期流；执行关系由它调用的能力 seam 负责。 |
 
 ### 目录生命周期

@@ -1,0 +1,39 @@
+{
+  "node": "v24.15.0",
+  "session": [
+    {
+      "messages": 100,
+      "beforeMs": 3.783,
+      "afterMs": 0.277,
+      "identical": true
+    },
+    {
+      "messages": 500,
+      "beforeMs": 127.733,
+      "afterMs": 1.578,
+      "identical": true
+    },
+    {
+      "messages": 1500,
+      "beforeMs": 1244.087,
+      "afterMs": 5.664,
+      "identical": true
+    }
+  ],
+  "browser": [
+    {
+      "bodyBytes": 140011,
+      "chunkBytes": 1024,
+      "beforeMs": 4.322,
+      "afterMs": 0.36,
+      "identical": true
+    },
+    {
+      "bodyBytes": 140011,
+      "chunkBytes": 32,
+      "beforeMs": 166.239,
+      "afterMs": 1.17,
+      "identical": true
+    }
+  ]
+}

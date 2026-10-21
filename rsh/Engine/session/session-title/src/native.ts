@@ -86,11 +86,6 @@ export interface NativeSessionTitles {
    * @returns the latest accepted title, or undefined when no eligible text exists.
    */
   refresh(owner: NativeActiveSessionOwner, signal?: AbortSignal): Promise<SessionTitleSnapshot | undefined>
-  /** Wait for title work already admitted for this owner's Session without changing its revision.
-   * @param owner - exact attached Session writer.
-   * @returns completion after accepted title work settles.
-   */
-  drainOwner(owner: NativeActiveSessionOwner): Promise<void>
   /**
    * Register the sole optional provider.
    * @param provider - provider identity, cadence, and generation function.
@@ -154,11 +149,6 @@ class NativeSessionTitleService implements NativeSessionTitles {
   }
 
   /** @inheritdoc */
-  drainOwner(owner: NativeActiveSessionOwner): Promise<void> {
-    return this.engine.settle(this.targetOf(owner))
-  }
-
-  /** @inheritdoc */
   register(provider: NativeSessionTitleProvider): () => Promise<void> {
     if (this.engine.disposed) throw new Error('session-title service disposed')
     return this.engine.register(provider)
@@ -183,7 +173,7 @@ class NativeSessionTitleService implements NativeSessionTitles {
       live: () => !target.detached && owner.writerAvailable,
       commit: (data) => { fold(target, owner.append('session/title', data)) },
       persist: () => owner.flush(),
-      hold: () => owner.invocation === 'root'
+      hold: () => owner.invocation === 'root' && owner.retainBackground !== undefined
         ? owner.retainBackground() : owner.retain(),
     }
     const buffered: SessionEvent[] = []

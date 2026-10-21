@@ -76,9 +76,17 @@ async function harness(config: LlmPiAi.Config): Promise<Context> {
 }
 
 describe('OpenAI Codex subscription catalog', () => {
-  it('does not advertise pi-ai’s static Codex catalog before sign-in', async () => {
+  it('advertises and resolves the current GPT-6 subscription routes without a narrowed model list', async () => {
     const ctx = await harness({ providers: { 'openai-codex': {} } })
-    await expect(ctx.llm.listModels('openai-codex')).rejects.toMatchObject({ code: 'MISSING_CREDENTIAL' })
+    const models = await ctx.llm.listModels('openai-codex')
+    expect(models.map(model => model.id)).toEqual(expect.arrayContaining(['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-6.1-sol']))
+    for (const id of ['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-6.1-sol']) {
+      const model = await ctx.llm.resolveModelInfo('openai-codex', id)
+      expect(model).toMatchObject({
+        provider: 'openai-codex', id, inputModalities: ['text', 'image'],
+      })
+      expect(model.reasoning?.efforts.some(effort => effort.id === 'high')).toBe(true)
+    }
   })
 })
 
@@ -594,15 +602,19 @@ describe('catalog routes with per-model configuration', () => {
     expect(resolved.get('openai')?.piProvider?.auth.apiKey?.name).toBe('OpenAI API key')
   })
 
-  it('lets a catalog route authenticate with the key its profile names', async () => {
-    const resolved = resolveProfiles({ openai: { apiKeyEnv: 'OPENAI_TOKEN' } })
-    const provider = resolved.get('openai')?.piProvider
+  it('lets an OAuth-only catalog route authenticate with the key its profile names', async () => {
+    // pi-ai honours a request's `apiKey` override only when the provider
+    // declares an api-key method. `openai-codex` ships OAuth alone, so without
+    // the harness method beside it the route refuses its own configured key as
+    // `Provider is not configured` before any request goes out.
+    const resolved = resolveProfiles({ 'openai-codex': { apiKeyEnv: 'CODEX_TOKEN' } })
+    const provider = resolved.get('openai-codex')?.piProvider
     expect(provider?.auth.oauth).toBeDefined()
     const models = createModels()
     models.setProvider(provider as Provider)
     const model = provider?.getModels()[0] as Model<Api>
-    const auth = await models.getAuth(model, { apiKey: 'openai-token' })
-    expect(auth?.auth.apiKey).toBe('openai-token')
+    const auth = await models.getAuth(model, { apiKey: 'codex-token' })
+    expect(auth?.auth.apiKey).toBe('codex-token')
   })
 
   it('leaves an OAuth-only catalog route unconfigured when its profile names no key', () => {
@@ -1066,9 +1078,9 @@ describe('compat switches', () => {
   })
 
   it('serves the Responses compat type on every protocol pi-ai gives it to', () => {
-    // pi-ai types azure-openai-responses and openai with the
+    // pi-ai types azure-openai-responses and openai-codex-responses with the
     // same OpenAIResponsesCompat, so a switch settable on one is settable on all.
-    for (const route of ['azure-openai-responses', 'openai']) {
+    for (const route of ['azure-openai-responses', 'openai-codex']) {
       const models = modelsOf({ [route]: { compat: { supportsDeveloperRole: false } } }, route)
       const [first] = [...models.values()]
       expect((first?.compat as { supportsDeveloperRole?: boolean }).supportsDeveloperRole).toBe(false)
@@ -1233,13 +1245,13 @@ describe('configurable-provider directory', () => {
   it('lists a route a stored profile names as a catalog route, not a declared one', async () => {
     // `declared` answers catalog membership, so a profile stored against a
     // route pi-ai ships is not mislabelled as one this deployment invented.
-    const ctx = await harness({ providers: { openai: { apiKeyEnv: KEY_ENV } } })
+    const ctx = await harness({ providers: { 'openai-codex': { apiKeyEnv: KEY_ENV } } })
 
     expect(ctx.llm.listConfigurableProviders()).toContainEqual({
-      provider: 'openai',
-      displayName: 'openai',
+      provider: 'openai-codex',
+      displayName: 'openai-codex',
       settingsNs: 'llm-pi-ai',
-      settingsPath: ['providers', 'openai'],
+      settingsPath: ['providers', 'openai-codex'],
       declared: false,
     })
   })

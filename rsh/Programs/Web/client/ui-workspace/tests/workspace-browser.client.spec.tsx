@@ -1498,3 +1498,29 @@ describe('WorkspaceBrowser', () => {
     expect(row.hasAttribute('draggable')).toBe(false)
   })
 })
+
+
+it.each(['desktop', 'browser'] as const)('workspace IDE menu: %s', async (carrier) => {
+  const openIde = vi.fn(async () => { throw new Error('Project could not open') })
+  mount({
+    useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha'), workspace('beta', [], 'Beta')])),
+    ...(carrier === 'desktop' ? { openIde } : {}),
+  })
+  fireEvent.click(screen.getByRole('button', { name: '工作区“Beta”的操作' }))
+  const labels = screen.getAllByRole('menuitem').map(item => item.textContent)
+  if (carrier === 'desktop') {
+    expect(labels).toMatchInlineSnapshot(`
+      [
+        "用 IDE 方式打开",
+        "重命名",
+        "删除工作区",
+      ]
+    `)
+    fireEvent.click(screen.getByRole('menuitem', { name: '用 IDE 方式打开' }))
+    expect(openIde).toHaveBeenCalledWith(wid('beta'))
+    await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('Project could not open') })
+  } else {
+    expect(labels).toEqual(['重命名', '删除工作区'])
+    expect(openIde).not.toHaveBeenCalled()
+  }
+})

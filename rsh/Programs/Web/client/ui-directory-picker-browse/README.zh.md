@@ -39,7 +39,7 @@ kind: "package-reference"
 <details>
 <summary>实现细节——点击展开</summary>
 
-`ui-primitives` 中共享的 `DirectoryBrowser` 渲染 680×500 的 Miller 分栏视图（在较矮或较窄的视口中限制尺寸）。本包通过 `ctx.workspaces` 提供 Host 的 `listDirectory` 与 `createDirectory` 调用，并在自己的 locale 命名空间中注册对话框文案。两个目录流程注册经嵌套的 `ctx.slots.inject()` 调用作为一次事务性效果安装，因为任一声明条目都可能晚些激活或替换其声明。浏览类失败留在对话框自己的提示区内，因此本填充不会驱动持有方的 `onError` 分支。node 半部是一个空 `apply`，让插件留在宿主名单上。
+对话框是 680×500 的 Miller 分栏视图（在较矮或较窄的视口中限制尺寸），经 `ctx.workspaces` 驱动宿主的 `listDirectory` 与 `createDirectory` 原语。两处注册经嵌套的 `ctx.slots.inject()` 调用作为一次事务性效果安装，因为任一声明条目都可能晚些激活或替换其声明；对话框文案注册在本包自己的 locale 命名空间下，让两份字典作为一个单元落地。浏览类失败留在对话框自己的提示区内，因此本填充从不驱动持有方的 `onError` 分支。node 半部是一个空 `apply`，让插件留在宿主名单上。
 
 </details>
 

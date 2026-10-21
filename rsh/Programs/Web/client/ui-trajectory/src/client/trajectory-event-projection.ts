@@ -3,7 +3,7 @@
 import type { ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm/types'
 import type {
   AssistantBlock, ContextProvenanceView, KnownContextForm,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
 
 /* jscpd:ignore-start -- Chat and Trajectory own independent event-to-view projections. */
 

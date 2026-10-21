@@ -16,13 +16,13 @@ Settings owner 通过传入 schema 元数据及可选生效时机，选择公开
 
 凭据引用从标记为 `credential-ref` 的已注册 schema 中发现，不依赖静态 Provider 或密钥目录。Host 仅投影 configured、source 与 writable 事实。Settings 或 Credentials Provider 异常文本会替换为通用 RPC 错误；revision 冲突只保留 namespace 与预期／当前 revision。Client 将值单次发送至 set，成功后清空本地输入，只收到确认；unset 也不返回值。
 
-原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。启动偏好读取期间，打开 Settings 或通过侧边栏更改语言或主题会使该启动结果失效，因此迟到的响应不会覆盖 Client 当前偏好。原生 application 将 `client-native-session` 声明为共享 Client peer 和开发依赖，因为 SettingsPage 在运行时导入 `NativeSessionRpcError`，并通过 `instanceof` 识别所选 Consumer 抛出的错误。
+原生 Client 增加由 locale 管理文案的 Settings 导航、用户覆盖 JSON 编辑器，以及为已发现引用提供的只写控件。编辑器会对不支持的数组扩缩、可见行移动及不安全的机密对象替换报错，不会误报保存成功。成功写入后会从 Host 刷新规范用户层。不切换默认 profile 装配。原生 application 将 `client-native-session` 声明为共享 Client peer 和开发依赖，因为 SettingsPage 在运行时导入 `NativeSessionRpcError`，并通过 `instanceof` 识别所选 Consumer 抛出的错误。
 
 Host 将 `maxCredentialRefsPerRead` 和 `maxSettingsOperations` 校验为正安全整数 Config 值，默认分别为 64 和 512。`settings/describe` 会随 namespace descriptor 公布选定 Host 的限制。页面按上限顺序分批读取已发现凭据引用并聚合脱敏信息；超过所公布设置操作数的修改会在发送前拒绝。Host 也会在调用 Settings Provider 前拒绝超限修改，因此一次 revision 检查原子写入不会拆分成局部请求。
 
 ## 支持范围
 
-该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。通用编辑器不编辑隐藏的 `role('secret')` 字段、不创建授权 grant，也不完成不透明 grant 记录编辑。Native Models 页面通过共享编辑器和现有 Host 操作呈现 API 提供方设置与授权流程（[决策](2026-10-11-native-models-settings-page.zh.md)）。Native 首次引导复用其提供方编辑器，并在本地保存欢迎确认状态（[决策](../feature/2026-10-12-native-web-first-run-onboarding.zh.md)）。
+该界面支持由活动 Settings 注册显式发布的 schema，以及其当前解析值中的凭据引用。机密字段必须位于 Settings 脱敏器可遍历的 `object`、`dict` 或 `array` 路径上；不支持的机密 schema 节点仍不能安全公开。UI 不编辑隐藏的 `role('secret')` 字段，不创建授权 grant，不完成不透明 grant 记录编辑，也不复刻旧版插件设置页。浏览器授权登录属于独立工作。
 
 ## 考虑过的替代方案
 

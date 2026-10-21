@@ -6,7 +6,6 @@
     "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
   },
   "include": [
-    "src/client-event-types.ts",
     "src/client/**/*.ts",
     "src/types.ts",
     "src/remote-events.ts"

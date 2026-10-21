@@ -22,8 +22,6 @@ Python SDK 单元测试驱动 fake peer，而打包运行时工作流可以在�
 
 `sdk-native` 场景必须使用 `--installed-wheel`，并通过已安装的 SDK 与运行时 wheel 默认选择的可执行载体，显式选择 `profile="native-sdk"`。本地 JSON patch 将 Native Provider 指向 SSE mock；该冒烟测试检查已完成的响应、context manager 关闭后的持久根 Session，以及子进程以零代码退出。使用 installed wheel 的 `all` 会包含此检查；源码 SDK 的 `all --exe` 保留 wheel 构建前的场景，不启动 Native。它证明所测产物与平台上的这条 Native SDK 路径，不代表更广泛的 P4 协议或平台矩阵。
 
-部署前，`verify-runtime-closure` 会从 CLI 随附的 `native-sdk` 组合中推导裸插件，并要求每个已发布运行时目标都将它们声明为直接工作区依赖。installed-wheel `sdk-native` 场景会通过公开 SDK 实际运行该打包 profile，并回放 canonical Native SDK Skills Session（`snapshots/native-sdk/skills`）：由第二个运行时进程恢复同一 Session，冒烟测试检查每个模型请求中的 Skill 指令和恢复后的 `skill` 工具消息，并确认 SDK 返回、持久化与 canonical 的 `skill` 工具结果一致。
-
 Linux 另外保留 manylinux 2.28 干净安装冒烟测试与 GLIBC 检查。macOS 保留部署目标与原生 helper 检查。这些平台约束补充共同黑盒行为，不能替代它。
 
 ### 真实 DeepSeek API

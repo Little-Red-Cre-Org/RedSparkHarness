@@ -53,19 +53,6 @@ describe('the replacement table', () => {
     expect(table['path']?.()).toBe(table['path/posix']?.())
   })
 
-  it('decodes a UTF-8 character split across writes', () => {
-    const module = loaderRequire()('node:string_decoder') as {
-      StringDecoder: new (encoding: string) => {
-        write(chunk: Uint8Array): string
-        end(chunk?: Uint8Array): string
-      }
-    }
-    const decoder = new module.StringDecoder('utf8')
-    expect(decoder.write(Buffer.from([0xe2]))).toBe('')
-    expect(decoder.write(Buffer.from([0x82]))).toBe('')
-    expect(decoder.end(Buffer.from([0xac]))).toBe('€')
-  })
-
   it('answers a prefixed subpath with the module its exact key answers', () => {
     const table = createNodeBuiltins()
     expect(REPLACED_PREFIXES['@earendil-works/pi-ai/']?.()).toBe(table['@earendil-works/pi-ai']?.())

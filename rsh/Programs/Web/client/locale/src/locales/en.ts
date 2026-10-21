@@ -30,7 +30,6 @@ export const en = {
   'collapse': 'Collapse',
   'expand': 'Expand',
   'back': 'Back',
-  'sidebar': 'Sidebar',
   'brand.localBuild': 'RedSpark Harness',
   'unknown': 'Unknown',
   'none': 'None',

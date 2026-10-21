@@ -1,11 +1,11 @@
 /** Current-surface projection and byte-bounded rendering. */
 
-import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction/native'
-import type { SessionSurfaceSnapshot } from '@deepseek-ai/dsh-session-query/native'
+import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
+import type { SessionSurfaceSnapshot } from '@deepseek-ai/dsh-session-query'
 import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { OptionalSessionSeq, SessionId } from '@deepseek-ai/dsh-session/native'
+import { SessionSeq } from '@deepseek-ai/dsh-session'
+import type { OptionalSessionSeq, SessionId } from '@deepseek-ai/dsh-session'
 import { stringifyTagSafeJson } from './serialization.ts'
 import type { ReferencedConversationItem } from './types.ts'
 
@@ -88,9 +88,9 @@ export function retainReferencedSession(
     conversation: retained.map(({ role, text }) => ({ role, text })),
   })
   const fullData = data()
-  const size = (): number => Buffer.byteLength(stringifyTagSafeJson(data()), 'utf8')
+  let size = serializedBytes(fullData)
 
-  while (size() > maxBytes) {
+  while (size > maxBytes) {
     const newestIndex = retained.length - 1
     const dropIndex = retained.findIndex((item, index) => !item.checkpoint && index !== newestIndex)
     if (dropIndex < 0) break
@@ -99,11 +99,13 @@ export function retainReferencedSession(
     if (removed === undefined) {
       throw new Error('session-reference retention selected a missing message')
     }
+    // The newest message remains, so every removal also removes one JSON comma.
+    size -= serializedBytes({ role: removed.role, text: removed.text }) + 1
     omittedMessages += 1
     droppedOmittedBytes += Buffer.byteLength(removed.originalText, 'utf8')
   }
 
-  while (size() > maxBytes) {
+  while (size > maxBytes) {
     let longestIndex = -1
     let longestBytes = 0
     for (const [index, item] of retained.entries()) {
@@ -114,7 +116,7 @@ export function retainReferencedSession(
       }
     }
     if (longestIndex < 0 || longestBytes === 0) return undefined
-    const overflow = size() - maxBytes
+    const overflow = size - maxBytes
     const target = Math.max(0, longestBytes - overflow)
     const item = retained[longestIndex]
     /* v8 ignore next 3 -- longestIndex was selected from this exact array's entries. */
@@ -124,6 +126,7 @@ export function retainReferencedSession(
     const shortened = truncateWithNotice(item.originalText, target)
     /* v8 ignore next -- strictly lowering the byte target must change a complete-string retention result. */
     if (shortened.text === retained[longestIndex]?.text) return undefined
+    size += serializedBytes(shortened.text) - serializedBytes(item.text)
     retained[longestIndex] = { ...item, text: shortened.text, omittedBytes: shortened.omittedBytes }
   }
 
@@ -142,6 +145,10 @@ export function retainReferencedSession(
       truncated: omittedMessages > 0 || omittedBytes > 0,
     },
   }
+}
+
+function serializedBytes(value: unknown): number {
+  return Buffer.byteLength(stringifyTagSafeJson(value), 'utf8')
 }
 
 function textContent(content: readonly { type: string; text?: string }[]): string {

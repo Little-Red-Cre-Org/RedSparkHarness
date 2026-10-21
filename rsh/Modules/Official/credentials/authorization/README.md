@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-authorization` lets a configuration UI or another caller obtain credentials through a human-guided sign-in, code entry, or question. Each attempt sends notices and prompts only to the surface that started it. It reports `authorized` only after the new credential has been stored; a refusal or withdrawal reports `cancelled`, while failures remain errors. Failed frames and logs carry a code; only an `AuthorizationError` or `SIWC_*` `HarnessError` adds its message. Choose it for credentials that cannot be supplied through configuration. It requires the credential store and an integration that defines the available authorization methods; the package provides no provider-specific methods itself.
+`dsh-authorization` lets a configuration UI or another caller obtain credentials through a human-guided sign-in, code entry, or question. Each attempt sends notices and prompts only to the surface that started it. It reports `authorized` only after the new credential has been stored; a refusal or withdrawal reports `cancelled`, while failures remain errors. Choose it for credentials that cannot be supplied through configuration. It requires the credential store and an integration that defines the available authorization methods; the package provides no provider-specific methods itself.
 
 ## Table of Contents
 
@@ -68,10 +68,6 @@ A flow declares the credential record it writes, a user-facing label, and the si
 
 A surface runs one attempt per credential at a time. The interaction travels with the request rather than living in a registry, so prompts reach exactly the page that asked; a headless caller supplies an interaction that declines. `begin()` reports `{ status: 'authorized' }` when the record was committed and observed during the attempt, and `{ status: 'cancelled' }` when the human declined or the caller withdrew. `cancel(key)` withdraws the running attempt from a second call, for the request/response transport that answers a Cancel button without holding the first call's signal.
 
-### Native Host entry
-
-Native Host compositions import `plugin` from `@deepseek-ai/dsh-authorization/native` and install it with a credentials Provider. `NativeAuthorization` returns an attempt whose `frames()` replays the conversation for reconnecting surfaces. Cancellation, flow removal, and Provider disposal wait for `run()` and its accepted credential writes to finish before releasing the key.
-
 ### What can go wrong
 
 - **A credential with no flow is inert** — `begin()` on a key no flow claims throws `NO_FLOW`; a record left by an uninstalled plugin can be deleted but not re-authorized.
@@ -102,13 +98,12 @@ This section explains the design decisions behind the seam and points at the cod
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition: flow registry, one-attempt-per-key lifecycle, interaction routing, commit confirmation |
-| [`src/native.ts`](src/native.ts) | Native Host Provider: frame replay, prompts and draining cancellation |
 | [`src/types.ts`](src/types.ts) | Wire-safe vocabulary: methods, notices, prompts, outcomes, entries |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `authorization/settled` always names a released key |
 
 ### Lifecycle
 
-The Cordis service runs one attempt per key. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. A withdrawn attempt settles immediately even when the flow never reacts to its signal — the orphaned run is left to finish on its own, and a record it still manages to commit is a record the human did authorize. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused; listener failures are contained on the credentials seam's terms.
+One attempt per key at a time. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. A withdrawn attempt settles immediately even when the flow never reacts to its signal — the orphaned run is left to finish on its own, and a record it still manages to commit is a record the human did authorize. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused; listener failures are contained on the credentials seam's terms.
 
 ### The interaction vocabulary
 
@@ -116,7 +111,7 @@ A notice is one-way and never carries a secret: a message, optionally the page t
 
 ### Commit confirmation
 
-During a Native attempt, the Provider selected for `credentials` synchronously reports the flow key after its durable commit; the authorization listener records that this attempt committed before the write resolves. Cordis uses its `credentials/record-updated` event for the same confirmation. After `run()` resolves, authorization still re-reads `describeRecord`, because on re-auth the record may already exist and presence alone would let stale credentials pass as fresh. A flow that resolves without committing during this attempt, or deletes the record instead of committing one, throws `NOT_COMMITTED`.
+During the attempt the seam watches `credentials/record-updated` for the flow's key, then after `run()` resolves it re-reads `describeRecord` — confirming the commit happened now, because on a re-auth the record already exists and presence alone would let a stale credential pass as freshly authorized. A flow that resolves without committing, or that deleted its record instead of committing one, throws `NOT_COMMITTED`.
 
 </details>
 
@@ -151,7 +146,7 @@ No invalidation; no authorization state enters a request prefix.
 
 These limits define when this package is a poor fit or needs special care. They are current package constraints, not a task backlog.
 
-- **Attempts live only in the Host process** — they do not survive a Host restart. On the Native Web path, a browser disconnect or reload leaves the attempt running; the client can rediscover its `attemptId` through the authorization list and resubscribe to replayable frames. The legacy Cordis Web Remote stream is tied to its initiating browser connection, so a disconnect or reload abandons that attempt; durable attempts need a store this seam does not have.
+- **No flow is resumable** — an attempt lives in the process that started it, so a browser reload during a login abandons it and the human starts over; durable attempts need a store this seam does not have.
 - **Nothing revokes** — signing out is `ctx.credentials.deleteRecord(key)`, which forgets the local record without telling the issuer; a provider that needs a server-side revoke has no place to declare it.
 - **A key with no flow is inert** — the seam reports what is registered, so a record left by an uninstalled plugin can be deleted but not re-authorized; recognizing that orphan is the caller's job, as it is for `listRecords()`.
 
@@ -163,6 +158,6 @@ These limits define when this package is a poor fit or needs special care. They 
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior, limits, and accepted rationale live in the sections above, the package code, and the linked Agent Note.
 
-The limitations above name the open directions — durable attempts, server-side revocation, orphaned-record discovery — each needing its own design and store before landing. The invariant companion is the one load-bearing runtime check: settlement must always find the key released, because a wedged key is indistinguishable from a busy one and only a restart frees it.
+The limitations above name the open directions — resumable attempts, server-side revocation, orphaned-record discovery — each needing its own design and store before landing. The invariant companion is the one load-bearing runtime check: settlement must always find the key released, because a wedged key is indistinguishable from a busy one and only a restart frees it.
 
 </details>

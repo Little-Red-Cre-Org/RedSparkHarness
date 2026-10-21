@@ -1,6 +1,6 @@
 version: 1
 scenario: inline-image-prompt
-profile: legacy-sdk
+profile: sdk
 composition: image
 recording: authored
 header:

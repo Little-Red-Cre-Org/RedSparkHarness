@@ -45,8 +45,6 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-skill)是每个受支持字段的穷尽式真源。
 
-Native Host profile 选择本包的 `./native` 入口，该入口提供按 scope 解析的 `skills` 服务。Native 提供方通过 `registerProvider(scope, create)` 注册，并取得仅属于该注册的中止信号与 `invalidate()` 回调；`list`、`snapshot` 和 `get` 使用调用方传入的动态 Agent scope。Native 提供方的异步释放函数会中止信号，并等待该注册的 `list` 和 `get` 工作结束。`NativeSkillRegistry.dispose()` 会关闭查找准入，并等待已接纳的 `list`、`snapshot`、`get` 调用及提供方工作结束。Native Definition 还声明 `skillInvocations`；该能力由 `dsh-tool-skill` 提供，用于通过选定 Program 的 `requestContexts` 注册表路由手动 Skill 调用，详见 [Skills 子系统参考](../../../../Docs/subsystems/skills.zh.md)。Cordis 组合仍可使用 Cordis 根入口。
-
 ### 注册表提供什么
 
 - **合并后的单一目录。** 消费方查询工作区的当前目录，即可收到来自所有提供方的全部胜出 skill 摘要，并按名称排序——无需自行做提供方特有的排序或去重。
@@ -89,8 +87,7 @@ Skill 摘要保留胜出提供方可选的指令文件 `path`，供提供文件�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis 插件入口、`SkillRegistry` 服务、候选项与定义验证、共享的面向模型渲染 |
-| [`src/native.ts`](src/native.ts) | Native Host 入口与按 scope 解析的 `NativeSkillRegistry` 提供方 |
+| [`src/index.ts`](src/index.ts) | 插件入口、`SkillRegistry` 服务、候选项与定义验证、共享的面向模型渲染 |
 | — | 不发布运行时不变式伴生入口；提供方／运行时 map 与带 revision 的 cache 在注册表内原子变更，且没有独立变更事件或快照可供交叉核对。 |
 
 ### 目录收集

@@ -30,7 +30,6 @@ import type { ResolvedRetryPolicy } from './retry-policy.ts'
 import { callConfigEquals } from './call-config.ts'
 import type { LlmCallConfig, LlmCallConfigAdapterDefaults } from './call-config.ts'
 import { LlmError } from './error.ts'
-import type { PreparedAdapterCall } from './adapter.ts'
 import { normalizeLlmFailure } from './adapter-failure.ts'
 import {
   contentHasFile, contentHasImage, fileHandleText, projectFilesToText, projectImagesForTextModel,
@@ -54,23 +53,7 @@ export * from './api-key.ts'
 export * from './types.ts'
 export * from './content.ts'
 export * from './assistant-stream.ts'
-export {
-  CONTEXT_SUMMARY_MAX_CHARS,
-  boundContextSummary,
-  freezeMessage,
-  createMessage,
-  createUserMessage,
-  createAssistantMessage,
-  createSystemMessage,
-  createToolResultMessage,
-} from './message.ts'
-export type {
-  ContextForm,
-  ContextSnapshotSection,
-  ContextFormed,
-  SystemMessage,
-  ToolResultMessageInput,
-} from './message.ts'
+export * from './message.ts'
 export * from './retry-policy.ts'
 export { BlockAssembler } from './assembler.ts'
 export { callConfigEquals, isAgentLoopRequest, markAgentLoopRequest } from './call-config.ts'
@@ -543,12 +526,11 @@ export class LlmRuntime extends TypertRemoteService {
    * Discover models advertised by one registered provider. Catalog membership
    * is advisory and never changes routing or request validation.
    * @param provider - registered provider route to inspect.
-   * @param signal - optional cancellation forwarded to the owning adapter.
    * @returns detached model metadata in adapter-preferred order.
    */
-  async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]> {
+  async listModels(provider: string): Promise<LlmModelInfo[]> {
     const adapter = this.registration(provider).adapter
-    const models = await adapter.listModels(provider, signal)
+    const models = await adapter.listModels(provider)
     const seen = new Set<string>()
     return models.map((model) => {
       if (
@@ -776,7 +758,6 @@ export class LlmRuntime extends TypertRemoteService {
     const adapterCall = await registration.adapter.prepareCall(config.provider, config.model, signal)
     const modelInfo = this.normalizeModelInfo(registration, config.model, adapterCall.model)
     const resolved = this.resolveCallWithInfo(config, modelInfo)
-    await assertOutputTokenLimit(adapterCall, resolved.config)
     const resolvedConfig = deepFreeze(structuredClone(resolved.config))
     const context = resolved.context === undefined
       ? undefined
@@ -887,7 +868,6 @@ export class LlmRuntime extends TypertRemoteService {
         const adapterCall = await adapter.prepareCall(options.provider, options.model, options.signal)
         modelInfo = this.normalizeModelInfo(registration, options.model, adapterCall.model)
         resolvedConfig = this.resolveCallWithInfo(options, modelInfo).config
-        await assertOutputTokenLimit(adapterCall, resolvedConfig)
         dispatch = options => adapterCall.stream(options)
       } else {
         modelInfo = prepared.modelInfo
@@ -981,17 +961,6 @@ export class LlmRuntime extends TypertRemoteService {
       'llm/stream',
       options,
       () => this.adapterStream(options, prepared),
-    )
-  }
-}
-
-/** Refuse a caller ceiling unless the captured route can enforce it exactly. */
-async function assertOutputTokenLimit(adapterCall: PreparedAdapterCall, config: LlmCallConfig): Promise<void> {
-  if (config.maxTokens !== undefined
-    && !await adapterCall.supportsOutputTokenLimit(config.maxTokens, config.reasoningEffort)) {
-    throw new LlmError(
-      `provider "${config.provider}" model "${config.model}" cannot enforce maxTokens ${config.maxTokens}`,
-      'UNSUPPORTED_OPTION',
     )
   }
 }

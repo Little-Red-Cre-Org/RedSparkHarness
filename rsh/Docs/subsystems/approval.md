@@ -60,8 +60,6 @@ The audit events are log-only and do not enter the model transcript. Model-visib
 
 The native Provider owns neither a Session nor a Cordis event. Its consuming application records the `native-approval/asked` and `native-approval/decided` audit pair, then renders the tool outcome. Native headless applies this path to its fixed `write_file` tool and forwards it to a contributed tool that declares an approval reason. The distinct names keep native request ids and policy data separate from the user-approval audit payloads.
 
-For ordinary root requests, a tool owner may supply complete resolved cwd and target identities. NativeTools binds its detached, frozen and validated JSON parameters; headless fingerprints the tool name, those identities and canonical parameters with object keys sorted and array order preserved. A remembered decision carries `NativeApprovalSessionGrant` in the existing `native-approval/decided` event. The sole writer reads that durable prefix and reuses only the original Session identity and exact fingerprint. Cold restore can reuse it; a fork or copied prefix retains the original identity and cannot inherit its authority. `never`, execution-policy denial, exact-owner approval and delegated denial precede reuse. The decision append and flush must succeed before execution. Sandbox escalation and requests without complete owner context remain one-shot.
-
 Source: [`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../../Modules/Official/interaction/native-approval/src/index.ts)
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->

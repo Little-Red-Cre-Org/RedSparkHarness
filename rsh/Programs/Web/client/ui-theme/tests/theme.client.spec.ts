@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
 import type {
   ThemeSettings,
@@ -9,7 +8,6 @@ import type {
   ThemeTokenOverrides,
 } from '@deepseek-ai/dsh-client-ui-theme/client'
 import { ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client'
-import { plugin as nativeThemePlugin, type NativeThemeService } from '../src/native.ts'
 
 const make = (host = stubSettingsScope<ThemeSettings>()): {
   ctx: Context
@@ -291,67 +289,4 @@ describe('ThemeRuntime', () => {
       expect(media.listenerCount()).toBe(0)
     })
   })
-})
-
-it('contains native theme listener failures and drains subscriptions when a consumer is removed', async () => {
-  const scope = new NativeScope()
-  const themeRequest = { plugin: nativeThemePlugin, scope, config: { preference: 'system' } }
-  const listenerFailure = new Error('native theme listener failed')
-  let service: NativeThemeService | undefined
-  const seen: number[] = []
-  const observer: NativePlugin = {
-    apiVersion: 1,
-    name: 'native-theme-observer-test',
-    targets: ['client'],
-    requires: ['clientNativeTheme'],
-    provides: [],
-    resolve: () => (context) => {
-      service = context.require('clientNativeTheme')
-      context.own(service.subscribe(() => { throw listenerFailure }))
-      context.own(service.subscribe(() => { seen.push(service!.getSnapshot().revision) }))
-    },
-  }
-  const observerRequest = { plugin: observer, scope, config: undefined }
-  const host = new NativeHost(resolveInstallation([themeRequest, observerRequest], 'client'))
-  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-  try {
-    await host.start()
-    service!.setPreference('dark')
-    expect(service!.getSnapshot()).toMatchObject({ preference: 'dark', revision: 1 })
-    expect(seen).toEqual([1])
-    expect(error).toHaveBeenCalledWith('[native-theme] subscriber failed:', listenerFailure)
-    expect(error).toHaveBeenCalledOnce()
-
-    await host.remove(observerRequest)
-    service!.setPreference('light')
-    expect(seen).toEqual([1])
-    expect(error).toHaveBeenCalledOnce()
-  } finally {
-    await host.stop()
-    error.mockRestore()
-  }
-})
-
-it('publishes the native content font size to the document root', async () => {
-  const scope = new NativeScope()
-  const themeRequest = { plugin: nativeThemePlugin, scope, config: { preference: 'system' } }
-  let service: NativeThemeService | undefined
-  const observer: NativePlugin = {
-    apiVersion: 1,
-    name: 'native-theme-font-size-observer-test',
-    targets: ['client'],
-    requires: ['clientNativeTheme'],
-    provides: [],
-    resolve: () => (context) => { service = context.require('clientNativeTheme') },
-  }
-  const observerRequest = { plugin: observer, scope, config: undefined }
-  const host = new NativeHost(resolveInstallation([themeRequest, observerRequest], 'client'))
-  try {
-    await host.start()
-    service!.setFontSize(16)
-    expect(service!.getSnapshot().fontSize).toBe(16)
-    expect(document.documentElement.style.getPropertyValue('--dsh-content-font-size')).toBe('16px')
-  } finally {
-    await host.stop()
-  }
 })

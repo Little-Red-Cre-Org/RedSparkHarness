@@ -1,9 +1,11 @@
 import { readFile, readdir } from 'node:fs/promises'
+import { zstdDecompressSync } from 'node:zlib'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { scanZstdFrames } from '@deepseek-ai/dsh-session-persistence-jsonl/src/zstd.js'
 
 const PRODUCTION_PROFILE_PROCESS_TIMEOUT_MS = 60_000
 const PRODUCTION_PROFILE_TEST_TIMEOUT_MS = PRODUCTION_PROFILE_PROCESS_TIMEOUT_MS + 15_000
@@ -27,11 +29,14 @@ describe('headless-agent keyless smoke', () => {
       inspect: async (cwd) => {
         const sessionsDir = join(cwd, '.sessions')
         const files = await readdir(sessionsDir, { recursive: true })
-        // The fixture sets only `root`, so this observes the backend's own default encoding.
-        const relativePath = files.find(file => file.endsWith('.jsonl'))
+        const relativePath = files.find(file => file.endsWith('.jsonl.zstd'))
         if (relativePath === undefined) return
-        const records = (await readFile(join(sessionsDir, relativePath))).toString()
-          .trimEnd().split('\n')
+        const compressed = await readFile(join(sessionsDir, relativePath))
+        expect(compressed.subarray(0, 4).toString('hex')).toBe('28b52ffd')
+        const { frames, tornStart } = scanZstdFrames(compressed)
+        expect(tornStart).toBeUndefined()
+        const records = frames.flatMap(({ start, end }) =>
+          zstdDecompressSync(compressed.subarray(start, end)).toString().trim().split('\n'))
           .map(line => JSON.parse(line) as Record<string, unknown>)
         persistedHeader = records[0]
         const requestHeader = records.find(record => record.type === 'request/header')

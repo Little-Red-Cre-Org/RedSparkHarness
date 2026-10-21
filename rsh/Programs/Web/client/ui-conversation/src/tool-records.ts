@@ -45,6 +45,8 @@ export type ToolCallBlock = RunningToolCall | ToolResultNode
 export interface OpenFileOptions {
   /** 1-based line to reveal; absent = the file's beginning. */
   readonly line?: number
+  /** Recorded change fragments for read-only IDE comparison; never instructions to apply an edit. */
+  readonly diffs?: readonly { readonly oldText: string | null; readonly newText: string }[]
 }
 
 /**

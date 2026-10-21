@@ -1,6 +1,5 @@
 import type { Credential } from '@earendil-works/pi-ai'
 import type { PiAiAuthInjection } from '../src/adapter.ts'
-import type { SiwcRegistrationStore } from '../src/siwc.ts'
 
 /**
  * The auth injectables for tests that exercise streaming rather than
@@ -14,19 +13,6 @@ export function memoryAuth(seed: Record<string, Credential> = {}): PiAiAuthInjec
   stored: Map<string, Credential>
 } {
   const stored = new Map(Object.entries(seed))
-  let registration: unknown
-  const siwcRegistration: SiwcRegistrationStore = {
-    async reconcile(migrate) {
-      const next = await migrate(registration, undefined, stored.get('openai-codex'))
-      if (next.value !== undefined) registration = next.value
-      return registration
-    },
-    async modify(mutate) {
-      const next = await mutate(registration)
-      if (next !== undefined) registration = next
-      return registration
-    },
-  }
   return {
     stored,
     credentials: {
@@ -49,6 +35,5 @@ export function memoryAuth(seed: Record<string, Credential> = {}): PiAiAuthInjec
       env: () => Promise.resolve(undefined),
       fileExists: () => Promise.resolve(false),
     },
-    siwcRegistration,
   }
 }

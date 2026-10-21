@@ -211,17 +211,16 @@ type MessageFeedbackDeleteResult =
 
 来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts`](../../Modules/Official/feedback/command-feedback/src/types.ts)
 
-```ts
-/** Durable feedback category ids in the order product surfaces present them. */
-const FEEDBACK_CATEGORIES = [
-  'task-result', 'instruction-following', 'product-interaction', 'service-stability',
-  'resource-cost', 'security-privacy-permission', 'other',
-] as const
-```
-
 ```ts type-equiv
-/** One of the fixed feedback categories. */
-type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number]
+/** One of the fixed feedback categories; the ids are durable log vocabulary. */
+type FeedbackCategory =
+  | 'task-result'
+  | 'instruction-following'
+  | 'product-interaction'
+  | 'service-stability'
+  | 'resource-cost'
+  | 'security-privacy-permission'
+  | 'other'
 ```
 
 ```ts type-equiv
@@ -253,7 +252,7 @@ interface SessionFeedbackRecordRequest {
 ```ts type-equiv
 /** Stable postcondition of a recorded remark. */
 interface SessionFeedbackRecordValue {
-  /** The selected recorder accepted the remark for the Session log. */
+  /** The remark is appended to the Session log; flushing follows the Session's own schedule. */
   readonly recorded: true
 }
 ```

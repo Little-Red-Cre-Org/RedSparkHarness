@@ -160,7 +160,7 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
     const fixtureModel = join(profile, 'node_modules/native-github-webhook-model')
     mkdirSync(fixtureModel)
     writeFileSync(join(fixtureModel, 'package.json'), JSON.stringify({
-      name: 'native-github-webhook-model', version: '1.0.0', type: 'module',
+      name: 'native-github-webhook-model', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))
@@ -168,7 +168,7 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
     const fixtureRule = join(profile, 'node_modules/native-github-webhook-rule')
     mkdirSync(fixtureRule)
     writeFileSync(join(fixtureRule, 'package.json'), JSON.stringify({
-      name: 'native-github-webhook-rule', version: '1.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
+      name: 'native-github-webhook-rule', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['webhookRules'], optional: [], provides: [] } },
     }))
     writeFileSync(join(fixtureRule, 'native.mjs'), ruleSource())

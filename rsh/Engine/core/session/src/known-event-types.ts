@@ -21,7 +21,6 @@
  */
 export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'agent-preset/selected',
-  'agent/inbox/moved',
   'agent/inbox/spliced',
   'approval/asked',
   'approval/decided',
@@ -35,7 +34,6 @@ export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'compaction/start',
   'compaction/summary',
   'deliverables/presented',
-  'execution/policy',
   'feedback/message-delete',
   'feedback/message-put',
   'feedback/record',
@@ -63,7 +61,6 @@ export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'subagent/catalog',
   'subagent/descriptor',
   'subagent/external-end',
-  'subagent/external-operation',
   'subagent/external-start',
   'subagent/model-selection-policy',
   'system/message',

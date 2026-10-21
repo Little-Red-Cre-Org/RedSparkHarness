@@ -9,10 +9,10 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef } from './types.ts'
+import type { CredentialInfo, CredentialKey, CredentialRecord, CredentialRef } from './types.ts'
 
 export type {
-  ApiKeyRecord, CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef, GrantRecord,
+  ApiKeyRecord, CredentialInfo, CredentialKey, CredentialRecord, CredentialRef, GrantRecord,
 } from './types.ts'
 
 export { credentialRef, isCredentialRefName, isCredentialKeySegment, credentialKey, parseCredentialKey, credentialKeyScope, credentialKeyId } from './credential-key.ts'
@@ -118,44 +118,6 @@ export abstract class CredentialProvider extends Service {
    * @returns the record, or `undefined` while none is stored.
    */
   abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
-
-  /**
-   * Read JSON metadata owned by a plugin. Metadata is stored separately from
-   * credential records and never appears in {@link listRecords}.
-   * @param key - owner-scoped metadata address.
-   * @returns the JSON value, or `undefined` while absent.
-   */
-  abstract readMetadata(key: CredentialKey): Promise<unknown>
-
-  /**
-   * Read-decide-replace plugin-owned JSON metadata under the provider's write
-   * lock. Returning `undefined` leaves the current value unchanged.
-   * @param key - owner-scoped metadata address.
-   * @param mutate - decides the next JSON value from the current one.
-   * @returns the committed value, or the unchanged current value.
-   */
-  abstract modifyMetadata(
-    key: CredentialKey,
-    mutate: (current: unknown) => Promise<unknown>,
-  ): Promise<unknown>
-
-  /**
-   * Reconcile owner metadata with a legacy credential record under the same
-   * provider lock. The legacy record is removed only after metadata is durable
-   * and verified. The callback receives detached metadata and legacy values
-   * and can read detached sibling-record copies from that locked snapshot.
-   * @param key - address shared by the old record and new metadata value.
-   * @param migrate - validates detached values from the locked snapshot and chooses the durable metadata result.
-   * @returns the verified metadata value.
-   */
-  abstract migrateRecordToMetadata(
-    key: CredentialKey,
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-  ): Promise<unknown>
 
   /**
    * Describe one record for configuration surfaces without exposing its value.

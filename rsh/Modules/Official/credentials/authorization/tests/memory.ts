@@ -2,7 +2,6 @@ import { CredentialProvider } from '@deepseek-ai/dsh-credentials'
 import type {
   CredentialInfo,
   CredentialKey,
-  CredentialMetadataMigration,
   CredentialRecord,
   CredentialRecordEntry,
   CredentialRecordInfo,
@@ -20,7 +19,6 @@ import type {
 // test-support double when a third suite needs one.
 export class MemoryCredentials extends CredentialProvider {
   private readonly records = new Map<CredentialKey, CredentialRecord>()
-  private readonly metadata = new Map<CredentialKey, unknown>()
 
   override resolve(_ref: CredentialRef): Promise<ResolvedCredential | undefined> {
     return Promise.resolve(undefined)
@@ -40,37 +38,6 @@ export class MemoryCredentials extends CredentialProvider {
 
   override readRecord(key: CredentialKey): Promise<CredentialRecord | undefined> {
     return Promise.resolve(this.records.get(key))
-  }
-
-  override readMetadata(key: CredentialKey): Promise<unknown> {
-    return Promise.resolve(this.metadata.get(key))
-  }
-
-  override async modifyMetadata(
-    key: CredentialKey,
-    mutate: (current: unknown) => Promise<unknown>,
-  ): Promise<unknown> {
-    const current = this.metadata.get(key)
-    const next = await mutate(current)
-    if (next !== undefined) this.metadata.set(key, next)
-    return this.metadata.get(key)
-  }
-
-  override async migrateRecordToMetadata(
-    key: CredentialKey,
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-  ): Promise<unknown> {
-    const result = await migrate(this.metadata.get(key), this.records.get(key), (recordKey) => {
-      const record = this.records.get(recordKey)
-      return record === undefined ? undefined : structuredClone(record)
-    })
-    if (result.value !== undefined) this.metadata.set(key, result.value)
-    if (result.retireRecord) this.records.delete(key)
-    return result.value
   }
 
   override describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> {

@@ -64,8 +64,6 @@ Native profile 会把 `@deepseek-ai/dsh-workflow-worker-thread/native` 安装为
 
 对于 Native Provider，此期限只约束脚本结算与 worker 终止；随后 `dispose()` 会继续等待每个已接受的 NativeSubagent 子任务释放 Session 写入器及其所有资源。清理失败会使 dispose 拒绝，并让运行继续保持跟踪。Cordis Provider 对慢速外部子任务后端仍采用宽限期上限。
 
-worker 会把每次 Native `agent()` 调用的有效委派上下文、最近的进程内 Responses 代际，以及精确父调用的审批转发器传给 Native subagent resolver；子任务仍使用基于 Session 的 spawn 路径。
-
 ### 运行会得到什么
 
 运行启动后，脚本正文在 worker 中以顶层 `await` 执行，并可使用钩子 `agent()`、`parallel()`、`pipeline()`、`phase()` 与 `log()`；`meta` 与 `args` 以普通 JSON 数据到达，绝不作为代码求值。每次 `agent()` 调用都会在配置的提供方下启动一个宿主侧 subagent，并以运行的父级作为每个子 agent（智能体）的父级。运行以脚本的最终 JSON 值结算；普通子 agent 失败会把 `agent()` 兑现为 `null`，由脚本处理。

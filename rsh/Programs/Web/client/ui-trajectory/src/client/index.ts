@@ -7,8 +7,6 @@ import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-// Type-only: load the Trajectory snapshot augmentation into this Client declaration.
-import type {} from './trajectory-client-augmentation.ts'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the 'conversation.view' SlotMap row (declared by the slot's
@@ -34,9 +32,9 @@ export type {
   TrajectoryContribution,
   TrajectoryConversationViewNode,
   TrajectoryRequestHeaderState,
+  TrajectorySnapshot,
   UseTrajectory,
 } from './trajectory-contract.ts'
-export type { TrajectorySnapshot } from './trajectory-client-augmentation.ts'
 
 /** Required services: the conversation slot, registries, ordinary Session paging, and the locale service. */
 export const inject = ['slots', 'sessions', 'uiSession', 'uiConversation', 'locale']

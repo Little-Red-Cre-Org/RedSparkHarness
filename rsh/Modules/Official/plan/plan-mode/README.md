@@ -70,8 +70,6 @@ Interfaces can show whether plan mode is active and whether a mode change you re
 
 The `./native` entry provides the same `/plan` command, `exit_plan_mode` tool, and `plan/mode` log for native profiles. It requires `tools` and `activeSessions`, uses `commands` and `userQuestions` when they are composed, and provides a read-only `planMode` view. The shipped `native-tui` profile installs it with the same guidance as the Cordis base bundle. The native system prompt cannot change during a session, so the guidance is delivered as a plan-mode notice queued for the next step: entering plan mode narrates the switch followed by the configured `section`, and leaving narrates the switch alone. A change you make while the agent is idle is logged at once; its notice is withdrawn again if you switch back before the agent runs. `/plan <message>` while idle queues the message for your next prompt instead of starting a turn.
 
-Both package entries require the `dsh-llm` and `dsh-user-questions` peers because they import shared message and error values; the Native `userQuestions` service remains optional at composition time.
-
 -----
 
 <a id="understand-the-implementation"></a>

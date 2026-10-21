@@ -45,9 +45,7 @@ Stdout 只承载 JSON-RPC 帧，客户端可以逐字节解析；诊断信息应
 
 ### SDK 客户端可以做什么
 
-`initialize` 是运行时就绪边界：服务器由 Loader 组合挂载时，会等待当前插件树完成所有加载任务后再响应，因此首次提示词能够看到 MCP 初始工具发现等异步同级能力。如果 Loader 插件树在启动期间失败，`initialize` 以及在失败之后处理的任何请求都会返回一个错误，其中包含失败的 Loader 配置项、插件和错误类型；适用时还会说明服务已由其他插件提供。完整错误保留在运行时 stderr 日志中。握手返回协议稳定标识 `deepseek-harness-sdk-runtime`。兼容 server 会明确拒绝 `maxSteps`；该上限只由 Native SDK profile 协商。服务器会通过所选适配器校验提供方／模型路由与可选的非空 `reasoningEffort`，再保存这些值；省略时不会保存推理强度，因此模型保留自身默认值。可选的正整数 `maxTokens` 会成为每个 SDK 创建的 agent 及其进程内后代的请求输出上限，省略时则应用所选适配器或提供方路由的默认值。JSON-RPC 请求可能并发分派，因此在一次 `initialize` 成功完成之前，`session/prompt` 会拒绝；客户端必须等待握手完成后再发送提示词。已接受的提示词会把一条带标识的用户消息排入队列，并立即返回 `{ messageId }`；服务器随后把每个持久事实作为 `session.event`、把整个 agent 生命周期的每次状态转换作为 `session.status` 流式发出。它不会把某条助手消息或 `turn/end` 归属于某个提示词，同一会话上的独立请求可以继续排入更多工作。持久化根目录与 persona 来自外围组合。
-
-Cordis profile 保留 `LegacySdkPromptContentBlock` 的行为，包括编码图像，并会在创建 Session 前明确拒绝 Native 文件回执块。`session/upload-file` 属于 Native SDK profile，本服务不提供该方法。
+`initialize` 是运行时就绪边界：服务器由 Loader 组合挂载时，会等待当前插件树完成所有加载任务后再响应，因此首次提示词能够看到 MCP 初始工具发现等异步同级能力。握手返回协议稳定标识 `deepseek-harness-sdk-runtime`。兼容 server 会明确拒绝 `maxSteps`；该上限只由 Native SDK profile 协商。服务器会通过所选适配器校验提供方／模型路由与可选的非空 `reasoningEffort`，再保存这些值；省略时不会保存推理强度，因此模型保留自身默认值。可选的正整数 `maxTokens` 会成为每个 SDK 创建的 agent 及其进程内后代的请求输出上限，省略时则应用所选适配器或提供方路由的默认值。JSON-RPC 请求可能并发分派，因此在一次 `initialize` 成功完成之前，`session/prompt` 会拒绝；客户端必须等待握手完成后再发送提示词。已接受的提示词会把一条带标识的用户消息排入队列，并立即返回 `{ messageId }`；服务器随后把每个持久事实作为 `session.event`、把整个 agent 生命周期的每次状态转换作为 `session.status` 流式发出。它不会把某条助手消息或 `turn/end` 归属于某个提示词，同一会话上的独立请求可以继续排入更多工作。持久化根目录与 persona 来自外围组合。
 
 ### 关闭与退出
 
@@ -107,7 +105,7 @@ Cordis profile 保留 `LegacySdkPromptContentBlock` 的行为，包括编码图�
 
 #### 模型看到什么
 
-对于每个已接受的 `session/prompt`，文本和持久内容引用会原样进入一条用户消息。内联 `SdkEncodedImageBlock` 会先通过组合中的附件存储完成校验与提交，因此会话日志保留内容寻址的图片引用而不是 base64 字节。随 CLI 提供的 `native-sdk` 与 `native-sdk-dsh-child` 组合也会安装 `dsh-agent-instructions`；它通过选定的文件系统 Provider 准备工作区指引，并将其作为持久用户消息保存。此服务器包本身不会添加系统提示词文本或工具 schema；这些内容来自组合中的其他插件。
+对于每个已接受的 `session/prompt`，文本和持久内容引用会原样进入一条用户消息。内联 `SdkEncodedImageBlock` 会先通过组合中的附件存储完成校验与提交，因此会话日志保留内容寻址的图片引用而不是 base64 字节。此包不会添加系统提示词文本或工具 schema；这些内容来自组合中的其他插件。
 
 #### Token 影响
 
