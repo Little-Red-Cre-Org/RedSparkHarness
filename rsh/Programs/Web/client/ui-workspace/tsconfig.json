@@ -58,6 +58,9 @@
     },
     {
       "path": "../../../../Core/util/workspace-path"
+    },
+    {
+      "path": "../ui-chat"
     }
   ]
 }

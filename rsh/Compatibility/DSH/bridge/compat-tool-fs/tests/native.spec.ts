@@ -593,12 +593,12 @@ it('bridges legacy tool execution and write/edit waterfalls through native callb
     const observed: string[] = []
     const actor = {}
     eventDisposers.push(host.events.on(scope, 'fs/observed', () => { observed.push('native') }))
-    disposers.push(legacy.on('fs/observed', () => { observed.push('compat') }))
+    disposers.push(legacy.on('fs/observed', () => { observed.push('cordis') }))
     host.events.emit(scope, 'fs/observed', target, { kind: 'absent' }, actor)
     expect(observed).toEqual(['native'])
     observed.length = 0
     legacy.emit('fs/observed', target, { kind: 'absent' }, actor)
-    expect(observed).toEqual(['native', 'compat'])
+    expect(observed).toEqual(['native', 'cordis'])
     const observedFailure = new Error('observation listener failed')
     const removeNativeObservationFailure = host.events.on(scope, 'fs/observed', () => { throw observedFailure })
     eventDisposers.push(removeNativeObservationFailure)

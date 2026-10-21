@@ -8,8 +8,6 @@
     "rewriteRelativeImportExtensions": false
   },
   "include": [
-    "rsh/Programs/Web/application/tests/native-browser-graph.spec.ts",
-    "rsh/Programs/Web/application/vite.config.ts",
     "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
     "rsh/Programs/Web/api/native-web-session-controller/tests/session-grant.host.spec.ts",
     "rsh/Programs/Web/host/native-schedule-controller/tests/native.host.spec.ts",
@@ -71,6 +69,7 @@
     "rsh/Programs/Web/application/tests/message-feedback.e2e.ts",
     "rsh/Programs/Web/application/tests/markdown-images.e2e.ts",
     "rsh/Programs/Web/application/tests/reference-composer.e2e.ts",
+    "rsh/Programs/Web/application/tests/ide-file-approval.e2e.ts",
     "rsh/Programs/Web/application/tests/markdown-wide-table.e2e.ts",
     "rsh/Programs/Web/application/tests/math-rendering.e2e.ts",
     "rsh/Programs/Web/application/tests/markdown-cjk-strong.e2e.ts",
@@ -174,6 +173,8 @@
     "rsh/Scripts/client-bundle-purity.spec.ts"
   ],
   "references": [
+    { "path": "./rsh/Modules/Official/ide/ide-code-oss" },
+    { "path": "./rsh/Programs/Web/host/native-ide" },
     { "path": "./rsh/Programs/TUI/terminal-ui" },
     { "path": "./rsh/Programs/TUI/native-tui" },
     { "path": "./rsh/Programs/Web/client/native-application/tsconfig.controller.json" },
@@ -366,8 +367,6 @@
     { "path": "./rsh/Compatibility/DSH/bridge/compat-plugin-host" },
     { "path": "./rsh/Core/util/errors" },
     { "path": "./rsh/Core/runtime-diagnostics/native-runtime" },
-    { "path": "./rsh/Core/runtime-diagnostics/cordis-bridge" },
-    { "path": "./rsh/Engine/preset/native-persona" },
     { "path": "./rsh/Tests/test-support/agent-loop-testkit" },
     { "path": "./rsh/Programs/ACP/packages/acp" },
     { "path": "./rsh/Compatibility/DSH/bundle/acp-app" },
@@ -396,7 +395,6 @@
     { "path": "./rsh/Tests/test-support/loader-smoke" },
     { "path": "./rsh/Tests/test-support/llm-mock-server" },
     { "path": "./rsh/Modules/Community/experimental/webworker-packer" },
-    { "path": "./rsh/Modules/Community/experimental/webworker-runtime/tsconfig.host.json" },
     { "path": "./rsh/Modules/Community/experimental/inspector/tsconfig.host.json" },
     { "path": "./rsh/Engine/subagent/subagent" },
     { "path": "./rsh/Engine/subagent/subagent-protocol" },

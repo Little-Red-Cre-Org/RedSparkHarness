@@ -1,7 +1,6 @@
 import { load as parseYaml } from 'js-yaml'
 import { resolve as resolveEsm } from 'import-meta-resolve'
 import { createHash } from 'node:crypto'
-import { existsSync } from 'node:fs'
 import { lstat, readFile, readdir, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -69,9 +68,6 @@ export async function coalesceStagedDshToolsPeer(
   const canonicalDirectories = new Map<string, string>()
 
   for (const [name, source] of component) {
-    // A closure prune may have removed this component member's peers; only validate what the
-    // packaged runtime still carries.
-    if (!existsSync(join(nodeModules, name))) continue
     const packageUrl = resolvePackage(name, join(staging, 'runtime-bootstrap.mjs'))
     const stagedDirectory = await packageDirectoryForUrl(packageUrl, name, staging)
     const expectedDirectory = resolve(nodeModules, name)

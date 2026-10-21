@@ -35,7 +35,6 @@ async function main() {
   const nativeApi = api.plugins.native
   let nativeMode = nativeApi !== undefined
   let inventory
-  let shownBackend
   let busy = false
   let backendChanges = 0
   let backendReads = 0
@@ -79,7 +78,6 @@ async function main() {
   }
 
   function renderBackend(backend) {
-    shownBackend = backend
     document.querySelector('#backend-state').textContent = messages[{
       starting: 'nativeBackendStarting', ready: 'nativeBackendReady', error: 'nativeBackendError',
     }[backend.phase]]
@@ -88,25 +86,9 @@ async function main() {
     document.querySelector('#recovery').hidden = backend.phase !== 'error'
     document.querySelector('#recovery-description').textContent = nativeMode ? messages.nativeRecoveryAdvice : messages.recoveryDescription
     configureMode()
+    // Native status uses only localized state; legacy diagnostics retain their existing presentation.
     document.querySelector('#startup-error').textContent = backend.phase === 'error'
-      ? startupErrorDetails(backend) : ''
-  }
-
-  function startupErrorDetails(backend) {
-    const types = {
-      AggregateError: messages.startupTypeAggregateError,
-      Error: messages.startupTypeError,
-      RangeError: messages.startupTypeRangeError,
-      SyntaxError: messages.startupTypeSyntaxError,
-      TypeError: messages.startupTypeTypeError,
-      ValidationError: messages.startupTypeValidationError,
-    }
-    return [
-      messages.startupErrorType.replace('{type}', types[backend.errorType] || messages.startupTypeUnknownError),
-      backend.path === undefined ? '' : messages.startupErrorPath.replace('{path}', backend.path),
-      backend.rule === undefined ? '' : messages.startupErrorRule.replace('{rule}', backend.rule),
-      backend.logPath === undefined ? messages.startupErrorLogAdvice : messages.startupErrorLogWritten.replace('{path}', backend.logPath),
-    ].filter(Boolean).join('\n')
+      ? (nativeMode ? messages.nativeBackendError : (backend.message ?? '')) : ''
   }
 
   unsubscribe = api.backend.subscribe(backend => {
@@ -121,7 +103,6 @@ async function main() {
     const read = ++backendReads
     const backend = await api.backend.status()
     if (!closed && observed === backendChanges && read === backendReads) renderBackend(backend)
-    return shownBackend ?? backend
   }
 
   function targetLabel(target) {
@@ -364,12 +345,9 @@ async function main() {
       const outcome = await operation()
       if (closed) return false
       if (!nativeMode) {
-        if (await render() === false || closed) return false
-        const backend = await readBackend()
-        if (closed) return false
-        status.textContent = backend.phase === 'ready' ? messages.operationComplete
-          : messages[backend.phase === 'error' ? 'nativeBackendError' : 'nativeBackendStarting']
-        return backend.phase === 'ready' && !closed
+        await render()
+        if (!closed) status.textContent = messages.operationComplete
+        return !closed
       }
       if (observed === backendChanges) renderBackend(outcome.status === 'applied' ? outcome.backend : outcome.error.backend)
       let resultMessage = nativeOutcome(outcome)
@@ -433,12 +411,25 @@ async function main() {
     }, message('installing', { spec }))
   })
   document.querySelector('#retry').addEventListener('click', () => void run(() => api.backend.retry(), messages.retry))
-  disableAll.addEventListener('click', () => {
-    if (nativeMode) {
-      void run(() => nativeApi.disableAll({ expectedRevision: inventory.revision }), messages.changingActivation)
-      return
+  async function disableNativeEligible() {
+    while (inventory !== undefined) {
+      const row = inventory.packages.flatMap(pkg => pkg.installations).find(
+        candidate => candidate.canDisable && !(candidate.target === 'client' && coreClientIds.has(candidate.id)),
+      )
+      if (row === undefined) return
+      const applied = await run(
+        () => nativeApi.toggle({
+          expectedRevision: inventory.revision, key: { target: row.target, id: row.id }, enabled: false,
+        }),
+        messages.changingActivation,
+      )
+      if (!applied) return
     }
-    void run(() => api.plugins.disableAll(), messages.changingActivation)
+  }
+
+  disableAll.addEventListener('click', () => {
+    if (nativeMode) void disableNativeEligible()
+    else void run(() => api.plugins.disableAll(), messages.changingActivation)
   })
   refresh.addEventListener('click', () => void load(messages.refreshing, messages.refreshed))
 

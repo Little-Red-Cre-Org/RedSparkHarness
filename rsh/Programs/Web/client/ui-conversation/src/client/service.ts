@@ -232,6 +232,10 @@ export class ConversationController extends Service implements IConversation {
     mode: InputSubmitMode,
     signal?: AbortSignal,
   ): Promise<SubmitOutcome> {
+    const prepared = { text }
+    await this.ctx.serial('conversation/prepare-prompt', session, prepared, signal)
+    signal?.throwIfAborted()
+    text = prepared.text
     const attachments = this.resolveDraftAttachments(attachmentIds)
     if (attachments.length !== attachmentIds.length) {
       throw new Error('conversation.sendSession: one or more draft attachments are no longer available')

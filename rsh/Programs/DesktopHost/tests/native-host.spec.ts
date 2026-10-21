@@ -43,9 +43,9 @@ async function fixture(linked: readonly string[] = [], options: {
   await mkdir(join(frontend, 'dist'), { recursive: true })
   await writeFile(join(frontend, 'package.json'), JSON.stringify({
     name: '@deepseek-ai/dsh-web-frontend',
-    exports: { './dist/index.html': './dist/index.html' },
+    exports: { './dist/native.html': './dist/native.html' },
   }))
-  await writeFile(join(frontend, 'dist', 'index.html'), '<!doctype html><html><head></head><body>native fixture</body></html>')
+  await writeFile(join(frontend, 'dist', 'native.html'), '<!doctype html><html><head></head><body>native fixture</body></html>')
   await writeFile(join(project, 'package.json'), JSON.stringify({
     name: 'desktop-native-fixture',
     private: true,

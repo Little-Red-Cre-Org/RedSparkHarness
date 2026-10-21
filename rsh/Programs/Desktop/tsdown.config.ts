@@ -2,6 +2,11 @@ import { defineConfig } from 'tsdown'
 
 export default defineConfig([
   {
+    entry: { 'ide-extension': 'lib/types/ide-extension.js' }, outDir: 'lib',
+    format: ['cjs'], platform: 'node', target: 'es2024', fixedExtension: false,
+    dts: false, clean: false, deps: { neverBundle: ['vscode'] },
+  },
+  {
     entry: ['lib/types/main.js'],
     outDir: 'lib',
     format: ['esm'],

@@ -234,7 +234,7 @@ function workspaceGroupHalf(e: { clientY: number; currentTarget: HTMLElement }):
 type SessionTreeProps = Pick<
   WorkspaceBrowserProps,
   'useSessions' | 'useSessionPendingInteraction' | 'startSession' | 'open' | 'forkSession'
-  | 'insertWorkspaceBefore' | 'insertSessionBefore' | 't' | 'usePanelInfo'
+  | 'insertWorkspaceBefore' | 'insertSessionBefore' | 't' | 'usePanelInfo' | 'openIde'
 > & {
   /** Host account home for POSIX hover-path abbreviation. */
   home?: string | undefined
@@ -275,12 +275,13 @@ type SessionTreeProps = Pick<
 function SessionTree({
   useSessions, useSessionPendingInteraction, startSession, open, forkSession, workspaces, archivedSessionIds,
   workspaceReady, usePanelInfo,
-  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
+  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, openIde,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
   revealSessionId, onSessionRevealed,
 }: SessionTreeProps) {
+  const [ideError, setIdeError] = useState<string | null>(null)
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
@@ -450,6 +451,7 @@ function SessionTree({
 
   return (
     <div className={clsx(css.treeBody, css.wide)}>
+      {ideError !== null && <div role="alert">{ideError}</div>}
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
       <div
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
@@ -538,6 +540,13 @@ function SessionTree({
                 actions={group.workspaceId === undefined
                   ? undefined
                   : {
+                    openIde: openIde === undefined ? undefined : () => {
+                      if (group.workspaceId === undefined) return
+                      setIdeError(null)
+                      void openIde(group.workspaceId).catch((error: unknown) => {
+                        setIdeError(error instanceof Error ? error.message : String(error))
+                      })
+                    },
                     rename: () => {
                     /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                       if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
@@ -849,6 +858,7 @@ export function WorkspaceBrowser({
   renameSession,
   forkSession,
   renameWorkspace,
+  openIde,
   deleteWorkspace,
   insertWorkspaceBefore,
   archiveSession,
@@ -1243,6 +1253,7 @@ export function WorkspaceBrowser({
                 onSessionRevealed={acknowledgeSessionReveal}
                 home={home}
                 t={t}
+                openIde={openIde}
                 onRenameRequest={(workspaceId, currentTitle) => {
                   setRenameTarget({ workspaceId, currentTitle })
                   setRenameDraft(currentTitle)

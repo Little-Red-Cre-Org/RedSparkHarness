@@ -9,10 +9,8 @@ import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
 import { EVENT_API, queryServiceApi, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
 import { hostInspectProviders } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
-import { CordisCatalogProjector, type CordisCatalogPolicy, type ServiceEntry } from '../src/cordis-catalog.ts'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
 import { FaceModelEmitter } from '../src/emitter.ts'
-import type { FaceModel, SourceDeclarationModel } from '../src/model.ts'
 
 const workspaceRoot = resolve(import.meta.dirname, '../../../../..')
 const temporaryRoots: string[] = []
@@ -44,60 +42,6 @@ afterEach(() => {
 })
 
 describe('model-driven dsh-tools generation', () => {
-  it('excludes the worker ServerResponse marker by package identity', () => {
-    const face: FaceModel = { face: 'host', packages: [], graph: { declarations: [], nodes: [] } }
-    const workerMarker: SourceDeclarationModel = {
-      face: 'host',
-      package: '@deepseek-ai/dsh-experimental-webworker-runtime',
-      name: 'ServerResponse',
-      kind: 'class',
-      location: { file: 'rsh/worker/src/http.ts', line: 1, column: 1 },
-      text: 'export class ServerResponse {}',
-    }
-    const otherOwner: SourceDeclarationModel = {
-      ...workerMarker,
-      package: '@deepseek-ai/dsh-http-routes',
-      kind: 'interface',
-      text: 'export interface ServerResponse { statusCode: number }',
-    }
-    const policy: CordisCatalogPolicy = {
-      linkedTypePages: {},
-      foundationTypeNames: new Set(),
-      typeLinkExemptions: {},
-      inheritedEvents: [],
-      inheritedServices: [],
-    }
-    const service: ServiceEntry = {
-      key: 'fixture',
-      type: 'FixtureService',
-      abstract: false,
-      doc: 'Fixture service.',
-      methods: [{ signature: 'respond(response: ServerResponse): void', jsDoc: '/** Respond. */' }],
-      source: 'rsh/fixture.ts:1',
-    }
-    const render = (
-      declarations: readonly SourceDeclarationModel[],
-      runtimeTypeExclusions: ReadonlySet<string> = new Set(),
-    ): string => new CordisCatalogProjector(face, declarations, { ...policy, runtimeTypeExclusions })
-      .renderRuntimeApi({ services: [service], events: [] })
-
-    expect(render([workerMarker])).toContain(workerMarker.text)
-    expect(render([workerMarker], new Set([`${workerMarker.package}#${workerMarker.name}`])))
-      .not.toContain(workerMarker.text)
-    const otherOwnerCatalog = render([workerMarker, otherOwner], new Set([`${workerMarker.package}#${workerMarker.name}`]))
-    expect(otherOwnerCatalog).toContain(otherOwner.text)
-    expect(otherOwnerCatalog).not.toContain(workerMarker.text)
-
-    const result = queryServiceApi('webServer') as {
-      referencedTypes: readonly { name: string; declaration: string }[]
-    }
-    const types = new Set(result.referencedTypes.map(type => type.name))
-    expect(types).toContain('HttpRoute')
-    expect(types).not.toContain('ServerResponse')
-    expect(result.referencedTypes.find(type => type.name === 'HttpRoute')?.declaration)
-      .toContain('request: IncomingMessage, response: ServerResponse')
-  })
-
   it('keeps same-package projection declarations in the generated Service type closure', () => {
     const sourceDeclarations = new WorkspaceAnalyzer({
       root: workspaceRoot,

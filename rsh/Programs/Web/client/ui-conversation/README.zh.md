@@ -7,6 +7,8 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
+发送普通输入框文本前，`conversation/prepare-prompt` 串行监听器可以补充即将记录并提交的文本。监听器拒绝或取消时保留输入框草稿，不向 Host 提交。没有监听器时，提交文本保持不变。
+
 ## 概述
 
 `ui-conversation` 拥有与 target 无关的 Conversation 组装和共享浏览器 shell。它消费 Session Controller 的 `SessionEventLikeEntry` feed，通过 `ctx.uiConversation` 暴露不依赖 React 的注册表与逐 Session binding，并通过 `ctx.uiSession` 提供 `useConversation`、`useInput` 和 `inputActions` 标准 props。它还拥有按会话的持久化图片 URL 缓存：`ctx.uiConversation.imageUrl(sessionId, attachment)` 为每个附件解析一个经会话授权的浏览器 URL，并随 Session binding 释放而撤销，因此所有 Conversation target 共享一次 `session.attachment` 读取。Chat 等具体 target 位于独立包，由各自包注册 Definition、快照 builder、View 和 renderer。
@@ -41,6 +43,10 @@ target package 通过 declaration merge 扩展 snapshot 与 Location data map，
 
 <a id="shell-and-standard-props"></a>
 ## Shell 与标准 props
+
+输入框挂载时会将程序预填的草稿写入现有持久化存储。草稿持久化事件使嵌入式 IDE 能等待该写入完成，再因项目切换重启扩展宿主。浏览器持有的待发送附件和正在处理的输入操作会暂缓编辑器项目切换。
+
+嵌入 IDE 的欢迎页使用紧凑排版并省略背景光晕。编辑器导航期间，现有输入框和 Session 绑定保持挂载。
 
 输入框注册「文件」命令动作，负责其标题、可用性和原生文件选择器回调。菜单可用性与实际调用都读取已挂载输入框当前的附件接收策略。输入框卸载或锁定后该动作不可用，插件 dispose（资源释放）时移除注册。回调绑定留在输入模块内部。
 
@@ -131,7 +137,7 @@ selector 必须是 owner currency 的纯函数。非 null 返回值作为 `match
 <a id="dev-note"></a>
 ### 开发备注
 
-无 Cordis 的 `./tool-records` 导出统一维护两种呈现方式共用的 Tool 调用／结果及图片加载器类型。`./conversation-copy` 导出既有类型化字典和命名空间声明，不创建 Conversation 服务。兼容的根入口和 `./client` 入口保留既有安装器。
+无 Cordis 的 `./tool-records` 导出统一维护两种呈现方式共用的 Tool 调用／结果及图片加载器类型。`./conversation-copy` 导出既有类型化字典和命名空间声明，不创建 Conversation 服务。兼容的根入口和 `./client` 入口保留既有安装器。 其中 `OpenFileOptions.diffs` 携带已记录的修改前后片段，原文为 null 表示不可用；消费者不得将这些片段作为可应用的编辑。
 
 <details>
 <summary>维护者工作上下文——点击展开</summary>

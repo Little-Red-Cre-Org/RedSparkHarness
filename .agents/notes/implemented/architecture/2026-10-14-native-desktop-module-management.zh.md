@@ -14,7 +14,7 @@ Native Desktop profile 会为带 scope 的 Host 组合和 Client 启动选择包
 
 Inventory 返回不透明的安装 id、已保存的 Host scope、包归属与能力、`hasConfig`，以及 profile 输入内容的 revision。每个变更都携带该 revision。manager 在停止 Host 前、持有现有锁时比较 revision；锁被占用时返回 `busy`，revision 过期时返回当前 revision，不修改 profile 文件。
 
-切换状态时保留 Host 行的 scope 和 Client 行的配置。Client formatVersion 1 接受可选的 `disabled`；禁用行继续保存，但会从生成的 modules 和启动选择中排除。`disableAll` 和单项禁用会保留 Desktop Host 必需项、Client 启动 Provider（`clientApplication`、`clientRenderer` 和 `clientNativeLayout`）以及已验证的最近必需 Provider 闭包，因此主窗口始终保留 Client 的 `layout` 和 `session-presentation` 行；签名运行时包可以被选择，但不能被实际更新或删除。
+切换状态时保留 Host 行的 scope 和 Client 行的配置。Client formatVersion 1 接受可选的 `disabled`；禁用行继续保存，但会从生成的 modules 和启动选择中排除。`disableAll` 保留 Desktop Host 必需项和已验证的最近必需 Provider 闭包；签名运行时包可以被选择，但不能被实际更新或删除。
 
 Host 组合预检会在全新 worker 中导入选定的 Host 入口和 CLI 有条件补入的 child 支持行，因此包更新不会复用上一版本加载的 ESM 模块。worker 使用 CLI profile loader 的每个根作用域 launch-environment 与 `pluginInventory` Provider、SDK 或 ACP child-runtime launcher、启用 child module 缺少 Provider 时补入的子作用域 subprocess 或 sandbox 支持行，以及 Desktop 私有 carrier；它不会激活 Provider。Inventory 展开 preset 元数据并根据静态 Provider 关系计算保留项，不为当前启用的 child 安装项派生路由。启用/禁用候选与变更后的组合仍通过 CLI loader 派生并校验路由，因此配置错误的可选 child 仍可显示并关闭，而保留的错误配置会在 Host 停止前阻止变更。Preset 派生 scope、安装项和配置参与依赖检查，但不会写回已保存的安装行。`disableAll` 保留 Desktop 启动的必需 Provider 闭包；若该闭包保留了 preset manager 或派生 preset 安装项，也会保留该 manager 当前激活的派生安装项及其必需 Provider。否则，可选 preset manager 和其 Provider 可以一起禁用。Client 预检读取选定 manifest 并生成浏览器目标 bundle，不会在 Electron 主进程导入 Client 入口。选定的 optional 依赖参与排序和循环检查；required 依赖决定 `disableAll` 保留项。
 

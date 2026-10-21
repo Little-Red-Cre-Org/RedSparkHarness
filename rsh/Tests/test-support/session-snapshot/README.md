@@ -29,19 +29,19 @@ Scenario manifests accept the explicit `native-tui` profile; its real-terminal a
 
 The manifest `profile` is the exact public `dsh` profile name; compatibility scenarios use `compat`.
 
-The `snapshots/web/` corpus folder groups browser `web` and Native Web `native-web` scenarios; each manifest retains the exact public profile name.
+The `snapshots/web/` corpus folder groups browser `web` and Native Web `native-web` scenarios; each manifest retains the exact shipped profile name.
 
-This package turns a `dsh` profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
+This package turns a shipped profile scenario into a keyless snapshot suite: write a scenario table and a fixtures directory, call the matching adapter once, and the kit owns launching or composing the profile, driving the scenario, comparing normalized output, and guarding the committed fixtures.
 
 `profile: desktop` identifies the existing Electron private Host lifecycle; its owner uses the real Desktop backend controller and Session round trip without adding an application entrypoint.
 
 ### Writing a snapshot suite
 
-The closed profile manifest accepts `legacy-headless`, `legacy-sdk`, and `legacy-acp` for scenarios that retain the Cordis profile templates under custom profile names. Native scenarios use the corresponding public `headless`, `sdk`, or `acp` profile names; explicit `native-*` aliases are also valid.
+The closed profile manifest accepts `native-acp` for native ACP protocol scenarios backed by shared Session recordings.
 
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.
 
-A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, `configPath`, and `tsconfigPath` paths because the subprocess cwd sits outside the repository. Legacy profiles set `profile` to their custom name and `fromDefaultProfile` to the shipped template they copy:
+A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, `configPath`, and `tsconfigPath` paths, because the subprocess cwd sits outside the repository:
 
 ```ts
 import { dirname, join } from 'node:path'
@@ -71,8 +71,7 @@ defineAcpSnapshotSuite({
   agent: { // absolute paths, resolved from the suite's own location
     binScript: fileURLToPath(new URL('../../../Programs/CLI/src/bin.ts', import.meta.url)),
     configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    profile: 'legacy-acp',
-    fromDefaultProfile: 'acp',
+    profile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
@@ -81,7 +80,7 @@ defineAcpSnapshotSuite({
 })
 ```
 
-Each recorded-session directory carries a closed `snapshot.yml` manifest plus canonical parent and contiguous child roles. Parent filenames are `session[.vN].jsonl`; children are `session.<ordinal>[.vN].jsonl`; v0 omits `.v0`, positive versions use lowercase `.vN`, and every filename agrees with its header. A role may retain older generations, but the harness selects the numerically highest one. An owning manifest may declare `sessionFormat.version` plus one or more closed `coverage` names to keep that historical generation as an explicit migration fixture; absence tracks the current writer. The manifest also names the scenario, selected profile, composition/header class, recording source, and only the replay, platform, permission, environment, workspace, or input facts the completed Session cannot reconstruct. Storage guards check tool results and portable paths in every selected parent and child role. Prompt/schema scrubbing, message identity, and prompt-before-request ordering apply to current generations; retained predecessors keep their historical representation. The adapter registers expected-output, Session-log, and optional `workspace.expected/` comparisons; guards reject orphan directories, missing roles, noncanonical names, absolute paths, malformed manifests, and platform-specific separators.
+Each recorded-session directory carries a closed `snapshot.yml` manifest plus canonical parent and contiguous child roles. Parent filenames are `session[.vN].jsonl`; children are `session.<ordinal>[.vN].jsonl`; v0 omits `.v0`, positive versions use lowercase `.vN`, and every filename agrees with its header. A role may retain older generations, but the harness selects the numerically highest one. An owning manifest may declare `sessionFormat.version` plus one or more closed `coverage` names to keep that historical generation as an explicit migration fixture; absence tracks the current writer. The manifest also names the scenario, shipped profile, composition/header class, recording source, and only the replay, platform, permission, environment, workspace, or input facts the completed Session cannot reconstruct. Storage guards check tool results and portable paths in every selected parent and child role. Prompt/schema scrubbing, message identity, and prompt-before-request ordering apply to current generations; retained predecessors keep their historical representation. The adapter registers expected-output, Session-log, and optional `workspace.expected/` comparisons; guards reject orphan directories, missing roles, noncanonical names, absolute paths, malformed manifests, and platform-specific separators.
 
 `normalizeSessionSnapshot` retains the complete Session header and event payloads but omits top-level `seq`/`time` envelopes from committed fixtures after normalizing paths and scrubbing system-prompt text and tool schemas; it also normalizes embedded stream clocks and historical packed-row `seq0`/`time0` envelopes, and catalog child-creation clocks. Event order and source-event references are preserved. Replay synthesizes the top-level envelopes in memory, while runtime persistence continues to write complete logs. Multi-session comparison validates expected and harvested logs through the strict build-static Session format catalog before identity redaction and normalization; source filenames cannot alter format validation. A retained historical replay input is not the native current-format writer-output oracle: structural migration preserves request meaning but can produce a different event layout. Normalization preserves unexpected request-header fields, including `system`, so regressions remain visible. Versionless protocol-adapter unit fixtures remain outside the released Session format corpus. Fixtures in the [current writer format](../../../Docs/session-format-status.md) use one row per event; retained v0/v1 fixtures may use canonical packed rows. The [temporary repository migrator](../../../Scripts/migrate-packed-session-fixtures.ts) (`pnpm run migrate:packed-session-fixtures`) rewrites older historical layouts, and its [removal proposal](../../../../.agents/notes/proposed/process/2026-07-26-remove-packed-session-fixture-migrator.md) owns its deletion.
 

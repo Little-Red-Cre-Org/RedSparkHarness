@@ -32,10 +32,6 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./native-inspection": {
-      "types": "./lib/types/native-inspection.d.ts",
-      "default": "./lib/native-inspection.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -43,7 +39,6 @@
     "lib/index.js",
     "lib/worker.cjs",
     "lib/native.js",
-    "lib/native-inspection.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],

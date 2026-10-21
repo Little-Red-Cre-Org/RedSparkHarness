@@ -32,7 +32,7 @@ The native Settings window showed raw namespace JSON on General, wider custom ca
 
 The native pages look like the legacy pages while the Host stays the only persistence owner. Controls whose namespace the Host does not register are hidden or disabled. Current gaps:
 
-- The native-web session controller registers `ui-conversation` (`busyEnter`: `queue` or `steer`, default `queue`), so busy-send is enabled and persisted by the Host. The native Host does not yet register `permission`, `locale`, `ui-theme`, `ui-chat` or `ui-pet`, so language, appearance and font size last only for the open window.
+- The native Host does not yet register `permission`, `locale`, `ui-theme`, `ui-chat`, `ui-conversation` or `ui-pet`. Busy-send therefore stays disabled, and language, appearance and font size last only for the open window.
 - The native Host does not yet register `agent-presets`, so the mode-selection switch and default selection stay disabled in native-web.
 - The native-web Host registers `web-search-deepseek` but not `shell`, `agent-loop` or `subagent-model-selection`. Native inventory reports installation ids, names, scopes, lifecycle states and failure steps; it does not expose the legacy Agent-preset switcher or grouping, plugin toggles and configuration, or Fiber details. The tab shows a single note for the missing per-preset grouping and toggles.
 - The native-web profile installs no authorization service, so `authorizationList` is empty and the Subscription models section shows only its heading.

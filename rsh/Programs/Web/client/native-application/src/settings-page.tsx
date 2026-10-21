@@ -382,7 +382,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string>()
   const [error, setError] = useState<string>()
-  const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
   const [authorizationError, setAuthorizationError] = useState<string>()
   const [accountsError, setAccountsError] = useState<string>()
@@ -436,7 +435,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
         const reset = resetDrafts.current
         if (reset) resetDrafts.current = false
         setLimits(description.limits)
-        setDescribeFailed(false)
         setNamespaces(rows)
         onDocumentAvailabilityChange?.(description.hasDocument)
         applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
@@ -468,7 +466,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     } catch (cause: unknown) {
       if (latest()) {
         resetDrafts.current = false
-        setDescribeFailed(true)
         setError(requestError(cause, translate.current, 'native/settings'))
       }
       return false
@@ -621,8 +618,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const transcript = namespaces.find(row => row.namespace === 'ui-chat')
   const conversation = namespaces.find(row => row.namespace === 'ui-conversation')
   const pet = namespaces.find(row => row.namespace === 'ui-pet')
-  // Only a completed, successful describe without ui-conversation proves the Host lacks the preference.
-  const busySendHostGap = conversation === undefined && limits !== undefined && !loading && !describeFailed
   const selectBusyEnter = (value: BusyEnterBehavior): void => {
     if (conversation === undefined) return
     void mutateField(conversation, ['busyEnter'], value)
@@ -707,16 +702,13 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     <div className={css.row}>
       <div className={css.rowText}><div className={css.title}>{t('settingsBusyEnter')}</div>
         <div className={css.description}>{t('settingsBusyEnterDescription')}</div>
-        {conversation === undefined ? <div className={css.description} role="status">
-          {t(busySendHostGap ? 'busySendPreferenceHostGap' : 'busySendPreferenceUnavailable')}</div> : null}</div>
-      {busySendHostGap ? <span className={css.fixedValue}>
-        {t(pendingDefault === 'steer' ? 'settingsBusyEnterSteer' : 'settingsBusyEnterQueue')}
-      </span> : <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
+        {conversation === undefined ? <div className={css.description} role="status">{t('busySendPreferenceUnavailable')}</div> : null}</div>
+      <select aria-label={t('settingsBusyEnter')} value={pendingDefault}
         disabled={saving !== undefined || conversation === undefined}
         onChange={(event) => { selectBusyEnter(event.target.value as BusyEnterBehavior) }}>
         <option value="queue">{t('settingsBusyEnterQueue')}</option>
         <option value="steer">{t('settingsBusyEnterSteer')}</option>
-      </select>}
+      </select>
     </div>
     {pet === undefined ? null : <section className={css.pet} aria-labelledby="native-settings-personalization">
       <h3 id="native-settings-personalization">{t('settingsPersonalization')}</h3>
@@ -731,7 +723,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     {notice === undefined ? null : <p role="status">{notice}</p>}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     <details className={css.advanced}>
-      <summary><span>{t('settingsAdvanced')}</span><span className={css.description}>{t('settingsAdvancedDescription')}</span></summary>
+      <summary>{t('settingsAdvanced')}</summary>
       {refreshButton}
       {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
       {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}

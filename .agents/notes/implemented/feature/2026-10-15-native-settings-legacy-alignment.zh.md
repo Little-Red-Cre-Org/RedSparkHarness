@@ -32,7 +32,7 @@ Native Settings 窗口的「通用」页面显示原始命名空间 JSON，「�
 
 Native 页面在外观上与旧版一致，同时 Host 仍是唯一的持久化所有者。Host 未注册命名空间的控件会被隐藏或禁用。当前缺口：
 
-- native-web session controller 注册 `ui-conversation`（`busyEnter`：`queue` 或 `steer`，默认 `queue`），因此繁忙发送可用并由 Host 持久化。Native Host 尚未注册 `permission`、`locale`、`ui-theme`、`ui-chat` 和 `ui-pet`，因此语言、外观和字体大小只对当前打开的窗口生效。
+- Native Host 尚未注册 `permission`、`locale`、`ui-theme`、`ui-chat`、`ui-conversation` 和 `ui-pet`。因此繁忙发送保持禁用，语言、外观和字体大小只对当前打开的窗口生效。
 - Native Host 尚未注册 `agent-presets`，因此在 native-web 中，模式选择开关和默认预设选择保持禁用。
 - native-web Host 注册了 `web-search-deepseek`，但未注册 `shell`、`agent-loop` 或 `subagent-model-selection`。Native 清单仅提供安装 id、名称、作用域、生命周期状态和失败步骤；它不提供旧版的 Agent 预设选择器或分组、插件开关与配置，也不提供 Fiber 详情。标签页以一条提示说明缺少按预设分组和插件开关。
 - native-web profile 未安装授权服务，因此 `authorizationList` 为空，「订阅模型」区域只显示标题。

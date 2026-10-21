@@ -22,14 +22,6 @@ import { assertSnapshotCorpusPolicy } from './session-snapshot-corpus-policy.ts'
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const corpusRoot = join(repoRoot, 'snapshots')
 const profiles = ['acp', 'compat', 'desktop', 'native-acp', 'native-headless', 'native-headless-query', 'native-sdk', 'native-tui', 'sdk', 'session', 'web'] as const
-const expectedProfilesByDirectory: Partial<Record<typeof profiles[number], readonly string[]>> = {
-  acp: ['acp', 'legacy-acp'],
-  'native-acp': ['native-acp', 'acp'],
-  'native-sdk': ['native-sdk', 'sdk'],
-  sdk: ['sdk', 'legacy-sdk'],
-  session: ['headless', 'legacy-headless'],
-  web: ['web', 'native-web'],
-}
 const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/message-feedback-protocol.snapshot.ts',
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
@@ -52,7 +44,6 @@ const snapshotAdapters = [
   'snapshots/native-headless/ptc-external-cancel.snapshot.ts',
   'snapshots/native-headless/claude-code.snapshot.ts',
   'snapshots/native-headless/read-image-native.snapshot.ts',
-  'snapshots/native-headless/schedule.snapshot.ts',
   'snapshots/native-headless/search-native.snapshot.ts',
   'snapshots/native-headless-query/session-query.snapshot.ts',
   'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
@@ -101,7 +92,8 @@ async function scenarios(): Promise<Scenario[]> {
       expect(existsSync(path), `${profile}/${entry.name}/snapshot.yml`).toBe(true)
       const manifest = parseSnapshotManifest(await readFile(path, 'utf8'), path)
       expect(manifest.scenario, `${profile}/${entry.name}: scenario`).toBe(entry.name)
-      const expectedProfiles = expectedProfilesByDirectory[profile] ?? [profile]
+      const expectedProfiles = profile === 'session' ? ['headless']
+        : profile === 'web' ? ['web', 'native-web'] : [profile]
       expect(expectedProfiles, `${profile}/${entry.name}: profile`).toContain(manifest.profile)
       expect(manifest.composition, `${profile}/${entry.name}: composition`).toBeTypeOf('string')
       expect(manifest.recording, `${profile}/${entry.name}: recording`).toMatch(/^(live|authored)$/)

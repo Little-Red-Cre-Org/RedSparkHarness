@@ -4,9 +4,7 @@ import { createRequire } from 'node:module'
 import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve, sep } from 'node:path'
-import { execaSync } from 'execa'
 import { describe, expect, it } from 'vitest'
-import { packedWorkspaceClosure, type WorkspacePackage } from '../../../../../Modules/Official/sandbox/sandbox-local/tests/packed-workspace-closure.ts'
 
 const root = resolve(import.meta.dirname, '../../../../../..')
 const require = createRequire(import.meta.url)
@@ -17,7 +15,7 @@ function run(command: string, args: string[], cwd: string, timeout: number): str
     env: { ...process.env, NODE_OPTIONS: undefined, NODE_PATH: undefined },
   })
   expect(result.error).toBeUndefined()
-  expect(result.status, result.stderr || result.stdout).toBe(0)
+  expect(result.status, result.stderr).toBe(0)
   return result.stdout
 }
 
@@ -36,52 +34,22 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
   it('installs, imports, and typechecks without Cordis', ({ task }) => {
     const output = mkdtempSync(join(tmpdir(), 'dsh-native-client-consumer-'))
     try {
-      const listed = JSON.parse(pnpm(['list', '--recursive', '--depth', '-1', '--json'], root, task.timeout)) as {
-        name: string
-        path: string
-      }[]
-      const workspacePackages = new Map<string, WorkspacePackage>()
-      for (const { name, path } of listed) {
-        const manifest = JSON.parse(readFileSync(join(path, 'package.json'), 'utf8')) as Record<string, unknown>
-        if (manifest.name !== name) throw new Error(`${path}/package.json does not declare ${name}`)
-        workspacePackages.set(name, { name, directory: path, manifest })
-      }
-      const closure = new Map<string, WorkspacePackage>()
-      for (const name of [
-        '@deepseek-ai/dsh-client-modules', '@deepseek-ai/dsh-client-web', '@deepseek-ai/dsh-client-store',
-      ]) {
-        for (const pkg of packedWorkspaceClosure(name, workspacePackages)) closure.set(pkg.name, pkg)
-      }
-      const archives = [...closure.values()].map(({ directory: dir }) => {
+      const modulesDir = join(root, 'rsh/Programs/Web/client/modules')
+      const webDir = join(root, 'rsh/Programs/Web/client/web')
+      const storeDir = join(root, 'rsh/Programs/Web/client/store')
+      const archives = [modulesDir, webDir, storeDir].map((dir) => {
         const packed = JSON.parse(pnpm(['pack', '--json', '--pack-destination', output], dir, task.timeout)) as {
           filename: string
         }
         return resolve(dir, packed.filename)
       })
       writeFileSync(join(output, 'package.json'), '{"name":"native-client-consumer","private":true,"type":"module"}\n')
-      execaSync('npm', [
-        'install', '--no-audit', '--no-fund', '--include=dev', '--package-lock=false', '--loglevel=error', ...archives,
-      ], {
-        cwd: output,
-        timeout: task.timeout,
-        env: { ...process.env, NODE_OPTIONS: undefined, NODE_PATH: undefined },
-      })
+      pnpm(['add', '--dir', output, '--offline', '--ignore-scripts', ...archives], output, task.timeout)
       expect(existsSync(join(output, 'node_modules/@deepseek-ai/cordis'))).toBe(false)
       const webManifest = JSON.parse(readFileSync(join(output, 'node_modules/@deepseek-ai/dsh-client-web/package.json'), 'utf8')) as {
-        dependencies?: Record<string, string>
-        devDependencies?: Record<string, string>
-        optionalDependencies?: Record<string, string>
-        peerDependencies?: Record<string, string>
-        exports?: Record<string, unknown>
+        peerDependenciesMeta?: Record<string, { optional?: boolean }>
       }
-      expect([
-        ...Object.keys(webManifest.dependencies ?? {}),
-        ...Object.keys(webManifest.devDependencies ?? {}),
-        ...Object.keys(webManifest.optionalDependencies ?? {}),
-        ...Object.keys(webManifest.peerDependencies ?? {}),
-      ]).not.toContain('@deepseek-ai/cordis')
-      expect(webManifest.exports?.['./base.css']).toBe('./lib/base.css')
-      expect(existsSync(join(output, 'node_modules/@deepseek-ai/dsh-client-web/lib/base.css'))).toBe(true)
+      expect(webManifest.peerDependenciesMeta?.['@deepseek-ai/cordis']?.optional).toBe(true)
 
       const source = `
         import { registerHooks } from 'node:module'
@@ -91,15 +59,14 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
           }
           return nextResolve(specifier, context)
         } })
-        const [modules, web, native, store] = await Promise.all([
+        const [modules, web, store] = await Promise.all([
           import('@deepseek-ai/dsh-client-modules/native'),
-          import('@deepseek-ai/dsh-client-web'),
           import('@deepseek-ai/dsh-client-web/native'),
           import('@deepseek-ai/dsh-client-store'),
         ])
         if (
           typeof modules.ClientModuleSystem !== 'function' ||
-          typeof web.bootNativeClient !== 'function' || typeof native.bootNativeClient !== 'function' ||
+          typeof web.bootNativeClient !== 'function' ||
           typeof store.createSnapshotStore !== 'function'
         ) {
           throw Error('native browser exports missing')
@@ -111,17 +78,11 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
       run(process.execPath, ['--input-type=module', '-e', source], output, task.timeout)
       writeFileSync(join(output, 'consumer.mts'), `
         import { ClientModuleSystem } from '@deepseek-ai/dsh-client-modules/native'
-        import { bootNativeClient as bootFromRoot } from '@deepseek-ai/dsh-client-web'
         import { bootNativeClient, type NativeClientBootOptions } from '@deepseek-ai/dsh-client-web/native'
-        import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native-wire'
         import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
         declare const options: NativeClientBootOptions
-        declare const wire: NativeClientBootWire
         void ClientModuleSystem
-        void bootFromRoot(options)
         void bootNativeClient(options)
-        void wire.formatVersion
-        void wire.selections
         void createSnapshotStore({ count: 0 }).getSnapshot().count
       `)
       writeFileSync(join(output, 'tsconfig.json'), JSON.stringify({
@@ -140,5 +101,5 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
       }
       rmSync(target, { recursive: true, force: true })
     }
-  }, 300_000)
+  }, 90_000)
 })

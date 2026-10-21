@@ -46,10 +46,17 @@ const MIME: Readonly<Record<string, string>> = {
   '.webmanifest': 'application/manifest+json',
 }
 
-interface AssetRoutes {
+/** Routes shared by the legacy Host and a future native Host selection. */
+export interface DesktopAssetRoutes {
+  /** Read the installed legacy index for its owning Host to transform. */
+  readLegacyIndex(): Promise<string>
+  /** Serve a native route or existing static asset; leave unmatched routes to the caller. */
   fetchKnown(request: Request): Promise<Response | undefined>
+  /** Render the selected native page for the native Host's fallback route. */
   renderNativeIndex(method: string): Promise<Response>
 }
+
+type AssetRoutes = Pick<DesktopAssetRoutes, 'fetchKnown' | 'renderNativeIndex'>
 
 function nativePage(html: string, bundle: NativeClientBundle, transportScript: string): string {
   const head = /<head(?:\s[^>]*)?>/iu.exec(html)
@@ -76,7 +83,7 @@ function createAssetRoutes(
   const require = createRequire(join(runtimeDir, 'package.json'))
   const distNativeIndex = nativeClient === undefined
     ? undefined
-    : require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')
+    : require.resolve('@deepseek-ai/dsh-web-frontend/dist/native.html')
   const distRoot = realpathSync(dirname(distNativeIndex
     ?? require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')))
   const renderNativeIndex = async (method: string): Promise<Response> => {
@@ -118,6 +125,26 @@ function createAssetRoutes(
         return undefined
       }
     },
+  }
+}
+
+/**
+ * Resolve the compatibility Host's legacy index and the selected native/static routes.
+ * @param runtimeDir - installed Desktop runtime root.
+ * @param nativeClient - selected Client bundle, when one is configured.
+ * @param transportScript - Host-owned browser transport installed before native-main executes.
+ * @returns legacy index access and the reusable native and static routes.
+ */
+export function createDesktopAssetRoutes(
+  runtimeDir: string,
+  nativeClient: NativeClientBundle | undefined,
+  transportScript: string,
+): DesktopAssetRoutes {
+  const require = createRequire(join(runtimeDir, 'package.json'))
+  const distIndex = require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')
+  return {
+    readLegacyIndex: () => readFile(distIndex, 'utf8'),
+    ...createAssetRoutes(runtimeDir, nativeClient, transportScript),
   }
 }
 

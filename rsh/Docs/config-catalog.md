@@ -1447,7 +1447,7 @@ export interface ReplayModelConfig {
 
 Depends on: [`ModelModality`](../Engine/llm/llm/src/index.ts) · [`RetryPolicyConfig`](../Engine/llm/llm/src/index.ts) · [`SystemPromptUpdate`](../Engine/llm/llm/src/index.ts)
 
-Source: [`rsh/Tests/test-support/llm-replay/src/index.ts:1133`](../Tests/test-support/llm-replay/src/index.ts)
+Source: [`rsh/Tests/test-support/llm-replay/src/index.ts:1123`](../Tests/test-support/llm-replay/src/index.ts)
 
 <a id="deepseek-aidsh-llm-retry"></a>
 
@@ -1944,7 +1944,7 @@ export interface Config {
 export type JsonlCompression = 'zstd' | 'none'
 ```
 
-Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:95`](../Engine/session/session-persistence-jsonl/src/backend.ts)
+Source: [`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:88`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 
@@ -3615,10 +3615,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-compat-settings-adapters` ([`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts))
 - `@deepseek-ai/dsh-compat-settings-definition` ([`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts))
 - `@deepseek-ai/dsh-compat-tool-fs` ([`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts))
-- `@deepseek-ai/dsh-cordis-bridge` ([`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts))
 - `@deepseek-ai/dsh-deepseek-account` ([`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts))
 - `@deepseek-ai/dsh-deque` ([`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts))
-- `@deepseek-ai/dsh-desktop-host-compatibility` ([`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts))
 - `@deepseek-ai/dsh-errors` ([`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts))
 - `@deepseek-ai/dsh-experimental-agent-team-profile` ([`rsh/Modules/Community/experimental/agent-team-profile/src/index.ts`](../Modules/Community/experimental/agent-team-profile/src/index.ts))
 - `@deepseek-ai/dsh-experimental-agent-team-web-profile` ([`rsh/Modules/Community/experimental/agent-team-web-profile/src/index.ts`](../Modules/Community/experimental/agent-team-web-profile/src/index.ts))
@@ -3629,6 +3627,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-http-proxy` ([`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts))
 - `@deepseek-ai/dsh-http-routes` ([`rsh/Core/util/http-routes/src/index.ts`](../Core/util/http-routes/src/index.ts))
 - `@deepseek-ai/dsh-http-routes-cordis` ([`rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts`](../Compatibility/DSH/bridge/http-routes-cordis/src/index.ts))
+- `@deepseek-ai/dsh-ide-code-oss` ([`rsh/Modules/Official/ide/ide-code-oss/src/index.ts`](../Modules/Official/ide/ide-code-oss/src/index.ts))
 - `@deepseek-ai/dsh-json-rpc-line` ([`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts))
 - `@deepseek-ai/dsh-launch-environment` ([`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts))
 - `@deepseek-ai/dsh-llm-mock-server` ([`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts))
@@ -3640,10 +3639,10 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-command` ([`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts))
 - `@deepseek-ai/dsh-native-file-reference-local` ([`rsh/Modules/Official/fs/native-file-reference-local/src/index.ts`](../Modules/Official/fs/native-file-reference-local/src/index.ts))
 - `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
+- `@deepseek-ai/dsh-native-ide` ([`rsh/Programs/Web/host/native-ide/src/index.ts`](../Programs/Web/host/native-ide/src/index.ts))
 - `@deepseek-ai/dsh-native-jobs` ([`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts))
 - `@deepseek-ai/dsh-native-model-execution` ([`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts))
 - `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
-- `@deepseek-ai/dsh-native-persona` ([`rsh/Engine/preset/native-persona/src/index.ts`](../Engine/preset/native-persona/src/index.ts))
 - `@deepseek-ai/dsh-native-prompt` ([`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts))
 - `@deepseek-ai/dsh-native-runtime` ([`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts))
 - `@deepseek-ai/dsh-native-sandbox-policy` ([`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts))
@@ -3697,6 +3696,5 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-util-time` ([`rsh/Core/util/time/src/index.ts`](../Core/util/time/src/index.ts))
 - `@deepseek-ai/dsh-util-values` ([`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts))
 - `@deepseek-ai/dsh-util-workspace-path` ([`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts))
-- `@deepseek-ai/dsh-web-compatibility` ([`rsh/Compatibility/DSH/web/frontend/src/index.ts`](../Compatibility/DSH/web/frontend/src/index.ts))
 - `@deepseek-ai/dsh-win32-process` ([`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts))
 - `@deepseek-ai/dsh-workspace-definition` ([`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts))

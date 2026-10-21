@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+Before sending ordinary composer text, `conversation/prepare-prompt` serial listeners can amend the text that will be recorded and submitted. Listener rejection or cancellation retains the composer draft and prevents Host admission. With no listener, submission text is unchanged.
+
 ## Summary
 
 `ui-conversation` owns target-neutral Conversation assembly and the shared browser shell. It consumes Session Controller `SessionEventLikeEntry` feeds, exposes React-free registries and per-Session bindings through `ctx.uiConversation`, and contributes the `useConversation`, `useInput`, and `inputActions` standard props through `ctx.uiSession`. It also owns the per-session durable image URL cache: `ctx.uiConversation.imageUrl(sessionId, attachment)` resolves one session-authorized browser URL per attachment and revokes it with the Session binding, so every Conversation target shares one `session.attachment` read. Concrete targets such as Chat are separate packages that register their own Definitions, snapshot builders, Views, and renderers.
@@ -41,6 +43,10 @@ Native Client packages that implement Conversation targets import shared event, 
 
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
+
+The composer writes a programmatically seeded draft to its existing persisted store when mounted. Its draft-persistence event lets the embedded IDE wait for that write before a project change restarts the extension host. Browser-owned unsent attachments and in-progress input operations postpone the editor project switch.
+
+The embedded IDE welcome screen uses compact typography without a background glow. The existing composer and Session binding remain mounted during editor navigation.
 
 The composer registers the File command action and owns its label, availability, and native file-dialog callback. Menu availability and invocation both consult the mounted composer's current attachment-intake policy. Unmounting or locking the composer disables that action; disposing the plugin removes its registration. The callback binding stays inside the input module.
 
@@ -131,7 +137,7 @@ None; Conversation assembly and browser input state do not alter provider-side p
 <a id="dev-note"></a>
 ### Dev Note
 
-The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers.
+The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers. Its `OpenFileOptions.diffs` carries recorded before/after fragments, with null prior text meaning unavailable; consumers must not interpret these fragments as applicable edits.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>

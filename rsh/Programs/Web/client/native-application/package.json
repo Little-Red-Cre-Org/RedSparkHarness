@@ -37,8 +37,6 @@
       ],
       "requires": [
         "clientNativeSession",
-        "clientNativeWorkspace",
-        "clientNativeDirectoryPicker",
         "clientSlots",
         "clientLocale",
         "clientNativeTheme"
@@ -54,7 +52,6 @@
     "lib/index.js",
     "lib/native.js",
     "lib/controller.js",
-    "lib/controller-*.js",
     "lib/native-*.js",
     "lib/*.css",
     "lib/types/**/*.d.ts"
@@ -98,7 +95,6 @@
     "@deepseek-ai/dsh-client-ui-sidebar-right": "workspace:^",
     "@deepseek-ai/dsh-client-ui-theme": "workspace:^",
     "@testing-library/react": "^16.1.0",
-    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",

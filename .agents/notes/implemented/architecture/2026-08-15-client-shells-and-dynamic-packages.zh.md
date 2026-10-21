@@ -6,8 +6,6 @@ Status: implemented
 
 > [Client 插件装载模型](2026-07-23-client-plugin-loading-model.zh.md)负责模块到达、Cordis 生命周期和 HMR。本 Note 负责包归属、构建 face、共享模块请求及 npm 依赖声明；这些决定取代装载 Note 中较早的包分类和 import 边规则。
 
-> [Native Web 包决策](2026-10-17-native-web-default-and-compatibility-browser-owner.zh.md)负责 Native 应用默认入口和独立兼容浏览器包。
-
 ## Problem
 
 Client npm 依赖区段描述安装和开发关系，但不能可靠描述 bundle 内容。把 `dependencies`、`peerDependencies` 或 `devDependencies` 当作隐式 bundler 指令，可能内联本应共享的 React 或 workspace 身份，也可能让构建后的库携带未解析子 import，却没有交给预期的宿主组装。
@@ -22,25 +20,24 @@ Client npm 依赖区段描述安装和开发关系，但不能可靠描述 bundl
 
 | 层 | 成员 | 职责 | 构建与加载形态 |
 | --- | --- | --- | --- |
-| Native Web 应用 | `rsh/Programs/Web/application` | 拥有 Native `index.html`、Vite 配置、dist chunk 和静态资源 | 从已构建 package export 组装 Native 浏览器产物 |
-| Cordis 兼容壳 | `rsh/Compatibility/DSH/web/frontend` | 拥有 `AppWebEntry`、旧版页面、`PLATFORM_MODULES` 和 worker preview 页面 | 从共享应用源码把旧版页面与 preview 构建到独立 `dist/` |
-| Native 浏览器 API | `rsh/Programs/Web/client/web` | 拥有无框架启动页、Native 模块系统接线和 renderer handoff | 不依赖 Cordis 的 `staticLinked` `lib/index.js`；无 `dsh.client` row |
-| 兼容壳静态装配库 | Cordis、`ui-primitives`、`ui-slots` | 向兼容壳提供共享模块身份与直接实体 API | ESM `lib/index.js`，由 Vite 合并拆分；不是 Loader entry |
-| 兼容壳模块自举包 | `rsh/Programs/Web/client/modules` | 提供兼容壳模块表及其 Cordis wrapper | 带一个普通 `lib/client.js` 的动态包；host 提前送达其 factory |
-| 动态 client 包 | connection、`ui-renderer`、主题和功能插件 | 在兼容应用中通过 Cordis service、slot 和 effect 参与 | 声明 `dsh.client`，产出自注册 `lib/client.js`，并保留 host graph entry |
+| Web 编译壳 | `rsh/Programs/Web/application` | 拥有 `index.html`、Vite 配置、dist chunk 和静态资源 | 从已构建 package export 组装最终浏览器产物 |
+| 启动内核 | `rsh/Programs/Web/client/web` | 拥有纯 DOM 启动页、模块系统接线、Cordis settle 和 renderer handoff | `staticLinked` `lib/index.js`；无 `dsh.client` row |
+| 静态装配库 | Cordis、`ui-primitives`、`ui-slots` | 提供共享模块身份和直接实体 API | ESM `lib/index.js`，由 Vite 合并拆分；不是 Loader entry |
+| 模块自举包 | `rsh/Programs/Web/client/modules` | 提供 client 模块表及其 Cordis wrapper | 带一个普通 `lib/client.js` 的动态包；host 提前送达其 factory |
+| 动态 client 包 | connection、`ui-renderer`、主题和功能插件 | 通过 Cordis service、slot 和 effect 参与应用 | 声明 `dsh.client`，产出自注册 `lib/client.js`，并保留 host graph entry |
 
-`rsh/Programs/Web/client/web` 发布不依赖 Cordis 的 Native 浏览器 API。`rsh/Compatibility/DSH/web/frontend` 拥有 Cordis peer 与旧启动内核。两个 Web 应用都消费已构建 package export，不通过 alias 读取 workspace 源码。
+`rsh/Programs/Web/client/web` 把 Cordis 保持为 matching peer 与开发依赖，并把 modules 和静态 UI 包作为开发期编译输入。`rsh/Programs/Web/application` 消费已构建 package export，不通过 alias 读取 workspace 源码。
 
 `staticLinked` 预设让 `lib/index.js` 中每个 bare specifier 保持 external import，并在旁边输出相对 CSS 资产。Vite 宿主负责解析和去重这些 import，并决定最终 chunk 边界。静态库不会把宿主打包策略复制进自身产物。
 
 ### 共享模块请求
 
-动态浏览器 bundle 会隐式 external 兼容基座：`PLATFORM_MODULES` 命名由兼容壳播种的 React、Cordis 和静态 UI 身份，`PRELOADED_CLIENT_EXTERNALS` 则为必须先于兼容壳启动到达的动态身份预留，当前为空。包只在精确请求基座外实体时使用 `dsh.client.external`。纯类型 import 会被擦除，不产生请求；允许的第三方实现库保留为 bundle 私有内容。
+动态浏览器 bundle 会隐式 external 统一基座：`PLATFORM_MODULES` 命名由外壳播种的 React、Cordis 和静态 UI 身份，`PRELOADED_CLIENT_EXTERNALS` 则为必须先于 shell 启动到达的动态身份预留，当前为空。包只在精确请求基座外实体时使用 `dsh.client.external`。纯类型 import 会被擦除，不产生请求；允许的第三方实现库保留为 bundle 私有内容。
 
 请求只有两种提供方：
 
 1. 请求所命名的 dynamic package row；末尾 `/client` 会别名到该 package row。
-2. 兼容壳静态模块表中的精确 key。
+2. 外壳静态模块表中的精确 key。
 
 不存在通用 `dsh.client.provide` 别名机制。动态 row 和静态 key 已穷尽实际提供方，Cordis service provide 与此相互独立。图组合会拒绝畸形或缺失请求、自请求和同步请求环，并把动态提供方排在消费者之前。`ClientModuleSystem.import()` 与 `prefetch()` 会在消费者能够物化前递归登记这些动态提供方的 factory，因此网络时序无法破坏同步请求图。
 
@@ -60,7 +57,7 @@ Bootstrap combo 当前只登记 modules factory。启动内核把原始图与外
 
 ### 依赖声明
 
-每个由 Cordis 治理的动态 Client 包都把 Cordis 保持为范围一致的 `peerDependencies` 和 `devDependencies`；Cordis 是唯一的 peer。Browser import、类型引用、模块扩充与 `dsh.client.inject` 都是开发输入，因为 Client 构建与发布 profile 会提供其运行期身份。纯 Native Client 包遵循 Native 包策略，不声明 Cordis。同时发布 Host 入口的包把该入口的运行期 value import 放在 `dependencies`。[发布依赖门面](../process/2026-08-26-published-dependency-faces.zh.md)负责包发现、例外与显式 Host 名册。
+每个 Client 包都把 Cordis 保持为范围一致的 `peerDependencies` 和 `devDependencies`；Cordis 是唯一的 peer。Browser import、类型引用、模块扩充与 `dsh.client.inject` 都是开发输入，因为 Client 构建与发布 profile 会提供其运行期身份。同时发布 Host 入口的包把该入口的运行期 value import 放在 `dependencies`。[发布依赖门面](../process/2026-08-26-published-dependency-faces.zh.md)负责包发现、例外与显式 Host 名册。
 
 普通安装库仍放在 `dependencies`：动态构建可以内联私有实现，而 `staticLinked` 库会保留 bare import 交给最终宿主。各构建 face 独立决定 external，不由 npm 区段推导。发布文件列表覆盖产物实际可达的每个运行期入口、相对资产和声明文件。
 

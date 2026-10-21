@@ -1,10 +1,8 @@
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
-import { appendFileSync, mkdirSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { inspect } from 'node:util'
 import {
   app,
   BrowserWindow,
@@ -16,7 +14,6 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
-import { setCliPackageRoot } from '@deepseek-ai/dsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'
@@ -34,18 +31,19 @@ import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 import { desktopErrorState } from './startup-error.ts'
-import type { DesktopErrorState } from './startup-error.ts'
 import { startupFailureDocument } from './startup-document.ts'
 import { DesktopPetWindow } from './pet-window.ts'
 import { parsePetPresentation } from './pet-presentation.ts'
 import { showTaskNotification } from './task-notification.ts'
+import { DesktopIdeWindow } from './ide-window.ts'
+import { parseIdeHandoff, type IdeHandoff } from './ide-handoff.ts'
+import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
 
 const SCHEME = 'dsh-app'
-const DESKTOP_LOG_FILE = 'desktop.log'
 let focusPrimaryWindow = (): void => {}
 type RecoveryAction = 'restart' | 'plugins' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
-const emergencyPages = new WeakMap<BrowserWindow, { url: string; busy: boolean }>()
+const emergencyPages = new WeakMap<BrowserWindow, { url: string; message: string; busy: boolean }>()
 let recoverApplication = (action: RecoveryAction): Promise<void> => {
   if (action !== 'restart') return Promise.reject(new Error('Desktop recovery could not initialize; reinstall the application'))
   app.relaunch()
@@ -53,25 +51,11 @@ let recoverApplication = (action: RecoveryAction): Promise<void> => {
   return Promise.resolve()
 }
 
-async function showEmergencyDocument(window: BrowserWindow, failure: DesktopErrorState): Promise<void> {
-  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), failure, profileRecoveryAvailable())
+async function showEmergencyDocument(window: BrowserWindow, message: string): Promise<void> {
+  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), message, profileRecoveryAvailable())
   const url = `data:text/html;charset=utf-8,${encodeURIComponent(document)}`
-  emergencyPages.set(window, { url, busy: false })
+  emergencyPages.set(window, { url, message, busy: false })
   await window.loadURL(url)
-}
-
-function logDesktopError(label: string, error: unknown): boolean {
-  console.error(label, error)
-  try {
-    const logs = app.getPath('logs')
-    mkdirSync(logs, { recursive: true })
-    appendFileSync(join(logs, DESKTOP_LOG_FILE),
-      `${new Date().toISOString()} ${label}\n${inspect(error, { depth: null })}\n\n`)
-    return true
-  } catch (writeError) {
-    console.error('Desktop log write failed', writeError)
-    return false
-  }
 }
 
 protocol.registerSchemesAsPrivileged([{
@@ -84,6 +68,9 @@ protocol.registerSchemesAsPrivileged([{
     stream: true,
     codeCache: true,
   },
+}, {
+  scheme: 'rsh-webview',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, allowServiceWorkers: true },
 }])
 
 const MIME: Readonly<Record<string, string>> = {
@@ -121,7 +108,7 @@ function developmentHostInspectPort(enabled: boolean): number | undefined {
 
 function createWindow(preload: string, show = false): BrowserWindow {
   const window = new BrowserWindow({
-    icon: join(app.getAppPath(), 'renderer', 'redspark.png'),
+    icon: join(app.getAppPath(), 'renderer', process.platform === 'win32' ? 'redspark.ico' : 'redspark.png'),
     width: 1280,
     height: 840,
     minWidth: 880,
@@ -140,6 +127,14 @@ function createWindow(preload: string, show = false): BrowserWindow {
       webSecurity: true,
     },
   })
+  if (process.platform === 'win32') {
+    window.setAppDetails({
+      appId: 'RedSpark.Harness',
+      appIconPath: join(app.getAppPath(), 'renderer', 'redspark.ico'),
+      appIconIndex: 0,
+      relaunchDisplayName: 'RedSpark Harness',
+    })
+  }
   window.webContents.setWindowOpenHandler(({ url }) => {
     const source = URL.parse(window.webContents.getURL())
     const target = URL.parse(url)
@@ -163,11 +158,7 @@ function createWindow(preload: string, show = false): BrowserWindow {
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
-      const logged = logDesktopError('Desktop recovery failed', error)
-      const failure = desktopErrorState(error)
-      if (!window.isDestroyed()) await showEmergencyDocument(window, {
-        ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
-      })
+      if (!window.isDestroyed()) await showEmergencyDocument(window, `${page.message}\n${desktopErrorState(error).message}`)
     }).catch((error: unknown) => { console.error(error) }).finally(() => { page.busy = false })
   })
   return window
@@ -209,10 +200,6 @@ async function serveShellAsset(request: Request): Promise<Response> {
 
 async function main(): Promise<void> {
   const resources = runtimeResources()
-  // Template resolution defaults to this module's own package, which the bundle replaces with the
-  // Desktop application; name the installed CLI so the composition builders read its manifest.
-  // `resources.dsh` is the runtime root, so the CLI package sits one node_modules level below it.
-  setCliPackageRoot(join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh'))
   const paths = resolveDesktopPaths()
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile
@@ -230,22 +217,36 @@ async function main(): Promise<void> {
   let updateState: DesktopUpdateState = { phase: 'idle' }
   const locale = resolveDesktopLocale(app.getLocale())
   const messages = locale.messages
-  const logPath = join(app.getPath('logs'), DESKTOP_LOG_FILE)
-  const updateErrorDetails = (state: Extract<DesktopUpdateState, { phase: 'error' }>) => {
-    const errorTypes = {
-      AggregateError: messages.startupTypeAggregateError,
-      Error: messages.startupTypeError,
-      RangeError: messages.startupTypeRangeError,
-      SyntaxError: messages.startupTypeSyntaxError,
-      TypeError: messages.startupTypeTypeError,
-      UnknownError: messages.startupTypeUnknownError,
-      ValidationError: messages.startupTypeValidationError,
-    } satisfies Record<typeof state.errorType, string>
-    return {
-      message: formatDesktopMessage(messages.startupErrorType, { type: errorTypes[state.errorType] }),
-      detail: state.logPath === undefined ? messages.startupErrorLogAdvice
-        : formatDesktopMessage(messages.startupErrorLogWritten, { path: state.logPath }),
+  let ide: DesktopIdeWindow | undefined
+  let restoration: ReturnType<typeof Promise.withResolvers<void>> | undefined
+  const restoreConversation = async (value: IdeHandoff): Promise<void> => {
+    const contents = mainWindow?.webContents
+    if (contents === undefined || contents.isDestroyed()) throw new Error(messages.ideServerStopped)
+    const pending = Promise.withResolvers<void>()
+    restoration = pending
+    const destroyed = (): void => { pending.reject(new Error(messages.ideServerStopped)) }
+    contents.once('destroyed', destroyed)
+    contents.send(DESKTOP_IPC.ideRestore, value)
+    try { await pending.promise } finally {
+      contents.removeListener('destroyed', destroyed)
+      restoration = undefined
     }
+  }
+  const openIde = async (target?: IdeHandoff): Promise<void> => {
+    if (profileDirectoryRuntime(activeProject) === 'native') throw new Error(messages.ideProfileUnsupported)
+    if (target === undefined && mainWindow?.webContents.getURL() === `${SCHEME}://app/index.html`) {
+      const selected: unknown = await mainWindow.webContents.executeJavaScript('window.dshDesktop.ide.current()')
+      if (selected !== undefined) target = parseIdeHandoff(selected)
+    }
+    ide ??= new DesktopIdeWindow(resources.node,
+      development === undefined ? join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh') : join(app.getAppPath(), '..', 'CLI'),
+      resolve(paths.root, '..'), messages, (request) => {
+        const active = backend.host
+        if (active === undefined) return Promise.resolve(new Response('backend unavailable', { status: 503 }))
+        return active.fetch(request)
+      }, restoreConversation)
+    focusPrimaryWindow()
+    if (mainWindow !== undefined) await ide.open(mainWindow, target)
   }
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const managementPreload = fileURLToPath(new URL('./preload.cjs', import.meta.url))
@@ -261,10 +262,9 @@ async function main(): Promise<void> {
     emergencyDocument = true
     petUpdatesAllowed = false
     desktopPet.close()
-    const logged = logDesktopError('Desktop emergency startup failed', error)
-    const failure = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
-    pageError = failure
-    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, failure)
+    const diagnostic = desktopErrorState(error).message
+    pageError = { phase: 'error', message: diagnostic }
+    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, diagnostic)
   }
 
   const navigateMain = (url: string): Promise<void> => {
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
     const hostInspectPort = developmentHostInspectPort(development !== undefined)
     const host = new DesktopHostProcess(resources.node, development ?? resources.dsh, activeProject,
       hostInspectPort, desktopHostEnvironment(app.isPackaged && process.platform === 'win32'
-        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure, logDesktopError)
+        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure)
     return {
       start: () => host.start(),
       stop: () => host.stop(),
@@ -309,7 +309,7 @@ async function main(): Promise<void> {
     if (state.phase === 'starting' && !emergencyDocument) pageError = undefined
     publishBackend(backendState())
     if (state.phase === 'error') void navigateMain(startupUrl).catch((error: unknown) => { console.error(error) })
-  }, (label, error) => logDesktopError(label, error) ? logPath : undefined)
+  })
 
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateState = state
@@ -347,8 +347,7 @@ async function main(): Promise<void> {
 
   const showStartupError = async (error: unknown): Promise<void> => {
     if (quitting) return
-    const logged = logDesktopError('Desktop startup failed', error)
-    pageError = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
+    pageError = desktopErrorState(error)
     try { await navigateMain(startupUrl) }
     catch (navigationError) {
       await showEmergencyError(new AggregateError([error, navigationError], messages.startupFailed))
@@ -407,9 +406,6 @@ async function main(): Promise<void> {
       try { await reconcileBackend() }
       catch { /* reconcileBackend already showed a Host startup failure. */ }
     },
-    undefined,
-    undefined,
-    (label, error) => logDesktopError(label, error) ? logPath : undefined,
   )
 
   protocol.handle(SCHEME, (request) => {
@@ -441,9 +437,8 @@ async function main(): Promise<void> {
       await manager.mutate(mutation, hooks)
       await navigateMain(applicationUrl)
     } catch (error) {
-      try { await showStartupError(error) }
-      catch (failure) { console.error(failure) }
-      throw new Error(messages.startupFailed)
+      await showStartupError(error)
+      throw error
     }
   }
   const nativeList = async (event: IpcMainInvokeEvent, payload: unknown) => {
@@ -504,6 +499,24 @@ async function main(): Promise<void> {
   ipcMain.handle(DESKTOP_IPC.localeGet, (event) => {
     assertDesktopSender(event, ['shell'])
     return locale
+  })
+  ipcMain.handle(DESKTOP_IPC.ideOpen, (event, value: unknown) => {
+    assertDesktopSender(event, ['app'])
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('Desktop IDE requests require the primary application frame')
+    }
+    return openIde(parseIdeHandoff(value))
+  })
+  ipcMain.handle(DESKTOP_IPC.ideRestored, (event, value: unknown) => {
+    assertDesktopSender(event, ['app'])
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('Desktop IDE restoration requires the primary application frame')
+    }
+    if (typeof value !== 'object' || value === null || !('ok' in value) || typeof value.ok !== 'boolean') {
+      throw new Error('Invalid desktop IDE restoration result')
+    }
+    if (value.ok) restoration?.resolve()
+    else restoration?.reject(new Error('message' in value && typeof value.message === 'string' ? value.message : messages.ideFailed))
   })
   ipcMain.handle(DESKTOP_IPC.petUpdate, (event, value: unknown) => {
     assertDesktopSender(event, ['app'])
@@ -588,7 +601,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.backendRetry, async (event) => {
     assertDesktopSender(event, ['shell'])
-    try { await reconcileBackend() } catch { return }
+    await reconcileBackend()
     focusPrimaryWindow()
   })
   ipcMain.handle(DESKTOP_IPC.applicationRestart, async (event) => {
@@ -629,7 +642,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'error',
           title: messages.updateCheckFailedTitle,
-          ...updateErrorDetails(state),
+          message: state.message ?? messages.unknownError,
         })
       }
       return
@@ -639,7 +652,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'info',
           title: messages.updateCheckTitle,
-          message: messages.updateCurrent,
+          message: state.message ?? messages.updateCurrent,
         })
       }
       return
@@ -648,7 +661,7 @@ async function main(): Promise<void> {
       type: 'info',
       title: messages.updateTitle,
       message: messages.updateAvailable,
-      detail: formatDesktopMessage(messages.updateDetail, { version: state.version }),
+      detail: formatDesktopMessage(messages.updateDetail, { version: state.version ?? '' }),
       buttons: [messages.installAndRestart, messages.later],
       defaultId: 0,
       cancelId: 1,
@@ -659,7 +672,7 @@ async function main(): Promise<void> {
       await dialog.showMessageBox({
         type: 'error',
         title: messages.updateFailedTitle,
-        ...updateErrorDetails(installed),
+        message: installed.message ?? messages.unknownError,
       })
     }
   }
@@ -685,6 +698,11 @@ async function main(): Promise<void> {
   Menu.setApplicationMenu(Menu.buildFromTemplate([{
     label: process.platform === 'darwin' ? app.name : messages.application,
     submenu: [
+      { label: messages.ideMenu, accelerator: 'CmdOrCtrl+Alt+I', click: () => {
+        void openIde().catch((error: unknown) => {
+          dialog.showErrorBox(messages.ideFailed, error instanceof Error ? error.message : messages.unknownError)
+        })
+      } },
       {
         label: development === undefined ? messages.pluginsMenu : messages.pluginsMenuPackagedOnly,
         accelerator: 'CmdOrCtrl+,',
@@ -751,14 +769,16 @@ async function main(): Promise<void> {
     }
     if (quitting) return
     quitting = true
-    desktopPet.close()
     void (async () => {
-      try { await backend.close() }
-      finally { await nativeMutationPromise?.catch(() => undefined) }
-    })().catch((error: unknown) => { console.error(error) }).finally(() => {
+      if (ide !== undefined && !await ide.requestClose()) { quitting = false; return }
+      desktopPet.close()
+      await (async () => {
+        try { await backend.close() }
+        finally { await nativeMutationPromise?.catch(() => undefined) }
+      })().catch((error: unknown) => { console.error(error) })
       quitReady = true
       app.quit()
-    })
+    })().catch((error: unknown) => { quitting = false; console.error(error) })
   })
 
   mainWindow = createMainWindow()
@@ -777,17 +797,15 @@ async function main(): Promise<void> {
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
-  const logged = logDesktopError('Desktop initialization failed', error)
+  const message = error instanceof Error ? error.message : String(error)
+  console.error(error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
-    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
+    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? message : message}\n`).catch(() => undefined)
   }
   const window = BrowserWindow.getAllWindows()[0] ?? createWindow(fileURLToPath(new URL('./preload-app.cjs', import.meta.url)), true)
   window.once('closed', () => { app.quit() })
-  const failure = desktopErrorState(error)
-  await showEmergencyDocument(window, {
-    ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
-  })
+  await showEmergencyDocument(window, message)
 }).catch((error: unknown) => {
   console.error(error)
   app.exit(1)

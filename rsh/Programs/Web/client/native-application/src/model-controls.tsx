@@ -1,59 +1,12 @@
 /** Native model picker and Session mode controls for the composer. */
-import { useEffect, useRef, useState } from 'react'
-import {
-  IconChevronDownOutline14, IconCloseFill14, IconShieldOutline16, Menu, ModelPicker, Pill,
-  type ModelPickerState,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+import { useState } from 'react'
+import { ChatComposerSelect, IconCloseFill14, ModelPicker, type ModelPickerState } from '@deepseek-ai/dsh-client-ui-primitives'
 import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 import css from './model-controls.module.css'
 
-/** Show the selected Session's mode as a menu chip when the Host allows changes.
- * @param props - selected Session controls, preset action, and localized copy.
- * @returns mode chip and active Plan pill.
- */
-export function ConversationModeLabel({ snapshot, selectPreset, t }: {
-  snapshot: ConversationSnapshot
-  selectPreset: NativeConversationController['selectPreset']
-  t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
-}) {
-  const [open, setOpen] = useState(false)
-  const trigger = useRef<HTMLButtonElement | null>(null)
-  const refocus = useRef(false)
-  const controls = snapshot.modeControls
-  const current = controls?.current
-  const name = current === null || current === undefined ? t('chatMode')
-    : controls?.options.find(option => option.id === current)?.name ?? current
-  const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
-  const canSelect = ready && controls !== undefined && controls.canSelect && !controls.locked
-  useEffect(() => { if (!canSelect) setOpen(false) }, [canSelect])
-  // The selection reload replaces the trigger with a static chip; refocus the trigger once it returns,
-  // unless the user has moved focus elsewhere meanwhile.
-  useEffect(() => {
-    if (!canSelect || !refocus.current) return
-    refocus.current = false
-    if (document.activeElement === document.body) trigger.current?.focus()
-  }, [canSelect])
-  const items = controls?.options.map(option => ({ id: option.id, label: option.name })) ?? []
-  return <>
-    <Menu className={css.modeMenu} open={open && canSelect} autoFocus compact portal items={items} selectedId={current ?? undefined}
-      onSelect={(id) => { setOpen(false); refocus.current = true; void selectPreset(id) }} onClose={() => { setOpen(false) }}
-      anchor={canSelect
-        ? <button ref={trigger} type="button" className={css.modeTrigger} aria-label={t('modeLabel', { name })}
-          aria-expanded={open}
-          onClick={() => { setOpen(value => !value) }}>
-          <span className={css.modeName}>{name}</span><IconChevronDownOutline14 />
-        </button>
-        : <span className={css.modeChip}>{name}</span>} />
-    {controls?.planMode.active === true ? <Pill active>{t('planLabel')}</Pill> : null}
-  </>
-}
-
-/** Render the catalog-backed model and reasoning picker.
- * @param props - selected Session state, model mutation actions, and localized copy.
- * @returns the model and reasoning picker.
- */
+/** Render the catalog-backed model and reasoning picker. */
 export function ModelPickerControl({ snapshot, selectModel, refreshModelControls, t }: {
   snapshot: ConversationSnapshot
   selectModel: NativeConversationController['selectModel']
@@ -85,39 +38,36 @@ export function ModelPickerControl({ snapshot, selectModel, refreshModelControls
   />
 }
 
-/** Render the selected Session's Plan and permission controls in the composer.
- * @param props - selected Session controls, mutation actions, and localized copy.
- * @returns the available composer controls.
- */
-export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset, t }: {
+/** Render the selected Session's mode and permission controls. */
+export function ModelControls({ snapshot, selectPreset, selectPlanMode, selectPermissionPreset, t }: {
   snapshot: ConversationSnapshot
+  selectPreset: NativeConversationController['selectPreset']
   selectPlanMode: NativeConversationController['selectPlanMode']
   selectPermissionPreset: NativeConversationController['selectPermissionPreset']
-  t: (key: ConversationLocaleKey, params?: Record<string, unknown>) => string
+  t: (key: ConversationLocaleKey) => string
 }) {
-  const [open, setOpen] = useState(false)
   const [selectingPlan, setSelectingPlan] = useState(false)
-  const permissionTrigger = useRef<HTMLButtonElement | null>(null)
-  const refocusPermission = useRef(false)
-  const ready = snapshot.state === 'ready' && snapshot.selected !== undefined && snapshot.navigationPending !== true
+  const ready = snapshot.state === 'ready' && snapshot.selected !== undefined
   const mode = snapshot.modeControls
   const planMode = mode?.planMode
   const permission = snapshot.permissionControls
   const planSelectable = snapshot.selected !== undefined && snapshot.state !== 'loading' && snapshot.state !== 'closed'
-  const currentPermission = permission?.options.find(option => option.value === permission.currentValue)
-  const currentPermissionLabel = permission?.currentValue === null || permission?.currentValue === undefined
-    ? t('unavailable') : permissionLabel(permission.currentValue, currentPermission?.name ?? permission.currentValue, t)
-  useEffect(() => { if (!ready) setOpen(false) }, [ready])
-  // The trigger is disabled while the selection applies; refocus it once it is enabled again,
-  // unless the user has moved focus elsewhere meanwhile.
-  useEffect(() => {
-    if (!ready || !refocusPermission.current) return
-    refocusPermission.current = false
-    if (document.activeElement === document.body) permissionTrigger.current?.focus()
-  }, [ready])
   return (
     <div className={css.root} role="group" aria-label={t('modelControls')}>
       <div className={css.row}>
+        {snapshot.selected === undefined ? null : mode === undefined
+          ? <ChatComposerSelect label={t('mode')} className={css.select} disabled value="">
+            <option value="">{t('modeUnavailable')}</option>
+          </ChatComposerSelect>
+          : <ChatComposerSelect label={t('mode')} className={css.select}
+            value={mode.current ?? ''}
+            disabled={!ready || !mode.canSelect || mode.locked}
+            onChange={(event) => { void selectPreset(event.target.value) }}>
+            {mode.current === null ? <option value="">{t('modeUnavailable')}</option>
+              : !mode.options.some(item => item.id === mode.current)
+                ? <option value={mode.current}>{mode.current}</option> : null}
+            {mode.options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </ChatComposerSelect>}
         {planMode?.available === true ? <button type="button" className={css.plan}
           aria-label={t(planMode.active ? 'planModeOn' : 'planModeOff')}
           aria-pressed={planMode.active} aria-busy={planMode.pending === true || selectingPlan}
@@ -132,34 +82,15 @@ export function ModelControls({ snapshot, selectPlanMode, selectPermissionPreset
           {planMode.pending === true ? <span className={css.planPending}>{t('planPending')}</span> : null}
           {planMode.active ? <IconCloseFill14 size={12} /> : null}
         </button> : null}
-        {permission?.available === true ? <Menu className={css.permissionMenu} open={open} autoFocus compact side="top"
-          items={permission.options.map(option => ({
-            id: option.value,
-            label: permissionLabel(option.value, option.name, t),
-            icon: <IconShieldOutline16 size={14} />,
-          }))}
-          selectedId={permission.currentValue ?? undefined}
-          onSelect={(value) => {
-            setOpen(false)
-            if (value === permission.currentValue) permissionTrigger.current?.focus()
-            else { refocusPermission.current = true; void selectPermissionPreset(value) }
-          }}
-          onClose={() => { setOpen(false) }}
-          anchor={<button ref={permissionTrigger} type="button" className={css.permissionTrigger} title={currentPermission?.description}
-            disabled={!ready} onClick={() => { setOpen(value => !value) }}>
-            <IconShieldOutline16 size={14} />
-            <span className={css.permissionName}>{currentPermissionLabel}</span>
-            <IconChevronDownOutline14 />
-          </button>} /> : null}
+        {permission?.available === true ? <ChatComposerSelect label={t('permission')} className={css.select}
+          value={permission.currentValue ?? ''} disabled={!ready}
+          onChange={(event) => { void selectPermissionPreset(event.target.value) }}>
+          {permission.currentValue === null ? <option value="">{t('unavailable')}</option>
+            : !permission.options.some(item => item.value === permission.currentValue)
+              ? <option value={permission.currentValue}>{permission.currentValue}</option> : null}
+          {permission.options.map(item => <option key={item.value} value={item.value}>{item.name}</option>)}
+        </ChatComposerSelect> : null}
       </div>
     </div>
   )
-}
-
-function permissionLabel(value: string, name: string, t: (key: ConversationLocaleKey) => string): string {
-  if (name !== value) return name
-  if (value === 'read-only') return t('permissionReadOnly')
-  if (value === 'workspace-write') return t('permissionWorkspaceWrite')
-  if (value === 'danger-full-access') return t('permissionFullAccess')
-  return name
 }

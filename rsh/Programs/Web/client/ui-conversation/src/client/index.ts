@@ -70,6 +70,23 @@ export type {
 export type { ComposerBlock, ComposerBlocks } from './contract/composer-blocks.ts'
 
 declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * Prepare composer text before Host admission; failures retain the user's draft.
+     * @param session - destination Session.
+     * @param prompt - mutable text which will be recorded with the user message.
+     * @param signal - submission cancellation.
+     * @mode serial
+     */
+    'conversation/prepare-prompt'(session: import('@deepseek-ai/dsh-api-session-controller/client').SessionFace, prompt: { text: string }, signal?: AbortSignal): Promise<void> | void
+    /**
+     * Report whether a Session draft is connected to its persisted Conversation store.
+     * @param sessionId - Session whose composer was mounted or unmounted.
+     * @param ready - true after the current draft is persisted; false on unmount.
+     * @mode parallel
+     */
+    'conversation/draft-persistence'(sessionId: import('@deepseek-ai/dsh-session/types').SessionId, ready: boolean): void
+  }
   interface Context {
     /** Scope-addressed Conversation actions and per-Session input registry. */
     conversation: import('./service.ts').IConversation

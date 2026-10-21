@@ -6,6 +6,10 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'ide.reviewBusy': '请等待当前任务结束，再提交代码修改。',
+  'ide.reviewCancelled': '代码预览准备已取消，请重新发送。',
+  'ide.reviewUnavailable': '无法准备只读代码预览，请重新打开 IDE 后重试。',
+  'ide.reviewContext': '以下是当前编辑器文件的最新内容。若需要修改这个文件，请返回且只返回一个包含完整修改后文件的代码块，以便用户逐块审核。不要直接写入文件或执行修改文件的命令；未采纳的修改必须保留在预览中。可以在代码块外说明改动。',
   'group.ungrouped': '未分组',
   'session.new': '新会话',
   'section.workspaces': '工作区',
@@ -35,6 +39,8 @@ export const zh = {
   'conflict.named': '已存在名为“{name}”的工作区。',
   'folderError.title': '无法打开文件夹',
   'folderError.retry': '重新选择',
+  'ide.open': '用 IDE 方式打开',
+  'ide.inputBusy': '请等待输入操作结束，并先发送或移除草稿附件，再切换界面。文字草稿会保留。',
   'rename': '重命名',
   'rename.workspace.title': '重命名工作区',
   'rename.session.title': '重命名会话',
@@ -78,6 +84,10 @@ export type WorkspaceKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'ide.reviewBusy': 'Wait for the current task to finish before requesting code changes.',
+  'ide.reviewCancelled': 'Code preview preparation was cancelled. Send again.',
+  'ide.reviewUnavailable': 'Read-only code review could not be prepared. Reopen the IDE and retry.',
+  'ide.reviewContext': 'The following is the latest current editor file. To edit it, return exactly one code block containing the complete updated file for block-by-block review. Do not write files or run commands that modify files. Unaccepted changes must remain in the preview. You may explain changes outside the code block.',
   'group.ungrouped': 'Ungrouped',
   'session.new': 'New Session',
   'section.workspaces': 'Workspaces',
@@ -107,6 +117,8 @@ export const en = {
   'conflict.named': 'A workspace named “{name}” already exists.',
   'folderError.title': 'Couldn’t open folder',
   'folderError.retry': 'Choose again',
+  'ide.open': 'Open in IDE',
+  'ide.inputBusy': 'Finish the input operation and send or remove draft attachments before switching. Text drafts are retained.',
   'rename': 'Rename',
   'rename.workspace.title': 'Rename workspace',
   'rename.session.title': 'Rename session',

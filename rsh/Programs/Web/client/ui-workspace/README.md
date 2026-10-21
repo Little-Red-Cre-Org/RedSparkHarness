@@ -7,7 +7,11 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+Embedded IDE submissions capture the current editor before Host admission and select the existing read-only permission preset. Nonempty source and complete-file review instructions are appended to the recorded user prompt. Pending reviews, running tasks, failed permission changes and unavailable editor responses reject submission while retaining the draft. Completed answers use the Desktop review controls documented in the [Desktop README](../../../Desktop/README.md).
+
 The session row menu includes Delete session with confirmation. This removes the sidebar entry using the persistent archive set; it does not erase the transcript, stop active work, or cancel schedules. Rejected requests keep the row and display the error.
+
+The primary Desktop workspace menu exposes **Open in IDE** only when the preload supplies its narrow IDE capability. The action targets the clicked workspace, including when another workspace is selected. It carries the active UI language and current session text without sending a message. The embedded workbench returns its current session and text through the private Desktop carrier; the original renderer validates session membership before acknowledging restoration. Attachments and active input transactions block handoff, leaving the source intact.
 
 ## Summary
 
@@ -30,6 +34,10 @@ Workspace and Session rows, the section header, and the empty state are shared p
 ## Use this package
 
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five non-blank Sessions by default and keeps the selected blank **New Session** as one provisional extra row until its first prompt. **Show more** reveals the hidden remainder; closing and reopening the Workspace restores this folded projection.
+
+The Desktop IDE embeds the same conversation and controllers. Its parent-bound channel selects the canonical Workspace, projects its non-archived Session summaries to Code OSS Explorer, and accepts New Session and Session selection commands. Disposal removes subscriptions and rejects late messages; the bridge neither executes agent turns nor owns another Session store.
+
+The selected Session determines the project path published to Code OSS. Editor selections append through the existing composer's revision-checked text insertion, retaining earlier draft text and reference chips; a busy composer or stale project rejects insertion. Code is sent to the model only after the user submits the draft through the ordinary logged prompt path. File-link events resolve paths from their originating Session and open the editor at the requested line. Conversation integration activates after the navigation service, avoiding a mutual service dependency. File navigation can carry recorded change fragments for read-only IDE comparison; the channel does not accept file mutation commands.
 
 ### Reordering and view options
 

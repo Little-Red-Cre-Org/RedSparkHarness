@@ -3,37 +3,22 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { type NativeProfileConfig } from './native-profile-config.ts'
+import { profileRuntime, type NativeProfileConfig } from './native-profile-config.ts'
 
 const ROOT = 'root'
-const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
-  headless: 'native-headless',
-  web: 'native-web',
-  sdk: 'native-sdk',
-  acp: 'native-acp',
-  rsh: 'native-tui',
+
+interface CliManifest {
+  dsh?: { nativeProfileTemplates?: unknown }
 }
 
-/**
- * Profile names whose first-use compositions ship with the CLI.
- *
- * Read on demand rather than at module load. A host that bundles this module cannot resolve the
- * CLI package from its own location, so a load-time manifest read would throw there even when it
- * never asks for a template.
- * @returns the declared `dsh.nativeProfileTemplates` names.
- */
-function shippedNativeProfiles(): readonly string[] {
-  const declared = cliNativeProfileTemplates()
-  if (!Array.isArray(declared) || declared.some(name => typeof name !== 'string' || name === '')) {
-    throw new Error('dsh: CLI package must declare its native profile templates')
-  }
-  return declared as readonly string[]
+const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as CliManifest
+const nativeProfileTemplates = manifest.dsh?.nativeProfileTemplates
+if (!Array.isArray(nativeProfileTemplates) || nativeProfileTemplates.some(name => typeof name !== 'string' || name === '')) {
+  throw new Error('dsh: CLI package must declare its native profile templates')
 }
 
 /** Profile names whose first-use compositions ship with the CLI. */
-export function SHIPPED_NATIVE_PROFILES(): readonly string[] {
-  return shippedNativeProfiles()
-}
+export const SHIPPED_NATIVE_PROFILES: readonly string[] = nativeProfileTemplates
 
 const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application', config: { maxLiveTextChars: 100000, maxLiveEvents: 100000 } },
@@ -47,19 +32,6 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'sidebar', plugin: '@deepseek-ai/dsh-client-ui-sidebar' },
   { id: 'sidebar-right', plugin: '@deepseek-ai/dsh-client-ui-sidebar-right' },
 ] as const
-
-/** One shipped browser Client installation used by a native Web profile. */
-export type NativeProfileClientInstallation = typeof NATIVE_WEB_CLIENT_INSTALLATIONS[number]
-
-/**
- * Return the browser Client rows written for a shipped native profile.
- * @param name - requested standard or native profile name.
- * @returns the profile's Client installations, or an empty list without a Client composition.
- */
-export function shippedNativeProfileClientComposition(name: string): readonly NativeProfileClientInstallation[] {
-  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
-  return profile === 'native-web' ? NATIVE_WEB_CLIENT_INSTALLATIONS : []
-}
 
 function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
   return [
@@ -103,48 +75,14 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
     config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
   { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
-  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard',
-    config: {
-      prefix: 'You are a coding agent powered by the {{model}} model.',
-      suffix: 'Your working directory is {{cwd}}.',
-    } },
 ] as const
 
-/**
- * Root of the CLI package whose manifest declares the shipped profile templates.
- *
- * Defaults to this module's own package. A host that bundles this module into its own program
- * cannot use that default: `import.meta.url` then describes the host's bundle, and the host's
- * `package.json` declares no templates. Such a host names its CLI package through
- * {@link setCliPackageRoot} before it builds a profile.
- */
-let cliPackageRoot: string | undefined
-
-/**
- * Point template resolution at one CLI package.
- * @param root - absolute path of the installed CLI package directory.
- */
-export function setCliPackageRoot(root: string): void {
-  cliPackageRoot = root
-}
-
 function cliRuntimeRoot(): string {
-  return cliPackageRoot ?? resolve(dirname(fileURLToPath(import.meta.url)), '..')
-}
-
-/**
- * Read this CLI package's declared native profile templates at runtime.
- * @returns the `dsh.nativeProfileTemplates` value, or `undefined` when the manifest does not declare it.
- */
-function cliNativeProfileTemplates(): unknown {
-  const manifest: unknown = JSON.parse(readFileSync(join(cliRuntimeRoot(), 'package.json'), 'utf8'))
-  const dsh = typeof manifest === 'object' && manifest !== null && 'dsh' in manifest
-    ? (manifest as { dsh?: unknown }).dsh : undefined
-  return typeof dsh === 'object' && dsh !== null ? (dsh as { nativeProfileTemplates?: unknown }).nativeProfileTemplates : undefined
+  return resolve(dirname(fileURLToPath(import.meta.url)), '..')
 }
 
 function isShippedNativeProfile(name: string): boolean {
-  return SHIPPED_NATIVE_PROFILES().includes(name)
+  return SHIPPED_NATIVE_PROFILES.includes(name)
 }
 
 function isHeadlessProfile(profile: string): boolean {
@@ -154,21 +92,28 @@ function isHeadlessProfile(profile: string): boolean {
 /**
  * Resolve a shipped native composition for the selected platform.
  * @param home - Harness home used by durable providers.
- * @param name - shipped standard or native profile name.
+ * @param profile - shipped profile name.
  * @param platform - target platform for command providers and tools.
- * @param options - Optional paths for the profile.
- * @param options.profileDirectory - Profile directory used by the native Web Host.
  * @returns the profile configuration installed on first use.
  * @remarks Native SDK, SDK-child, ACP and ACP-child profiles install workspace instructions through their selected filesystem Provider.
  */
 export function shippedNativeProfileComposition(
   home: string,
-  name: string,
+  profile: string,
   platform: NodeJS.Platform = process.platform,
-  options: { readonly profileDirectory?: string } = {},
 ): NativeProfileConfig {
-  if (!isShippedNativeProfile(name)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(name)}`)
-  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
+  if (!isShippedNativeProfile(profile)) throw new Error(`dsh: unknown native profile template ${JSON.stringify(profile)}`)
+  if (profile === 'native-ide') return {
+    formatVersion: 1,
+    scopes: [{ id: ROOT }],
+    installations: [
+      { id: 'app', plugin: '@deepseek-ai/dsh-native-ide', scope: ROOT },
+      { id: 'ide', plugin: '@deepseek-ai/dsh-ide-code-oss', scope: ROOT,
+        config: { runtimeDirectory: join(home, 'ide', 'runtime'), workspaceDirectory: process.cwd(),
+          dataDirectory: join(home, 'ide', 'data'), startupTimeoutMs: 30000, shutdownGraceMs: 1000, maxOutputBytes: 16384 } },
+      { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: ROOT },
+    ],
+  }
   if (profile === 'native-acp-dsh-child') {
     const parent = shippedNativeProfileComposition(home, 'native-acp', platform)
     const recursiveInstallations = new Set([
@@ -255,7 +200,7 @@ export function shippedNativeProfileComposition(
           : profile === 'native-tui' ? '@deepseek-ai/dsh-native-tui' : '@deepseek-ai/dsh-native-headless',
         scope: ROOT,
         config: profile === 'native-web'
-          ? { projectDir: options.profileDirectory ?? join(home, 'profiles', name), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
+          ? { projectDir: join(home, 'profiles', profile), runtimeDir: cliRuntimeRoot(), clientReload: 'live', maxRequestBodyBytes: 300 * 1024 * 1024 }
           : { provider: 'deepseek', model: 'deepseek-flash', systemPrompt: 'You are a helpful coding assistant.', maxSteps: 8,
             ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
             ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 500, maxPendingHumanRequests: 32 } : {}) },
@@ -356,7 +301,7 @@ export function shippedNativeProfileComposition(
         config: { thresholds: [3, 5, 8], argumentsPreviewChars: 500 } },
       ...(profile === 'native-web' || profile === 'native-tui' ? [{
         id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: ROOT,
-        config: { path: join(options.profileDirectory ?? join(home, 'profiles', name), 'task-scheduler.sqlite') },
+        config: { path: join(home, 'profiles', profile, 'task-scheduler.sqlite') },
       }] : []),
       ...(profile === 'native-web' ? [{ id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: ROOT }] : []),
@@ -412,16 +357,20 @@ export function ensureShippedNativeProfile(name: string, home: string = resolveD
   if (!isShippedNativeProfile(name)) return
   const profiles = join(home, 'profiles')
   const directory = join(profiles, name)
-  if (existsSync(join(directory, 'package.json'))) return
+  if (existsSync(directory)) {
+    if (profileRuntime(name, home) !== 'native') {
+      throw new Error(`dsh: existing ${name} profile is not a complete native profile`)
+    }
+    return
+  }
   mkdirSync(profiles, { recursive: true })
-  mkdirSync(directory, { recursive: true })
-  const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
+  mkdirSync(directory)
   writeFileSync(join(directory, 'rsh.profile.json'), `${JSON.stringify(shippedNativeProfileComposition(home, name), null, 2)}\n`, { flag: 'wx' })
   writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
     name: `dsh-profile-${name}`, private: true,
-    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: profile === 'native-web' ? 'live' : 'startup' } },
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: name === 'native-web' ? 'live' : 'startup' } },
   }, null, 2)}\n`, { flag: 'wx' })
-  if (profile === 'native-web') {
+  if (name === 'native-web') {
     writeFileSync(join(directory, 'rsh.client.json'), `${JSON.stringify({
       formatVersion: 1, installations: NATIVE_WEB_CLIENT_INSTALLATIONS,
     }, null, 2)}\n`, { flag: 'wx' })
