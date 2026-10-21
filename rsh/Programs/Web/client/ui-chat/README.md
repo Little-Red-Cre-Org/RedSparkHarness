@@ -31,6 +31,8 @@ File-mention providers receive the viewed Session ID with the closing-turn owner
 
 Sent file references and skills confirmed by the message’s logged invocation open in the right Sidebar. File paths use the viewed Session; skill names resolve through its current input-trigger source. Both use the prose file-link dotted underline on hover or focus. Sessions, directories, and command labels remain non-navigating references.
 
+In the Desktop IDE, the workbench claims file-link navigation and opens the file in Code OSS at the requested line. Relative paths still resolve against the viewed Session's working directory. Ordinary browser sessions retain the right Sidebar preview. Write/edit approval details display the correlated running call’s proposed path and literal text. Approval outcomes still use the existing pending interaction; displaying the proposal neither authorizes nor executes it.
+
 <a id="system-prompt-row"></a>
 ## System prompt row
 

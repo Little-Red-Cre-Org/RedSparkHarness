@@ -126,8 +126,6 @@ async function main(): Promise<void> {
       recursive: true, dereference: true,
       filter: source => desktopRuntimeFileExclusion(relative(modules, source), target) === undefined,
     })
-    cpSync(join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), join(DSH_OUTPUT_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
-    copyFileSync(join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE), join(DSH_OUTPUT_ROOT, DESKTOP_PACKAGE_SET_FILE))
     writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json'), `${JSON.stringify({
       name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: release.version, type: 'module',
       dependencies: Object.fromEntries(packageSet.packages.map(entry => [entry.name, entry.version])),
@@ -140,7 +138,7 @@ async function main(): Promise<void> {
     if (process.platform === 'darwin') {
       await signMacOSRuntime(DSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env))
     }
-    writeDesktopRuntime(DSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target, packageSet.assembly)
+    writeDesktopRuntime(DSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target)
     const descriptor = await verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target)
     await new Promise<void>((accept, reject) => {
       execFile(NODE, [join(APP_ROOT, 'tests/fixtures/runtime-payload-smoke.mjs'), DSH_OUTPUT_ROOT],

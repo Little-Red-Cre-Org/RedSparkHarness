@@ -22,6 +22,11 @@
   background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--sph-crimson) 10%, transparent), transparent 65%);
 }
 
+/* IDE chrome already carries the project identity; the welcome mark stays compact. */
+:global([data-rsh-workbench]) .root::before { display: none; }
+:global([data-rsh-workbench]) .headline { font-size: 24px; line-height: 34px; }
+:global([data-rsh-workbench]) .stack { gap: 16px; }
+
 /* Cap matches the InputBar card. Glow may paint past the sides. */
 .stack {
   display: flex;

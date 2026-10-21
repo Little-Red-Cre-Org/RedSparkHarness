@@ -63,7 +63,6 @@ export function buildTrajectorySnapshot(events: readonly SessionEvent[]): Trajec
   const calls = new Map<string, RunningToolCall>()
   const turns = new Map<number, TurnBoundary>()
   const coordinates = new Map<number, EventCoordinate>()
-  const pendingUserMessages: number[] = []
   const stepStartTimes = new Map<string, number>()
   const requests = new Map<string, AssistantRequest>()
   let activeTurn: number | undefined
@@ -87,54 +86,40 @@ export function buildTrajectorySnapshot(events: readonly SessionEvent[]): Trajec
     return found
   }
 
-  const setCoordinate = (seq: number, coordinate: EventCoordinate): void => {
-    activeTurn = coordinate.turn
-    if (coordinate.step === undefined) turnBoundary(coordinate.turn)
-    else stepBoundary(coordinate.turn, coordinate.step)
-    for (const userSeq of pendingUserMessages) coordinates.set(userSeq, { turn: coordinate.turn })
-    pendingUserMessages.length = 0
-    coordinates.set(seq, coordinate)
-  }
-
   for (const event of events) {
     switch (event.type) {
       case 'turn/start':
         turnBoundary(event.data.turn).start = event
-        setCoordinate(event.seq, { turn: event.data.turn })
+        activeTurn = event.data.turn
+        coordinates.set(event.seq, { turn: event.data.turn })
         break
       case 'turn/end':
         turnBoundary(event.data.turn).end = event
-        setCoordinate(event.seq, { turn: event.data.turn })
+        coordinates.set(event.seq, { turn: event.data.turn })
         activeTurn = undefined
         break
       case 'step/start':
         stepBoundary(event.data.turn, event.data.step).start = event
         stepStartTimes.set(stepKey(event.data.turn, event.data.step), event.time)
-        setCoordinate(event.seq, { turn: event.data.turn, step: event.data.step })
+        coordinates.set(event.seq, { turn: event.data.turn, step: event.data.step })
         break
       case 'step/end':
         stepBoundary(event.data.turn, event.data.step).end = event
-        setCoordinate(event.seq, { turn: event.data.turn, step: event.data.step })
+        coordinates.set(event.seq, { turn: event.data.turn, step: event.data.step })
         break
       case 'assistant/message':
       case 'assistant/attempt':
       case 'system/message':
       case 'tool/call':
       case 'tool/result':
-        setCoordinate(event.seq, { turn: event.data.turn, step: event.data.step })
+        coordinates.set(event.seq, { turn: event.data.turn, step: event.data.step })
         break
       case 'user/message':
         if (activeTurn !== undefined) coordinates.set(event.seq, { turn: activeTurn })
-        else pendingUserMessages.push(event.seq)
         break
       default:
         break
     }
-  }
-
-  let firstVisibleTurn = Number.POSITIVE_INFINITY
-  for (const { turn } of coordinates.values()) {
-    firstVisibleTurn = Math.min(firstVisibleTurn, turn)
   }
 
   for (const event of events) {
@@ -252,7 +237,7 @@ export function buildTrajectorySnapshot(events: readonly SessionEvent[]): Trajec
           turn: event.data.turn,
           step: event.data.step,
           text: event.data.message.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('\n\n'),
-          update: systemPrompts.length > 0 || event.data.turn !== firstVisibleTurn,
+          update: systemPrompts.length > 0,
         })
         break
       }

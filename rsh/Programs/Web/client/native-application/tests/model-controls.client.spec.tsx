@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { useSyncExternalStore } from 'react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type {
   NativeModeControls, NativePermissionControls, NativeSessionClient,
@@ -8,7 +7,7 @@ import type {
 import { SESSION_FORMAT_VERSION, type SessionId } from '@deepseek-ai/dsh-session/types'
 import { NativeConversationController, type ConversationSnapshot } from '../src/controller.ts'
 import type { ConversationLocaleKey } from '../src/locales.ts'
-import { ConversationModeLabel, ModelControls, ModelPickerControl } from '../src/model-controls.tsx'
+import { ModelControls, ModelPickerControl } from '../src/model-controls.tsx'
 import { en } from '../src/locales.ts'
 
 const controllers: NativeConversationController[] = []
@@ -25,7 +24,7 @@ async function renderControls() {
   }
   let permission: NativePermissionControls = {
     available: true, currentValue: 'workspace-write', options: [
-      { value: 'read-only', name: 'read-only' }, { value: 'workspace-write', name: 'workspace-write' },
+      { value: 'read-only', name: 'Read Only' }, { value: 'workspace-write', name: 'Workspace Write' },
     ],
   }
   const selectPreset = vi.fn(async ({ preset }: { preset: string }) => {
@@ -45,7 +44,6 @@ async function renderControls() {
     selectPlanMode,
     selectPermissionPreset,
     async *follow() { yield { type: 'baseline' as const, items: [] } },
-    async attach() { return undefined },
     async submissions() { return { throughSeq: -1, submissions: [] } },
     async history(id: SessionId) {
       return { header: { version: SESSION_FORMAT_VERSION, id, createdAt: 1, isSeeded: false },
@@ -56,52 +54,38 @@ async function renderControls() {
   controllers.push(controller)
   await controller.load()
   await controller.select('session-alpha' as SessionId)
-  const Live = () => <ModelControls snapshot={useSyncExternalStore(controller.subscribe, controller.getSnapshot)}
+  render(<ModelControls snapshot={controller.getSnapshot()}
+    selectPreset={controller.selectPreset.bind(controller)}
     selectPlanMode={controller.selectPlanMode.bind(controller)}
     selectPermissionPreset={controller.selectPermissionPreset.bind(controller)}
-    t={key => en[key]} />
-  render(<Live />)
+    t={key => en[key]} />)
   return { controller, selectPreset, selectPlanMode, selectPermissionPreset }
 }
 
-it.each(['plan', 'permission'] as const)('routes the %s composer control through the Host Client', async (control) => {
+it.each(['mode', 'plan', 'permission'] as const)('routes the %s composer control through the Host Client', async (control) => {
   const { controller, selectPreset, selectPlanMode, selectPermissionPreset } = await renderControls()
 
-  if (control === 'plan') {
+  if (control === 'mode') {
+    fireEvent.change(screen.getByRole('combobox', { name: en.mode }), { target: { value: 'minimal' } })
+    await waitFor(() => {
+      expect(selectPreset).toHaveBeenCalledWith({
+        id: 'session-alpha', preset: 'minimal', expectedRevision: 7,
+      }, expect.any(AbortSignal))
+    })
+    expect(controller.getSnapshot().modeControls?.current).toBe('minimal')
+  } else if (control === 'plan') {
     fireEvent.click(screen.getByRole('button', { name: en.planModeOff }))
     await waitFor(() => {
       expect(selectPlanMode).toHaveBeenCalledWith('session-alpha', true, expect.any(AbortSignal))
     })
     expect(controller.getSnapshot().modeControls?.planMode).toEqual({ available: true, active: false, pending: true })
   } else {
-    expect(screen.getByRole('button', { name: 'Auto review' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Auto review' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Read only' }))
+    fireEvent.change(screen.getByRole('combobox', { name: en.permission }), { target: { value: 'read-only' } })
     await waitFor(() => {
       expect(selectPermissionPreset).toHaveBeenCalledWith('session-alpha', 'read-only', expect.any(AbortSignal))
     })
     expect(controller.getSnapshot().permissionControls?.currentValue).toBe('read-only')
-    await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Read only' })) })
   }
-  expect(selectPreset).not.toHaveBeenCalled()
-})
-
-it('opens the title mode chip, applies the selected Host preset, and returns focus to the chip', async () => {
-  const { controller, selectPreset } = await renderControls()
-  const t = (key: ConversationLocaleKey, params?: Record<string, unknown>): string =>
-    key === 'modeLabel' ? en.modeLabel.replace('{name}', String(params?.name)) : en[key]
-  const Live = () => <ConversationModeLabel snapshot={useSyncExternalStore(controller.subscribe, controller.getSnapshot)}
-    selectPreset={controller.selectPreset.bind(controller)} t={t} />
-  render(<Live />)
-
-  fireEvent.click(screen.getByRole('button', { name: 'Mode: Standard' }))
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Minimal' }))
-  await waitFor(() => {
-    expect(selectPreset).toHaveBeenCalledWith({
-      id: 'session-alpha', preset: 'minimal', expectedRevision: 7,
-    }, expect.any(AbortSignal))
-  })
-  await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mode: Minimal' })) })
 })
 
 it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable and locks loaded rows without a Session ($catalogError)', async ({ catalogError }) => {
@@ -119,6 +103,7 @@ it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable
   const trigger = screen.getByRole<HTMLButtonElement>('button', { name: 'trigger.selectAria' })
   expect(trigger.disabled).toBe(false)
   fireEvent.click(trigger)
+  fireEvent.click(screen.getByRole('menuitem', { name: /menu\.model/ }))
   expect(await screen.findByText('Failed: catalog offline')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'retry' }))
 
@@ -143,42 +128,4 @@ it.each([{ catalogError: 'catalog offline' }])('keeps catalog failures retryable
   expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'High' }).disabled).toBe(true)
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'High' }))
   expect(selectModel).not.toHaveBeenCalled()
-})
-
-it('keeps the picker open across its open-time reload and still selects a model', async () => {
-  const modelControls: ConversationSnapshot['modelControls'] = {
-    canSelectModel: true, presets: [], catalog: {
-      default: { provider: 'fixture', model: 'one' }, routableProviders: ['fixture'], failures: [], groups: [{ id: 'fixture', name: 'Fixture', models: [
-        { id: 'one', name: 'One' }, { id: 'two', name: 'Two' },
-      ] }, { id: 'secondary', name: 'Secondary provider', models: [{ id: 'two-alt', name: 'Two' }] }],
-    },
-  }
-  const snapshot: ConversationSnapshot = {
-    sessions: [], events: [], state: 'ready', selected: 'session-alpha' as SessionId, modelControls,
-  }
-  const refreshModelControls = vi.fn(async () => undefined)
-  const selectModel = vi.fn(async () => undefined)
-  const view = render(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
-    refreshModelControls={refreshModelControls} t={key => key} />)
-  const trigger = screen.getByRole('button', { name: 'trigger.aria' })
-  fireEvent.click(trigger)
-  expect(refreshModelControls).toHaveBeenCalledTimes(1)
-  // The reload locks the controls; the browser then drops focus from the trigger to nowhere.
-  view.rerender(<ModelPickerControl snapshot={{ ...snapshot, state: 'loading' }} selectModel={selectModel}
-    refreshModelControls={refreshModelControls} t={key => key} />)
-  expect(trigger.hasAttribute('disabled')).toBe(false)
-  fireEvent.blur(trigger, { relatedTarget: null })
-  view.rerender(<ModelPickerControl snapshot={snapshot} selectModel={selectModel}
-    refreshModelControls={refreshModelControls} t={key => key} />)
-  expect(screen.getByRole('menu')).toBeTruthy()
-  // Keyboard focus stays in the card across the reload and the pane drill.
-  expect(screen.getByRole('menuitemradio', { name: 'One' })).toBeTruthy()
-  expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'One' }))
-  expect(screen.getByRole('group', { name: 'Secondary provider' })).toBeTruthy()
-  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' })
-  expect(screen.queryByRole('menu')).toBeNull()
-  fireEvent.click(trigger)
-  fireEvent.click(within(screen.getByRole('group', { name: 'Fixture' }))
-    .getByRole('menuitemradio', { name: 'TwoFixture' }))
-  await waitFor(() => { expect(selectModel).toHaveBeenCalledWith({ provider: 'fixture', model: 'two' }) })
 })

@@ -3,11 +3,14 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+import { zstdDecompress } from 'node:zlib'
 import { execa } from 'execa'
 import { describe, expect, it } from 'vitest'
 
 const binScript = fileURLToPath(new URL('../../../src/bin.ts', import.meta.url))
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
+const decompress = promisify(zstdDecompress)
 
 function waitForLine(
   lines: string[],
@@ -172,11 +175,11 @@ describe('Python SDK dsh profile keyless smoke', () => {
       expect(exit.exitCode, `signal=${String(exit.signal)}; stderr=${stderr}`).toBe(0)
       const sessionsRoot = join(root, '.dsh', 'sessions')
       const files = await readdir(sessionsRoot, { recursive: true })
-      // The shipped sdk template selects plaintext, so the log is the readable generation.
-      const log = files.find(file => file.endsWith('.jsonl'))
+      const log = files.find(file => file.endsWith('.jsonl.zstd'))
       expect(log).toBeDefined()
-      const records = (await readFile(join(sessionsRoot, log!))).toString().trimEnd().split('\n')
-      expect(JSON.parse(records[0]!)).toMatchObject({ type: 'session', id: 'main' })
+      const compressed = await readFile(join(sessionsRoot, log!))
+      expect(compressed.subarray(0, 4).toString('hex')).toBe('28b52ffd')
+      expect(JSON.parse((await decompress(compressed)).toString())).toMatchObject({ type: 'session', id: 'main' })
     } finally {
       // No-op after exit; reject: false settles on every outcome, so cleanup never races teardown.
       child.kill('SIGKILL')
@@ -335,8 +338,6 @@ describe('Python SDK dsh profile keyless smoke', () => {
         'tsx/esm',
         binScript,
         '--profile',
-        'legacy-sdk',
-        '--from-default-profile',
         'sdk',
       ], {
         cwd: repoRoot,

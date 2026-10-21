@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-16-ide-editor-layout.md
+2026-10-16-ide-editor-layout.md: 7510cb54f6baa12c823b92c39f67e1f5cd1fd235
+2026-10-16-ide-editor-layout.zh.md: 030f6b808a105822d3c68a4d8d67285fef743a7c

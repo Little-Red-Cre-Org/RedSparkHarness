@@ -779,19 +779,16 @@ export interface NativeSessionClient {
    * @param sessionId - selected identity.
    * @param text - human input.
    * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
+   * @param signal - abort cancels and drains this turn.
+   * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
    * @param onFollowError - background follow failure after turn settlement, when present.
    * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void, lastSeq?: number, detach?: AbortSignal,
-    onAccepted?: () => void): Promise<{
+    onFollowError?: (error: unknown) => void, lastSeq?: number): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
@@ -799,32 +796,17 @@ export interface NativeSessionClient {
    * @param sessionId - selected identity.
    * @param content - ordered input; file parts must use receipts from this Program and Session.
    * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
+   * @param signal - abort cancels and drains this turn.
+   * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param onFollowError - background follow failure after turn settlement, when present.
    * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   promptContent(sessionId: SessionId, content: readonly NativeSessionInputPart[], resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void, onFollowError?: (error: unknown) => void, lastSeq?: number,
-    detach?: AbortSignal, onAccepted?: () => void): Promise<{
+    observe?: (frame: NativeSessionFollowFrame) => void, onFollowError?: (error: unknown) => void, lastSeq?: number): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
-  /** Resume a running Host turn from durable history and any pending human presentation.
-   * @param sessionId - selected identity.
-   * @param lastSeq - highest event already present in the selected view.
-   * @param observe - required synchronous presentation observer.
-   * @param signal - explicit turn cancellation.
-   * @param onFollowError - report a failure after the turn has settled.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @returns durable turn settlement, or `undefined` when no turn is running.
-   */
-  attach(sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void,
-    detach?: AbortSignal): Promise<{ readonly exitCode: number; readonly answer?: string } | undefined>
   /**
    * @param sessionId - selected identity.
    * @param signal - caller cancellation.
@@ -1288,11 +1270,6 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/start':
       if (typeof data.admissionId !== 'string' || data.admissionId.length === 0) throw new TypeError('invalid native Session admission')
       break
-    case 'session/attach':
-      if (data.admissionId !== null && (typeof data.admissionId !== 'string' || data.admissionId.length === 0)) {
-        throw new TypeError('invalid native Session admission')
-      }
-      break
     case 'session/create':
       if (typeof data.sessionId !== 'string' || data.sessionId.length === 0) throw new TypeError('invalid native Session identity')
       break
@@ -1407,42 +1384,42 @@ export function createNativeSessionClient(
     if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
     return decodeReply(endpoint, result.value) as T
   }
-  type TurnResult = { readonly exitCode: number; readonly answer?: string }
-  function trackPrompt<T>(pending: Promise<T>): Promise<T> {
-    pendingPrompts.add(pending)
-    const settled = (): void => { pendingPrompts.delete(pending) }
-    void pending.then(settled, settled)
-    return pending
-  }
-  async function runTurn(
-    sessionId: SessionId, admissionId: NativeSessionAdmissionId, signal: AbortSignal | undefined,
-    observe: ((frame: NativeSessionFollowFrame) => void) | undefined,
-    onFollowError: ((error: unknown) => void) | undefined, lastSeq: number, detach: AbortSignal | undefined,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
+  async function runPrompt(
+    sessionId: SessionId, input: { readonly text: string; readonly images?: readonly NativeImageUpload[] }
+      | { readonly content: readonly NativeSessionInputPart[] }, resume: boolean,
+    signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
+    onFollowError?: (error: unknown) => void, lastSeq = -1,
+  ) {
+    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+    accepted.throwIfAborted()
+    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
+      throw new TypeError('native Session Client: invalid follow cursor')
+    }
+    const responseOperation = rpc.response
+    if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+    const following = new AbortController()
+    // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
+    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, resume, follow: observe !== undefined,
+      ...observe === undefined ? {} : { lastSeq },
+      ...'content' in input ? { content: input.content } : { text: input.text, ...input.images === undefined ? {} : { images: input.images } } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
     let turnSettled = false
     const wasTurnSettled = (): boolean => turnSettled
     let followFailure: unknown
-    const following = new AbortController()
-    const cancel = (): void => {
-      following.abort(signal?.reason)
+    const abort = (): void => {
+      following.abort(accepted.reason)
       if (!turnSettled) {
         cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
         // Settlement reports cancellation failures after the original turn's response has drained.
         void cancellation.then(() => undefined, () => undefined)
       }
     }
-    const detachFollow = (): void => { following.abort(detachSignal.reason) }
-    signal?.addEventListener('abort', cancel, { once: true })
-    detachSignal.addEventListener('abort', detachFollow, { once: true })
-    if (signal?.aborted) cancel()
-    if (detachSignal.aborted) detachFollow()
+    accepted.addEventListener('abort', abort, { once: true })
+    if (accepted.aborted) abort()
     let followComplete = false
     const isFollowComplete = (): boolean => followComplete
     let followWork: Promise<void> | undefined
-    const responseOperation = rpc.response
     try {
       if (observe !== undefined && responseOperation !== undefined) {
         const activeFollow = (async () => {
@@ -1480,10 +1457,7 @@ export function createNativeSessionClient(
             }
             if (!terminal) throw new Error('native Session follow: EOF before settlement')
           } catch (error: unknown) {
-            if (!wasTurnSettled() && !detachSignal.aborted && !signal?.aborted) {
-              followFailure = error
-              following.abort(error)
-            }
+            if (!wasTurnSettled() && !accepted.aborted) { followFailure = error; abort() }
             else {
               try { onFollowError?.(error) }
               catch (callbackError: unknown) { console.error('native Session follow error observer failed:', callbackError) }
@@ -1495,20 +1469,15 @@ export function createNativeSessionClient(
         void activeFollow.then(() => { pendingFollows.delete(activeFollow) })
       }
 
-      const settlementWork = call<TurnResult>('session/await', { sessionId, admissionId }, detachSignal, false)
+      const settlementWork = call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)
         .then((value) => { turnSettled = true; return { status: 'fulfilled' as const, value } },
-          (reason: unknown) => {
-            if (detachSignal.aborted) return { status: 'detached' as const, reason: detachSignal.reason as unknown }
-            turnSettled = true
-            return { status: 'rejected' as const, reason }
-          })
+          (reason: unknown) => { turnSettled = true; return { status: 'rejected' as const, reason } })
       if (followWork !== undefined) {
         const first = await Promise.race([followWork.then(() => 'follow' as const), settlementWork.then(() => 'settlement' as const)])
         if (first === 'follow') await followWork
       }
       const settlement = await settlementWork
       if (isFollowComplete() && followWork !== undefined) await followWork
-      if (settlement.status === 'detached') throw settlement.reason
       const controls = await Promise.allSettled(cancellation === undefined ? [] : [cancellation])
       const errors: unknown[] = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected'
         ? [outcome.reason as unknown] : [])
@@ -1519,43 +1488,9 @@ export function createNativeSessionClient(
       return settlement.value
     } finally {
       if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId)
-      signal?.removeEventListener('abort', cancel)
-      if (followWork === undefined || isFollowComplete()) detachSignal.removeEventListener('abort', detachFollow)
-      else void followWork.then(() => { detachSignal.removeEventListener('abort', detachFollow) })
+      if (followWork === undefined || isFollowComplete()) accepted.removeEventListener('abort', abort)
+      else void followWork.then(() => { accepted.removeEventListener('abort', abort) })
     }
-  }
-  async function runPrompt(
-    sessionId: SessionId, input: { readonly text: string; readonly images?: readonly NativeImageUpload[] }
-      | { readonly content: readonly NativeSessionInputPart[] }, resume: boolean,
-    signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    onFollowError?: (error: unknown) => void, lastSeq = -1, detach?: AbortSignal, onAccepted?: () => void,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    signal?.throwIfAborted()
-    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
-      throw new TypeError('native Session Client: invalid follow cursor')
-    }
-    if (observe !== undefined && rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, resume,
-      follow: observe !== undefined, ...observe === undefined ? {} : { lastSeq },
-      ...'content' in input ? { content: input.content } : { text: input.text, ...input.images === undefined ? {} : { images: input.images } } },
-    detachSignal, false)
-    onAccepted?.()
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
-  }
-  async function attach(
-    sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void, detach?: AbortSignal,
-  ): Promise<TurnResult | undefined> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    if (!Number.isSafeInteger(lastSeq) || lastSeq < -1) throw new TypeError('native Session Client: invalid follow cursor')
-    if (rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId | null }>(
-      'session/attach', { sessionId, lastSeq }, detachSignal, false)
-    if (admissionId === null) return undefined
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
   }
   return {
     sessionFeedbackRecord: (request, signal) => call<SessionFeedbackRecordResult>('feedback/session-record', request, signal),
@@ -1763,16 +1698,20 @@ export function createNativeSessionClient(
     async submissions(sessionId, signal) {
       return call<NativeSubmissionsSnapshot>('session/submissions', { sessionId }, signal)
     },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { text, ...(images === undefined ? {} : { images }) }, resume,
-        signal, observe, onFollowError, lastSeq, detach, onAccepted))
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+      const pending = runPrompt(sessionId, { text, ...(images === undefined ? {} : { images }) }, resume,
+        signal, observe, onFollowError, lastSeq)
+      pendingPrompts.add(pending)
+      const settled = (): void => { pendingPrompts.delete(pending) }
+      void pending.then(settled, settled)
+      return pending
     },
-    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq, detach,
-        onAccepted))
-    },
-    attach(sessionId, lastSeq, observe, signal, onFollowError, detach) {
-      return trackPrompt(attach(sessionId, lastSeq, observe, signal, onFollowError, detach))
+    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq) {
+      const pending = runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq)
+      pendingPrompts.add(pending)
+      const settled = (): void => { pendingPrompts.delete(pending) }
+      void pending.then(settled, settled)
+      return pending
     },
     cancel: (sessionId, signal) => call('session/cancel', { sessionId }, signal),
     status: (sessionId, signal) => call('session/status', { sessionId }, signal),

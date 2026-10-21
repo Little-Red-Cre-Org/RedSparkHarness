@@ -9,6 +9,8 @@ English | [中文](README.zh.md)
 
 The session row menu includes Delete session with confirmation. This removes the sidebar entry using the persistent archive set; it does not erase the transcript, stop active work, or cancel schedules. Rejected requests keep the row and display the error.
 
+The primary Desktop workspace menu exposes **Open in IDE** only when the preload supplies its narrow IDE capability. The action targets the clicked workspace, including when another workspace is selected. It carries the active UI language and current session text without sending a message. The embedded workbench returns its current session and text through the private Desktop carrier; the original renderer validates session membership before acknowledging restoration. Attachments and active input transactions block handoff, leaving the source intact.
+
 ## Summary
 
 This package lets users browse grouped or flat Session lists, choose a Workspace for a new Session, and manage Workspaces and Sessions through add, rename, reorder, search, fork, archive, and Workspace deletion. Pending interactions appear as warning dots, active scheduled tasks as alarm markers, and subagent-origin Sessions remain hidden. Canonically distinct folder paths remain separate Workspaces. Adding a Workspace requires a composed directory picker; without one, the add action is unavailable.
@@ -30,6 +32,10 @@ Workspace and Session rows, the section header, and the empty state are shared p
 ## Use this package
 
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five non-blank Sessions by default and keeps the selected blank **New Session** as one provisional extra row until its first prompt. **Show more** reveals the hidden remainder; closing and reopening the Workspace restores this folded projection.
+
+The Desktop IDE embeds the same conversation and controllers. Its parent-bound channel selects the canonical Workspace, projects its non-archived Session summaries to Code OSS Explorer, and accepts New Session and Session selection commands. Disposal removes subscriptions and rejects late messages; the bridge neither executes agent turns nor owns another Session store.
+
+The selected Session determines the project path published to Code OSS. Editor selections append through the existing composer's revision-checked text insertion, retaining earlier draft text and reference chips; a busy composer or stale project rejects insertion. Code is sent to the model only after the user submits the draft through the ordinary logged prompt path. File-link events resolve paths from their originating Session and open the editor at the requested line. Conversation integration activates after the navigation service, avoiding a mutual service dependency. File navigation can carry recorded change fragments for read-only IDE comparison; the channel does not accept file mutation commands.
 
 ### Reordering and view options
 
@@ -125,3 +131,7 @@ None.
 </details>
 
 **Runtime invariant:** No companion is published. This is a pure-consumer plugin that registers presentational components into two host-declared slots and registers its locale dictionaries; its inject face consists of stateless RPC wrappers plus a create-and-open call. It emits no Cordis events and owns no cross-plugin mutable state.
+
+In the embedded IDE, newly completed assistant answers open their Markdown code blocks as unsaved central editor tabs. Existing files and chat explanations remain unchanged. Initial history, interrupted answers, and repeated completion notifications do not open tabs.
+
+The primary Desktop renderer supplies its selected conversation workspace and plain-text draft when the application IDE menu is invoked. An empty selection delegates directory selection to Desktop.

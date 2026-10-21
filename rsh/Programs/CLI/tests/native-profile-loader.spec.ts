@@ -1,10 +1,8 @@
 /** Real package-export loading from a profile, including pre-import refusal. */
 import { existsSync } from 'node:fs'
-import { createServer } from 'node:http'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { once } from 'node:events'
 import { expect, it } from 'vitest'
 import { NativeScope, type NativePlugin, type NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
 import { loadNativeProfile, replaceNativeProfile } from '../src/native-profile-loader.ts'
@@ -372,28 +370,12 @@ it('refuses a legacy patch on an explicitly native profile', async () => {
   } finally { await rm(home, { recursive: true, force: true }) }
 })
 
-it('installs the launch proxy before running a native application and awaits disposal', async () => {
+it('runs one native application through the profile launcher and awaits disposal', async () => {
   const { home, profileDir } = await fixture()
   const packageDir = join(profileDir, 'node_modules', 'test-native-app')
   const marker = join(home, 'events.txt')
   const priorExitCode = process.exitCode
-  const proxyNames = ['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy', 'DSH_HOME', 'CORDIS_SHARED']
-  const priorEnvironment = new Map(proxyNames.map(name => [name, process.env[name]]))
-  let proxyRequest: string | undefined
-  const proxy = createServer((request, response) => {
-    proxyRequest = String(request.url)
-    response.end('PROXIED')
-  })
   try {
-    proxy.listen(0, '127.0.0.1')
-    await once(proxy, 'listening')
-    const address = proxy.address()
-    if (address === null || typeof address === 'string') throw new Error('test proxy did not bind a TCP port')
-    for (const name of proxyNames) Reflect.deleteProperty(process.env, name)
-    process.env.DSH_HOME = home
-    process.env.HTTP_PROXY = `http://127.0.0.1:${address.port}`
-    process.env.HTTPS_PROXY = process.env.HTTP_PROXY
-    process.env.NO_PROXY = ''
     await mkdir(packageDir)
     await writeFile(join(packageDir, 'package.json'), JSON.stringify({
       name: 'test-native-app', version: '1.0.0', type: 'module',
@@ -403,31 +385,16 @@ it('installs the launch proxy before running a native application and awaits dis
     await writeFile(join(packageDir, 'native.mjs'), `import { appendFileSync } from 'node:fs';
       export const plugin = { apiVersion: 1, name: 'test-native-app', targets: ['host'], requires: [], provides: ['application'],
         resolve: () => context => { context.own(() => appendFileSync(${JSON.stringify(marker)}, 'closed\\n'));
-          context.provide('application', { run: async args => { appendFileSync(${JSON.stringify(marker)}, args.join(' ') + '\\n');
-            const response = await fetch('http://native-proxy-check.invalid/path');
-            appendFileSync(${JSON.stringify(marker)}, await response.text() + '\\n'); return 0 } }) } }
+          context.provide('application', { run: async args => { appendFileSync(${JSON.stringify(marker)}, args.join(' ') + '\\n'); return 0 } }) } }
     `)
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }],
       installations: [{ id: 'app', plugin: 'test-native-app', scope: 'root' }],
     }))
     await runNativeProfile({ profile: 'probe', patchFiles: [], args: ['hello', 'native'], home })
-    expect(proxyRequest).toBe('http://native-proxy-check.invalid/path')
-    expect(await readFile(marker, 'utf8')).toBe('hello native\nPROXIED\nclosed\n')
+    expect(await import('node:fs/promises').then(fs => fs.readFile(marker, 'utf8'))).toBe('hello native\nclosed\n')
   } finally {
     process.exitCode = priorExitCode
-    for (const [name, value] of priorEnvironment) {
-      if (value === undefined) Reflect.deleteProperty(process.env, name)
-      else process.env[name] = value
-    }
-    if (proxy.listening) {
-      await new Promise<void>((resolve, reject) => {
-        proxy.close((error) => {
-          if (error === undefined) resolve()
-          else reject(error)
-        })
-      })
-    }
     await rm(home, { recursive: true, force: true })
   }
 })

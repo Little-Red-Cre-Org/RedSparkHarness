@@ -125,29 +125,6 @@
   color: var(--dsw-alias-label-primary);
 }
 
-/* The volume picker: a drive letter is a jump target above the trail, so it
-   reads as one more crumb rather than as a form control. */
-.volumeSelect {
-  border: none;
-  background: transparent;
-  padding: 0 2px 0 0;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-tertiary);
-  cursor: pointer;
-  appearance: none;
-}
-
-.volumeSelect:hover {
-  color: var(--dsw-alias-label-primary);
-}
-
-.volumeSelect:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
 .crumbChevron {
   flex: none;
   color: var(--dsw-alias-label-tertiary);

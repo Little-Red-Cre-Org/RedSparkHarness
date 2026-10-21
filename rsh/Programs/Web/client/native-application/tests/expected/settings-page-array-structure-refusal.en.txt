@@ -19,6 +19,6 @@
     "Request failed: Settings arrays must keep their existing row count and order."
   ],
   "notices": [
-    "This Host does not save this preference; the behavior shown is used."
+    "Could not read the busy-send preference."
   ]
 }

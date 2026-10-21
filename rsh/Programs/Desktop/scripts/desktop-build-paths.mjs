@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path'
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
 const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64'])
-const SUPPORTED_ASSEMBLIES = new Set(['native', 'compatibility'])
 
 /**
  * Resolve the fixed build target selected by a packaging environment.
@@ -29,33 +28,18 @@ export function resolveDesktopBuildTarget(
   return /** @type {'mac-arm64' | 'mac-x64' | 'win-x64'} */ (target)
 }
 
-/** Resolve the explicitly selected Desktop runtime assembly. */
-export function resolveDesktopBuildAssembly(env = process.env) {
-  const assembly = env.DSH_DESKTOP_ASSEMBLY ?? 'native'
-  if (!SUPPORTED_ASSEMBLIES.has(assembly)) {
-    throw new Error(`desktop build paths: unsupported assembly ${String(assembly)}`)
-  }
-  return assembly
-}
-
 /**
  * Return the mutable preparation and artifact directories owned by one release target.
  * @param {'mac-arm64' | 'mac-x64' | 'win-x64'} target - Supported Desktop target name.
  * @returns {{ root: string, artifacts: string, runtime: string, packageSet: string, dsh: string, dshPnpm: string, nodeExtract: string, packedDsh: string, packedVendor: string, packedLandlock: string, downloads: string }} Target paths plus the shared immutable download cache.
  */
-export function desktopTargetBuildPaths(target, assembly = 'native') {
+export function desktopTargetBuildPaths(target) {
   if (!SUPPORTED_TARGETS.has(target)) {
     throw new Error(`desktop build paths: unsupported target ${String(target)}`)
   }
-  if (!SUPPORTED_ASSEMBLIES.has(assembly)) {
-    throw new Error(`desktop build paths: unsupported assembly ${String(assembly)}`)
-  }
-  const root = assembly === 'native'
-    ? join(BUILD_ROOT, 'targets', target)
-    : join(BUILD_ROOT, 'targets', target, assembly)
+  const root = join(BUILD_ROOT, 'targets', target)
   const packed = join(root, 'packed')
   return {
-    assembly,
     root,
     artifacts: join(root, 'artifacts'),
     runtime: join(root, 'runtime'),
@@ -82,5 +66,5 @@ export function resolveDesktopTargetBuildPaths(
   hostPlatform = process.platform,
   hostArch = process.arch,
 ) {
-  return desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch), resolveDesktopBuildAssembly(env))
+  return desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
 }

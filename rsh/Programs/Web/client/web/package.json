@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-web",
-  "description": "Cordis-free Native browser boot API and framework-free loading page",
+  "description": "Web boot kernel: static module table, Cordis loader, framework-free boot page, and UI-renderer handoff",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
@@ -26,10 +26,7 @@
       "types": "./lib/types/boot-page.d.ts",
       "default": "./lib/boot-page.js"
     },
-    "./native-wire": {
-      "types": "./lib/types/native-wire.d.ts"
-    },
-    "./base.css": "./lib/base.css",
+    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "license": "MIT",
@@ -39,11 +36,26 @@
     "dequal": "2.0.3"
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
+    "@deepseek-ai/dsh-client-modules": "workspace:^",
+    "@deepseek-ai/dsh-client-store": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-dockkit": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   },
   "files": [
     "lib/index.js",

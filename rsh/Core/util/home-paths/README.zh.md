@@ -40,7 +40,7 @@ const cache = dshCachePath('models')         // $DSH_HOME/cache/models, default 
 
 `dshCachePath(...segments)` 从解析出的主目录下的 `cache` 目录派生路径。不传路径段时返回缓存目录本身。传入首个选项对象 `dshCachePath({ dshHome: home }, ...segments)` 可使用显式配置的主目录，遵循相同的优先级与波浪号展开规则。它返回绝对路径，不会创建目录。
 
-`resolveDshProfileExecution(name, home)` 会读取所选 profile 的 `package.json`，并返回其声明的 runtime 与 reload mode。manifest 缺失时选择 legacy execution；已存在的 manifest 必须声明 `runtime: 'native'` 与 `config: 'rsh.profile.json'`，或声明 `bundles: [...]` 以选择 legacy execution。`runtime: 'legacy'` 不能声明 native 配置字段。解析器只读取而不写入；已存在的 manifest 若既未声明 runtime，也未声明 bundles，则会报错。CLI 与 SDK 共用此解析器，因此 source launcher 的选择与 CLI 启动行为一致；完整规则见[原生配置迁移参考](../../../Docs/native-config-migration.zh.md)。
+`resolveDshProfileExecution(name, home)` 会读取所选 profile 的 `package.json`，并返回其声明的 runtime 与 reload mode。profile manifest 缺失时选择 legacy execution；Native marker 必须使用 `rsh.profile.json`，并拒绝未知的 profile 字段。CLI 与 SDK 共用此解析器，因此 source launcher 的选择与 CLI 启动行为一致。
 
 ### 展示主目录
 

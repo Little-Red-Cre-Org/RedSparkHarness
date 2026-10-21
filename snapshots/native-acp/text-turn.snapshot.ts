@@ -65,7 +65,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] },
         { id: 'fixture-model-next', input: ['text', 'image'], reasoningEfforts: { off: null, high: 'high' } }] } } } },
   ] }))
-  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'acp', '--patch', patch], {
+  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
     cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })

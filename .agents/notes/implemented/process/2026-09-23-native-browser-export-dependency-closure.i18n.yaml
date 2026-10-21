@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-09-23-native-browser-export-dependency-closure.md
-2026-09-23-native-browser-export-dependency-closure.md: c5280ac32ea007c0d5ca5da207c3f5057948f887
-2026-09-23-native-browser-export-dependency-closure.zh.md: 627d71fcbcc7d861cc44c675aa143dc6152096dc
+2026-09-23-native-browser-export-dependency-closure.md: 0b699e04863491f82fae354859c7e22ded3eb92b
+2026-09-23-native-browser-export-dependency-closure.zh.md: 84a1cc85766ae1972c5c0d60d8a4b6c597a98472

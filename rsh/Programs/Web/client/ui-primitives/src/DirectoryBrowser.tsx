@@ -66,12 +66,6 @@ export interface DirectoryBrowserListing {
   entries: readonly DirectoryBrowserEntry[]
   /** Whether the host truncated the child directory list. */
   truncated: boolean
-  /**
-   * Volumes reachable as browsing roots. A host with several roots cannot reach
-   * the others through `crumbs`, which only walks up within one tree, so these
-   * rows are the only way to cross to another drive.
-   */
-  roots?: readonly DirectoryBrowserEntry[]
 }
 
 /** Localized copy supplied by the owning application. */
@@ -89,7 +83,6 @@ export type DirectoryBrowserKey =
   | 'browser.title'
   | 'browser.truncated'
   | 'browser.untitledFolder'
-  | 'browser.volume'
 
 /** Translate the directory browser's localized labels. */
 export type DirectoryBrowserTranslate = (key: DirectoryBrowserKey, params?: Record<string, unknown>) => string
@@ -99,7 +92,7 @@ export interface DirectoryBrowserProps {
   /** Dialog visibility (owner-local; closed unmounts nothing but resets on reopen). */
   open: boolean
   /**
-   * List one directory level (absent path = the Host start directory); the
+   * List one directory level (absent path = the Host home directory); the
    * signal aborts a superseded scan on the wire. A rejection may carry
    * `{ rpcError: { message: string } }`; the dialog prefers that Host
    * business message over the ordinary Error text.
@@ -456,7 +449,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
    * upgrade — one keystroke must move the view once. A failure leaves the
    * last readable panes standing and says nothing, while an arrival clears
    * the stale message and re-parks focus the swap dropped.
-   * @param path - the level to list; absent lists the Host start directory.
+   * @param path - the level to list; absent lists the Host home directory.
    * @param options - `closeEditor` retires the path draft on arrival and
    * bounds the wait for the parent leg; `announce` surfaces a failure as the
    * dialog's alert.
@@ -622,7 +615,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
     select(entry)
   }, [child, select])
 
-  // Every open starts fresh at the Host start directory; closing invalidates
+  // Every open starts fresh at the Host home directory; closing invalidates
   // any in-flight response so a late arrival cannot repopulate a closed dialog.
   useEffect(() => {
     openGeneration.current += 1
@@ -748,13 +741,6 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
     ? null
     : readDraft(crumbSource, pathDraft, scanned.current).tail
   const crumbs = crumbSource === null ? [] : displayCrumbs(crumbSource, t('browser.home'))
-  // Volumes the host reports. Windows has no common ancestor above the drive
-  // letters, so the trail alone can never reach a second drive; these rows are
-  // the only way to cross volumes.
-  const roots = crumbSource?.roots ?? []
-  const currentRoot = crumbSource === null
-    ? null
-    : roots.find(entry => crumbSource.path.toLowerCase().startsWith(entry.path.toLowerCase()))?.path ?? null
   const crumbTail = crumbs.at(-1)?.path
   useEffect(() => {
     const trail = crumbTrailRef.current
@@ -881,33 +867,9 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
               ? (
                 <>
                   <span className={css.crumbTrail} role="navigation" ref={crumbTrailRef}>
-                    {roots.length > 0 && (
-                      <span className={css.crumbSeat}>
-                        <select
-                          className={css.volumeSelect}
-                          aria-label={t('browser.volume')}
-                          title={t('browser.volume')}
-                          value={currentRoot ?? ''}
-                          disabled={parentInert}
-                          onChange={(event) => {
-                            const next = event.target.value
-                            if (next !== '') navigate(next)
-                          }}
-                        >
-                          {/* The current volume is what the trail below already
-                            * names, so the closed control shows it while the
-                            * open list offers every root as a jump target. */}
-                          {currentRoot === null && <option value="">{t('browser.volume')}</option>}
-                          {roots.map(root => (
-                            <option key={root.path} value={root.path}>{root.name}</option>
-                          ))}
-                        </select>
-                        <IconChevronRightOutline14 size={12} className={css.crumbChevron} />
-                      </span>
-                    )}
                     {crumbs.map((crumb, index) => (
                       <span key={crumb.path} className={css.crumbSeat}>
-                        {(index > 0 || roots.length > 0) && <IconChevronRightOutline14 size={12} className={css.crumbChevron} />}
+                        {index > 0 && <IconChevronRightOutline14 size={12} className={css.crumbChevron} />}
                         <button
                           type="button"
                           className={css.crumb}

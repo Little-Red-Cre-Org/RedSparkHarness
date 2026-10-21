@@ -1,6 +1,6 @@
 version: 1
 scenario: escalation-approved
-profile: legacy-acp
+profile: acp
 composition: acp-default
 recording: live
 header:

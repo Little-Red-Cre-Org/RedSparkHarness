@@ -18,11 +18,8 @@ function fixture() {
   const answers: ReturnType<typeof Promise.withResolvers<undefined>>[] = []
   const turns: { observe: Parameters<NativeSessionClient['prompt']>[4]
     settled: ReturnType<typeof Promise.withResolvers<{ exitCode: number; answer: string }>> }[] = []
-  const transport = createNativeSessionClient({ async call(_target, endpoint) {
-    if (endpoint === 'session/attach') return { ok: true as const, value: { admissionId: null } }
-    throw new Error('unexpected transport call')
-  } },
-  { maxFollowBufferChars: 10_000 })
+  const transport = createNativeSessionClient({ async call() { throw new Error('unexpected transport call') } },
+    { maxFollowBufferChars: 10_000 })
   const answerHuman = vi.fn<NativeSessionClient['answerHuman']>(() => {
     const answer = Promise.withResolvers<undefined>()
     answers.push(answer)
@@ -45,8 +42,7 @@ function fixture() {
     async history(id) { return { header: header(id), events: [
       { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
     ], inheritedEventCount: 0 } },
-    prompt(_id, _text, _resume, _signal, observe, _images, _onFollowError, _lastSeq, _detach, onAccepted) {
-      onAccepted?.()
+    prompt(_id, _text, _resume, _signal, observe) {
       const settled = Promise.withResolvers<{ exitCode: number; answer: string }>()
       turns.push({ observe, settled })
       return settled.promise

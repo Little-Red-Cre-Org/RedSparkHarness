@@ -77,7 +77,7 @@ Native profile 必须提供 `activeSessions` 和 `tools`；省略 `config` 或�
 
 ### 作用域与组合
 
-包有独立的 Cordis 与 Native Host 入口。`src/index.ts` 保留 Cordis overlay，要求 agent、session、tool 和 persistence 服务，并安装在插件加载后创建的根 Agent 上。`src/native.ts` 要求 `activeSessions` 和 `tools`，附加到现有和未来的确切根 Session owner，并拒绝来自委托 Agent 或其他 Session 的调用。Cordis 与 invariant 入口拥有仅供 Cordis 使用的 peers；因此 Native-only 消费者无需安装这些可选 peers。两个入口复用同一持久事件 fold 与串行管理操作；任何入口都不会安装到 child Agent。
+包有独立的 Cordis 与 Native Host 入口。`src/index.ts` 保留 Cordis overlay，要求 agent、session、tool 和 persistence 服务，并安装在插件加载后创建的根 Agent 上。`src/native.ts` 要求 `activeSessions` 和 `tools`，附加到现有和未来的确切根 Session owner，并拒绝来自委托 Agent 或其他 Session 的调用。两个入口复用同一持久事件 fold 与串行管理操作；任何入口都不会安装到 child Agent。
 
 Time-context 不是 Schedule 的依赖。官方 Web overlay 挂载 `@deepseek-ai/dsh-time-context`，让模型能够按浏览器请求本地时区解释自然语言；但模型仍必须向 `schedule_create` 传入显式偏移量或 `time_zone`；Schedule 绝不会从模型上下文导入或推断该值。
 

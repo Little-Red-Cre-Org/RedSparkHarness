@@ -95,7 +95,6 @@
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
@@ -123,6 +122,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/dsh-settings-definition": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^",
     "@deepseek-ai/dsh-native-web-assets": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",

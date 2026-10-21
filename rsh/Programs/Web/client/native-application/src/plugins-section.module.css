@@ -124,11 +124,6 @@
   cursor: pointer;
 }
 
-.headerStatic {
-  box-sizing: border-box;
-  cursor: default;
-}
-
 .header:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: -2px;
