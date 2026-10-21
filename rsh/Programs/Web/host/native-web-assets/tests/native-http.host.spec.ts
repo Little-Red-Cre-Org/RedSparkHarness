@@ -106,23 +106,6 @@ it('mounts a native RPC channel and removes the listener when the owner is dispo
     expect(mounted.body).toContain('server-response')
     await disposer()
     expect(await responseBody(server.port, '/rpc/echo', { method: 'POST', body: '{}' })).toEqual({ status: 200, body: 'asset' })
-    const started = deferred()
-    const release = deferred()
-    server.connection.rpc.handle('/slow', async () => {
-      started.resolve()
-      await release.promise
-      return { ok: true }
-    })
-    const pending = responseBody(server.port, '/slow/echo', { method: 'POST', body: '{}' })
-    await started.promise
-    let closed = false
-    const closing = server.close().then(() => { closed = true })
-    await new Promise<void>((resolve) => { setImmediate(resolve) })
-    expect(closed).toBe(false)
-    release.resolve()
-    await expect(pending).resolves.toMatchObject({ status: 200 })
-    await closing
-    expect(closed).toBe(true)
   } finally {
     await server.close()
   }

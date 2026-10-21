@@ -197,7 +197,6 @@ const handle = await ctx.agents.create({
 - **分类是一元的**：安全性取决于比较同级调用或资源的调用必须保持独占（[原理](../../../../.agents/notes/implemented/feature/2026-07-10-parallel-tool-call-execution.zh.md)）。
 - **配置标签默认对应新会话**：省略 `sessionId` 时，每次启动都会创建新的 `${id}-session-<uuid>`；如需确切的恢复或创建行为，必须显式提供稳定的 `sessionId`，而 `resumeSessionId` 要求已有持久化历史。
 - **配置 agent 没有逐 agent persona 字段或 setup 钩子**：它们使用部署 persona；只有编程式 `ctx.agents.create()` / `resume()` 工厂选项支持带作用域的 persona 与工具组合。
-- **兼容层 AgentLoop 拒绝携带 policy 的创建与恢复输入**：`createAgent(seed)` 会在 Session 准备或创建持久化记录前拒绝包含 `execution/policy` 的 seed；`resumeWith(persisted)` 会在读取已存事件后、崩溃修复或发布 Agent 前拒绝。只读 `ctx.sessions.prepare()` 仍可使用；不含 policy 的创建与恢复行为不变。
 - **没有内置轮次预算**：工具调用或 steering 会让当前轮次继续；限制失控轮次的策略必须从既有生命周期扩展点（如 `agent/turn-stopping`）执行取消。
 
 <a id="dev-note"></a>

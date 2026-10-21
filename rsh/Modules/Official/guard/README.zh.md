@@ -7,6 +7,8 @@ kind: "package-group"
 
 [English](README.md) | 中文
 
+可选的 [tool-groups](tool-groups/README.zh.md) Native 插件控制每次模型请求可见的配置能力，所属子系统为[工具](../../../Docs/subsystems/tools.zh.md)。
+
 ## 概述
 
 `guard/` 组通过监视两种常见失败模式来保持 agent loop（智能体循环）高效。`repeat-tool-reminder` 会在模型重复完全相同的工具调用时提醒它改变方法或结束任务，让卡住的循环不再浪费时间和 token。`timeout-policy` 为声明了限时的工具调用设置时间上限，让挂起的调用向模型返回清晰的超时错误，而不是拖住整个会话。两者都在 `dsh` 基础组合包中默认启用；组合可以调优或移除它们。

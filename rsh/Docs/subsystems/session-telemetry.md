@@ -4,25 +4,7 @@ English | [中文](session-telemetry.zh.md)
 
 Outbound session reporting is split as a [capability seam](../capability-seams.md): the Service Definition and capture coordinator ([dsh-session-telemetry](../../Engine/session/session-telemetry), `ctx.sessionTelemetry`) own complete canonical-event capture, the `session-telemetry/record` redaction waterfall, the handoff cursor, and the minimal backend contract; the Service Provider a deployment loads ([dsh-session-telemetry-otel](../../Engine/session/session-telemetry-otel)) is the OpenTelemetry JS SDK's log pipeline configured verbatim. It is one optional capability, not part of the agent-loop spine, and nothing here reaches a model request. The boundary axiom — the harness's aspect ends at `emit()`; batching, retry, queueing, and loss policy belong to the reporting SDK — and the rejected alternatives are pinned in the [revival Agent Note](../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.md); the capture and cursor contracts live in the [Service Definition README](../../Engine/session/session-telemetry/README.md).
 
-Source: [`rsh/Engine/session/session-telemetry/src/types.ts`](../../Engine/session/session-telemetry/src/types.ts)
-
-## Native Host service
-
-Native Hosts use the package's `./native-definition` export for a Host service with the same reporting policy vocabulary. The Native OTel Provider consumes durable feedback commits, redacts copied records through `session-telemetry/record`, and drains accepted captures before Native Host resources are released; it does not compose the Cordis coordinator or handoff cursor.
-
-```ts type-equiv
-/** Native telemetry service provided by an explicitly selected backend. */
-interface NativeSessionTelemetryOperations {
-  /** Selected sharing policy; this does not confirm collector delivery. */
-  readonly sharing: SessionTelemetrySharingStatus
-  /** @param record - direct submissions are refused by FEEDBACK_ONLY backends. */
-  emit(record: SessionTelemetryRecord): void
-  /** @returns completion after accepted exporter work has drained. */
-  shutdown(): Promise<void>
-}
-```
-
-Source: [`rsh/Engine/session/session-telemetry/src/native-definition.ts`](../../Engine/session/session-telemetry/src/native-definition.ts)
+Source: [`rsh/Engine/session/session-telemetry/src/index.ts`](../../Engine/session/session-telemetry/src/index.ts)
 
 ## The logical record
 

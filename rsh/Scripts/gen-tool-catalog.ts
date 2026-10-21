@@ -15,6 +15,9 @@ import { plugin as nativeToolsPlugin } from '@deepseek-ai/dsh-native-tools/nativ
 import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { plugin as nativeCodeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
 import { plugin as nativeCodeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
+import { plugin as nativeToolGroupsPlugin } from '@deepseek-ai/dsh-tool-groups/native'
+import { plugin as nativeSessionPlugin } from '@deepseek-ai/dsh-native-session-execution'
+import { plugin as nativeTodoPlugin } from '@deepseek-ai/dsh-tool-todo/native'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import type { ToolSchema } from '@deepseek-ai/dsh-llm'
@@ -220,6 +223,31 @@ async function harvestNativeCodeTool(): Promise<ToolSchema[]> {
   }
 }
 
+/** Harvest the group-request schema with an explicitly configured planning group. */
+async function harvestNativeToolGroups(): Promise<ToolSchema[]> {
+  const scope = new NativeScope()
+  let tools: NativeToolRegistry | undefined
+  const observer: NativePlugin = {
+    apiVersion: 1, name: 'group-catalog-observer', targets: ['host'], requires: ['tools'], provides: [],
+    resolve: () => (context) => { tools = context.require('tools') },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: nativeAgentPlugin, scope, config: undefined },
+    { plugin: nativeToolsPlugin, scope, config: { mode: 'native' } },
+    { plugin: nativeSessionPlugin, scope, config: undefined },
+    { plugin: nativeTodoPlugin, scope, config: { allowParallelInProgress: false } },
+    { plugin: nativeToolGroupsPlugin, scope, config: {
+      initial: [], groups: [{ name: 'planning', description: 'Maintain the task plan', tools: ['todo_write'] }],
+    } },
+    { plugin: observer, scope, config: undefined },
+  ], 'host'))
+  try {
+    await host.start()
+    if (tools === undefined) throw new Error('gen-tool-catalog: group tool registry was not published')
+    return tools.schemas(scope)
+  } finally { await host.stop() }
+}
+
 /**
  * The boot manifest: every shipped tool package (a `tool-*` leaf under
  * `packages/`). Ordered by package name (the render order); the completeness
@@ -318,6 +346,13 @@ const TOOL_PACKAGES: ToolPackage[] = [
     writes: ['tool/call', 'tool/ptc-dispatch-start', 'tool/ptc-dispatch', 'tool/result'],
     harvest: harvestNativeCodeTool,
     note: 'Native run_code is registered by the selected code-tool Consumer. This catalog harvest uses the TypeScript worker-thread Provider; selecting the Python Provider changes the code parameter description and SDK language.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-groups', dir: 'tool-groups',
+    source: 'rsh/Modules/Official/guard/tool-groups/src/native.ts',
+    requires: ['tools', 'activeSessions'], writes: ['tool-groups/opened', 'request/header', 'tool/result'],
+    harvest: harvestNativeToolGroups,
+    note: 'The planning group is a catalog example. Profiles explicitly configure initial tools and group names, descriptions and tool lists. Grants apply to the next model request and do not change operation permissions.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-cordis',
@@ -450,7 +485,7 @@ const TOOL_PACKAGES: ToolPackage[] = [
     pkg: '@deepseek-ai/dsh-schedule',
     dir: 'schedule',
     source: 'rsh/Engine/schedule/schedule/src/tools.ts',
-    requires: ['ctx.tools', 'ctx.sessions (Cordis) or activeSessions (Native)', 'Session persistence', 'an exact live root Session owner'],
+    requires: ['ctx.tools', 'ctx.sessions', 'Session persistence', 'a future live root Agent'],
     writes: ['tool/call', 'schedule/change create or delete', 'tool/result'],
     async mount(ctx) {
       await ctx.plugin(SessionStore)
@@ -462,8 +497,8 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     scope: ctx => catalogChildScopes.get(ctx) as Agent,
     note:
-      'Cordis registers tools on root Agent scopes created after its overlay loads; the Native Host entry attaches to existing and future exact root Session owners before the first model request snapshot. '
-      + 'The first Native turn includes these schemas when its tool allowlist permits them. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, '
+      'Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. '
+      + 'Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, '
       + 'and discloses session-local delivery; '
       + 'management reads and mutations require the shared Session persistence barrier.',
   },

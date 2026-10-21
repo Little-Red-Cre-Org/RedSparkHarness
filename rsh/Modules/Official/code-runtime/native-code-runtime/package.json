@@ -54,8 +54,5 @@
   "dependencies": {
     "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^"
-  },
-  "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
   }
 }

@@ -3,7 +3,6 @@ import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {
   NativeApprovalAnswerer,
-  NativeApprovalAnswererResult,
   NativeApprovalAnswererRequest,
   NativeApprovalRequest,
   NativeApprovalServiceDefinition,
@@ -15,14 +14,12 @@ export {
 } from './types.ts'
 export type {
   NativeApprovalAnswerer,
-  NativeApprovalAnswererResult,
   NativeApprovalAnswererRequest,
   NativeApprovalDecision,
   NativeApprovalOutcome,
   NativeApprovalPolicy,
   NativeApprovalRequest,
   NativeApprovalServiceDefinition,
-  NativeApprovalSessionGrant,
 } from './types.ts'
 
 /** Optional native-provider configuration. */
@@ -129,7 +126,6 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
   private async decide(request: NativeApprovalAnswererRequest): Promise<approvalTypes.NativeApprovalDecision> {
     if (this.isAborted(request.signal)) return this.decision(request, 'cancelled')
     if (request.policy === 'never') return this.decision(request, 'rejected')
-    if (request.sessionGrant?.previouslyGranted === true) return this.decision(request, 'allowed-once')
     for (const answerer of [...this.answerers]) {
       const outcome = await this.answer(answerer, request)
       if (outcome !== undefined) return this.decision(request, outcome)
@@ -139,11 +135,11 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
 
   private answer(
     answerer: NativeApprovalAnswerer, request: NativeApprovalAnswererRequest,
-  ): Promise<NativeApprovalAnswererResult | undefined> {
+  ): Promise<approvalTypes.NativeApprovalOutcome | undefined> {
     if (this.isAborted(request.signal)) return Promise.resolve('cancelled')
     return new Promise((resolve) => {
       let settled = false
-      const complete = (outcome: NativeApprovalAnswererResult | undefined): void => {
+      const complete = (outcome: approvalTypes.NativeApprovalOutcome | undefined): void => {
         if (settled) return
         settled = true
         request.signal.removeEventListener('abort', onAbort)
@@ -151,7 +147,7 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
       }
       const onAbort = (): void => { complete('cancelled') }
       request.signal.addEventListener('abort', onAbort, { once: true })
-      let work: Promise<NativeApprovalAnswererResult | undefined>
+      let work: Promise<approvalTypes.NativeApprovalOutcome | undefined>
       try {
         work = Promise.resolve(answerer(request))
       } catch {
@@ -168,11 +164,9 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
   }
 
   private decision(
-    request: NativeApprovalAnswererRequest, answer: NativeApprovalAnswererResult,
+    request: NativeApprovalAnswererRequest, outcome: approvalTypes.NativeApprovalOutcome,
   ): approvalTypes.NativeApprovalDecision {
-    if (typeof answer === 'string') return { id: request.id, policy: request.policy, outcome: answer }
-    if (request.sessionGrant === undefined) throw new Error('native-approval: answer has no reusable Session scope')
-    return { id: request.id, policy: request.policy, outcome: answer.outcome, sessionGrant: request.sessionGrant.grant }
+    return { id: request.id, policy: request.policy, outcome }
   }
 
   private isAborted(signal: AbortSignal): boolean {

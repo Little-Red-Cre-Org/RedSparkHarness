@@ -26,5 +26,19 @@ const startup: DshDesktopStartupApi = {
 contextBridge.exposeInMainWorld('dshDesktop', location.protocol === 'dsh-app:' && location.hostname === 'shell'
   ? startup : location.protocol === 'dsh-app:' && location.hostname === 'app'
     ? { protocolVersion: 1, notifyTask: (value: unknown) => ipcRenderer.invoke(DESKTOP_IPC.taskNotification, value),
+      ide: {
+        open: (value: unknown) => ipcRenderer.invoke(DESKTOP_IPC.ideOpen, value),
+        subscribe: (listener: (value: unknown) => Promise<void>) => {
+          const restore = (_event: Electron.IpcRendererEvent, value: unknown): void => {
+            void Promise.resolve().then(() => listener(value)).then(
+              () => ipcRenderer.invoke(DESKTOP_IPC.ideRestored, { ok: true }),
+              (error: unknown) => ipcRenderer.invoke(DESKTOP_IPC.ideRestored,
+                { ok: false, message: error instanceof Error ? error.message : String(error) }),
+            ).catch(console.error)
+          }
+          ipcRenderer.on(DESKTOP_IPC.ideRestore, restore)
+          return () => { ipcRenderer.off(DESKTOP_IPC.ideRestore, restore) }
+        },
+      },
       pet: { update: (value: unknown) => ipcRenderer.invoke(DESKTOP_IPC.petUpdate, value) } }
     : { protocolVersion: 1 })

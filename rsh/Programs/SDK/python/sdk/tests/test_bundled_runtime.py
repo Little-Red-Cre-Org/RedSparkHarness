@@ -2,11 +2,6 @@
 
 Each carrier skips independently when absent. The dummy API key only satisfies
 adapter loading; initialize and shutdown do not call a model.
-
-The carriers ship the native ``sdk`` profile only. The legacy bundle profile
-needs the CLI's optional compatibility packages, which the pruned deploy
-closure deliberately omits, so those cases skip instead of asserting a legacy
-composition the artifact no longer carries.
 """
 
 from __future__ import annotations
@@ -18,14 +13,9 @@ import pytest
 
 from deepseek_harness import DeepSeekHarness, HarnessClient, HarnessConfig
 from deepseek_harness.errors import JsonRpcError, TransportClosedError
-from deepseek_harness_runtime import (
-    RUNTIME_MODE_ENV_VAR,
-    bundled_package_dir,
-    resolve_bundled_launch_args,
-)
+from deepseek_harness_runtime import RUNTIME_MODE_ENV_VAR, resolve_bundled_launch_args
 
 _MODES = ("exe", "node")
-_LEGACY_BUNDLES = ("@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app")
 
 
 def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -36,31 +26,11 @@ def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(RUNTIME_MODE_ENV_VAR, mode)
 
 
-def _legacy_bundle_roots() -> tuple[Path, ...]:
-    """Skip the legacy-profile case when the carrier ships no compatibility packages.
-
-    The bundled carriers deploy a native-only closure, and the CLI refuses a
-    legacy profile without its optional compatibility packages. The case only
-    has meaning on a carrier that still carries them.
-    """
-    node_root = bundled_package_dir() / "runtime" / "node"
-    roots = tuple(node_root / "node_modules" / bundle for bundle in _LEGACY_BUNDLES)
-    if node_root.is_dir() and not all(root.is_dir() for root in roots):
-        pytest.skip(
-            "bundled carrier deploys the native-only closure; the legacy profile "
-            f"needs {', '.join(_LEGACY_BUNDLES)}, which it omits"
-        )
-    return roots
-
-
-def _client(
-    tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch, *patches: Path, profile: str = "sdk"
-) -> HarnessClient:
+def _client(tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch, *patches: Path) -> HarnessClient:
     _select_mode(mode, monkeypatch)
     return HarnessClient(
         HarnessConfig(
             dsh_home=str(tmp_path / "home"),
-            profile=profile,
             patches=tuple(str(patch) for patch in patches),
             cwd=str(tmp_path),
             env={
@@ -80,14 +50,15 @@ def test_bundled_runtime_boots_the_sdk_profile(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with _client(tmp_path, mode, monkeypatch) as client:
-        init = client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
+        init = client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-pro")
 
     assert init.serverInfo is not None
     assert init.serverInfo.name == "deepseek-harness-sdk-runtime"
     profile = json.loads((tmp_path / "home" / "profiles" / "sdk" / "package.json").read_text())
-    assert profile["dsh"]["profile"]["runtime"] == "native"
-    assert profile["dsh"]["profile"]["config"] == "rsh.profile.json"
-    assert (tmp_path / "home" / "profiles" / "sdk" / "rsh.profile.json").is_file()
+    assert profile["dsh"]["profile"]["bundles"] == [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-sdk-app",
+    ]
 
 
 @pytest.mark.parametrize("mode", _MODES)
@@ -95,15 +66,13 @@ def test_python_sdk_applies_an_ordered_profile_patch(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _select_mode(mode, monkeypatch)
-    patch = tmp_path / "persona.patch.json"
-    # A present installation config replaces the whole prior value, so the
-    # patch repeats maxSteps instead of relying on a merge.
-    patch.write_text(json.dumps({"formatVersion": 1, "installations": [{
-        "id": "app",
-        "config": {"systemPrompt": "Python SDK ordered patch marker.", "maxSteps": 8},
-    }]}))
+    patch = tmp_path / "persona.patch.yml"
+    patch.write_text(json.dumps([{
+        "id": "system-prompt",
+        "config": {"persona": "Python SDK ordered patch marker."},
+    }]))
     harness = DeepSeekHarness(
-        model="deepseek-v4-flash",
+        model="deepseek-v4-pro",
         cwd=str(tmp_path),
         dsh_home=str(tmp_path / "home"),
         patches=(str(patch),),
@@ -121,27 +90,16 @@ def test_python_sdk_applies_an_ordered_profile_patch(
 def test_bundled_runtime_surfaces_unbundled_plugin_failure(
     tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _legacy_bundle_roots()
-    profile_dir = tmp_path / "home" / "profiles" / "legacy-sdk"
-    profile_dir.mkdir(parents=True)
-    (profile_dir / "package.json").write_text(json.dumps({
-        "name": "dsh-profile-legacy-sdk",
-        "private": True,
-        "dsh": {"profile": {"runtime": "legacy", "bundles": [
-            "@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app",
-        ]}},
-    }))
-    (profile_dir / "cordis.patch.yml").write_text("[]\n")
     patch = tmp_path / "missing.patch.yml"
     patch.write_text(json.dumps([{
         "insert": [{"id": "missing", "name": "@deepseek-ai/dsh-does-not-exist"}],
     }]))
 
-    client = _client(tmp_path, mode, monkeypatch, patch, profile="legacy-sdk")
+    client = _client(tmp_path, mode, monkeypatch, patch)
     client.start()
     try:
         with pytest.raises((JsonRpcError, TransportClosedError, TimeoutError)) as excinfo:
-            client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
+            client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-pro")
     finally:
         client.close()
 

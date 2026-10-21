@@ -1,0 +1,86 @@
+{
+  "initial": [
+    {
+      "name": "request_tool_group",
+      "description": "Request a tool group for this task. Its tools become available in the next model request, not in this batch or program. This does not grant operation permissions. Returned tool schemas describe the new program bindings as well. Groups:\nplanning: Maintain the task plan",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "planning"
+            ]
+          }
+        },
+        "required": [
+          "group"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": [
+    [
+      {
+        "name": "todo_write",
+        "description": "Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished).",
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "todos"
+          ],
+          "properties": {
+            "todos": {
+              "type": "array",
+              "description": "The COMPLETE task list, replacing any previous list.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "content",
+                  "status"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "What the task is — a short imperative line."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ],
+                    "description": "pending (not started) | in_progress (now) | completed (done)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "request_tool_group",
+        "description": "Request a tool group for this task. Its tools become available in the next model request, not in this batch or program. This does not grant operation permissions. Returned tool schemas describe the new program bindings as well. Groups:\nplanning: Maintain the task plan",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "group": {
+              "type": "string",
+              "enum": [
+                "planning"
+              ]
+            }
+          },
+          "required": [
+            "group"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  ]
+}

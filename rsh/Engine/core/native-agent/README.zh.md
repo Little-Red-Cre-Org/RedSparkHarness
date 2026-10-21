@@ -29,7 +29,7 @@ Agent 清理会先启动全部已注册的释放操作，再等待完成，使�
 
 `./consumed-work` 将已接纳的 turn、step 和 inbox 事件折叠为实际已消费工作的结束状态。兼容 Agent 消费者转发该纯叶入口；它不持有 Session 或 writer。
 
-`./inbox` 是 Host 与 Client 共享的 InboxTarget、`agent/inbox/spliced` 与 `agent/inbox/moved` 唯一声明；兼容 Agent 转发这些类型。Client 编译面只包含这些纯声明，不加载原生 registry 实现。
+`./inbox` 是 Host 与 Client 共享的 InboxTarget 和 agent/inbox/spliced 唯一声明；兼容 Agent 转发这些类型。Client 编译面只包含该纯声明，不加载原生 registry 实现。
 
 <a id="model-experience"></a>
 

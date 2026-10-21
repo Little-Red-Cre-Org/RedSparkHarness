@@ -12,7 +12,6 @@ import type {
   DeepSeekLlmApiJson,
   PreparedDeepSeekLlmApiExtensions,
 } from './types.ts'
-import { prepareDeepSeekLlmApiExtensions } from './registry-core.ts'
 
 export type * from './types.ts'
 
@@ -22,9 +21,50 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
+interface ErasedProvider {
+  prepare(request: DeepSeekLlmApiExtensionRequest):
+    | { readonly value: DeepSeekLlmApiJson; accept?(): void | Promise<void> }
+    | undefined
+    | Promise<{ readonly value: DeepSeekLlmApiJson; accept?(): void | Promise<void> } | undefined>
+}
+
+/** Recursively freeze a fresh structured clone. */
+function freezeJson<T extends DeepSeekLlmApiJson>(value: T): T {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Array.isArray(value) ? value : Object.values(value)) freezeJson(child)
+    Object.freeze(value)
+  }
+  return value
+}
+
+/** Settle every acceptance callback before reporting failures. */
+async function acceptAll(callbacks: readonly (() => void | Promise<void>)[]): Promise<void> {
+  const outcomes = await Promise.allSettled(callbacks.map(callback => Promise.resolve().then(callback)))
+  const failures: unknown[] = outcomes
+    .filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+    .map(outcome => outcome.reason as unknown)
+  if (failures.length === 1) throw failures[0]
+  if (failures.length > 1) throw new AggregateError(failures, 'DeepSeek LLM API extension acceptance failed')
+}
+
+/** Stop awaiting provider work when the containing model request is cancelled. */
+async function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted()
+  const aborted = Promise.withResolvers<never>()
+  const onAbort = (): void => { aborted.reject(signal.reason) }
+  signal.addEventListener('abort', onAbort, { once: true })
+  try {
+    const result = await Promise.race([work, aborted.promise])
+    signal.throwIfAborted()
+    return result
+  } finally {
+    signal.removeEventListener('abort', onAbort)
+  }
+}
+
 /** Registry of independently owned top-level fields for official DeepSeek requests. */
 export class DeepSeekLlmApiExtensionRegistry extends Service {
-  private readonly providers = new Map<string, DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiJson>>()
+  private readonly providers = new Map<string, ErasedProvider>()
 
   constructor(ctx: Context) {
     super(ctx, 'deepseekLlmApiExtensions')
@@ -45,7 +85,7 @@ export class DeepSeekLlmApiExtensionRegistry extends Service {
       throw new Error('deepseek-llm-api-extensions: field must be a non-blank trimmed string')
     }
     const providers = this.providers
-    const erased = provider as DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiJson>
+    const erased = provider as ErasedProvider
     const dispose = this.ctx.effect(() => {
       if (providers.has(fieldName)) {
         throw new Error(`deepseek-llm-api-extensions: field ${JSON.stringify(fieldName)} is already registered`)
@@ -66,7 +106,26 @@ export class DeepSeekLlmApiExtensionRegistry extends Service {
    * @returns detached fields and their idempotent joint acceptance transaction.
    */
   async prepare(request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions> {
-    return prepareDeepSeekLlmApiExtensions(this.providers, request)
+    request.signal.throwIfAborted()
+    const entries = [...this.providers.entries()]
+    const prepared = await abortable(Promise.all(entries.map(async ([field, provider]) => ({
+      field,
+      result: await provider.prepare(request),
+    }))), request.signal)
+    const fields: Record<string, DeepSeekLlmApiJson> = Object.create(null) as Record<string, DeepSeekLlmApiJson>
+    const callbacks: Array<() => void | Promise<void>> = []
+    for (const { field, result } of prepared) {
+      if (result === undefined) continue
+      fields[field] = freezeJson(structuredClone(result.value))
+      const accept = result.accept
+      if (accept !== undefined) callbacks.push(accept.bind(result))
+    }
+    Object.freeze(fields)
+    let acceptance: Promise<void> | undefined
+    return {
+      fields,
+      accept: () => acceptance ??= acceptAll(callbacks),
+    }
   }
 }
 

@@ -7,7 +7,7 @@
 import {
   type SessionEventType,
   type SessionId as SessionIdValue,
-} from '@deepseek-ai/dsh-session/native'
+} from '@deepseek-ai/dsh-session'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import {
   SessionQueryError,
@@ -15,7 +15,7 @@ import {
   type SessionEventMetadataFilter,
   type SessionEventSurface,
   type SessionResultFilter,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@deepseek-ai/dsh-session-query'
 
 interface SessionSearchArgs {
   query: string

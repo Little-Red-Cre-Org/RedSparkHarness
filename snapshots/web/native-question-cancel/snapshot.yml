@@ -1,8 +1,0 @@
-version: 1
-scenario: native-question-cancel
-profile: web
-composition: native-web-question-cancel
-recording: authored
-header:
-  class: native-web-question-cancel
-  pin: true

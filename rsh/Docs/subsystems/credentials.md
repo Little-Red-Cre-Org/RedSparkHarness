@@ -53,96 +53,6 @@ interface CredentialInfo {
 
 `credentials/reference-updated (ref)` fires after a committed change to a provider-managed source — a `set`, an `unset`, or an external edit observed in storage. Ambient process-environment changes are not observable and never emit. Consumers do not need the event (they re-resolve per operation); it exists for configuration surfaces refreshing a "configured" badge.
 
-## Native Host service
-
-Native Host consumers receive record changes from the `credentials` Provider selected for their scope. `onRecordUpdated` passes only the branded key after the Provider commits its updated snapshot; the callback runs synchronously, but returned asynchronous work does not delay the credential write. A disposer closes admission and waits for callbacks already in progress, so consumers register it with `context.effect` and call it outside the callback. This service notification is separate from the Cordis event below.
-
-Credential providers also store owner-private JSON metadata by `CredentialKey`. Metadata does not resolve as a credential, appear in `listRecords`, or emit record-update events. A provider may reconcile a legacy record and metadata under one lock, retiring the record only after it verifies the durable metadata value.
-
-```ts type-equiv
-/** Service implemented by a native credential Provider. */
-interface NativeCredentials {
-  resolve(ref: CredentialRef): Promise<NativeResolvedCredential | undefined>
-  describe(ref: CredentialRef): Promise<CredentialInfo>
-  set(ref: CredentialRef, value: string): Promise<void>
-  unset(ref: CredentialRef): Promise<void>
-  readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
-  /**
-   * Read owner-private JSON metadata kept outside enumerable credential records.
-   * @param key - owner-scoped address.
-   * @returns the JSON value, or `undefined` while absent.
-   */
-  readMetadata(key: CredentialKey): Promise<unknown>
-  /**
-   * Read-decide-replace owner-private JSON metadata under the Provider's write lock.
-   * Returning `undefined` leaves the current value unchanged.
-   * @param key - owner-scoped address.
-   * @param mutate - decides the next JSON value from the current one.
-   * @param options - `signal` is checked before mutation begins; once it begins the value is committed.
-   * @returns the committed value, or the unchanged current value.
-   */
-  modifyMetadata(
-    key: CredentialKey,
-    mutate: (current: unknown) => Promise<unknown>,
-    options?: NativeCredentialWriteOptions,
-  ): Promise<unknown>
-  /**
-   * Reconcile a legacy record and metadata value under the shared file lock.
-   * Metadata is written and read back before the legacy record is removed; the two writes are not
-   * one atomic transaction.
-   * @param key - address shared by the old record and new metadata value.
-   * @param migrate - validates detached metadata and legacy values; sibling records are detached copies read from the same locked snapshot.
-   * @param options - checked when its queued operation starts, before lock acquisition; aborting
-   *   afterward does not stop migration.
-   * @returns the verified metadata value.
-   */
-  migrateRecordToMetadata(
-    key: CredentialKey,
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-    options?: NativeCredentialWriteOptions,
-  ): Promise<unknown>
-  describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo>
-  listRecords(): Promise<readonly NativeCredentialRecordEntry[]>
-  /**
-   * Receive a committed record change from this selected Provider instance.
-   * The Provider invokes the listener synchronously after a durable write or
-   * removal, or after adopting an observed external change. Asynchronous
-   * listener work does not delay the operation. Listener failures are logged
-   * and contained; the disposer stops later delivery and drains admitted work.
-   * @param listener - callback receiving the changed record address, never its payload.
-   * @returns an idempotent disposer; call it outside the listener so it cannot await itself.
-   */
-  onRecordUpdated(listener: (key: CredentialKey) => void | Promise<void>): () => Promise<void>
-  /**
-   * Read-decide-replace one record under the Provider's write queue.
-   * @param key - record address.
-   * @param mutate - decides the next record from the current one; undefined keeps it.
-   * @param options - `signal` is checked when the queued write starts, before
-   *   reading; once `mutate` begins the write always commits. A queued write
-   *   rejects with the signal's reason and writes nothing.
-   * @returns the committed record, or the unchanged current one.
-   */
-  modifyRecord(
-    key: CredentialKey,
-    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
-    options?: NativeCredentialWriteOptions,
-  ): Promise<CredentialRecord | undefined>
-  /**
-   * Remove one record under the Provider's write queue.
-   * @param key - record address.
-   * @param options - `signal` is checked inside the queue before the removal commits;
-   *   `when` decides against the record as it stands inside the queue, so a later write is never removed.
-   */
-  deleteRecord(key: CredentialKey, options?: NativeCredentialDeleteOptions): Promise<void>
-}
-```
-
-Source: [`rsh/Modules/Official/credentials/credentials/src/native.ts`](../../Modules/Official/credentials/credentials/src/native.ts)
-
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -266,34 +176,6 @@ abstract unset(ref: CredentialRef): Promise<void>
  * @returns the record, or `undefined` while none is stored.
  */
 abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
-
-/**
- * Read JSON metadata owned by a plugin. Metadata is stored separately from
- * credential records and never appears in {@link listRecords}.
- * @param key - owner-scoped metadata address.
- * @returns the JSON value, or `undefined` while absent.
- */
-abstract readMetadata(key: CredentialKey): Promise<unknown>
-
-/**
- * Read-decide-replace plugin-owned JSON metadata under the provider's write
- * lock. Returning `undefined` leaves the current value unchanged.
- * @param key - owner-scoped metadata address.
- * @param mutate - decides the next JSON value from the current one.
- * @returns the committed value, or the unchanged current value.
- */
-abstract modifyMetadata( key: CredentialKey, mutate: (current: unknown) => Promise<unknown>, ): Promise<unknown>
-
-/**
- * Reconcile owner metadata with a legacy credential record under the same
- * provider lock. The legacy record is removed only after metadata is durable
- * and verified. The callback receives detached metadata and legacy values
- * and can read detached sibling-record copies from that locked snapshot.
- * @param key - address shared by the old record and new metadata value.
- * @param migrate - validates detached values from the locked snapshot and chooses the durable metadata result.
- * @returns the verified metadata value.
- */
-abstract migrateRecordToMetadata( key: CredentialKey, migrate: ( current: unknown, legacy: CredentialRecord | undefined, readRecord: (key: CredentialKey) => CredentialRecord | undefined, ) => Promise<CredentialMetadataMigration>, ): Promise<unknown>
 
 /**
  * Describe one record for configuration surfaces without exposing its value.

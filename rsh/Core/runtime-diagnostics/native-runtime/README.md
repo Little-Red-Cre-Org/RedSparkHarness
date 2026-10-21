@@ -14,7 +14,6 @@ This library resolves explicit plugin selections and activates them without Cord
 ## Table of Contents
 
 - [Installation and cleanup](#installation-and-cleanup)
-- [Package provenance](#package-provenance)
 - [Entry metadata](#entry-metadata)
 - [Events](#events)
 - [Model Experience](#model-experience)
@@ -30,45 +29,7 @@ This library resolves explicit plugin selections and activates them without Cord
 
 `resolveInstallation(requests, target)` checks versions, targets, provider conflicts, missing dependencies and cycles before resolving configuration. A plugin's `resolve(config)` validates configuration without acquiring resources and returns its activation function. A consumer reads only declared services, selecting the nearest provider in its scope or ancestry; separate roots isolate realms. Providers become visible only after activation succeeds and all declared services exist.
 
-Service Definition packages extend `NativeServices`, and event Definition packages extend `NativeEvents`, from the `@deepseek-ai/dsh-native-runtime` package root. The Host and event bus use those same merged declarations. The root also declares `pluginInventory`; launchers provide its read-only installation inventory.
-
-<a id="package-provenance"></a>
-### Package provenance
-
-Package-backed installations carry the selected manifest's actual non-empty name and version through `InstallationRequest.package` and `InstallationDiagnostic.package`. In-memory installations omit provenance. `NativePluginInventory.packages(scope)` returns only ready package-backed installations visible from that exact scope and its ancestors, retaining each installation id and scope.
-
-```ts type-equiv
-/** Identity read from the selected npm package manifest. */
-interface NativePackageProvenance {
-  /** Actual `package.json` name, independent of the Native plugin entry name. */
-  readonly name: string
-  /** Actual `package.json` version. */
-  readonly version: string
-}
-```
-
-```ts type-equiv
-/** One selected package manifest tied to its exact Native installation and scope. */
-interface NativePackageInstallation {
-  readonly id: NativeInstallationId
-  readonly scope: NativeScopeId
-  readonly package: NativePackageProvenance
-}
-```
-
-```ts type-equiv
-/** Read-only view of the running Host's installations. */
-interface NativePluginInventory {
-  /** @returns detached installation states in dependency order. */
-  list(): readonly InstallationDiagnostic[]
-  /**
-   * Read ready package-backed installations visible from one exact scope.
-   * @param scope - operation scope within this inventory Provider's realm.
-   * @returns selected manifest identities from the scope and its ancestors.
-   */
-  packages(scope: NativeScope): readonly NativePackageInstallation[]
-}
-```
+Service Definition packages extend `NativeServices`, and event Definition packages extend `NativeEvents`, from the `@deepseek-ai/dsh-native-runtime` package root. The Host and event bus use those same merged declarations.
 
 `NativeHost` owns each activation before calling it. Plugins register resource cleanup immediately through `context.own()`, registrations through `context.effect()`, and subscriptions through `context.on()`. An effect's disposer must synchronously close admission and return completion after its admitted callbacks settle. Owner cancellation starts every effect drain before releasing any resource, including resources acquired after registration. Stop aborts owned signals, closes event admission, awaits callbacks and startup settlement, and disposes consumers before providers. Resource cleanup runs in reverse acquisition order, attempts every disposer and reports aggregate failures. Plugins must cooperate with cancellation and await their own in-flight work during disposal. Cleanup does not undo completed external writes.
 

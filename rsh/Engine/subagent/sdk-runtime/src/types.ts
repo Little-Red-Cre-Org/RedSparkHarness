@@ -6,14 +6,7 @@
  */
 
 import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeExternalOperationEvent } from '@deepseek-ai/dsh-native-subagent/native'
-import type {
-  ApprovalRequestParams,
-  LegacySdkPromptContentBlock,
-  NativeSdkPromptContentBlock,
-  SessionUploadFileResult,
-  SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-protocol'
+import type { ApprovalRequestParams, SdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
 
 /** Generic process settings supplied by the selected Program launcher. */
@@ -119,12 +112,6 @@ export interface RunResult {
   notifications: HarnessNotification[]
 }
 
-/** One durable Native external-operation fact projected without field changes. */
-export type NativeExternalOperationSessionEvent = SessionEvent<'subagent/external-operation'>
-
 /** Re-exported content-block alias so SDK callers need no extra import. */
 export type { ContentBlock }
-export type { NativeExternalOperationEvent }
 export type { SdkPromptContentBlock }
-export type { LegacySdkPromptContentBlock, NativeSdkPromptContentBlock }
-export type { SessionUploadFileResult }

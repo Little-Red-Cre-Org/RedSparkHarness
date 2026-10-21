@@ -2,6 +2,8 @@
 
 English | [中文](tools.zh.md)
 
+Native request-bound selection is owned by [native-tools](../../Engine/core/native-tools/README.md). Its `NativeToolSelectionPolicy` supplies initial names and an asynchronous per-Session selector; `prepareRequest()` captures the intersection for schemas, program bindings and execution. The optional [tool-groups plugin](../../Modules/Official/guard/tool-groups/README.md) derives grants from Session events.
+
 The tool pipeline of [dsh-tools](../../Engine/core/tools). [core.md](core.md) introduces `ToolDefinition` as the pipeline-authoring type shared by the core packages; the model-facing [`ToolSchema`](llm-streaming.md#the-model-request-and-result) wire type is declared with the model request. This page documents every `ToolDefinition` field, the typed schema DSL that builds it, the guarded execution types, and the UI-presentation types.
 
 Source: [`rsh/Engine/core/tools/src/index.ts`](../../Engine/core/tools/src/index.ts) · [`rsh/Engine/core/tools/src/schema.ts`](../../Engine/core/tools/src/schema.ts) · [`rsh/Engine/core/tools/src/presentation.ts`](../../Engine/core/tools/src/presentation.ts)
@@ -402,15 +404,6 @@ type PostToolDecision =
 Call `next()` for the default or return a decision to short-circuit. Pre-policy may deny or ask; only `allowed-once` proceeds, while a non-grant, missing approval channel or service, or agent-less request becomes a denial. Guards may still impose a final denial. Arguments cannot be rewritten because history, audit, UI, and execution must agree.
 
 Post-policy may replace either content or value, never both. Content replacement preserves the canonical value and existing metadata; value replacement is revalidated and recomputes content/metadata; a block removes the value and becomes an `isError` containing corrective feedback. Content replacement is presentation policy, not confidentiality policy: a listener that must hide the programmatic value blocks or replaces it. `tools/result` receives the frozen execution and result after normalization; observers cannot transform them, and observer failures are contained. Unknown and throwing tools both become structured errors (`ToolNotFoundError` maps to `UNKNOWN_TOOL`), so the call fails without ending the turn.
-
-## Native registration identity
-
-`NativeToolRegistration` is the asynchronous disposer returned by a NativeTools contribution. A `NativeToolExecutionSnapshot` exposes `includesRegistration()` so consumers can check whether that exact disposer was captured; a matching tool name alone does not establish registration identity. See the [NativeTools README](../../Engine/core/native-tools/README.md) for the snapshot API.
-
-```ts type-equiv
-/** Exact asynchronous disposer returned by one tool registration. */
-type NativeToolRegistration = () => Promise<void>
-```
 
 ## The enforced raw JSON Schema subset
 

@@ -30,7 +30,6 @@ import type {} from '@deepseek-ai/dsh-session-persistence'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { Remote, RemoteError, TypertRemoteService, type TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
 import { WorkspaceChangeFeed } from './changes.ts'
-import { cutWorkspaceFilePage, WorkspaceFilePageTooLargeError, type WorkspaceFilePage } from './native-helpers.ts'
 import type {
   WorkspaceByteRange,
   WorkspaceDirectoryEntry,
@@ -42,7 +41,7 @@ import type {
   WorkspaceFileWatchFrame,
 } from './types.ts'
 
-export type * from './remote-types.ts'
+export type * from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -84,6 +83,14 @@ export interface Config {
   readonly maxEntries: number
 }
 
+/** One page cut from a decoded text stream. */
+interface Page {
+  readonly text: string
+  /** Lines in `text`; `0` for a page past the last line. */
+  readonly lines: number
+  readonly eof: boolean
+}
+
 /** The byte text never carries: its presence marks a page as binary. */
 const NUL = String.fromCharCode(0)
 
@@ -93,6 +100,62 @@ function integerAtLeast(value: number, min: number, name: string): number {
     throw new RemoteError('gateway/bad-request', `${name} must be a safe integer of at least ${min}`, {})
   }
   return value
+}
+
+/**
+ * Cut lines `offset` through `offset + limit - 1` from decoded chunks, stopping
+ * at the first character past the page so the rest of the file is never read.
+ * Lines before the page are counted, not kept, and the page is refused the
+ * moment its bytes exceed `maxBytes`, so one giant line cannot grow memory past
+ * the cap either.
+ */
+async function cutPage(
+  chunks: AsyncIterable<string>,
+  offset: number,
+  limit: number,
+  maxBytes: number,
+  path: string,
+): Promise<Page> {
+  const last = offset + limit - 1
+  const lines: string[] = []
+  let current = ''
+  let bytes = 0
+  let lineNumber = 1
+  const admit = (size: number): void => {
+    bytes += size
+    if (bytes > maxBytes) {
+      throw new RemoteError(
+        'workspace-file/too-large',
+        `lines ${offset}-${last} of "${path}" exceed the ${maxBytes} byte cap`,
+        { path, limit: maxBytes },
+      )
+    }
+  }
+  const complete = (): void => {
+    if (lines.length > 0) admit(1)
+    lines.push(current)
+    current = ''
+  }
+  for await (const chunk of chunks) {
+    let position = 0
+    while (position < chunk.length) {
+      if (lineNumber > last) return { text: lines.join('\n'), lines: lines.length, eof: false }
+      const newline = chunk.indexOf('\n', position)
+      const segment = newline === -1 ? chunk.slice(position) : chunk.slice(position, newline)
+      if (lineNumber >= offset) {
+        admit(Buffer.byteLength(segment, 'utf8'))
+        current += segment
+      }
+      if (newline === -1) break
+      if (lineNumber >= offset) complete()
+      lineNumber += 1
+      position = newline + 1
+    }
+  }
+  // Only an in-page line can be pending here: earlier lines were never kept,
+  // and a character past the page returned above.
+  if (current.length > 0) complete()
+  return { text: lines.join('\n'), lines: lines.length, eof: true }
 }
 
 /**
@@ -392,13 +455,10 @@ export class WorkspaceFiles extends TypertRemoteService {
   }
 
   /** Stream the file as text and cut the page, classifying the backend's non-text refusal. */
-  private async cutPage(target: FsTarget, offset: number, limit: number, signal: AbortSignal, path: string): Promise<WorkspaceFilePage> {
+  private async cutPage(target: FsTarget, offset: number, limit: number, signal: AbortSignal, path: string): Promise<Page> {
     try {
-      return await cutWorkspaceFilePage(await this.ctx.fs.streamText(target, signal), offset, limit, this.config.maxBytes, path)
+      return await cutPage(await this.ctx.fs.streamText(target, signal), offset, limit, this.config.maxBytes, path)
     } catch (error: unknown) {
-      if (error instanceof WorkspaceFilePageTooLargeError) {
-        throw new RemoteError('workspace-file/too-large', error.message, { path: error.path, limit: error.limit }, { cause: error })
-      }
       if (isNotTextRefusal(error)) {
         throw new RemoteError('workspace-file/not-text', `"${path}" is not UTF-8 text`, { path }, { cause: error })
       }

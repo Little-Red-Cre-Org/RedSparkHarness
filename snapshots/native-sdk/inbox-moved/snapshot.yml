@@ -1,8 +1,0 @@
-version: 1
-scenario: inbox-moved
-profile: native-sdk
-composition: native-sdk-inbox-moved
-recording: authored
-header:
-  class: native-sdk-inbox-moved
-  pin: true

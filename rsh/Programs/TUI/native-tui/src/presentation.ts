@@ -61,17 +61,8 @@ export interface TerminalInteraction {
   selectPreset(request: Omit<NativeAgentPresetSelectionRequest, 'id'>): Promise<TerminalPresetState>
   /** @returns command names visible to the selected Agent. */
   commands(): Promise<readonly CommandDescriptor[]>
-  /**
-   * Resolve a slash command first, then admit a matching user-invocable skill at its original queue position.
-   * @param line - complete human command input.
-   * @param name - parsed slash name, when the input has one.
-   * @param message - original identified input.
-   * @returns the registered command result, skill admission, unknown notice, or cancellation.
-   */
-  dispatchSlash(line: string, name: string | undefined, message: UserMessage): Promise<{
-    readonly kind: 'command'
-    readonly execution: CommandExecution
-  } | { readonly kind: 'skill' | 'unknown' } | undefined>
+  /** @param line - complete human command input. @returns settled command result or undefined when unavailable. */
+  dispatchCommand(line: string): Promise<CommandExecution | undefined>
   /**
    * @param value - entered response to the currently displayed human request.
    * @param expected - exact rendered request; stale responses refuse.
@@ -214,17 +205,9 @@ export function TerminalView({ interaction, locale, model, background }: {
       return
     }
     if (text.startsWith('/')) {
-      void (async () => {
-        try {
-          const command = parseCommand(text)
-          const routed = await interaction.dispatchSlash(value, command?.name, createInput(text))
-          if (routed === undefined) return
-          if (routed.kind === 'command') { setNotice(routed.execution.result.text ?? copy.commandCompleted); return }
-          if (routed.kind === 'skill') {
-            setScrollLines(0); setLast(text); setNotice('')
-          } else setNotice(`${copy.unknownCommand}: ${text}`)
-        } catch (error: unknown) { setNotice(String(error)) }
-      })()
+      void interaction.dispatchCommand(value).then((execution) => {
+        setNotice(execution?.result.text ?? (execution === undefined ? `${copy.unknownCommand}: ${text}` : copy.commandCompleted))
+      }, (error: unknown) => { setNotice(String(error)) })
       return
     }
     send(text)

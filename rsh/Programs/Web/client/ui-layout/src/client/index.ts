@@ -155,6 +155,8 @@ export function apply(ctx: ClientContext): void {
         'shell.overlay': { kind: 'list', scope: 'root' },
       },
       store,
+      inject: () => ({ embeddedWorkbench: typeof location !== 'undefined' && location.protocol === 'dsh-app:'
+        && location.hostname.startsWith('ide-') && new URLSearchParams(location.search).has('channel') }),
     }, AppFrame)
     const disposePanels = ctx.slots.subscribe('main', retainMainPanels)
     retainMainPanels()

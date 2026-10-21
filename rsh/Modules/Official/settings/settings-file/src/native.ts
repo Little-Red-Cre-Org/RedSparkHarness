@@ -7,7 +7,6 @@ import { patchNode } from './yaml-patch.ts'
 import { watch as watchFile } from 'chokidar'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
 
 interface NativeConfig {
   path?: string
@@ -20,7 +19,6 @@ interface NativeConfig {
  * Validate the native file-provider configuration.
  * @param input - untrusted native plugin configuration.
  * @returns the validated path configuration.
- * @throws when the input contains an unknown field or an invalid field value.
  */
 export function resolveNativeSettingsConfig(input: unknown): NativeConfig {
   if (input === undefined) return {}
@@ -68,13 +66,12 @@ export const plugin: NativePlugin = {
       const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
       let closed = false
       const settings = new NativeSettings({
-        documentPath: filename,
         load: () => readDocument(filename, format),
         persist: async (update) => {
           await mkdir(dirname(filename), { recursive: true, mode: 0o700 })
           return withFileLock(filename, async () => {
             const currentText = await readDocumentText(filename)
-            const current = parseNativeSettingsDocument(currentText, filename, format)
+            const current = parseSettingsDocument(currentText, filename, format)
             const next = update(current)
             let text: string
             if (format === 'json') text = JSON.stringify(next, null, 2) + '\n'
@@ -87,10 +84,6 @@ export const plugin: NativePlugin = {
             return next
           })
         },
-      }, (namespace, revision) => {
-        void context.events.parallel(context.scope, 'settings/document-updated', namespace, revision).catch(() => {
-          console.warn('settings-file: document update listener failed')
-        })
       })
       context.own(() => settings.dispose())
       await settings.start()
@@ -137,7 +130,7 @@ export const plugin: NativePlugin = {
 }
 
 async function readDocument(filename: string, format: 'yaml' | 'json'): Promise<NativeSettingsSection> {
-  return parseNativeSettingsDocument(await readDocumentText(filename), filename, format)
+  return parseSettingsDocument(await readDocumentText(filename), filename, format)
 }
 
 async function readDocumentText(filename: string): Promise<string> {
@@ -149,14 +142,7 @@ async function readDocumentText(filename: string): Promise<string> {
   }
 }
 
-/** Parse one settings document with the format rules used by the native Provider.
- * @param text - YAML or JSON file contents.
- * @param filename - document path, used in diagnostics.
- * @param format - parser selected from the filename extension.
- * @returns namespace sections from the document.
- * @throws when the document is invalid YAML/JSON or its root is not a namespace map.
- */
-export function parseNativeSettingsDocument(text: string, filename: string, format: 'yaml' | 'json'): NativeSettingsSection {
+function parseSettingsDocument(text: string, filename: string, format: 'yaml' | 'json'): NativeSettingsSection {
   if (text.trim().length === 0) return {}
   let value: unknown
   if (format === 'json') {

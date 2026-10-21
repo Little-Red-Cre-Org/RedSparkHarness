@@ -2,6 +2,8 @@
 
 [English](tools.md) | 中文
 
+Native 请求边界上的工具选择由 [native-tools](../../Engine/core/native-tools/README.zh.md) 负责。`NativeToolSelectionPolicy` 提供初始工具名及按 Session 异步选择工具的方法，`prepareRequest()` 捕获其交集，用于 schema、程序绑定和执行。可选的 [tool-groups 插件](../../Modules/Official/guard/tool-groups/README.zh.md) 从 Session 事件派生开放状态。
+
 [dsh-tools](../../Engine/core/tools) 的工具流水线。[core.md](core.zh.md) 介绍了核心包共用、用于编写流水线的类型 `ToolDefinition`；面向模型的 [`ToolSchema`](llm-streaming.zh.md#the-model-request-and-result) 协议类型与模型请求一起声明。本页记录 `ToolDefinition` 的每个字段、用于构建它的类型化 schema DSL、带守卫的执行类型和 UI 展示类型。
 
 源码：[`rsh/Engine/core/tools/src/index.ts`](../../Engine/core/tools/src/index.ts) · [`rsh/Engine/core/tools/src/schema.ts`](../../Engine/core/tools/src/schema.ts) · [`rsh/Engine/core/tools/src/presentation.ts`](../../Engine/core/tools/src/presentation.ts)
@@ -402,15 +404,6 @@ type PostToolDecision =
 调用 `next()` 获取默认决策，或直接返回一个决策以短路。前置策略可以 deny 或 ask；只有 `allowed-once` 才继续执行，而未授权、缺少审批通道或服务、或无 agent 的请求都会变为拒绝。Guard 仍可施加最终拒绝。参数不可被改写，因为历史记录、审计、UI 和执行必须保持一致。
 
 后置策略可以替换内容或值，但不能同时替换两者。替换内容会保留规范值和现有元数据；替换值会重新校验并重新计算内容/元数据；阻止会移除值，并转为包含纠正反馈的 `isError`。内容替换是展示策略，而非保密策略；需要隐藏程序化值的监听器必须阻止或替换该值。`tools/result` 在归一化后接收冻结的执行和结果；观察者无法对其进行变换，观察者的失败也会被隔离。未知工具和抛出异常的工具都会变为结构化错误（`ToolNotFoundError` 映射为 `UNKNOWN_TOOL`），调用失败但不终止当前轮次。
-
-## Native 注册身份
-
-`NativeToolRegistration` 是 NativeTools 贡献返回的异步释放函数。`NativeToolExecutionSnapshot` 提供 `includesRegistration()`，供消费方检查该精确释放函数是否在快照捕获时已登记；仅凭匹配的工具名无法确认注册身份。快照 API 见 [NativeTools README](../../Engine/core/native-tools/README.zh.md)。
-
-```ts type-equiv
-/** Exact asynchronous disposer returned by one tool registration. */
-type NativeToolRegistration = () => Promise<void>
-```
 
 ## 已强制执行的原始 JSON Schema 子集
 

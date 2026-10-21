@@ -9,9 +9,7 @@ import type {} from '@deepseek-ai/dsh-native-tools/native'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import { fileAttachmentsIn } from '@deepseek-ai/dsh-llm/native'
-import type { NativeValueToolContribution, NativeToolExecution, NativeToolApprovalContext } from '@deepseek-ai/dsh-native-tools'
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
+import type { NativeValueToolContribution, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
 import {
   ESCALATION_TARGETS, approveEscalation, escalationHintMarker, sandboxDenialMarker, validateEscalationArgs,
   type SandboxExecutionPolicy, type SandboxMode,
@@ -118,13 +116,12 @@ function escalationSchema(fs: FileSystemOperations): Record<string, unknown> {
 async function mutationPolicy(
   context: NativeContext, fs: FileSystemOperations, call: NativeToolExecution, args: EscalationArgs,
   reason: string,
-  sessionContext: NativeToolApprovalContext,
 ): Promise<SandboxExecutionPolicy | undefined> {
   const standing = context.optional('sandboxPolicy')?.resolve({ session: call.session })
   if (args.sandbox_permissions === undefined || args.justification === undefined) {
     if (context.optional('approval') !== undefined) {
       if (call.authorize === undefined) throw new Error(`native-tools: tool ${call.name} requires an approval authority`)
-      await call.authorize({ reason, sessionContext }, call.signal)
+      await call.authorize({ reason }, call.signal)
     }
     return standing
   }
@@ -147,31 +144,7 @@ function actor(call: NativeToolExecution): { agent: { session: object } } {
   return { agent: { session: call.session } }
 }
 
-async function attachedFileTarget(fs: FileSystemOperations, attachments: AttachmentOperations, call: NativeToolExecution,
-  path: string): Promise<{ readonly ref: FileAttachmentRef; readonly target: FsTarget } | undefined> {
-  const cwd = call.session.header.cwd
-  const refs = fileAttachmentsIn(call.session.deriveMessages())
-  if (cwd === undefined || !isAbsolute(cwd) || refs.length === 0) return undefined
-  const requested = await fs.resolve(path, { cwd, signal: call.signal })
-  for (const ref of refs) {
-    const hostPath = attachments.fileHostPath(ref)
-    const executionPath = hostPath === undefined ? undefined : fs.processPathFromHostPath(hostPath)
-    if (executionPath === undefined) continue
-    const admitted = await fs.resolve(executionPath, { cwd, signal: call.signal })
-    if (admitted.targetKey === requested.targetKey) return { ref, target: requested }
-  }
-  return undefined
-}
-
-async function* decodeAttachment(chunks: AsyncIterable<Uint8Array>): AsyncIterable<string> {
-  const decoder = new TextDecoder('utf-8', { ignoreBOM: true })
-  for await (const chunk of chunks) yield decoder.decode(chunk, { stream: true })
-  const trailing = decoder.decode()
-  if (trailing.length > 0) yield trailing
-}
-
-async function workspaceTarget(fs: FileSystemOperations, call: NativeToolExecution, path: string,
-  allowOutside = false): Promise<{ root: FsTarget; resolved: FsTarget }> {
+async function target(fs: FileSystemOperations, call: NativeToolExecution, path: string, allowOutside = false): Promise<FsTarget> {
   const cwd = call.session.header.cwd
   if (cwd === undefined || !isAbsolute(cwd)) throw new Error('tool-fs: Session has no absolute workspace')
   const root = await fs.resolve(cwd, { signal: call.signal })
@@ -179,15 +152,10 @@ async function workspaceTarget(fs: FileSystemOperations, call: NativeToolExecuti
   if (rootInfo?.type !== 'directory') throw new Error('tool-fs: Session workspace is not a directory')
   const resolved = await fs.resolve(path, { cwd, signal: call.signal })
   if (!allowOutside && !fs.contains(root, resolved)) throw new FsError(`path outside workspace: ${path}`, 'FS_SANDBOX_DENIED')
-  return { root, resolved }
+  return resolved
 }
 
-async function target(fs: FileSystemOperations, call: NativeToolExecution, path: string, allowOutside = false): Promise<FsTarget> {
-  return (await workspaceTarget(fs, call, path, allowOutside)).resolved
-}
-
-function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCaps,
-  attachments?: AttachmentOperations): NativeValueToolContribution {
+function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCaps): NativeValueToolContribution {
   return {
     schema: {
       name: 'read', description: 'Read a UTF-8 text file and return line-numbered content.',
@@ -208,14 +176,6 @@ function readTool(context: NativeContext, fs: FileSystemOperations, caps: ReadCa
         ...fields.offset === undefined ? {} : { offset: fields.offset },
         ...fields.limit === undefined ? {} : { limit: fields.limit },
       }, caps.limit)
-      const attachment = attachments === undefined ? undefined
-        : await attachedFileTarget(fs, attachments, call, input.filePath)
-      if (attachments !== undefined && attachment !== undefined) {
-        const window = await buildWindow(decodeAttachment(attachments.readFileStream(attachment.ref, call.signal)), {
-          offset: input.offset, limit: input.limit, maxLineLength: caps.maxLineLength, maxBytes: caps.maxBytes,
-        }, attachment.target.displayPath)
-        return { path: attachment.target.displayPath, offset: input.offset, lines: window.lines, totalLines: window.totalLines }
-      }
       const resolved = await target(fs, call, input.filePath)
       const info = await fs.stat(resolved, call.signal)
       if (info === undefined) {
@@ -313,9 +273,9 @@ function writeTool(context: NativeContext, fs: FileSystemOperations): NativeValu
     async execute(call) {
       const fields = argumentsObject(call.arguments, ['file_path', 'content', 'sandbox_permissions', 'justification'])
       const input = parseWriteArgs({ file_path: requiredString(fields.file_path, 'file_path'), content: requiredString(fields.content, 'content') })
-      const { root, resolved } = await workspaceTarget(fs, call, input.filePath, fs.sandboxMode !== undefined)
       const sandboxPolicy = await mutationPolicy(context, fs, call, escalationArgs(fields),
-        'Writing a file changes the selected workspace.', { cwdKey: root.targetKey, targetKey: resolved.targetKey })
+        'Writing a file changes the selected workspace.')
+      const resolved = await target(fs, call, input.filePath, fs.sandboxMode !== undefined)
       let outcome
       try {
         const intent = await context.events.waterfall(context.scope, 'fs/write-intent', (): FsWriteIntent | undefined => undefined,
@@ -356,9 +316,9 @@ function editTool(context: NativeContext, fs: FileSystemOperations): NativeValue
         new_string: requiredString(fields.new_string, 'new_string'),
         ...fields.replace_all === undefined ? {} : { replace_all: fields.replace_all },
       })
-      const { root, resolved } = await workspaceTarget(fs, call, input.filePath, fs.sandboxMode !== undefined)
       const sandboxPolicy = await mutationPolicy(context, fs, call, escalationArgs(fields),
-        'Editing a file changes the selected workspace.', { cwdKey: root.targetKey, targetKey: resolved.targetKey })
+        'Editing a file changes the selected workspace.')
+      const resolved = await target(fs, call, input.filePath, fs.sandboxMode !== undefined)
       let outcome
       try {
         const intent = await context.events.waterfall(context.scope, 'fs/edit-intent', () => undefined, resolved, actor(call))
@@ -390,7 +350,7 @@ export const plugin: NativePlugin = {
         throw new Error('tool-fs: the mounted filesystem confines but sandboxPolicy is missing')
       }
       const attachments = context.optional('attachments')
-      for (const contribution of [readTool(context, fs, caps, attachments),
+      for (const contribution of [readTool(context, fs, caps),
         ...(attachments === undefined ? [] : [readImageTool(context, fs, attachments)]),
         writeTool(context, fs), editTool(context, fs)]) {
         context.effect(tools.registerValueTool(contribution, context.scope))
@@ -398,7 +358,7 @@ export const plugin: NativePlugin = {
       const sections = context.optional('promptSections')
       if (sections !== undefined) {
         const visible = (scope: NativeScope, name: string): boolean =>
-          tools.schemas(scope).some(schema => schema.name === name)
+          tools.schemas(scope, true).some(schema => schema.name === name)
         for (const section of [
           { name: 'tool:read', order: 1100, text: (scope: NativeScope) => visible(scope, 'read') ? READ_GUIDANCE : '' },
           { name: 'tool:write', order: 1200, text: (scope: NativeScope) => visible(scope, 'write') ? writeGuidance(visible(scope, 'edit')) : '' },

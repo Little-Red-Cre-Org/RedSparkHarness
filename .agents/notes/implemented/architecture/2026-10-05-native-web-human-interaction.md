@@ -14,14 +14,10 @@ The Web Program registers answerers on the selected approval and user-question P
 
 Question-answer JSON validation is shared with the existing broker. The browser holds transient presentation data, choices and submission state. It does not append Session events. Existing tool consumers persist approval decisions and question results through the sole writer; cold restore renders those facts.
 
-The existing `session/answer-human` request also accepts `{ kind: 'cancel-questions' }` for an exact pending question presentation. It rejects that Provider wait with the existing `UserQuestionError` code `ASK_CANCELLED`, removes only that presentation and leaves the borrowed turn signal and other waits alive. The tool Consumer records the error through the sole writer; the next model step receives the tool error and can continue the same turn. Authentication, admission, root ownership and stale-answer checks apply before cancellation, including duplicate or late requests.
-
-Ordinary root approval presentations carry `canAllowSession` only for a Provider-admitted scope. An authenticated `allowed-session` answer requests remembering that scope through the existing service; browser input supplies no fingerprint. The sole writer persists the original Session identity and exact tool/parameter/resolved-target/cwd fingerprint in the decision audit. Cold restore can reuse it, but copied or forked history cannot transfer authority. Current approval buttons stay unchanged, and sandbox escalation remains one-shot.
-
 ## Alternatives considered
 
 Restoring pending input from durable history would accept obsolete requests. Polling status would not identify the exact Provider operation. A second Agent or Session registry would compete with the selected executor. The existing authenticated follow stream and control requests supply the required presentation and answers.
 
 ## Consequences
 
-The explicit native-web template installs the existing question Definition and tool Consumer; legacy defaults remain unchanged. Failed answers remain editable. Approval input accepts allow-once or reject, plus a Session remember request only for an admitted scope. Owner removal and installation teardown release presentation promises before Provider drain. No separate presentation log or authority is introduced.
+The explicit native-web template installs the existing question Definition and tool Consumer; legacy defaults remain unchanged. Failed answers remain editable. Approval input accepts only allow-once or reject. Owner removal and installation teardown release presentation promises before Provider drain. No separate presentation log or authority is introduced.

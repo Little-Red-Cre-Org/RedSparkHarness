@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+Native system-prompt guidance uses the initial capability selection to remain stable across Session resume. On-demand tool-group results supply schemas for later additions; execution uses the current request selection.
+
 ## Summary
 
 Use `dsh-tool-fs` to let a model read UTF-8 files with line numbers, read supported images, create or atomically replace files, and apply targeted literal edits. Results are capped, and failures provide stable error codes and recovery instructions. Add `dsh-fs-observation-policy` when writes and edits must follow a successful read; without it, mutations remain atomic but are unconditional. Image reads require durable attachment storage and an image-capable routed model. Choose the sibling discovery package for glob or grep searches.
@@ -65,7 +67,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 ### Policy and sandbox behavior
 
-Path authorization for Cordis `read` and `read_image` and Native `read_image` belongs to `ctx.fs`. Native `read` additionally accepts only an execution-world path that resolves to an exact `FileBlock` in the current Session, then reads that reference through the attachment Provider; every other path outside the workspace remains denied.
+Path authorization for `read` and `read_image` belongs entirely to `ctx.fs`; media-type declarations and file signatures only decide whether `read_image` accepts the bytes returned by that backend.
 
 With the policy plugin mounted, `write` and `edit` obtain their guard from the `fs/*` intent slots, so an unread target or a stale observation fails with `FS_NOT_OBSERVED` or `FS_STALE_VERSION` and a recovery instruction. Under a confining backend (`fs-sandbox`), `write`/`edit` additionally advertise `sandbox_permissions` and `justification`; a denied mutation returns the `[sandbox: file access denied under <mode> mode]` marker with the same-turn escalation hint, and an approved retry may stamp a strictly wider mode for that one call.
 
@@ -78,10 +80,6 @@ Failures are normalized as `Error: <message>` with a structured code preserved f
 ### Native composition
 
 The `./native` entry publishes the same file operations as NativeTools value tools. It requires selected `fs`, `fsObservationPolicy` and `tools` services; writes and edits always use that observation authority. Optional attachment storage enables `read_image`, which resolves the exact Session model through its selected native Model Provider before admitting image bytes. Scoped prompt sections are visible only to the consuming agent scope. Tool results, image references and presentation metadata pass through the Headless sole Session writer before observer acceptance and later model input.
-
-Native `read` also accepts the execution-world path of a `FileBlock` still present in the current Session. It resolves that path to the exact attachment reference, reads the provider's verified byte stream, and applies the same UTF-8 line window and output caps; other paths outside the workspace remain denied. `write` and `edit` never gain attachment-path access.
-
-Native `write` and `edit` resolve the workspace root and file target before ordinary approval, supply their complete identities as `sessionContext`, and execute with that same resolved target. This allows the owning Session application to remember the exact frozen operation. Filesystem observation and confinement still apply. A sandbox escalation uses the existing one-call `requestApproval` path and supplies no reusable scope.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation

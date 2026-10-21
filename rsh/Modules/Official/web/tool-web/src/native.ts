@@ -166,7 +166,7 @@ export const plugin: NativePlugin = {
       for (const tool of registered) context.effect(tools.registerValueTool(tool, context.scope))
       const sections = context.optional('promptSections')
       if (sections === undefined) return
-      const visible = (scope: NativeScope, name: string) => tools.schemas(scope).some(tool => tool.name === name)
+      const visible = (scope: NativeScope, name: string) => tools.schemas(scope, true).some(tool => tool.name === name)
       if (config.search) context.effect(sections.register({
         name: 'tool:web_search', order: 2000,
         text: scope => visible(scope, 'web_search') ? webSearchGuidance(config.searchMaxQueries, config.fetch && visible(scope, 'web_fetch')) : '',

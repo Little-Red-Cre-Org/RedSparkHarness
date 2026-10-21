@@ -23,11 +23,6 @@ class RecordingAdapter extends LlmAdapter {
     super()
   }
 
-  override async prepareCall(provider: string, model: string, signal?: AbortSignal) {
-    const prepared = await super.prepareCall(provider, model, signal)
-    return { ...prepared, supportsOutputTokenLimit: async () => true }
-  }
-
   override async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     this.onDispatch?.()
     this.requests.push(options)
@@ -35,15 +30,14 @@ class RecordingAdapter extends LlmAdapter {
   }
 }
 
-class CooperativeAdapter extends RecordingAdapter {
-  constructor() { super([]) }
-
+class CooperativeAdapter extends LlmAdapter {
   override async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const signal = options.signal
     if (signal === undefined) throw new Error('expected title request signal')
     await new Promise<never>((_resolve, reject) => {
       const rejectAbort = (): void => {
-        reject(signal.reason as Error)
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- exercise exact AbortSignal.reason propagation
+        reject(signal.reason)
       }
       if (signal.aborted) {
         rejectAbort()
@@ -54,9 +48,9 @@ class CooperativeAdapter extends RecordingAdapter {
   }
 }
 
-class DelayedSuccessAdapter extends RecordingAdapter {
+class DelayedSuccessAdapter extends LlmAdapter {
   constructor(private readonly delayMs: number) {
-    super([])
+    super()
   }
 
   override async * stream(): AsyncIterable<StreamChunk> {
@@ -177,28 +171,6 @@ describe('generateSessionTitleWithLlm', () => {
         messages: options.messages,
         maxTokens: 32,
       })
-  })
-
-  it('omits the output token cap for openai-codex requests and records', async () => {
-    const ctx = new Context()
-    await ctx.plugin(SessionStore)
-    await ctx.plugin(LlmRuntime)
-    const adapter = new RecordingAdapter(SCRIPT)
-    ctx.llm.registerAdapter(['openai-codex'], adapter)
-    const source = request(ctx)
-    const providerRequest = { ...source, route: { provider: 'openai-codex', model: 'fixture' } }
-
-    await generateSessionTitleWithLlm(
-      ctx,
-      resolveSessionTitleLlmConfig(CONFIG),
-      providerRequest,
-      providerRequest.messages,
-      TITLE_PROVIDER,
-    )
-
-    expect(adapter.requests[0]).not.toHaveProperty('maxTokens')
-    const record = providerRequest.session.snapshotEvents().findLast(event => event.type === 'session/title-llm-request')
-    expect(record?.data).not.toHaveProperty('maxTokens')
   })
 
   it('uses paired explicit overrides and bounds the final framed input before model dispatch', async () => {

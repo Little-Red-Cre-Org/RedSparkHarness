@@ -12,7 +12,6 @@
     "src/agent.ts",
     "src/assistant-stream.ts",
     "src/catalog.ts",
-    "src/client-event-types.ts",
     "src/commands.ts",
     "src/control.ts",
     "src/file-references.ts",

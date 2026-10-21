@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 import { optionalStringArray } from './modules/src/client/manifest.ts'
-import { PLATFORM_MODULES, PRELOADED_CLIENT_EXTERNALS } from '../../../Compatibility/DSH/web/frontend/src/platform.ts'
+import { PLATFORM_MODULES, PRELOADED_CLIENT_EXTERNALS } from './web/src/platform.ts'
 import { clientBuildEnvironmentDefines } from '../../../Scripts/client-build-environment.ts'
 
 /**
@@ -264,31 +264,8 @@ interface AssetEmitter {
   }): string
 }
 
-/** Contract 4. Keep a relative `.css` import verbatim and emit the sheet beside the
- * JavaScript, so the shell's CSS Modules pipeline sees a real stylesheet.
- * @returns a rolldown plugin owning one build's emitted sheet names.
- */
-export function cssAssetPlugin() {
-  const emitted = new Set<string>()
-  return {
-    name: 'dsh-css-asset',
-    async resolveId(this: AssetEmitter, source: string, importer: string | undefined) {
-      if (!source.endsWith('.css') || importer === undefined) return null
-      const { file, fileName } = stylesheetAsset(source, importer)
-      if (!emitted.has(fileName)) {
-        emitted.add(fileName)
-        // originalFileName also puts the physical sheet in the watch graph.
-        this.emitFile({ type: 'asset', fileName, source: await readFile(file), originalFileName: file })
-      }
-      // Every emitted chunk sits at the lib/ root, so the src-relative name
-      // is what resolves from there. Rolldown keeps relative externals as
-      // written instead of re-normalizing them.
-      return { id: `./${fileName}`, external: true }
-    },
-  }
-}
-
 function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js'), pluginName = STATIC_LINKED_PLUGIN): UserConfig {
+  const emitted = new Set<string>()
   return {
     name: id,
     entry: { [outputName]: entry },
@@ -318,26 +295,23 @@ function staticLinkedConfig(id: string, entry: string, outputName = basename(ent
         },
       },
     }, tscSourceMapPlugin(), {
-      // Native feature installers own the lifetime of sheets they read as text.
-      // Resolve `?inline` against source files because tsc preserves the import
-      // but does not copy CSS into `lib/types`.
-      name: 'dsh-css-text-inline',
-      resolveId(source: string, importer: string | undefined) {
-        if (!source.endsWith(INLINE_CSS_QUERY)) return null
-        const stylesheet = source.slice(0, -INLINE_CSS_QUERY.length)
-        if (!stylesheet.endsWith('.css')) return null
-        const abs = importer !== undefined ? sourceAssetPath(stylesheet, importer) : stylesheet
-        return INLINE_CSS_VIRTUAL_PREFIX + abs + CSS_VIRTUAL_SUFFIX
+      // Contract 4. The import survives verbatim and the sheet lands beside the
+      // JavaScript, so the shell's CSS Modules pipeline sees a real stylesheet.
+      name: 'dsh-css-asset',
+      async resolveId(this: AssetEmitter, source: string, importer: string | undefined) {
+        if (!source.endsWith('.css') || importer === undefined) return null
+        const { file, fileName } = stylesheetAsset(source, importer)
+        if (!emitted.has(fileName)) {
+          emitted.add(fileName)
+          // originalFileName also puts the physical sheet in the watch graph.
+          this.emitFile({ type: 'asset', fileName, source: await readFile(file), originalFileName: file })
+        }
+        // Every emitted chunk sits at the lib/ root, so the src-relative name
+        // is what resolves from there. Rolldown keeps relative externals as
+        // written instead of re-normalizing them.
+        return { id: `./${fileName}`, external: true }
       },
-      async load(this: { addWatchFile(id: string): void }, virtualId: string) {
-        if (!virtualId.startsWith(INLINE_CSS_VIRTUAL_PREFIX)) return null
-        const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
-        this.addWatchFile(fileId)
-        const source = await readFile(fileId)
-        const { code } = transform({ filename: fileId, code: source, minify: true })
-        return `export default ${JSON.stringify(code.toString())};`
-      },
-    }, cssAssetPlugin()],
+    }],
   }
 }
 

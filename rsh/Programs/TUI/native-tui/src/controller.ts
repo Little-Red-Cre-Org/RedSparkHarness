@@ -31,24 +31,11 @@ export interface TerminalCommandOperations {
   dispatch(id: SessionId, line: string, signal: AbortSignal): Promise<CommandExecution | undefined>
 }
 
-/** Installed Native manual-skill Consumer used only after command lookup misses. */
-export interface TerminalSkillInvocationOperations {
-  /**
-   * Check manual invocation availability.
-   * @param name - slash command Skill.
-   * @param id - selected Session.
-   * @param signal - lookup cancellation.
-   * @returns current manual-consumer availability.
-   */
-  canInvoke(name: string, id: SessionId, signal: AbortSignal): Promise<boolean>
-}
-
 /** Internal operations backed by one selected native executor and persistence authority. */
 export interface TerminalExecution {
   readonly models?: TerminalModelOperations | undefined
   readonly presets?: TerminalPresetOperations | undefined
   readonly commands?: TerminalCommandOperations | undefined
-  readonly skillInvocations?: TerminalSkillInvocationOperations | undefined
   /** @param signal - browser cancellation. @returns stored Session identities in this workspace. */
   sessions(signal: AbortSignal): Promise<readonly SessionId[]>
   readonly turn: NativeHeadlessApplication['executeRootTurn']
@@ -69,24 +56,14 @@ export interface TerminalExecution {
 
 const completedAssistantEvents = new Set(['assistant/message', 'assistant/attempt'])
 
-interface QueuedMessage { readonly kind: 'message'; readonly message: UserMessage }
-interface PendingSkillRoute {
-  readonly kind: 'skill-route'
-  readonly ready: Promise<UserMessage | undefined>
-  readonly resolve: (message: UserMessage | undefined) => void
-}
-type QueuedInput = QueuedMessage | PendingSkillRoute
-
 /** The terminal owns input admission and observations; the selected executor owns every durable write. */
 export class TerminalController implements TerminalInteraction {
   /** Pending presentation owner; Providers retain the Agent and Session audit authority. */
   readonly human: TerminalHumanInteraction
   private readonly shutdown = new AbortController()
-  private readonly queue: QueuedInput[] = []
+  private readonly queue: UserMessage[] = []
   private readonly listeners = new Set<() => void>()
   private readonly commandDrains = new Set<Promise<void>>()
-  private readonly skillLookups = new Set<AbortController>()
-  private readonly routeDrains = new Set<Promise<void>>()
   private selectedId: SessionId
   private state: TerminalState = { events: [], chunks: [], busy: false, queued: 0 }
   private active: AbortController | undefined
@@ -100,7 +77,6 @@ export class TerminalController implements TerminalInteraction {
   private failure: Error | undefined
   private finish!: () => void
   private readonly done = new Promise<void>((resolve) => { this.finish = resolve })
-  private skillLookupEpoch = 0
 
   /**
    * @param execution - selected executor operations and history observation.
@@ -114,7 +90,6 @@ export class TerminalController implements TerminalInteraction {
     this.lifetime = AbortSignal.any([ownerSignal, this.shutdown.signal])
     this.human = new TerminalHumanInteraction(config.maxPendingHumanRequests, terminalCopy(config.locale),
       (human) => {
-        if (human !== undefined) this.cancelSkillLookups(new Error(terminalCopy(config.locale).modelBusy))
         if (human !== undefined && this.maintenance) this.active?.abort(new Error(terminalCopy(config.locale).modelBusy))
         this.publish({ human })
       })
@@ -158,32 +133,19 @@ export class TerminalController implements TerminalInteraction {
     if (this.closed || this.ownerSignal.aborted) throw new Error(terminalCopy(this.config.locale).closed)
     if (this.maintenance || this.cancelling !== undefined) throw new Error(terminalCopy(this.config.locale).modelBusy)
     if (this.queue.length >= this.config.maxQueuedInputs) throw new Error(terminalCopy(this.config.locale).queueFull)
-    this.queue.push({ kind: 'message', message })
+    this.queue.push(message)
     this.publish({})
-    this.startDrain()
-  }
-
-  private startDrain(): void {
-    if (this.draining !== undefined) return
-    const pending = Promise.resolve().then(() => this.drain())
-    this.draining = pending
-    const restart = (): void => {
-      if (this.draining !== pending) return
-      this.draining = undefined
-      if (!this.closed && this.queue.length > 0) this.startDrain()
+    if (this.draining === undefined) {
+      const pending = Promise.resolve().then(() => this.drain())
+      this.draining = pending
+      void pending.then(() => { this.draining = undefined })
     }
-    void pending.then(restart, restart)
   }
 
   private async drain(): Promise<void> {
     while (!this.closed) {
-      const first = this.queue[0]
-      if (first === undefined) return
-      const message = first.kind === 'message' ? first.message : await first.ready
-      if (this.queue[0] !== first) continue
-      this.queue.shift()
-      this.publish({})
-      if (message === undefined) continue
+      const message = this.queue.shift()
+      if (message === undefined) return
       const controller = new AbortController()
       this.active = controller
       this.publish({ busy: true, chunks: [], error: undefined })
@@ -278,93 +240,16 @@ export class TerminalController implements TerminalInteraction {
     return this.trackCommandDrain(() => commands.list(id, this.lifetime))
   }
 
-  /** Resolve a command immediately, then admit a matching user-invocable Skill at its input position.
+  /** Dispatch explicit slash input outside the turn queue through the same root Session owner.
    * @param line - complete unmodified terminal input.
-   * @param name - parsed slash name, when available.
-   * @param message - original identified input for the normal turn queue.
-   * @returns the command result, successful Skill admission, unknown notice, or cancellation.
+   * @returns the durable command result, or undefined when no installed command matches.
    */
-  dispatchSlash(line: string, name: string | undefined, message: UserMessage): Promise<{
-    readonly kind: 'command'
-    readonly execution: CommandExecution
-  } | { readonly kind: 'skill' | 'unknown' } | undefined> {
+  async dispatchCommand(line: string): Promise<CommandExecution | undefined> {
     const commands = this.execution.commands
+    if (commands === undefined) return undefined
     this.assertCommandAdmission()
     const id = this.selectedId
-    const route = this.reserveSkillRoute()
-    const lookupEpoch = this.skillLookupEpoch
-    let admitted = false
-    const operation = (async (): Promise<{
-      readonly kind: 'command'
-      readonly execution: CommandExecution
-    } | { readonly kind: 'skill' | 'unknown' } | undefined> => {
-      try {
-        const command = commands === undefined ? undefined
-          : await this.trackCommandDrain(() => commands.dispatch(id, line, this.lifetime))
-        if (command !== undefined) return { kind: 'command', execution: command }
-        if (!this.isSkillLookupCurrent(undefined, lookupEpoch)) return undefined
-        if (route === undefined) throw new Error(terminalCopy(this.config.locale).queueFull)
-        if (name === undefined) return { kind: 'unknown' }
-        const invocations = this.execution.skillInvocations
-        if (invocations === undefined) return { kind: 'unknown' }
-        const controller = new AbortController()
-        const signal = AbortSignal.any([controller.signal, this.lifetime])
-        this.skillLookups.add(controller)
-        try {
-          const available = await invocations.canInvoke(name, id, signal)
-          if (!this.isSkillLookupCurrent(id, lookupEpoch, signal)) return undefined
-          if (!available) return { kind: 'unknown' }
-          if (!this.resolveSkillRoute(route, message)) return undefined
-          admitted = true
-          return { kind: 'skill' }
-        } catch (error: unknown) {
-          if (signal.aborted) return undefined
-          throw error
-        } finally { this.skillLookups.delete(controller) }
-      } finally { if (!admitted) this.releaseSkillRoute(route) }
-    })()
-    const drained = operation.then(() => undefined, () => undefined)
-    this.routeDrains.add(drained)
-    void drained.then(() => { this.routeDrains.delete(drained) })
-    return operation
-  }
-
-  private reserveSkillRoute(): PendingSkillRoute | undefined {
-    if (this.queue.length >= this.config.maxQueuedInputs) return undefined
-    const pending = Promise.withResolvers<UserMessage | undefined>()
-    const route: PendingSkillRoute = { kind: 'skill-route', ready: pending.promise, resolve: pending.resolve }
-    this.queue.push(route)
-    this.publish({})
-    this.startDrain()
-    return route
-  }
-
-  private isSkillLookupCurrent(id: SessionId | undefined, epoch: number, signal?: AbortSignal): boolean {
-    return this.skillLookupEpoch === epoch && !this.closed && !this.ownerSignal.aborted
-      && this.state.human === undefined && (id === undefined || this.selectedId === id)
-      && (signal === undefined || !signal.aborted)
-  }
-
-  private resolveSkillRoute(route: PendingSkillRoute, message: UserMessage): boolean {
-    if (!this.queue.includes(route)) return false
-    route.resolve(message)
-    return true
-  }
-
-  private releaseSkillRoute(route: PendingSkillRoute | undefined): void {
-    if (route === undefined) return
-    const index = this.queue.indexOf(route)
-    if (index >= 0) {
-      this.queue.splice(index, 1)
-      route.resolve(undefined)
-      this.publish({})
-    }
-  }
-
-  private clearQueuedInputs(): void {
-    for (const input of this.queue.splice(0)) {
-      if (input.kind === 'skill-route') input.resolve(undefined)
-    }
+    return this.trackCommandDrain(() => commands.dispatch(id, line, this.lifetime))
   }
 
   private assertCommandAdmission(): void {
@@ -396,7 +281,7 @@ export class TerminalController implements TerminalInteraction {
     const copy = terminalCopy(this.config.locale)
     if (this.closed || this.ownerSignal.aborted) throw new Error(copy.closed)
     if (this.draining !== undefined || this.cancelling !== undefined || this.commandDrains.size > 0
-      || this.routeDrains.size > 0 || this.queue.length !== 0 || this.state.human !== undefined) {
+      || this.queue.length !== 0 || this.state.human !== undefined) {
       throw new Error(copy.modelBusy)
     }
     const controller = new AbortController()
@@ -418,9 +303,8 @@ export class TerminalController implements TerminalInteraction {
 
   /** Cancel displayed human work's root epoch or the local turn; admission waits for actual writer drain. */
   cancel(): void {
-    this.clearQueuedInputs()
+    this.queue.length = 0
     const reason = new Error(terminalCopy(this.config.locale).cancelled)
-    this.cancelSkillLookups(reason)
     if (this.cancelling === undefined) {
       const active = this.active
       const pending = this.human.cancel((cause) => { active?.abort(cause) })
@@ -441,11 +325,6 @@ export class TerminalController implements TerminalInteraction {
   }
 
   private hasHumanCancellation(): boolean { return this.cancelling !== undefined }
-
-  private cancelSkillLookups(reason: Error): void {
-    this.skillLookupEpoch++
-    for (const lookup of this.skillLookups) lookup.abort(reason)
-  }
 
   /** Request ordinary exit; application completion follows asynchronous cleanup. */
   exit(): void { this.finish() }
@@ -494,17 +373,8 @@ export class TerminalController implements TerminalInteraction {
     return signal.aborted || this.ownerSignal.aborted ? 130 : 0
   }
 
-  /** @returns completion after all currently admitted inputs and their follow-up queue drains settle. */
-  async settle(): Promise<void> {
-    while (this.draining !== undefined || this.cancelling !== undefined || this.commandDrains.size > 0 || this.routeDrains.size > 0) {
-      await Promise.all([
-        ...(this.draining === undefined ? [] : [this.draining]),
-        ...(this.cancelling === undefined ? [] : [this.cancelling]),
-        ...this.commandDrains,
-        ...this.routeDrains,
-      ])
-    }
-  }
+  /** @returns completion after all currently admitted inputs settle. */
+  async settle(): Promise<void> { await Promise.all([this.draining, this.cancelling, ...this.commandDrains]) }
 
   /** Close input admission and await the selected executor before resource withdrawal.
    * @returns idempotent completion after accepted work drains.
@@ -516,7 +386,7 @@ export class TerminalController implements TerminalInteraction {
     this.human.close()
     this.listeners.clear()
     this.withdrawLaunch?.()
-    this.clearQueuedInputs()
+    this.queue.length = 0
     this.shutdown.abort(new Error('native-tui: disposed'))
     this.finish()
     return this.closing = (async () => {

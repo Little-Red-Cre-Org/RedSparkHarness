@@ -50,7 +50,7 @@ interface ConnectionServerResponse {
 
 /** Shared route, authentication, and RPC dispatch state for one Host process. */
 export class HostConnectionRegistry {
-  private readonly interceptors = new Map<string, ConnectionRpcInterceptor[]>()
+  private readonly interceptors = new Map<string, ConnectionRpcInterceptor>()
   private readonly fetchRoutes = new Map<string, RegisteredFetchRoute>()
 
   /**
@@ -120,10 +120,8 @@ export class HostConnectionRegistry {
         const route = this.fetchRoutes.get(pathname)
         if (route?.methods.has(request.method) === true) return route.fetch(request)
         const endpoint = endpointFromPath(channel, pathname)
-        const interceptor = endpoint === undefined
-          ? undefined
-          : this.interceptors.get(channel)?.find(candidate => candidate.matches(endpoint))
-        if (interceptor === undefined) {
+        const interceptor = this.interceptors.get(channel)
+        if (endpoint === undefined || interceptor === undefined || !interceptor.matches(endpoint)) {
           return Promise.resolve(new Response('not found', { status: 404 }))
         }
         return interceptor.fetchHandler.fetch(request)
@@ -165,16 +163,11 @@ export class HostConnectionRegistry {
     }
     const interceptor: ConnectionRpcInterceptor = { matches, fetchHandler: rpcFetchHandler(channel, handler) }
     return owner.effect(() => {
-      const interceptors = this.interceptors.get(channel) ?? []
-      interceptors.push(interceptor)
-      this.interceptors.set(channel, interceptors)
-      return () => {
-        const index = interceptors.indexOf(interceptor)
-        if (index !== -1) interceptors.splice(index, 1)
-        if (interceptors.length === 0 && this.interceptors.get(channel) === interceptors) {
-          this.interceptors.delete(channel)
-        }
+      if (this.interceptors.has(channel)) {
+        throw new Error(`connection: shared RPC channel ${JSON.stringify(channel)} already has an interceptor`)
       }
+      this.interceptors.set(channel, interceptor)
+      return () => { this.interceptors.delete(channel) }
     }, `client-connection: ${channel} rpc interceptor`)
   }
 }

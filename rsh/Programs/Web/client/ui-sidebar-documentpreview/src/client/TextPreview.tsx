@@ -10,12 +10,12 @@
  * with the same reload. The type's controls, viewer choice, wrap and reload, sit at the end of
  * the path row; the Sidebar's strip carries none of them.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import clsx from 'clsx'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
-import { FileTypeIcon, IconRefreshOutline16, Menu, SidebarPathBar, Tooltip, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
+import { FileTypeIcon, IconRefreshOutline16, Menu, Tooltip, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pathPartsOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { TextInjected } from './face.ts'
 import { failureLine } from './failure-line.ts'
@@ -32,6 +32,29 @@ import css from './TextPreview.module.css'
 
 export { linesOf, loadedPages, lastLineLoaded, scrollToLine } from './text/lines.ts'
 export type { LoadedPage } from './text/lines.ts'
+
+/** Keep the path fade in sync with whether its full text fits the header row. */
+function usePathClipped(
+  box: RefObject<HTMLDivElement | null>,
+  text: RefObject<HTMLSpanElement | null>,
+  path: string,
+  shown: boolean,
+): void {
+  useLayoutEffect(() => {
+    const outer = box.current
+    const inner = text.current
+    if (outer === null || inner === null) return undefined
+    const apply = (): void => {
+      if (inner.offsetWidth > outer.clientWidth) outer.dataset.textpreviewPathClipped = ''
+      else delete outer.dataset.textpreviewPathClipped
+    }
+    apply()
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(apply)
+    observer?.observe(outer)
+    observer?.observe(inner)
+    return () => { observer?.disconnect() }
+  }, [box, text, path, shown])
+}
 
 /** Private registration inputs; the framework binds the registry source to useDocumentPreviews. */
 export interface TextPreviewInjected extends TextInjected {
@@ -73,9 +96,11 @@ export function TextPreview({
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const scrollportRef = useRef<HTMLElement | null>(null)
   const storedScrollTopRef = useRef(0)
+  const pathRef = useRef<HTMLDivElement | null>(null)
+  const pathTextRef = useRef<HTMLSpanElement | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const displayPath = meta.value?.absolutePath ?? current?.complete?.absolutePath ?? file.path
-  const { name } = pathPartsOf(displayPath)
+  usePathClipped(pathRef, pathTextRef, displayPath, state !== undefined)
   // Every tab of this type is a `file` resource address, so its params are the
   // `file` type's; the union is narrowed on the one field read, not validated.
   const line = navigation.params !== undefined && 'line' in navigation.params ? navigation.params.line : undefined
@@ -158,6 +183,7 @@ export function TextPreview({
     )
   }
   const next = loadedThrough + 1
+  const { directory, name } = pathPartsOf(displayPath)
   const observedVersion = meta.value?.version
   const changed = current?.version !== undefined && observedVersion !== undefined
     && observedVersion !== current.version && observedVersion !== current.observedVersion
@@ -203,7 +229,13 @@ export function TextPreview({
             </button>
           </p>
         )}
-      <SidebarPathBar path={displayPath}>
+      <div className={css.header}>
+        <div ref={pathRef} className={css.path} title={displayPath} data-textpreview-path>
+          <span ref={pathTextRef} className={css.pathText}>
+            {directory !== '' && <span className={css.pathDirectory}>{directory}</span>}
+            <span className={css.pathName}>{name}</span>
+          </span>
+        </div>
         <Menu
           open={menuOpen}
           anchor={(
@@ -246,7 +278,7 @@ export function TextPreview({
             <IconRefreshOutline16 />
           </button>
         </Tooltip>
-      </SidebarPathBar>
+      </div>
       <div
         ref={bindBody}
         className={clsx(css.body, state.wrap && css.wrap)}

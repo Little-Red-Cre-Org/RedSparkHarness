@@ -31,8 +31,6 @@ As a deployment, choose a backend, mount it, and add redaction rules when record
 
 Load exactly one backend plugin; it registers `ctx.sessionTelemetry` with the capture coordinator and its delivery pipeline. A duplicate load throws. The required [`sharing` member](#the-sharing-disclosure) reports the deployment mode, not per-session admission or delivery. A consumer may report "not configured" only when no telemetry service is mounted. The `/feedback` command confirms recording without reading this policy.
 
-Native Hosts use the separate `./native-definition` export for `NativeSessionTelemetryOperations` and the `session-telemetry/record` event. The selected backend provides the `sessionTelemetry` service key through the Native runtime, not the Cordis context. The `./records` export contains the pure ledger projection shared with the Native backend; this path does not compose the Cordis coordinator or its handoff cursor.
-
 ### The backend contract
 
 A backend implements three members: `emit(record)` must be a non-blocking enqueue because it runs synchronously on the session-event path; optional `flush()` is a fire-and-forget hint after a turn ends, which most backends omit in favor of their SDK's own batching schedule; `shutdown()` drains queued records and resolves when the SDK stops, and disposal awaits it. A backend that implements `flush()` must order concurrent flushes with the final `shutdown()` drain.
@@ -65,17 +63,14 @@ This section explains the capture design; the observable behavior is fully cover
 
 ### Design concept
 
-The seam is built on one boundary: the harness's aspect ends at `emit()`. Complete event capture, redaction, and the handoff cursor live here; batching, retry, queueing, and loss policy are the reporting SDK's, deliberately not modelled or wrapped. Cordis peers are needed only by the Cordis entry and coordinator; Native backends use the Cordis-free `./records` and `./native-definition` exports. The design and rejected alternatives are pinned in the [revival Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.md).
+The seam is built on one boundary: the harness's aspect ends at `emit()`. Complete event capture, redaction, and the handoff cursor live here; batching, retry, queueing, and loss policy are the reporting SDK's, deliberately not modelled or wrapped. The design and rejected alternatives are pinned in the [revival Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.md).
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis Service Definition and `session-telemetry/record` waterfall declaration |
-| [`src/types.ts`](src/types.ts) | Shared record vocabulary and backend contract |
+| [`src/index.ts`](src/index.ts) | Service Definition: `SessionTelemetryBackend`/`SessionTelemetrySink` contract, record vocabulary, `session-telemetry/record` waterfall declaration |
 | [`src/coordinator.ts`](src/coordinator.ts) | Capture: live listeners, lifecycle-local on-demand replay, redaction, handoff cursor, containment |
-| [`src/native-definition.ts`](src/native-definition.ts) | Native service and record-redaction event Definition |
-| [`src/records.ts`](src/records.ts) | Pure ledger projection shared with the Native backend |
 
 ### Capture flow
 

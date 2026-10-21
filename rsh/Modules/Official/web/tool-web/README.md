@@ -7,6 +7,8 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+Native system-prompt guidance uses the initial capability selection to remain stable across Session resume. On-demand tool-group results supply schemas for later additions; execution uses the current request selection.
+
 ## Summary
 
 `dsh-tool-web` lets models search the web with `web_search` and retrieve pages with `web_fetch`. Choose it when an agent needs current information or full source text, and enable either tool independently through package configuration. Results label provider-controlled text as external and untrusted, while fetched HTML excludes active and hidden content. If a configured provider is missing or unavailable, the tool remains visible and returns a structured error the model can act on. Timeout and result-size limits are deployment settings rather than model arguments.

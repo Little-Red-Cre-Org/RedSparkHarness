@@ -148,7 +148,7 @@ export const plugin: NativePlugin = {
       }
       const sections = context.optional('promptSections')
       if (sections !== undefined) {
-        const visible = (scope: NativeScope, name: string) => tools.schemas(scope).some(tool => tool.name === name)
+        const visible = (scope: NativeScope, name: string) => tools.schemas(scope, true).some(tool => tool.name === name)
         context.effect(sections.register({ name: 'tool:glob', order: 1400, text: scope => visible(scope, 'glob')
           ? globGuidance({ ...config, maxResults: config.globMaxResults, maxMetaBytes: config.searchMetaMaxBytes }) : '' }, context.scope))
         context.effect(sections.register({ name: 'tool:grep', order: 1500, text: scope => visible(scope, 'grep')

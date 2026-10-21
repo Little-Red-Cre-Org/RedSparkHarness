@@ -26,6 +26,7 @@
 | `@deepseek-ai/dsh-tool-present` | `present` | `ctx.tools`, `ctx.fs`, `ctx.sessionProjections` | `tool/call`, `deliverables/presented 在成功的最终结果之后`, `tool/result` | - | 交付归调用方 Session 所有；Web ui-deliverables 提供源文件打开与卡片。 |
 | `@deepseek-ai/dsh-tool-pwsh` | `pwsh` | `ctx.tools`、`ctx.shell`、`ctx.systemPrompt`、`ctx.shellEnv`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | pwsh 工具是 Windows 组合中 bash 执行器 seam 的 PowerShell 方言消费方（由 `@deepseek-ai/dsh-pwsh-local` 等 PowerShell 执行器为 `ctx.shell` 提供后端）；除沙箱接口外，它逐项对应 bash 工具调用。使用 `run_in_background` 的运行会注册到通用 `ctx.jobs` 运行时，并通过 `job_*` 工具收集／停止；托管的 `DSH_*` 环境来自 `@deepseek-ai/dsh-shell-env`。每次调用都在新进程中运行，不使用持久 PTY 会话。路径采用原生 `C:\...` 形式，变量采用 `$env:NAME`。 |
 | `@deepseek-ai/dsh-tool-code-runtime` | `run_code` | `tools`, `codeRuntime`, `fs` | `tool/call`, `tool/ptc-dispatch-start`, `tool/ptc-dispatch`, `tool/result` | - | 原生 run_code 由选定的代码工具 Consumer 注册。本目录通过 TypeScript worker-thread Provider 采集；选用 Python Provider 时，code 参数描述和 SDK 语言会相应变化。 |
+| `@deepseek-ai/dsh-tool-groups` | `request_tool_group` | `tools`, `activeSessions` | `tool-groups/opened`, `request/header`, `tool/result` | - | planning 组仅为目录示例。profile 明确配置初始工具以及组名、描述和工具列表。开放从下一次模型请求生效，不改变操作权限。 |
 | `@deepseek-ai/dsh-tool-cordis` | `cordis_define`、`cordis_inspect_list`、`cordis_inspect_query`、`cordis_inspect_self`、`cordis_run`、`cordis_stop`、`cordis_undefine` | `ctx.tools`、`ctx.dynamicCordisRunner` | `tool/call`、`tool/result`、`process-local dynamic package lifecycle` | - | 不在任何随产品发布的树中，需要显式选择启用；动态 Package 代码可以访问真实运行时，见 .agents/notes/implemented/feature/2026-07-08-self-referential-cordis-toolset.md。该工具集注入 `@deepseek-ai/dsh-cordis-host-runner` 提供的 `ctx.dynamicCordisRunner`，后者拥有定义注册表和 vm 沙箱；组合缺少它时这些工具不会激活。运行中的 Package 在停止、undefine 或 DSH 重启前可以注册**额外的**模型可见工具；发生这类工具集变化时，系统会记录完整且有变动的请求头。 |
 | `@deepseek-ai/dsh-tool-bash-persistent` | `bash` | `ctx.tools`、`ctx.terminals`、`an owning Agent at execution time` | `tool/call`、`PTY shell state`、`tool/result` | - | 一个按所有者隔离的持久 bash 工具；部署组合提供 PTY 后端，并可覆盖面向模型的环境描述。 |
 | `@deepseek-ai/dsh-tool-pwsh-persistent` | `pwsh` | `ctx.tools`、`ctx.terminals`、`an owning Agent at execution time` | `tool/call`、`PTY shell state`、`tool/result` | - | 一个按所有者隔离的持久 pwsh 工具，持久 bash 工具的 Windows 对应物；部署组合提供 pwsh 方言的 PTY 后端，并可覆盖面向模型的环境描述。 |
@@ -35,7 +36,7 @@
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
 | `@deepseek-ai/dsh-task-scheduler` | `task_schedule` | `ctx.tools`, `owning root Agent`, `task database`, `Agent presets and permission presets` | `tool/call`, `tool/result`, `task plans and run receipts in SQLite`, `independent execution session events` | - | 按需启用的持久化单次与固定周期 Agent 任务。管理限于创建会话，执行使用独立会话。完成表示 Agent 轮次结束，不代表代码验证通过。 |
-| `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`（Cordis）或 `activeSessions`（Native）、Session 持久化、确切的 live 根 Session owner | `tool/call`、`schedule/change create or delete`、`tool/result` | - | Cordis 会在 overlay 加载后创建的根 Agent scope 中注册工具；Native Host 入口会在首个模型请求捕获工具快照前，附加到现有及未来的确切根 Session owner。若 tool allowlist 允许，Native 首轮会包含这些 schema。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
+| `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`、`ctx.agents`、`ctx.skills` | `tool/call`、`tool/result`、`user/message replacement catalogs via agent.inject()` | - | - |
@@ -344,6 +345,36 @@ pwsh 工具是 Windows 组合中 bash 执行器 seam 的 PowerShell 方言消费
 来源：[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/native.ts)
 
 原生 run_code 由选定的代码工具 Consumer 注册。本目录通过 TypeScript worker-thread Provider 采集；选用 Python Provider 时，code 参数描述和 SDK 语言会相应变化。
+
+<a id="deepseek-aidsh-tool-groups"></a>
+
+## `@deepseek-ai/dsh-tool-groups`
+
+### `request_tool_group`
+
+申请当前任务的工具组。组内工具从下一次模型请求开始可用，不能在当前批次或程序中使用。开放不会授予操作权限，返回的工具 schema 同时描述新增程序绑定。示例组 `planning` 用于维护任务计划。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "enum": [
+        "planning"
+      ]
+    }
+  },
+  "required": [
+    "group"
+  ],
+  "additionalProperties": false
+}
+```
+
+来源：[`rsh/Modules/Official/guard/tool-groups/src/native.ts`](../Modules/Official/guard/tool-groups/src/native.ts)
+
+planning 组仅为目录示例。profile 明确配置初始工具以及组名、描述和工具列表。开放从下一次模型请求生效，不改变操作权限。
 
 <a id="deepseek-aidsh-tool-cordis"></a>
 
@@ -1351,7 +1382,7 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 
 来源：[`rsh/Engine/schedule/schedule/src/tools.ts`](../Engine/schedule/schedule/src/tools.ts)
 
-Cordis 会在 overlay 加载后创建的根 Agent scope 中注册工具；Native Host 入口会在首个模型请求捕获工具快照前，附加到现有及未来的确切根 Session owner。若 tool allowlist 允许，Native 首轮会包含这些 schema。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。
+仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。
 
 <a id="deepseek-aidsh-tool-lsp"></a>
 

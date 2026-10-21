@@ -64,7 +64,7 @@ interface SessionTitleSnapshot extends SessionTitleEventData {
 
 ## Auxiliary request record
 
-The shared LLM helper records each validated, dispatchable title request before calling the model. The payload reproduces the model-visible system and message input, routing, provider ownership, and source-message attribution even when generation later fails; it includes an output limit only when the route accepts one.
+The shared LLM helper records each validated, dispatchable title request before calling the model. The payload reproduces the model-visible system and message input, routing, output limit, provider ownership, and source-message attribution even when generation later fails.
 
 ```ts type-equiv
 /** Exact model-visible request recorded before one auxiliary title dispatch. */
@@ -79,8 +79,8 @@ interface SessionTitleLlmRequestEventData {
   readonly system: string
   /** Exact auxiliary message list. */
   readonly messages: Message[]
-  /** Exact auxiliary output-token cap; omitted for openai-codex routes that reject it. */
-  readonly maxTokens?: number
+  /** Exact auxiliary output-token cap. */
+  readonly maxTokens: number
 }
 ```
 

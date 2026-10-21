@@ -91,20 +91,14 @@ export const plugin: NativePlugin = {
           },
         },
         async execute(call) {
-          const sessionPolicy = policy?.resolve({ session: call.session })
-          if (runtime.isolation === 'process-sandbox' && sessionPolicy?.workspaceRoot !== call.session.header.cwd) {
+          if (runtime.isolation === 'process-sandbox' && policy?.config.workspaceRoot !== call.session.header.cwd) {
             throw new Error('tool-code-runtime: codeRuntime sandbox workspace differs from Session cwd')
-          }
-          if (runtime.isolation !== 'process-sandbox'
-            && (sessionPolicy !== undefined ? sessionPolicy.mode !== 'danger-full-access' : filesystem.sandboxMode !== undefined)) {
-            throw new Error('tool-code-runtime: restricted file policy requires a process-sandbox code runtime')
           }
           const { code, description } = call.arguments as { code: string; description: string }
           if (description.trim().length === 0) {
             throw new ToolArgsError(['description: expected a non-empty string'])
           }
-          const schemas = call.programSnapshot?.programSchemas
-            ?? tools.sdkSchemas(call.agent.scope).filter(schema => schema.name !== 'run_code')
+          const schemas = tools.sdkSchemas(call.agent.scope).filter(schema => schema.name !== 'run_code')
           const dispatch = createNativePtcDispatch(tools, call, maxParallel)
           const bindings: CodeBindingNamespace[] = schemas.length === 0 ? [] : [{
             global: 'tools', errorClass: { name: 'ToolCallError', memberNameProperty: 'toolName' },
@@ -129,7 +123,7 @@ export const plugin: NativePlugin = {
           let value: CodeRunResult
           try {
             value = await runtime.run({
-              program: code, bindings, signal: dispatch.signal, session: call.session,
+              program: code, bindings, signal: dispatch.signal,
               onStop() { void closeDispatch() },
             })
           }
@@ -150,10 +144,9 @@ export const plugin: NativePlugin = {
       if (sdkPrompt && prompts !== undefined) {
         context.effect(prompts.register({
           name: 'tools:sdk', order: 0,
-          text(scope = context.scope, renderContext) {
+          text(scope = context.scope) {
             if (tools.modelMode === 'native') return ''
-            const schemas = [...(renderContext?.programSchemas
-              ?? tools.sdkSchemas(scope).filter(schema => schema.name !== 'run_code'))]
+            const schemas = tools.sdkSchemas(scope, true).filter(schema => schema.name !== 'run_code')
             return (tools.modelMode === 'ptc' ? 'Call tools only through `run_code`; business names below are program bindings.\n\n' : '')
               + '## Writing code for run_code\n\n'
               + (python ? '`run_code` takes two required strings: `code`, the body of an async Python function, '

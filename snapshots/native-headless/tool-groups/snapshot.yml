@@ -1,0 +1,8 @@
+version: 1
+scenario: tool-groups
+profile: native-headless
+composition: native-tool-groups
+recording: authored
+header:
+  class: native-tool-groups
+  pin: true

@@ -157,49 +157,6 @@ interface ConfinedArgv {
 
 提供方选择、探测、缓存和后端特定的强制执行报告归[本地提供方](../../Modules/Official/sandbox/sandbox-local/README.zh.md)所有。
 
-原生消费方使用仅供 Host 使用的 `./native` 出口声明的 `ProcessSandbox` 服务。它与 `ctx.sandbox` 分开；`confineChildProcess()` 将 launcher 所有的 `privateHome` 作为唯一额外的调用方可写路径，并保留既有策略授权；所选 `cwd` 会以只读方式暴露，除非既有授权包含该路径。
-
-```ts type-equiv
-/** Native service implemented by a process-confinement Provider. */
-interface ProcessSandbox {
-  /**
-   * Wrap exact argv under a per-call file policy or fail closed.
-   * @param argv - original program and arguments.
-   * @param policy - complete confined policy for this call.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confine(argv: readonly string[], policy: SandboxPolicy): ConfinedArgv
-  /**
-   * Confine a fixed child runtime while exposing its selected cwd and private home.
-   * The launcher-owned `privateHome` is an additional writable path. Existing
-   * policy grants, including backend-managed temporary paths, remain in force.
-   * The selected cwd is visible and read-only unless an existing policy grant
-   * contains it.
-   * @param argv - the exact child program and arguments.
-   * @param policy - the child's resolved file-effect policy.
-   * @param paths - canonical child cwd and launcher-owned private home.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confineChildProcess(argv: readonly string[], policy: SandboxPolicy, paths: ProcessSandboxChildPaths): ConfinedArgv
-  /**
-   * Prepare and return the existing per-session writable temp root for a policy, when this backend owns one.
-   * @param policy - complete workspace-write policy for the owning session.
-   * @returns the runner temp root reused by {@link confine}, or `undefined` when this backend does not expose one.
-   */
-  prepareWritableTempRoot?(policy: SandboxPolicy): string | undefined
-}
-```
-
-```ts type-equiv
-/** Canonical paths required to start one confined SDK child. */
-interface ProcessSandboxChildPaths {
-  /** Existing canonical directory used as the child's process cwd. */
-  cwd: string
-  /** Existing canonical directory created and owned by the child launcher. */
-  privateHome: string
-}
-```
-
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

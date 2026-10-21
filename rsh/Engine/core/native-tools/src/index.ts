@@ -1,6 +1,5 @@
 /** Reversible native tool contributions consumed by a selected application. */
 import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
 import { deepFreeze, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
@@ -9,7 +8,7 @@ import type {
 } from '@deepseek-ai/dsh-session/native'
 import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validateJsonSchemaValue } from './json-schema.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
-import type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
+import type { NativeToolRestriction } from './types.ts'
 import {
   registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, type AsyncPolicyRegistration,
 } from './result-processing.ts'
@@ -18,31 +17,15 @@ export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
 export type NativeToolMode = 'native' | 'ptc' | 'both'
 
-/** Exact asynchronous disposer returned by one tool registration. */
-export type NativeToolRegistration = () => Promise<void>
-
-/** Captured Registry entries for one model catalog or program binding set. */
-export interface NativeToolExecutionSnapshot {
-  /** Schemas captured from the exact visible registrations admitted to this operation. */
-  readonly schemas: readonly ToolSchema[]
-  /** Canonical input/output schemas captured for PTC bindings; absent for model-only snapshots. */
-  readonly programSchemas?: readonly ToolSdkSchema[]
+/** Select capabilities at a model request boundary; execution retains that selection until the next request. */
+export interface NativeToolSelectionPolicy {
+  readonly initial: readonly string[]
   /**
-   * Return whether this exact registered contribution belongs to the captured catalog.
-   * @param registration - disposer returned by the contribution.
-   * @returns whether the registration identity was captured.
+   * @param agent - requesting Agent.
+   * @param session - authoritative Session.
+   * @returns allowed tool names after durable policy state is restored.
    */
-  includesRegistration(registration: NativeToolRegistration): boolean
-  /** Cancellation for this snapshot; callers combine it with their operation signal. */
-  readonly signal: AbortSignal
-  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns exact admitted preparation. */
-  prepare(call: NativeToolExecution): Promise<NativePreparedToolInvocation>
-  /** @param call - pending invocation. @returns overlap only when the captured registration permits it. */
-  executionMode(call: Pick<NativeToolExecution, 'agent' | 'name' | 'arguments'>): 'parallel' | 'exclusive'
-  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns the admitted call and result. */
-  execute(call: NativeToolExecution): Promise<{ readonly call: NativeToolExecution; readonly result: NativeToolResult }>
-  /** Close admission, cancel accepted executions and wait for their body pipelines to settle. */
-  dispose(): Promise<void>
+  select(agent: NativeAgent, session: Session): Promise<readonly string[]>
 }
 
 /** One model-requested tool invocation with its Session and cancellation. */
@@ -56,10 +39,6 @@ export interface NativeToolExecution {
   readonly signal: AbortSignal
   /** Exact enclosing admitted invocation for a nested program call. */
   readonly parent?: NativeToolExecution
-  /** Exact external-child route and resource ceilings inherited by nested delegation. */
-  readonly delegationContext?: NativeToolDelegationContext
-  /** Exact program/business registrations captured for this external operation's PTC bindings. */
-  readonly programSnapshot?: NativeToolExecutionSnapshot
   /** Unbound application approval authority; the registry binds it to each admitted invocation. */
   readonly approvalAuthority?: NativeToolApprovalAuthority
   /** Append and persist a tool-owned Session event before returning a model-visible result. */
@@ -79,11 +58,6 @@ export interface NativeToolApprovalRequest {
   readonly callId: ToolCallId
   readonly toolName: string
   readonly reason?: string
-  /** Frozen validated parameters and complete tool-owned context, only for ordinary root authorization. */
-  readonly sessionGrant?: {
-    readonly parameters: JsonValue
-    readonly context: NativeToolApprovalContext
-  }
   readonly signal: AbortSignal
 }
 
@@ -106,20 +80,10 @@ export interface NativeToolApprovalAuthority {
 /** Closed answer returned to a tool that handles its own approval outcome. */
 export type NativeToolApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
 
-/** Complete resolved facts supplied by an operation owner; no borrowed paths or reason text. */
-export interface NativeToolApprovalContext {
-  /** Stable filesystem target identity of the effective execution cwd. */
-  readonly cwdKey: string
-  /** Stable identity of the exact resolved target used for execution. */
-  readonly targetKey: string
-}
-
 /** Optional pre-execution approval requested by one tool contribution. */
 export interface NativeToolApproval {
   /** Human-readable explanation for the answerer and durable audit. */
   readonly reason?: string
-  /** Omit unless the tool can reuse the same resolved target and supply complete execution facts. */
-  readonly sessionContext?: NativeToolApprovalContext
 }
 
 /** Model-visible outcome to append once to the authoritative Session. */
@@ -135,44 +99,6 @@ export interface NativeToolResult {
   readonly additionalContexts?: readonly UserMessage[]
   /** A successful result may finish the turn after the current model batch settles. */
   readonly concludesTurn?: true
-}
-
-/** One wire-parsed product tool call admitted from a recorded external model response. */
-export interface NativeExternalToolCall {
-  readonly callId: ToolCallId
-  readonly name: string
-  readonly arguments: JsonValue
-}
-
-/** Result whose acceptance is deferred until its external-operation event is durable. */
-export interface NativeExternalToolInvocation {
-  readonly result: NativeToolResult
-  /** @returns settlement contexts and turn conclusion after the Engine records this exact result. */
-  acceptRecordedResult(): { readonly settlementContexts: readonly UserMessage[]; readonly concludesTurn: boolean }
-  /**
-   * Read verified bytes referenced by this result and its accepted settlement contexts.
-   * @returns each referenced image once, in first-occurrence order.
-   * @throws before this invocation's result is accepted or after its captured owner closes.
-   */
-  readAcceptedImages(): Promise<readonly StoredImageAttachment[]>
-}
-
-export type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-
-/** Captured Engine tool authority for one external operation. */
-export interface NativeExternalToolOperations {
-  /** Schemas from the exact filtered tool registrations admitted to this operation. */
-  readonly schemas: readonly ToolSchema[]
-  /** Canonical program-only bindings from the same exact filtered Registry registrations. */
-  readonly programSchemas: readonly ToolSdkSchema[]
-  /** Prompt sections rendered against this operation's captured direct and program catalogs. */
-  readonly promptText: string
-  /** @param call - one wire-parsed model call. @param signal - external operation cancellation. @returns its unaccepted result. */
-  execute(call: NativeExternalToolCall, signal: AbortSignal): Promise<NativeExternalToolInvocation>
-  /** Close admission, cancel active calls, and await their body pipelines and cleanup.
-   * The Engine broker owns durable result acceptance and settlement.
-   */
-  dispose(): Promise<void>
 }
 
 /** A tool whose canonical JSON result is validated before presentation or program consumption. */
@@ -330,8 +256,7 @@ export type NativePtcDispatchLogPolicy = (
   call: NativeToolExecution, original: Readonly<NativeToolResult>, next: () => Promise<NativePtcDispatchLog>, signal: AbortSignal,
 ) => Promise<NativePtcDispatchLog>
 
-export type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
-export type { ToolSdkSchema } from './ts-types.ts'
+export type { NativeToolRestriction } from './types.ts'
 
 interface CompiledToolRestriction {
   readonly allow?: ReadonlySet<string>
@@ -340,8 +265,6 @@ interface CompiledToolRestriction {
 
 /** One prepared invocation retaining its selected contribution until dispatch or cancellation. */
 export interface NativePreparedToolInvocation {
-  /** Exact frozen invocation admitted by the Registry. */
-  readonly call: NativeToolExecution
   /** @returns the contribution result; rejects cancellation or a second dispatch. */
   execute(): Promise<NativeToolResult>
   /** Release an invocation that will not be dispatched; repeated abandonment has no effect. */
@@ -390,6 +313,12 @@ export class NativeToolRegistry {
   private resultPolicySequence = 0
   private guardSequence = 0
   private restrictionSequence = 0
+  private selectionSequence = 0
+  private readonly selections: NativeContributions<{
+    policy: NativeToolSelectionPolicy
+    initial: ReadonlySet<string>
+    captured: WeakMap<NativeScope, ReadonlySet<string>>
+  }>
   private readonly registrations = new Set<ToolRegistration>()
   private disposal: Promise<void> | undefined
 
@@ -409,6 +338,34 @@ export class NativeToolRegistry {
     this.settlementPolicies = new NativeContributions(scope)
     this.ptcLogPolicies = new NativeContributions(scope)
     this.restrictions = new NativeContributions(scope)
+    this.selections = new NativeContributions(scope)
+  }
+
+  /**
+   * Install a request-bound capability selection, including same-scope contributions.
+   * @param policy - initial prompt capabilities and durable request selection.
+   * @param scope - installation scope.
+   * @returns disposer that removes this policy and its captured selections.
+   */
+  selectForRequest(policy: NativeToolSelectionPolicy, scope?: NativeScope): () => void {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    return this.selections.register(`selection:${this.selectionSequence++}`, {
+      policy, initial: new Set(policy.initial), captured: new WeakMap(),
+    }, scope)
+  }
+
+  /**
+   * Capture all selected capabilities before generating schemas or executing the next model batch.
+   * @param agent - requesting Agent.
+   * @param session - authoritative Session.
+   * @param builtinTools - application tools that bypass this registry; incompatible with selection policies.
+   * @returns completion after every policy succeeds, without publishing partial selections.
+   */
+  async prepareRequest(agent: NativeAgent, session: Session, builtinTools: boolean): Promise<void> {
+    const entries = [...this.selections.visible(agent.scope).values()]
+    if (entries.length > 0 && builtinTools) throw new Error('native-tools: tool selection requires builtinTools=false')
+    const selected = await Promise.all(entries.map(async entry => ({ entry, allowed: new Set(await entry.policy.select(agent, session)) })))
+    for (const { entry, allowed } of selected) entry.captured.set(agent.scope, allowed)
   }
 
   /**
@@ -433,7 +390,16 @@ export class NativeToolRegistry {
     }, scope)
   }
 
-  private visible(scope = this.scope): Map<string, ToolRegistration> {
+  private visible(scope = this.scope, initial = false): Map<string, ToolRegistration> {
+    const visible = this.scopeVisible(scope)
+    for (const selection of this.selections.visible(scope).values()) {
+      const allowed = initial ? selection.initial : selection.captured.get(scope) ?? selection.initial
+      for (const name of visible.keys()) if (name !== 'run_code' && !allowed.has(name)) visible.delete(name)
+    }
+    return visible
+  }
+
+  private scopeVisible(scope: NativeScope): Map<string, ToolRegistration> {
     const all = this.tools.visible(scope)
     if (scope === this.scope) return all
     const inherited = this.tools.visible(scope.parent)
@@ -696,11 +662,11 @@ export class NativeToolRegistry {
    * @param scope - installation scope, defaulting to the Provider scope.
    * @returns an idempotent disposer that removes the registration, cancels calls and awaits their settlement.
    */
-  register(tool: NativeToolContribution, scope?: NativeScope): NativeToolRegistration {
+  register(tool: NativeToolContribution, scope?: NativeScope): () => Promise<void> {
     return this.install(tool, scope)
   }
 
-  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): NativeToolRegistration {
+  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): () => Promise<void> {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
     const schema = structuredClone(tool.schema)
     const parameters = schema.parameters
@@ -738,10 +704,11 @@ export class NativeToolRegistry {
   /**
    * Return detached visible schemas in ancestor registration order with nearest overrides.
    * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @param initial - use initial capabilities for stable Session prompt sections.
    * @returns schemas currently visible to the consuming application.
    */
-  schemas(scope?: NativeScope): ToolSchema[] {
-    return [...this.visible(scope).values()].map(entry => structuredClone(entry.schema))
+  schemas(scope?: NativeScope, initial = false): ToolSchema[] {
+    return [...this.visible(scope, initial).values()].map(entry => structuredClone(entry.schema))
   }
 
   private acceptsModelName(name: string): boolean {
@@ -762,125 +729,6 @@ export class NativeToolRegistry {
   }
 
   /**
-   * Capture exact model-callable registrations for one product operation.
-   * @param names - additional allowlist intersected with the current model-visible catalog.
-   * @param scope - consuming Agent scope, defaulting to the Provider scope.
-   * @returns captured schemas and execution authority that rejects removed or replaced registrations.
-   */
-  captureModelSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
-    return this.captureSnapshot(names, scope, 'model')
-  }
-
-  /**
-   * Capture exact program-bound registrations without treating them as direct model calls.
-   * @param names - additional allowlist intersected with the current SDK binding catalog.
-   * @param scope - consuming Agent scope, defaulting to the Provider scope.
-   * @returns captured schemas, PTC bindings and exact execution authority.
-   */
-  captureProgramSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
-    return this.captureSnapshot(names, scope, 'program')
-  }
-
-  private captureSnapshot(
-    names: readonly string[], scope: NativeScope | undefined, catalog: 'model' | 'program',
-  ): NativeToolExecutionSnapshot {
-    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    const catalogNames = new Set(catalog === 'model' ? this.modelSchemas(scope).map(schema => schema.name)
-      : this.sdkSchemas(scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name))
-    const allowed = new Set(names)
-    const registrations = new Map([...this.visible(scope)].filter(([name]) => allowed.has(name) && catalogNames.has(name)))
-    const schemas = deepFreeze([...registrations.values()].map(entry => structuredClone(entry.schema)))
-    const programSchemas = catalog === 'program' ? deepFreeze([...registrations.values()].map((entry) => {
-      if (entry.outputSchema === undefined) throw new Error(`native-tools: tool ${entry.schema.name} has no canonical output schema`)
-      return { ...structuredClone(entry.schema), output: structuredClone(entry.outputSchema) }
-    })) : undefined
-    const controller = new AbortController()
-    const pending = new Set<Promise<void>>()
-    const undispatched = new Set<() => void>()
-    let closed = false
-    let disposal: Promise<void> | undefined
-    const registrationHandles = new Set([...registrations.values()].map(entry => entry.dispose))
-    return {
-      schemas,
-      ...(programSchemas === undefined ? {} : { programSchemas }),
-      signal: controller.signal,
-      includesRegistration: registration => registrationHandles.has(registration),
-      prepare: async (call) => {
-        if (closed) throw new Error('native-tools: model snapshot is closed')
-        const entry = registrations.get(call.name)
-        if (entry === undefined) throw new HarnessError(`native-tools: tool ${call.name} is outside the captured catalog`, 'TOOL_DENIED')
-        const completion = Promise.withResolvers<void>()
-        pending.add(completion.promise)
-        const admitted = { ...call, signal: AbortSignal.any([call.signal, controller.signal]) }
-        try {
-          this.assertVisible(admitted, entry)
-          const prepared = await this.prepareSelected(admitted, entry)
-          if (controller.signal.aborted) {
-            prepared.abandon()
-            throw new Error('native-tools: captured snapshot closed during preparation')
-          }
-          let state: 'ready' | 'running' | 'closed' = 'ready'
-          const finish = (): void => {
-            state = 'closed'
-            undispatched.delete(abandon)
-            pending.delete(completion.promise)
-            completion.resolve()
-          }
-          const abandon = (): void => {
-            if (state !== 'ready') return
-            prepared.abandon()
-            finish()
-          }
-          undispatched.add(abandon)
-          return {
-            call: prepared.call,
-            async execute() {
-              if (state !== 'ready') throw new Error('native-tools: captured invocation is already dispatched or abandoned')
-              state = 'running'
-              undispatched.delete(abandon)
-              try { return await prepared.execute() }
-              finally { finish() }
-            },
-            abandon,
-          }
-        } catch (error: unknown) {
-          pending.delete(completion.promise)
-          completion.resolve()
-          throw error
-        }
-      },
-      executionMode: (call) => {
-        if (this.agents.get(call.agent.id) !== call.agent) return 'exclusive'
-        const entry = registrations.get(call.name)
-        if (entry?.isConcurrencySafe === undefined) return 'exclusive'
-        try {
-          if (this.visible(call.agent.scope).get(call.name) !== entry) return 'exclusive'
-          const args = snapshotJsonValue(call.arguments)
-          if (args === undefined) return 'exclusive'
-          entry.validate(args)
-          return entry.isConcurrencySafe(deepFreeze(args)) ? 'parallel' : 'exclusive'
-        } catch {
-          // Invalid arguments or a failed classifier cannot authorize body overlap.
-          return 'exclusive'
-        }
-      },
-      async execute(call) {
-        const prepared = await this.prepare(call)
-        try { return { call: prepared.call, result: await prepared.execute() } }
-        catch (error: unknown) { prepared.abandon(); throw error }
-      },
-      dispose() {
-        if (disposal !== undefined) return disposal
-        closed = true
-        controller.abort(new Error('native-tools: model snapshot closed'))
-        for (const abandon of [...undispatched]) abandon()
-        disposal = Promise.all([...pending]).then(() => {})
-        return disposal
-      },
-    }
-  }
-
-  /**
    * Reject model calls outside the selected transport before approval or body execution.
    * @param call - model-requested operation and its application-owned Session attribution.
    * @returns the guarded contribution result for the application to record.
@@ -895,10 +743,11 @@ export class NativeToolRegistry {
   /**
    * Project the same visible registrations for program bindings; every tool must declare a canonical output.
    * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @param initial - use stable initial capabilities for the Session system prompt; request tools describe additions.
    * @returns detached argument and output schemas in visible registration order.
    */
-  sdkSchemas(scope?: NativeScope): ToolSdkSchema[] {
-    return [...this.visible(scope).values()].map((entry) => {
+  sdkSchemas(scope?: NativeScope, initial = false): ToolSdkSchema[] {
+    return [...this.visible(scope, initial).values()].map((entry) => {
       if (entry.outputSchema === undefined) throw new Error(`native-tools: tool ${entry.schema.name} has no canonical output schema`)
       return { ...structuredClone(entry.schema), output: structuredClone(entry.outputSchema) }
     })
@@ -942,11 +791,6 @@ export class NativeToolRegistry {
     if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const entry = this.visible(call.agent.scope).get(call.name)
     if (entry === undefined) throw new Error(`native-tools: unknown tool ${call.name}`)
-    return this.prepareSelected(call, entry)
-  }
-
-  private async prepareSelected(call: NativeToolExecution, entry: ToolRegistration): Promise<NativePreparedToolInvocation> {
-    if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const argumentsValue = snapshotJsonValue(call.arguments)
     if (argumentsValue === undefined) throw new ToolArgsError(['arguments must be lossless JSON'])
     const policies = [...this.resultPolicies.visible(call.agent.scope).values()]
@@ -954,19 +798,16 @@ export class NativeToolRegistry {
     const owners = [...policies, ...wrappers]
     const signal = AbortSignal.any([call.signal, entry.controller.signal, ...owners.map(policy => policy.controller.signal)])
     const authority = call.approvalAuthority
-    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal, ordinary: boolean): NativeToolApprovalRequest => ({
+    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal): NativeToolApprovalRequest => ({
       agent: call.agent, session: call.session, callId: call.callId, toolName: call.name,
       ...approval.reason === undefined ? {} : { reason: approval.reason },
-      ...!ordinary || call.delegationContext !== undefined || approval.sessionContext === undefined ? {} : {
-        sessionGrant: { parameters: argumentsValue as JsonValue, context: Object.freeze({ ...approval.sessionContext }) },
-      },
       signal: AbortSignal.any([signal, requestedSignal]),
     })
     const admitted: NativeToolExecution = {
       ...call, arguments: deepFreeze(argumentsValue), signal,
       ...authority === undefined ? {} : {
-        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal, true)),
-        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal, false)),
+        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal)),
+        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal)),
       },
     }
     const completion = Promise.withResolvers<void>()
@@ -1003,7 +844,6 @@ export class NativeToolRegistry {
       const assertVisible = (): void => { this.assertVisible(admitted, entry) }
       const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies, wrappers)
       return {
-        call: admitted,
         async execute() {
           signal.throwIfAborted()
           if (phase !== 'ready') throw new Error('native-tools: prepared invocation is already dispatched or abandoned')
@@ -1036,6 +876,7 @@ export class NativeToolRegistry {
     this.resultObservers.clear()
     this.settlementPolicies.clear()
     this.restrictions.clear()
+    this.selections.clear()
     this.ptcLogController.abort()
     const completions = [
       ...[...this.registrations].map(entry => entry.dispose()),

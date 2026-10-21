@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-13-native-acp-child-runtime.md
-2026-10-13-native-acp-child-runtime.md: 413f88f6dc3b0c5a7030064e05c21aca8fa33153
-2026-10-13-native-acp-child-runtime.zh.md: e51d990dafdcf3e63739c634e429468fd898644c
