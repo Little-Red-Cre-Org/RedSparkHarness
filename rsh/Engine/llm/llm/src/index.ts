@@ -54,23 +54,7 @@ export * from './api-key.ts'
 export * from './types.ts'
 export * from './content.ts'
 export * from './assistant-stream.ts'
-export {
-  CONTEXT_SUMMARY_MAX_CHARS,
-  boundContextSummary,
-  freezeMessage,
-  createMessage,
-  createUserMessage,
-  createAssistantMessage,
-  createSystemMessage,
-  createToolResultMessage,
-} from './message.ts'
-export type {
-  ContextForm,
-  ContextSnapshotSection,
-  ContextFormed,
-  SystemMessage,
-  ToolResultMessageInput,
-} from './message.ts'
+export * from './message.ts'
 export * from './retry-policy.ts'
 export { BlockAssembler } from './assembler.ts'
 export { callConfigEquals, isAgentLoopRequest, markAgentLoopRequest } from './call-config.ts'

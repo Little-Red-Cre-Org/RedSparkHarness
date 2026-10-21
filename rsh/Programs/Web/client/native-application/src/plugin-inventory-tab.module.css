@@ -302,12 +302,3 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
-.inlineAction {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: var(--dsw-alias-brand-primary);
-  font: inherit;
-  cursor: pointer;
-}

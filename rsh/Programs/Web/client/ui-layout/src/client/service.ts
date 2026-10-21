@@ -39,10 +39,6 @@ export interface ILayout {
   beginNavigation(): AbortSignal
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
   toggleSidebar(): void
-  /** Collapse a sidebar expanded over a narrow frame.
-   * @returns no value.
-   */
-  collapseNarrow(): void
   /**
    * Report the right panel's presentation without changing its expanded state.
    * @param track - whether the normal panel width reserves a grid track,
@@ -92,13 +88,6 @@ export class LayoutController implements ILayout {
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
   toggleSidebar(): void {
     this.panels.toggleSidebar()
-  }
-
-  /** Collapse a sidebar expanded over a narrow frame.
-   * @returns no value.
-   */
-  collapseNarrow(): void {
-    this.panels.collapseNarrow()
   }
 
   /** Report the right panel's track and fullscreen presentation. */

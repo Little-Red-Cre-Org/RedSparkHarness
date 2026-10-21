@@ -3,7 +3,6 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, expect, it } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
@@ -72,8 +71,6 @@ const initialClientRows: readonly NativeRow[] = [
   { id: 'client-renderer', plugin: '@fixture/client-renderer' },
   { id: 'optional-client', plugin: '@fixture/optional', config: 'private-client-value' },
   { id: 'client-already-disabled', plugin: '@fixture/optional', disabled: true, config: null },
-  { id: 'layout', plugin: '@fixture/client-layout' },
-  { id: 'session-presentation', plugin: '@fixture/client-session-presentation' },
 ]
 
 function prepareFixture(root: string): { manager: DesktopProjectManager; profile: string } {
@@ -97,19 +94,6 @@ function prepareNativePackages(profile: string): void {
   writeNativePackage(profile, '@fixture/client-app', ['client'], ['clientState'], ['clientApplication'])
   writeNativePackage(profile, '@fixture/client-renderer', ['client'], [], ['clientRenderer'], '1.0.0', [],
     'void document.createElement("div")\n')
-  writeNativePackage(profile, '@fixture/client-layout', ['client'], ['clientNativeSessionPresentation'], ['clientNativeLayout'])
-  writeNativePackage(profile, '@fixture/client-session-presentation', ['client'], [], ['clientNativeSessionPresentation'])
-}
-
-function writePiAiNativePackage(profile: string): void {
-  const packageDir = fileURLToPath(new URL('../../../Modules/Official/llm/llm-pi-ai/', import.meta.url))
-  const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as Record<string, unknown>
-  manifest.version = '1.0.0'
-  const directory = join(profile, 'node_modules/@deepseek-ai/dsh-llm-pi-ai')
-  mkdirSync(join(directory, 'lib'), { recursive: true })
-  writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest))
-  writeFileSync(join(directory, 'lib/native.js'),
-    `export { plugin } from ${JSON.stringify(pathToFileURL(join(packageDir, 'src/native.ts')).href)}\n`)
 }
 
 function writeNativePnpm(root: string): string {
@@ -167,13 +151,13 @@ if (command === 'add' || command === 'remove') {
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
   if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
     rmSync(${JSON.stringify(failReservedInstall)})
-    const reserved = join(modules, '@deepseek-ai/dsh')
+    const reserved = join(modules, '@deepseek-ai', 'cordis')
     if (existsSync(reserved)) {
       if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
       else rmSync(reserved, { recursive: true, force: true })
     }
     mkdirSync(reserved, { recursive: true })
-    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '1.0.0' }))
+    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '1.0.0' }))
     process.exitCode = 1
   }
 } else if (command === 'install') {
@@ -253,9 +237,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const hostProfilePath = join(profile, 'rsh.profile.json')
   const clientProfilePath = join(profile, 'rsh.client.json')
   await manager.applyRelease()
-  writeNativeProfile(profile, initialHostRows, initialClientRows.map(row => row.id === 'layout' || row.id === 'session-presentation'
-    ? { ...row, disabled: true } : row))
-  prepareNativePackages(profile)
+  writeCurrentProfile(profile)
   const lifecycle = { stop: 0, start: 0 }
   const listed = await manager.listNativeModules(ready)
   expect(listed.status).toBe('listed')
@@ -263,29 +245,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(listed.inventory.scopes.map(scope => scope.id)).toEqual(['root', 'empty'])
   expect(JSON.stringify(listed.inventory)).not.toContain('private-host-value')
   expect(JSON.stringify(listed.inventory)).not.toContain('private-client-value')
-  const presentationEnabled = await manager.mutateNativeModules({ type: 'toggle', request: {
-    expectedRevision: listed.inventory.revision,
-    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('session-presentation') }, enabled: true,
-  } }, hooks(lifecycle), ready)
-  expect(presentationEnabled.status).toBe('applied')
-  if (presentationEnabled.status !== 'applied') return
-  const layoutEnabled = await manager.mutateNativeModules({ type: 'toggle', request: {
-    expectedRevision: presentationEnabled.revision,
-    key: { target: 'client', id: brandString<NativeDesktopInstallationId>('layout') }, enabled: true,
-  } }, hooks(lifecycle), ready)
-  expect(layoutEnabled.status).toBe('applied')
-  if (layoutEnabled.status !== 'applied') return
-  const enabledClient = readJson(clientProfilePath) as { installations: NativeRow[] }
-  expect(enabledClient.installations.filter(row => row.id === 'layout' || row.id === 'session-presentation')
-    .every(row => row.disabled !== true)).toBe(true)
-  const enabledListing = await manager.listNativeModules(ready)
-  expect(enabledListing.status).toBe('listed')
-  if (enabledListing.status !== 'listed') return
-  expect(enabledListing.inventory.packages.find(row => row.packageName === '@fixture/client-layout')?.installations[0])
-    .toMatchObject({ id: 'layout', canDisable: false, disableReasons: ['client-boot-requirement'] })
-  expect(enabledListing.inventory.packages.find(row => row.packageName === '@fixture/client-session-presentation')?.installations[0])
-    .toMatchObject({ id: 'session-presentation', canDisable: false, disableReasons: ['required-provider'] })
-  const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: enabledListing.inventory.revision } },
+  const applied = await manager.mutateNativeModules({ type: 'disable-all', request: { expectedRevision: listed.inventory.revision } },
     hooks(lifecycle), ready)
   expect(applied.status).toBe('applied')
   const host = readJson(hostProfilePath) as { installations: NativeRow[] }
@@ -294,10 +254,10 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(host.installations.find(row => row.id === 'optional-host')).toMatchObject({ disabled: true, config: { token: 'private-host-value' } })
   expect(host.installations.find(row => row.id === 'already-disabled')).toMatchObject({ ...initialHostRows[4], scope: 'root' })
   expect(client.installations.filter(row => row.disabled !== true).map(row => row.id))
-    .toEqual(['client-state', 'client-app', 'client-renderer', 'layout', 'session-presentation'])
+    .toEqual(['client-state', 'client-app', 'client-renderer'])
   expect(client.installations.find(row => row.id === 'optional-client')).toMatchObject({ disabled: true, config: 'private-client-value' })
   expect(client.installations.find(row => row.id === 'client-already-disabled')).toEqual(initialClientRows[4])
-  expect(lifecycle).toEqual({ stop: 3, start: 3 })
+  expect(lifecycle).toEqual({ stop: 1, start: 1 })
   const after = await manager.listNativeModules(ready)
   expect(after.status).toBe('listed')
   if (after.status !== 'listed') return
@@ -326,61 +286,28 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   } })
   expect(readFileSync(hostProfilePath, 'utf8')).toBe(requiredHostBefore)
   expect(readFileSync(clientProfilePath, 'utf8')).toBe(requiredClientBefore)
-  const fakeToken = 'native-desktop-fake-token'
-  const fakeHeaderName = `Authorization: Bearer ${fakeToken}`
   const preflightFixture = prepareFixture(fixtureRoot())
   await preflightFixture.manager.applyRelease()
   writeNativeProfile(preflightFixture.profile, [...initialHostRows,
-    { id: 'pi-ai-invalid-header', plugin: '@deepseek-ai/dsh-llm-pi-ai', disabled: true, config: {
-      providers: { gateway: {
-        api: 'openai-completions', baseURL: 'https://gateway.invalid/v1',
-        models: [{ id: 'test-model', name: 'Test Model' }],
-        headers: { [fakeHeaderName]: 'value' },
-      } },
-    } },
+    { id: 'throwing-host', plugin: '@fixture/throwing-host', disabled: true },
   ], initialClientRows)
   prepareNativePackages(preflightFixture.profile)
-  writePiAiNativePackage(preflightFixture.profile)
+  writeNativePackage(preflightFixture.profile, '@fixture/throwing-host', ['host'], [], [])
+  writeFileSync(join(preflightFixture.profile, 'node_modules/@fixture/throwing-host/native.js'),
+    'export const plugin = { apiVersion: 1, name: "@fixture/throwing-host", targets: ["host"], requires: [], provides: [], resolve() { throw new Error("preflight failed") } }\n')
   const preflightInventory = await preflightFixture.manager.listNativeModules(ready)
   expect(preflightInventory.status).toBe('listed')
   if (preflightInventory.status !== 'listed') return
-  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-llm-pi-ai')
-    ?.installations[0]).toMatchObject({ id: 'pi-ai-invalid-header', canEnable: true })
+  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@fixture/throwing-host')
+    ?.installations[0]).toMatchObject({ id: 'throwing-host', canEnable: true })
   const preflightHostBefore = readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')
   const preflightClientBefore = readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')
   const preflightLifecycle = { stop: 0, start: 0 }
   const preflightRefusal = await preflightFixture.manager.mutateNativeModules({ type: 'toggle', request: {
     expectedRevision: preflightInventory.inventory.revision,
-    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('pi-ai-invalid-header') }, enabled: true,
+    key: { target: 'host', id: brandString<NativeDesktopInstallationId>('throwing-host') }, enabled: true,
   } }, hooks(preflightLifecycle), ready)
-  const diagnosticValues: unknown[] = [preflightRefusal]
-  const diagnosticSeen = new Set<object>()
-  let diagnosticErrors = 0
-  while (diagnosticValues.length > 0) {
-    const value = diagnosticValues.pop()
-    if (value instanceof Error) {
-      diagnosticErrors += 1
-      for (const detail of [value.message, value.stack, 'detail' in value ? value.detail : undefined]) {
-        if (typeof detail !== 'string') continue
-        expect(detail).not.toContain(fakeToken)
-        expect(detail).not.toContain(fakeHeaderName)
-        expect(detail).not.toContain('Authorization')
-      }
-      diagnosticValues.push(value.cause)
-      if (value instanceof AggregateError) {
-        for (const nested of value.errors as unknown[]) diagnosticValues.push(nested)
-      }
-    } else if (typeof value === 'object' && value !== null && !diagnosticSeen.has(value)) {
-      diagnosticSeen.add(value)
-      for (const nested of Object.values(value) as unknown[]) diagnosticValues.push(nested)
-    }
-  }
-  expect(diagnosticErrors).toBe(0)
-  expect(JSON.stringify(preflightRefusal)).not.toContain(fakeToken)
-  expect(JSON.stringify(preflightRefusal)).not.toContain(fakeHeaderName)
   expect(preflightRefusal).toMatchObject({ status: 'refused', error: { code: 'dependency-conflict' } })
-  if (preflightRefusal.status !== 'refused') return
-  expect(preflightRefusal.error.diagnostic).toEqual({ path: 'providers.0.headers.0', rule: 'valid-fetch-header' })
   expect(preflightLifecycle).toEqual({ stop: 0, start: 0 })
   expect(readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')).toBe(preflightHostBefore)
   expect(readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')).toBe(preflightClientBefore)
@@ -399,7 +326,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   } finally {
     if (existsSync(manager.paths.lock)) rmSync(manager.paths.lock)
   }
-  expect(lifecycle).toEqual({ stop: 3, start: 3 })
+  expect(lifecycle).toEqual({ stop: 1, start: 1 })
 
   writeNativeProfile(profile, [...initialHostRows,
     { id: 'duplicate-inventory', plugin: '@fixture/inventory-duplicate' }], initialClientRows)
@@ -795,8 +722,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const emptyRuntime = join(emptyRoot, 'resources', 'dsh')
   const runtimeDescriptor = readDesktopRuntime(emptyRuntime)
   const noDependencyHostRows = [initialHostRows[0]!, initialHostRows[1]!]
-  const noDependencyClientRows = [initialClientRows[0]!, initialClientRows[1]!, initialClientRows[2]!,
-    initialClientRows[5]!, initialClientRows[6]!]
+  const noDependencyClientRows = [initialClientRows[0]!, initialClientRows[1]!, initialClientRows[2]!]
   const noDependencyPackages = [...noDependencyHostRows, ...noDependencyClientRows].map(row => row.plugin)
   writeNativePackage(emptyRuntime, '@fixture/credentials', ['host'], ['launchEnvironment'], ['credentials'])
   writeNativePackage(emptyRuntime, '@fixture/native-session', ['host'],
@@ -804,8 +730,6 @@ it('installs, updates, and removes exact Native packages without losing row conf
   writeNativePackage(emptyRuntime, '@fixture/client-state', ['client'], [], ['clientState'])
   writeNativePackage(emptyRuntime, '@fixture/client-app', ['client'], ['clientState'], ['clientApplication'])
   writeNativePackage(emptyRuntime, '@fixture/client-renderer', ['client'], [], ['clientRenderer'])
-  writeNativePackage(emptyRuntime, '@fixture/client-layout', ['client'], ['clientNativeSessionPresentation'], ['clientNativeLayout'])
-  writeNativePackage(emptyRuntime, '@fixture/client-session-presentation', ['client'], [], ['clientNativeSessionPresentation'])
   writeDesktopRuntime(emptyRuntime, runtimeDescriptor.release, [
     ...runtimeDescriptor.sharedPackages.map(row => row.name), ...noDependencyPackages,
   ])
@@ -832,8 +756,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
       if (emptyRestartCalls === 1) throw new Error('New Host start failed')
       emptyProfileRestored = !existsSync(emptyLock)
         && !existsSync(join(emptyFixture.profile, 'node_modules/@fixture/new-client'))
-        && existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/dsh'))
-        && !existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/cordis'))
+        && existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/cordis'))
         && !existsSync(join(emptyFixture.profile, 'desktop-packages-pending'))
     },
   }, ready)
@@ -888,8 +811,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
   const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(reservedMarker, '')
-  const profileDsh = join(profile, 'node_modules', '@deepseek-ai/dsh')
-  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai/dsh')
+  const profileCordis = join(profile, 'node_modules', '@deepseek-ai', 'cordis')
+  const bundledCordis = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai', 'cordis')
   let oldHostRestartedAfterReservedFailure = false
   const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {
@@ -899,9 +822,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   } }, {
     beforeChange: async () => {},
     afterChange: async () => {
-      oldHostRestartedAfterReservedFailure = existsSync(profileDsh) && lstatSync(profileDsh).isSymbolicLink()
-        && existsSync(join(bundledDsh, 'package.json'))
-        && !existsSync(join(profile, 'node_modules/@deepseek-ai/cordis'))
+      oldHostRestartedAfterReservedFailure = existsSync(profileCordis) && lstatSync(profileCordis).isSymbolicLink()
+        && existsSync(join(bundledCordis, 'package.json'))
         && !existsSync(join(profile, 'node_modules/@fixture/new-client'))
         && !existsSync(join(profile, 'desktop-packages-pending'))
     },
@@ -910,7 +832,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
   expect(readFileSync(hostProfilePath)).toEqual(beforeReservedFailure.host)
   expect(readFileSync(clientProfilePath)).toEqual(beforeReservedFailure.client)
   expect(oldHostRestartedAfterReservedFailure).toBe(true)
-  expect(existsSync(join(bundledDsh, 'package.json'))).toBe(true)
+  expect(existsSync(join(bundledCordis, 'package.json'))).toBe(true)
   const reservedFailureCalls = readFileSync(pnpmLog, 'utf8').trim().split('\n').slice(callsBeforeReservedFailure)
     .map(line => JSON.parse(line) as string[])
   expect(reservedFailureCalls.some(args => args.slice(args.indexOf('install')).join(' ')
@@ -976,7 +898,7 @@ it('restores reserved Host peer links before validating package mutations', asyn
   ], initialClientRows)
   prepareNativePackages(profile)
   writeNativePackage(profile, '@fixture/shared-peer-host', ['host'], [], [], '1.0.0', [],
-    "import '@deepseek-ai/dsh-desktop-host'\n", { '@deepseek-ai/dsh-desktop-host': '*' })
+    "import '@deepseek-ai/cordis'\n", { '@deepseek-ai/cordis': '*' })
 
   const initial = await manager.listNativeModules(ready)
   expect(initial.status).toBe('listed')

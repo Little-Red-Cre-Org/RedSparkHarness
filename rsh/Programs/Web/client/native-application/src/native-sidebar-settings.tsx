@@ -1,5 +1,5 @@
 /** Native sidebar Settings entry and compact appearance controls. */
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   IconDarkOutline16, IconGlobeOutline14, IconLightOutline16, IconSettingsOutline16, SettingsPanel, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -10,8 +10,6 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
-import { applyNativeSettingsPreferences } from './settings-preferences.ts'
-import { subscribeNativeSettingsRequests } from './settings-request.ts'
 import css from './NativeSidebarSettings.module.css'
 
 /** Bind Settings page operations to the selected Native Session Consumer.
@@ -76,23 +74,6 @@ export function NativeSidebarSettings({
   const [settingsSection, setSettingsSection] = useState('general')
   const [hasSettingsDocument, setHasSettingsDocument] = useState(false)
   const [settingsDocumentError, setSettingsDocumentError] = useState(false)
-  const startupPreferencesStale = useRef(false)
-  useEffect(() => subscribeNativeSettingsRequests((section) => {
-    startupPreferencesStale.current = true
-    setSettingsSection(section)
-    setShowSettings(true)
-  }), [])
-  useEffect(() => {
-    const lifetime = new AbortController()
-    void settingsActions.settingsDescribe(lifetime.signal).then((description) => {
-      if (!lifetime.signal.aborted && !startupPreferencesStale.current) {
-        applyNativeSettingsPreferences(description, { setLocale, setThemePreference, setFontSize })
-      }
-    }).catch(() => {
-      /* Startup preferences are optional; retain the locale and theme already selected. */
-    })
-    return () => { lifetime.abort() }
-  }, [settingsActions, setFontSize, setLocale, setThemePreference])
   const openSettingsDocument = async (): Promise<void> => {
     try {
       await settingsActions.settingsOpenDocument()
@@ -105,7 +86,7 @@ export function NativeSidebarSettings({
     <div className={wide ? css.row : `${css.row} ${css.collapsed}`}>
       <Tooltip label={t('settings')} delayMs={500} disabled={wide}>
         <button type="button" className={css.settingsButton} aria-label={t('settings')}
-          onClick={() => { startupPreferencesStale.current = true; setSettingsSection('general'); setShowSettings(true) }}>
+          onClick={() => { setSettingsSection('general'); setShowSettings(true) }}>
           <IconSettingsOutline16 size={wide ? 16 : 18} />
           {wide && <span>{t('settings')}</span>}
         </button>
@@ -113,13 +94,12 @@ export function NativeSidebarSettings({
       <div className={css.appearanceActions}>
         <Tooltip label={t('localeToggle')} delayMs={500} disabled={wide}>
           <button type="button" className={css.iconButton} aria-label={t('localeToggle')}
-            onClick={() => { startupPreferencesStale.current = true; setLocale(locale === 'zh' ? 'en' : 'zh') }}>
+            onClick={() => { setLocale(locale === 'zh' ? 'en' : 'zh') }}>
             <IconGlobeOutline14 size={wide ? 14 : 18} />
           </button>
         </Tooltip>
         <Tooltip label={t('themeToggle')} delayMs={500} disabled={wide}>
-          <button type="button" className={css.iconButton} aria-label={t('themeToggle')}
-            onClick={() => { startupPreferencesStale.current = true; toggleTheme() }}>
+          <button type="button" className={css.iconButton} aria-label={t('themeToggle')} onClick={toggleTheme}>
             {colorScheme === 'dark' ? <IconLightOutline16 size={wide ? 16 : 18} /> : <IconDarkOutline16 size={wide ? 16 : 18} />}
           </button>
         </Tooltip>
@@ -130,6 +110,7 @@ export function NativeSidebarSettings({
       closeLabel={t('settingsClose')}
       rows={[
         { id: 'general', label: t('settingsGeneral') },
+        { id: 'jobs', label: t('settingsJobs') },
         { id: 'models', label: t('settingsModels') },
         { id: 'plugins', label: t('settingsPlugins') },
         { id: 'agent-presets', label: t('settingsAgentPresets') },

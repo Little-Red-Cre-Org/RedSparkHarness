@@ -1,11 +1,44 @@
 /** Native schedule Client decodes the selected Host's unary and SSE responses. */
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeScheduleFrame, NativeScheduledJob } from '../src/schedule-types.ts'
 import { createNativeSessionClient, nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
+
+it.each(['headers', 'body'] as const)('times out authorization stalled at %s without cancelling its attempt', async (phase) => {
+  vi.useFakeTimers()
+  const cancel = vi.fn()
+  const call = vi.fn(async () => { throw new Error('unexpected RPC') })
+  let transportSignal: AbortSignal | undefined
+  const rpc: ClientConnectionRpc = {
+    call,
+    response: async (_channel, _endpoint, _payload, signal) => {
+      transportSignal = signal
+      if (phase === 'headers') return await new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => { reject(new Error(String(signal.reason))) }, { once: true })
+      })
+      return new Response(new ReadableStream<Uint8Array>({ cancel }), { headers: { 'content-type': 'text/event-stream' } })
+    },
+  }
+  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 10000, authorizationIdleTimeoutMs: 60 })
+  const caller = new AbortController()
+  try {
+    const pending = client.authorizationFrames('llm-pi-ai/openai-codex', 'a1', caller.signal)[Symbol.asyncIterator]().next()
+    const rejected = expect(pending).rejects.toThrow('idle timeout')
+    await vi.advanceTimersByTimeAsync(60)
+    await rejected
+    expect(transportSignal?.aborted).toBe(true)
+    expect(caller.signal.aborted).toBe(false)
+    if (phase === 'body') expect(cancel).toHaveBeenCalledOnce()
+    expect(call).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  } finally {
+    await client.close()
+    vi.useRealTimers()
+  }
+})
 
 it('reads a typed slash-command catalog for the selected Session', async () => {
   const sessionId = 'command-catalog-session' as SessionId

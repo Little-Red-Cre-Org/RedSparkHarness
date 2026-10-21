@@ -13,14 +13,13 @@ export class NativeSessionFeed {
   private bytes = 0
   private ended = false
   private detached = false
-  private disconnect: (() => void) | undefined
   private wake: (() => void) | undefined
   private error: Error | undefined
   private readonly encoder = new TextEncoder()
 
   /**
    * @param maxBytes - maximum unread serialized output, including SSE framing.
-   * @param overflow - cancels the owning turn when a connected follower cannot drain its buffer.
+   * @param overflow - cancels the owning turn; its settlement still drains the writer.
    */
   constructor(private readonly maxBytes: number, private readonly overflow: (error: Error) => void) {}
 
@@ -95,17 +94,6 @@ export class NativeSessionFeed {
    */
   failure(): Error | undefined { return this.error }
 
-  /** Close the current follower when a newer admission feed replaces this one. */
-  detach(): void {
-    this.disconnect?.()
-    this.detached = true
-    this.frames.length = 0
-    this.baselineEvents.length = 0
-    this.baseline = undefined
-    this.bytes = 0
-    this.wake?.()
-  }
-
   /** Surface a late owner-drain failure to an already attached follower. */
   fail(error: Error): void {
     if (this.detached || this.ended || this.error !== undefined) return
@@ -132,10 +120,9 @@ export class NativeSessionFeed {
       this.wake?.()
       release()
     }
-    this.disconnect = detach
     const abort = (): void => { detach() }
     signal.addEventListener('abort', abort, { once: true })
-    if (signal.aborted || this.detached) detach()
+    if (signal.aborted) detach()
     const stream = new ReadableStream<Uint8Array>({
       pull: async (controller) => {
         while (!closed && (

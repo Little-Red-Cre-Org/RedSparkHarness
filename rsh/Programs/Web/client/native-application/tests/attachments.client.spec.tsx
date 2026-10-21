@@ -26,7 +26,6 @@ const limits: NonNullable<NativeModelControls['images']> = {
 
 const messages: Record<string, string> = {
   images: 'Add images',
-  attachImage: 'Add image',
   image: 'Image',
   imageLoading: 'Loading image…',
   imageLoadFailed: 'Image failed to load; retry',
@@ -60,12 +59,6 @@ function fileDrag(type: 'dragenter' | 'drop', files: readonly File[]): Event {
   return event
 }
 
-function filePaste(files: readonly File[]): Event {
-  const event = new Event('paste', { bubbles: true, cancelable: true })
-  Object.defineProperty(event, 'clipboardData', { value: { files } })
-  return event
-}
-
 it('filters picked and dropped files by limits and opens a loaded Session image', async () => {
   let urlSequence = 0
   const createObjectURL = vi.fn(() => `blob:test-${String(++urlSequence)}`)
@@ -80,20 +73,20 @@ it('filters picked and dropped files by limits and opens a loaded Session image'
   const second = new File(['b'], 'second.jpg', { type: 'image/jpeg' })
   const countOverflow = new File(['c'], 'third.jpg', { type: 'image/jpeg' })
   let rerenderAttachments = (): void => {}
-  const attachmentView = render(<form><NativeComposerAttachments
+  const attachmentView = render(<NativeComposerAttachments
     files={files}
     onChange={(next) => { files = next; rerenderAttachments() }}
     limits={limits}
     disabled={false}
     t={translate}
-  /></form>)
-  rerenderAttachments = () => { attachmentView.rerender(<form><NativeComposerAttachments
+  />)
+  rerenderAttachments = () => { attachmentView.rerender(<NativeComposerAttachments
     files={files}
     onChange={(next) => { files = next; rerenderAttachments() }}
     limits={limits}
     disabled={false}
     t={translate}
-  /></form>) }
+  />) }
 
   const input = screen.getByLabelText('Add images')
   fireEvent.change(input, { target: { files: [first, overBatch, unsupported, oversized, second, countOverflow] } })
@@ -121,31 +114,4 @@ it('filters picked and dropped files by limits and opens a loaded Session image'
   expect(await screen.findByRole('dialog', { name: 'Image preview' })).toBeTruthy()
   expect(loadImage).toHaveBeenCalledWith('session-1', image, expect.any(AbortSignal))
   expect(createObjectURL).toHaveBeenCalledTimes(3)
-})
-
-it('attaches files pasted into the composer form and leaves text paste alone', () => {
-  const file = new File(['a'], 'pasted.png', { type: 'image/png' })
-  const onChange = vi.fn()
-  const props = { files: [], onChange, limits, t: translate }
-  const { rerender } = render(<form><textarea aria-label="Message" />
-    <NativeComposerAttachments {...props} disabled={false} />
-  </form>)
-  const textarea = screen.getByRole('textbox', { name: 'Message' })
-  const imagePaste = filePaste([file])
-  fireEvent(textarea, imagePaste)
-  expect(imagePaste.defaultPrevented).toBe(true)
-  expect(onChange).toHaveBeenCalledWith([file])
-
-  const textPaste = filePaste([])
-  fireEvent(textarea, textPaste)
-  expect(textPaste.defaultPrevented).toBe(false)
-  expect(onChange).toHaveBeenCalledTimes(1)
-
-  rerender(<form><textarea aria-label="Message" />
-    <NativeComposerAttachments {...props} disabled />
-  </form>)
-  const blockedPaste = filePaste([file])
-  fireEvent(screen.getByRole('textbox', { name: 'Message' }), blockedPaste)
-  expect(blockedPaste.defaultPrevented).toBe(false)
-  expect(onChange).toHaveBeenCalledTimes(1)
 })

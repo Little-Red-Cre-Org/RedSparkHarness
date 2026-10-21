@@ -16,6 +16,8 @@ The native Models page joins `modelsListProviders`, `modelsListConfigurableProvi
 
 ## Alternatives considered
 
+**Business-frame idle timeout alone.** Rejected for authorization subscriptions because a healthy flow can wait for user input without producing business frames. The Host sends transport-only SSE comment heartbeats; the Client times out silent transport, including response-header waits. Subscription loss refreshes Host state and permits one automatic resubscription per attempt before requiring manual refresh. It does not cancel the Host attempt. Terminal frames end observation, and superseded subscriptions cannot apply late frames.
+
 **Import the legacy Models feature package.** Rejected because its data layer and page integration depend on Cordis and legacy slots, which native-application cannot import.
 
 **Copy the editor components and stylesheet into native-application.** Rejected because the two pages would have separate owners for the same provider presentation.

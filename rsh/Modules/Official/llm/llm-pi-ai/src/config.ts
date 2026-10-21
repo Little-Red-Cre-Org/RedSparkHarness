@@ -384,21 +384,16 @@ function rejectRemovedFields(provider: string, source: PiAiProviderProfile): voi
   }
 }
 
-/** Reject a Fetch-invalid header and attach its configuration path and rule. */
-function assertValidHeaders(
-  providerIndex: number,
-  headers: Readonly<Record<string, string>> | undefined,
-): void {
-  for (const [headerIndex, [name, value]] of Object.entries(headers ?? {}).entries()) {
+/** Reject a profile header that Fetch cannot put on a provider request. */
+function assertValidHeaders(provider: string, headers: Readonly<Record<string, string>> | undefined): void {
+  for (const [name, value] of Object.entries(headers ?? {})) {
     try {
       new Headers([[name, value]])
     } catch {
-      throw Object.assign(new Error(
-        `llm-pi-ai: provider #${providerIndex} header #${headerIndex} is not valid for Fetch;`
-          + ' use a valid HTTP field name and a single-line value representable as bytes',
-      ), {
-        issues: [{ path: ['providers', providerIndex, 'headers', headerIndex], rule: 'valid-fetch-header' }],
-      })
+      throw new Error(
+        `llm-pi-ai: provider "${provider}" header "${name}" is not valid for Fetch;`
+        + ' use a valid HTTP field name and a single-line value representable as bytes',
+      )
     }
   }
 }
@@ -472,7 +467,7 @@ export function resolveProfiles(
   }
   const entries = Object.entries(providers ?? {})
   const resolved = new Map<string, ResolvedPiAiProviderProfile>()
-  for (const [providerIndex, [provider, source]] of entries.entries()) {
+  for (const [provider, source] of entries) {
     rejectRemovedFields(provider, source)
     assertCodexSubscriptionProfile(provider, source)
     if (provider.length === 0) throw new Error('llm-pi-ai: provider names must be non-empty')
@@ -482,7 +477,7 @@ export function resolveProfiles(
     if (source.displayName !== undefined && source.displayName.length === 0) {
       throw new Error(`llm-pi-ai: provider "${provider}" has an empty displayName`)
     }
-    assertValidHeaders(providerIndex, source.headers)
+    assertValidHeaders(provider, source.headers)
     const streamIdleTimeoutMs = source.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS
     if (!Number.isFinite(streamIdleTimeoutMs)
       || streamIdleTimeoutMs <= 0

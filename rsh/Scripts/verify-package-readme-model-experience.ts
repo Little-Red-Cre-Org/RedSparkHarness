@@ -50,6 +50,8 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  'rsh/Modules/Official/ide/ide-code-oss': { kind: 'none', reason: 'The provider owns Code OSS lifecycle and supplies no model context or Session events.' },
+  'rsh/Programs/Web/host/native-ide': { kind: 'none', reason: 'The application exposes IDE readiness and cancellation without creating an Agent or Session.' },
   'rsh/Programs/TUI/native-tui': { kind: 'indirect', reason: 'The terminal delegates model request assembly and logging to the shared native executor.' },
   'rsh/Programs/TUI/terminal-ui': { kind: 'none', reason: 'Pure transcript presentation changes no model input.' },
   'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox': { kind: 'indirect', reason: 'The process Provider delegates model-visible run_code schemas and durable results to its consuming application.' },
@@ -68,8 +70,6 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },
   'rsh/Engine/context/request-context': { kind: 'indirect', reason: 'The Provider delegates model-visible messages and durable Session acceptance to its consuming Program.' },
   'rsh/Engine/core/native-prompt': { kind: 'indirect', reason: 'The registry delegates rendered prompt placement and Session logging to its consuming native application.' },
-  'rsh/Core/runtime-diagnostics/cordis-bridge': { kind: 'indirect', reason: 'The host delegates every model-visible contribution to the Cordis plugin it runs and the application that renders it.' },
-  'rsh/Engine/preset/native-persona': { kind: 'indirect', reason: 'The row delegates persona section rendering and Session recording to its consuming native application.' },
   'rsh/Modules/Official/sandbox/native-sandbox-policy': { kind: 'indirect', reason: 'The policy delegates model-visible denial text and durable results to filesystem tools and their application.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-local': { kind: 'indirect', reason: 'The bridge delegates every model-visible filesystem outcome to its native consumer.' },
   'rsh/Compatibility/DSH/bridge/compat-fs-policy': { kind: 'indirect', reason: 'The bridge changes filesystem decisions but delegates model rendering to the native tool consumer.' },
@@ -157,7 +157,6 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Programs/Web/client/ui-settings-plugin-inventory': { kind: 'none', reason: 'Browser-side inventory projection; registers nothing model-facing.' },
   'rsh/Programs/Web/client/locale': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'rsh/Programs/Web/client/web': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
-  'rsh/Compatibility/DSH/web/frontend': { kind: 'none', reason: 'The compatibility browser shell renders product UI but contributes no model request content.' },
   'rsh/Engine/context/file-reference': { kind: 'indirect', reason: 'The discovery seam and grammar delegate model guidance to the composed provider.' },
   'rsh/Modules/Official/fs/fs': { kind: 'indirect', reason: 'The service interface delegates model rendering to dsh-tool-fs.' },
   'rsh/Modules/Official/e2b/fs-e2b': { kind: 'indirect', reason: 'The provider backend delegates model rendering to dsh-tool-fs.' },
@@ -231,7 +230,6 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Engine/jobs/jobs': { kind: 'indirect', reason: 'Producer and controller plugins own all model rendering over the job registry.' },
   'rsh/Engine/jobs/jobs-local': { kind: 'indirect', reason: 'The registry backend delegates model rendering to producer plugins and dsh-tool-jobs.' },
   'rsh/Compatibility/DSH/boot/app-boot': { kind: 'indirect', reason: 'Only the loaded plugin tree contributes model context.' },
-  'rsh/Compatibility/DSH/boot/desktop-host-compatibility': { kind: 'indirect', reason: 'The selected legacy plugin tree owns model-visible content.' },
   'rsh/Compatibility/DSH/boot/cmdline': { kind: 'none', reason: 'Resolves the process command line before any session exists; configured rows own every model-visible consequence.' },
   'rsh/Modules/Official/interaction/permission-presets': { kind: 'indirect', reason: 'The service writes mechanism events rendered by dsh-user-approval and dsh-tool-bash.' },
   'rsh/Modules/Official/interaction/user-question-broker': { kind: 'indirect', reason: 'The shared broker supplies answers to question Consumers; it creates no model messages or separate Session events.' },

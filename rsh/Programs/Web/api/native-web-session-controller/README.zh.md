@@ -22,9 +22,11 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
+授权帧流在等待流程时发送仅用于传输的 SSE（Server-Sent Events）注释。`authorizationHeartbeatMs` 默认为 15,000 毫秒，接受 1 至 2,147,483,647 的整数。该值须小于 Client 的 `authorizationIdleTimeoutMs`，并为传输延迟留出余量。心跳遵循背压，在结算、断开或安装取消时停止；它们不会进入授权历史，也不会改变正在运行的尝试。
+
 配置包含原生 headless 的工作区、模型、提示与预算，以及必填正整数限制 maxPendingRequests、maxHistoryEvents、maxPromptChars、maxFollowBufferBytes、maxFollowers、maxPendingHumanRequests。`maxFollowers` 分别限制 Session、工作区文件和 Workspace 流的并发跟随者数量。`workspaceFiles` 限制默认为每个文本页 2 MiB、每个完整文件 32 MiB、每页 5,000 行和 2,000 个目录项。`maxCredentialRefsPerRead` 与 `maxSettingsOperations` 默认为经过校验的正安全整数上限 64 和 512。`settings/describe` 会随 namespace descriptor 公布这两个值；Host 在调用 Provider 前拒绝超限设置修改，保留一次 revision 检查的原子写入。凭据读取会执行公布的单请求上限。历史超限时拒绝，不进行截断。普通请求与取消／状态请求分别进行有界准入，避免提示队列占满后无法取消。
 
-Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、活动轮次附着、取消与状态。提示和附着操作在持久化结算后返回；显式取消轮次会在排空后返回 exitCode 130。页面断开会停止跟随和结算等待，但不会取消执行。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
+Client Consumer 提供列表、空白创建、历史、显式新建／恢复提示、取消与状态。提示成功在持久化结算后返回；执行器的确切取消原因在排空后返回 exitCode 130。每个 Session 接受一个待完成浏览器轮次。繁忙提交明确拒绝，不静默加入另一个队列。活跃历史使用确切的当前写入者；冷态历史在回复前关闭读取句柄。安装卸载撤销路由、取消请求并排空执行器。
 
 `session/file-upload` 通过经过身份验证的 `application/octet-stream` 请求体流式传输字节，并交给选定的不可变附件 Provider 保存；响应返回绑定 Program route 与 Session 代际的进程内回执。初始 prompt、`session/queue` 与 `session/steer` 接受有序文本、图片和回执部分；queue 与 steer 要求此 Program 有活动的浏览器轮次。Queue 将消息追加到 `next-turn`；steer 将消息追加到 `next-step`；`session/dequeue` 会移除仍在待处理 inbox 中且身份匹配的消息。`requestId` 会复用为持久化用户消息 id。只有精确附着的 root owner 能消费回执；FileBlock 在持久化接纳后回执才退休。writer 交接结果不确定时会隔离回执并要求重新上传。`session/submission/edit` 会用文本块替换待处理消息的全部 content，同时保留其 id、source 和位置；它使用精确的 root owner，没有活动 owner 时可通过 idle maintenance 执行，并返回 `updated` 或 `stale`。`session/submission/promote` 要求活动浏览器轮次，并用一条 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾；它返回 `promoted`、`stale` 或 `not-promotable`。`session/submissions` 会折叠持久 Session 前缀，并连同 `throughSeq` 返回完整待处理消息。由带观察者的提示创建的跟随流会发送 accepted、rejected、settled 请求的 `submission-update` 帧。准入失败详情会包含 request id。普通 prompt 仍只准入一个待处理轮次。
 
@@ -36,9 +38,9 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` 和 `read-related`，请求包含 `{ sessionId, path }`，必要时还包含 `range` 或 `relativePath`。Host 将每个路径（包括从基础文件目录解析的 `readRelated` 路径）限制在 Session 的 `cwd` 内；header 缺少 `cwd` 时使用所选 Workspace 或配置根目录。绝对路径以及解析到根目录外的路径或符号链接会以 `native/session-files` 失败。Host 会先解析根目录，因此 Session `cwd` 是目录符号链接时也可列出 `.`。Linux 文件包含检查使用已打开描述符的 `/proc/self/fd` 路径。没有 `/proc` 的系统会在真实路径上检查包含关系，将已打开描述符与重新打开的路径按设备号和 inode 核对，并确认路径仍解析到自身。文件读取和 stat 使用原始描述符。Linux 列表从已打开的目录描述符枚举；macOS 列表使用已验证的真实目录路径，并在读取后复核其设备号和 inode。`list` 返回 `{ path, entries, truncated }`；`stat` 返回文件身份与版本；`read` 接受从 1 开始的行范围；完整读取返回 base64 字节。经过身份验证的 POST `/api/native-session/files-follow` 会在入队前过滤观察，以 `maxFollowBufferBytes` 限制待发送 SSE 编码字节，并在超限时关闭；断开或取消也会关闭流并释放跟随者槽位。
 
-控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；路由准入会拒绝受保护的系统目录，并要求规范路径位于 `allowedRoots` 内或已经信任。`workspace-trust` 设置 namespace 会持久化获准的规范路径。创建和连接都会使用该信任列表；`trust: true` 会先保存请求路径，再重试准入。根目录外失败使用带 `{ path }` 的 `native/workspace-untrusted`；受保护目录使用 `native/workspace-forbidden` 和拒绝原因。其他失败保留 `native/workspaces` 代码与通用文案。所选 sandbox policy 会按 Session `cwd` 解析 workspace root，因此文件系统写入仍限制在各 Workspace 内。
+控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；`connect` 只会选择该路由策略和所选 sandbox policy 允许的目录。
 
-控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, home, entries, crumbs }`，未给出路径时从启动 `cwd` 开始，create-directory 创建一个子目录。其他 Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。
+控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, entries, crumbs }`，create-directory 创建一个子目录。Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
@@ -56,9 +58,9 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 可选 attachments 与 modelDirectory 在根执行内解析实际下一模型后，准入有序的光栅图片上传。文件上传使用同一个选定不可变附件 Provider；精确 root owner 将 FileBlock 加入持久 Session inbox 前，回执元数据仅保留在进程内。模型请求通过 `projectFilesToText` 投影已记录文件引用，并将选定 Provider 路径转换成执行文件系统路径，不会发送 Host 路径或接受客户端自造的持久引用。图片读取由身份认证及完整 Session 历史约束，包含继承引用。图片端点拒绝其他工作区、不存在的引用及过大图片，并返回已验证的光栅字节、确切媒体类型及 no-store 响应头。目录策略、标题与分叉控制保留为独立 Consumer。
 
-可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。`session/attach` 会为活动轮次替换跟随流，解除并拒绝先前的结算请求，从提供的持久化游标继续，并重放待处理的人类展示。若读取历史期间该 attach 被后续请求取代，则该请求会拒绝，且不会重新绑定待处理展示。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；跟随期间超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连会释放跟随者及其队列；执行器保留轮次所有权直到结算，之后可再次附着。
+可选跟随通过经过身份验证的 POST `/api/native-session/follow` 发送已接受的持久化事件和临时助手文本。每次准入只允许一个使用确切 Session 与准入身份的跟随者。轮次跟随与列表跟随共用 `maxFollowers` 上限。未读 SSE 队列受字节数限制；超限会取消执行并使结算失败，不遮蔽执行或清理错误。断连释放跟随者及队列；执行器保留轮次所有权直到结算。移除控制器时会关闭路由和已准入请求，先处置其 Session 执行器以取消仍保留的标题提供方工作，再排空跟随任务；即使标题提供方仍安装，排空也会等待其清理完成。
 
-提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；显式轮次取消信号会使用该身份请求 Host 排空。断开信号只会停止本地跟随和结算等待，不会取消 Host 执行。断开的活动轮次会占用其 Session 槽位直到结算，随后丢弃无人接收的结果，使该 Session 可以接纳下一次提示；结算前的 attach 会为其替代等待者重新保留该结果。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭取消并排空所有轮次。
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
 <a id="invariants"></a>
 

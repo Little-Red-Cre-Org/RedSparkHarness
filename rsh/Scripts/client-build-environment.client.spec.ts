@@ -51,7 +51,6 @@ function buildFixture(environment: Record<string, string>): string {
   const fixtureRoot = mkdtempSync(join(tmpdir(), 'dsh-client-build-'))
   roots.push(fixtureRoot)
   write(join(fixtureRoot, 'rsh/Programs/Web/application/dist/index.html'), '<main></main>')
-  write(join(fixtureRoot, 'rsh/Compatibility/DSH/web/frontend/dist/index.html'), '<main></main>')
   write(join(fixtureRoot, 'rsh/Programs/Web/client/example/lib/client.js'), 'module.exports = {}\n')
   writeClientBuildRecord(fixtureRoot, environment)
   return fixtureRoot
@@ -250,9 +249,8 @@ describe('client build environment', () => {
     if (typeof viteModule !== 'object' || viteModule === null) {
       throw new TypeError('web Vite config module must be an object')
     }
-    const configureVite: unknown = Reflect.get(viteModule, 'createWebViteConfig')
-    if (typeof configureVite !== 'function') throw new TypeError('web Vite config factory must be a function')
-    const viteConfig: unknown = Reflect.apply(configureVite, undefined, [false])
+    const viteConfig: unknown = Reflect.get(viteModule, 'default')
+    if (typeof viteConfig === 'function') throw new TypeError('web Vite config must be an object')
     if (typeof viteConfig !== 'object' || viteConfig === null) {
       throw new TypeError('web Vite config must be an object')
     }
@@ -276,7 +274,7 @@ describe('client build environment', () => {
     expect(() => { readClientBuildRecord(defaultBuild, officialEnvironment) }).toThrow(/DSH_CLIENT_/)
     expect(() => { readClientBuildRecord(join(defaultBuild, 'missing')) }).toThrow(/record.*missing/)
 
-    write(join(official, 'rsh/Compatibility/DSH/web/frontend/dist/index.html'), '<main>changed</main>')
+    write(join(official, 'rsh/Programs/Web/application/dist/index.html'), '<main>changed</main>')
     expect(() => { readClientBuildRecord(official) }).toThrow(/artifacts differ/)
   })
 

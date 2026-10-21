@@ -11,7 +11,6 @@ import {
   PROTOCOL_VERSION,
   type SessionNotification,
 } from '@agentclientprotocol/sdk'
-import { initProfile, PROFILE_TEMPLATES } from '@deepseek-ai/dsh-app-boot'
 import { startMockLlmServer } from '@deepseek-ai/dsh-llm-mock-server'
 import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
 import { execa } from 'execa'
@@ -31,7 +30,7 @@ const SPAWN_TIMEOUT_MS = 60_000
 // prints what this manifest carries, so no test may pin it to a literal.
 const cliVersion = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
 const dshBin = join(repoRoot, 'rsh/Programs/CLI/lib/bin.js')
-const invalidProvider = fileURLToPath(new URL('./fixtures/invalid-provider.native.json', import.meta.url))
+const invalidProvider = fileURLToPath(new URL('./fixtures/invalid-provider.cordis.yml', import.meta.url))
 
 async function runBuiltBin(
   args: readonly string[] = [],
@@ -728,8 +727,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     const sandboxTempRoot = join(home, 'sandbox-temp')
     mkdirSync(workspace)
     mkdirSync(sandboxTempRoot)
-    const profilePath = join(home, 'profiles', 'headless', 'rsh.profile.json')
-    const observerPackage = join(home, 'profiles', 'headless', 'node_modules', '@fixture', 'subprocess-observer')
+    const profilePath = join(home, 'profiles', 'native-headless', 'rsh.profile.json')
+    const observerPackage = join(home, 'profiles', 'native-headless', 'node_modules', '@fixture', 'subprocess-observer')
     const observationPath = join(home, 'native-subprocess-observation.json')
     const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
     let profileRun: Promise<{ stdout: string; code: number; stderr: string }> | undefined
@@ -737,7 +736,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     let cliSettled = false
     let nativeHome: string | undefined
     try {
-      ensureShippedNativeProfile('headless', home)
+      ensureShippedNativeProfile('native-headless', home)
       const profile = JSON.parse(readFileSync(profilePath, 'utf8')) as {
         installations: Array<{ id: string; plugin: string; scope: string; config?: Record<string, unknown> }>
       }
@@ -826,7 +825,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       })
       writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
 
-      profileRun = runBuiltBin(['--profile', 'headless', 'complete', 'the', 'requested', 'work'], {
+      profileRun = runBuiltBin(['--profile', 'native-headless', 'complete', 'the', 'requested', 'work'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: parentKey,
@@ -1226,7 +1225,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
   it('routes help and usage errors without activating startup-dependent rows', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-app-help-'))
     try {
-      const web = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--help'], {
+      const web = await runBuiltBin(['--profile', 'web', '--help'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1236,7 +1235,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(web.stdout).toContain('--port <port>')
       expect(web.stdout).not.toContain('dsh web: http://')
 
-      const wildcardHost = await runBuiltBin(['--profile', 'legacy-web', '--host', '0.0.0.0'], {
+      const wildcardHost = await runBuiltBin(['web', '--host', '0.0.0.0'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1245,7 +1244,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(wildcardHost.stderr).toContain('--host 0.0.0.0 is intentionally not supported yet for safety: it would expose remote code execution to the network; use 127.0.0.1 instead')
       expect(wildcardHost.stderr).not.toContain('dsh web: http://')
 
-      const headlessHelp = await runBuiltBin(['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--help'], {
+      const headlessHelp = await runBuiltBin(['--profile', 'headless', '--help'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1253,7 +1252,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(headlessHelp.stderr).toBe('')
       expect(headlessHelp.stdout).toContain('Usage: dsh --profile headless')
 
-      const sdkHelp = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--help'], {
+      const sdkHelp = await runBuiltBin(['--profile', 'sdk', '--help'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1261,7 +1260,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(sdkHelp.stderr).toBe('')
       expect(sdkHelp.stdout).toContain('Usage: dsh --profile sdk')
 
-      const acpHelp = await runBuiltBin(['--profile', 'legacy-acp', '--from-default-profile', 'acp', '--help'], {
+      const acpHelp = await runBuiltBin(['--profile', 'acp', '--help'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1269,7 +1268,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(acpHelp.stderr).toBe('')
       expect(acpHelp.stdout).toContain('Usage: dsh --profile acp')
 
-      const missingTask = await runBuiltBin(['--profile', 'legacy-headless'], {
+      const missingTask = await runBuiltBin(['--profile', 'headless'], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
       })
@@ -1290,7 +1289,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       '',
     ].join('\n'))
     try {
-      const result = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
+      const result = await runBuiltBin(['--profile', 'sdk', '--patch', patch], {
         DSH_HOME: home,
         DSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: 'built-sdk-startup-failure-no-call',
@@ -1317,7 +1316,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     writeFileSync(patch, JSON.stringify([{ insert: [
       { id: 'absolute-plugin', name: pluginPath, config: { marker } },
     ] }]))
-    const child = execa(process.execPath, [dshBin, '--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
+    const child = execa(process.execPath, [dshBin, '--profile', 'sdk', '--patch', patch], {
       cwd: home,
       reject: false,
       timeout: SPAWN_TIMEOUT_MS,
@@ -1382,7 +1381,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       successText: 'ACP BUILT PROFILE OK',
     })
     const home = mkdtempSync(join(tmpdir(), 'dsh-built-acp-'))
-    const child = execa(process.execPath, [dshBin, '--profile', 'legacy-acp', '--from-default-profile', 'acp'], {
+    const child = execa(process.execPath, [dshBin, '--profile', 'acp'], {
       cwd: home,
       reject: false,
       timeout: SPAWN_TIMEOUT_MS,
@@ -1609,11 +1608,10 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const dir = join(home, 'profiles', 'rescue')
       const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
         dependencies: Record<string, string>
-        dsh: { profile: { runtime: 'legacy'; bundles: string[]; patchReload: string } }
+        dsh: { profile: { bundles: string[]; patchReload: string } }
       }
       expect(manifest.dependencies).toEqual({})
       expect(manifest.dsh.profile).toEqual({
-        runtime: 'legacy',
         bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
         patchReload: 'live',
       })
@@ -1960,34 +1958,15 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'dsh-dump-bin-')) })
     afterEach(() => { rmSync(home, { recursive: true, force: true }) })
 
-    it('rejects bundle-default dumps for a native standard profile', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
-      expect(code).toBe(1)
-      expect(stdout).toBe('')
-      expect(stderr).toContain('native profile has no bundle default to dump')
-      expect(JSON.parse(readFileSync(join(home, 'profiles', 'web', 'package.json'), 'utf8')))
-        .toMatchObject({ dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } })
-      expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(false)
-      const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
-      const plugin = await runBuiltBin(['plugin', '--profile', 'web', 'add', 'unused'], {
-        DSH_HOME: home, NODE_OPTIONS: `--import=${noCordisHook}`,
-      })
-      expect(plugin.code).toBe(1)
-      expect(plugin.stderr).toContain('dsh plugin does not manage native profile web')
-      expect(plugin.stderr).toContain('edit its rsh.profile.json installations instead')
-      expect(plugin.stderr).toContain('rsh/Docs/native-config-migration.md')
-    }, SPAWN_TIMEOUT_MS + 30_000)
-
-    it('prints bundle defaults for an existing legacy standard profile', async () => {
-      const profileDir = join(home, 'profiles', 'web')
-      mkdirSync(profileDir, { recursive: true })
-      const template = PROFILE_TEMPLATES.web!
-      initProfile(profileDir, template.bundles, template.patchReload)
-
+    it('prints the web profile bundle layers without a user layer', async () => {
       const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
       expect(code).toBe(0)
       expect(stderr).toBe('')
-      expect(stdout).toContain('# == @deepseek-ai/dsh-web-app')
+      expect(stdout).toContain("name: '@deepseek-ai/dsh-agent-loop'")
+      expect(stdout).toContain('agents: []')
+      expect(stdout).toContain('# == @deepseek-ai/dsh-base')
+      expect(stdout).toContain("name: '@deepseek-ai/dsh-host-webserver'")
+      expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(false)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('creates a custom profile from a shipped template before printing it', async () => {
@@ -2015,7 +1994,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
 
     it('prints the headless profile without Host or browser layers', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--dump-default-config'],
+        ['--profile', 'headless', '--dump-default-config'],
         { DSH_HOME: home },
       )
       expect(code).toBe(0)
@@ -2073,10 +2052,10 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     }, SPAWN_TIMEOUT_MS * 2 + 30_000)
 
     it('composes the profile user layer and a --patch overlay in order', async () => {
-      // Create a legacy custom profile first, then write its user layer.
-      const init = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--dump-default-config'], { DSH_HOME: home })
+      // Auto-init the web profile first, then write its user layer.
+      const init = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
       expect(init.code).toBe(0)
-      const profilePatch = join(home, 'profiles', 'legacy-web', 'cordis.patch.yml')
+      const profilePatch = join(home, 'profiles', 'web', 'cordis.patch.yml')
       writeFileSync(profilePatch, [
         '- id: agent-loop',
         '  config:',
@@ -2100,7 +2079,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         '',
       ].join('\n'))
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'legacy-web', '--patch', overlay, '--dump-config'],
+        ['--profile', 'web', '--patch', overlay, '--dump-config'],
         { DSH_HOME: home },
       )
       expect(code).toBe(0)

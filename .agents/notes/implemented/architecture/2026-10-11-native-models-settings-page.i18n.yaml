@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-11-native-models-settings-page.md
-2026-10-11-native-models-settings-page.md: 45ada198d359643313d9923eeb23f56dd56c4e61
-2026-10-11-native-models-settings-page.zh.md: de628da4d1e797a7546fab630ee726b88ac6f582
+2026-10-11-native-models-settings-page.md: 80e8522fbc9db9b11e2e515e90d54ed02fa90fbe
+2026-10-11-native-models-settings-page.zh.md: fadf501e646605c4a723a853f4f2c75d2cf833db

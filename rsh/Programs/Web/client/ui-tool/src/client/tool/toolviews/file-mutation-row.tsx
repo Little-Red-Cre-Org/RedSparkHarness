@@ -10,7 +10,7 @@ import { CONVERSATION_NS as NS } from '../../locale.ts'
 type FileMutationRowProps = ToolCallViewProps & PropsLocale<'conversation'>
 
 /**
- * Lets users expand an applied file diff and open the reported path.
+ * Opens recorded change fragments in the IDE, or the reported file in a browser.
  */
 export function FileMutationRow({ toolName, block, cwd, home, openFile, inspect, t }: FileMutationRowProps) {
   const model = toolRowModel(toolName, block, cwd, home)
@@ -28,7 +28,11 @@ export function FileMutationRow({ toolName, block, cwd, home, openFile, inspect,
       diff={diff}
       state={model.state}
       filePath={model.filePath}
-      onOpenFile={openFile}
+      onOpenFile={(path) => {
+        const diffs = diff?.card.diffs.filter(hunk => hunk.path === path)
+        if (diffs === undefined || diffs.length === 0) openFile(path)
+        else openFile(path, { diffs })
+      }}
       inspect={inspect}
     />
   )

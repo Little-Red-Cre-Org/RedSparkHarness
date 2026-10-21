@@ -42,6 +42,10 @@ target package 通过 declaration merge 扩展 snapshot 与 Location data map，
 <a id="shell-and-standard-props"></a>
 ## Shell 与标准 props
 
+输入框挂载时会将程序预填的草稿写入现有持久化存储。草稿持久化事件使嵌入式 IDE 能等待该写入完成，再因项目切换重启扩展宿主。浏览器持有的待发送附件和正在处理的输入操作会暂缓编辑器项目切换。
+
+嵌入 IDE 的欢迎页使用紧凑排版并省略背景光晕。编辑器导航期间，现有输入框和 Session 绑定保持挂载。
+
 输入框注册「文件」命令动作，负责其标题、可用性和原生文件选择器回调。菜单可用性与实际调用都读取已挂载输入框当前的附件接收策略。输入框卸载或锁定后该动作不可用，插件 dispose（资源释放）时移除注册。回调绑定留在输入模块内部。
 
 已认领的命令在仅删除参数和末尾分隔空格时保留身份与高亮，改动命令名才会释放认领。所有命令和语言使用相同规则，包括 `/goal`、`/目标`、`/plan` 和 `/计划`。输入法组合输入期间，命令提示和普通占位文字持续隐藏，直到编辑器提交最终文字且对应输入为空时才重新显示。
@@ -131,7 +135,7 @@ selector 必须是 owner currency 的纯函数。非 null 返回值作为 `match
 <a id="dev-note"></a>
 ### 开发备注
 
-无 Cordis 的 `./tool-records` 导出统一维护两种呈现方式共用的 Tool 调用／结果及图片加载器类型。`./conversation-copy` 导出既有类型化字典和命名空间声明，不创建 Conversation 服务。兼容的根入口和 `./client` 入口保留既有安装器。
+无 Cordis 的 `./tool-records` 导出统一维护两种呈现方式共用的 Tool 调用／结果及图片加载器类型。`./conversation-copy` 导出既有类型化字典和命名空间声明，不创建 Conversation 服务。兼容的根入口和 `./client` 入口保留既有安装器。 其中 `OpenFileOptions.diffs` 携带已记录的修改前后片段，原文为 null 表示不可用；消费者不得将这些片段作为可应用的编辑。
 
 <details>
 <summary>维护者工作上下文——点击展开</summary>

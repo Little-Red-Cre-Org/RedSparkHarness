@@ -65,7 +65,7 @@ This section explains the capture design; the observable behavior is fully cover
 
 ### Design concept
 
-The seam is built on one boundary: the harness's aspect ends at `emit()`. Complete event capture, redaction, and the handoff cursor live here; batching, retry, queueing, and loss policy are the reporting SDK's, deliberately not modelled or wrapped. Cordis peers are needed only by the Cordis entry and coordinator; Native backends use the Cordis-free `./records` and `./native-definition` exports. The design and rejected alternatives are pinned in the [revival Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.md).
+The seam is built on one boundary: the harness's aspect ends at `emit()`. Complete event capture, redaction, and the handoff cursor live here; batching, retry, queueing, and loss policy are the reporting SDK's, deliberately not modelled or wrapped. The design and rejected alternatives are pinned in the [revival Agent Note](../../../../.agents/notes/implemented/feature/2026-07-23-session-telemetry-otel-revival.md).
 
 ### Source map
 

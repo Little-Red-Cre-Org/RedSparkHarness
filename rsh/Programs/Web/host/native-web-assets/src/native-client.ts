@@ -6,7 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { parseNativeEntryManifest } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native-wire'
+import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native'
 import { NativeClientBuildError } from './client-build-error.ts'
 
 const PROFILE_FILENAME = 'rsh.client.json'

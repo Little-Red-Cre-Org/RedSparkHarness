@@ -104,7 +104,7 @@ export function NativePendingSubmissions({ snapshot, changePending, editPending,
   const items = new Map(snapshot.submissions?.submissions.map(item => [item.requestId, item]))
   const requestIds = new Set([...items.keys(), ...edits.keys()])
   const disabled = snapshot.submissionBusy === true || snapshot.state === 'loading' || snapshot.state === 'closed'
-    || snapshot.state === 'cancelling' || snapshot.navigationPending === true
+    || snapshot.state === 'cancelling'
   return <section className={css.pending} aria-label={t('pendingTitle')}>
     {snapshot.submissionError === undefined ? null : <div role="alert">
       <p>{t('pendingRequestFailed')}</p>

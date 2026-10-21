@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-18-python-runtime-declared-closure.md
-2026-10-18-python-runtime-declared-closure.md: 02974755fa342b2668313c667240bddd52078c6d
-2026-10-18-python-runtime-declared-closure.zh.md: cc3b5b9ed48897cb9ed2f4651d959409c5757407

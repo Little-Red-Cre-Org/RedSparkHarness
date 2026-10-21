@@ -27,7 +27,7 @@ dsh Web 客户端的侧边栏显示当前构建、启动会话、将导航折叠
 
 侧边栏是导航外壳：用户看到品牌、启动新会话、折叠轨道并到达 Settings。功能插件填充它的席位——ui-workspace 填充 `sidebar.workspaces`，ui-settings 在 `sidebar.settings` 注册触发行与设置面板。
 
-在 native-web profile 中，原生应用使用 Host 提供的 Session 列表和 Settings 面板填充这些席位。工作区分区按已注册的 `workspaceId` 分组，并跟随 Session 活动和 Workspace 变化；支持按最近活动/手动顺序排序、按 Workspace 分组或平铺、Session 搜索和归档，以及创建、选择、重命名和删除 Workspace。Workspace 路径不在配置根目录内时，sidebar 会询问是否信任该路径，并在批准后重试同一操作。从列表或搜索结果打开已有 Session 时，会先为其 Workspace 完成准入，因此尚未启动且未受信任的 Workspace 会在加载 Session 前询问是否信任。sidebar 按 RPC 错误码而不是错误类识别信任与系统目录拒绝。受保护的系统目录仍会被拒绝，并显示本地化的原因。折叠侧栏时也能打开目录浏览器。按 Workspace 分组并选择手动排序时，上移/下移按钮通过 Host 持久化 Workspace 和组内会话顺序；写入期间控件禁用，失败时保留 follow 提供的顺序。创建 Workspace 时使用共享的应用内目录浏览器。定时任务标题操作会打开只读列表；面板选中时会跟随 Host 变化。紧凑的语言和主题控件仍位于侧边栏页脚。Native tree 只有一个可移动的 treeitem Tab 停靠点：方向上/下键与 Home/End 移动焦点，方向右键展开已折叠的 Workspace，方向左键折叠已展开的 Workspace，Enter/Space 激活行。
+在 native-web profile 中，原生应用使用 Host 提供的 Session 列表和 Settings 面板填充这些席位。工作区分区按已注册的 `workspaceId` 分组，并跟随 Session 活动和 Workspace 变化；支持按最近活动/手动顺序排序、按 Workspace 分组或平铺、Session 搜索和归档，以及创建、选择、重命名和删除 Workspace。按 Workspace 分组并选择手动排序时，上移/下移按钮通过 Host 持久化 Workspace 和组内会话顺序；写入期间控件禁用，失败时保留 follow 提供的顺序。创建 Workspace 时使用共享的应用内目录浏览器。定时任务标题操作会打开只读列表；面板选中时会跟随 Host 变化。紧凑的语言和主题控件仍位于侧边栏页脚。
 
 ### 品牌与 New Session
 

@@ -22,11 +22,13 @@ export class NativeWebAuthorization {
    * @param providers - selected authorization and credential providers.
    * @param keys - credential keys the browser may authorize.
    * @param lifetime - plugin installation cancellation.
+   * @param heartbeatMs - interval between transport-only SSE comments while waiting for frames.
    */
   constructor(
     private readonly providers: { authorization: NativeAuthorization; credentials: NativeCredentials } | undefined,
     private readonly keys: readonly CredentialKey[],
     private readonly lifetime: AbortSignal,
+    private readonly heartbeatMs: number,
   ) {}
 
   /** Handle one authenticated authorization RPC request.
@@ -92,14 +94,32 @@ export class NativeWebAuthorization {
     const signal = AbortSignal.any([request.signal, this.lifetime, stop.signal])
     const iterator = attempt.frames(signal)[Symbol.asyncIterator]()
     const encoder = new TextEncoder()
+    const heartbeatMs = this.heartbeatMs
     const stream = new ReadableStream<Uint8Array>({
       async pull(controller) {
-        const next = await iterator.next()
-        if (next.done) controller.close()
-        else controller.enqueue(encoder.encode(`data: ${JSON.stringify(next.value)}\n\n`))
+        const timer = setInterval(() => {
+          if (!signal.aborted && (controller.desiredSize ?? 0) > 0) {
+            controller.enqueue(encoder.encode(': heartbeat\n\n'))
+          }
+        }, heartbeatMs)
+        try {
+          const next = await iterator.next()
+          if (stop.signal.aborted) return
+          if (next.done) controller.close()
+          else {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(next.value)}\n\n`))
+            if (next.value.type === 'settled') {
+              controller.close()
+              await iterator.return?.()
+            }
+          }
+        } finally { clearInterval(timer) }
       },
-      cancel() { stop.abort() },
-    }, { highWaterMark: 0 })
+      async cancel() {
+        stop.abort()
+        await iterator.return?.()
+      },
+    }, { highWaterMark: 1 })
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' } })
   }
 

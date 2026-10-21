@@ -1,13 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { runInContext } from 'node:vm'
-import { JSDOM } from 'jsdom'
 import { DESKTOP_IPC } from '../src/ipc.ts'
-import { resolveDesktopLocale } from '../src/locale.ts'
-import { startupFailureDocument } from '../src/startup-document.ts'
-import type { DesktopBackendState } from '../src/backend-controller.ts'
 
 const harness = await vi.hoisted(async () => {
   const { EventEmitter } = await import('node:events')
@@ -35,9 +30,7 @@ const harness = await vi.hoisted(async () => {
   let nativeMutationRecoveryGate: { readonly promise: Promise<void>; resolve(): void } | undefined
   let nativeMutationRecoveryWaiting = deferred()
   let autoReadyRecoveryHost = false
-  let failLogWrites = false
   let updateRestartWaiting = deferred()
-  let updateCheckState: unknown = { phase: 'idle' }
   let updateBeforeRestart: (() => Promise<void>) | undefined
   let updateAfterFailedRestart: (() => Promise<void>) | undefined
   const nativeMutations: unknown[] = []
@@ -102,7 +95,6 @@ const harness = await vi.hoisted(async () => {
     getLocale: () => 'en-US',
     getVersion: () => '1.0.0',
     getAppPath: () => 'desktop-test-app',
-    getPath: (name: string) => name === 'logs' ? resources : '',
     requestSingleInstanceLock: () => true,
     exit: vi.fn(),
     relaunch: vi.fn(),
@@ -122,9 +114,6 @@ const harness = await vi.hoisted(async () => {
   return {
     windows, hosts, handlers, app, FakeWindow, FakeHost, desktopPetClose, desktopPetUpdate, nativeMutations,
     quitPrevented, installUpdate,
-    updateLogError: undefined as ((label: string, error: unknown) => string | undefined) | undefined,
-    get updateCheckState() { return updateCheckState },
-    set updateCheckState(value: unknown) { updateCheckState = value },
     get applicationMenu() { return applicationMenu },
     setApplicationMenu(menu: unknown) { applicationMenu = menu },
     menuPopup: vi.fn(),
@@ -157,8 +146,6 @@ const harness = await vi.hoisted(async () => {
     },
     set autoReadyRecoveryHost(value: boolean) { autoReadyRecoveryHost = value },
     get updateRestartWaiting() { return updateRestartWaiting },
-    get failLogWrites() { return failLogWrites },
-    set failLogWrites(value: boolean) { failLogWrites = value },
     get updateBeforeRestart() { return updateBeforeRestart },
     get updateAfterFailedRestart() { return updateAfterFailedRestart },
     setUpdateCallbacks(beforeRestart: () => Promise<void>, afterFailedRestart: () => Promise<void>) {
@@ -178,8 +165,6 @@ const harness = await vi.hoisted(async () => {
       nativeMutationRecoveryComplete = false; nativeMutationRecoveryRestartError = ''
       nativeMutationRecoveryGate = undefined; nativeMutationRecoveryWaiting = deferred()
       autoReadyRecoveryHost = false
-      failLogWrites = false
-      updateCheckState = { phase: 'idle' }
       quitPrevented.length = 0; quitWasAllowed = false; quitWasAllowedAfterNativeRecovery = false
       updateBeforeRestart = undefined; updateAfterFailedRestart = undefined; updateRestartWaiting = deferred()
       preparing = deferred(); prepared = deferred(); hostStarted = deferred()
@@ -188,16 +173,6 @@ const harness = await vi.hoisted(async () => {
   }
 })
 
-vi.mock('node:fs', async (importOriginal) => {
-  const fs = await importOriginal<typeof import('node:fs')>()
-  return {
-    ...fs,
-    appendFileSync: (...args: Parameters<typeof fs.appendFileSync>) => {
-      if (harness.failLogWrites) throw Object.assign(new Error('Permission denied'), { code: 'EACCES' })
-      fs.appendFileSync(...args)
-    },
-  }
-})
 vi.mock('electron', () => ({
   app: harness.app,
   BrowserWindow: harness.FakeWindow,
@@ -277,7 +252,7 @@ vi.mock('../src/pet-window.ts', () => ({
 }))
 vi.mock('../src/update-coordinator.ts', () => ({
   DesktopUpdateCoordinator: class {
-    readonly check = vi.fn(async () => harness.updateCheckState)
+    readonly check = vi.fn()
     readonly install = async () => {
       const restart = harness.updateBeforeRestart?.()
       harness.updateRestartWaiting.resolve()
@@ -288,12 +263,8 @@ vi.mock('../src/update-coordinator.ts', () => ({
       _publish: unknown,
       beforeRestart: () => Promise<void>,
       afterFailedRestart: () => Promise<void>,
-      _updater: unknown,
-      _enabled: unknown,
-      logError: (label: string, error: unknown) => string | undefined,
     ) {
       harness.setUpdateCallbacks(beforeRestart, afterFailedRestart)
-      harness.updateLogError = logError
     }
   },
 }))
@@ -359,11 +330,11 @@ describe('desktop main startup', () => {
     rmSync(dll)
     await import('../src/main.ts')
     await harness.preparing.promise
-    const failure = expect(Promise.resolve(invoke(DESKTOP_IPC.backendRetry))).resolves.toBeUndefined()
+    const failure = expect(Promise.resolve(invoke(DESKTOP_IPC.backendRetry))).rejects.toThrow('msys-2.0.dll')
     harness.prepared.resolve()
     await failure
     expect(invoke(DESKTOP_IPC.backendStatus)).toHaveProperty('phase', 'error')
-    expect(invoke(DESKTOP_IPC.backendStatus)).toHaveProperty('errorType', 'Error')
+    expect(invoke(DESKTOP_IPC.backendStatus)).toHaveProperty('message', expect.stringContaining('missing packaged Windows Bash file'))
     expect(harness.hosts).toHaveLength(0)
     expect(harness.windows).toHaveLength(1)
     expect(harness.windows[0]!.urls).not.toContain('dsh-app://app/index.html')
@@ -439,7 +410,7 @@ describe('desktop main startup', () => {
     await import('../src/main.ts')
     await exited.promise
     expect(harness.app.exit).toHaveBeenCalledWith(1)
-    expect(console.error).toHaveBeenCalledWith('Desktop initialization failed', expect.objectContaining({ message: 'locale unavailable' }))
+    expect(console.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'emergency navigation failed' }))
   })
 
   it('withholds profile recovery after application resources fail to load', async () => {
@@ -457,59 +428,6 @@ describe('desktop main startup', () => {
     expect(html).not.toContain('dsh-recovery://plugins')
   })
 
-  it('uses generic diagnostics when the Desktop log cannot be written', async () => {
-    harness.failLogWrites = true
-    await import('../src/main.ts')
-    await harness.preparing.promise
-    harness.prepared.reject(new Error('backend startup failed'))
-    await harness.errorPublished.promise
-
-    const state = invoke(DESKTOP_IPC.backendStatus) as DesktopBackendState
-    expect(state).toMatchObject({ phase: 'error', errorType: 'Error' })
-    expect(state).not.toHaveProperty('logPath')
-    const messages = resolveDesktopLocale('en').messages
-    const writtenPath = messages.startupErrorLogWritten.replace('{path}', join(resources, 'desktop.log'))
-    const normalPage = new JSDOM(readFileSync(new URL('../renderer/startup.html', import.meta.url), 'utf8'), {
-      runScripts: 'outside-only',
-    })
-    Object.defineProperty(normalPage.window, 'dshDesktop', { value: {
-      protocolVersion: 1,
-      locale: async () => resolveDesktopLocale('en'),
-      backend: { status: async () => state, subscribe: () => () => {} },
-      disablePlugins: async () => {}, restart: async () => {}, resetConfiguration: async () => {},
-    } })
-    runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), normalPage.getInternalVMContext())
-    await vi.waitFor(() => {
-      expect(normalPage.window.document.querySelector('#error')?.textContent).toContain(messages.startupErrorLogAdvice)
-    })
-    const normalErrorText = normalPage.window.document.querySelector('#error')?.textContent ?? ''
-    expect(normalErrorText).not.toContain(writtenPath)
-    expect(normalErrorText).not.toContain(join(resources, 'desktop.log'))
-    normalPage.window.dispatchEvent(new normalPage.window.Event('pagehide'))
-    normalPage.window.close()
-
-    const window = harness.windows[0]!
-    window.webContents.emit('preload-error', {}, 'preload-app.cjs', new Error('preload unavailable'))
-    const emergencyPage = decodeURIComponent(window.urls.at(-1)!)
-    expect(emergencyPage).toContain(messages.startupErrorLogAdvice)
-    expect(emergencyPage).not.toContain(writtenPath)
-    expect(emergencyPage).not.toContain(join(resources, 'desktop.log'))
-
-    // Derive the update state from the logger main.ts hands to the coordinator, so a failed write must drop the path.
-    const updateLogPath = harness.updateLogError?.('Desktop update failed', new TypeError('update failed'))
-    expect(updateLogPath).toBeUndefined()
-    harness.updateCheckState = { phase: 'error', errorType: 'TypeError', ...(updateLogPath === undefined ? {} : { logPath: updateLogPath }) }
-    const menu = harness.applicationMenu as { items: Array<{ submenu?: Array<{ click?: () => void }> }> }
-    menu.items[0]?.submenu?.[1]?.click?.()
-    await vi.waitFor(() => {
-      expect(harness.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
-        title: messages.updateCheckFailedTitle,
-        message: messages.startupErrorType.replace('{type}', messages.startupTypeTypeError),
-        detail: messages.startupErrorLogAdvice,
-      }))
-    })
-  })
-
   it('reloads a crashed startup renderer in the same window', async () => {
     await import('../src/main.ts')
     await harness.preparing.promise
@@ -519,7 +437,7 @@ describe('desktop main startup', () => {
     await harness.errorPublished.promise
     expect(window.urls).toEqual(['dsh-app://shell/startup.html', 'dsh-app://shell/startup.html'])
     expect(harness.desktopPetClose).toHaveBeenCalledTimes(2)
-    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', errorType: 'Error' })
+    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', message: 'Desktop renderer exited: crashed' })
   })
 
   it.each([1, 2])('rejects old app-frame pet updates while the main window navigates away after %i crash(es)', async (crashes) => {
@@ -552,7 +470,7 @@ describe('desktop main startup', () => {
     window.webContents.emit('render-process-gone', {}, { reason: 'crashed' })
     await harness.errorPublished.promise
     expect(window.urls).toEqual([startupUrl, applicationUrl, applicationUrl, startupUrl])
-    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', errorType: 'Error' })
+    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', message: 'Desktop renderer exited: crashed' })
   })
 
   it.each(['plugins', 'reset'])('runs %s recovery from a document with a broken preload', async (action) => {
@@ -598,9 +516,7 @@ describe('desktop main startup', () => {
     const window = harness.windows[0]!
     window.webContents.emit('preload-error', {}, 'preload-app.cjs', new Error('preload unavailable'))
     expect(window.urls.at(-1)).toContain('data:text/html')
-    const emergencyDocument = decodeURIComponent(window.urls.at(-1)!)
-    expect(emergencyDocument).toContain('Error type: Application error')
-    expect(emergencyDocument).not.toContain('preload unavailable')
+    expect(decodeURIComponent(window.urls.at(-1)!)).toContain('preload unavailable')
     harness.prepared.resolve()
     await harness.hostStarted.promise
     harness.hosts[0]!.ready.resolve()
@@ -734,7 +650,7 @@ describe('desktop main startup', () => {
     await firstHost.stopping.promise
     harness.installUpdate.mockImplementationOnce(async () => {
       await harness.updateAfterFailedRestart?.()
-      return { phase: 'error', version: '1.1.0', errorType: 'Error' }
+      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
     })
     const installing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
     await harness.updateRestartWaiting.promise
@@ -767,7 +683,7 @@ describe('desktop main startup', () => {
 
     harness.installUpdate.mockImplementationOnce(async () => {
       await harness.updateAfterFailedRestart?.()
-      return { phase: 'error', version: '1.1.0', errorType: 'Error' }
+      return { phase: 'error', version: '1.1.0', message: 'installer failed' }
     })
     const closing = Promise.resolve(invoke(DESKTOP_IPC.updatesInstall))
     await harness.hosts[2]!.stopping.promise
@@ -800,7 +716,7 @@ describe('desktop main startup', () => {
     harness.hosts[0]!.exited.resolve()
     await expect(result).resolves.toMatchObject({ status: 'recovery-required' })
     expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({
-      phase: 'error', errorType: 'Error', profileRecovery: true,
+      phase: 'error', message: 'The backend or package state requires recovery.', profileRecovery: true,
     })
     expect(harness.windows[0]!.urls.at(-1)).toBe('dsh-app://shell/startup.html')
   })
@@ -819,67 +735,17 @@ describe('desktop main startup', () => {
   })
 
   it('keeps startup errors and a successful retry in the same window', async () => {
-    const fakeToken = 'desktop-startup-fake-token'
-    const { plugin: piAi } = await import('../../../Modules/Official/llm/llm-pi-ai/src/native.ts')
-    let schemaFailure: Error | undefined
-    try {
-      piAi.resolve({ providers: { gateway: { headers: { Authorization: [`Bearer ${fakeToken}`] } } } })
-    } catch (error) {
-      if (!(error instanceof Error)) throw error
-      schemaFailure = error
-    }
-    expect(schemaFailure).toMatchObject({
-      name: 'ValidationError',
-      issues: [{ path: ['providers', 0, 'headers', 0], rule: 'schema' }],
-    })
-    if (schemaFailure === undefined) throw new Error('pi-ai schema accepted an array-valued Authorization header')
     await import('../src/main.ts')
     await harness.preparing.promise
     harness.prepared.resolve()
     await harness.hostStarted.promise
     const first = harness.hosts[0]!
-    const failedRetry = expect(Promise.resolve(invoke(DESKTOP_IPC.backendRetry))).resolves.toBeUndefined()
+    const failedRetry = expect(Promise.resolve(invoke(DESKTOP_IPC.backendRetry))).rejects.toThrow('plugin composition failed')
     first.exited.resolve()
-    first.ready.reject(schemaFailure)
+    first.ready.reject(new Error('plugin composition failed'))
     await harness.errorPublished.promise
     await failedRetry
-    const status = invoke(DESKTOP_IPC.backendStatus) as Extract<DesktopBackendState, { phase: 'error' }>
-    const errorPayloads = harness.windows[0]!.webContents.send.mock.calls
-      .filter(([channel, state]) => channel === 'dsh-desktop:backend-state' && state.phase === 'error')
-      .map(([, state]) => state)
-    const payload = errorPayloads.at(-1)
-    expect(payload).toBeDefined()
-    const pending: unknown[] = [payload]
-    const seen = new Set<object>()
-    let errors = 0
-    while (pending.length > 0) {
-      const value = pending.pop()
-      if (value instanceof Error) {
-        errors += 1
-        expect(value.message).not.toContain(fakeToken)
-        expect(value.stack ?? '').not.toContain(fakeToken)
-        if ('detail' in value && typeof value.detail === 'string') expect(value.detail).not.toContain(fakeToken)
-        pending.push(value.cause)
-        if (value instanceof AggregateError) {
-          for (const nested of value.errors as unknown[]) pending.push(nested)
-        }
-      } else if (typeof value === 'object' && value !== null && !seen.has(value)) {
-        seen.add(value)
-        for (const nested of Object.values(value) as unknown[]) pending.push(nested)
-      }
-    }
-    expect(errors).toBe(0)
-    expect(JSON.stringify(payload)).not.toContain(fakeToken)
-    expect(JSON.stringify(payload)).not.toContain('Authorization')
-    expect(payload).toEqual({ phase: 'error', errorType: 'ValidationError', path: 'providers.0.headers.0', rule: 'schema',
-      logPath: join(resources, 'desktop.log'), profileRecovery: true })
-    expect(status).toEqual(payload)
-    expect(readFileSync(join(resources, 'desktop.log'), 'utf8')).toContain(fakeToken)
-    const emergencyDocument = startupFailureDocument(resolveDesktopLocale('en'), status, true)
-    expect(emergencyDocument).not.toContain(fakeToken)
-    expect(emergencyDocument).not.toContain('Authorization')
-    expect(emergencyDocument).toContain('providers.0.headers.0')
-    expect(emergencyDocument).toContain(join(resources, 'desktop.log'))
+    expect(invoke(DESKTOP_IPC.backendStatus)).toEqual({ phase: 'error', message: 'plugin composition failed', profileRecovery: true })
     expect(harness.windows[0]!.urls).toEqual(['dsh-app://shell/startup.html'])
     const nextStarted = harness.nextHostStart()
     const retry = Promise.resolve(invoke(DESKTOP_IPC.backendRetry))
@@ -889,11 +755,6 @@ describe('desktop main startup', () => {
     await retry
     expect(harness.windows).toHaveLength(1)
     expect(harness.windows[0]!.urls.at(-1)).toBe('dsh-app://app/index.html')
-    const window = harness.windows[0]!
-    window.webContents.emit('preload-error', {}, 'preload-app.cjs', new Error('preload unavailable'))
-    const emergencyPage = decodeURIComponent(window.urls.at(-1)!)
-    expect(emergencyPage).toContain(join(resources, 'desktop.log'))
-    expect(emergencyPage).not.toContain(fakeToken)
     expect(harness.dialog.showErrorBox).not.toHaveBeenCalled()
   })
 
