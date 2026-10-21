@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Select `dsh --profile native-acp` to create, prompt, cancel, close, list, and resume durable Sessions over standard ACP JSON-RPC stdio. Committed assistant text, reasoning, and images, plus registered tool lifecycle facts with text or image results, become ordered `session/update` notifications; provider usage appears when the Session has route capacity and a token meter. Session listing uses stable keyset pagination. The compatibility `acp` profile remains the default ACP composition.
+Select `dsh --profile native-acp` to create, prompt, cancel, close, list, and resume durable Sessions over standard ACP JSON-RPC stdio. Committed assistant text, reasoning, and registered tool lifecycle facts become ordered `session/update` notifications. The compatibility `acp` profile remains the default ACP composition.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ Select `dsh --profile native-acp` to create, prompt, cancel, close, list, and re
 
 ## Configuration
 
-The profile sets `provider`, `model`, `systemPrompt`, and positive `maxSteps` for each accepted turn. `sessionListPageSize` is a positive safe integer that limits each `session/list` response (default `100`); pages use the compatibility carrier's newest-first `createdAt` and UTF-8 Session-id cursor order. Each Session selects an absolute existing workspace directory through `session/new`; each accepts one ordered text/image prompt at a time. An overlapping prompt fails explicitly. Empty Sessions are durably created through the Engine root maintenance operation before creation returns. The host composition requires the native `activeSessions` Provider for that operation; installation planning rejects the profile before activation if it is absent. Resume checks the stored workspace and lineage and replays committed presentation events before accepting further prompts. Close releases the live executor and retains the stored log. Input EOF and Host cancellation cancel and drain accepted work; ACP has no standard shutdown request.
+The profile sets `provider`, `model`, `systemPrompt`, and positive `maxSteps` for each accepted turn. Each Session selects an absolute existing workspace directory through `session/new`; each accepts one ordered text/image prompt at a time. An overlapping prompt fails explicitly. Empty Sessions are durably created through the Engine root maintenance operation before creation returns. The host composition requires the native `activeSessions` Provider for that operation; installation planning rejects the profile before activation if it is absent. Resume checks the stored workspace and lineage and replays committed presentation events before accepting further prompts. Close releases the live executor and retains the stored log. Input EOF and Host cancellation cancel and drain accepted work; ACP has no standard shutdown request.
 
 Versioned `session/new` metadata may set per-turn `maxSteps`, optional `maxTokens`, and a permission mode. The Program validates it and commits one required Engine `execution/policy` event through the Session writer; it does not persist a second ACP policy record. ACP checks that the configured route can enforce an output-token ceiling before publishing the Session, and Headless checks the exact selected, prepared generation before each dispatch, so later model selection cannot widen it. Restored `parent-relay` execution requires a fresh approval capability for the exact live Session owner; without that owner, execution is refused before model work.
 
@@ -46,7 +46,7 @@ When the `commands` Provider is installed, `session/new` and `session/resume` ad
 
 ## Dev Note
 
-The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership; the [presentation and listing decision](../../../../../.agents/notes/implemented/feature/2026-10-14-native-acp-presentation-and-listing.md) records output, usage, and cursor semantics. No runtime invariant companion is published because the ACP session table pairs each protocol session with its executor and MCP resources, while the executor owns Agent execution and durable Session state; ACP records hold transport and resource lifecycle plus transient controls, not a second Session projection.
+The [native ACP decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.md) explains protocol and execution ownership. No runtime invariant companion is published because the ACP session table pairs each protocol session with its executor and MCP resources, while the executor owns Agent execution and durable Session state; ACP records hold transport and resource lifecycle plus transient controls, not a second Session projection.
 
 ## Model Experience
 
@@ -66,5 +66,5 @@ A submitted prompt appends user content after retained history; preceding reques
 
 ## Known Limitations and Deferred Work
 
-- Audio and embedded-resource input, ACP question requests (human elicitation), and a shutdown request remain unsupported. Unsupported prompt content fails explicitly; initialization advertises no audio or embedded-context support. Assistant and tool-result images are presented as inline ACP image blocks.
+- Audio/embedded input, question requests, and attachment presentation are outside this carrier slice; unsupported prompt content fails explicitly. Initialization advertises no audio or embedded-context support. Existing ACP clients requiring these capabilities use the compatibility profile until native parity is implemented.
 - This package is an ACP server carrier, not a general provider for launching external ACP subagents. TypeScript and Python SDK projections for the required Engine `execution/policy` event are not provided by this carrier.

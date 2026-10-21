@@ -24,7 +24,7 @@ kind: "package-reference"
 <a id="reference"></a>
 ## 参考
 
-在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、attach、cancel 与 status。提示要求显式 resume 布尔值；attach 会从调用方最后的持久事件序号恢复活动轮次，并重放待处理的人类展示。两种操作都会等待 Host 结算。prompt 或 attach 的轮次信号会显式取消执行；detach 信号只停止本地跟随和结算等待，不会取消 Host 轮次。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
+在原生 profile 中选择本包时，必须排在 client-connection 后，并配置正整数 maxFollowBufferChars，以限制 SSE 解析缓冲区。clientNativeSession 服务提供 list、create、history、prompt、cancel 与 status。提示要求显式 resume 布尔值，并在 Host 结算后完成。调用方取消会中止非提示请求；提示取消会等待 Host 结算。Host 错误以拒绝返回；解码结果在进入 Consumer 前验证端点字段。Consumer 不维护第二个 Session 缓存或连接循环。
 
 `./list-types` 导出 Host 与 Client 共用的纯 Session 列表 wire row。标题投影与未修改的 Session header 并列，区分已解析、不存在和读取不可用；Host 从持久标题事件生成该投影。
 
@@ -86,7 +86,7 @@ type NativeSettingsEvent =
 
 账户方法会列出 Host 投影的安全身份、读取 Provider 用量，并按账户 key 退出登录。身份中的 email、name 和头像 URL 均可为空；用量状态区分 ready、signed-out、failed 和 unsupported。OpenAI Codex 在模型调用报告额度前返回 `USAGE_PENDING`，之后返回 grant 邮箱、可空套餐、额度窗口和可选额度余额；快照仅保存在 Host 内存中，并按已存 grant 的 issuer 与 subject 隔离。账户响应不包含凭据值。
 
-同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。创建与连接接受可选的 `trust` 标记；Host RPC 错误会保留 code 与 details，供信任确认流程使用。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。Host 集成从 `workspaces` 子路径导入可序列化的 Workspace 与目录类型。
+同一 Cordis-free 安装还提供 `clientNativeWorkspace` 与 `clientNativeDirectoryPicker`。Workspace 方法以 `{ workspaces, archivedSessionIds }` 返回 `list()`，以完整基线及后续 upsert/remove/order/archive 帧返回 `follow(signal)`，并提供创建、重命名、仅删除注册、排序、会话排序、归档、按标题或路径大小写不敏感搜索及 `connectWorkspace`。删除会释放该 Workspace 的空闲运行时路由，同时保留目录与 Session 日志。连接会复用未归档、属于该 Workspace、记录的 `cwd` 与 Workspace 路径一致且尚未开始 turn（或记录定时任务通知）的 Session，否则会创建并关联一个空白 Session。目录方法提供 Host OS 目录对话框、单层 `{ path, entries, crumbs }` 浏览以及创建一个子目录。Host 集成从 `workspaces` 子路径导入可序列化的 Workspace 与目录类型。
 
 `clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
@@ -109,15 +109,15 @@ interface NativeSettingsDescription {
 }
 ```
 
-`uploadFile(sessionId, file, signal?)` 会将字节流式传到 Host 并返回进程内回执。初始 prompt、`queueContent` 和 `steerContent` 可将这些回执与有序文本、编码图片一起提交；Host 在根所有者内准入图片，并在持久化准入后退休文件回执。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
+提示上传携带有序的编码光栅图片；Host 在根所有者内准入它们。图片限额来自选定附件 Provider。图片读取只发送 Session 身份和已记录附件身份，并在返回 Blob 前验证响应媒体类型及字节长度。
 
-`close()` 会解除 Client 已拥有提示和跟随流的等待，中止上传，并等待这些调用结算；原生安装器在卸载时等待该操作。
+`close()` 取消当前 Client 拥有的提示并等待 Host 结算回复；原生安装器在卸载时等待该操作。
 
 已发布声明引用 native-runtime、client-connection、native-model-selection、agent-presets、workspace-files 与 brand，因此这些包作为生产依赖安装以供类型解析。共享 Session 包仍为 peer，因为事件验证与格式解释使用应用的同一份 Session 实现。
 
-提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；轮次信号会使用该身份请求 Host 排空。detach 信号只停止本地等待，Host 执行会继续。断开轮次结算后会退休其无人接收的结果，之后可准入下一次提示。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭会解除 Client 等待；Host 回合继续运行，直至正常结算或显式取消。
+提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；发送后取消使用该身份请求 Host 排空，直到持久化结算才结束 Promise。待结算轮次和结算等待者分别受 maxPendingRequests 限制，未领取的结果继续占用槽位。安装关闭取消并排空所有轮次。
 
-`queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`queueContent(sessionId, content, requestId, signal?)` 与 `steerContent(...)` 接受有序文本、编码图片和暂存文件回执，并提交到相同 inbox。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求。`submissions(sessionId, signal?)` 返回 `{ throughSeq, submissions }`，其中包含完整的持久化待处理消息。`editSubmission(sessionId, requestId, text, signal?)` 会通过精确的 root owner 替换消息全部 content，同时保留身份与位置，也支持 idle maintenance；`promoteSubmission(sessionId, requestId, signal?)` 会将 queued 输入移到 `next-step`，并要求活动浏览器轮次。其结果分别区分 `updated`/`stale` 与 `promoted`/`stale`/`not-promotable`。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
+`queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求；`submissions(sessionId)` 返回待处理 inbox 的位置。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
 
 <a id="invariants"></a>
 
@@ -139,7 +139,7 @@ interface NativeSettingsDescription {
 
 #### 模型看到什么
 
-提交的人工文本、已准入的持久化图片引用及暂存文件块会到达 Host 执行器；Host 的附件感知 `read_file` 工具会向模型提供上传字节。
+提交的人工文本及已准入的持久化图片引用通过 Host 执行器进入模型输入；本包不贡献模型工具或提示段。
 
 #### Token 影响
 
@@ -153,5 +153,5 @@ interface NativeSettingsDescription {
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 完整产品 UI 和音频上传不由该包提供；文件上传可通过带类型的 Client 操作完成。
+- 完整产品 UI、文件及音频上传不由该包提供。
 - Host 只能为已附加的 root owner 查询活动定时任务；冷态 Session 行的 `hasActiveSchedule` 为 `false`，因为 scheduler 清单按 owner 限定。

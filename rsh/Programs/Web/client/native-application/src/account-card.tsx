@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ModelsSettingsStyles, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeQuota, NativeQuotaWindow } from '@deepseek-ai/dsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { NativeSettingsActions } from './settings-page.tsx'
 import css from './account-card.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
-const styles = ModelsSettingsStyles
 type ReadyUsage = Extract<NativeAccountUsage, { status: 'ready' }>
 type ReadyBalance = Extract<NativeAccountBalance, { status: 'ready' }>
 type CachedAccountData = { accountKey: string; identity: string | null; value: ReadyUsage | ReadyBalance }
@@ -125,42 +124,37 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
   const currentStatus = currentData === undefined && status === 'stale' ? 'unavailable' : status
   const email = currentUsage?.email ?? account.identity.email
   const plan = currentUsage?.plan ?? account.plan
-  const identityName = account.provider === 'deepseek-account'
-    ? account.identity.name ?? (account.status === 'ready' ? t('signedIn') : null)
-    : account.identity.name
-  const identityContact = account.provider === 'deepseek-account' ? account.identity.contact : email
-  return <article className={styles['rowCard']}>
-    <div className={styles['rowHead']}>
-      <span className={styles['rowIdentity']}>
+  return <article className={css.card}>
+    <header className={css.header}>
+      <div className={css.identity}>
         {account.identity.avatarUrl === null ? <svg className={css.avatar} viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.2 0-7.5 2.1-7.5 4.75V21h15v-2.25C19.5 16.1 16.2 14 12 14Z" fill="currentColor" />
         </svg> : <img className={css.avatar} src={account.identity.avatarUrl} referrerPolicy="no-referrer" alt="" />}
-        <div className={css.identityText}>
-          <h3 className={`${styles['rowName']} ${css.identityTitle}`}>
-            {account.provider === 'deepseek-account' ? t('deepSeekAccount') : t('chatGptAccount')}
-          </h3>
-          <div className={`${styles['authorizationStatus']} ${css.accountDetails}`}>
-            {identityName === null ? null : <span>{identityName}</span>}
-            {identityContact === null ? null : <span>{identityContact}</span>}
+        <div>
+          <h3>{account.provider === 'deepseek-account' ? t('deepSeekAccount') : t('chatGptAccount')}</h3>
+          {account.provider === 'deepseek-account' ? <>
+            {account.identity.name !== null ? <p>{account.identity.name}</p> : account.status === 'ready' ? <p>{t('signedIn')}</p> : null}
+            {account.identity.contact === null ? null : <p>{account.identity.contact}</p>}
+          </> : <>
+            {account.identity.name === null ? null : <p>{account.identity.name}</p>}
+            {email === null ? null : <p>{email}</p>}
             {plan === null ? null : <Tag tone="neutral">{t('plan')}: {plan}</Tag>}
-          </div>
+          </>}
         </div>
-      </span>
-      <span className={styles['rowActions']}>
-        <button type="button" className={styles['secondaryButton']} disabled={currentStatus === 'loading'} onClick={() => { void refresh() }}>
-          {t('refreshAccount')}
-        </button>
-        {signOutAvailable ? <button type="button" className={styles['secondaryButton']} disabled={signingOut} onClick={() => { void signOut() }}>
+      </div>
+      <div className={css.actions}>
+        <Button variant="outline" size="sm" disabled={currentStatus === 'loading'} onClick={() => { void refresh() }}>{t('refreshAccount')}</Button>
+        {signOutAvailable ? <Button variant="outline" size="sm" disabled={signingOut} onClick={() => { void signOut() }}>
           {signingOut ? t('signingOut') : t('signOut')}
-        </button> : null}
-      </span>
-    </div>
+        </Button> : null}
+      </div>
+    </header>
     {account.provider === 'deepseek-account'
       ? currentBalance === undefined
-        ? <div className={styles['authorizationStatus']} role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'signed-out' ? t('accountSignedOut')
-          : currentStatus === 'unavailable' ? t('balanceUnavailable') : t('loadingBalance')}</div>
+        ? <p role={currentStatus === 'unavailable' ? 'status' : undefined}>{currentStatus === 'signed-out' ? t('accountSignedOut')
+          : currentStatus === 'unavailable' ? t('balanceUnavailable') : t('loadingBalance')}</p>
         : <>
-          {currentStatus === 'stale' ? <div className={styles['authorizationStatus']} role="status">{t('balanceStale')}</div> : null}
+          {currentStatus === 'stale' ? <p role="status">{t('balanceStale')}</p> : null}
           {currentBalance.wallets.length > 0 || currentBalance.bonusWallets.length > 0 ? <div className={css.balances}>
             {currentBalance.wallets.length > 0 ? <div className={css.balanceRow}>
               <span>{t('balance')}</span>
@@ -176,17 +170,17 @@ export function AccountCard({ account, actions, refreshClick, onRefreshAccounts,
             </div> : null}
           </div> : null}
         </>
-      : currentStatus === 'signed-out' ? <div className={styles['authorizationStatus']}>{t('signedOut')}</div> : currentUsage === undefined
-        ? <div className={styles['authorizationStatus']} role={currentStatus === 'unavailable' || currentStatus === 'usage-pending' ? 'status' : undefined}>
+      : currentStatus === 'signed-out' ? <p>{t('signedOut')}</p> : currentUsage === undefined
+        ? <p role={currentStatus === 'unavailable' || currentStatus === 'usage-pending' ? 'status' : undefined}>
           {currentStatus === 'usage-pending' ? t('usagePending') : currentStatus === 'unavailable' ? t('accountUnavailable') : t('loadingAccount')}
-        </div>
+        </p>
         : <>
-          {currentStatus === 'stale' ? <div className={styles['authorizationStatus']} role="status">{t('usageStale')}</div> : null}
+          {currentStatus === 'stale' ? <p role="status">{t('usageStale')}</p> : null}
           <Quotas quotas={currentUsage.quotas} t={t} />
           {currentUsage.credits === null ? null : <p className={css.credits}>
             <strong>{t('credits')}</strong> {currentUsage.credits.unlimited ? t('unlimited') : currentUsage.credits.balance ?? '—'}
           </p>}
         </>}
-    {error ? <p className={styles['error']} role="alert">{t('accountError')}</p> : null}
+    {error ? <p role="alert">{t('accountError')}</p> : null}
   </article>
 }

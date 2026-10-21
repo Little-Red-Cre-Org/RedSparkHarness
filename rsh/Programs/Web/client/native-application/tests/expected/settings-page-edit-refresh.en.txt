@@ -4,11 +4,6 @@
     "llm-pi-ai"
   ],
   "buttons": [
-    "Light",
-    "Dark",
-    "Follow system",
-    "−",
-    "+",
     "Refresh settings",
     "Save settings"
   ],
@@ -17,7 +12,6 @@
   ],
   "alerts": [],
   "notices": [
-    "This Host does not save this preference; the behavior shown is used.",
     "Settings saved; values were read back from the Host."
   ]
 }

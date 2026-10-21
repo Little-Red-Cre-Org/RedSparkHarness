@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest'
 import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeAuthorizationProvider } from '@deepseek-ai/dsh-authorization/native'
 import { NativeHost, NativeScope, RuntimeEvents, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ConnectionRpcHandler, HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
+import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
 import type { NativeAccounts } from '@deepseek-ai/dsh-llm-pi-ai/native'
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
@@ -99,17 +99,6 @@ it.each([
   const scope = new NativeScope()
   let settingsDocument: Record<string, unknown> = defaultSelection === undefined ? {} : { 'agent-default-model': defaultSelection }
   const updatedNamespaces: string[] = []
-  let nativeRpcHandler: ConnectionRpcHandler | undefined
-  const hostConnection = {
-    rpc: {
-      handle: () => () => Promise.resolve(),
-      intercept: (_channel: string, _matches: unknown, handler: ConnectionRpcHandler) => {
-        nativeRpcHandler = handler
-        return () => Promise.resolve()
-      },
-    },
-    fetch: { register: () => () => Promise.resolve() },
-  } as unknown as HostConnectionHandle
   const firstAvailableAccountModel = vi.fn(async () => ({ provider: 'openai-codex', model: 'fixture-account-model' }))
   const modelSettings = {
     firstAvailableAccountModel,
@@ -119,7 +108,10 @@ it.each([
     provides: ['model', 'hostConnection', 'credentials', 'authorization', 'settings', 'modelSettings'],
     resolve: () => async (context) => {
       context.provide('model', { async *stream() {} })
-      context.provide('hostConnection', hostConnection)
+      context.provide('hostConnection', {
+        rpc: { handle: () => () => Promise.resolve(), intercept: () => () => Promise.resolve() },
+        fetch: { register: () => () => Promise.resolve() },
+      } as unknown as HostConnectionHandle)
       context.provide('credentials', {} as NativeCredentials)
       context.provide('authorization', new NativeAuthorizationProvider(scope, {} as NativeCredentials, { events: new RuntimeEvents() }))
       const settings = new NativeSettings({
@@ -152,17 +144,6 @@ it.each([
   try {
     await host.start()
     expect(host.diagnostics().find(entry => entry.name === plugin.name)?.state).toBe('ready')
-    const describedSettings = await nativeRpcHandler!('settings/describe', {}, new AbortController().signal)
-    expect(describedSettings).toMatchObject({ ok: true, value: { namespaces: expect.arrayContaining([
-      expect.objectContaining({ namespace: 'ui-conversation', value: { busyEnter: 'queue' }, revision: 0 }),
-    ]) as unknown } })
-    const changedConversation = await nativeRpcHandler!('settings/mutate', {
-      ns: 'ui-conversation', ops: [{ op: 'set', path: ['busyEnter'], value: 'steer' }], expectedRevision: 0,
-    }, new AbortController().signal)
-    expect(changedConversation).toMatchObject({ ok: true, value: {
-      namespace: 'ui-conversation', value: { busyEnter: 'steer' }, revision: 1,
-    } })
-    expect(settingsDocument['ui-conversation']).toEqual({ busyEnter: 'steer' })
     expect(settingsDocument['agent-default-model']).toEqual(defaultSelection)
     await host.events.parallel(scope, 'authorization/settled', credentialKey('llm-pi-ai', 'openai-codex'), 'authorized')
     expect(settingsDocument['agent-default-model']).toEqual(expected)

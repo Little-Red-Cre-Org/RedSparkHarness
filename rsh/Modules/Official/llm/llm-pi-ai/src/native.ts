@@ -7,7 +7,6 @@ import type {} from '@deepseek-ai/dsh-deepseek-account/native'
 import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
 import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
 import { credentialKey, credentialKeyId, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
-import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-launch-environment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-fs/native'
@@ -19,7 +18,7 @@ import { CodexUsageStore } from './rate-limits.ts'
 export type { AccountBalance, AccountKey, AccountSummary, AccountUsage, NativeAccounts, Quota, QuotaWindow } from './accounts.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { PiAiProviderProfile } from './config.ts'
-import { authContextFrom, credentialStoreFrom, siwcRegistrationStoreFrom } from './auth-core.ts'
+import { authContextFrom, credentialStoreFrom } from './auth-core.ts'
 import { createPiAiFlows } from './login-core.ts'
 import { configurableProviderEntries } from './configurable-providers.ts'
 import { discoverModels } from './discovery.ts'
@@ -38,44 +37,6 @@ const DEEPSEEK_ACCOUNT_PROFILE: PiAiProviderProfile = {
     { id: 'deepseek-flash', name: 'DeepSeek-V41-Flash' },
     { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro' },
   ],
-}
-
-const dictionaryFields = new Set([
-  'providers', 'headers', 'modelOverrides', 'chatTemplateKwargs', 'chatTemplateArgs', 'reasoningEfforts',
-])
-
-function safeConfigPath(input: unknown, path: readonly (string | number | symbol)[] | undefined): (string | number)[] | undefined {
-  if (path === undefined || path.length === 0) return undefined
-  const safePath: (string | number)[] = []
-  let value = input
-  for (const [index, segment] of path.entries()) {
-    if (typeof segment !== 'string' && typeof segment !== 'number') return undefined
-    const parent = path[index - 1]
-    let safeSegment = segment
-    if (typeof segment === 'string' && typeof parent === 'string' && dictionaryFields.has(parent)
-      && typeof safePath[index - 1] === 'string') {
-      if (typeof value !== 'object' || value === null) return undefined
-      safeSegment = Object.keys(value).indexOf(segment)
-      if (safeSegment < 0) return undefined
-    }
-    safePath.push(safeSegment)
-    value = typeof value === 'object' && value !== null
-      ? (value as Record<string, unknown>)[String(segment)]
-      : undefined
-  }
-  return safePath
-}
-
-/** Validate pi-ai configuration and attach a safe issue to schema failures without replacing them. */
-function validateConfig(input: Parameters<typeof Config>[0]): Config {
-  try {
-    return Config(input)
-  } catch (error) {
-    if (!z.ValidationError.is(error)) throw error
-    const path = safeConfigPath(input, error.options.path)
-    if (path !== undefined) Object.assign(error, { issues: [{ path, rule: 'schema' }] })
-    throw error
-  }
 }
 
 function profilesWithAccountRoutes(
@@ -106,8 +67,7 @@ export const plugin: NativePlugin = {
     for (const key of Object.keys(input)) {
       if (key !== 'providers') throw new Error(`llm-pi-ai: unknown native configuration field ${key}`)
     }
-    const base = validateConfig(input)
-    resolveProfiles(base.providers, 'deferred')
+    const base = Config(input)
     return async (context) => {
       const credentials = context.require('credentials')
       const environment = context.require('launchEnvironment')
@@ -116,11 +76,7 @@ export const plugin: NativePlugin = {
       const settings = context.optional('settings')
       const authorization = context.optional('authorization')
       const deepseekAccount = context.optional('deepseekAccount')
-      const auth = {
-        credentials: credentialStoreFrom(credentials),
-        authContext: authContextFrom(credentials, environment),
-        siwcRegistration: siwcRegistrationStoreFrom(credentials),
-      }
+      const auth = { credentials: credentialStoreFrom(credentials), authContext: authContextFrom(credentials, environment) }
       if (authorization !== undefined) {
         for (const flow of createPiAiFlows(auth)) context.effect(authorization.registerFlow(flow))
       }
@@ -128,7 +84,7 @@ export const plugin: NativePlugin = {
       let settingsSelection: NativeSettingsScope<Config> | undefined
       if (settings !== undefined) {
         const selection = settings.register<'llm-pi-ai', Config>('llm-pi-ai', { providers: base.providers ?? {} }, (value) => {
-          const config = validateConfig(value)
+          const config = Config(value)
           resolveProfiles(config.providers, 'deferred')
           return config
         }, assertServiceable, { schema: Config, applies: 'live' })
@@ -141,7 +97,7 @@ export const plugin: NativePlugin = {
       let credentialSnapshotsReady = false
       let codexAvailable = false
       let deepseekAccountAvailable = false
-      context.effect(credentials.onRecordUpdated(async (key) => {
+      context.on('credentials/record-updated', async (key) => {
         if (!credentialSnapshotsReady) {
           if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) credentialSnapshotsDirty = true
           return
@@ -165,7 +121,7 @@ export const plugin: NativePlugin = {
         if (key === CODEX_ACCOUNT_KEY || key === DEEPSEEK_ACCOUNT_KEY) {
           await context.events.parallel(context.scope, 'accounts/changed', key)
         }
-      }))
+      })
       do {
         context.signal.throwIfAborted()
         // Reconcile account commits delivered while either snapshot is pending.

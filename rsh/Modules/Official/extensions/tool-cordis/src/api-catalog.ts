@@ -799,24 +799,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the record, or `undefined` while none is stored.',
       },
       {
-        signature: 'abstract readMetadata(key: CredentialKey): Promise<unknown>',
-        description: 'Read JSON metadata owned by a plugin. Metadata is stored separately from credential records and never appears in listRecords.',
-        parameters: [{ name: 'key', description: 'owner-scoped metadata address.' }],
-        returns: 'the JSON value, or `undefined` while absent.',
-      },
-      {
-        signature: 'abstract modifyMetadata( key: CredentialKey, mutate: (current: unknown) => Promise<unknown>, ): Promise<unknown>',
-        description: 'Read-decide-replace plugin-owned JSON metadata under the provider\'s write lock. Returning `undefined` leaves the current value unchanged.',
-        parameters: [{ name: 'key', description: 'owner-scoped metadata address.' }, { name: 'mutate', description: 'decides the next JSON value from the current one.' }],
-        returns: 'the committed value, or the unchanged current value.',
-      },
-      {
-        signature: 'abstract migrateRecordToMetadata( key: CredentialKey, migrate: ( current: unknown, legacy: CredentialRecord | undefined, readRecord: (key: CredentialKey) => CredentialRecord | undefined, ) => Promise<CredentialMetadataMigration>, ): Promise<unknown>',
-        description: 'Reconcile owner metadata with a legacy credential record under the same provider lock. The legacy record is removed only after metadata is durable and verified. The callback receives detached metadata and legacy values and can read detached sibling-record copies from that locked snapshot.',
-        parameters: [{ name: 'key', description: 'address shared by the old record and new metadata value.' }, { name: 'migrate', description: 'validates detached values from the locked snapshot and chooses the durable metadata result.' }],
-        returns: 'the verified metadata value.',
-      },
-      {
         signature: 'abstract describeRecord(key: CredentialKey): Promise<CredentialRecordInfo>',
         description: 'Describe one record for configuration surfaces without exposing its value.',
         parameters: [{ name: 'key', description: 'the record to describe.' }],
@@ -4244,10 +4226,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type CredentialKey = Branded<\'CredentialKey\'>;',
   },
   {
-    name: 'CredentialMetadataMigration',
-    declaration: 'export interface CredentialMetadataMigration {\n    readonly value: unknown;\n    readonly retireRecord: boolean;\n}',
-  },
-  {
     name: 'CredentialRecord',
     declaration: 'export type CredentialRecord = ApiKeyRecord | GrantRecord;',
   },
@@ -4421,7 +4399,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'FeedbackCategory',
-    declaration: 'export type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number];',
+    declaration: 'export type FeedbackCategory = \'task-result\' | \'instruction-following\' | \'product-interaction\' | \'service-stability\' | \'resource-cost\' | \'security-privacy-permission\' | \'other\';',
   },
   {
     name: 'FiberState',

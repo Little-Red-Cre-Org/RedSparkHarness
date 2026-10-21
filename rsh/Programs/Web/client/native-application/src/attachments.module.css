@@ -4,7 +4,6 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding-inline: 12px;
 }
 
 .input {
@@ -12,20 +11,13 @@
 }
 
 .picker {
-  display: grid;
-  flex: none;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  corner-shape: round;
-  background: var(--dsw-alias-interactive-bg-hover);
+  padding: 4px 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 20px;
-  line-height: 1;
+  font-size: 12px;
+  line-height: 18px;
   cursor: pointer;
 }
 

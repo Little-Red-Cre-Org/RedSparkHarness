@@ -1,14 +1,12 @@
 /** Sign in with ChatGPT OAuth for the public Responses API subscription route. */
 
 import { createServer } from 'node:http'
-import type { ServerResponse } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { HarnessError } from '@deepseek-ai/dsh-llm/native'
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import type { JSONWebKeySet } from 'jose'
-import type { Credential, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
-import type { CredentialMetadataMigration, CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
+import type { CredentialStore, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 
 const ISSUER = 'https://auth.openai.com'
 const AUTHORIZATION_URL = `${ISSUER}/api/accounts/authorize`
@@ -16,6 +14,8 @@ const TOKEN_URL = `${ISSUER}/api/accounts/oauth/token`
 const JWKS_URL = `${ISSUER}/.well-known/jwks.json`
 const RESOURCE = 'https://api.openai.com/v1'
 const FIRST_REGISTRATION_CLIENT_ID = 'dynamic_agent_client'
+const CODEX_PROVIDER_ID = 'openai-codex'
+const REGISTRATION_STORE_ID = 'openai-codex-siwc-registration'
 const REGISTRATION_MARKER = 'siwc-registration-v1:'
 const REQUIRED_SCOPE = 'chatgpt.tokens.use.direct'
 const SCOPES = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
@@ -119,96 +119,31 @@ interface TokenResponse {
   readonly scope?: unknown
 }
 
-/** Durable SIWC registration ids required to resume browser authorization without changing provider identity. */
-export interface SiwcRegistrationMetadata {
+interface RegistrationMetadata {
   readonly clientId?: string
   readonly extAgentHostId: string
 }
 
-/** Durable storage adapter for SIWC registration identity, separate from pi-ai credentials. */
-export interface SiwcRegistrationStore {
-  /** Reconcile registration metadata with its grant and legacy record under the credentials provider's lock.
-   * @param migrate - validates the current metadata, legacy record, and authorized grant before choosing persisted metadata.
-   * @returns the verified registration metadata.
-   */
-  reconcile(
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      authorized: Credential | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-  ): Promise<unknown>
-  /** Persist callback-updated registration identity and read it back before continuing OAuth.
-   * @param mutate - validates the current ids and returns the issued client id to persist.
-   * @returns the verified registration metadata.
-   */
-  modify(mutate: (current: unknown) => Promise<unknown>): Promise<unknown>
-}
-
-function registrationFrom(value: unknown): SiwcRegistrationMetadata | undefined {
-  if (value === undefined) return undefined
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Sign in with ChatGPT registration metadata is invalid')
-  }
-  const raw = value as Partial<SiwcRegistrationMetadata>
-  if (typeof raw.extAgentHostId !== 'string' || raw.extAgentHostId.length === 0) {
-    throw new Error('Sign in with ChatGPT registration metadata has no host ID')
-  }
-  if (raw.clientId !== undefined && (typeof raw.clientId !== 'string' || raw.clientId.length === 0)) {
-    throw new Error('Sign in with ChatGPT registration metadata has an invalid client ID')
-  }
-  if (Object.keys(raw).some(key => key !== 'clientId' && key !== 'extAgentHostId')) {
-    throw new Error('Sign in with ChatGPT registration metadata has unsupported fields')
-  }
-  return {
-    extAgentHostId: raw.extAgentHostId,
-    ...raw.clientId === undefined ? {} : { clientId: raw.clientId },
-  }
-}
-
-function legacyRegistrationFrom(record: CredentialRecord | undefined): SiwcRegistrationMetadata | undefined {
-  if (record === undefined) return undefined
-  if (record.kind !== 'api-key' || record.env !== undefined
-    || typeof record.key !== 'string' || !record.key.startsWith(REGISTRATION_MARKER)) {
-    throw new Error('Sign in with ChatGPT legacy registration record is invalid and was preserved')
-  }
+function registrationFrom(value: unknown): RegistrationMetadata | undefined {
+  if (value === null || typeof value !== 'object') return undefined
+  const credential = value as { type?: unknown; key?: unknown }
+  if (credential.type !== 'api_key' || typeof credential.key !== 'string'
+    || !credential.key.startsWith(REGISTRATION_MARKER)) return undefined
   try {
-    return registrationFrom(JSON.parse(record.key.slice(REGISTRATION_MARKER.length)))
+    const raw = JSON.parse(credential.key.slice(REGISTRATION_MARKER.length)) as Partial<RegistrationMetadata>
+    if (typeof raw.extAgentHostId !== 'string' || raw.extAgentHostId.length === 0) return undefined
+    if (raw.clientId !== undefined && (typeof raw.clientId !== 'string' || raw.clientId.length === 0)) return undefined
+    return {
+      extAgentHostId: raw.extAgentHostId,
+      ...raw.clientId === undefined ? {} : { clientId: raw.clientId },
+    }
   } catch {
-    throw new Error('Sign in with ChatGPT legacy registration record is invalid and was preserved')
+    return undefined
   }
 }
 
-/** Move valid legacy registration identity into metadata without inventing a replacement.
- * @param current - the owner metadata value, if one is present.
- * @param legacy - the old api-key record, if one is present.
- * @param authorized - an existing pi-ai credential read from the locked credential snapshot.
- * @returns the merged ids, or a retirement decision for the valid legacy record.
- * @throws when metadata, legacy ids, or the authorized account conflict; the legacy record remains stored.
- */
-// oxlint-disable-next-line typescript/require-await -- Preserve promise rejection semantics for the async reconciliation callback.
-export async function migrateExistingSiwcRegistration(
-  current: unknown,
-  legacy: CredentialRecord | undefined,
-  authorized?: Credential,
-): Promise<CredentialMetadataMigration> {
-  const saved = registrationFrom(current)
-  const old = legacyRegistrationFrom(legacy)
-  if (saved !== undefined && old !== undefined
-    && (saved.extAgentHostId !== old.extAgentHostId
-      || (saved.clientId !== undefined && old.clientId !== undefined && saved.clientId !== old.clientId))) {
-    throw new Error('Sign in with ChatGPT registration identity conflicts with its legacy record; the record was preserved')
-  }
-  const clientId = saved?.clientId ?? old?.clientId
-  const value = saved === undefined
-    ? old
-    : { extAgentHostId: saved.extAgentHostId, ...(clientId === undefined ? {} : { clientId }) }
-  if (value !== undefined && isSiwcCredential(authorized)
-    && (authorized.extAgentHostId !== value.extAgentHostId
-      || (value.clientId !== undefined && authorized.clientId !== value.clientId))) {
-    throw new Error('Sign in with ChatGPT registration identity conflicts with the authorized account; the legacy record was preserved')
-  }
-  return { value, retireRecord: legacy !== undefined }
+function registrationCredential(metadata: RegistrationMetadata): { type: 'api_key'; key: string } {
+  return { type: 'api_key', key: `${REGISTRATION_MARKER}${JSON.stringify(metadata)}` }
 }
 
 function randomBase64Url(): string {
@@ -219,7 +154,6 @@ function randomBase64Url(): string {
 async function callbackListener(state: string, signal: AbortSignal): Promise<{
   readonly redirectUri: string
   readonly callback: Promise<CallbackResult>
-  respond(success: boolean): Promise<void>
   close(): Promise<void>
 }> {
   const timeout = AbortSignal.timeout(CALLBACK_TIMEOUT_MS)
@@ -232,26 +166,6 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
     rejectCallback = reject
   })
   void callback.catch(() => {})
-  let callbackResponse: ServerResponse | undefined
-  const respond = (success: boolean): Promise<void> => {
-    const response = callbackResponse
-    callbackResponse = undefined
-    if (response === undefined || response.destroyed) return Promise.resolve()
-    return new Promise((resolve) => {
-      const complete = (): void => {
-        response.off('close', complete)
-        response.off('error', complete)
-        resolve()
-      }
-      response.once('error', complete)
-      response.once('close', complete)
-      response.writeHead(success ? 200 : 500, {
-        'content-type': 'text/plain; charset=utf-8',
-        connection: 'close',
-      })
-        .end(success ? 'Sign-in complete. You can close this tab.' : 'Sign-in could not be completed. Return to RedSpark Harness.')
-    })
-  }
   const finish = (result: CallbackResult | Error): void => {
     if (settled) return
     settled = true
@@ -284,28 +198,28 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
       code = queryValue('code')
       clientId = queryValue('client_id')
     } catch (error: unknown) {
-      callbackResponse = response
+      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in callback was invalid.')
       finish(error instanceof Error ? error : new Error(String(error)))
       return
     }
     if (returnedState !== state) {
-      callbackResponse = response
+      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in state did not match.')
       finish(new Error('Sign in with ChatGPT returned a mismatched state'))
       return
     }
     if (oauthError !== undefined) {
-      callbackResponse = response
+      response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in was not completed. You can close this tab.')
       finish(new Error(oauthError === 'access_denied'
         ? 'Sign in with ChatGPT was cancelled or plan usage was not approved'
         : 'Sign in with ChatGPT returned an OAuth error'))
       return
     }
     if (code === undefined || code.length === 0) {
-      callbackResponse = response
+      response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in did not return an authorization code.')
       finish(new Error('Sign in with ChatGPT returned no authorization code'))
       return
     }
-    callbackResponse = response
+    response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end('Sign-in received. Return to RedSpark Harness to finish.')
     finish({ code, ...clientId === undefined ? {} : { clientId } })
   })
 
@@ -339,14 +253,10 @@ async function callbackListener(state: string, signal: AbortSignal): Promise<{
   return {
     redirectUri: `http://127.0.0.1:${address.port}/auth/callback`,
     callback,
-    respond,
     async close() {
       callbackSignal.removeEventListener('abort', onAbort)
       if (!server.listening) return
-      await new Promise<void>((resolve) => {
-        server.close(() => { resolve() })
-        server.closeAllConnections()
-      })
+      await new Promise<void>((resolve, reject) => server.close((error) => { if (error) reject(error); else resolve() }))
     },
   }
 }
@@ -444,36 +354,34 @@ async function verifiedIdentity(idToken: string, clientId: string, nonce: string
 }
 
 /**
- * Create pi-ai OAuth semantics while keeping registration metadata separate from OAuth grants.
- * The callback success page follows token and identity validation. Failures receive generic text.
- * Listener shutdown closes remaining connections.
- * @param registration - durable owner metadata store shared by Native and Cordis entry points.
+ * Create pi-ai OAuth semantics while keeping this app's registration separate from Codex CLI credentials.
+ * @param credentials - credential store for the SIWC registration and OAuth grant.
  * @returns a pi-ai OAuth provider that signs in, refreshes, and resolves SIWC credentials.
  */
-export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth {
+export function createSiwcOAuth(credentials: CredentialStore): OAuthAuth {
   return {
     name: 'Sign in with ChatGPT',
     loginLabel: 'Continue with ChatGPT',
     isSubscription: true,
     async login(interaction: ProviderAuthInteraction, options): Promise<OAuthCredential> {
-      let previous: SiwcCredential | undefined
-      const savedRegistration = registrationFrom(await registration.reconcile(async (current, legacy, authorized) => {
-        previous = isSiwcCredential(authorized) ? authorized : undefined
-        const migrated = await migrateExistingSiwcRegistration(current, legacy, authorized)
-        const saved = registrationFrom(migrated.value)
-        const extAgentHostId = saved?.extAgentHostId
-          ?? previous?.extAgentHostId
-          ?? options?.getDeviceId?.()
-          ?? `urn:uuid:${randomUUID()}`
-        const clientId = saved?.clientId ?? previous?.clientId
-        return {
-          value: { extAgentHostId, ...(clientId === undefined ? {} : { clientId }) },
-          retireRecord: migrated.retireRecord,
-        }
-      }))
-      if (savedRegistration === undefined) throw new Error('Sign in with ChatGPT registration metadata was not saved')
-      const extAgentHostId = savedRegistration.extAgentHostId
-      const clientId = savedRegistration.clientId ?? FIRST_REGISTRATION_CLIENT_ID
+      const previousValue = await credentials.read(CODEX_PROVIDER_ID, { signal: interaction.signal })
+      const previous = isSiwcCredential(previousValue) ? previousValue : undefined
+      const savedRegistration = registrationFrom(
+        await credentials.read(REGISTRATION_STORE_ID, { signal: interaction.signal }),
+      )
+      const extAgentHostId = previous?.extAgentHostId
+        ?? savedRegistration?.extAgentHostId
+        ?? options?.getDeviceId?.()
+        ?? `urn:uuid:${randomUUID()}`
+      const clientId = previous?.clientId ?? savedRegistration?.clientId ?? FIRST_REGISTRATION_CLIENT_ID
+      await credentials.modify(
+        REGISTRATION_STORE_ID,
+        () => Promise.resolve(registrationCredential({
+          extAgentHostId,
+          ...clientId === FIRST_REGISTRATION_CLIENT_ID ? {} : { clientId },
+        })),
+        { signal: interaction.signal },
+      )
       const state = randomBase64Url()
       const nonce = randomBase64Url()
       const verifier = randomBase64Url()
@@ -500,6 +408,7 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           instructions: 'Continue in your browser to authorize RedSpark Harness for ChatGPT plan usage.',
         })
         const returned = await listener.callback
+        interaction.signal.throwIfAborted()
         if (clientId === FIRST_REGISTRATION_CLIENT_ID) {
           if (returned.clientId === undefined || returned.clientId === FIRST_REGISTRATION_CLIENT_ID) {
             throw new Error('Sign in with ChatGPT registration returned no issued client ID')
@@ -509,19 +418,12 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
         }
         const issuedClientId = returned.clientId ?? clientId
         if (issuedClientId !== FIRST_REGISTRATION_CLIENT_ID) {
-          await registration.modify(
-            // oxlint-disable-next-line typescript/require-await -- Preserve async rejection from metadata validation.
-            async (current) => {
-              const saved = registrationFrom(current)
-              if (saved === undefined || saved.extAgentHostId !== extAgentHostId
-                || (saved.clientId !== undefined && saved.clientId !== issuedClientId)) {
-                throw new Error('Sign in with ChatGPT registration identity changed during browser sign-in')
-              }
-              return { extAgentHostId, clientId: issuedClientId }
-            },
+          await credentials.modify(
+            REGISTRATION_STORE_ID,
+            () => Promise.resolve(registrationCredential({ clientId: issuedClientId, extAgentHostId })),
+            { signal: interaction.signal },
           )
         }
-        interaction.signal.throwIfAborted()
         const form = new URLSearchParams({
           grant_type: 'authorization_code',
           client_id: issuedClientId,
@@ -530,7 +432,7 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           redirect_uri: listener.redirectUri,
           resource: RESOURCE,
         })
-        // The registration is already durable; cancellation now stops token exchange and grant creation.
+        // A cancelled sign-in stores nothing, so the code exchange may stop with the caller.
         const requestSignal = AbortSignal.any([interaction.signal, AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS)])
         const tokens = await tokenResponse(await fetch(TOKEN_URL, {
           method: 'POST',
@@ -556,7 +458,7 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           throw new Error('Sign in with ChatGPT selected a different account than the saved registration')
         }
         interaction.signal.throwIfAborted()
-        const credential: OAuthCredential = {
+        return {
           type: 'oauth',
           access,
           refresh,
@@ -572,10 +474,7 @@ export function createSiwcOAuth(registration: SiwcRegistrationStore): OAuthAuth 
           extAgentHostId,
           scopes,
         }
-        await listener.respond(true)
-        return credential
       } finally {
-        await listener.respond(false)
         await listener.close()
       }
     },

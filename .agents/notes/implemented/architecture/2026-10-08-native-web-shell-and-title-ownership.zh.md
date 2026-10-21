@@ -14,7 +14,7 @@ native-web template 选择六个可选 Client 安装器，分别负责 locale、
 
 Session 标题仍是从 Session 历史投影的持久化 `session/title` 事实。自动 Provider 工作在 idle observer 捕获当前输入并提交 fallback 后启动。service 为该后台任务保留确切的 ActiveSession owner，并在 Provider 完成或失败时释放。Rename 和 refresh 通过调用方现有的 RootExecution 能力委派执行；它们不会创建新的 writer 或标题 store。owner 脱离和 service 销毁时会取消并排空 Provider 与 maintenance 工作，因此提示结算不必等待辅助 Provider，同时安全卸载仍会等到已准入工作结束。
 
-Session controller 跟随 Host 列表基线和增量，后者提供活动时间、运行状态、完成状态、子代理数和待交互状态。Host 与 Client 通过仅包含类型的 `workspaces-types` 入口共享 Workspace 和目录 DTO 声明，避免 Host handler 引入 Client RPC 实现。sidebar 按已注册的 workspaceId 分组并跟随 Workspace 注册表；Workspace 顺序和手动 Session 顺序都采用 Host 顺序。最近活动排序、Session 搜索与归档、Workspace 选择/创建/重命名/删除及目录选择都会调用所选 Host client；cwd 仅提供已注册路径的显示值。native-web profile 显式选择这些模块。
+Session controller 跟随 Host 列表基线和增量，后者提供活动时间、运行状态、完成状态、子代理数和待交互状态。Host 与 Client 通过仅包含类型的 `workspaces-types` 入口共享 Workspace 和目录 DTO 声明，避免 Host handler 引入 Client RPC 实现。sidebar 按已注册的 workspaceId 分组并跟随 Workspace 注册表；Workspace 顺序和手动 Session 顺序都采用 Host 顺序。最近活动排序、Session 搜索与归档、Workspace 选择/创建/重命名/删除及目录选择都会调用所选 Host client；cwd 仅提供已注册路径的显示值。native-web profile 显式选择这些模块。兼容应用仍为默认，本次变更不选择 P5 默认 profile。
 
 ## 考虑过的替代方案
 

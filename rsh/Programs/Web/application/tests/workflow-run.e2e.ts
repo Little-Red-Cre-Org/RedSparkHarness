@@ -2,7 +2,7 @@
 // Reuses the existing recorded workflow parent/child model fixtures; the real
 // workflow tool, worker, subagent provider, Session log, browser plugin graph,
 // and navigation all execute during replay.
-import { mkdir, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
@@ -220,10 +220,5 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
     expect(tripwire.pageErrors).toEqual([])
     expect(tripwire.warnings).toEqual([])
     await assertFixtureInventory(SNAPSHOT_DIR, ['ui-live.expected.md', 'ui.expected.md'])
-    const evidence = process.env.DSH_CORDIS_WORKFLOW_EVIDENCE
-    if (evidence !== undefined) {
-      await mkdir(evidence, { recursive: true })
-      await page.screenshot({ path: join(evidence, 'cordis-workflow-history.png'), fullPage: true })
-    }
   })
 })

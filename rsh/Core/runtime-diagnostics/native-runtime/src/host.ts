@@ -14,7 +14,6 @@ type ServiceKey = keyof NativeServices
 /** One resolved activation's owned capabilities and cancellation. */
 export interface NativeContext {
   readonly scope: NativeScope
-  /** Host shutdown or this installation's removal/replacement. */
   readonly signal: AbortSignal
   readonly events: Pick<RuntimeEvents, 'emit' | 'serial' | 'parallel' | 'waterfall'>
   /**
@@ -349,7 +348,7 @@ export class NativeHost {
       this.activations.push(activation)
       this.diagnosticState.set(entry, { state: 'activating', failure: undefined, cleanup: 'pending' })
       const context: NativeContext = {
-        scope: entry.scope, signal: AbortSignal.any([this.controller.signal, owner.controller.signal]), events: this.events,
+        scope: entry.scope, signal: owner.controller.signal, events: this.events,
         own: dispose => owner.own(dispose),
         effect: dispose => owner.effect(dispose),
         groupInstallations: () => {
@@ -571,17 +570,19 @@ export class NativeHost {
   }
 
   /**
-   * Stop Host and Context admission, drain admitted work and events, then release dependents before providers.
+   * Stop admission immediately, await startup settlement, then release dependents before providers.
    * Await stop from outside admitted work; an operation cannot await its own drain.
    * @returns shared shutdown completion, including any startup or cleanup failure.
    */
   stop(): Promise<void> {
     this.controller.abort()
+    for (const activation of this.activations) activation.owner.controller.abort()
+    const draining = this.events.close()
     return this.shutdown ??= Promise.resolve().then(async () => {
+      await draining
       await this.startup
       await this.mutation
       await Promise.allSettled(this.invocations.keys())
-      await this.events.close()
       await this.release()
       for (const [entry, current] of this.diagnosticState) {
         if (current.state === 'planned') {

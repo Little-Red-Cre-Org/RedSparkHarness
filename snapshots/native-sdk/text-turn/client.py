@@ -14,9 +14,7 @@ launcher, home, workspace, patch, *arguments = sys.argv[1:]
 goal_control = arguments[-1:] == ["goal-control"]
 scheduled_origin = arguments[-1:] == ["scheduled-origin"]
 task = arguments[0] if arguments else "say hello through native SDK"
-profile_args = {"profile": "native-sdk"} if goal_control or scheduled_origin else {}
-config = DeepSeekHarnessConfig(dsh_bin=launcher, dsh_home=home,
-    **profile_args,
+config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key"})
 def refuse_steering(session, text):
@@ -85,7 +83,6 @@ if scheduled_origin:
         endpoint("start-origin", "accepted")
         endpoint("await-origin-ready", "ready")
         initializing.start_session(session_id).run(first_task)
-    endpoint("await-schedule-seed", "ready")
     with DeepSeekHarness(config) as restored:
         result = restored.start_session(session_id).run(restored_task)
         print(json.dumps({"run": serialized(result)}))

@@ -11,7 +11,7 @@ import { shippedNativeProfileComposition } from '../../../CLI/src/native-profile
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 
 /** Create an isolated supported native composition and a deterministic model.
- * @param cancellation - whether the fixture model blocks its first request for cancellation and cleanup.
+ * @param cancellation - whether the fixture model waits for cancellation and explicit cleanup release.
  * @param script - committed assistant responses for replay; omitted only by the cancellation fixture.
  * @param cleanupFailure - inject a controller teardown rejection after its real drain.
  * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
@@ -47,7 +47,6 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     const close = controller.close;
     controller.close = async function () { await close.call(this); throw new Error('fixture executor cleanup failed'); };` : ''}
     const home = ${JSON.stringify(home)};
-    let cancelFirstRequest = ${String(cancellation)};
     let pauseFirstRequest = ${String(presetMode === 'shipped')};
     const script = ${JSON.stringify(script ?? [])};
     export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ${JSON.stringify(modelProvides)},
@@ -60,8 +59,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
           await writeFile(home + '/goal-request-aborted', 'aborted');
           throw request.signal.reason;
         }
-        if (cancelFirstRequest) {
-          cancelFirstRequest = false;
+        if (${String(cancellation)}) {
           await writeFile(home + '/started', 'started');
           await new Promise(resolve => { if (request.signal.aborted) resolve(); else request.signal.addEventListener('abort', resolve, { once: true }); });
           await writeFile(home + '/aborted', 'aborted');
@@ -78,13 +76,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
         const index = request.messages.filter(message => message.role === 'assistant').length;
         const entry = script[index];
         if (entry?.kind !== 'chunks') throw new Error('terminal replay exhausted');
-        for (const chunk of entry.chunks) {
-          if (${String(cancellation)} && index === 0 && chunk.type === 'finish') {
-            await writeFile(home + '/continuation-finish-started', 'started');
-            for (;;) { try { await access(home + '/release-continuation-finish'); break; } catch (error) { if (error.code !== 'ENOENT') throw error; await wait(10); } }
-          }
-          yield chunk;
-        }
+        for (const chunk of entry.chunks) yield chunk;
       }, ...(${String(modelControls)} ? { providerInfo: id => ({ id, name: 'Fixture Provider' }),
       listModels: async provider => ['fixture', 'fixture-alt'].map(id => ({ provider, id, name: id })),
       resolveModel: async (provider, id) => ({ provider, id, name: id, inputModalities: ['text'], context: { contextWindow: 4096 },
@@ -166,7 +158,6 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     },
     async cleanup() {
       writeFileSync(join(home, 'release'), 'release')
-      writeFileSync(join(home, 'release-continuation-finish'), 'release')
       for (const run of processes) {
         if (!run.exited) run.child.kill()
         await run.completion

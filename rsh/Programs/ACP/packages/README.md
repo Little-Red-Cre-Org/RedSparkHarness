@@ -25,7 +25,7 @@ The acp group provides compatibility and native carriers: servers that let progr
 | Package | Role |
 |---|---|
 | [`acp/`](acp/README.md) | Lets programs manage persistent agents over ACP, attach MCP servers, select model options, prompt and cancel work, and receive semantic updates |
-| [`native-acp/`](native-acp/README.md) | Explicit native ACP carrier with durable text/image output, conditional usage, paginated Session listing, prompts, cancellation, close, and resume |
+| [`native-acp/`](native-acp/README.md) | Explicit native text ACP carrier with durable Session prompts, cancellation, close, list, and resume |
 
 -----
 

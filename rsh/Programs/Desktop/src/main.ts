@@ -1,10 +1,8 @@
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
-import { appendFileSync, mkdirSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { inspect } from 'node:util'
 import {
   app,
   BrowserWindow,
@@ -16,36 +14,28 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
-import { setCliPackageRoot } from '@deepseek-ai/dsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'
 import { DesktopBackendController, type DesktopBackendState } from './backend-controller.ts'
 import { DESKTOP_IPC, type DesktopUpdateState } from './ipc.ts'
-import {
-  parseNativeDesktopInstallRequest,
-  parseNativeDesktopListRequest,
-  parseNativeDesktopMutationRequest,
-  parseNativeDesktopPackageRequest,
-  parseNativeDesktopToggleRequest,
-  parseNativeDesktopUpdateRequest,
-} from './native-module-management.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
 import { desktopErrorState } from './startup-error.ts'
-import type { DesktopErrorState } from './startup-error.ts'
 import { startupFailureDocument } from './startup-document.ts'
 import { DesktopPetWindow } from './pet-window.ts'
 import { parsePetPresentation } from './pet-presentation.ts'
 import { showTaskNotification } from './task-notification.ts'
+import { DesktopIdeWindow } from './ide-window.ts'
+import { parseIdeHandoff, type IdeHandoff } from './ide-handoff.ts'
+import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
 
 const SCHEME = 'dsh-app'
-const DESKTOP_LOG_FILE = 'desktop.log'
 let focusPrimaryWindow = (): void => {}
 type RecoveryAction = 'restart' | 'plugins' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
-const emergencyPages = new WeakMap<BrowserWindow, { url: string; busy: boolean }>()
+const emergencyPages = new WeakMap<BrowserWindow, { url: string; message: string; busy: boolean }>()
 let recoverApplication = (action: RecoveryAction): Promise<void> => {
   if (action !== 'restart') return Promise.reject(new Error('Desktop recovery could not initialize; reinstall the application'))
   app.relaunch()
@@ -53,25 +43,11 @@ let recoverApplication = (action: RecoveryAction): Promise<void> => {
   return Promise.resolve()
 }
 
-async function showEmergencyDocument(window: BrowserWindow, failure: DesktopErrorState): Promise<void> {
-  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), failure, profileRecoveryAvailable())
+async function showEmergencyDocument(window: BrowserWindow, message: string): Promise<void> {
+  const document = startupFailureDocument(resolveDesktopLocale(app.getLocale()), message, profileRecoveryAvailable())
   const url = `data:text/html;charset=utf-8,${encodeURIComponent(document)}`
-  emergencyPages.set(window, { url, busy: false })
+  emergencyPages.set(window, { url, message, busy: false })
   await window.loadURL(url)
-}
-
-function logDesktopError(label: string, error: unknown): boolean {
-  console.error(label, error)
-  try {
-    const logs = app.getPath('logs')
-    mkdirSync(logs, { recursive: true })
-    appendFileSync(join(logs, DESKTOP_LOG_FILE),
-      `${new Date().toISOString()} ${label}\n${inspect(error, { depth: null })}\n\n`)
-    return true
-  } catch (writeError) {
-    console.error('Desktop log write failed', writeError)
-    return false
-  }
 }
 
 protocol.registerSchemesAsPrivileged([{
@@ -84,6 +60,9 @@ protocol.registerSchemesAsPrivileged([{
     stream: true,
     codeCache: true,
   },
+}, {
+  scheme: 'rsh-webview',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, allowServiceWorkers: true },
 }])
 
 const MIME: Readonly<Record<string, string>> = {
@@ -163,11 +142,7 @@ function createWindow(preload: string, show = false): BrowserWindow {
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
-      const logged = logDesktopError('Desktop recovery failed', error)
-      const failure = desktopErrorState(error)
-      if (!window.isDestroyed()) await showEmergencyDocument(window, {
-        ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
-      })
+      if (!window.isDestroyed()) await showEmergencyDocument(window, `${page.message}\n${desktopErrorState(error).message}`)
     }).catch((error: unknown) => { console.error(error) }).finally(() => { page.busy = false })
   })
   return window
@@ -180,11 +155,6 @@ function assertDesktopSender(event: IpcMainInvokeEvent, hostnames: readonly stri
   if (url.protocol !== `${SCHEME}:` || !hostnames.includes(url.hostname)) {
     throw new Error('dsh desktop: rejected IPC from an unowned renderer')
   }
-}
-
-function isNativeDesktopPayload(value: unknown): boolean {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    && Object.hasOwn(value, 'runtime')
 }
 
 async function serveShellAsset(request: Request): Promise<Response> {
@@ -209,10 +179,6 @@ async function serveShellAsset(request: Request): Promise<Response> {
 
 async function main(): Promise<void> {
   const resources = runtimeResources()
-  // Template resolution defaults to this module's own package, which the bundle replaces with the
-  // Desktop application; name the installed CLI so the composition builders read its manifest.
-  // `resources.dsh` is the runtime root, so the CLI package sits one node_modules level below it.
-  setCliPackageRoot(join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh'))
   const paths = resolveDesktopPaths()
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile
@@ -221,31 +187,38 @@ async function main(): Promise<void> {
   let pageError: Extract<DesktopBackendState, { phase: 'error' }> | undefined
   let quitting = false
   let startup: Promise<void> | undefined
-  let nativeMutationPromise: Promise<unknown> | undefined
-  let quitReady = false
-  let ordinaryQuitRequested = false
   let mainWindow: BrowserWindow | undefined
   let pluginWindow: BrowserWindow | undefined
   let shellInstallerOwnsQuit = false
   let updateState: DesktopUpdateState = { phase: 'idle' }
   const locale = resolveDesktopLocale(app.getLocale())
   const messages = locale.messages
-  const logPath = join(app.getPath('logs'), DESKTOP_LOG_FILE)
-  const updateErrorDetails = (state: Extract<DesktopUpdateState, { phase: 'error' }>) => {
-    const errorTypes = {
-      AggregateError: messages.startupTypeAggregateError,
-      Error: messages.startupTypeError,
-      RangeError: messages.startupTypeRangeError,
-      SyntaxError: messages.startupTypeSyntaxError,
-      TypeError: messages.startupTypeTypeError,
-      UnknownError: messages.startupTypeUnknownError,
-      ValidationError: messages.startupTypeValidationError,
-    } satisfies Record<typeof state.errorType, string>
-    return {
-      message: formatDesktopMessage(messages.startupErrorType, { type: errorTypes[state.errorType] }),
-      detail: state.logPath === undefined ? messages.startupErrorLogAdvice
-        : formatDesktopMessage(messages.startupErrorLogWritten, { path: state.logPath }),
+  let ide: DesktopIdeWindow | undefined
+  let restoration: ReturnType<typeof Promise.withResolvers<void>> | undefined
+  const restoreConversation = async (value: IdeHandoff): Promise<void> => {
+    const contents = mainWindow?.webContents
+    if (contents === undefined || contents.isDestroyed()) throw new Error(messages.ideServerStopped)
+    const pending = Promise.withResolvers<void>()
+    restoration = pending
+    const destroyed = (): void => { pending.reject(new Error(messages.ideServerStopped)) }
+    contents.once('destroyed', destroyed)
+    contents.send(DESKTOP_IPC.ideRestore, value)
+    try { await pending.promise } finally {
+      contents.removeListener('destroyed', destroyed)
+      restoration = undefined
     }
+  }
+  const openIde = async (target?: IdeHandoff): Promise<void> => {
+    if (profileDirectoryRuntime(activeProject) === 'native') throw new Error(messages.ideProfileUnsupported)
+    ide ??= new DesktopIdeWindow(resources.node,
+      development === undefined ? join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh') : join(app.getAppPath(), '..', 'CLI'),
+      resolve(paths.root, '..'), messages, (request) => {
+        const active = backend.host
+        if (active === undefined) return Promise.resolve(new Response('backend unavailable', { status: 503 }))
+        return active.fetch(request)
+      }, restoreConversation)
+    focusPrimaryWindow()
+    if (mainWindow !== undefined) await ide.open(mainWindow, target)
   }
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const managementPreload = fileURLToPath(new URL('./preload.cjs', import.meta.url))
@@ -261,10 +234,9 @@ async function main(): Promise<void> {
     emergencyDocument = true
     petUpdatesAllowed = false
     desktopPet.close()
-    const logged = logDesktopError('Desktop emergency startup failed', error)
-    const failure = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
-    pageError = failure
-    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, failure)
+    const diagnostic = desktopErrorState(error).message
+    pageError = { phase: 'error', message: diagnostic }
+    if (mainWindow !== undefined) await showEmergencyDocument(mainWindow, diagnostic)
   }
 
   const navigateMain = (url: string): Promise<void> => {
@@ -299,7 +271,7 @@ async function main(): Promise<void> {
     const hostInspectPort = developmentHostInspectPort(development !== undefined)
     const host = new DesktopHostProcess(resources.node, development ?? resources.dsh, activeProject,
       hostInspectPort, desktopHostEnvironment(app.isPackaged && process.platform === 'win32'
-        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure, logDesktopError)
+        ? join(process.resourcesPath, 'runtime', 'bash', 'usr', 'bin') : undefined, process.env), onFailure)
     return {
       start: () => host.start(),
       stop: () => host.stop(),
@@ -309,7 +281,7 @@ async function main(): Promise<void> {
     if (state.phase === 'starting' && !emergencyDocument) pageError = undefined
     publishBackend(backendState())
     if (state.phase === 'error') void navigateMain(startupUrl).catch((error: unknown) => { console.error(error) })
-  }, (label, error) => logDesktopError(label, error) ? logPath : undefined)
+  })
 
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateState = state
@@ -321,10 +293,7 @@ async function main(): Promise<void> {
 
   const hooks: DesktopProjectHooks = {
     beforeChange: () => backend.stop(),
-    afterChange: async () => {
-      if (quitting || shellInstallerOwnsQuit) throw new Error('desktop backend shutdown has started')
-      await backend.start(async () => {})
-    },
+    afterChange: () => backend.start(async () => {}),
   }
 
   recoverApplication = async (action): Promise<void> => {
@@ -347,8 +316,7 @@ async function main(): Promise<void> {
 
   const showStartupError = async (error: unknown): Promise<void> => {
     if (quitting) return
-    const logged = logDesktopError('Desktop startup failed', error)
-    pageError = { ...desktopErrorState(error), ...(logged ? { logPath } : {}) }
+    pageError = desktopErrorState(error)
     try { await navigateMain(startupUrl) }
     catch (navigationError) {
       await showEmergencyError(new AggregateError([error, navigationError], messages.startupFailed))
@@ -376,40 +344,8 @@ async function main(): Promise<void> {
     publishUpdate,
     async () => {
       shellInstallerOwnsQuit = true
-      try {
-        await backend.stop()
-        await nativeMutationPromise?.catch(() => undefined)
-        quitReady = true
-      } catch (error) {
-        shellInstallerOwnsQuit = false
-        throw error
-      }
+      await backend.stop()
     },
-    async () => {
-      shellInstallerOwnsQuit = false
-      quitReady = false
-      if (ordinaryQuitRequested) {
-        quitting = true
-        desktopPet.close()
-        try {
-          try { await backend.close() }
-          finally { await nativeMutationPromise?.catch(() => undefined) }
-        }
-        catch (error) { console.error(error) }
-        quitReady = true
-        app.quit()
-        return
-      }
-      if (startup !== undefined) {
-        try { await startup }
-        catch { /* reconcileBackend retries the failed or cancelled startup below. */ }
-      }
-      try { await reconcileBackend() }
-      catch { /* reconcileBackend already showed a Host startup failure. */ }
-    },
-    undefined,
-    undefined,
-    (label, error) => logDesktopError(label, error) ? logPath : undefined,
   )
 
   protocol.handle(SCHEME, (request) => {
@@ -441,69 +377,31 @@ async function main(): Promise<void> {
       await manager.mutate(mutation, hooks)
       await navigateMain(applicationUrl)
     } catch (error) {
-      try { await showStartupError(error) }
-      catch (failure) { console.error(failure) }
-      throw new Error(messages.startupFailed)
+      await showStartupError(error)
+      throw error
     }
-  }
-  const nativeList = async (event: IpcMainInvokeEvent, payload: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (development !== undefined) return manager.refuseNativeList('wrong-profile', backendState())
-    try { parseNativeDesktopListRequest(payload) }
-    catch { return manager.refuseNativeList('invalid-request', backendState()) }
-    await startup?.catch(() => undefined)
-    if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeList('wrong-profile', backendState())
-    return manager.listNativeModules(backendState)
-  }
-  const nativeMutation = (
-    event: IpcMainInvokeEvent,
-    parse: () => Parameters<DesktopProjectManager['mutateNativeModules']>[0],
-  ): Promise<unknown> => {
-    assertDesktopSender(event, ['shell'])
-    if (quitting || shellInstallerOwnsQuit) return Promise.resolve(manager.refuseNativeMutation('busy', backendState()))
-    if (development !== undefined) {
-      return Promise.resolve(manager.refuseNativeMutation('wrong-profile', backendState()))
-    }
-    let mutation: Parameters<DesktopProjectManager['mutateNativeModules']>[0]
-    try { mutation = parse() }
-    catch { return Promise.resolve(manager.refuseNativeMutation('invalid-request', backendState())) }
-    if (nativeMutationPromise !== undefined) {
-      return Promise.resolve(manager.refuseNativeMutation('busy', backendState()))
-    }
-    const operation = (async () => {
-      await startup?.catch(() => undefined)
-      // A quit or update can begin while the initial backend startup is pending.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (quitting || shellInstallerOwnsQuit) return manager.refuseNativeMutation('busy', backendState())
-      if (!manager.supportsNativeModuleManagement()) return manager.refuseNativeMutation('wrong-profile', backendState())
-      const nativeHooks: DesktopProjectHooks = {
-        beforeChange: async () => {
-          await navigateMain(startupUrl)
-          await hooks.beforeChange()
-        },
-        afterChange: () => hooks.afterChange(),
-      }
-      const outcome = await manager.mutateNativeModules(mutation, nativeHooks, backendState)
-      // The updater can claim quit while this manager promise is pending.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (outcome.status === 'recovery-required' && backendState().phase !== 'error' && !shellInstallerOwnsQuit) {
-        await showStartupError(new Error(messages.nativeRecoveryError))
-      } else if (outcome.status === 'applied' || ('error' in outcome && outcome.error.backend.phase === 'ready')) {
-        try { await navigateMain(applicationUrl) }
-        catch (error) { await showStartupError(error) }
-      }
-      return outcome
-    })()
-    nativeMutationPromise = operation
-    const clearMutation = (): void => {
-      if (nativeMutationPromise === operation) nativeMutationPromise = undefined
-    }
-    void operation.then(clearMutation, clearMutation)
-    return operation
   }
   ipcMain.handle(DESKTOP_IPC.localeGet, (event) => {
     assertDesktopSender(event, ['shell'])
     return locale
+  })
+  ipcMain.handle(DESKTOP_IPC.ideOpen, (event, value: unknown) => {
+    assertDesktopSender(event, ['app'])
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('Desktop IDE requests require the primary application frame')
+    }
+    return openIde(parseIdeHandoff(value))
+  })
+  ipcMain.handle(DESKTOP_IPC.ideRestored, (event, value: unknown) => {
+    assertDesktopSender(event, ['app'])
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('Desktop IDE restoration requires the primary application frame')
+    }
+    if (typeof value !== 'object' || value === null || !('ok' in value) || typeof value.ok !== 'boolean') {
+      throw new Error('Invalid desktop IDE restoration result')
+    }
+    if (value.ok) restoration?.resolve()
+    else restoration?.reject(new Error('message' in value && typeof value.message === 'string' ? value.message : messages.ideFailed))
   })
   ipcMain.handle(DESKTOP_IPC.petUpdate, (event, value: unknown) => {
     assertDesktopSender(event, ['app'])
@@ -534,61 +432,38 @@ async function main(): Promise<void> {
       BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({ color: background, symbolColor: foreground })
     }
   })
-  ipcMain.handle(DESKTOP_IPC.pluginsList, (event, payload?: unknown) => {
+  ipcMain.handle(DESKTOP_IPC.pluginsList, (event) => {
     assertDesktopSender(event, ['shell'])
-    if (payload !== undefined) return nativeList(event, payload)
     if (development !== undefined) return []
     if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     return manager.listPlugins()
   })
   ipcMain.handle(DESKTOP_IPC.pluginsAdd, (event, spec: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(spec)) {
-      return nativeMutation(event, () => ({ type: 'install', request: parseNativeDesktopInstallRequest(spec) }))
-    }
     if (typeof spec !== 'string') throw new Error('dsh desktop: plugin spec must be a string')
     return mutate(event, { type: 'plugin-add', spec })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsRemove, (event, name: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'remove', request: parseNativeDesktopPackageRequest(name) }))
-    }
     if (typeof name !== 'string') throw new Error('dsh desktop: plugin name must be a string')
     return mutate(event, { type: 'plugin-remove', name })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsUpdate, (event, name: unknown, version: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'update', request: parseNativeDesktopUpdateRequest(name) }))
-    }
     if (typeof name !== 'string' || typeof version !== 'string') {
       throw new Error('dsh desktop: plugin name and version must be strings')
     }
     return mutate(event, { type: 'plugin-update', name, version })
   })
   ipcMain.handle(DESKTOP_IPC.pluginsToggle, (event, name: unknown, enabled: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (enabled === undefined && isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'toggle', request: parseNativeDesktopToggleRequest(name) }))
-    }
     if (typeof name !== 'string' || typeof enabled !== 'boolean') throw new Error('dsh desktop: invalid plugin activation request')
     return mutate(event, { type: 'plugin-toggle', name, enabled })
   })
-  ipcMain.handle(DESKTOP_IPC.pluginsDisableAll, (event, payload?: unknown) => {
-    assertDesktopSender(event, ['shell'])
-    if (payload !== undefined) {
-      return nativeMutation(event, () => ({ type: 'disable-all', request: parseNativeDesktopMutationRequest(payload) }))
-    }
-    return mutate(event, { type: 'plugins-disable-all' })
-  })
+  ipcMain.handle(DESKTOP_IPC.pluginsDisableAll, event => mutate(event, { type: 'plugins-disable-all' }))
   ipcMain.handle(DESKTOP_IPC.backendStatus, (event) => {
     assertDesktopSender(event, ['shell'])
     return backendState()
   })
   ipcMain.handle(DESKTOP_IPC.backendRetry, async (event) => {
     assertDesktopSender(event, ['shell'])
-    try { await reconcileBackend() } catch { return }
+    await reconcileBackend()
     focusPrimaryWindow()
   })
   ipcMain.handle(DESKTOP_IPC.applicationRestart, async (event) => {
@@ -629,7 +504,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'error',
           title: messages.updateCheckFailedTitle,
-          ...updateErrorDetails(state),
+          message: state.message ?? messages.unknownError,
         })
       }
       return
@@ -639,7 +514,7 @@ async function main(): Promise<void> {
         await dialog.showMessageBox({
           type: 'info',
           title: messages.updateCheckTitle,
-          message: messages.updateCurrent,
+          message: state.message ?? messages.updateCurrent,
         })
       }
       return
@@ -648,7 +523,7 @@ async function main(): Promise<void> {
       type: 'info',
       title: messages.updateTitle,
       message: messages.updateAvailable,
-      detail: formatDesktopMessage(messages.updateDetail, { version: state.version }),
+      detail: formatDesktopMessage(messages.updateDetail, { version: state.version ?? '' }),
       buttons: [messages.installAndRestart, messages.later],
       defaultId: 0,
       cancelId: 1,
@@ -659,13 +534,13 @@ async function main(): Promise<void> {
       await dialog.showMessageBox({
         type: 'error',
         title: messages.updateFailedTitle,
-        ...updateErrorDetails(installed),
+        message: installed.message ?? messages.unknownError,
       })
     }
   }
 
   const openPluginWindow = (): void => {
-    if (!manager.supportsLegacyPluginManagement() && !manager.supportsNativeModuleManagement()) {
+    if (!manager.supportsLegacyPluginManagement()) {
       void dialog.showMessageBox({ type: 'info', title: messages.pluginWindowTitle, message: messages.nativePluginManagementUnavailable })
         .catch((error: unknown) => { console.error(error) })
       return
@@ -685,6 +560,11 @@ async function main(): Promise<void> {
   Menu.setApplicationMenu(Menu.buildFromTemplate([{
     label: process.platform === 'darwin' ? app.name : messages.application,
     submenu: [
+      { label: messages.ideMenu, accelerator: 'CmdOrCtrl+Alt+I', click: () => {
+        void openIde().catch((error: unknown) => {
+          dialog.showErrorBox(messages.ideFailed, error instanceof Error ? error.message : messages.unknownError)
+        })
+      } },
       {
         label: development === undefined ? messages.pluginsMenu : messages.pluginsMenuPackagedOnly,
         accelerator: 'CmdOrCtrl+,',
@@ -743,22 +623,15 @@ async function main(): Promise<void> {
     if (process.platform !== 'darwin') app.quit()
   })
   app.on('before-quit', (event) => {
-    if (quitReady) return
+    if (shellInstallerOwnsQuit || quitting) return
     event.preventDefault()
-    if (shellInstallerOwnsQuit) {
-      ordinaryQuitRequested = true
-      return
-    }
-    if (quitting) return
     quitting = true
-    desktopPet.close()
     void (async () => {
-      try { await backend.close() }
-      finally { await nativeMutationPromise?.catch(() => undefined) }
-    })().catch((error: unknown) => { console.error(error) }).finally(() => {
-      quitReady = true
+      if (ide !== undefined && !await ide.requestClose()) { quitting = false; return }
+      desktopPet.close()
+      await backend.close()
       app.quit()
-    })
+    })().catch((error: unknown) => { quitting = false; console.error(error) })
   })
 
   mainWindow = createMainWindow()
@@ -777,17 +650,15 @@ async function main(): Promise<void> {
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
-  const logged = logDesktopError('Desktop initialization failed', error)
+  const message = error instanceof Error ? error.message : String(error)
+  console.error(error)
   const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
-    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
+    await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? message : message}\n`).catch(() => undefined)
   }
   const window = BrowserWindow.getAllWindows()[0] ?? createWindow(fileURLToPath(new URL('./preload-app.cjs', import.meta.url)), true)
   window.once('closed', () => { app.quit() })
-  const failure = desktopErrorState(error)
-  await showEmergencyDocument(window, {
-    ...failure, ...(logged ? { logPath: join(app.getPath('logs'), DESKTOP_LOG_FILE) } : {}),
-  })
+  await showEmergencyDocument(window, message)
 }).catch((error: unknown) => {
   console.error(error)
   app.exit(1)

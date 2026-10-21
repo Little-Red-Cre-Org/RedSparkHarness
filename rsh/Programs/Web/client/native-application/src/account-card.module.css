@@ -1,22 +1,44 @@
-.identityText {
-  min-width: 0;
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
 }
 
-.identityTitle {
+.header,
+.identity,
+.actions,
+.quotaHeading {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.identity {
+  min-width: 0;
+  gap: 12px;
+}
+
+.identity h3,
+.identity p,
+.quotaWindow p {
   margin: 0;
 }
 
-.accountDetails {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+.identity p {
   overflow-wrap: anywhere;
+  color: var(--dsw-alias-label-secondary);
 }
 
 .avatar {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
   flex: none;
   border-radius: 50%;
   corner-shape: round;
@@ -24,16 +46,20 @@
   object-fit: cover;
 }
 
+.actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .quotas {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .balances {
   display: grid;
-  gap: 6px;
-  font-size: 13px;
-  line-height: 18px;
+  gap: 10px;
 }
 
 .balanceRow,
@@ -54,57 +80,20 @@
 
 .quotaWindow {
   display: grid;
-  gap: 4px;
-  font-size: 13px;
-  line-height: 18px;
+  gap: 6px;
 }
 
 .quotaHeading {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
 .quotaWindow progress {
-  box-sizing: border-box;
   width: 100%;
-  height: 4px;
-  appearance: none;
-  border: 0;
-  border-radius: 2px;
-  corner-shape: round;
-  background-color: var(--dsw-alias-interactive-bg-hover);
+  accent-color: var(--dsw-alias-brand-primary);
 }
 
-.quotaWindow progress::-webkit-progress-bar {
-  border-radius: 2px;
-  corner-shape: round;
-  background-color: var(--dsw-alias-interactive-bg-hover);
-}
-
-.quotaWindow progress::-webkit-progress-value {
-  border-radius: 2px;
-  corner-shape: round;
-  background-color: var(--dsw-alias-brand-primary);
-}
-
-.quotaWindow progress::-moz-progress-bar {
-  border-radius: 2px;
-  corner-shape: round;
-  background-color: var(--dsw-alias-brand-primary);
-}
-
-.quotaWindow p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-secondary);
-}
-
+.quotaWindow p,
 .credits {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
   color: var(--dsw-alias-label-secondary);
 }

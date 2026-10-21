@@ -1,6 +1,5 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   collectNativeEntryAliases,
@@ -134,7 +133,6 @@ describe('generated tsconfig package aliases', () => {
     const config = readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8')
     const nativeAliases = collectNativeExportAliases(root)
     expect(nativeAliases.size).toBeGreaterThan(20)
-    expect(nativeAliases.has('@deepseek-ai/dsh-native-sdk-server/native')).toBe(true)
     expect(uncoveredNativeAliases(nativeAliases, mappedPathAliases(config))).toEqual([])
     expect(uncoveredNativeAliases(
       new Map([['@deepseek-ai/dsh-native-probe/native', './rsh/Engine/probe/src']]),
@@ -142,38 +140,6 @@ describe('generated tsconfig package aliases', () => {
     )).toEqual([
       '@deepseek-ai/dsh-native-probe/native -> source under ./rsh/Engine/probe/src (found ./rsh/Engine/probe/lib/native.js)',
     ])
-  })
-
-  it('ignores nested deployment manifests but rejects workspace native exports without source', () => {
-    const fixtureRoot = mkdtempSync(join(tmpdir(), 'dsh-native-export-alias-'))
-    const workspaceDir = join(fixtureRoot, 'rsh/Programs/SDK/packages/native-probe')
-    const artifactDir = join(
-      fixtureRoot,
-      'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/node_modules/@deepseek-ai/dsh-agent-instructions',
-    )
-    try {
-      mkdirSync(join(workspaceDir, 'src'), { recursive: true })
-      writeFileSync(join(workspaceDir, 'package.json'), JSON.stringify({
-        name: '@deepseek-ai/dsh-native-probe',
-        exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-      }))
-      mkdirSync(artifactDir, { recursive: true })
-      writeFileSync(join(artifactDir, 'package.json'), JSON.stringify({
-        name: '@deepseek-ai/dsh-agent-instructions',
-        exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-      }))
-
-      expect([...collectNativeExportAliases(fixtureRoot)]).toEqual([
-        ['@deepseek-ai/dsh-native-probe/native', './rsh/Programs/SDK/packages/native-probe/src'],
-      ])
-
-      rmSync(join(workspaceDir, 'src'), { recursive: true })
-      expect(() => collectNativeExportAliases(fixtureRoot)).toThrow(
-        /native-probe[\\/]package\.json has no src directory/,
-      )
-    } finally {
-      rmSync(fixtureRoot, { recursive: true, force: true })
-    }
   })
 
   it('leaves no wildcard that probes every package group', () => {

@@ -29,9 +29,9 @@ VFS 镜像打包器：把一份合成 profile 变成浏览器 worker 挂载为�
 
 1. **Roster**——合成 profile 的插件行（标准 YAML 解析、Include 方言、`!!js` 原样保留），加上 CLI（命令行界面）在 `package.json` `dsh.configTrees` 里声明的每棵配置树（agent（智能体） presets）的行，按 Node 式依赖闭包物化。外部 peer 边绝不会绑定到 worker，workspace peer 保留在链上。
 2. **发布视图**——每个 workspace 或 vendored 包贡献其构建后的 npm 切片（`files` 走 picomatch），不带源码和 workspace `dist/`。外部包的 `main` 或 `exports` 可能指向 `src/` 或 `dist/`，因此两处发布 JavaScript 都会保留，只应用通用的测试、map、声明与归档排除规则。
-3. **可达性 sweep**——用运行时加载器自己的解析，从全部 workspace 运行时导出面加 worker 装配种子（`IMAGE_ENTRY_SEEDS`）出发，打包时把每个可达模块转换为符合包装层约定的形式。仅类型和样式表导出不会成为 JavaScript 加载器入口；运行时目标缺失或不受支持仍会让打包失败。该转换会报告名称可静态确定的 import、re-export 与动态 import、经 `require` 发起的调用，以及通过 `node:module` 或 `module` 具名导入（含导入别名）在模块作用域直接发起的 `createRequire(import.meta.url)('pkg')` 调用。大多数页面资产（`./client` 导出背后的 `lib/client.js`）原样直发；共享 HTTP 路由 renderer 属于 worker 代码，会被转换；自家代码的不可解析请求会让打包失败，第三方不可解析请求则允许延后到 require 时明确失败。
+3. **可达性 sweep**——用运行时加载器自己的解析，从全部 workspace 导出面加 worker 装配种子（`IMAGE_ENTRY_SEEDS`）出发，打包时把每个可达模块转换为符合包装层约定的形式。该转换会报告名称可静态确定的 import、re-export 与动态 import、经 `require` 发起的调用，以及通过 `node:module` 或 `module` 具名导入（含导入别名）在模块作用域直接发起的 `createRequire(import.meta.url)('pkg')` 调用。页面资产（`./client` 导出背后的 `lib/client.js`）原样直发；自家代码的不可解析请求会让打包失败，第三方不可解析请求则允许延后到 require 时明确失败。
 
-[`repository.ts`](src/repository.ts) 负责从配置的 RSH 扫描根目录发现包，并经真实 CLI dump 路径合成 profile；`pack.ts` 通过参数接收这些输入。扫描范围包括 `rsh/Core/native/system/packages/`，使 Landlock 入口包成为普通发布视图依赖，其可执行文件仍由 Worker 平台实现。CLI 为 `dsh-pack-vfs-image --out <file> [--profile <name>] [--from-default-profile <shipped-name>]`；不传 profile 参数时，会从已发布的 `web` 模板合成私有 `preview-web` profile。可选模板参数通过 CLI 初始化一个新的兼容 profile 后再进行组合。`@deepseek-ai/dsh-web-compatibility` 使用此默认配置把 legacy 页面打包进私有 preview 镜像，并在构建壳之后运行它。
+[`repository.ts`](src/repository.ts) 负责从配置的 RSH 扫描根目录发现包，并经真实 CLI dump 路径合成 profile；`pack.ts` 通过参数接收这些输入。扫描范围包括 `rsh/Core/native/system/packages/`，使 Landlock 入口包成为普通发布视图依赖，其可执行文件仍由 Worker 平台实现。CLI 为 `dsh-pack-vfs-image --out <file> [--profile web]`；`rsh/Programs/Web/application` 的 `build:preview` 在预览壳构建后运行它。
 
 仓库适配器还声明 `webworker-runtime/tests/fixtures/` 下仅用于 preview 的 fixture（测试前置数据） tree。CLI 会把每套具名 fixture 打成一份独立的确定性 overlay 归档，并写出浏览器可读的 manifest（元数据清单）。Overlay 文件绕过 npm 发布视图和模块可达性排除规则，因此点目录与示例源码会完整保留；其挂载位置仅限 `home/` 与 `workspace/`。`pack.ts` 把它们视为不透明字节；会话与 Workspace 的解释仍归拥有这些格式的运行时包。
 

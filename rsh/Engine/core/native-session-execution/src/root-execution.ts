@@ -9,80 +9,6 @@ import type { NativeActiveSessionOwner } from './active-session.ts'
 import type { NativeSessionConfiguration, NativeSessionTurnResult } from './index.ts'
 import type { SessionDeletionId, SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
 import type { NativeSessionOwnerApproval } from './execution-policy.ts'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { MessageId } from '@deepseek-ai/dsh-llm/native'
-
-/** Program-local identity returned for one staged file upload. */
-export type NativeStagedFileReceiptId = Branded<'NativeStagedFileReceiptId'>
-
-/** Opaque upload acknowledgement; it is not a durable attachment reference. */
-export interface NativeStagedFileReceipt {
-  readonly receiptId: NativeStagedFileReceiptId
-  readonly name: string
-  readonly bytes: number
-}
-
-/** File block admitted by this Program's receipt store. */
-export type NativeStagedFileBlock = Extract<UserMessage['content'][number], { readonly type: 'file' }>
-
-/** One initial message whose staged files retire only after the inbox event is durable. */
-export interface NativeStagedFileAdmission {
-  readonly message: UserMessage
-  /** Retire the reserved receipts after the exact message reaches the durable log. */
-  accepted(): void
-  /** Release a reservation only when failure is known to precede writer handoff. */
-  refused(): void
-  /** Quarantine an uncertain handoff; the bytes remain immutable and the caller must upload again. */
-  uncertain(): void
-}
-
-/** Shared Program-owned upload and receipt resolution for Native clients. */
-export interface NativeRootStagedFileOperations {
-  /** Store one streamed upload through the selected immutable attachment Provider.
-   * @param request - explicit Program route, existing Session identity, file chunks, and optional display name.
-   * @param signal - upload cancellation.
-   * @returns process-local receipt bound to this Program, route, and Session generation.
-   */
-  stageStream(request: {
-    readonly route: NativeRootRouteId
-    readonly id: SessionId
-    readonly data: AsyncIterable<Uint8Array>
-    readonly name?: string
-  }, signal: AbortSignal): Promise<NativeStagedFileReceipt>
-  /** Store one encoded upload through the selected immutable attachment Provider.
-   * @param request - explicit Program route, existing Session identity, canonical encoded bytes, and optional display name.
-   * @param signal - upload cancellation.
-   * @returns process-local receipt bound to this Program, route, and Session generation.
-   */
-  stageEncoded(request: {
-    readonly route: NativeRootRouteId
-    readonly id: SessionId
-    readonly data: string
-    readonly name?: string
-  }, signal: AbortSignal): Promise<NativeStagedFileReceipt>
-  /** Reserve staged files for an exact currently attached root owner.
-   * @param request - exact owner, selected receipts, cancellation, and ordered message builder.
-   * @returns a message lease whose settlement is controlled by the durable Session admission path.
-   */
-  prepare(request: {
-    readonly owner: NativeActiveSessionOwner
-    readonly receiptIds: readonly NativeStagedFileReceiptId[]
-    readonly signal: AbortSignal
-    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
-  }): NativeStagedFileAdmission
-  /** Resolve and durably enqueue staged files through the existing owner and inbox writer.
-   * @param request - exact owner, selected receipts, destination, wake policy, cancellation, and ordered message builder.
-   * @returns the message identity after durable admission.
-   */
-  enqueue(request: {
-    readonly owner: NativeActiveSessionOwner
-    readonly receiptIds: readonly NativeStagedFileReceiptId[]
-    readonly target: 'next-turn' | 'next-step'
-    readonly wake: boolean
-    readonly signal: AbortSignal
-    readonly createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
-  }): Promise<MessageId>
-}
 
 /** Route-authorized recoverable storage mutations; no Agent or writer is created. */
 export interface NativeRootSessionDeletionOperations {
@@ -155,8 +81,6 @@ export interface NativeRootForkRequest {
 
 /** Program-level capability; Providers reuse their existing root executor and writer ownership. */
 export interface NativeRootExecutionOperations {
-  /** Upload and resolve process-local file receipts through the selected Program's attachment Provider. */
-  readonly stagedFiles: NativeRootStagedFileOperations
   /** Available only when the selected persistence Provider supplies recoverable deletion. */
   readonly deletions?: NativeRootSessionDeletionOperations
   /**
@@ -177,28 +101,20 @@ export interface NativeRootExecutionOperations {
    */
   workspaceRoutes(): readonly Readonly<NativeRootRoute>[]
   /**
-   * Select an existing registered Workspace under the Program's path admission.
-   * @param request - Workspace identity and optional `trusted` approval to bypass `allowedRoots`; system directories stay forbidden.
+   * Select an existing registered Workspace under the Program's explicit directory and policy admission.
+   * @param request - configured base route and branded Workspace identity; arbitrary cwd is not accepted.
    * @param signal - caller cancellation combined with Program lifetime.
    * @returns immutable route after canonical directory, policy and capacity validation.
    */
-  selectWorkspace(request: {
-    readonly baseRoute: NativeRootRouteId
-    readonly workspaceId: WorkspaceId
-    readonly trusted?: boolean
-  },
+  selectWorkspace(request: { readonly baseRoute: NativeRootRouteId; readonly workspaceId: WorkspaceId },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
-   * Create or reuse an existing directory as a Workspace after the selected Program's route admission.
-   * @param request - absolute path and optional `trusted` approval to bypass `allowedRoots`; system directories stay forbidden.
+   * Create or reuse an existing directory as a Workspace after the selected Program's route policy admits its canonical path.
+   * @param request - configured base route and absolute existing directory; arbitrary paths outside route policy are rejected.
    * @param signal - caller cancellation composed with Program lifetime.
    * @returns immutable admitted route after Workspace registration and filesystem identity checks.
    */
-  createWorkspaceRoute?(request: {
-    readonly baseRoute: NativeRootRouteId
-    readonly path: string
-    readonly trusted?: boolean
-  },
+  createWorkspaceRoute?(request: { readonly baseRoute: NativeRootRouteId; readonly path: string },
     signal: AbortSignal): Promise<Readonly<NativeRootRoute>>
   /**
    * Retire idle unowned root Agents before withdrawing the dynamic route. Active ownership and pending admissions block release;

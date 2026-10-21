@@ -2,6 +2,11 @@ import { defineConfig } from 'tsdown'
 
 export default defineConfig([
   {
+    entry: { 'ide-extension': 'lib/types/ide-extension.js' }, outDir: 'lib',
+    format: ['cjs'], platform: 'node', target: 'es2024', fixedExtension: false,
+    dts: false, clean: false, deps: { neverBundle: ['vscode'] },
+  },
+  {
     entry: ['lib/types/main.js'],
     outDir: 'lib',
     format: ['esm'],
@@ -11,16 +16,6 @@ export default defineConfig([
     dts: false,
     clean: false,
     deps: { neverBundle: ['electron'] },
-  },
-  {
-    entry: ['lib/types/native-host-preflight-worker.js'],
-    outDir: 'lib',
-    format: ['esm'],
-    platform: 'node',
-    target: 'es2024',
-    fixedExtension: false,
-    dts: false,
-    clean: false,
   },
   ...(['preload', 'preload-app', 'preload-pet'] as const).map(name => ({
     // Sandboxed Electron preloads run as CommonJS even though the application package is ESM.

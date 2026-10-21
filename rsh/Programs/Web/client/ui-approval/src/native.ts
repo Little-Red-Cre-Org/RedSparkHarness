@@ -6,7 +6,7 @@ import { ApprovalCard } from './ApprovalCard.tsx'
 import { en, zh, type ApprovalKey } from './client/locales.ts'
 
 /** Render the shared approval card from Native prompt fields.
- * @param props - approval request, locale and available answer callbacks.
+ * @param props - approval request, locale and one-shot answer callback.
  * @returns the localized approval card.
  */
 export function NativeApprovalCard(props: {
@@ -16,7 +16,6 @@ export function NativeApprovalCard(props: {
   readonly disabled: boolean
   readonly locale: 'en' | 'zh'
   readonly onAnswer: (outcome: 'allowed-once' | 'rejected') => void
-  readonly onAllowSession?: (() => void) | undefined
 }): ReactElement {
   const { locale, ...card } = props
   const dictionary: Record<string, string> = locale === 'zh'

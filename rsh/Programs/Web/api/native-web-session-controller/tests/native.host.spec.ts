@@ -22,7 +22,7 @@ import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/na
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { NativeAgentId, type NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeApprovalAnswerer, NativeApprovalAnswererRequest, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -34,9 +34,8 @@ import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
 import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mode/src/native.ts'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
-import { LlmError, ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
+import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
@@ -44,7 +43,7 @@ import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/na
 import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
-import { createNativeSessionClient, nativeSubmissionRequestId, type NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
@@ -56,239 +55,7 @@ import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
 import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
-import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig, type NativeWebSelectionProviders } from '../src/native.ts'
-
-type DetachedTurnRequest = Parameters<NativeHeadlessApplication['executeRootTurn']>[0]
-type DetachedTurnResult = Awaited<ReturnType<NativeHeadlessApplication['executeRootTurn']>>
-
-function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: AbortSignal,
-  owner: NativeActiveSessionOwner) => Promise<DetachedTurnResult>) {
-  const id = SessionId('detached-turn-session')
-  const events: SessionEvent[] = [
-    { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
-  ]
-  const owner = {
-    agent: {}, session: { id, header: { id, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false } },
-    invocation: 'root', writerAvailable: true, readEvents: async () => events, onEvent: () => () => {},
-  } as unknown as NativeActiveSessionOwner
-  const active = {
-    owners: () => [owner], owner: () => owner, onAttached: () => () => {}, onDetached: () => () => {},
-  } as unknown as NativeActiveSessionOperations
-  const executor = {
-    rootExecution: { capture: () => ({ id: 'detached-turn-route' }) },
-    async executeRootTurn(request: DetachedTurnRequest, signal: AbortSignal) {
-      await request.onBaseline?.(owner, signal)
-      return execute(request, signal, owner)
-    },
-    dispose: async () => {},
-  } as unknown as NativeHeadlessApplication
-  const lifetime = new AbortController()
-  const service = new NativeWebSessionService(executor,
-    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-      maxSteps: 1, builtinTools: false, maxPendingRequests: 4, maxHistoryEvents: 10, maxPromptChars: 100,
-      maxFollowBufferBytes: 100_000, maxFollowers: 4, maxPendingHumanRequests: 2 }), lifetime.signal)
-  const answerers: NativeApprovalAnswerer[] = []
-  const disposers: (() => void)[] = []
-  const approvals = {
-    registerAnswerer(answerer: NativeApprovalAnswerer) {
-      answerers.push(answerer)
-      return () => { answerers.splice(answerers.indexOf(answerer), 1) }
-    },
-  } as unknown as NativeApprovalServiceDefinition
-  const context = ({ own: (dispose: () => void) => { disposers.push(dispose) }, scope: {} }) as unknown as Parameters<NativeWebSessionService['bindHuman']>[0]
-  service.bindHuman(context, approvals)
-  const rpc: ClientConnectionRpc = {
-    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime.signal),
-    response: (_target, endpoint, payload, signal) => {
-      if (endpoint !== 'native-session/follow') throw new Error(`unexpected response endpoint ${endpoint}`)
-      return service.follow(new Request('http://localhost/api/native-session/follow', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal,
-      }))
-    },
-  }
-  const clients = [0, 1].map(() => createNativeSessionClient(rpc, { maxFollowBufferChars: 100_000 }))
-  return {
-    id, owner, answerers, clients, service,
-    async close() {
-      await Promise.all(clients.map(client => client.close()))
-      for (const dispose of disposers) dispose()
-      await service.close()
-    },
-  }
-}
-
-it('keeps a detached turn running and accepts the next prompt after it settles', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const firstCompletion = Promise.withResolvers<DetachedTurnResult>()
-  let executionCount = 0
-  let turnSignal: AbortSignal | undefined
-  const fixture = detachedTurnFixture(async (_request, signal) => {
-    executionCount++
-    if (executionCount === 1) {
-      turnSignal = signal
-      started.resolve(undefined)
-      return firstCompletion.promise
-    }
-    return { exitCode: 0, answer: 'second prompt' }
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    expect(turnSignal?.aborted).toBe(false)
-    firstCompletion.resolve({ exitCode: 0, answer: 'first prompt' })
-    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' }) })
-    await expect(fixture.clients[0]!.prompt(fixture.id, 'second prompt', true, undefined,
-      () => {}, undefined, undefined, SessionSeq(0))).resolves.toEqual({ exitCode: 0, answer: 'second prompt' })
-    expect(executionCount).toBe(2)
-  } finally {
-    firstCompletion.resolve({ exitCode: 130, answer: '' })
-    await fixture.close()
-  }
-})
-
-it('keeps settlement for an attach after a page disconnect when the turn settles before the new await', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const completion = Promise.withResolvers<DetachedTurnResult>()
-  const fixture = detachedTurnFixture(async () => {
-    started.resolve(undefined)
-    return completion.promise
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    const attached = await fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, new AbortController().signal)
-    if (!attached.ok) throw new Error(attached.error.message)
-    const { admissionId } = attached.value as { admissionId: string }
-    completion.resolve({ exitCode: 0, answer: 'settled before await' })
-    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'idle' }) })
-    await expect(fixture.service.handle('session/await', { sessionId: fixture.id, admissionId }, new AbortController().signal))
-      .resolves.toMatchObject({ ok: true, value: { exitCode: 0, answer: 'settled before await' } })
-  } finally {
-    completion.resolve({ exitCode: 130, answer: '' })
-    await fixture.close()
-  }
-})
-
-it('retires a detached turn when a replacement attach disconnects while reading history', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const completion = Promise.withResolvers<DetachedTurnResult>()
-  const fixture = detachedTurnFixture(async () => {
-    started.resolve(undefined)
-    return completion.promise
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  const history = Promise.withResolvers<readonly SessionEvent[]>()
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => history.promise)
-    const disconnect = new AbortController()
-    const attached = fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, disconnect.signal)
-    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
-    disconnect.abort()
-    completion.resolve({ exitCode: 0, answer: 'settled while attaching' })
-    history.resolve(await fixture.owner.readEvents())
-    await expect(attached).resolves.toMatchObject({ ok: false })
-    await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' })
-  } finally {
-    completion.resolve({ exitCode: 130, answer: '' })
-    history.resolve([])
-    await fixture.close()
-  }
-})
-
-it('replays a pending approval onto an attached turn feed', async () => {
-  const approvalStarted = Promise.withResolvers<undefined>()
-  let turnSignal: AbortSignal | undefined
-  const fixture = detachedTurnFixture(async (_request, signal, owner) => {
-    turnSignal = signal
-    approvalStarted.resolve(undefined)
-    const answerer = fixture.answerers[0]
-    const answer = await answerer?.({ id: 'fixture-approval' as NativeApprovalAnswererRequest['id'],
-      agent: owner.agent, toolName: 'fixture-tool', policy: 'ask', signal })
-    if (answer === undefined) throw new Error('fixture approval was not claimed')
-    return { exitCode: 0, answer: 'approved' }
-  })
-  const firstPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'approval prompt', true, undefined, (frame) => {
-    if (frame.type === 'human' && frame.prompt.kind === 'approval') firstPromptId.resolve(frame.prompt.id)
-  }, undefined, undefined, SessionSeq(0), detach.signal)
-  const attachedPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
-  let attached!: Promise<DetachedTurnResult | undefined>
-  let superseded!: Promise<DetachedTurnResult | undefined>
-  const supersededHistory = Promise.withResolvers<readonly SessionEvent[]>()
-  try {
-    await approvalStarted.promise
-    const promptId = await firstPromptId.promise
-    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => supersededHistory.promise)
-    superseded = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), () => {})
-    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
-    attached = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), (frame) => {
-      if (frame.type === 'human' && frame.prompt.kind === 'approval') attachedPromptId.resolve(frame.prompt.id)
-    })
-    const resumedPromptId = await Promise.race([
-      attachedPromptId.promise,
-      attached.then(() => { throw new Error('attached turn settled before approval replay') }),
-    ])
-    expect(resumedPromptId).toBe(promptId)
-    await expect(firstPrompt).rejects.toBeDefined()
-    expect(turnSignal?.aborted).toBe(false)
-    supersededHistory.resolve(await fixture.owner.readEvents())
-    await expect(superseded).rejects.toThrow('attach was superseded')
-    await fixture.clients[1]!.answerHuman(fixture.id, resumedPromptId, { kind: 'approval', outcome: 'allowed-once' })
-    await expect(attached).resolves.toMatchObject({ exitCode: 0, answer: 'approved' })
-  } finally {
-    detach.abort()
-    supersededHistory.resolve(await fixture.owner.readEvents())
-    await fixture.close()
-  }
-})
-
-it.each([{ namespace: 'optional-settings' }])('describes absent optional Settings without accepting writes ($namespace)', async ({ namespace }) => {
-  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
-    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1,
-    maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 })
-  const lifetime = new AbortController().signal
-  const active = {
-    onAttached: () => async () => {}, onDetached: () => async () => {}, owners: () => [],
-  } as unknown as NativeActiveSessionOperations
-  const failedSettings = { describe: () => { throw new Error('actual provider read failure') } } as unknown as NativeWebSelectionProviders['settings']
-  const services = [undefined, failedSettings].map(settings => new NativeWebSessionService(
-    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, active, config, lifetime, { settings },
-  ))
-  const clients = services.map(service => createNativeSessionClient({
-    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime),
-  }, { maxFollowBufferChars: 1000 }))
-  try {
-    await expect(clients[0]?.settingsDescribe()).resolves.toEqual({ hasDocument: false, namespaces: [],
-      limits: { maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 } })
-    await expect(clients[0]?.settingsMutate(namespace, [{ op: 'set', path: ['enabled'], value: true }], 0))
-      .rejects.toMatchObject({ code: 'native/settings' })
-    await expect(clients[0]?.settingsOpenDocument()).rejects.toMatchObject({ code: 'native/settings' })
-    await expect(clients[1]?.settingsDescribe()).rejects.toBeInstanceOf(NativeSessionRpcError)
-    await expect(clients[1]?.settingsDescribe()).rejects.toMatchObject({
-      code: 'native/settings', message: 'Settings request failed.',
-    })
-  } finally {
-    await Promise.all(clients.map(client => client.close()))
-    await Promise.all(services.map(service => service.close()))
-  }
-})
+import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 it('closes a list follower aborted while its consumer is paused at yield', async () => {
   const rpc = {
@@ -317,93 +84,8 @@ it('closes a list follower aborted while its consumer is paused at yield', async
   }
 })
 
-it('cancels and drains a stalled upload body before Native Web shutdown completes', async () => {
-  const stageStarted = Promise.withResolvers<undefined>()
-  const cancelStarted = Promise.withResolvers<undefined>()
-  const finishCancel = Promise.withResolvers<undefined>()
-  const cleanupError = new Error('request body reader cleanup failed')
-  const dispose = vi.fn(async () => undefined)
-  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
-  let bodyCanceled = false
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) { bodyController = controller },
-    cancel() { bodyCanceled = true; cancelStarted.resolve(undefined); return finishCancel.promise },
-  })
-  const executor = {
-    rootExecution: { stagedFiles: { async stageStream({ data }: { readonly data: AsyncIterable<Uint8Array> }, signal: AbortSignal) {
-      stageStarted.resolve(undefined)
-      for await (const chunk of data) expect(chunk).toBeInstanceOf(Uint8Array)
-      signal.throwIfAborted()
-      throw new Error('stalled upload unexpectedly completed')
-    } } },
-    dispose,
-  } as unknown as NativeHeadlessApplication
-  const active = { owners: () => [], onAttached: () => () => {}, onDetached: () => () => {} } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
-      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
-      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal)
-  const upload = service.uploadFile(new Request('http://localhost/api/native-session/file-upload?sessionId=stalled-upload', {
-    method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body,
-    duplex: 'half',
-  } as RequestInit & { duplex: 'half' }))
-  let closing: Promise<void> | undefined
-  let closed = false
-  try {
-    await stageStarted.promise
-    closing = service.close().then(() => { closed = true })
-    await vi.waitFor(() => { expect(bodyCanceled).toBe(true) }, { interval: 10, timeout: 1000 })
-    expect(closed).toBe(false)
-    finishCancel.reject(cleanupError)
-    const closeFailure = await closing.then(() => undefined, (error: unknown) => error)
-    expect(closeFailure).toMatchObject({ errors: [{ errors: [cleanupError] }] })
-    const response = await upload
-    expect(await response.json()).toMatchObject({ ok: false, error: { message: cleanupError.message } })
-    expect(dispose).toHaveBeenCalledOnce()
-  } finally {
-    finishCancel.resolve(undefined)
-    if (!bodyCanceled) bodyController?.close()
-    await Promise.allSettled([upload, ...(closing === undefined ? [] : [closing])])
-    await Promise.allSettled([service.close()])
-  }
-})
-
-it('waits for an owned file upload to settle when the Native Session Client closes', async () => {
-  const fetchStarted = Promise.withResolvers<undefined>()
-  const abortObserved = Promise.withResolvers<undefined>()
-  const finishFetch = Promise.withResolvers<undefined>()
-  const rpc = {
-    call: async () => ({ ok: true as const, value: {} }),
-    response: async (_base: string, _endpoint: string, _payload: unknown, signal: AbortSignal) => {
-      fetchStarted.resolve(undefined)
-      await new Promise<void>((resolve) => {
-        const abort = (): void => { abortObserved.resolve(undefined); void finishFetch.promise.then(resolve) }
-        signal.addEventListener('abort', abort, { once: true })
-        if (signal.aborted) abort()
-      })
-      return new Response(null, { status: 499 })
-    },
-  } as unknown as ClientConnectionRpc
-  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
-  const upload = client.uploadFile(SessionId('upload-close'), { data: new Blob(['staged bytes']) })
-  let closed = false
-  const closing = client.close().then(() => { closed = true })
-  try {
-    await fetchStarted.promise
-    await abortObserved.promise
-    expect(closed).toBe(false)
-    finishFetch.resolve(undefined)
-    await closing
-    await expect(upload).rejects.toThrow('native Session file upload failed with HTTP 499')
-  } finally {
-    finishFetch.resolve(undefined)
-    await Promise.allSettled([upload, closing])
-    await client.close()
-  }
-})
-
 it('includes nested AggregateError messages in native Session failures', async () => {
-  let failure: Error = new AggregateError([
+  const failure = new AggregateError([
     new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
   ], 'native-headless: turn cleanup failed')
   const active = {
@@ -422,26 +104,6 @@ it('includes nested AggregateError messages in native Session failures', async (
     await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
       ok: false,
       error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
-    })
-    failure = new LlmError('model rejected the credential', 'AUTH')
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'AUTH', message: 'model rejected the credential' },
-    })
-    failure = new AggregateError([new Error('feed closed'), new LlmError('model rejected the credential', 'AUTH')], 'feed closed; execution failed')
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'AUTH' },
-    })
-    failure = Object.assign(new Error('quota exhausted'), { name: 'LlmError', code: 'QUOTA', failure: { message: 'quota exhausted', code: 'QUOTA' } })
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'QUOTA' },
-    })
-    failure = Object.assign(new Error('storage failure'), { failure: null })
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'native/session' },
     })
   } finally {
     await service.close()
@@ -584,24 +246,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   let foreignStep = 0
   let foreignApprovals = 0
   const requests: GenerateOptions[] = []
-  const streamedFileBytes = new TextEncoder().encode('uploaded through the Native Web carrier\n')
-  let streamedUploadRequest: {
-    readonly path: string
-    readonly sessionId: string | null
-    readonly method: string | undefined
-    readonly contentType: string | null
-    readonly body: BodyInit | null | undefined
-  } | undefined
-  let streamedUploadResponseStatus: number | undefined
-  let streamedFileProjected = false
   const firstContinue = Promise.withResolvers<undefined>()
-  const racePreparation = Array.from({ length: 2 }, () => ({
-    entered: Promise.withResolvers<undefined>(), release: Promise.withResolvers<undefined>(),
-  }))
-  let racePreparationCount = 0
-  let racePreparationEnabled = false
-  const submissionUpdates: Array<{ requestId: string; status: string }> = []
-  let restoreClientPrompt: (() => void) | undefined
   const resolving = Promise.withResolvers<undefined>()
   const releaseResolution = Promise.withResolvers<undefined>()
   let holdResolution = false
@@ -678,14 +323,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             context.own(releaseRetainedRoot)
           }
           if (holdResolution) { resolving.resolve(undefined); await releaseResolution.promise }
-          if (racePreparationEnabled) {
-            const barrier = racePreparation[racePreparationCount]
-            if (barrier !== undefined) {
-              racePreparationCount++
-              barrier.entered.resolve(undefined)
-              await barrier.release.promise
-            }
-          }
           if (holdImage) {
             const owner = context.require('activeSessions').owners().find(owner => owner.invocation === 'root')!
             imageExecution = context.require('agents').execution(owner.agent)
@@ -761,14 +398,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             return
           }
           if (humanSteps !== undefined) { yield* humanSteps.shift() ?? textResponse('human complete'); return }
-          if (requests.length === 3 && request.messages.some(message => message.content.some(block => block.type === 'text'
-            && block.text.includes('File "web-upload.txt"') && block.text.includes('saved at')))) {
-            streamedFileProjected = true
-            yield* textResponse('staged file projected')
-            return
-          }
-          const latestUser = request.messages.findLast(message => message.role === 'user')
-          if (latestUser?.content.some(block => block.type === 'text' && block.text === 'cancel input')) {
+          if (requests.length > 2) {
             const signal = request.signal
             if (signal === undefined) throw new Error('missing model cancellation')
             await new Promise<void>((resolve) => {
@@ -837,7 +467,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignProgram: NativePlugin = {
     apiVersion: 1, name: 'foreign-program', targets: ['host'],
     requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
-    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'], provides: [],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments'], provides: [],
     resolve: () => (context) => {
       persistence = context.require('sessionPersistence')
       foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',
@@ -951,20 +581,11 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const cookie = login.headers.get('set-cookie')?.split(';')[0]
     if (cookie === undefined) throw new Error('missing browser authentication')
     const url = web.url
-    const rpc = createWebConnectionRpc(async (input, init) => {
+    const rpc = createWebConnectionRpc((input, init) => {
       if (input.pathname.endsWith('/native-session/follow')) followFields = JSON.parse(init.body as string)
-      if (input.pathname.endsWith('/native-session/file-upload')) {
-        const uploadUrl = new URL(input.href)
-        streamedUploadRequest = { path: uploadUrl.pathname, sessionId: uploadUrl.searchParams.get('sessionId'),
-          method: init.method, contentType: new Headers(init.headers).get('content-type'), body: init.body }
-      }
       const headers = new Headers(init.headers)
       headers.set('cookie', cookie)
-      const response = await fetch(new URL(input.pathname + input.search, url), { ...init, headers })
-      if (input.pathname.endsWith('/native-session/file-upload')) {
-        streamedUploadResponseStatus = response.status
-      }
-      return response
+      return fetch(new URL(input.pathname, url), { ...init, headers })
     })
     const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
@@ -981,13 +602,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
-    const originalPrompt = client.prompt.bind(client)
-    client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq, detach) => originalPrompt(
-      selectedSession, text, resume, signal, (frame) => {
-        if (frame.type === 'submission-update') submissionUpdates.push({ requestId: frame.requestId, status: frame.status })
-        observe?.(frame)
-      }, images, onFollowError, lastSeq, detach)
-    restoreClientPrompt = () => { client.prompt = originalPrompt }
     const settingsDescription = await client.settingsDescribe()
     expect((await client.pluginInventoryList()).entries).toContainEqual(expect.objectContaining({ name: plugin.name, state: 'ready' }))
     expect(await rpc.call('/api', 'settings/open-document', {}, new AbortController().signal)).toMatchObject({
@@ -1038,7 +652,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.credentialsDescribe(['UNRELATED_KEY'])).rejects.toBeInstanceOf(NativeSessionRpcError)
     await expect(client.credentialsDescribe(['NATIVE_TEST_KEY', 'NATIVE_TEST_KEY', 'NATIVE_TEST_KEY']))
       .rejects.toMatchObject({ code: 'native/credentials' })
-    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 200 })
+    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 100 })
     await conversation.load()
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
@@ -1100,83 +714,17 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     releaseRetainedRoot?.()
     await conversation.select(sessionId)
-    racePreparationEnabled = true
     const first = conversation.send('first input')
-    await racePreparation[0]!.entered.promise
-    expect(requests).toHaveLength(0)
-    const submissionId = nativeSubmissionRequestId('native-host-edit-promote')
-    await expect(client.queue(sessionId, 'queued original', submissionId)).resolves.toMatchObject({
-      requestId: submissionId, placement: 'queued', status: 'accepted',
-    })
-    await expect(client.editSubmission(sessionId, submissionId, 'edited before promotion')).resolves.toEqual({
-      requestId: submissionId, outcome: 'updated',
-    })
-    const editedSubmissions = await client.submissions(sessionId)
-    expect(editedSubmissions.throughSeq).toBeGreaterThanOrEqual(0)
-    expect(editedSubmissions.submissions).toContainEqual(expect.objectContaining({
-      requestId: submissionId, placement: 'queued', status: 'accepted',
-      message: { id: submissionId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'edited before promotion' }] },
-    }))
-    await expect(client.promoteSubmission(sessionId, submissionId)).resolves.toEqual({
-      requestId: submissionId, outcome: 'promoted',
-    })
-    const promotedSnapshot = await client.submissions(sessionId)
-    expect(promotedSnapshot.throughSeq).toBeGreaterThanOrEqual(0)
-    const promoted = promotedSnapshot.submissions.find(submission => submission.requestId === submissionId)
-    if (promoted === undefined) throw new Error('pending reader missed the promoted submission')
-    expect(promoted.placement).toBe('steering')
-    expect(promoted.status).toBe('accepted')
-    expect(nativeSubmissionRequestId(promoted.message.id)).toBe(submissionId)
-    expect(promoted.message.content).toEqual([{ type: 'text', text: 'edited before promotion' }])
-    racePreparation[0]!.release.resolve(undefined)
-    await racePreparation[1]!.entered.promise
-    const owner = activeSessionsService?.owners().find(candidate => candidate.session.id === sessionId
-      && candidate.invocation === 'root')
-    if (owner === undefined) throw new Error('missing browser root owner for existing pending submission')
-    await expect(client.editSubmission(sessionId, submissionId, 'edited immediately before claim')).resolves.toEqual({
-      requestId: submissionId, outcome: 'updated',
-    })
-    racePreparation[1]!.release.resolve(undefined)
-    await vi.waitFor(() => { expect(owner.messages('next-step')).toEqual([]) })
-    await expect(owner.flush()).resolves.toBeUndefined()
-    await vi.waitFor(() => {
-      expect(conversation.getSnapshot().error).toBeUndefined()
-      expect(conversation.getSnapshot().liveText).toBe('swer')
-      expect(requests).toHaveLength(1)
-    })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
     expect(conversation.getSnapshot()).toMatchObject({ state: 'sending', liveTruncated: true })
     expect(conversation.getSnapshot().events.some(event => event.type === 'user/message')).toBe(true)
     expect(conversation.getSnapshot().events.some(event => event.type === 'assistant/message')).toBe(false)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'edited immediately before claim'))).toBe(true)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'edited before promotion'))).toBe(false)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'queued original'))).toBe(false)
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
-    const existing = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'queued by another owner consumer' }] })
-    const existingRequestId = nativeSubmissionRequestId(existing.id)
-    await owner.enqueue(existing, 'next-turn', false, new AbortController().signal)
-    const pendingSnapshot = await client.submissions(sessionId)
-    const observed = pendingSnapshot.submissions.find(submission => submission.requestId === existingRequestId)
-    expect(observed).toMatchObject({ requestId: existingRequestId, placement: 'queued', status: 'accepted', message: existing })
-    if (observed === undefined) throw new Error('pending reader missed the existing queued submission')
-    await expect(client.promoteSubmission(sessionId, observed.requestId)).resolves.toEqual({
-      requestId: observed.requestId, outcome: 'promoted',
-    })
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [{
-      requestId: existingRequestId, placement: 'steering', status: 'accepted', message: existing,
-    }] })
-    await expect(client.dequeue(sessionId, observed.requestId)).resolves.toBeUndefined()
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
     const admission = followFields as { sessionId: string; admissionId: string }
     expect((await fetch(new URL('/api/native-session/follow', url), { method: 'POST', body: JSON.stringify(admission) })).status).toBe(401)
     expect((await rpc.response!('/api', 'native-session/follow', { ...admission, admissionId: 'wrong' }, new AbortController().signal)).status).toBe(409)
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
-    expect(submissionUpdates.filter(update => update.requestId === submissionId).map(update => update.status))
-      .toEqual(['accepted', 'settled'])
     const search = await client.search('first input')
     expect(search.items.map(item => item.sessionId)).toEqual([sessionId])
     expect(search.items[0]?.snippet).toContain('first input')
@@ -1210,52 +758,19 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const blob = await client.image(sessionId, image.attachment)
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe(image.attachment.bytes)
-    const receipt = await client.uploadFile(sessionId, { data: new Blob([streamedFileBytes]), name: 'web-upload.txt' })
-    expect(receipt).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
-    expect(streamedUploadRequest).toMatchObject({ path: '/api/native-session/file-upload', sessionId, method: 'POST',
-      contentType: 'application/octet-stream' })
-    expect(streamedUploadResponseStatus).toBe(200)
-    expect(streamedUploadRequest?.body).toBeInstanceOf(Blob)
-    expect(new Uint8Array(await (streamedUploadRequest?.body as Blob).arrayBuffer())).toEqual(streamedFileBytes)
-    await expect(client.promptContent(sessionId, [
-      { type: 'text', text: 'before staged file' },
-      { type: 'file', receiptId: receipt.receiptId },
-      { type: 'text', text: 'after staged file' },
-    ], true)).resolves.toMatchObject({ exitCode: 0 })
-    await conversation.select(sessionId)
-    expect(streamedFileProjected).toBe(true)
-    expect(requests[2]?.messages.some((message) => {
-      const text = message.content.flatMap(block => block.type === 'text' ? [block.text] : [])
-      const before = text.findIndex(block => block === 'before staged file')
-      const handle = text.findIndex(block => block.includes('File "web-upload.txt"') && block.includes('saved at'))
-      const after = text.findIndex(block => block === 'after staged file')
-      return before >= 0 && handle > before && after > handle
-    })).toBe(true)
-    const stagedHistory = await client.history(sessionId)
-    const stagedMessage = stagedHistory.events.findLast(event => event.type === 'user/message'
-      && event.data.content.some(block => block.type === 'file' && block.attachment.name === 'web-upload.txt'))
-    const stagedContent = stagedMessage?.type === 'user/message' ? stagedMessage.data.content : []
-    expect(stagedContent.map(block => block.type)).toEqual(['text', 'file', 'text'])
-    expect(stagedContent[0]).toEqual({ type: 'text', text: 'before staged file' })
-    expect(stagedContent[2]).toEqual({ type: 'text', text: 'after staged file' })
-    const stagedFile = stagedContent[1]
-    expect(stagedFile?.type).toBe('file')
-    if (stagedFile?.type === 'file') {
-      expect(stagedFile.attachment).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
-    }
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
-      .toEqual(['user/message', 'user/message', 'assistant/message', 'user/message', 'assistant/message'])
+      .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
     const early = new AbortController()
     early.abort(new Error('before admission'))
     await expect(client.prompt(sessionId, 'not admitted', true, early.signal)).rejects.toThrow('before admission')
-    expect(requests).toHaveLength(3)
+    expect(requests).toHaveLength(2)
     let settled = false
     const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
-    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(4) })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(3) })
     // Control admission still cancels the accepted turn and awaits cleanup.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
     conversation.cancel()
@@ -1471,24 +986,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       const clients = createNativeWorkspaceClients(rpc, 1000000)
       const workspacePath = join(cwd, 'native-workspace')
       await mkdir(workspacePath)
-      const registeredBeforeDeniedCreate = workspaceRegistryService?.list().map(workspace => workspace.id)
-      const deniedCreate = await rpc.call('/api', 'workspaces/create', { path: process.cwd() }, new AbortController().signal)
-      expect(deniedCreate).toMatchObject({ ok: false, error: {
-        code: 'native/workspace-untrusted', message: 'Workspace is outside the configured allowed roots',
-        details: { path: process.cwd() },
-      } })
-      expect(workspaceRegistryService?.list().map(workspace => workspace.id)).toEqual(registeredBeforeDeniedCreate)
-      const trustedWorkspace = await clients.workspace.create({ path: process.cwd(), trust: true })
-      expect(trustedWorkspace.created).toBe(true)
-      expect(settingsDocument['workspace-trust']).toEqual({ paths: [trustedWorkspace.workspace.path] })
-      const trustedSession = await clients.workspace.connectWorkspace(trustedWorkspace.workspace.workspaceId)
-      const trustedRoute = rootExecutionService?.workspaceRoutes()
-        .find(route => route.workspaceId === trustedWorkspace.workspace.workspaceId)
-      if (rootExecutionService === undefined || trustedRoute === undefined) throw new Error('missing trusted Workspace route')
-      await rootExecutionService.releaseWorkspace(trustedRoute.id, new AbortController().signal)
-      expect(await rpc.call('/api', 'session/mode-controls', { sessionId: trustedSession.sessionId }, new AbortController().signal))
-        .toMatchObject({ ok: true })
-      await clients.workspace.delete(trustedWorkspace.workspace.workspaceId)
       const directoryListing = await clients.directoryPicker.list(cwd)
       expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
       if (process.platform !== 'win32') {
@@ -1554,8 +1051,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       await (hostStop ?? host.stop())
     }
   } finally {
-    for (const barrier of racePreparation) barrier.release.resolve(undefined)
-    restoreClientPrompt?.()
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
     holdResolution = false

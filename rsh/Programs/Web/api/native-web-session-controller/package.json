@@ -65,9 +65,7 @@
         "sessionTitles",
         "commands",
         "pluginInventory",
-        "requestContexts",
-        "sessionFeedback",
-        "messageFeedback"
+        "requestContexts"
       ],
       "provides": [
         "nativeWebSession",
@@ -95,7 +93,6 @@
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
     "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
@@ -114,15 +111,14 @@
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "@deepseek-ai/dsh-workspace-definition": "workspace:^",
-    "@deepseek-ai/dsh-host-directory-picker-native": "workspace:^",
-    "@deepseek-ai/dsh-command-feedback": "workspace:^",
-    "@deepseek-ai/dsh-message-feedback": "workspace:^"
+    "@deepseek-ai/dsh-host-directory-picker-native": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-settings-definition": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^",
     "@deepseek-ai/dsh-native-web-assets": "workspace:^",
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",

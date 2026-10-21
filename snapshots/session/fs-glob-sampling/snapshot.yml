@@ -1,6 +1,6 @@
 version: 1
 scenario: fs-glob-sampling
-profile: legacy-headless
+profile: headless
 composition: fs-search
 recording: live
 header:

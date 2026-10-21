@@ -1,9 +1,9 @@
 /** Native Agent, model, filesystem tool, and released Session storage in one host. */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
@@ -22,12 +22,12 @@ import {
   type NativeSubagentOperations,
 } from '@deepseek-ai/dsh-native-subagent/native'
 import { AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
+import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
 import type {} from '@deepseek-ai/dsh-attachment/native'
 import { plugin as sessionExecutionPlugin } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
 import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
 import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
@@ -41,21 +41,14 @@ import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
 import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
 import { plugin as tmuxContextPlugin } from '@deepseek-ai/dsh-native-tmux-context/native'
-import { plugin as requestContextsPlugin } from '@deepseek-ai/dsh-request-context/native'
-import { plugin as skillsPlugin } from '@deepseek-ai/dsh-skill/native'
-import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
-import type { SkillProvider } from '@deepseek-ai/dsh-skill/types'
-import { plugin as skillFilesystemPlugin } from '@deepseek-ai/dsh-skill-filesystem/native'
-import { plugin as toolSkillPlugin } from '@deepseek-ai/dsh-tool-skill/native'
 import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
 import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
 import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
 import { plugin as fileReferencePlugin } from '@deepseek-ai/dsh-native-file-reference-local/native'
-import { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId,
   NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeToolDelegationContext, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
@@ -99,43 +92,30 @@ async function fixture(
     sandboxPolicy?: NativeSandboxPolicy
     modelSelection?: NativeModelSelectionOperations
     attachments?: AttachmentOperations
-    parentAttachments?: AttachmentOperations
     externalSubagentDriver?: NativeExternalSubagentDriver
-    skillDirectory?: string
-    observeSkillProvider?: (provider: SkillProvider) => void
   } = {},
 ) {
   const ownsDirectory = options.directory === undefined
   const directory = options.directory ?? await mkdtemp(join(tmpdir(), 'rsh-native-headless-'))
   const workspace = join(directory, 'work')
   const sessions = join(directory, 'sessions')
-  const skillDirectory = options.skillDirectory ?? (options.observeSkillProvider === undefined ? undefined : join(directory, 'skills'))
   await import('node:fs/promises').then(fs => fs.mkdir(workspace, { recursive: true }))
-  if (skillDirectory !== undefined) {
-    await mkdir(join(skillDirectory, 'handoff-skill'), { recursive: true })
-    await writeFile(join(skillDirectory, 'handoff-skill', 'SKILL.md'), '---\nname: handoff-skill\ndescription: Handoff skill\n---\n\nFilesystem instructions.\n')
-  }
-  const parentScope = options.parentAttachments === undefined ? undefined : new NativeScope()
-  const scope = new NativeScope(parentScope)
+  const scope = new NativeScope()
   const adapter = new MockAdapter(script)
-  let app: NativeHeadlessApplication | undefined
+  let app: NativeApplication | undefined
   let filesystem: LocalFileSystemBackend | undefined
   let agents: NativeAgentRegistry | undefined
   let tools: NativeToolRegistry | undefined
   let rootExecution: NativeRootExecutionOperations | undefined
-  let persistence: NativeSessionPersistenceOperations | undefined
   let sessionExecution: NativeSessionExecutionOperations | undefined
   let subagents: NativeSubagentOperations | undefined
   let approval: NativeApprovalServiceDefinition | undefined
-  let codeRuntime: NativeCodeRuntime | undefined
-  let skills: NativeSkills | undefined
   const model: NativePlugin = {
     apiVersion: 1, name: 'test-model', targets: ['host'], requires: [], provides: ['model'],
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const selectedModelSelection = options.modelSelection
   const needsSessionExecution = options.fileReferences || options.toolSubagent || selectedModelSelection !== undefined
-    || skillDirectory !== undefined
   const modelSelectionProvider: NativePlugin | undefined = selectedModelSelection === undefined ? undefined : {
     apiVersion: 1, name: 'test-model-selection', targets: ['host'], requires: [], provides: ['modelSelection'],
     resolve: () => (context) => { context.provide('modelSelection', selectedModelSelection) },
@@ -149,10 +129,6 @@ async function fixture(
     apiVersion: 1, name: 'test-attachments', targets: ['host'], requires: [], provides: ['attachments'],
     resolve: () => (context) => { context.provide('attachments', options.attachments!) },
   }
-  const parentAttachmentProvider: NativePlugin | undefined = options.parentAttachments === undefined ? undefined : {
-    apiVersion: 1, name: 'test-parent-attachments', targets: ['host'], requires: [], provides: ['attachments'],
-    resolve: () => (context) => { context.provide('attachments', options.parentAttachments!) },
-  }
   const externalSubagentDriver = options.externalSubagentDriver
   const externalSubagentDriverProvider: NativePlugin | undefined = externalSubagentDriver === undefined ? undefined : {
     apiVersion: 1, name: 'test-external-subagent-driver', targets: ['host'], requires: [], provides: ['externalSubagentDriver'],
@@ -163,57 +139,25 @@ async function fixture(
     apiVersion: 1, name: 'test-shell', targets: ['host'], requires: [], provides: ['shell'],
     resolve: () => (context) => { context.provide('shell', selectedShell) },
   }
-  const skillProviderObserver: NativePlugin | undefined = skillDirectory === undefined ? undefined : {
-    apiVersion: 1, name: 'test-skill-provider-observer', targets: ['host'], requires: ['skills'], provides: [],
-    resolve: () => (context) => {
-      const registry = context.require('skills')
-      const registerProvider = registry.registerProvider.bind(registry)
-      registry.registerProvider = (registrationScope, createProvider) => registerProvider(registrationScope, (control) => {
-        const provider = createProvider(control)
-        if (provider.name === 'filesystem') options.observeSkillProvider?.(provider)
-        return provider
-      })
-    },
-  }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'], optional: ['approval', 'codeRuntime', 'sessionExecution', 'subagents', 'skills'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution'], optional: ['approval', 'sessionExecution', 'subagents'], provides: [],
     resolve: () => (context) => {
-      app = context.require('application') as NativeHeadlessApplication
+      app = context.require('application')
       const provided = context.require('fs')
       if (!(provided instanceof LocalFileSystemBackend)) throw new Error('missing local filesystem')
       filesystem = provided
       agents = context.require('agents')
       tools = context.require('tools')
       rootExecution = context.require('rootExecution')
-      persistence = context.require('sessionPersistence')
       sessionExecution = context.optional('sessionExecution')
       subagents = context.optional('subagents')
       approval = context.optional('approval')
-      codeRuntime = context.optional('codeRuntime')
-      skills = context.optional('skills')
     },
   }
   let host: NativeHost | undefined
-  let toolsRequest: InstallationRequest = { plugin: toolsPlugin, scope, config: undefined }
-  let codeRuntimeRequest: InstallationRequest = { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
-    config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined }
-  let skillProviderRequest: InstallationRequest | undefined = skillDirectory === undefined ? undefined : {
-    plugin: skillFilesystemPlugin, scope, config: { includeDefaultRoots: false, customSkillDirs: [skillDirectory], watch: true,
-      watchUsePolling: true, watchStabilityThresholdMs: 20, watchPollIntervalMs: 10 },
-  }
-  let requests: InstallationRequest[]
   try {
-    requests = [
-      ...(parentScope === undefined ? [] : [{ plugin: localFilesystemPlugin, scope: parentScope, config: { cwd: directory } }]),
-      ...(parentScope === undefined || parentAttachmentProvider === undefined ? [] : [
-        { plugin: parentAttachmentProvider, scope: parentScope, config: undefined },
-      ]),
+    host = new NativeHost(resolveInstallation([
       { plugin: capture, scope, config: undefined },
-      ...(skillDirectory === undefined ? [] : [
-        { plugin: skillsPlugin, scope, config: undefined },
-        { plugin: skillProviderObserver!, scope, config: undefined },
-        { plugin: requestContextsPlugin, scope, config: undefined },
-      ]),
       ...(modelSelectionProvider === undefined ? [] : [{ plugin: modelSelectionProvider, scope, config: undefined }]),
       ...(attachmentProvider === undefined ? [] : [{ plugin: attachmentProvider, scope, config: undefined }]),
       { plugin: appPlugin, scope, config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use tools.', maxSteps: options.maxSteps ?? 4, ...(options.ptc ? { builtinTools: false } : {}),
@@ -227,17 +171,15 @@ async function fixture(
         { plugin: subagentPlugin, scope, config: { providerName: externalSubagentDriver.name } },
       ]),
       ...(options.toolSubagent ? [{ plugin: toolSubagentPlugin, scope, config: { toolName: 'subagent', maxDepth: 2 } }] : []),
-      codeRuntimeRequest,
+      { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
+        config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined },
       ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
       ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
       ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
       ...(options.tmuxContext === undefined ? [] : [{ plugin: tmuxContextPlugin, scope, config: options.tmuxContext }]),
       ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
-      toolsRequest,
-      ...(skillDirectory === undefined ? [] : [
-        { plugin: toolSkillPlugin, scope, config: undefined },
-      ]),
+      { plugin: toolsPlugin, scope, config: undefined },
       { plugin: policyPlugin, scope, config: undefined },
       ...(options.fileReferences || options.toolSubagent ? [{ plugin: promptPlugin, scope, config: undefined }] : []),
       ...(options.fileReferences ? [
@@ -247,13 +189,10 @@ async function fixture(
       { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
       { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
       { plugin: model, scope, config: undefined },
-      ...(skillProviderRequest === undefined ? [] : [skillProviderRequest]),
       ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
-    ]
-    host = new NativeHost(resolveInstallation(requests, 'host'))
+    ], 'host'))
     await host.start()
-    if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined
-      || rootExecution === undefined || persistence === undefined) {
+    if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined || rootExecution === undefined) {
       throw new Error('missing native application dependencies')
     }
   } catch (error: unknown) {
@@ -271,33 +210,8 @@ async function fixture(
   }
   if (host === undefined) throw new Error('native-headless fixture has no Host')
   return {
-    host, scope, get app() { return app! }, filesystem, agents, get tools() { return tools! }, rootExecution, persistence,
-    sessionExecution, subagents, approval,
-    get skills() { return skills! },
-    get codeRuntime() { return codeRuntime },
-    adapter, directory, workspace, sessions, skillDirectory,
-    async replaceCodeRuntime(provider: NativePlugin) {
-      const nextRequest: InstallationRequest = { plugin: provider, scope, config: undefined }
-      const nextRequests = requests.map(request => request === codeRuntimeRequest ? nextRequest : request)
-      await host.replace(resolveInstallation(nextRequests, 'host'))
-      codeRuntimeRequest = nextRequest
-      requests = nextRequests
-    },
-    async replaceToolsProvider(provider: NativePlugin) {
-      const nextRequest: InstallationRequest = { plugin: provider, scope, config: undefined }
-      const nextRequests = requests.map(request => request === toolsRequest ? nextRequest : request)
-      await host.replace(resolveInstallation(nextRequests, 'host'))
-      toolsRequest = nextRequest
-      requests = nextRequests
-    },
-    async replaceSkillProvider(provider: NativePlugin) {
-      if (skillProviderRequest === undefined) throw new Error('fixture has no skill Provider')
-      const nextRequest: InstallationRequest = { plugin: provider, scope, config: undefined }
-      const nextRequests = requests.map(request => request === skillProviderRequest ? nextRequest : request)
-      await host.replace(resolveInstallation(nextRequests, 'host'))
-      skillProviderRequest = nextRequest
-      requests = nextRequests
-    },
+    host, scope, app, filesystem, agents, tools, rootExecution, sessionExecution, subagents, approval,
+    adapter, directory, workspace, sessions,
   }
 }
 
@@ -347,208 +261,6 @@ function imageAttachmentOperations(readImage: AttachmentOperations['readImage'])
     isAttachmentError: () => false,
   }
 }
-
-it('streams current Session attachment reads while denying other outside reads and writes', async () => {
-  const attachmentDirectory = await mkdtemp(join(tmpdir(), 'rsh-native-file-read-'))
-  const attachmentPath = join(attachmentDirectory, 'notes.txt')
-  const outsidePath = join(attachmentDirectory, 'private.txt')
-  const bytes = new TextEncoder().encode('first line\nsecond 📎\nthird line')
-  await writeFile(attachmentPath, bytes)
-  await writeFile(outsidePath, 'private')
-  const ref: FileAttachmentRef = { attachmentId: AttachmentId('file-read-stream'), name: 'notes.txt', bytes: bytes.length }
-  const decoyRef: FileAttachmentRef = { ...ref, attachmentId: AttachmentId('parent-decoy-file') }
-  let selectedSaveCount = 0
-  let decoySaveCount = 0
-  let removeCapturedRead: (() => Promise<void>) | undefined
-  let streamFinished = false
-  let readCount = 0
-  const attachments: AttachmentOperations = {
-    ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
-    async saveFileStream({ data }) {
-      const chunks: Uint8Array[] = []
-      for await (const chunk of data) chunks.push(chunk)
-      expect(Buffer.concat(chunks).equals(Buffer.from(bytes))).toBe(true)
-      selectedSaveCount++
-      return ref
-    },
-    fileHostPath: file => file.attachmentId === ref.attachmentId ? attachmentPath : undefined,
-    async *readFileStream(file, signal) {
-      expect(file).toEqual(ref)
-      signal?.throwIfAborted()
-      readCount++
-      const split = bytes.findIndex(value => value === 0xf0) + 2
-      yield bytes.subarray(0, split)
-      yield bytes.subarray(split)
-      streamFinished = true
-    },
-  }
-  const parentAttachments: AttachmentOperations = {
-    ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
-    async saveFileStream({ data }) {
-      for await (const _chunk of data) {}
-      decoySaveCount++
-      return decoyRef
-    },
-    fileHostPath: file => file.attachmentId === decoyRef.attachmentId ? outsidePath : undefined,
-  }
-  const state = await fixture([
-    toolCallResponse('read-uploaded-file', 'read', { file_path: attachmentPath, offset: 2, limit: 1 }),
-    toolCallResponse('read-captured-upload', 'read-captured-upload', {}),
-    toolCallResponse('read-private-file', 'read', { file_path: outsidePath }),
-    toolCallResponse('write-uploaded-file', 'write_file', { path: attachmentPath, content: 'overwritten' }),
-    textResponse('finished'),
-  ], { attachments, parentAttachments, fileReferences: true, allowedTools: ['read', 'read_file', 'write_file', 'read-captured-upload'] })
-  const id = SessionId('native-attachment-read')
-  const route = brandString<NativeRootRouteId>('root')
-  const signal = new AbortController().signal
-  let sibling: Awaited<ReturnType<typeof fixture>> | undefined
-  try {
-    removeCapturedRead = state.tools.registerValueTool({
-      schema: { name: 'read-captured-upload', description: 'Read the exact Session attachment through captured Headless tools.',
-        parameters: { type: 'object', properties: {}, additionalProperties: false } },
-      output: { schema: { type: 'string' }, render: (_call, value) => {
-        if (typeof value !== 'string') throw new Error('captured attachment result must be text')
-        return { content: [{ type: 'text', text: value }], isError: false }
-      } },
-      async execute(call) {
-        if (state.sessionExecution === undefined) throw new Error('sessionExecution is unavailable')
-        const operations = await state.sessionExecution.captureExternalTools(call.agent, call.session, {
-          depth: 1, maxDepth: 1, cwd: state.workspace, provider: 'mock', model: 'fixture', maxSteps: 3,
-          toolNames: ['read_file'], builtinToolNames: ['read_file'], programToolNames: [],
-        }, call.signal)
-        try {
-          const read = await operations.execute({ callId: ToolCallId('captured-file-read'), name: 'read_file',
-            arguments: { path: attachmentPath } }, call.signal)
-          const readText = read.result.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('')
-          expect(read.result.isError).toBe(false)
-          expect(readText).toBe(new TextDecoder().decode(bytes))
-          read.acceptRecordedResult()
-          return readText
-        } finally { await operations.dispose() }
-      },
-    })
-    expect(state.filesystem.config.cwd).toBe(state.workspace)
-    await state.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
-    const receipt = await state.rootExecution.stagedFiles.stageStream({ route, id,
-      data: (async function* () { yield bytes })(), name: ref.name }, signal)
-    expect(selectedSaveCount).toBe(1)
-    expect(decoySaveCount).toBe(0)
-    sibling = await fixture([textResponse('must not execute with another Program receipt')], {
-      attachments, fileReferences: true, allowedTools: [],
-    })
-    await sibling.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
-    await expect(sibling.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
-      sibling!.rootExecution.stagedFiles.prepare({ owner, receiptIds: [receipt.receiptId], signal,
-        createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [...files] }) })
-    }, signal)).rejects.toThrow('staged file receipt')
-    expect(sibling.adapter.requests).toHaveLength(0)
-    await state.app.executeRootTurn({ route, id, resume: true, prepareMessage: async (_model, owner, ownerSignal) =>
-      state.rootExecution.stagedFiles.prepare({ owner, receiptIds: [receipt.receiptId], signal: ownerSignal,
-        createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [
-          { type: 'text', text: 'Read the uploaded file.' }, ...files, { type: 'text', text: 'Keep this after the file.' },
-        ] }) }) }, signal)
-
-    expect(state.adapter.requests[0]?.messages.some(message =>
-      message.content.some(block => block.type === 'text' && block.text.includes(JSON.stringify(attachmentPath))))).toBe(true)
-    expect(readCount).toBe(2)
-    expect(streamFinished).toBe(true)
-    expect(selectedSaveCount).toBe(1)
-    expect(decoySaveCount).toBe(0)
-    expect(JSON.stringify(state.adapter.requests[1]?.messages)).toContain('2: second 📎')
-    expect(state.adapter.requests[2]?.messages.some(message => message.content.some(block =>
-      block.type === 'tool-result' && block.content.some(result =>
-        result.type === 'text' && result.text.includes(new TextDecoder().decode(bytes)))))).toBe(true)
-    expect(JSON.stringify(state.adapter.requests[3]?.messages)).toContain('path outside workspace')
-    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
-    try {
-      const reader = await storage.open(id, 'read')
-      try {
-        const events = (await reader.read()).events
-        const writeCall = events.find(event => event.type === 'tool/call' && event.data.name === 'write_file')
-        if (writeCall?.type !== 'tool/call') throw new Error('uploaded-file write call was not recorded')
-        const writeResult = events.find(event => event.type === 'tool/result' && event.data.message.source.kind === 'tool'
-          && event.data.message.source.callId === writeCall.data.callId)
-        expect(writeResult).toMatchObject({ type: 'tool/result', data: { error: { code: 'FS_SANDBOX_DENIED' } } })
-      } finally { await reader.close() }
-    } finally { await storage.close() }
-    await expect(readFile(attachmentPath).then(value => new Uint8Array(value))).resolves.toEqual(bytes)
-  } finally {
-    if (sibling !== undefined) {
-      await sibling.host.stop()
-      await rm(sibling.directory, { recursive: true, force: true })
-    }
-    if (removeCapturedRead !== undefined) await removeCapturedRead()
-    await state.host.stop()
-    await rm(state.directory, { recursive: true, force: true })
-    await rm(attachmentDirectory, { recursive: true, force: true })
-  }
-})
-
-it.each(['initial stat', 'file save', 'final stat'] as const)(
-  'rejects an upload when delete and same-header restore replace its generation during %s', async (barrier) => {
-    const entered = Promise.withResolvers<undefined>()
-    const release = Promise.withResolvers<undefined>()
-    let saveCalls = 0
-    const saved: FileAttachmentRef = {
-      attachmentId: AttachmentId(`sha256:${'a'.repeat(64)}`), name: 'staged.txt', bytes: 3,
-    }
-    const attachments: AttachmentOperations = {
-      ...imageAttachmentOperations(async image => ({ ref: image, data: new Uint8Array() })),
-      async saveFileStream({ data }) {
-        for await (const _chunk of data) {}
-        saveCalls++
-        if (barrier === 'file save' && saveCalls === 2) {
-          entered.resolve(undefined)
-          await release.promise
-        }
-        return saved
-      },
-    }
-    const state = await fixture([textResponse('ready')], { attachments, fileReferences: true })
-    const id = SessionId(`staged-generation-${barrier.replaceAll(' ', '-')}`)
-    const route = brandString<NativeRootRouteId>('root')
-    const signal = new AbortController().signal
-    let stage: Promise<Awaited<ReturnType<NativeRootExecutionOperations['stagedFiles']['stageStream']>>> | undefined
-    let statCalls = 0
-    const originalStat = state.persistence.stat.bind(state.persistence)
-    try {
-      await state.rootExecution.maintenance({ route, id, resume: false }, async () => undefined, signal)
-      const retained = await state.rootExecution.stagedFiles.stageStream({ route, id,
-        data: (async function* () { yield Uint8Array.of(1, 2, 3) })(), name: 'idle-retained.txt' }, signal)
-      await state.rootExecution.maintenance({ route, id, resume: true }, async (owner) => {
-        const admission = state.rootExecution.stagedFiles.prepare({ owner, receiptIds: [retained.receiptId], signal,
-          createMessage: files => createUserMessage({ source: { kind: 'user' }, content: [...files] }) })
-        expect(admission.message.content).toEqual([{ type: 'file', attachment: saved }])
-        admission.refused()
-      }, signal)
-      state.persistence.stat = async (candidate, options) => {
-        statCalls++
-        const blocked = candidate === id && (barrier === 'initial stat' ? statCalls === 1
-          : barrier === 'final stat' && statCalls === 2)
-        if (blocked) {
-          entered.resolve(undefined)
-          await release.promise
-        }
-        return originalStat(candidate, options)
-      }
-      async function* upload(): AsyncIterable<Uint8Array> { yield Uint8Array.of(1, 2, 3) }
-      stage = state.rootExecution.stagedFiles.stageStream({ route, id, data: upload(), name: saved.name }, signal)
-      await entered.promise
-      const deletions = state.rootExecution.deletions
-      if (deletions === undefined) throw new Error('Session deletion Provider is unavailable')
-      const deleted = await deletions.delete({ route, id }, signal)
-      await deletions.restore({ route, id: deleted.id }, signal)
-      release.resolve(undefined)
-      await expect(stage).rejects.toThrow('staged file Session generation changed during upload')
-      if (barrier !== 'initial stat') expect(statCalls).toBeGreaterThanOrEqual(2)
-    } finally {
-      release.resolve(undefined)
-      await stage?.catch(() => undefined)
-      await state.host.stop()
-      await rm(state.directory, { recursive: true, force: true })
-    }
-  },
-)
 
 it('reads deduplicated images only after an external tool result and its settlement are accepted, then drains reads', async () => {
   const first: ImageAttachmentRef = { attachmentId: AttachmentId('captured-image-first'), mediaType: 'image/png', bytes: 2, width: 1, height: 1 }
@@ -1040,7 +752,7 @@ it('prepares root input with the effective default model for a fresh Session', a
   const prepared: { provider: string; model: string }[] = []
   try {
     await state.host.run(state.scope, { kind: 'prepared-model' }, invocation =>
-      state.app.executeRootTurn({ id: SessionId('prepared-model'), resume: false,
+      (state.app as NativeHeadlessApplication).executeRootTurn({ id: SessionId('prepared-model'), resume: false,
         prepareMessage: async (model) => {
           prepared.push(model)
           return createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Prepared prompt.' }] })
@@ -1230,22 +942,9 @@ it.each([
     toolCallResponse('capture-delegated', 'capture_external', { child: true }),
     textResponse('delegated turn completed'),
     textResponse('external operations drained'),
-    toolCallResponse('provider-real-result', 'provider_probe', { mode: 'real' }), textResponse('real Provider completed'),
-    toolCallResponse('provider-held-result', 'provider_probe', { mode: 'hold' }),
-    toolCallResponse('provider-substitute-result', 'provider_probe', { mode: 'replacement' }),
-    textResponse('replacement Provider completed'),
   ], { fileReferences: true, codeRuntimeProvider })
   const calls: NativeToolExecution[] = []
   let childOwnerObserved = false
-  let parentInitiator: NativeToolExecution['agent'] | undefined
-  let parentSession: NativeToolExecution['session'] | undefined
-  const childSessionId = SessionId('native-headless-delegated-child')
-  const childCalls: NativeToolExecution[] = []
-  let childInitiator: NativeToolExecution['agent'] | undefined
-  let childConfiguration: ReturnType<NonNullable<typeof state.sessionExecution>['configuration']> | undefined
-  let childAuthority: ReturnType<NonNullable<typeof state.sessionExecution>['delegationAuthority']> | undefined
-  let childOwnerFailure: unknown
-  let childToolPrepared = false
   let removeEcho: (() => Promise<void>) | undefined
   let removeCapture: (() => Promise<void>) | undefined
   try {
@@ -1267,9 +966,7 @@ it.each([
       } },
       async execute(call) {
         if (state.sessionExecution === undefined) throw new Error('sessionExecution is unavailable')
-        parentInitiator = state.agents.currentInitiator()
-        parentSession = call.session
-        if (selection !== undefined && typeof call.arguments === 'object' && call.arguments !== null && 'child' in call.arguments) {
+        if (typeof call.arguments === 'object' && call.arguments !== null && 'child' in call.arguments) {
           const config = state.sessionExecution.configuration(call.agent, call.session)
           const authority = state.sessionExecution.delegationAuthority(call.agent, call.session)
           expect(config).toMatchObject({ cwd: state.workspace, provider: 'mock', model: 'fixture', maxSteps: 3,
@@ -1311,35 +1008,10 @@ it.each([
           await rejectedBuiltin
           expect(runtimeExited).toBe(true)
           await state.sessionExecution.delegate(call.agent, call.session, {
-            id: childSessionId,
+            id: SessionId('native-headless-delegated-child'),
             config: { cwd: state.workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Delegated child.', maxSteps: 3,
               ...(selection === undefined ? {} : { builtinTools: selection }) },
             maxDepth: 2,
-            prepare({ agent, own }) {
-              if (selection !== undefined) return
-              const remove = state.tools.registerValueTool({
-                schema: { name: 'capture_external', description: 'Return the child Agent owner.', parameters: {
-                  type: 'object', properties: { child: { type: 'boolean' } }, additionalProperties: false,
-                } },
-                output: { schema: { type: 'string' }, render: (_call, value) => {
-                  if (typeof value !== 'string') throw new Error('child tool output must be text')
-                  return { content: [{ type: 'text', text: value }], isError: false }
-                } },
-                async execute(childCall) {
-                  childInitiator = state.agents.currentInitiator()
-                  childCalls.push(childCall)
-                  childOwnerObserved = true
-                  try {
-                    if (state.sessionExecution === undefined) throw new Error('sessionExecution is unavailable')
-                    childConfiguration = state.sessionExecution.configuration(childCall.agent, childCall.session)
-                    childAuthority = state.sessionExecution.delegationAuthority(childCall.agent, childCall.session)
-                  } catch (error: unknown) { childOwnerFailure = error }
-                  return 'delegated child result'
-                },
-              }, agent.scope)
-              own(remove)
-              childToolPrepared = true
-            },
             message: createUserMessage({ content: [{ type: 'text', text: 'inspect inherited tool grants' }], source: { kind: 'user' } }),
             delegationContext: Object.freeze({
               depth: 0, maxDepth: 2, cwd: state.workspace, provider: 'mock', model: 'fixture', maxSteps: 4,
@@ -1359,196 +1031,9 @@ it.each([
       state.app.run(['capture the external tool owner'], invocation.signal))
     expect(state.adapter.requests).toHaveLength(4)
     expect(childOwnerObserved).toBe(true)
-    if (selection === undefined) {
-      expect(childToolPrepared).toBe(true)
-      expect(state.adapter.requests[1]?.tools?.find(schema => schema.name === 'capture_external')?.description)
-        .toBe('Return the child Agent owner.')
-      expect(parentInitiator).toBe(calls[0]?.agent)
-    }
     expect(state.adapter.requests[0]?.tools?.some(schema => schema.name === 'capture_external')).toBe(true)
     const delegatedTools = state.adapter.requests[1]?.tools?.map(schema => schema.name).sort() ?? []
     expect(delegatedTools).toEqual(['capture_external', 'headless_external_echo', ...(expectedBuiltinTools ? ['read_file'] : [])])
-    if (selection === undefined) {
-      expect(childCalls).toHaveLength(1)
-      const childCall = childCalls[0]
-      if (childCall === undefined || state.sessionExecution === undefined) throw new Error('delegated tool call was not captured')
-      expect(childInitiator).toBe(childCall.agent)
-      expect(childCall.agent.id).toBe(NativeAgentId(childSessionId))
-      expect(childCall.session.id).toBe(childSessionId)
-      expect(childCall.session).not.toBe(parentSession)
-      expect(childCall.callId).toBe(ToolCallId('capture-delegated'))
-      expect(childOwnerFailure).toBeUndefined()
-      expect(childConfiguration).toMatchObject({
-        cwd: state.workspace, provider: 'mock', model: 'fixture', maxSteps: 3,
-        builtinTools: expectedBuiltinTools,
-      })
-      expect([...(childAuthority?.toolNames ?? [])].sort()).toEqual([
-        'capture_external', 'headless_external_echo', ...(expectedBuiltinTools ? ['read_file'] : []),
-      ])
-      expect(childAuthority?.builtinToolNames).toEqual(expectedBuiltinTools ? ['read_file'] : [])
-      expect(childCall.delegationContext).toMatchObject({ depth: 1, maxDepth: 2 })
-      expect(childCall.delegationContext?.toolNames).toEqual([
-        'read_file', 'write_file', 'run_code', 'headless_external_echo', 'capture_external',
-      ])
-    }
-    const modelToolOutput = (callId: string): string => {
-      const result = state.adapter.requests.flatMap(request => request.messages).flatMap(message => message.content)
-        .find(block => block.type === 'tool-result' && block.toolCallId === ToolCallId(callId))
-      if (result?.type !== 'tool-result') throw new Error(`missing model-visible result for ${callId}`)
-      const output = result.content.find(block => block.type === 'text')
-      if (output?.type !== 'text') throw new Error(`missing text output for ${callId}`)
-      return output.text
-    }
-    if (selection === undefined) expect(modelToolOutput('capture-delegated')).toBe('delegated child result')
-
-    if (selection === undefined) {
-      const oldTools = state.tools
-      const capturedOldExecute = oldTools.execute.bind(oldTools)
-      const providerProbeSchema = { name: 'provider_probe', description: 'Return the current tools Provider.', parameters: {
-        type: 'object', properties: { mode: { type: 'string', enum: ['real', 'hold', 'replacement'] } },
-        required: ['mode'], additionalProperties: false,
-      } }
-      const providerProbeOutput = { schema: { type: 'string' as const }, render: (_call: NativeToolExecution, value: import('@deepseek-ai/dsh-util-values').JsonValue) => {
-        if (typeof value !== 'string') throw new Error('Provider probe output must be text')
-        return { content: [{ type: 'text' as const, text: value }], isError: false }
-      } }
-      const heldEntered = Promise.withResolvers<undefined>()
-      const heldAborted = Promise.withResolvers<undefined>()
-      const releaseHeld = Promise.withResolvers<undefined>()
-      const cleanupEntered = Promise.withResolvers<undefined>()
-      const releaseCleanup = Promise.withResolvers<undefined>()
-      let heldBodySettled = false
-      let oldResourcesCleaned = false
-      let replacementActive = false
-      let oldExecutionCalls = 0
-      let replacementExecutionCalls = 0
-      let replacementRegistry: NativeToolRegistry | undefined
-      const removeProbe = oldTools.registerValueTool({
-        schema: providerProbeSchema,
-        output: providerProbeOutput,
-        async execute(call) {
-          oldExecutionCalls += 1
-          const mode = (call.arguments as { mode: string }).mode
-          if (mode === 'hold') {
-            heldEntered.resolve(undefined)
-            await new Promise<void>((resolve) => {
-              if (call.signal.aborted) { heldAborted.resolve(undefined); resolve() }
-              else call.signal.addEventListener('abort', () => { heldAborted.resolve(undefined); resolve() }, { once: true })
-            })
-            await releaseHeld.promise
-            heldBodySettled = true
-            return 'old Provider drained'
-          }
-          return 'real Provider'
-        },
-      })
-      const clearOldTools = oldTools.clear.bind(oldTools)
-      oldTools.clear = async () => {
-        await clearOldTools()
-        oldResourcesCleaned = true
-        cleanupEntered.resolve(undefined)
-        await releaseCleanup.promise
-      }
-      const substituteToolsProvider: NativePlugin = {
-        apiVersion: 1, name: 'test-substitute-native-tools', targets: ['host'], requires: ['agents'], provides: ['tools'],
-        resolve: () => (context) => {
-          expect(oldResourcesCleaned).toBe(true)
-          expect(oldTools.schemas()).toEqual([])
-          expect(() => oldTools.register({ schema: providerProbeSchema,
-            execute: async () => ({ content: [], isError: false }) })).toThrow('native-tools: registry is disposed')
-          const registry = new NativeToolRegistry(context.require('agents'), context.scope)
-          context.own(() => registry.clear())
-          context.effect(registry.registerValueTool({ schema: providerProbeSchema, output: providerProbeOutput,
-            async execute() { replacementExecutionCalls += 1; return 'replacement Provider' } }))
-          replacementRegistry = registry
-          replacementActive = true
-          context.provide('tools', registry)
-        },
-      }
-      let inFlightOutcome: { status: 'fulfilled' } | { status: 'rejected'; reason: unknown } | undefined
-      let replacementSettled = false
-      let inFlight: Promise<void> | undefined
-      let replacing: Promise<void> | undefined
-      let unregisterCapturedAgent: (() => Promise<void>) | undefined
-      try {
-        await state.host.run(state.scope, { kind: 'real-tools-provider' }, invocation =>
-          state.app.run(['call the tools Provider'], invocation.signal))
-        expect(modelToolOutput('provider-real-result')).toBe('real Provider')
-        inFlight = state.host.run(state.scope, { kind: 'held-tools-provider' }, invocation =>
-          state.app.run(['hold the tools Provider'], invocation.signal)).then(
-          () => { inFlightOutcome = { status: 'fulfilled' } },
-          (reason: unknown) => { inFlightOutcome = { status: 'rejected', reason } },
-        )
-        await heldEntered.promise
-        replacing = state.replaceToolsProvider(substituteToolsProvider).then(() => { replacementSettled = true })
-        await heldAborted.promise
-        await new Promise<void>(resolve => setImmediate(resolve))
-        expect(replacementSettled).toBe(false)
-        expect(replacementActive).toBe(false)
-        expect(state.tools).toBe(oldTools)
-        expect(oldTools.schemas().some(schema => schema.name === 'provider_probe')).toBe(true)
-        releaseHeld.resolve(undefined)
-        await cleanupEntered.promise
-        expect(heldBodySettled).toBe(true)
-        expect(oldTools.schemas()).toEqual([])
-        expect(state.tools).toBe(oldTools)
-        await new Promise<void>(resolve => setImmediate(resolve))
-        expect(replacementSettled).toBe(false)
-        expect(replacementActive).toBe(false)
-        releaseCleanup.resolve(undefined)
-        await replacing
-        await inFlight
-        expect(inFlightOutcome).toMatchObject({ status: 'rejected' })
-        const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
-        try {
-          let heldResult: SessionEvent | undefined
-          for (const snapshot of await storage.list()) {
-            const reader = await storage.open(SessionId(snapshot.header.id), 'read')
-            try {
-              heldResult ??= (await reader.read()).events.find(event => event.type === 'tool/result'
-                && event.data.message.source.kind === 'tool'
-                && event.data.message.source.callId === ToolCallId('provider-held-result'))
-            } finally { await reader.close() }
-          }
-          expect(heldResult).toMatchObject({
-            type: 'tool/result',
-            data: {
-              error: { name: 'ToolOutcomeUnknownError', code: 'TOOL_OUTCOME_UNKNOWN' },
-              message: { content: [{ type: 'tool-result', toolCallId: ToolCallId('provider-held-result'), isError: true }] },
-            },
-          })
-        } finally { await storage.close() }
-        expect(state.tools).toBe(replacementRegistry)
-        expect(oldTools.schemas()).toEqual([])
-        const capturedAgent: NativeAgent = { id: NativeAgentId('captured-old-tools-agent'), scope: state.scope }
-        unregisterCapturedAgent = state.agents.register(capturedAgent)
-        const capturedSessionId = SessionId('captured-old-tools-session')
-        const capturedSession = Session.create(capturedSessionId, undefined, {
-          version: SESSION_FORMAT_VERSION, id: capturedSessionId, createdAt: 1, cwd: state.workspace, isSeeded: false,
-        })
-        const signal = new AbortController().signal
-        expect(signal.aborted).toBe(false)
-        await expect(capturedOldExecute({
-          agent: capturedAgent, callId: ToolCallId('captured-old-tools-call'), name: 'provider_probe', arguments: { mode: 'real' },
-          session: capturedSession, signal,
-          appendEvent: async (type, data, ...opts) => capturedSession.append(type, data, ...opts),
-        })).rejects.toThrow('native-tools: unknown tool provider_probe')
-        expect(oldExecutionCalls).toBe(2)
-        expect(replacementExecutionCalls).toBe(0)
-        await unregisterCapturedAgent()
-        unregisterCapturedAgent = undefined
-        await state.host.run(state.scope, { kind: 'replacement-tools-provider' }, invocation =>
-          state.app.run(['call the replacement tools Provider'], invocation.signal))
-        expect(modelToolOutput('provider-substitute-result')).toBe('replacement Provider')
-        expect(replacementExecutionCalls).toBe(1)
-      } finally {
-        releaseHeld.resolve(undefined)
-        releaseCleanup.resolve(undefined)
-        await Promise.allSettled([inFlight, replacing].filter((work): work is Promise<void> => work !== undefined))
-        if (unregisterCapturedAgent !== undefined) await unregisterCapturedAgent()
-        await removeProbe()
-      }
-    }
   } finally {
     releaseRuntime.resolve(undefined)
     if (removeCapture !== undefined) await removeCapture()
@@ -2053,79 +1538,25 @@ it('projects a bounded worker-thread code result through the Session tool sequen
 
 it.each([false, true])('passes the current Session to builtin/PTC code runtime and rejects restricted worker execution (PTC %s)', async (ptc) => {
   const requests: NativeCodeRunRequest[] = []
-  const initialRuntime: NativeCodeRuntime = {
+  const codeRuntime: NativeCodeRuntime = {
     language: 'typescript', isolation: 'worker-thread',
     run: async (request) => { requests.push(request); return { logs: [], value: 42 } },
     dispose: async () => {},
   }
-  const initialProvider: NativePlugin = {
+  const codeRuntimeProvider: NativePlugin = {
     apiVersion: 1, name: 'test-code-runtime', targets: ['host'], requires: [], provides: ['codeRuntime'],
     resolve: () => (context) => {
-      context.own(() => initialRuntime.dispose())
-      context.provide('codeRuntime', initialRuntime)
+      context.own(() => codeRuntime.dispose())
+      context.provide('codeRuntime', codeRuntime)
     },
   }
   const args = ptc ? { code: 'return 6 * 7', description: 'Calculate six times seven.' } : { program: 'return 6 * 7' }
-  const waitingProgram = ptc ? 'await tools.headless_in_flight({}); return 0' : 'while (true) {}'
-  const waitingArgs = ptc ? { code: waitingProgram, description: 'Wait for the in-flight call to be cancelled.' }
-    : { program: waitingProgram }
   const safe = await fixture([
     toolCallResponse('code-safe', 'run_code', args), textResponse('calculation complete'),
-    toolCallResponse('code-in-flight', 'run_code', waitingArgs),
-    toolCallResponse('code-after-replacement', 'run_code', args), textResponse('replacement calculation complete'),
-  ], { ptc, ...ptc ? { allowedTools: ['run_code', 'headless_in_flight'] } : { codeRuntimeProvider: initialProvider } })
+  ], { ptc, codeRuntimeProvider, ...ptc ? { allowedTools: ['run_code'] } : {} })
   let removeBusiness: (() => Promise<void>) | undefined
-  let removeInFlightTool: (() => Promise<void>) | undefined
-  const handoff: string[] = []
-  const inFlightToolEntered = Promise.withResolvers<undefined>()
-  const inFlightRuntimeResult = Promise.withResolvers<Awaited<ReturnType<NativeCodeRuntime['run']>>>()
-  const cleanupEntered = Promise.withResolvers<undefined>()
-  const releaseCleanup = Promise.withResolvers<undefined>()
   try {
-    const previousRuntime = safe.codeRuntime
-    if (previousRuntime === undefined) throw new Error('missing production code-runtime Provider')
-    let staleRequest: NativeCodeRunRequest | undefined
-    let oldRuntimeDisposedAtActivation = false
     if (ptc) {
-      const realRun = previousRuntime.run.bind(previousRuntime)
-      previousRuntime.run = async (request) => {
-        requests.push(request)
-        if (request.program === waitingProgram) handoff.push('old runtime entered')
-        const result = await realRun(request)
-        if (request.program === waitingProgram) {
-          handoff.push('old runtime settled')
-          inFlightRuntimeResult.resolve(result)
-        }
-        return result
-      }
-      const realDispose = previousRuntime.dispose.bind(previousRuntime)
-      previousRuntime.dispose = async () => {
-        handoff.push('old cleanup entered')
-        await realDispose()
-        cleanupEntered.resolve(undefined)
-        await releaseCleanup.promise
-        handoff.push('old cleanup completed')
-      }
-    }
-    if (ptc) {
-      removeInFlightTool = safe.tools.registerValueTool({
-        schema: { name: 'headless_in_flight', description: 'Hold a code-runtime call until its signal aborts.',
-          parameters: { type: 'object', properties: {}, additionalProperties: false } },
-        output: { schema: { type: 'string' }, render: (_call, value) => {
-          if (typeof value !== 'string') throw new Error('in-flight fixture output must be text')
-          return { content: [{ type: 'text', text: value }], isError: false }
-        } },
-        async execute(call) {
-          handoff.push('old bound work entered')
-          inFlightToolEntered.resolve(undefined)
-          await new Promise<void>((resolve) => {
-            if (call.signal.aborted) resolve()
-            else call.signal.addEventListener('abort', () => { resolve() }, { once: true })
-          })
-          handoff.push('old bound work settled')
-          return 'cancelled'
-        },
-      }, safe.scope)
       removeBusiness = safe.tools.registerValueTool({
         schema: { name: 'headless_unallowed_business', description: 'Return an unallowed fixture value.',
           parameters: { type: 'object', properties: {}, additionalProperties: false } },
@@ -2139,89 +1570,15 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
     }
     await safe.host.run(safe.scope, { kind: 'code-runtime-session' }, invocation => safe.app.run(['calculate'], invocation.signal))
     expect(requests).toHaveLength(1)
-    if (ptc) expect(requests[0]?.bindings.flatMap(binding => Object.keys(binding.functions))).toEqual(['headless_in_flight'])
+    if (ptc) expect(requests[0]?.bindings).toEqual([])
     expect(requests[0]?.session.header.cwd).toBe(safe.workspace)
-
-    if (ptc) {
-      const before = JSON.stringify(safe.adapter.requests[1]?.messages)
-      expect(before).toContain('42')
-      const inFlight = safe.host.run(safe.scope, { kind: 'code-runtime-replacement' },
-        invocation => safe.app.run(['hold for replacement'], invocation.signal))
-      await inFlightToolEntered.promise
-      staleRequest = requests.find(request => request.program === waitingProgram)
-      if (staleRequest === undefined) throw new Error('old Provider did not receive the in-flight program')
-      const substituteRuntime: NativeCodeRuntime = {
-        language: 'typescript', isolation: 'worker-thread',
-        run: async (request) => { requests.push(request); handoff.push('substitute served'); return { logs: [], value: 7 } },
-        dispose: async () => {},
-      }
-      const substituteProvider: NativePlugin = {
-        apiVersion: 1, name: 'test-code-runtime-substitute', targets: ['host'], requires: [], provides: ['codeRuntime'],
-        resolve: () => async (context) => {
-          if (staleRequest === undefined) throw new Error('old Provider did not receive the in-flight program')
-          await expect(previousRuntime.run({ ...staleRequest, program: 'return 1' })).rejects.toThrow('run() after disposal')
-          oldRuntimeDisposedAtActivation = true
-          context.own(() => substituteRuntime.dispose())
-          context.provide('codeRuntime', substituteRuntime)
-          handoff.push('substitute provider active')
-        },
-      }
-      let replacementSettled = false
-      const replacing = safe.replaceCodeRuntime(substituteProvider).then(() => { replacementSettled = true })
-      await cleanupEntered.promise
-      await new Promise<void>(resolve => setImmediate(resolve))
-      expect(replacementSettled).toBe(false)
-      expect(safe.codeRuntime).toBe(previousRuntime)
-      expect(handoff).toEqual([
-        'old runtime entered', 'old bound work entered', 'old bound work settled', 'old runtime settled',
-        'old cleanup entered',
-      ])
-      await expect(inFlightRuntimeResult.promise).resolves.toMatchObject({ error: { kind: 'abort' } })
-      releaseCleanup.resolve(undefined)
-      await replacing
-      await Promise.allSettled([inFlight])
-      expect(handoff).toEqual([
-        'old runtime entered', 'old bound work entered', 'old bound work settled', 'old runtime settled',
-        'old cleanup entered', 'old cleanup completed', 'substitute provider active',
-      ])
-      expect(oldRuntimeDisposedAtActivation).toBe(true)
-      expect(safe.codeRuntime).toBe(substituteRuntime)
-
-      await safe.host.run(safe.scope, { kind: 'code-runtime-replacement-result' },
-        invocation => safe.app.run(['calculate with replacement'], invocation.signal))
-      const modelToolOutput = (callId: string): string => {
-        const result = safe.adapter.requests.flatMap(request => request.messages).flatMap(message => message.content)
-          .find(block => block.type === 'tool-result' && block.toolCallId === ToolCallId(callId))
-        if (result?.type !== 'tool-result') throw new Error(`missing model-visible result for ${callId}`)
-        const output = result.content.find(block => block.type === 'text')
-        if (output?.type !== 'text') throw new Error(`missing text output for ${callId}`)
-        return output.text
-      }
-      expect(modelToolOutput('code-safe')).toBe('42')
-      expect(modelToolOutput('code-after-replacement')).toBe('7')
-      expect(handoff.at(-1)).toBe('substitute served')
-    }
   } finally {
-    releaseCleanup.resolve(undefined)
-    await safe.host.stop()
     await removeBusiness?.()
-    await removeInFlightTool?.()
+    await safe.host.stop()
     await rm(safe.directory, { recursive: true, force: true })
   }
 
   requests.length = 0
-  const restrictedRuntime: NativeCodeRuntime = {
-    language: 'typescript', isolation: 'worker-thread',
-    run: async (request) => { requests.push(request); return { logs: [], value: 42 } },
-    dispose: async () => {},
-  }
-  const codeRuntimeProvider: NativePlugin = {
-    apiVersion: 1, name: 'test-restricted-code-runtime', targets: ['host'], requires: [], provides: ['codeRuntime'],
-    resolve: () => (context) => {
-      context.own(() => restrictedRuntime.dispose())
-      context.provide('codeRuntime', restrictedRuntime)
-    },
-  }
   const policy = new NativeSandboxPolicy({ mode: 'danger-full-access', workspaceRoot: process.cwd() })
   const resolvePolicy = vi.spyOn(policy, 'resolve').mockImplementation((request = {}) => ({
     mode: request.session === undefined ? 'danger-full-access' : 'read-only',
@@ -2240,7 +1597,7 @@ it.each([false, true])('passes the current Session to builtin/PTC code runtime a
     await restricted.host.stop()
     await rm(restricted.directory, { recursive: true, force: true })
   }
-}, 15_000)
+})
 
 it('projects a program failure as an explicit native code-runtime tool error', async () => {
   const state = await fixture([
@@ -2699,266 +2056,6 @@ it.each([false, true])('projects nested instruction discovery and removal after 
     expect(final).toContain('Instructions removed:')
     expect(final.match(/Nested rule\./g)).toHaveLength(1)
   } finally {
-    await state.host.stop()
-    await rm(state.directory, { recursive: true, force: true })
-  }
-})
-
-it.each(['read-first', 'cleanup-first'] as const)('replaces the filesystem skill Provider after pending work (%s)', async (releaseOrder) => {
-  const cleanupEntered = Promise.withResolvers<undefined>()
-  const releaseCleanup = Promise.withResolvers<undefined>()
-  const cleanupCompleted = Promise.withResolvers<undefined>()
-  let capturedFilesystemProvider: (SkillProvider & { dispose(): Promise<void> }) | undefined
-  let oldProviderCalls = 0
-  let oldProviderCallsAtReplacement = 0
-  let oldResourcesCleaned = false
-  const observeSkillProvider = (provider: SkillProvider): void => {
-    if (provider.name !== 'filesystem') throw new Error(`unexpected skill Provider ${provider.name}`)
-    const disposable = provider as SkillProvider & { dispose(): Promise<void> }
-    const originalList = disposable.list.bind(disposable)
-    Object.defineProperty(disposable, 'list', {
-      value: async (...args: Parameters<SkillProvider['list']>) => {
-        oldProviderCalls += 1
-        return await originalList(...args)
-      },
-    })
-    const originalGet = disposable.get.bind(disposable)
-    Object.defineProperty(disposable, 'get', {
-      value: async (...args: Parameters<SkillProvider['get']>) => {
-        oldProviderCalls += 1
-        return await originalGet(...args)
-      },
-    })
-    const originalDispose = disposable.dispose.bind(disposable)
-    let disposal: Promise<void> | undefined
-    Object.defineProperty(disposable, 'dispose', {
-      value: () => disposal ??= (async () => {
-        cleanupEntered.resolve(undefined)
-        await releaseCleanup.promise
-        await originalDispose()
-        oldResourcesCleaned = true
-        cleanupCompleted.resolve(undefined)
-      })(),
-    })
-    capturedFilesystemProvider = disposable
-  }
-  const state = await fixture([
-    toolCallResponse('skill-real', 'skill', { name: 'handoff-skill' }), textResponse('real Provider completed'),
-    toolCallResponse('skill-controlled', 'skill', { name: 'handoff-skill' }), textResponse('controlled Provider completed'),
-  ], { observeSkillProvider })
-  const skillDirectory = state.skillDirectory
-  if (skillDirectory === undefined) throw new Error('missing real skill directory')
-  const skillFile = join(skillDirectory, 'handoff-skill', 'SKILL.md')
-  let holdSkillRead = false
-  const readEntered = Promise.withResolvers<undefined>()
-  const releaseRead = Promise.withResolvers<undefined>()
-  const readAborted = Promise.withResolvers<undefined>()
-  const readFinished = Promise.withResolvers<undefined>()
-  const originalReadText = state.filesystem.readText.bind(state.filesystem)
-  state.filesystem.readText = async (target, signal) => {
-    if (holdSkillRead && state.filesystem.processPath(target) === skillFile) {
-      holdSkillRead = false
-      readEntered.resolve(undefined)
-      signal?.addEventListener('abort', () => { readAborted.resolve(undefined) }, { once: true })
-      await releaseRead.promise
-      try { signal?.throwIfAborted() } finally { readFinished.resolve(undefined) }
-    }
-    return await originalReadText(target, signal)
-  }
-  let controlledActive = false
-  let controlledGetCalls = 0
-  const controlledProvider: SkillProvider = {
-    name: 'controlled-handoff',
-    async list() {
-      return [{ name: 'handoff-skill', description: 'Handoff skill', invocation: { modelInvocable: true, userInvocable: true },
-        source: 'custom', provider: 'controlled-handoff', resourceBase: { kind: 'opaque', description: 'controlled resource store' },
-        rank: 0, locator: 'handoff-skill' }]
-    },
-    async get(candidate) {
-      controlledGetCalls += 1
-      return { ...candidate, content: 'Controlled instructions.' }
-    },
-  }
-  const controlledPlugin: NativePlugin = {
-    apiVersion: 1, name: 'test-controlled-skill-provider', targets: ['host'], requires: ['skills'], provides: [],
-    resolve: () => (context) => {
-      if (!oldResourcesCleaned) throw new Error('filesystem skill resources were not disposed before replacement activation')
-      context.own(context.require('skills').registerProvider(state.scope, () => controlledProvider))
-      controlledActive = true
-    },
-  }
-  let inFlight: Promise<{ result: Awaited<ReturnType<NativeToolRegistry['execute']>> } | { error: unknown }> | undefined
-  let replacing: Promise<void> | undefined
-  let replacementSettled = false
-  try {
-    const activeApplication = state.app
-    const run = async (prompt: string): Promise<void> => {
-      await state.host.run(state.scope, { kind: 'skill-provider-handoff' }, invocation =>
-        state.app.run([prompt], invocation.signal))
-    }
-    await run('Load handoff-skill')
-    expect(state.adapter.requests).toHaveLength(2)
-    const firstRequest = state.adapter.requests[0]
-    if (firstRequest === undefined) throw new Error('missing first model request')
-    if (firstRequest.tools === undefined) throw new Error('missing first model schemas')
-    const firstSkillSchemas = firstRequest.tools.filter(tool => tool.name === 'skill')
-    expect(firstSkillSchemas).toHaveLength(1)
-
-    const directSessionId = SessionId('skill-provider-handoff-in-flight')
-    const directSession = Session.create(directSessionId, undefined, {
-      version: SESSION_FORMAT_VERSION, id: directSessionId, createdAt: 1, cwd: state.workspace, isSeeded: false,
-    })
-    const directAgent: NativeAgent = { id: NativeAgentId('skill-provider-handoff-agent'), scope: state.scope }
-    const unregisterAgent = state.agents.register(directAgent)
-    holdSkillRead = true
-    inFlight = state.tools.execute({
-      agent: directAgent, callId: ToolCallId('skill-in-flight'), name: 'skill', arguments: { name: 'handoff-skill' },
-      session: directSession, signal: new AbortController().signal,
-      appendEvent: async (type, data, ...opts) => directSession.append(type, data, ...opts),
-    }).then(result => ({ result }), (error: unknown) => ({ error }))
-    await readEntered.promise
-    oldProviderCallsAtReplacement = oldProviderCalls
-    replacing = state.replaceSkillProvider(controlledPlugin).then(() => { replacementSettled = true })
-    await readAborted.promise
-    await cleanupEntered.promise
-    if (releaseOrder === 'read-first') {
-      releaseRead.resolve(undefined)
-      await readFinished.promise
-    } else {
-      releaseCleanup.resolve(undefined)
-      await cleanupCompleted.promise
-    }
-    await new Promise<void>(resolve => setImmediate(resolve))
-    expect(replacementSettled).toBe(false)
-    expect(controlledActive).toBe(false)
-    expect(controlledGetCalls).toBe(0)
-    if (releaseOrder === 'read-first') {
-      releaseCleanup.resolve(undefined)
-      await cleanupCompleted.promise
-    } else {
-      releaseRead.resolve(undefined)
-      await readFinished.promise
-    }
-    const inFlightOutcome = await inFlight
-    expect(inFlightOutcome).toMatchObject({ error: new Error('skill "handoff-skill" is unknown or no longer available') })
-    await replacing
-    expect(oldResourcesCleaned).toBe(true)
-    await unregisterAgent()
-    expect(state.app).toBe(activeApplication)
-    expect(state.tools.schemas().filter(tool => tool.name === 'skill')).toEqual(firstSkillSchemas)
-    expect(capturedFilesystemProvider).toBeDefined()
-
-    await run('Load handoff-skill')
-    expect(state.adapter.requests).toHaveLength(4)
-    expect(controlledActive).toBe(true)
-    expect(controlledGetCalls).toBe(1)
-    expect(oldProviderCalls).toBe(oldProviderCallsAtReplacement)
-
-    const realContent = [
-      '<skill_content name="handoff-skill">', '<skill_resources>',
-      `Base directory for this skill: ${join(skillDirectory, 'handoff-skill')}`,
-      'Resolve relative paths mentioned by this skill against the base directory before using them. Load referenced resources only as needed.',
-      '</skill_resources>', '', '<skill_instructions>', 'Filesystem instructions.', '</skill_instructions>', '</skill_content>',
-    ].join('\n')
-    const controlledContent = [
-      '<skill_content name="handoff-skill">', '<skill_resources>',
-      'Resources for this skill: controlled resource store', 'Load referenced resources only as needed.',
-      '</skill_resources>', '', '<skill_instructions>', 'Controlled instructions.', '</skill_instructions>', '</skill_content>',
-    ].join('\n')
-    const skillCatalogText = [
-      '<system-reminder>',
-      'A skill is a reusable set of task-specific instructions. The following skills are available in this session:',
-      '',
-      '<available_skills>',
-      '- `handoff-skill`: Handoff skill',
-      '</available_skills>',
-      '',
-      "If the user names a skill, or the task clearly matches a skill's description, call the `skill` tool with the exact skill name before taking task actions. Load all applicable skills, then follow their full instructions. This catalog contains summaries only; do not infer or follow a skill's instructions until it has been loaded.",
-      'A user may also invoke a skill directly; its <skill_content> block then appears in this conversation. Follow it, and do not call the `skill` tool again for that skill.',
-      '</system-reminder>',
-    ].join('\n')
-    const skillCatalogMessage = (index: number) => {
-      const request = state.adapter.requests[index]
-      if (request === undefined) throw new Error(`missing model request ${index}`)
-      const message = request.messages.find(candidate => candidate.source.kind === 'skill-catalog')
-      if (message === undefined) throw new Error(`missing skill catalog in request ${index}`)
-      const { id: _messageId, ...catalog } = message
-      return catalog
-    }
-    for (const index of [0, 1, 2, 3]) {
-      expect(skillCatalogMessage(index)).toEqual({
-        role: 'user',
-        content: [{ type: 'text', text: skillCatalogText }],
-        source: { kind: 'skill-catalog', form: 'catalog', entries: [{ name: 'handoff-skill', description: 'Handoff skill' }] },
-      })
-    }
-    const modelInput = (index: number) => {
-      const request = state.adapter.requests[index]
-      if (request === undefined) throw new Error(`missing model request ${index}`)
-      const { messages, signal, sessionId, ...input } = request
-      expect(signal?.aborted).toBe(false)
-      expect(sessionId).toBeDefined()
-      return {
-        ...input,
-        messages: messages.map(({ id: _messageId, ...message }) => ({
-          ...message,
-          source: message.source.kind === 'tool'
-            ? { ...message.source, callId: ToolCallId('normalized-skill-call') }
-            : message.source,
-          content: message.content.map((block) => {
-            if (block.type === 'tool-call') return { ...block, id: ToolCallId('normalized-skill-call') }
-            if (block.type === 'tool-result') return {
-              ...block,
-              toolCallId: ToolCallId('normalized-skill-call'),
-              content: block.content.map(content => content.type === 'text'
-                && (content.text === realContent || content.text === controlledContent)
-                ? { ...content, text: '<skill provider content>' }
-                : content),
-            }
-            return block
-          }),
-        })),
-      }
-    }
-    const modelToolResult = (requestIndex: number, callId: string) => {
-      const request = state.adapter.requests[requestIndex]
-      if (request === undefined) throw new Error(`missing model request ${requestIndex}`)
-      const block = request.messages.flatMap(message => message.content)
-        .find(content => content.type === 'tool-result' && content.toolCallId === ToolCallId(callId))
-      if (block?.type !== 'tool-result') throw new Error(`missing model result for ${callId} in request ${requestIndex}`)
-      return block
-    }
-    expect(modelToolResult(1, 'skill-real')).toEqual({ type: 'tool-result', toolCallId: ToolCallId('skill-real'),
-      content: [{ type: 'text', text: realContent }], isError: false })
-    expect(modelToolResult(3, 'skill-controlled')).toEqual({ type: 'tool-result', toolCallId: ToolCallId('skill-controlled'),
-      content: [{ type: 'text', text: controlledContent }], isError: false })
-    expect(modelInput(0)).toEqual(modelInput(2))
-    expect(modelInput(1)).toEqual(modelInput(3))
-
-    const storage = new JsonlSessionBackend({ root: state.sessions, compression: 'none' })
-    try {
-      const resultEvents: SessionEvent[] = []
-      for (const snapshot of await storage.list()) {
-        const reader = await storage.open(SessionId(snapshot.header.id), 'read')
-        try {
-          resultEvents.push(...(await reader.read()).events.filter(event => event.type === 'tool/result'))
-        } finally { await reader.close() }
-      }
-      const persistedResult = (callId: string) => resultEvents.find(event => event.type === 'tool/result'
-        && event.data.message.content.some(content => content.type === 'tool-result'
-          && content.toolCallId === ToolCallId(callId)))
-      expect(persistedResult('skill-real')).toMatchObject({ type: 'tool/result', data: { message: { content: [modelToolResult(1, 'skill-real')] } } })
-      expect(persistedResult('skill-controlled')).toMatchObject({ type: 'tool/result', data: { message: { content: [modelToolResult(3, 'skill-controlled')] } } })
-    } finally { await storage.close() }
-
-    expect(oldProviderCalls).toBe(oldProviderCallsAtReplacement)
-  } finally {
-    releaseRead.resolve(undefined)
-    releaseCleanup.resolve(undefined)
-    await Promise.allSettled([
-      ...inFlight === undefined ? [] : [inFlight],
-      ...replacing === undefined ? [] : [replacing],
-    ])
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

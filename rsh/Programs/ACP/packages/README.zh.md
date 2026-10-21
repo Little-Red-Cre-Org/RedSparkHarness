@@ -25,7 +25,7 @@ acp 组提供兼容与原生承载包：服务器，让程序与自动化流程�
 | 包 | 职责 |
 |---|---|
 | [`acp/`](acp/README.zh.md) | 让程序通过 ACP 管理持久 agent、挂载 MCP 服务器、选择模型选项、发送提示词、取消工作并接收语义更新 |
-| [`native-acp/`](native-acp/README.zh.md) | 显式选择的原生 ACP 承载层，支持持久化文本／图片输出、条件 usage、分页 Session 列表、提示、取消、关闭与恢复 |
+| [`native-acp/`](native-acp/README.zh.md) | 显式选择的原生文本 ACP 承载层，支持持久化 Session 提示、取消、关闭、列出与恢复 |
 
 -----
 

@@ -7,10 +7,6 @@ import {
 } from './theme-contract.ts'
 import { installThemeStyles } from './theme-sheets.ts'
 
-const FONT_SIZE_MIN = 12
-const FONT_SIZE_MAX = 17
-const CONTENT_FONT_SIZE_VARIABLE = '--dsh-content-font-size'
-
 /** Native theme capability with an explicit preference write face. */
 export interface NativeThemeService {
   /** Read the resolved appearance and its revision. */
@@ -19,8 +15,6 @@ export interface NativeThemeService {
   subscribe(listener: () => void): () => void
   /** Select a durable-profile override for light, dark, or system appearance. */
   setPreference(preference: ThemePreference): void
-  /** Set the conversation content font size in integer px from 12 through 17. */
-  setFontSize(px: number): void
   /** Switch between the two explicit palettes. */
   toggle(): void
 }
@@ -32,7 +26,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   }
 }
 
-/** Native theme Provider for the palette preference and conversation font-size variable. */
+/** Native theme Provider; DOM projection belongs to the shell layout module. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@deepseek-ai/dsh-client-ui-theme',
@@ -47,18 +41,14 @@ export const plugin: NativePlugin = {
     return (context) => {
       const media = typeof matchMedia === 'undefined' ? undefined : matchMedia('(prefers-color-scheme: dark)')
       let preference = initial
-      let fontSize = DEFAULT_FONT_SIZE
       let revision = 0
       const listeners = new Set<() => void>()
-      const root = typeof document === 'undefined' ? undefined : document.documentElement
-      const previousFontSize = root?.style.getPropertyValue(CONTENT_FONT_SIZE_VARIABLE)
-      root?.style.setProperty(CONTENT_FONT_SIZE_VARIABLE, `${fontSize}px`)
       const snapshot = (): ThemeSnapshot => {
         const colorScheme = preference === 'system' ? media?.matches === true ? 'dark' : 'light' : preference
         const active = Object.freeze({ id: colorScheme, colorScheme, tokens: Object.freeze({}) })
         return Object.freeze({
           preference,
-          fontSize,
+          fontSize: DEFAULT_FONT_SIZE,
           active,
           themes: [Object.freeze({ id: 'light', colorScheme: 'light' as const, tokens: Object.freeze({}) }),
             Object.freeze({ id: 'dark', colorScheme: 'dark' as const, tokens: Object.freeze({}) })],
@@ -76,11 +66,6 @@ export const plugin: NativePlugin = {
       media?.addEventListener('change', onSystemChange)
       context.own(() => media?.removeEventListener('change', onSystemChange))
       context.own(installThemeStyles())
-      context.own(() => {
-        if (root === undefined) return
-        if (previousFontSize === undefined || previousFontSize === '') root.style.removeProperty(CONTENT_FONT_SIZE_VARIABLE)
-        else root.style.setProperty(CONTENT_FONT_SIZE_VARIABLE, previousFontSize)
-      })
       const service: NativeThemeService = {
         getSnapshot: () => current,
         subscribe(listener) {
@@ -90,15 +75,6 @@ export const plugin: NativePlugin = {
         setPreference(value) {
           if (preference === value) return
           preference = value
-          publish()
-        },
-        setFontSize(value) {
-          if (!Number.isInteger(value) || value < FONT_SIZE_MIN || value > FONT_SIZE_MAX) {
-            throw new RangeError(`font size must be an integer from ${FONT_SIZE_MIN} through ${FONT_SIZE_MAX}`)
-          }
-          if (fontSize === value) return
-          fontSize = value
-          root?.style.setProperty(CONTENT_FONT_SIZE_VARIABLE, `${fontSize}px`)
           publish()
         },
         toggle() {

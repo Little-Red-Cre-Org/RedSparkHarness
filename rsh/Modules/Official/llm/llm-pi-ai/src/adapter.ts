@@ -154,8 +154,6 @@ export interface PiAiAuthInjection {
   credentials: CredentialStore
   /** Ambient lookups a provider performs while resolving its own auth. */
   authContext: AuthContext
-  /** Durable SIWC registration identity, stored separately from OAuth grants. */
-  siwcRegistration: import('./siwc.ts').SiwcRegistrationStore
 }
 
 /** Copy profile stream knobs into pi-ai's common option vocabulary. */
@@ -376,13 +374,13 @@ function asCodexRouteEvents(events: AssistantMessageEventStream): AssistantMessa
 /** Account-scoped SIWC catalog over the public OpenAI Responses API. */
 function codexSubscriptionProvider(
   base: Provider,
-  auth: PiAiAuthInjection,
+  credentials: CredentialStore,
   catalogIdentity: { value: CodexAccountIdentity | undefined; error?: unknown },
 ): Provider {
   const openai = catalogProvider('openai')
   if (openai === undefined) throw new Error('llm-pi-ai: installed pi-ai catalog has no OpenAI Responses provider')
 
-  const oauth = createSiwcOAuth(auth.siwcRegistration)
+  const oauth = createSiwcOAuth(credentials)
   let currentModels: readonly Model<Api>[] = []
 
   return {
@@ -405,17 +403,17 @@ function codexSubscriptionProvider(
       }
       const entries = await fetchCodexModels(context.credential.access, context.signal)
       const models = entries
-        .map(({ id, name, contextWindow }): Model<Api> => ({
+        .map(({ id, name }): Model<Api> => ({
           id,
           name,
           api: 'openai-responses',
           provider: CODEX_SUBSCRIPTION_ROUTE,
           baseUrl: OPENAI_RESPONSES_BASE_URL,
-          // The public catalog supplies context_window; other model capabilities remain unknown.
+          // The public catalog documents slugs and display names, not model capabilities.
           input: ['text'],
           cost: NO_MODEL_COST,
           reasoning: false,
-          contextWindow: contextWindow ?? 0,
+          contextWindow: 0,
           maxTokens: 0,
         }))
       await context.publish({ update: () => {
@@ -547,7 +545,7 @@ export class PiAiAdapter extends LlmAdapter {
     for (const profile of profiles.values()) {
       if (profile.piProvider !== undefined) {
         models.setProvider(profile.provider === CODEX_SUBSCRIPTION_ROUTE
-          ? codexSubscriptionProvider(profile.piProvider, this.config.auth, codexIdentity)
+          ? codexSubscriptionProvider(profile.piProvider, this.config.auth.credentials, codexIdentity)
           : profile.piProvider)
       }
     }

@@ -1,6 +1,5 @@
 /** Native navigation surface over the Session, layout, and schedule owners. */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import {
   Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
@@ -11,7 +10,7 @@ import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem, NativeSessionRpcError,
+  NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem,
 } from '@deepseek-ai/dsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -34,7 +33,6 @@ import type { SidebarPanelMetadata, SidebarRootInjected } from './client/contrac
 import { SidebarRoot } from './client/SidebarRoot.tsx'
 import css from './client/SidebarRoot.module.css'
 import { en as sidebarEn, zh as sidebarZh, type SidebarKey } from './client/locales.ts'
-import { en as nativeSidebarEn, zh as nativeSidebarZh, type NativeSidebarKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -43,13 +41,72 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
+/** Native sidebar copy for legacy workspace and session rows. */
+const zh = {
+  sessions: '会话', workspace: '工作区', empty: '暂无会话', loading: '正在读取会话…',
+  scheduleAction: '定时任务', search: '搜索会话', searchAria: '搜索会话', searchPlaceholder: '搜索会话…',
+  'schedule.loading': '正在读取定时任务…', 'schedule.empty': '暂无定时任务。', 'schedule.error': '无法读取定时任务。',
+  'schedule.close': '返回会话', 'schedule.nextRun': '下次执行', 'schedule.noNextRun': '暂无后续执行',
+  'schedule.once': '单次执行：{time}（{zone}）', 'schedule.every': '每 {interval} 执行一次，首次于 {time}（{zone}）',
+  'schedule.hours': '{n} 小时', 'schedule.minutes': '{n} 分钟', 'schedule.seconds': '{n} 秒',
+  'schedule.state.active': '计划中', 'schedule.state.paused': '已暂停', 'schedule.state.failed': '执行失败',
+  sortUpdated: '按最近活动排序', sortManual: '按手动顺序排序', addWorkspace: '新建工作区', workspaceTitle: '工作区名称',
+  viewOptions: '视图选项', groupBy: '分组方式', groupWorkspace: '按工作区', groupFlat: '平铺会话', orderBy: '排序方式',
+  'browser.title': '选择工作区目录', 'browser.home': '主目录', 'browser.newFolder': '新建文件夹', 'browser.folderName': '文件夹名称',
+  'browser.createIn': '在“{name}”中新建文件夹', 'browser.untitledFolder': '未命名文件夹', 'browser.create': '创建',
+  'browser.cancel': '取消', 'browser.open': '打开', 'browser.editPath': '编辑路径', 'browser.loading': '加载中…',
+  'browser.truncated': '文件夹过多，仅显示开头部分。', 'browser.showHidden': '显示隐藏文件',
+  'search.pending': '正在搜索…', 'search.noMatches': '没有匹配的会话', 'search.unavailable': '搜索不可用',
+  renameTitle: '重命名', refreshTitle: '重新生成标题', titleInput: '会话标题', saveTitle: '保存', cancelTitle: '取消',
+  'actions.newSession.aria': '在“{name}”中新建会话', 'actions.session.aria': '会话“{name}”的操作',
+  'actions.workspace.aria': '工作区“{name}”的操作', cancel: '取消', close: '关闭', copy: '复制',
+  'date.ymd': '{y}年{m}月{d}日',
+  'delete.sessionNote': '删除“{name}”？对应的执行历史和提醒会同步隐藏，定时计划不受影响。',
+  'delete.workspace': '删除工作区', 'delete.desc': '将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“未分组”下。',
+  'delete.pending': '正在删除工作区…', 'group.ungrouped': '未分组', 'hover.copied': '已复制',
+  'hover.created': '创建于 {time}', 'menu.archiveSession': '归档会话', 'menu.fork': '分叉会话',
+  'menu.removeSession': '删除会话', rename: '重命名', 'schedule.active': '有活动定时任务', 'session.new': '新会话',
+  'status.completed': '已完成', 'status.idle': '空闲', 'status.planReview': '计划待审', 'status.running': '进行中',
+  'status.subagentsRunning.one': '{n} 个子代理运行中', 'status.subagentsRunning.other': '{n} 个子代理运行中',
+  'status.waitingAnswer': '等待回答', 'status.waitingApproval': '等待审批', 'time.ago': '{t}前',
+  'time.days': '{n}天', 'time.hours': '{n}小时', 'time.minutes': '{n}分钟', 'time.months': '{n}个月',
+  'time.now': '刚刚', 'time.years': '{n}年',
+} as const
+const en = {
+  sessions: 'Sessions', workspace: 'Workspaces', empty: 'No sessions yet', loading: 'Loading Sessions…',
+  scheduleAction: 'Scheduled tasks', search: 'Search sessions', searchAria: 'Search sessions', searchPlaceholder: 'Search sessions…',
+  'schedule.loading': 'Loading scheduled tasks…', 'schedule.empty': 'No scheduled tasks.', 'schedule.error': 'Could not load scheduled tasks.',
+  'schedule.close': 'Back to conversation', 'schedule.nextRun': 'Next run', 'schedule.noNextRun': 'No upcoming run',
+  'schedule.once': 'Once · {time} ({zone})', 'schedule.every': 'Every {interval} from {time} ({zone})',
+  'schedule.hours': '{n}h', 'schedule.minutes': '{n} min', 'schedule.seconds': '{n}s',
+  'schedule.state.active': 'Scheduled', 'schedule.state.paused': 'Paused', 'schedule.state.failed': 'Failed',
+  sortUpdated: 'Sort by recent activity', sortManual: 'Sort by manual order', addWorkspace: 'New workspace', workspaceTitle: 'Workspace title',
+  viewOptions: 'View options', groupBy: 'Group by', groupWorkspace: 'Workspace', groupFlat: 'Flat list', orderBy: 'Order by',
+  'browser.title': 'Select Workspace Directory', 'browser.home': 'Home', 'browser.newFolder': 'New folder', 'browser.folderName': 'Folder name',
+  'browser.createIn': 'New folder in “{name}”', 'browser.untitledFolder': 'Untitled folder', 'browser.create': 'Create',
+  'browser.cancel': 'Cancel', 'browser.open': 'Open', 'browser.editPath': 'Edit path', 'browser.loading': 'Loading…',
+  'browser.truncated': 'Too many folders to list; only the beginning is shown.', 'browser.showHidden': 'Show hidden files',
+  'search.pending': 'Searching…', 'search.noMatches': 'No matching sessions', 'search.unavailable': 'Search is unavailable',
+  renameTitle: 'Rename', refreshTitle: 'Refresh title', titleInput: 'Session title', saveTitle: 'Save', cancelTitle: 'Cancel',
+  'actions.newSession.aria': 'New session in {name}', 'actions.session.aria': 'Session actions for {name}',
+  'actions.workspace.aria': 'Workspace actions for {name}', cancel: 'Cancel', close: 'Close', copy: 'Copy',
+  'date.ymd': '{y}-{m}-{d}',
+  'delete.sessionNote': 'Delete “{name}”? Its execution history and reminders will also be hidden. Schedules are unaffected.',
+  'delete.workspace': 'Delete workspace', 'delete.desc': 'This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Ungrouped.',
+  'delete.pending': 'Deleting workspace…', 'group.ungrouped': 'Ungrouped', 'hover.copied': 'Copied',
+  'hover.created': 'Created {time}', 'menu.archiveSession': 'Archive session', 'menu.fork': 'Fork session',
+  'menu.removeSession': 'Delete session', rename: 'Rename', 'schedule.active': 'Has active scheduled task', 'session.new': 'New Session',
+  'status.completed': 'Completed', 'status.idle': 'Idle', 'status.planReview': 'Plan awaiting review', 'status.running': 'Running',
+  'status.subagentsRunning.one': '{n} subagent running', 'status.subagentsRunning.other': '{n} subagents running',
+  'status.waitingAnswer': 'Waiting for answer', 'status.waitingApproval': 'Waiting for approval', 'time.ago': '{t} ago',
+  'time.days': '{n}d', 'time.hours': '{n}h', 'time.minutes': '{n}min', 'time.months': '{n}mo',
+  'time.now': 'now', 'time.years': '{n}y',
+} satisfies Record<keyof typeof zh, string>
+type NativeSidebarKey = keyof typeof zh
 type NativeSidebarTranslate = TranslateNS<'nativeSidebar'>
 type NativeSessionId = Parameters<NativeConversationService['select']>[0]
 type NativeWorkspaceId = NativeWorkspace['workspaceId']
 type NativeSessionGroup = WorkspaceGroupRow<NativeWorkspaceId, NativeSessionId>
-type NativeOrderDrag =
-  | { kind: 'session'; workspaceId: NativeWorkspaceId; id: NativeSessionId; over?: { id: NativeSessionId; half: 'before' | 'after' } }
-  | { kind: 'workspace'; id: NativeWorkspaceId; over?: { id: NativeWorkspaceId; half: 'before' | 'after' } }
 interface NativeWorkspaceSnapshot extends NativeWorkspaceBaseline {
   readonly ready: boolean
 }
@@ -60,24 +117,17 @@ type NativeWorkspacesInjected = {
     homeDirectory: HostObservable<string | undefined>
   }
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
-  deselectSession: NativeConversationService['deselect']
-  beginNavigation: NativeConversationService['beginNavigation']
-  isCurrentNavigation: NativeConversationService['isCurrentNavigation']
   renameTitle: (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
-  selectWorkspace: (id: NativeWorkspaceId, trust?: boolean) => Promise<void>
+  selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
-  createWorkspace: (path: string, trust?: boolean) => Promise<void>
+  createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
-  reorderWorkspace: NativeWorkspaceClient['reorder']
-  reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
-  collapseNarrow: () => void
   toggleSidebar: () => void
 }
 type NativeWorkspacesProps = PropsRuntime<'sidebar.workspaces'> & InjectFace<NativeWorkspacesInjected> & PropsLocale<'nativeSidebar'>
@@ -163,46 +213,29 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** Match native RPC refusals by code: a source run can load a second NativeSessionRpcError class, so instanceof is unreliable. */
-function rpcRefusal(error: unknown, code: string): Partial<NativeSessionRpcError> | undefined {
-  const refusal = error as Partial<NativeSessionRpcError> | null | undefined
-  return refusal?.code === code ? refusal : undefined
-}
-
 const SEARCH_DEBOUNCE_MS = 250
-// The first Workspace baseline normally arrives at once; past this, admission reports instead of waiting forever.
-const WORKSPACE_BASELINE_TIMEOUT_MS = 15_000
 
 function NativeSessionBrowser({
-  wide, useConversation, useWorkspaceRegistry, displayTitle, admitSession, selectSession, deselectSession,
-  beginNavigation, isCurrentNavigation,
-  renameTitle, refreshTitle,
+  wide, useConversation, useWorkspaceRegistry, displayTitle, selectSession, renameTitle, refreshTitle,
   searchSessions, archiveSession, selectWorkspace, useHomeDirectory, listDirectory, createDirectory, createWorkspace,
-  renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar, t,
+  renameWorkspace, deleteWorkspace, toggleSidebar, t,
 }: {
   wide: boolean
   useConversation: SnapshotSelectorHook<NativeConversationSnapshot>
   useWorkspaceRegistry: SnapshotSelectorHook<NativeWorkspaceSnapshot>
   displayTitle: NativeSessionPresentation['displayTitle']
-  admitSession: (id: NativeSessionId, trust?: boolean) => Promise<void>
   selectSession: NativeConversationService['select']
-  deselectSession: NativeConversationService['deselect']
-  beginNavigation: NativeConversationService['beginNavigation']
-  isCurrentNavigation: NativeConversationService['isCurrentNavigation']
   renameTitle: (id: NativeSessionId, title: string) => Promise<boolean>
   refreshTitle: NativeConversationService['refreshTitle']
   searchSessions: NativeSessionClient['search']
   archiveSession: NativeSessionClient['archive']
-  selectWorkspace: (id: NativeWorkspaceId, trust?: boolean) => Promise<void>
+  selectWorkspace: (id: NativeWorkspaceId) => Promise<void>
   useHomeDirectory: SnapshotSelectorHook<string | undefined>
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
-  createWorkspace: (path: string, trust?: boolean) => Promise<void>
+  createWorkspace: (path: string) => Promise<void>
   renameWorkspace: NativeWorkspaceClient['rename']
-  reorderWorkspace: NativeWorkspaceClient['reorder']
-  reorderSession: NativeWorkspaceClient['reorderSession']
   deleteWorkspace: NativeWorkspaceClient['delete']
-  collapseNarrow: () => void
   toggleSidebar: () => void
   t: NativeSidebarTranslate
 }) {
@@ -211,7 +244,6 @@ function NativeSessionBrowser({
   const homeDirectory = useHomeDirectory(value => value)
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const [editingId, setEditingId] = useState<NativeSessionId>()
-  const [pendingSessionId, setPendingSessionId] = useState<NativeSessionId>()
   const [titleDraft, setTitleDraft] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<NativeWorkspaceId>()
   const [workspaceTitleDraft, setWorkspaceTitleDraft] = useState('')
@@ -220,62 +252,20 @@ function NativeSessionBrowser({
   const [workspaceDeleteError, setWorkspaceDeleteError] = useState<string>()
   const [searchExpanded, setSearchExpanded] = useState(false)
   const [query, setQuery] = useState('')
-  const ordering = useRef(false)
-  const [orderingPending, setOrderingPending] = useState(false)
   const [order, setOrder] = useState<'updated' | 'manual'>('updated')
   const [groupBy, setGroupBy] = useState<'workspace' | 'flat'>('workspace')
-  const [drag, setDrag] = useState<NativeOrderDrag>()
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
   const [directoryPickerOpen, setDirectoryPickerOpen] = useState(false)
   const [directoryPickerBusy, setDirectoryPickerBusy] = useState(false)
   const [directoryPickerError, setDirectoryPickerError] = useState<string>()
-  const [workspaceTrustPrompt, setWorkspaceTrustPrompt] = useState<{ path: string; retry: () => Promise<void> }>()
-  const [workspaceTrustPending, setWorkspaceTrustPending] = useState(false)
   const [actionError, setActionError] = useState<string>()
   const [searchState, setSearchState] = useState<NativeSearchState>({ query: '', status: 'idle', items: [] })
-  const treeRef = useRef<HTMLElement | null>(null)
   const searchInput = useRef<HTMLInputElement>(null)
-  const groups = useMemo(() => groupNativeSessions(
-    snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t,
-  ), [snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t])
-  const visibleIds = useMemo(() => groups.flatMap(group => group.expanded ? group.sessions.map(session => session.id) : []), [groups])
+  const groups = groupNativeSessions(snapshot.sessions, registry, snapshot.selected, displayTitle, collapsedGroups, order, groupBy, t)
   const sessionItems = useMemo(() => new Map(snapshot.sessions.map(item => [item.header.id, item])), [snapshot.sessions])
   const workspaceItems = useMemo(() => new Map(registry.workspaces.map(item => [item.workspaceId, item])), [registry.workspaces])
   const archived = useMemo(() => new Set(registry.archivedSessionIds), [registry.archivedSessionIds])
-  const openRequest = useRef<{ id: NativeSessionId; settled: boolean; navigation: number }>()
-  // Admission completes asynchronously, so it reads the conversation as of now rather than as of the click.
-  const live = useRef(snapshot)
-  live.current = snapshot
-  const selectionOrder = useRef<{ id: NativeSessionId; ids: readonly NativeSessionId[] }>()
   const searchQuery = query.trim()
-  useEffect(() => {
-    if (snapshot.state === 'loading' || snapshot.state === 'closed') return
-    const pending = pendingSessionId
-    if (pending !== undefined) setPendingSessionId(undefined)
-    if (snapshot.selected === undefined || !archived.has(snapshot.selected)) {
-      if (pending !== undefined && pending !== snapshot.selected) admitAndSelect(pending)
-      return
-    }
-    // A generating or approval-waiting Session is detached, not awaited: its Host turn keeps running.
-    // A queued click or an open still in admission wins over the neighbouring row.
-    const lastOrder = selectionOrder.current
-    const request = openRequest.current
-    let nextId = pending ?? (request?.settled === false && isCurrentNavigation(request.navigation) ? request.id : undefined)
-    if (nextId === undefined && lastOrder?.id === snapshot.selected) {
-      const index = lastOrder.ids.indexOf(snapshot.selected)
-      nextId = lastOrder.ids.slice(index + 1).find(id => visibleIds.includes(id))
-        ?? lastOrder.ids.slice(0, index).reverse().find(id => visibleIds.includes(id))
-    }
-    void deselectSession().then(() => {
-      if (nextId !== undefined) admitAndSelect(nextId)
-    }, (error: unknown) => { setActionError(errorMessage(error)) })
-  }, [snapshot.state, snapshot.selected, pendingSessionId, selectSession, deselectSession,
-    archived, visibleIds, isCurrentNavigation])
-  useEffect(() => {
-    if (snapshot.selected !== undefined && visibleIds.includes(snapshot.selected)) {
-      selectionOrder.current = { id: snapshot.selected, ids: visibleIds }
-    }
-  }, [snapshot.selected, visibleIds])
   useEffect(() => {
     if (wide && searchExpanded) searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded])
@@ -314,72 +304,6 @@ function NativeSessionBrowser({
   const runAction = (action: () => Promise<unknown>): void => {
     void action().catch((error: unknown) => { setActionError(errorMessage(error)) })
   }
-  const workspaceError = (error: unknown): string =>
-    error instanceof DOMException && error.name === 'TimeoutError' ? t('workspaceListTimeout')
-      : rpcRefusal(error, 'native/workspace-forbidden') === undefined ? errorMessage(error) : t('workspaceForbidden')
-  const admitAndSelect = (id: NativeSessionId): void => {
-    const navigation = beginNavigation()
-    const request = { id, settled: false, navigation }
-    openRequest.current = request
-    const from = live.current.selected
-    // A later open or any other navigation during admission makes this request stale.
-    const current = (): boolean => openRequest.current === request && live.current.selected === from
-      && isCurrentNavigation(navigation)
-    const open = async (trust?: boolean): Promise<void> => {
-      await admitSession(id, trust)
-      if (!current()) {
-        if (openRequest.current === request) openRequest.current = undefined
-        return
-      }
-      request.settled = true
-      if (live.current.state === 'loading') setPendingSessionId(id)
-      else await selectSession(id)
-    }
-    setActionError(undefined)
-    void open().catch((error: unknown) => {
-      if (!current()) {
-        if (openRequest.current === request) openRequest.current = undefined
-        return
-      }
-      // A trust prompt or a final failure ends this open: an archive must fall back to the neighbouring row.
-      request.settled = true
-      if (!requestWorkspaceTrust(error, async () => { if (current()) await open(true) })) setActionError(workspaceError(error))
-    })
-  }
-  const openSession = (id: NativeSessionId): void => {
-    openRequest.current = undefined
-    collapseNarrow()
-    if (snapshot.state === 'loading') {
-      setPendingSessionId(id)
-      return
-    }
-    if (id === snapshot.selected) return
-    admitAndSelect(id)
-  }
-  const requestWorkspaceTrust = (error: unknown, retry: (path: string) => Promise<void>): boolean => {
-    const details = rpcRefusal(error, 'native/workspace-untrusted')?.details
-    const path = details !== undefined && 'path' in details ? details.path : undefined
-    if (typeof path !== 'string') return false
-    setDirectoryPickerOpen(false)
-    setWorkspaceTrustPrompt({ path, retry: () => retry(path) })
-    return true
-  }
-  const runWorkspaceAction = (action: (trust?: boolean) => Promise<void>): void => {
-    setActionError(undefined)
-    void action().catch((error: unknown) => {
-      if (!requestWorkspaceTrust(error, () => action(true))) setActionError(workspaceError(error))
-    })
-  }
-  const confirmWorkspaceTrust = (): void => {
-    if (workspaceTrustPrompt === undefined || workspaceTrustPending) return
-    setWorkspaceTrustPending(true)
-    void workspaceTrustPrompt.retry().then(() => {
-      setWorkspaceTrustPrompt(undefined)
-    }).catch((error: unknown) => {
-      setWorkspaceTrustPrompt(undefined)
-      setActionError(workspaceError(error))
-    }).finally(() => { setWorkspaceTrustPending(false) })
-  }
   const addWorkspaceAction = <Tooltip label={t('addWorkspace')} delayMs={500} disabled={wide}>
     <button type="button" className={css.workspaceHeaderButton} aria-label={t('addWorkspace')}
       title={t('addWorkspace')} disabled={snapshot.state !== 'ready' || !registry.ready}
@@ -387,91 +311,32 @@ function NativeSessionBrowser({
       <IconProjectAddOutline16 size={wide ? 16 : 18} />
     </button>
   </Tooltip>
-  const runOrdering = (action: () => Promise<unknown>): void => {
-    if (ordering.current || !registry.ready) return
-    ordering.current = true
-    setOrderingPending(true)
-    setActionError(undefined)
-    void action().catch((error: unknown) => { setActionError(errorMessage(error)) }).finally(() => {
-      ordering.current = false
-      setOrderingPending(false)
-    })
-  }
-  const toggleGroup = (key: string): void => {
-    setCollapsedGroups((current) => {
-      const next = new Set(current)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-  const orderControls = (kind: 'workspace' | 'session', name: string, index: number, count: number, move: (up: boolean) => void) => (
-    <div className={css.orderControls}>
-      <button type="button" aria-label={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })} title={t(kind === 'workspace' ? 'moveWorkspaceUp' : 'moveSessionUp', { name })}
-        disabled={orderingPending || !registry.ready || index === 0} onClick={() => { move(true) }}>↑</button>
-      <button type="button" aria-label={t(kind === 'workspace' ? 'moveWorkspaceDown' : 'moveSessionDown', { name })} title={t(kind === 'workspace' ? 'moveWorkspaceDown' : 'moveSessionDown', { name })}
-        disabled={orderingPending || !registry.ready || index === count - 1} onClick={() => { move(false) }}>↓</button>
-    </div>
-  )
-  const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false,
-    group?: NativeSessionGroup, index = 0) => {
+  const renderSession = (session: NativeSessionGroup['sessions'][number], flat = false) => {
     const item = sessionItems.get(session.id)
-    const workspaceId = group?.workspaceId
-    const dragProps = order !== 'manual' || group === undefined || workspaceId === undefined ? undefined : {
-      active: drag?.kind === 'session' && drag.workspaceId === workspaceId,
-      marker: drag?.kind === 'session' && drag.over?.id === session.id ? drag.over.half : null,
-      start: () => { setDrag({ kind: 'session', workspaceId, id: session.id }) },
-      hover: (half: 'before' | 'after') => {
-        setDrag(current => current?.kind === 'session' ? { ...current, over: { id: session.id, half } } : current)
-      },
-      drop: (half: 'before' | 'after') => {
-        if (drag?.kind !== 'session' || drag.id === session.id) { setDrag(undefined); return }
-        const remaining = group.sessions.filter(row => row.id !== drag.id)
-        const position = remaining.findIndex(row => row.id === session.id) + (half === 'after' ? 1 : 0)
-        if (position !== group.sessions.findIndex(row => row.id === drag.id)) {
-          runOrdering(() => reorderSession(drag.workspaceId, drag.id, remaining[position]?.id))
-        }
-        setDrag(undefined)
-      },
-      end: () => { setDrag(undefined) },
-    }
     return <div key={session.id}>
-      <div className={css.orderedRow}>
-        <SessionNodeItem
-          node={session}
-          currentId={snapshot.selected}
-          now={Date.now()}
-          tabIndex={-1}
-          onOpen={openSession}
-          onRename={item?.titleActions?.rename === true
-            ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
-            : undefined}
-          onRefresh={item?.titleActions?.refresh === true
-            ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
-            : undefined}
-          onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
-          drag={dragProps}
-          flat={flat}
-          refreshTitleLabel={t('refreshTitle')}
-          t={t}
-        />
-        {order !== 'manual' || group?.workspaceId === undefined ? null
-          : orderControls('session', session.title, index, group.sessions.length, (up) => {
-            const workspaceId = group.workspaceId
-            if (workspaceId === undefined) return
-            const anchor = group.sessions[up ? index - 1 : index + 2]?.id
-            runOrdering(() => reorderSession(workspaceId, session.id, anchor))
-          })}
-      </div>
+      <SessionNodeItem
+        node={session}
+        currentId={snapshot.selected}
+        now={Date.now()}
+        onOpen={(id) => { if (snapshot.state === 'ready') void selectSession(id) }}
+        onRename={item?.titleActions?.rename === true
+          ? (_id, currentTitle) => { setTitleDraft(currentTitle); setEditingId(session.id) }
+          : undefined}
+        onRefresh={item?.titleActions?.refresh === true
+          ? (id) => { if (snapshot.state === 'ready') runAction(() => refreshTitle(id)) }
+          : undefined}
+        onArchive={id => archiveSession(id).catch((error: unknown) => { setActionError(errorMessage(error)) })}
+        allowRemove={false}
+        flat={flat}
+        refreshTitleLabel={t('refreshTitle')}
+        t={t}
+      />
       {editingId === session.id && <form className={css.sessionRename} onSubmit={(event) => {
         event.preventDefault()
         void renameTitle(session.id, titleDraft).then((success) => { if (success) setEditingId(undefined) })
       }}>
         <label>{t('titleInput')}
-          <input autoFocus aria-label={t('titleInput')} value={titleDraft}
-            onFocus={(event) => { event.currentTarget.select() }}
-            onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setEditingId(undefined) } }}
-            onChange={(event) => { setTitleDraft(event.target.value) }} />
+          <input aria-label={t('titleInput')} value={titleDraft} onChange={(event) => { setTitleDraft(event.target.value) }} />
         </label>
         <Button type="submit" variant="primary" size="sm" disabled={snapshot.state !== 'ready'}>{t('saveTitle')}</Button>
         <Button type="button" variant="ghost" size="sm" disabled={snapshot.state !== 'ready'} onClick={() => { setEditingId(undefined) }}>
@@ -486,11 +351,7 @@ function NativeSessionBrowser({
     void createWorkspace(path).then(() => {
       setDirectoryPickerOpen(false)
     }).catch((error: unknown) => {
-      // A failed trusted retry reopens the browser with its reason, which both sidebar layouts render.
-      if (!requestWorkspaceTrust(error, trustedPath => createWorkspace(trustedPath, true).catch((retryError: unknown) => {
-        setDirectoryPickerError(workspaceError(retryError))
-        setDirectoryPickerOpen(true)
-      }))) setDirectoryPickerError(workspaceError(error))
+      setDirectoryPickerError(errorMessage(error))
     }).finally(() => { setDirectoryPickerBusy(false) })
   }
   const confirmWorkspaceDelete = (): void => {
@@ -506,94 +367,19 @@ function NativeSessionBrowser({
   const currentSearch = searchState.query === searchQuery
     ? searchState
     : { query: searchQuery, status: 'loading' as const, items: [] }
-  // Roving tab stop: Tab reaches the tree once, arrows move between rows.
-  useLayoutEffect(() => {
-    // The collapsed sidebar renders no tree.
-    const tree = treeRef.current
-    if (tree === null) return
-    tree.tabIndex = tree.querySelector('[role="treeitem"]') !== null
-      && tree.querySelector('[role="treeitem"][tabindex="0"]') === null ? 0 : -1
-  })
-  const focusTreeRow = (tree: HTMLElement, rows: readonly HTMLElement[], next: HTMLElement): void => {
-    tree.tabIndex = -1
-    for (const row of rows) row.tabIndex = row === next ? 0 : -1
-    next.focus()
-  }
-  const handleTreeFocus = (event: ReactFocusEvent<HTMLElement>): void => {
-    const tree = event.currentTarget
-    const rows = Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'))
-    // Entering the tree lands on the selected row; a row focused by pointer becomes the tab stop.
-    const row = event.target === tree ? rows.find(item => item.getAttribute('aria-selected') === 'true') ?? rows[0]
-      : rows.find(item => item === event.target)
-    if (row !== undefined) focusTreeRow(tree, rows, row)
-  }
-  const handleTreeKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
-    const rows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'))
-    const row = event.target as HTMLElement
-    const index = rows.indexOf(row)
-    const targets: Record<string, HTMLElement | undefined> = {
-      ArrowDown: rows[index + 1], ArrowUp: rows[index - 1], Home: rows[0], End: rows.at(-1),
-    }
-    const next = targets[event.key]
-    if (index !== -1 && next !== undefined) {
-      event.preventDefault()
-      focusTreeRow(event.currentTarget, rows, next)
-      return
-    }
-    if (row.getAttribute('aria-expanded') === null) return
-    const expanded = row.getAttribute('aria-expanded') === 'true'
-    if ((event.key === 'ArrowRight' && expanded) || (event.key === 'ArrowLeft' && !expanded)
-      || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return
-    const groupRows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded]'))
-    const group = groups[groupRows.indexOf(row)]
-    if (group === undefined) return
-    event.preventDefault()
-    toggleGroup(group.key)
-  }
-  const workspaceTrustDialog = workspaceTrustPrompt === undefined ? null : <Modal
-    open
-    title={t('workspaceTrustTitle')}
-    description={t('workspaceTrustBody')}
-    closeLabel={t('close')}
-    onClose={() => { if (!workspaceTrustPending) setWorkspaceTrustPrompt(undefined) }}
-    footer={<>
-      <Button variant="outline" disabled={workspaceTrustPending} onClick={() => { setWorkspaceTrustPrompt(undefined) }}>
-        {t('cancel')}
-      </Button>
-      <Button variant="primary" disabled={workspaceTrustPending} onClick={confirmWorkspaceTrust}>
-        {t('workspaceTrust')}
-      </Button>
-    </>}
-  >
-    <code>{workspaceTrustPrompt.path}</code>
-  </Modal>
-  const directoryBrowser = <DirectoryBrowser
-    open={directoryPickerOpen}
-    listDirectory={listDirectory}
-    createDirectory={createDirectory}
-    onOpen={adoptWorkspaceDirectory}
-    onClose={() => { setDirectoryPickerOpen(false) }}
-    busy={directoryPickerBusy}
-    ownerError={directoryPickerError}
-    t={t}
+  if (!wide) return <WorkspaceSectionHeader
+    wide={false}
+    label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
+    searchExpanded={searchExpanded}
+    query={query}
+    maxLength={500}
+    searchLabel={t('search')}
+    searchAriaLabel={t('searchAria')}
+    placeholder={t('searchPlaceholder')}
+    clearLabel={t('search')}
+    actions={addWorkspaceAction}
+    onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
   />
-  if (!wide) return <>
-    <WorkspaceSectionHeader
-      wide={false}
-      label={t(groupBy === 'workspace' ? 'workspace' : 'sessions')}
-      searchExpanded={searchExpanded}
-      query={query}
-      maxLength={500}
-      searchLabel={t('search')}
-      searchAriaLabel={t('searchAria')}
-      placeholder={t('searchPlaceholder')}
-      clearLabel={t('search')}
-      actions={addWorkspaceAction}
-      onRailSearch={() => { toggleSidebar(); setSearchExpanded(true) }}
-    />
-    {directoryBrowser}
-    {workspaceTrustDialog}
-  </>
   return <div className={css.workspaceBrowser}>
     <WorkspaceSectionHeader
       wide={wide}
@@ -644,19 +430,18 @@ function NativeSessionBrowser({
       </>}
     />
     {actionError !== undefined && <div role="alert">{actionError}</div>}
-    <nav ref={treeRef} className={css.workspaceList} aria-label={t('workspace')} role="tree"
-      onFocus={handleTreeFocus} onKeyDown={handleTreeKeyDown}>
+    <nav className={css.workspaceList} aria-label={t('workspace')} role="tree">
       {searchExpanded && searchQuery !== '' ? <>
         {currentSearch.status === 'loading' && <WorkspaceSectionEmpty label={t('search.pending')} />}
         {currentSearch.status === 'error' && <WorkspaceSectionEmpty label={t('search.unavailable')} />}
         {currentSearch.status === 'ready' && currentSearch.items.length === 0 && <WorkspaceSectionEmpty label={t('search.noMatches')} />}
         {currentSearch.items.map(result => <SearchResultItem
           key={result.id} result={result} currentId={snapshot.selected}
-          tabIndex={-1}
           onOpen={(id) => {
+            if (snapshot.state !== 'ready') return
             setSearchExpanded(false)
             setQuery('')
-            openSession(id)
+            void selectSession(id)
           }} t={t}
         />)}
       </> : <>
@@ -675,66 +460,34 @@ function NativeSessionBrowser({
                 setWorkspaceDeleteTarget({ id: workspaceId, title: group.label })
               },
             }
-            const dropMarker = drag?.kind === 'workspace' && drag.over !== undefined && drag.over.id === workspaceId
-              ? drag.over.half === 'before' ? css.workspaceDropBefore : css.workspaceDropAfter : ''
-            return <div className={`${css.workspaceGroup} ${dropMarker}`} key={group.key}
-              onDragOver={order !== 'manual' || workspaceId === undefined ? undefined : (event) => {
-                if (drag?.kind !== 'workspace') return
-                event.preventDefault()
-                event.dataTransfer.dropEffect = 'move'
-                const rect = event.currentTarget.getBoundingClientRect()
-                setDrag({ ...drag, over: { id: workspaceId, half: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after' } })
-              }}
-              onDrop={order !== 'manual' || workspaceId === undefined ? undefined : (event) => {
-                if (drag?.kind !== 'workspace') return
-                event.preventDefault()
-                if (drag.id !== workspaceId) {
-                  const remaining = registry.workspaces.filter(row => row.workspaceId !== drag.id)
-                  const rect = event.currentTarget.getBoundingClientRect()
-                  const half = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-                  const position = remaining.findIndex(row => row.workspaceId === workspaceId) + (half === 'after' ? 1 : 0)
-                  if (position !== registry.workspaces.findIndex(row => row.workspaceId === drag.id)) {
-                    runOrdering(() => reorderWorkspace(drag.id, remaining[position]?.workspaceId))
-                  }
-                }
-                setDrag(undefined)
-              }}>
-              <div className={css.orderedRow}>
-                <ProjectRowItem group={group} label={group.label} home={homeDirectory}
-                  onToggle={() => { toggleGroup(group.key) }} onCreate={workspaceId === undefined ? undefined : () => {
-                    setCollapsedGroups((current) => {
-                      const next = new Set(current)
-                      next.delete(group.key)
-                      return next
-                    })
-                    if (snapshot.state === 'ready') runWorkspaceAction(trust => selectWorkspace(workspaceId, trust))
-                  }} actions={workspaceActions} showCreate={workspaceId !== undefined} tabIndex={-1}
-                  drag={order !== 'manual' || workspaceId === undefined ? undefined : {
-                    start: () => { setDrag({ kind: 'workspace', id: workspaceId }) },
-                    end: () => { setDrag(undefined) },
-                  }} t={t} />
-                {order !== 'manual' || workspaceId === undefined ? null
-                  : orderControls('workspace', group.label, registry.workspaces.findIndex(row => row.workspaceId === workspaceId),
-                    registry.workspaces.length, (up) => {
-                      const index = registry.workspaces.findIndex(row => row.workspaceId === workspaceId)
-                      const anchor = registry.workspaces[up ? index - 1 : index + 2]?.workspaceId
-                      runOrdering(() => reorderWorkspace(workspaceId, anchor))
-                    })}
-              </div>
+            return <div className={css.workspaceGroup} key={group.key}>
+              <ProjectRowItem group={group} label={group.label} home={homeDirectory} onToggle={() => {
+                setCollapsedGroups((current) => {
+                  const next = new Set(current)
+                  if (next.has(group.key)) next.delete(group.key)
+                  else next.add(group.key)
+                  return next
+                })
+                if (workspaceId !== undefined && snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+              }} onCreate={workspaceId === undefined ? undefined : () => {
+                setCollapsedGroups((current) => {
+                  const next = new Set(current)
+                  next.delete(group.key)
+                  return next
+                })
+                if (snapshot.state === 'ready') runAction(() => selectWorkspace(workspaceId))
+              }} actions={workspaceActions} showCreate={workspaceId !== undefined} t={t} />
               {editingWorkspaceId === workspaceId && workspaceId !== undefined && <form className={css.sessionRename} onSubmit={(event) => {
                 event.preventDefault()
                 runAction(async () => { await renameWorkspace(workspaceId, workspaceTitleDraft.trim()); setEditingWorkspaceId(undefined) })
               }}>
                 <label>{t('workspaceTitle')}
-                  <input autoFocus aria-label={t('workspaceTitle')} required value={workspaceTitleDraft}
-                    onFocus={(event) => { event.currentTarget.select() }}
-                    onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setEditingWorkspaceId(undefined) } }}
-                    onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
+                  <input aria-label={t('workspaceTitle')} required value={workspaceTitleDraft} onChange={(event) => { setWorkspaceTitleDraft(event.target.value) }} />
                 </label>
                 <Button type="submit" variant="primary" size="sm">{t('saveTitle')}</Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingWorkspaceId(undefined) }}>{t('cancelTitle')}</Button>
               </form>}
-              {group.expanded && group.sessions.map((session, index) => renderSession(session, false, group, index))}
+              {group.expanded && group.sessions.map(session => renderSession(session))}
             </div>
           })}
       </>}
@@ -759,8 +512,16 @@ function NativeSessionBrowser({
       {workspaceDeletePending && <div role="status">{t('delete.pending')}</div>}
       {workspaceDeleteError !== undefined && <div role="alert">{workspaceDeleteError}</div>}
     </Modal>
-    {directoryBrowser}
-    {workspaceTrustDialog}
+    <DirectoryBrowser
+      open={directoryPickerOpen}
+      listDirectory={listDirectory}
+      createDirectory={createDirectory}
+      onOpen={adoptWorkspaceDirectory}
+      onClose={() => { setDirectoryPickerOpen(false) }}
+      busy={directoryPickerBusy}
+      ownerError={directoryPickerError}
+      t={t}
+    />
   </div>
 }
 
@@ -867,10 +628,7 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
     </header>
     {error && <p className={css.scheduleError} role="alert">{t('schedule.error')}</p>}
     {!ready ? <p className={css.scheduleEmpty} role="status">{t('schedule.loading')}</p>
-      : jobs.length === 0 ? <div className={css.scheduleEmpty}>
-        <p>{t('schedule.empty')}</p>
-        <p>{t('schedule.emptyHint')}</p>
-      </div>
+      : jobs.length === 0 ? <p className={css.scheduleEmpty}>{t('schedule.empty')}</p>
         : jobs.map((job) => {
           const separator = '; every '
           const separatorIndex = job.schedule.indexOf(separator)
@@ -920,45 +678,36 @@ export const plugin: NativePlugin = {
       workspaces: [], archivedSessionIds: [], ready: false,
     })
     const homeDirectory = createSnapshotStore<string | undefined>(undefined)
-    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ home }) => {
-      homeDirectory.set(home)
+    const homeLookup = directoryPicker.list(undefined, context.signal).then(({ path }) => {
+      homeDirectory.set(path)
     }).catch((error: unknown) => {
       if (!context.signal.aborted) console.error('native sidebar home directory lookup failed:', error)
     })
     context.own(async () => { await homeLookup })
     const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
       const listing = await directoryPicker.list(path, signal ?? context.signal)
+      if (path === undefined) homeDirectory.set(listing.path)
       return {
         path: listing.path,
-        home: listing.home,
+        home: homeDirectory.getSnapshot() ?? listing.path,
         crumbs: listing.crumbs.map(crumb => ({ ...crumb, hidden: false })),
         entries: listing.entries.filter(entry => entry.kind === 'directory')
           .map(entry => ({ name: entry.name, path: entry.path, hidden: entry.name.startsWith('.') })),
         truncated: false,
       }
     }
-    // Settles once: resolved by the first baseline, rejected if the follow ends before one arrives.
-    const workspaceBaseline = Promise.withResolvers<void>()
-    workspaceBaseline.promise.catch(() => {})
     const workspaceFollow = (async () => {
       try {
         for await (const frame of workspaceClient.follow(context.signal)) {
-          const next = nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame)
-          if (frame.type === 'baseline' || frame.type === 'archived') {
-            for (const id of next.archivedSessionIds) controller.discardDraft(id)
-          }
-          workspaceRegistry.set(next)
-          if (workspaceRegistry.getSnapshot().ready) workspaceBaseline.resolve()
+          workspaceRegistry.set(nextWorkspaceSnapshot(workspaceRegistry.getSnapshot(), frame))
         }
-        workspaceBaseline.reject(new Error('Workspace list unavailable'))
       } catch (error: unknown) {
-        workspaceBaseline.reject(error)
         if (!context.signal.aborted) console.error('native sidebar Workspace follow failed:', error)
       }
     })()
     context.own(async () => { await workspaceFollow })
     context.own(locale.register('sidebar', { en: sidebarEn, zh: sidebarZh }))
-    context.own(locale.register('nativeSidebar', { en: nativeSidebarEn, zh: nativeSidebarZh }))
+    context.own(locale.register('nativeSidebar', { en, zh }))
 
     const scheduledTasksPanelId = 'scheduled-tasks' as MainPanelId
     context.own(slots.inject('main', () => slots.register({
@@ -999,32 +748,7 @@ export const plugin: NativePlugin = {
         'sidebar.header.action': { kind: 'list', scope: 'root' },
       },
       inject: (): SidebarRootInjected => ({
-        startSession: () => {
-          const current = controller.getSnapshot()
-          if (current.state !== 'ready') return
-          const navigation = controller.beginNavigation(true)
-          const selectedWorkspace = current.sessions.find(session => session.header.id === current.selected)?.workspaceId
-          const recentSession = current.sessions.reduce<NativeSessionListItem | undefined>((recent, session) =>
-            session.workspaceId !== undefined && (recent === undefined || session.updatedAt > recent.updatedAt)
-              ? session : recent, undefined)
-          const target = selectedWorkspace ?? recentSession?.workspaceId
-          if (target === undefined) {
-            if (controller.isCurrentNavigation(navigation)) controller.clear()
-            return
-          }
-          void workspaceClient.connectWorkspace(target, context.signal)
-            .then(async ({ sessionId }) => {
-              await controller.idle()
-              if (controller.isCurrentNavigation(navigation)) return controller.select(sessionId)
-            })
-            .catch(async (error: unknown) => {
-              if (rpcRefusal(error, 'native/workspace-untrusted') !== undefined) {
-                await controller.idle()
-                if (controller.isCurrentNavigation(navigation) && controller.getSnapshot().state === 'ready') controller.clear()
-                else controller.releaseNavigation(navigation)
-              } else controller.failNavigation(navigation, error)
-            })
-        },
+        startSession: () => { if (controller.getSnapshot().state === 'ready') void controller.create() },
         toggleSidebar: () => { layout.toggleSidebar() },
         selectPanel: (id) => { layout.selectPanel(id) },
         hooks: { panels },
@@ -1035,76 +759,40 @@ export const plugin: NativePlugin = {
       inject: (): NativeWorkspacesInjected => ({
         hooks: { conversation: controller, workspaceRegistry, homeDirectory },
         displayTitle: item => presentation.displayTitle(item),
-        // Admit the Session's Workspace before select(), which reports a cold untrusted route only as a generic Session error.
-        admitSession: async (id, trust) => {
-          const workspaceId = controller.getSnapshot().sessions.find(item => item.header.id === id)?.workspaceId
-          // Sessions can load before the Workspace baseline; an unknown Workspace is only "unregistered" once it arrives.
-          // A follow that stalls without closing must not hang the open; a later open waits again.
-          if (workspaceId !== undefined) {
-            let timer: ReturnType<typeof setTimeout> | undefined
-            await Promise.race([workspaceBaseline.promise, new Promise<never>((_, reject) => {
-              timer = setTimeout(() => { reject(new DOMException('Workspace list timed out', 'TimeoutError')) }, WORKSPACE_BASELINE_TIMEOUT_MS)
-            })]).finally(() => { clearTimeout(timer) })
-          }
-          const workspace = workspaceRegistry.getSnapshot().workspaces.find(item => item.workspaceId === workspaceId)
-          if (workspace !== undefined) {
-            await workspaceClient.create({ path: workspace.path, ...trust === undefined ? {} : { trust } }, context.signal)
-          }
-        },
-        selectSession: async (id) => { layout.collapseNarrow(); await controller.select(id) },
-        deselectSession: controller.deselect.bind(controller),
-        beginNavigation: controller.beginNavigation.bind(controller),
-        isCurrentNavigation: controller.isCurrentNavigation.bind(controller),
+        selectSession: controller.select.bind(controller),
         renameTitle: async (id: Parameters<NativeConversationService['renameTitle']>[0], title: string) => {
           await controller.renameTitle(id, title)
           return controller.getSnapshot().error === undefined
         },
         refreshTitle: controller.refreshTitle.bind(controller),
         searchSessions: nativeSession.search.bind(nativeSession),
-        archiveSession: async (id) => {
-          await nativeSession.archive(id, context.signal)
-          controller.discardDraft(id)
-        },
-        selectWorkspace: async (id, trust) => {
-          const navigation = controller.beginNavigation()
-          const { sessionId } = trust === undefined
-            ? await workspaceClient.connectWorkspace(id, context.signal)
-            : await workspaceClient.connectWorkspace(id, context.signal, trust)
-          if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
+        archiveSession: id => nativeSession.archive(id, context.signal),
+        selectWorkspace: async (id) => {
+          const { sessionId } = await workspaceClient.connectWorkspace(id, context.signal)
+          await controller.select(sessionId)
         },
         listDirectory,
         createDirectory: (path, name) => directoryPicker.createDirectory(path, name, context.signal),
-        createWorkspace: async (path, trust) => {
-          const navigation = controller.beginNavigation()
-          const { workspace } = await workspaceClient.create({ path, ...trust === undefined ? {} : { trust } }, context.signal)
-          const { sessionId } = trust === undefined
-            ? await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
-            : await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal, trust)
-          if (controller.isCurrentNavigation(navigation)) await controller.select(sessionId)
+        createWorkspace: async (path) => {
+          const { workspace } = await workspaceClient.create({ path }, context.signal)
+          const { sessionId } = await workspaceClient.connectWorkspace(workspace.workspaceId, context.signal)
+          await controller.select(sessionId)
         },
         renameWorkspace: (id, title) => workspaceClient.rename(id, title, context.signal),
         deleteWorkspace: id => workspaceClient.delete(id, context.signal),
-        reorderWorkspace: (id, before) => workspaceClient.reorder(id, before, context.signal),
-        reorderSession: (id, session, before) => workspaceClient.reorderSession(id, session, before, context.signal),
         toggleSidebar: layout.toggleSidebar.bind(layout),
-        collapseNarrow: layout.collapseNarrow.bind(layout),
       }),
-    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle,
-      admitSession, selectSession, deselectSession, renameTitle, refreshTitle,
-      beginNavigation, isCurrentNavigation,
+    }, ({ wide, useConversation, useWorkspaceRegistry, useHomeDirectory, displayTitle, selectSession, renameTitle, refreshTitle,
       searchSessions, archiveSession, selectWorkspace, listDirectory, createDirectory, createWorkspace,
-      renameWorkspace, deleteWorkspace, reorderWorkspace, reorderSession, collapseNarrow, toggleSidebar,
+      renameWorkspace, deleteWorkspace, toggleSidebar,
       t }: NativeWorkspacesProps) => (
       <NativeSessionBrowser wide={wide} useConversation={useConversation} useWorkspaceRegistry={useWorkspaceRegistry}
         useHomeDirectory={useHomeDirectory}
-        displayTitle={displayTitle} admitSession={admitSession} selectSession={selectSession} deselectSession={deselectSession}
-        beginNavigation={beginNavigation} isCurrentNavigation={isCurrentNavigation}
-        renameTitle={renameTitle} refreshTitle={refreshTitle}
+        displayTitle={displayTitle} selectSession={selectSession} renameTitle={renameTitle} refreshTitle={refreshTitle}
         searchSessions={searchSessions} archiveSession={archiveSession} selectWorkspace={selectWorkspace}
         listDirectory={listDirectory} createDirectory={createDirectory} createWorkspace={createWorkspace}
         renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
-        reorderWorkspace={reorderWorkspace} reorderSession={reorderSession}
-        collapseNarrow={collapseNarrow} toggleSidebar={toggleSidebar} t={t} />))))
+        toggleSidebar={toggleSidebar} t={t} />))))
     context.own(slots.inject('sidebar.header.action', () => slots.register({
       name: 'sidebar.header.action', id: 'scheduled-tasks', order: 10, locale: 'nativeSidebar',
       inject: () => ({ open: () => { layout.selectPanel(scheduledTasksPanelId) } }),

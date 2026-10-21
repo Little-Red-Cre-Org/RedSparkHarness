@@ -105,16 +105,14 @@ function readEnvLayer(
  * @param binName - the diagnostic prefix on the diagnostics.
  * @param cwd - the invoking directory whose `.env` is the project layer.
  * @param warn - sink for the one-line misconfiguration diagnostics.
- * @param homeDirectory - explicit Harness home, defaulting to the selected process home.
  * @returns this run's frozen environment snapshot.
  * @throws when either file declares a bootstrap-only variable, except {@link HOME_LAYER_PROXY_NAMES} in the Harness-home file.
  */
 export function loadLayeredEnv(
   binName: string, cwd: string = process.cwd(),
   warn: (line: string) => void = line => void process.stderr.write(line),
-  homeDirectory?: string,
 ): LaunchEnvironmentSnapshot {
-  const home = resolveDshHome(homeDirectory)
+  const home = resolveDshHome()
   const inherited = { ...process.env } as Record<string, string>
   // Parse both layers first: a rejection must not leave one file applied.
   const project = readEnvLayer(binName, cwd, warn, home)

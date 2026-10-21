@@ -33,9 +33,9 @@ A multi-select draft keeps its selected labels while the user opens or edits the
 
 ### The plan-review card
 
-A `plan-review` intent — set by `dsh-plan-mode` on the `exit_plan_mode` review — renders the waiting-approval card layout: a `Plan review` strip, the plan as the scrolling markdown body, and a wrapping action group of `Chat about it` / `Refuse` / `Approve`. Approve and Refuse answer with the asker's own option labels; `Chat about it` rejects the wait as `ASK_CANCELLED`, returning the composer so the user can say what they want instead.
+A `plan-review` intent — set by `dsh-plan-mode` on the `exit_plan_mode` review — renders the waiting-approval card layout: a `Plan review` strip, the plan as the scrolling markdown body, and one decision row of `Chat about it` / `Refuse` / `Approve`. Approve and Refuse answer with the asker's own option labels; `Chat about it` rejects the wait as `ASK_CANCELLED`, returning the composer so the user can say what they want instead.
 
-`./native` exports the shared question composer and plan-review presentation through props. Native answers plan reviews through the existing structured answer. Its optional cancel callback exposes generic dismissal and plan discussion for the entire pending question batch, leaving the turn alive.
+The `./native` entry exports the shared question composer and plan-review presentation through props. Native uses the existing structured answer for plan-review intent; the Native Host answer API has no question-only cancellation, so its generic question view omits dismiss and its plan-review view omits `Chat about it`.
 
 ### Failure and recovery
 

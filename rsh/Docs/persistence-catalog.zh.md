@@ -85,26 +85,11 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:411`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:419`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:441`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:472`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:410`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:418`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:440`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:471`](../Engine/core/session/src/types.ts)
 
 ## 事件
 
 ### `agent/*`
-
-<a id="agentinboxmoved--log-only"></a>
-
-#### `agent/inbox/moved` — log-only
-
-```ts persistence-catalog
-/**
- * Move one queued message to the end of the next-step list as one replayable fact.
- * @param data - exact queued message identity to move.
- * @param data.messageId - stable id already pending in `next-turn`.
- */
-'agent/inbox/moved': { messageId: MessageId }
-```
-
-来源：[`rsh/Engine/core/native-agent/src/inbox.ts:75`](../Engine/core/native-agent/src/inbox.ts)
 
 <a id="agentinboxspliced--log-only"></a>
 
@@ -115,7 +100,6 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
  * One normalized mutation of an agent's durable pending-message lists.
  * The session-projection registry applies the committed event before
  * `Session.append()` returns; Inbox live notifications follow that commit.
- * @param data - selected list splice and optional cancellation attribution.
  */
 'agent/inbox/spliced': {
   target: InboxTarget
@@ -126,7 +110,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/core/native-agent/src/inbox.ts:63`](../Engine/core/native-agent/src/inbox.ts)
+来源：[`rsh/Engine/core/native-agent/src/inbox.ts:15`](../Engine/core/native-agent/src/inbox.ts)
 
 ### `agent-preset/*`
 
@@ -201,7 +185,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'assistant/attempt': { turn: number; step: number; stream: AssistantStreamRecord[] }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:336`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:335`](../Engine/core/session/src/types.ts)
 
 <a id="assistantmessage--surface"></a>
 
@@ -231,7 +215,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[TokenUsage](subsystems/llm-streaming.zh.md)
 
-来源：[`rsh/Engine/core/session/src/types.ts:322`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:321`](../Engine/core/session/src/types.ts)
 
 ### `command/*`
 
@@ -451,7 +435,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'feedback/record': FeedbackRecord
 ```
 
-来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts:38`](../Modules/Official/feedback/command-feedback/src/types.ts)
+来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts:40`](../Modules/Official/feedback/command-feedback/src/types.ts)
 
 ### `goal/*`
 
@@ -643,7 +627,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'request/context': RequestContext
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:378`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:377`](../Engine/core/session/src/types.ts)
 
 <a id="requestheader--log-only"></a>
 
@@ -662,7 +646,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:366`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:365`](../Engine/core/session/src/types.ts)
 
 ### `sandbox/*`
 
@@ -731,7 +715,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'session/end-seed': { inherited?: true }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:401`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/types.ts)
 
 <a id="sessionroot-origin--log-only"></a>
 
@@ -746,7 +730,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'session/root-origin': { origin: 'scheduled' }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:407`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:406`](../Engine/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 
@@ -808,7 +792,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'step/end': { turn: number; step: number }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:290`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:289`](../Engine/core/session/src/types.ts)
 
 <a id="stepstart--log-only"></a>
 
@@ -819,7 +803,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'step/start': { turn: number; step: number }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:288`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:287`](../Engine/core/session/src/types.ts)
 
 ### `subagent/*`
 
@@ -940,7 +924,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'system/message': { turn: number; step: number; message: SystemMessage }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:311`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:310`](../Engine/core/session/src/types.ts)
 
 ### `team/*`
 
@@ -1033,7 +1017,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[ToolCallId](subsystems/core.zh.md)
 
-来源：[`rsh/Engine/core/session/src/types.ts:342`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:341`](../Engine/core/session/src/types.ts)
 
 <a id="toolptc-dispatch--log-only"></a>
 
@@ -1109,7 +1093,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:354`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:353`](../Engine/core/session/src/types.ts)
 
 ### `tool-workflow/*`
 
@@ -1189,7 +1173,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[TurnEndReason](subsystems/session.zh.md)
 
-来源：[`rsh/Engine/core/session/src/types.ts:286`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:285`](../Engine/core/session/src/types.ts)
 
 <a id="turnstart--log-only"></a>
 
@@ -1205,7 +1189,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'turn/start': { turn: number }
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:277`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:276`](../Engine/core/session/src/types.ts)
 
 ### `user/*`
 
@@ -1224,7 +1208,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'user/message': UserMessage
 ```
 
-来源：[`rsh/Engine/core/session/src/types.ts:298`](../Engine/core/session/src/types.ts)
+来源：[`rsh/Engine/core/session/src/types.ts:297`](../Engine/core/session/src/types.ts)
 
 ### `web/*`
 

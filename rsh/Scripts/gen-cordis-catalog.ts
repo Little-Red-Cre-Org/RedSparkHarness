@@ -232,6 +232,8 @@ export const EVENT_SCOPE_PAGE: Record<string, string> = {
  * exemption cannot mask another declaration in that scope.
  */
 export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
+  'conversation/draft-persistence': 'client-side draft lifecycle — rsh/Programs/Web/client/ui-conversation/README.md owns the API',
+  'workbench/open-file': 'client-side IDE file navigation — rsh/Programs/Web/client/ui-workspace/README.md owns the API',
   'command/executed': 'client-face local command acknowledgment — rsh/Programs/Web/client/ui-commands/README.md owns the API',
   'connection/reset': 'client-face transport signal — rsh/Programs/Web/api/session-controller/README.md owns the API',
   'locale/change': 'client-face locale switch signal — rsh/Programs/Web/client/locale/README.md owns the API',
@@ -612,7 +614,6 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   CredentialRef: 'credentials.md',
   CredentialKey: 'credentials.md',
   CredentialInfo: 'credentials.md',
-  CredentialMetadataMigration: 'credentials.md',
   CredentialRecord: 'credentials.md',
   CredentialRecordEntry: 'credentials.md',
   CredentialRecordInfo: 'credentials.md',
@@ -806,10 +807,6 @@ export const CORDIS_CATALOG_POLICY: CordisCatalogPolicy = {
     '@deepseek-ai/dsh-http-routes',
     '@deepseek-ai/dsh-http-routes-cordis',
   ],
-  // This empty runtime feature-detection marker is not the Node type used by HttpRoute.
-  runtimeTypeExclusions: new Set([
-    '@deepseek-ai/dsh-experimental-webworker-runtime#ServerResponse',
-  ]),
   runtimeServiceExclusions: new Set(['cordisInspect', 'dynamicCordisRunner']),
   runtimeServices: [{
     key: 'timer',

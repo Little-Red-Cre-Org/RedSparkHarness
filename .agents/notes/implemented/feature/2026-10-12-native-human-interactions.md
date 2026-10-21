@@ -12,7 +12,7 @@ The Native conversation needs to answer Host tool approvals and user questions w
 
 `ui-tool/native`, `ui-approval/native`, and `ui-user-questions/native` expose props-only card views. Legacy views adapt to the same approval and question presentation components. Native calls the existing `answerHuman` Host operation with the supported approval outcome or structured question answer; plan-review intent already travels on the question prompt.
 
-The Native wrapper supplies the optional Session action only for `canAllowSession: true`, and sends `approval/allowed-session` through the existing Host answer API. Its question cancel callback reuses generic dismissal and plan discussion, sending `cancel-questions` for the entire pending batch. These actions leave scope admission and turn execution on the Host.
+The Native Host approval Provider accepts `allowed-once` and `rejected`, so the approval card offers those actions. The Host question answer API has no question-only cancellation operation, so Native question cards omit dismiss and plan-review cards omit `Chat about it`. The separate whole-turn cancellation remains available.
 
 ## Alternatives considered
 
@@ -20,8 +20,8 @@ The Native wrapper supplies the optional Session action only for `canAllowSessio
 
 **Copy the legacy card markup into Native.** That would split presentation and let legacy and Native cards drift.
 
-**Derive permission scope in the browser.** The Host admits reusable scopes and validates presentation ownership; Client callbacks cannot expand that authority.
+**Add outcomes to the Native Host protocol.** The current Providers do not accept session-scoped approval or question-only cancellation; adding UI-only wire outcomes would claim behavior the Host cannot perform.
 
 ## Consequences
 
-Native tool cards share legacy presentation and package-local English and Chinese copy through `./native`. Approval and plan actions wrap on narrow screens. Pending question dismissal cancels the batch rather than an individual draft or the turn. Failed acknowledgements release local busy state while retaining the prompt; delayed answer results cannot update a different Session or prompt. Only Host removal clears a presentation.
+Native tool cards share legacy presentation and package-local English and Chinese copy through the generated `./native` aliases. Session-wide approval and question-only dismissal remain Host API gaps recorded in `/workspace/rsh-h2-notes/m2-host-needs.md`; Native does not advertise either action.

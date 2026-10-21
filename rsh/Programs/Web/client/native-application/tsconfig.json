@@ -73,12 +73,6 @@
     },
     {
       "path": "../ui-primitives"
-    },
-    {
-      "path": "../ui-workflow-run"
-    },
-    {
-      "path": "../../../../Core/util/crypto"
     }
   ]
 }

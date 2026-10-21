@@ -1078,24 +1078,6 @@ describe('Documentation site publication', () => {
   })
 })
 
-describe('RedSpark CI', () => {
-  it.each(['sandbox.yml', 'node-addon-system.yml'])('%s validates main pushes', (name) => {
-    expect(workflowEvent(loadWorkflow('.github/workflows/' + name), 'push').branches).toEqual(['main'])
-  })
-
-  it('checks package rules before building and prepared static checks before runtime tests', () => {
-    const client = workflowJob(loadWorkflow('.github/workflows/redspark-ci.yml'), 'client')
-    if (!Array.isArray(client.steps)) throw new TypeError('client must define steps')
-    const names = client.steps.filter(isRecord).map(step => step.name)
-    const ordered = ['Install locked dependencies', 'CI workflow regressions', 'Package publication rules', 'Build Web and desktop sources',
-      'Typecheck', 'Lint', 'Documentation checks', 'Native profile and pi-ai lifecycle regressions',
-      'Client tests (no API credentials)']
-    const indices = ordered.map(name => names.indexOf(name))
-    expect(indices.every(index => index >= 0)).toBe(true)
-    expect(indices).toEqual([...indices].sort((left, right) => left - right))
-  })
-})
-
 describe('Git hooks', () => {
   it('leaves frozen Agent Note sidecars to the archive verifier', () => {
     const lefthook = loadWorkflow('lefthook.yml')

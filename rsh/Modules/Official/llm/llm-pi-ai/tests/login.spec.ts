@@ -38,10 +38,8 @@ vi.mock('../src/siwc.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/siwc.ts')>()
   return {
     ...actual,
-    createSiwcOAuth(
-      registration: Parameters<typeof actual.createSiwcOAuth>[0],
-    ): ReturnType<typeof actual.createSiwcOAuth> {
-      const oauth = actual.createSiwcOAuth(registration)
+    createSiwcOAuth(credentials: Parameters<typeof actual.createSiwcOAuth>[0]): ReturnType<typeof actual.createSiwcOAuth> {
+      const oauth = actual.createSiwcOAuth(credentials)
       return {
         ...oauth,
         login: interaction => login('openai-codex', 'oauth', interaction) as ReturnType<typeof oauth.login>,
@@ -50,7 +48,7 @@ vi.mock('../src/siwc.ts', async (importOriginal) => {
   }
 })
 
-const { credentialStoreFrom, authContextFrom, recordKeyFor, siwcRegistrationStoreFrom } = await import('../src/auth.ts')
+const { credentialStoreFrom, authContextFrom, recordKeyFor } = await import('../src/auth.ts')
 const { catalogProvider } = await import('../src/catalog.ts')
 const { registerPiAiFlows } = await import('../src/login.ts')
 const { plugin: nativePlugin } = await import('../src/native.ts')
@@ -70,11 +68,7 @@ async function harness(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
   await ctx.plugin(AuthorizationService)
-  registerPiAiFlows(ctx, {
-    credentials: credentialStoreFrom(ctx),
-    authContext: authContextFrom(ctx),
-    siwcRegistration: siwcRegistrationStoreFrom(ctx),
-  })
+  registerPiAiFlows(ctx, { credentials: credentialStoreFrom(ctx), authContext: authContextFrom(ctx) })
   return ctx
 }
 
@@ -128,16 +122,11 @@ afterEach(async () => {
 describe('pi-ai login flows', () => {
   it.each([false, true])('native login and catalog services follow optional authorization (%s)', async (withAuthorization) => {
     const writeSignals: (AbortSignal | undefined)[] = []
-    let recordUpdated: ((key: string) => void | Promise<void>) | undefined
     const credentials = {
       resolve: async () => undefined,
       describeRecord: async () => ({ configured: false, writable: true }),
       readRecord: async () => undefined,
       listRecords: async () => [],
-      onRecordUpdated(listener: (key: string) => void | Promise<void>) {
-        recordUpdated = listener
-        return async () => {}
-      },
       modifyRecord: async (_key: string, mutate: (record: undefined) => Promise<unknown>, options?: { signal?: AbortSignal }) => {
         writeSignals.push(options?.signal)
         return mutate(undefined)
@@ -151,6 +140,7 @@ describe('pi-ai login flows', () => {
     const services = new Map<string, unknown>()
     const disposers: (() => void | Promise<void>)[] = []
     const effects: (() => void | Promise<void>)[] = []
+    let recordUpdated: ((key: string) => void) | undefined
     const signal = new AbortController().signal
     const context = {
       signal,
@@ -161,6 +151,7 @@ describe('pi-ai login flows', () => {
       optional: (name: string) => name === 'authorization' && withAuthorization ? authorization : undefined,
       own(dispose: () => void | Promise<void>) { disposers.push(dispose); return async () => {} },
       effect(dispose: () => void | Promise<void>) { effects.push(dispose); return async () => {} },
+      on: (_key: string, listener: (key: string) => void) => { recordUpdated = listener; return async () => {} },
       provide: (name: string, service: unknown) => { services.set(name, service) },
     } as unknown as NativeContext
 
@@ -169,12 +160,12 @@ describe('pi-ai login flows', () => {
       const codex = flows.find(flow => flow.key === recordKeyFor('openai-codex'))
       if (!withAuthorization) {
         expect(codex).toBeUndefined()
-        expect(effects).toHaveLength(1)
+        expect(effects).toHaveLength(0)
         return
       }
 
       expect(codex?.methods.map(method => method.id)).toEqual(['oauth'])
-      expect(effects).toHaveLength(flows.length + 1)
+      expect(effects).toHaveLength(flows.length)
       const sessionSignal = new AbortController().signal
       login.mockImplementation(async () => (
         { type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh', expires: 1 }
@@ -191,7 +182,7 @@ describe('pi-ai login flows', () => {
       expect(nativeModels.collections).toBe(before + 1)
       expect(nativeModels.refreshes).toBe(1)
       const afterFirstCatalog = nativeModels.collections
-      await recordUpdated?.(recordKeyFor('openai-codex'))
+      recordUpdated?.(recordKeyFor('openai-codex'))
       await catalog()
       expect(nativeModels.collections).toBe(afterFirstCatalog + 1)
       expect(nativeModels.refreshes).toBe(2)
@@ -203,16 +194,7 @@ describe('pi-ai login flows', () => {
 
   it('offers one flow per installed provider, with the methods that provider ships', async () => {
     const ctx = await harness()
-    const registrationKey = recordKeyFor('openai-codex-siwc-registration')
-    await ctx.credentials.modifyRecord(registrationKey, () => Promise.resolve({
-      kind: 'api-key',
-      key: 'siwc-registration-v1:{"extAgentHostId":"login-host-fixture"}',
-    }))
-    await credentialStoreFrom(ctx).list()
-    expect((await ctx.credentials.listRecords()).some(record => record.key === registrationKey)).toBe(false)
-    expect(ctx.authorization.describe(registrationKey)).toBeUndefined()
     const offered = ctx.authorization.list()
-    expect(offered.some(entry => entry.key === registrationKey)).toBe(false)
 
     // The OAuth-only provider is exactly the case this exists for: nothing
     // else could ever configure it.

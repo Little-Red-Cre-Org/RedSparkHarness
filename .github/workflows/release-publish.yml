@@ -79,13 +79,8 @@ jobs:
           pnpm --dir rsh/Core/native/system run build:ts
           pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
 
-      - name: Prepare Linux workspace-write sandbox
-        if: runner.os == 'Linux'
-        shell: bash
-        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
-
       - name: Verify packed install
-        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
+        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock
 
       - uses: actions/upload-artifact@v4
         with:

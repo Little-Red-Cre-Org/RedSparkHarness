@@ -42,7 +42,6 @@ function harness(beforeCommit?: () => Promise<void>): {
   provider: NativeAuthorizationProvider
 } {
   const records = new Map<CredentialKey, CredentialRecord>()
-  const metadata = new Map<CredentialKey, unknown>()
   const scope = new NativeScope()
   const events = new RuntimeEvents()
   const credentials: NativeCredentials = {
@@ -51,24 +50,6 @@ function harness(beforeCommit?: () => Promise<void>): {
     set: async () => {},
     unset: async () => {},
     readRecord: async key => records.get(key),
-    readMetadata: async key => metadata.get(key),
-    modifyMetadata: async (key, mutate, options) => {
-      options?.signal?.throwIfAborted()
-      const current = metadata.get(key)
-      const next = await mutate(current)
-      if (next !== undefined) metadata.set(key, next)
-      return metadata.get(key)
-    },
-    migrateRecordToMetadata: async (key, migrate, options) => {
-      options?.signal?.throwIfAborted()
-      const result = await migrate(metadata.get(key), records.get(key), (recordKey) => {
-        const record = records.get(recordKey)
-        return record === undefined ? undefined : structuredClone(record)
-      })
-      if (result.value !== undefined) metadata.set(key, result.value)
-      if (result.retireRecord) records.delete(key)
-      return result.value
-    },
     describeRecord: async (key) => {
       const record = records.get(key)
       return record === undefined
@@ -76,7 +57,6 @@ function harness(beforeCommit?: () => Promise<void>): {
         : { configured: true, kind: record.kind, writable: true }
     },
     listRecords: async () => [...records].map(([key, record]) => ({ key, kind: record.kind })),
-    onRecordUpdated: () => async () => {},
     modifyRecord: async (key, mutate, options) => {
       options?.signal?.throwIfAborted()
       const current = records.get(key)

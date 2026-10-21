@@ -4,11 +4,6 @@
     "profiles"
   ],
   "buttons": [
-    "Light",
-    "Dark",
-    "Follow system",
-    "−",
-    "+",
     "Refresh settings",
     "Save settings"
   ],
@@ -18,7 +13,5 @@
   "alerts": [
     "Request failed: Settings arrays must keep their existing row count and order."
   ],
-  "notices": [
-    "This Host does not save this preference; the behavior shown is used."
-  ]
+  "notices": []
 }

@@ -155,7 +155,6 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
         label: effort.name,
       })),
     ], [reasoning, t])
-  const hasReasoningChoices = effortChoices.length > 0
   const busy = state.status === 'selecting'
 
   const reload = (): void => {
@@ -171,14 +170,8 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
       if (menuRef.current?.contains(event.target as Node) === true) return
       setOpen(false)
     }
-    // Leaving the window drops focus to nowhere too, which onBlur ignores.
-    const closeOnWindowBlur = (): void => { setOpen(false) }
     document.addEventListener('mousedown', closeOutside)
-    window.addEventListener('blur', closeOnWindowBlur)
-    return () => {
-      document.removeEventListener('mousedown', closeOutside)
-      window.removeEventListener('blur', closeOnWindowBlur)
-    }
+    return () => { document.removeEventListener('mousedown', closeOutside) }
   }, [open])
 
   // Portaled placement (the Menu primitive's portal rules: fixed from the
@@ -213,27 +206,12 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
       window.removeEventListener('resize', place)
     }
   }, [open, pane, state])
-
   /* jscpd:ignore-end */
-  useLayoutEffect(() => {
-    if (!open || pane !== 'model') return
-    const selected = itemRefs.current.find(item => item?.getAttribute('aria-checked') === 'true')
-    if (typeof selected?.scrollIntoView === 'function') selected.scrollIntoView({ block: 'nearest' })
-  }, [open, pane, state])
-
-  // Keep keyboard focus inside the open card (keyboard open, pane drill, the
-  // open-time reload re-rendering the rows): land on the checked row or the first.
-  useEffect(() => {
-    /* v8 ignore next -- the card ref is attached whenever the menu is open. */
-    if (!open || menuRef.current?.contains(document.activeElement) === true) return
-    const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled)
-    ;(items.find(item => item.getAttribute('aria-checked') === 'true') ?? items[0])?.focus()
-  }, [open, pane, state])
 
   if (!available) return null
 
   const show = (): void => {
-    setPane(hasReasoningChoices ? 'root' : 'model')
+    setPane('root')
     setOpen(true)
     reload()
   }
@@ -256,7 +234,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
-      if (pane !== 'root' && hasReasoningChoices) setPane('root')
+      if (pane !== 'root') setPane('root')
       else close(true)
       return
     }
@@ -268,12 +246,10 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
   }
 
   const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
-    // Focus dropping to nowhere (a click on the card's non-focusable area, or the
-    // trigger locking while the open-time reload runs) is not leaving the picker;
-    // outside clicks close through the document mousedown listener instead.
-    if (!(event.relatedTarget instanceof Node)) return
-    if (rootRef.current?.contains(event.relatedTarget) === true
-      || menuRef.current?.contains(event.relatedTarget) === true) return
+    if (event.relatedTarget instanceof Node && (
+      rootRef.current?.contains(event.relatedTarget) === true
+      || menuRef.current?.contains(event.relatedTarget) === true
+    )) return
     close()
   }
 
@@ -332,10 +308,6 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
     const at = itemIndex++
     return (node: HTMLButtonElement | null) => { itemRefs.current[at] = node }
   }
-  const duplicateNames = new Map<string, number>()
-  for (const group of state.groups) for (const model of group.models) {
-    duplicateNames.set(model.name, (duplicateNames.get(model.name) ?? 0) + 1)
-  }
 
   return (
     <div ref={rootRef} className={css.root} onKeyDown={onRootKeyDown} onBlur={onBlur}>
@@ -348,7 +320,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
         aria-expanded={open}
         aria-controls={open ? `${id}-menu` : undefined}
         title={triggerLabel}
-        disabled={locked && !open}
+        disabled={locked}
         onClick={() => {
           if (open) {
             close()
@@ -427,13 +399,11 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
                             className={clsx(css.option, selected && css.selected)}
                             key={model.id}
                             title={model.name}
-                            disabled={busy || locked}
+                            disabled={busy}
                             onClick={() => { choose({ provider: group.id, model: model.id }) }}
                           >
                             <span className={css.optionCopy}>
                               <span className={css.modelName}>{model.name}</span>
-                              {(duplicateNames.get(model.name) ?? 0) > 1
-                                ? <span className={css.providerName}>{group.name}</span> : null}
                             </span>
                             <span className={css.check}>
                               {selected ? <IconCheckOutline16 /> : null}
@@ -469,7 +439,7 @@ export function ModelPicker({ locked, available, state, load, getError, select, 
                     aria-checked={effectiveEffort === level.effort}
                     className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
                     key={level.key}
-                    disabled={busy || locked}
+                    disabled={busy}
                     onClick={() => { chooseEffort(level.effort) }}
                   >
                     <span className={css.optionCopy}>

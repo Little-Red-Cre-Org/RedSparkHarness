@@ -80,8 +80,6 @@ await ctx.credentials.deleteRecord(key)                  // no-op when absent
 
 `modifyRecord` 是唯一写路径：它让你的变更函数看到写入取得独占那一刻的记录，返回 `undefined` 则保持原状。记录没有空值规则——一条既无 key 也无环境值的记录，陈述的是其拥有者确认了 ambient 认证——配置界面还可以枚举每条记录，显示你获得了哪些授权，并找出已卸载插件留下的记录。
 
-凭据提供方还通过 `readMetadata`、`modifyMetadata` 暴露按拥有者寻址的 JSON 元数据，并提供 `migrateRecordToMetadata` 在同一写入锁下迁移旧记录。迁移决策回调可以检查该锁定快照中的其他记录副本，副本与存储值分离。元数据与凭据分开存储：它不会出现在 `listRecords`、记录描述或记录更新事件中。本地提供方会先验证 sidecar 写入，再移除旧记录。
-
 ### 在配置中使用密钥
 
 settings 分节或 `cordis.yml` 条目按名引用密钥，而不是包含密钥本身——例如 LLM（大语言模型）适配器接受 `apiKeyEnv`：
@@ -118,30 +116,27 @@ apiKeyEnv: DEEPSEEK_API_KEY
 - **记录是持久化的，存在即事实。** 记录按 `<scope>/<id>` 存储并跨重启保留；空值规则不适用，因此一条既无 key 也无环境值的 `api-key` 记录是有意陈述，而不是空白。
 - **监听器失败受到隔离。** `notifyUpdated` 扇出 `credentials/reference-updated`，保证每个监听器都会运行；同步抛出与异步拒绝都会被记录，不改变已提交操作的结果，`INVARIANT` 编码的失败除外——它们在所有监听器运行完毕后重新抛出。
 
-### 凭据变更通知
+### credentials/reference-updated 事件
 
 `credentials/reference-updated (ref)` 在提供方管理的来源发生已提交变更后触发——`set`、`unset` 或在存储中观察到的外部编辑。进程环境变量的变化不可观测，永不触发。消费方不需要该事件（它们按操作重新解析）；它服务于配置界面刷新「已配置」徽标。
 
-Cordis 会在记录写入或删除已提交，或存储中观察到的外部编辑被采纳后发出 `credentials/record-updated (key)`。Native Host 消费方通过所选 service 实例的 `NativeCredentials.onRecordUpdated` 订阅。两条路径都只传带品牌的记录地址，不传 payload；Native 监听器会在提供方更新已提交快照后同步调用，但其异步工作不会延迟写入。
+`credentials/record-updated (key)` 在存储记录发生已提交变更后触发——一次确实写入的 `modifyRecord`、一次确实移除的 `deleteRecord`，或在存储中观察到的外部编辑。它保持独立事件，因为两个键文法互斥：一个监听器若在同一事件上同时收到两个空间，将无法分辨主体属于哪一边。
 
 ### 记录写入与读取路径
 
 `modifyRecord` 是唯一写路径，因为正确的写入依赖当前值：刷新 token 是「读—决定—替换」，变更函数看到的是写入取得独占那一刻的记录——返回 `undefined` 则保持原状。独占在支持它的底层存储上跨进程成立，这正是防止两个进程同时轮换一个 refresh token、丢掉先写那一个的机制。读取与引用一侧对称，但绝不分层：没有任何东西能遮蔽记录，`grant` 的 payload 会原样返回给其拥有者，因为只有拥有它的插件能解释它。
-
-元数据操作使用提供方按拥有者划分的写入锁，但不会创建凭据记录或凭据事件。`migrateRecordToMetadata` 在持锁时读取当前元数据、旧记录和需要检查的其他记录；写入并回读验证元数据后才移除旧记录。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition：`credentialRef`/`credentialKey` 品牌、`ResolvedCredential`/`CredentialRecordInfo`、覆盖两个键空间的抽象提供方、带失败隔离的扇出 |
-| [`src/types.ts`](src/types.ts) | Cordis 事件声明，以及客户端安全的凭据品牌和记录类型 |
-| [`src/native.ts`](src/native.ts) | Native Host service Definition：所选提供方的记录通知与持久化记录操作 |
+| [`src/types.ts`](src/types.ts) | 客户端安全类型面：`CredentialRef` 与 `CredentialKey` 品牌、存储记录联合类型、`CredentialInfo` 引用视图、`credentials/reference-updated` 与 `credentials/record-updated` 事件声明 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`credentials/reference-updated` 只在凭据服务存活时触发 |
 
 ### 客户端安全类型
 
-`./types` 子路径出口把 Cordis 事件声明与其点名的 `CredentialRef`、`CredentialKey` 品牌、存储记录联合类型，以及配置界面读取的 `CredentialInfo` 引用视图放在一起，包根继续 re-export 它们。Native Host 消费方导入 `./native` Definition，其中将所选提供方通知与记录方法配套公开。
+`./types` 子路径出口把事件声明与其点名的 `CredentialRef`、`CredentialKey` 品牌、存储记录联合类型，以及配置界面读取的 `CredentialInfo` 引用视图放在一起，包根继续 re-export 它们。于是 Host 编译面之外的消费方读到的正是 Host 发射的那一份签名，而不必再写一遍。
 
 ### 生命周期
 

@@ -65,7 +65,7 @@ import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from './adapter.ts'
-import { authContextFrom, credentialStoreFrom, siwcRegistrationStoreFrom } from './auth.ts'
+import { authContextFrom, credentialStoreFrom } from './auth.ts'
 import { configurableProviderEntries } from './configurable-providers.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
@@ -164,11 +164,7 @@ export function apply(ctx: Context, config: Config): void {
   // One store and one ambient context for the whole plugin instance: both read
   // through `ctx` per call, so they stay correct across the collection rebuilds
   // a configuration change causes, and a sign-in survives one.
-  const auth = {
-    credentials: credentialStoreFrom(ctx),
-    authContext: authContextFrom(ctx),
-    siwcRegistration: siwcRegistrationStoreFrom(ctx),
-  }
+  const auth = { credentials: credentialStoreFrom(ctx), authContext: authContextFrom(ctx) }
   const adapter = new PiAiAdapter({
     profiles,
     resolveApiKey,

@@ -29,8 +29,6 @@ kind: "package-library"
 
 `createNativeSdkChildHarness` 将相同客户端实现绑定到 Program 选定的 runtime 与受管连接。运行在提示词前完成 protocol initialize 握手；若请求 `maxSteps`，Native server 必须协商出不高于请求值的正有效值。`maxTokens` 保持每次模型输出上限语义。Session cancel、steer、fork、通知订阅、EOF 处理与受管进程范围释放均复用同一实现。
 
-Native `HarnessSession.uploadFile(bytes, name?)` 在文件进入有序 Native 提示词或 steer 内容前持久化字节；其进程内回执绑定到该 Session，runtime 重启后必须重新上传。通用 wire 提示词类型保留 Cordis 兼容的持久内容与编码图像，而 `NativeSdkPromptContentBlock` 仅限文本、编码图像与文件回执。
-
 <a id="understand-the-implementation"></a>
 
 ## 理解实现

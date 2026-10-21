@@ -112,12 +112,6 @@
     },
     {
       "path": "../../host/directory-picker-native"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/command-feedback"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/message-feedback"
     }
   ]
 }

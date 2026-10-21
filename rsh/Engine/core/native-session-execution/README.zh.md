@@ -38,8 +38,6 @@ NativeSessionConfiguration 可显式选择 builtinTools。委派将解析后的�
 
 `NativeActiveSessionOwner.appendBatch` 通过 Program 唯一保留的 writer 接收关联事实。被拒绝的批次不会跟踪任何事件；已接收事件保持序号顺序，并由 `flush()` 通过既有持久化屏障写入。
 
-Owner 可用文本块替换待处理消息的全部 content，同时保留身份、source 和位置。它可用一条持久化 `agent/inbox/moved` 事件将 queued 消息移到 `next-step` 末尾。Edit 返回 `updated` 或 `stale`；promotion 区分 `promoted`、`stale` 与 `not-promotable`。
-
 仅供 Host 使用的 `./read-history` 工具通过选定的精确存活所有者或既有持久化 reader 读取，不激活 Agent。明确的历史上限额外请求一个事件，以检测超限并拒绝截断。读取后重新检查存活所有权；等待冷 reader 关闭，清理失败保留原读取失败并报告给调用请求的所有者。
 
 `NativeProgramInteractionOwner` 描述 Program 选定的存活请求者及显示根。Program 从实际执行入口和委派关系派生这一只读归属，不依赖持久 Session parent header。交互 Consumer 回答前必须验证确切存活的 Agent 和 Session；显示根不会替代请求 Session 或其 writer。
@@ -68,13 +66,13 @@ Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工�
 
 `activeSessions` 服务在模型调用发起归属之外提供确切的 Program 所有 Agent 与 Session 访问。注册会等待未来 attach 观察者后才允许初始模型接纳。释放会关闭查询接纳、等待已接纳 attach 回调，并在 Program writer 清理前执行 detach 清理；移除观察者也会等待已接纳回调。Attach 失败通过 detach 清理回滚。复制的 Agent 与复制的 Session 不能选择所有者。
 
-活动所有者通过唯一 writer 暴露已校验历史、追踪 append/flush、独立的持久收件箱候选与后端已接纳事件观察。`readCommittedEvents()` 在已接受的 append 与 flush 后读取有界权威前缀，不受 turn cancellation 影响；普通 `readEvents()` 仍受调用方与 Program 生命周期取消。其 invocation 来自当前 Program 入口（`root` 或 `delegated`），独立于历史 Session 谱系。有序异步 step hook 通过 `next()` 委派，只能选择未修改的已捕获候选。Hook 可注册一个同步提交检查，由 Program 在请求准备后执行；检查只能取消该次 admission 所选候选的 id，并且不能返回 Promise。
+活动所有者通过唯一 writer 暴露已校验历史、追踪 append/flush、独立的持久收件箱候选与后端已接纳事件观察。其 invocation 来自当前 Program 入口（`root` 或 `delegated`），独立于历史 Session 谱系。有序异步 step hook 通过 `next()` 委派，只能选择未修改的已捕获候选。Hook 可注册一个同步提交检查，由 Program 在请求准备后执行；检查只能取消该次 admission 所选候选的 id，并且不能返回 Promise。
 
 驻留保留是进程本地的 Program 所有权。Consumer 可跨空闲 turn 保留根 writer；释放确切的 lease 允许自然关闭。取消与卸载会覆盖保留并等待已接纳工作停稳。Consumer 仅在 `writerAvailable` 且确切所有权仍有效时才能追加。关闭的所有者会直接报错；注册表不创建替代收件箱、模型循环或 writer。
 
 active owner 可为精确的当前 root 调用提供 `rootOperations`。这个 Program 所有的 handle 在普通 writer 关闭后仍可使用，前提是原始 Agent 仍活跃。`runIdle()` 同步拒绝忙碌或已释放 root，在 idle maintenance 中临时恢复唯一 writer；成功释放可以唤醒已接纳待处理输入，失败则保留持久化 inbox 事实且不发起模型请求。delegated 调用不提供该 handle。registry 不拥有未来 timer 或第二个 executor。
 
-本包还定义 `rootExecution`，由选定的 Program 提供 Provider。`ready(signal)` 等待真实 executor 与配置，由该 Program 定义。明确的 branded route 绑定 Program 的不可变配置与现有 scope，未知 route 在接纳前失败。`selectWorkspace()` 和 `createWorkspaceRoute()` 接受可选的 `trusted: true`，用于绕过所选 Program 配置的 `allowedRoots`；native headless 实现仍会拒绝受保护的系统目录。`capture(owner)` 只接受精确附着的 root。`execute()` 等待完整 root 结算；`maintenance()` 在不产生模型 turn 的情况下执行持久化 root 事务。`stagedFiles` 通过选定的不可变附件 Provider 保存字节，并签发绑定 route 与 Session 代际的进程内回执；只有精确附着的 root owner 能消费回执，且回执在 inbox 接纳持久化后退休。可确证的交接前拒绝会释放预留；交接结果不确定时会隔离回执并要求重新上传。`releaseWorkspace()` 会在撤销路由前退休没有活动 Session owner 的空闲 root Agent，并保留其持久日志；活跃所有权和待处理准入会阻止释放，清理失败时会保留路由。计划任务的 root 请求会在发布活动 owner 前记录信息型 `session/root-origin` 事件，因此即使维护阶段未接纳 prompt，Provider 替换和 Session 恢复后仍会保留计划任务分类。这些操作不转移权限，也不注册另一个 executor。
+本包还定义 `rootExecution`，由选定的 Program 提供 Provider。`ready(signal)` 等待真实 executor 与配置，由该 Program 定义。明确的 branded route 绑定 Program 的不可变配置与现有 scope，未知 route 在接纳前失败。`capture(owner)` 只接受精确附着的 root。`execute()` 等待完整 root 结算；`maintenance()` 在不产生模型 turn 的情况下执行持久化 root 事务。`releaseWorkspace()` 会在撤销路由前退休没有活动 Session owner 的空闲 root Agent，并保留其持久日志；活跃所有权和待处理准入会阻止释放，清理失败时会保留路由。计划任务的 root 请求会在发布活动 owner 前记录信息型 `session/root-origin` 事件，因此即使维护阶段未接纳 prompt，Provider 替换和 Session 恢复后仍会保留计划任务分类。这些操作不转移权限，也不注册另一个 executor。
 
 `fork(request, signal)` 使用选定的 Program 路由与已持久化的闭合源轮次创建新根目标，并在复制继承前缀、持久化精确切点后返回目标身份。Program 拥有源观察、Agent 注册、取消及唯一目标写入器；Consumer 不能提供替代 seed 事件，也不能通过源 id 转移权限。
 

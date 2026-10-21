@@ -1897,11 +1897,6 @@
       "source": "rsh/Modules/Official/credentials/credentials/src/native-types.ts"
     },
     {
-      "doc": "rsh/Docs/subsystems/credentials.md",
-      "symbol": "NativeCredentials",
-      "source": "rsh/Modules/Official/credentials/credentials/src/native.ts"
-    },
-    {
       "doc": "rsh/Docs/subsystems/settings.md",
       "symbol": "SettingsDescribeOptions",
       "source": "rsh/Core/settings/settings-definition/src/index.ts"
@@ -2103,11 +2098,6 @@
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
-      "symbol": "NativeSessionTelemetryOperations",
-      "source": "rsh/Engine/session/session-telemetry/src/native-definition.ts"
-    },
-    {
-      "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetryCapture",
       "source": "rsh/Engine/session/session-telemetry/src/coordinator.ts"
     },
@@ -2119,22 +2109,22 @@
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySharingStatus",
-      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySeverity",
-      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetryRecord",
-      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/session-telemetry.md",
       "symbol": "SessionTelemetrySink",
-      "source": "rsh/Engine/session/session-telemetry/src/types.ts"
+      "source": "rsh/Engine/session/session-telemetry/src/index.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/typert.md",

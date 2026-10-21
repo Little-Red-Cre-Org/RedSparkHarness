@@ -61,8 +61,6 @@ export interface AgentUnderTest {
   packageResolutionAnchor?: string
   /** Named dsh profile; omitted only for test-only fake bins with their own config grammar. */
   profile?: string
-  /** Shipped template used to initialize a missing custom profile. */
-  fromDefaultProfile?: string
   /** The repo tsconfig whose paths resolve unbuilt workspace imports. */
   tsconfigPath: string
 }
@@ -128,15 +126,7 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
     libBin: agent.libBinScript,
     configArgs: agent.profile === undefined
       ? ['--config', selectedConfig]
-      : profileArgs(
-        agent.profile,
-        agent.configPath,
-        selectedConfig,
-        options.env?.DSH_SNAPSHOT,
-        cwd,
-        agent.packageResolutionAnchor,
-        agent.fromDefaultProfile,
-      ),
+      : profileArgs(agent.profile, agent.configPath, selectedConfig, options.env?.DSH_SNAPSHOT, cwd, agent.packageResolutionAnchor),
     tsconfigPath: agent.tsconfigPath,
     ...agent.profile === undefined ? {} : { sourceImport: 'tsx/esm' },
     env: {
@@ -352,7 +342,7 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
   }
 }
 
-/** Build one profile invocation from its shipped template and scenario patches. */
+/** Build one dsh profile invocation from the base and optional scenario patches. */
 function profileArgs(
   profile: string,
   basePatch: string,
@@ -360,7 +350,6 @@ function profileArgs(
   snapshotMode: string | undefined,
   cwd: string,
   packageResolutionAnchor?: string,
-  fromDefaultProfile?: string,
 ): string[] {
   const base = resolve(cwd, basePatch)
   const selected = resolve(cwd, selectedPatch)
@@ -373,11 +362,7 @@ function profileArgs(
   mkdirSync(materializedRoot, { recursive: true })
   const materializedDir = mkdtempSync(join(materializedRoot, 'launch-'))
   const materialized = patches.map((file, index) => materializeProfilePatch(file, cwd, materializedDir, index, packageResolutionAnchor))
-  return [
-    '--profile', profile,
-    ...fromDefaultProfile === undefined ? [] : ['--from-default-profile', fromDefaultProfile],
-    ...materialized.flatMap(file => ['--patch', file]),
-  ]
+  return ['--profile', profile, ...materialized.flatMap(file => ['--patch', file])]
 }
 
 /** Derive the replay-only sibling patch selected by the former app-bin swap. */

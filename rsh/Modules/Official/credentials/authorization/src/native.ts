@@ -451,10 +451,9 @@ export const plugin: NativePlugin = {
       throw new TypeError('authorization: configuration must be undefined or an empty object')
     }
     return (context) => {
-      const credentials = context.require('credentials')
-      const service = new NativeAuthorizationProvider(context.scope, credentials, context)
+      const service = new NativeAuthorizationProvider(context.scope, context.require('credentials'), context)
+      context.on('credentials/record-updated', (key) => { service.recordUpdated(key) })
       context.own(() => service.dispose())
-      context.effect(credentials.onRecordUpdated((key) => { service.recordUpdated(key) }))
       context.provide('authorization', service)
     }
   },

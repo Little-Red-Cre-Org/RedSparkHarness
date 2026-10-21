@@ -32,7 +32,6 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-native-session-execution": "workspace:^",
     "@deepseek-ai/dsh-json-rpc-line": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
     "@deepseek-ai/dsh-native-headless": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",

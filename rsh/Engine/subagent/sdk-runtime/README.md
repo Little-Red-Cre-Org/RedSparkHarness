@@ -29,8 +29,6 @@ The package exports the shared `HarnessClient`, `DeepSeekHarness`, Session handl
 
 The `createNativeSdkChildHarness` helper binds the same client implementation to a Program-selected runtime and managed connection. A run performs the protocol initialize handshake before prompts, and requested `maxSteps` must be negotiated by the Native server at an effective positive value no greater than the requested cap. `maxTokens` retains its per-model-output meaning. Session cancel, steer, fork, notification subscriptions, EOF handling, and managed-range disposal all use the shared implementation.
 
-Native `HarnessSession.uploadFile(bytes, name?)` stores bytes before they are included in ordered Native prompt or steer content; its process-local receipt is scoped to that Session and must be uploaded again after runtime restart. The generic wire prompt type retains Cordis-compatible durable content and encoded images, while `NativeSdkPromptContentBlock` is restricted to text, encoded images, and file receipts.
-
 ## Understand the implementation
 
 <details>

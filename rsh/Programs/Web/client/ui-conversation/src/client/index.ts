@@ -70,6 +70,15 @@ export type {
 export type { ComposerBlock, ComposerBlocks } from './contract/composer-blocks.ts'
 
 declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * Report whether a Session draft is connected to its persisted Conversation store.
+     * @param sessionId - Session whose composer was mounted or unmounted.
+     * @param ready - true after the current draft is persisted; false on unmount.
+     * @mode parallel
+     */
+    'conversation/draft-persistence'(sessionId: import('@deepseek-ai/dsh-session/types').SessionId, ready: boolean): void
+  }
   interface Context {
     /** Scope-addressed Conversation actions and per-Session input registry. */
     conversation: import('./service.ts').IConversation

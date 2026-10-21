@@ -3,7 +3,7 @@
 import type { RenderOpts } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render } from '@testing-library/react'
+import { act, cleanup, render } from '@testing-library/react'
 import { AppFrame } from '../src/client/AppFrame.tsx'
 import type { AppFrameProps } from '../src/client/AppFrame.tsx'
 import type { MainPanelId, RightbarOwnerProps, SidebarOwnerProps } from '../src/client/index.ts'
@@ -261,38 +261,16 @@ describe('AppFrame normal width concessions', () => {
     expect(tracks(frame)).toEqual([420, 0])
   })
 
-  it.each(['backdrop', 'Escape'] as const)('opens the narrow sidebar as a modal drawer and closes it from the %s', (close) => {
+  it('uses the post-collapse left rail to permit a narrow first opening', () => {
     frameWidth = 800
-    const opener = document.body.appendChild(document.createElement('button'))
-    const { frame, instance, rightOwner, sidebarOwner, getByRole } = mountFrame()
-    expect(tracks(frame)).toEqual([56, 0])
-    opener.focus()
+    const { frame, instance, rightOwner } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
-    const drawer = getByRole('dialog', { name: 'sidebar' })
-    expect(tracks(frame)).toEqual([56, 0])
-    expect(sidebarOwner()).toEqual({ collapsed: false, width: 280 })
-    expect(drawer.getAttribute('style')).toContain('width: 280px')
-    expect(drawer.getAttribute('aria-modal')).toBe('true')
-    expect(document.activeElement).toBe(drawer)
-    expect(frame.querySelectorAll('[data-center-col][inert], [data-rightbar-col][inert]')).toHaveLength(2)
-    expect(rightOwner()).toEqual({ width: 344, viewportWidth: 800, canShow: true })
-    drawer.blur()
-    fireEvent.keyDown(document.body, { key: 'Tab', shiftKey: true })
-    expect(document.activeElement).toBe(drawer)
-    drawer.blur()
-    if (close === 'backdrop') fireEvent.click(getByRole('button', { name: 'close' }))
-    else fireEvent.keyDown(document.body, { key: 'Escape' })
-    expect(instance.getSnapshot().layoutInfo.narrowExpanded).toBe(false)
-    expect(frame.querySelector('[data-sidebar-overlay], [role="dialog"], [inert]')).toBeNull()
-    expect(document.activeElement).toBe(opener)
-    expect(tracks(frame)).toEqual([56, 0])
+    expect(tracks(frame)).toEqual([280, 0])
     expect(rightOwner()).toEqual({ width: 344, viewportWidth: 800, canShow: true })
     act(() => { instance.actions.openRightbar(true, false) })
     expect(tracks(frame)).toEqual([56, 344])
     expect(instance.getSnapshot().layoutInfo).toMatchObject({ narrowExpanded: false, rightbar: 360 })
-    act(() => { instance.actions.toggleSidebar() })
     expect(rightOwner().canShow).toBe(true)
-    opener.remove()
   })
 
   it.each([[756, 300, true], [755, 0, false]] as const)('reports eligibility at %ipx', (width, rightbar, canShow) => {
@@ -302,27 +280,36 @@ describe('AppFrame normal width concessions', () => {
     expect(rightOwner()).toEqual({ width: rightbar, viewportWidth: width, canShow })
   })
 
+  it('does not anticipate another left collapse after the right panel is already shown', () => {
+    frameWidth = 800
+    const { instance, rightOwner } = mountFrame()
+    act(() => { instance.actions.openRightbar(true, false); instance.actions.toggleSidebar() })
+    expect(rightOwner().canShow).toBe(false)
+  })
+
   it('auto-collapses only below 1024px and preserves the wide sidebar preference', () => {
-    const { frame, instance, sidebarOwner } = mountFrame()
+    const { frame, instance } = mountFrame()
     act(() => { instance.actions.setSidebar(400) })
     resize(1024)
     expect(tracks(frame)[0]).toBe(400)
     resize(1023)
     expect(tracks(frame)[0]).toBe(56)
     act(() => { instance.actions.toggleSidebar() })
-    expect(tracks(frame)[0]).toBe(56)
+    expect(tracks(frame)[0]).toBe(400)
     resize(980)
-    expect(tracks(frame)[0]).toBe(56)
+    expect(tracks(frame)[0]).toBe(400)
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)[0]).toBe(56)
     resize(1920)
     expect(tracks(frame)[0]).toBe(400)
-    // A wide-closed sidebar still opens at the default overlay width without touching the stored preference.
+  })
+
+  it('re-expands a wide-closed sidebar at the default width while narrow', () => {
+    const { frame, instance } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
     resize(980)
     act(() => { instance.actions.toggleSidebar() })
-    expect(tracks(frame)[0]).toBe(56)
-    expect(sidebarOwner()).toEqual({ collapsed: false, width: 280 })
+    expect(tracks(frame)[0]).toBe(280)
     expect(instance.getSnapshot().layoutInfo.sidebar).toBe(0)
   })
 })

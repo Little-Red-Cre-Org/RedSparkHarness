@@ -37,8 +37,6 @@
       ],
       "requires": [
         "clientNativeSession",
-        "clientNativeWorkspace",
-        "clientNativeDirectoryPicker",
         "clientSlots",
         "clientLocale",
         "clientNativeTheme"
@@ -54,7 +52,6 @@
     "lib/index.js",
     "lib/native.js",
     "lib/controller.js",
-    "lib/controller-*.js",
     "lib/native-*.js",
     "lib/*.css",
     "lib/types/**/*.d.ts"
@@ -66,8 +63,7 @@
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-client-ui-trajectory": "workspace:^",
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-workflow-run": "workspace:^"
+    "@deepseek-ai/dsh-native-tools": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
@@ -98,14 +94,12 @@
     "@deepseek-ai/dsh-client-ui-sidebar-right": "workspace:^",
     "@deepseek-ai/dsh-client-ui-theme": "workspace:^",
     "@testing-library/react": "^16.1.0",
-    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
     "@deepseek-ai/dsh-native-model-selection": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-approval": "workspace:^",
     "@deepseek-ai/dsh-client-ui-user-questions": "workspace:^",
     "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
-    "@deepseek-ai/dsh-tool-todo": "workspace:^",
-    "@deepseek-ai/dsh-util-crypto": "workspace:^"
+    "@deepseek-ai/dsh-tool-todo": "workspace:^"
   }
 }

@@ -21,24 +21,9 @@ it('keeps workspace Client resolution explicit and rejects installed package esc
     await writeFile(join(source, 'native.mjs'), 'export const plugin = { apiVersion: 1, name: "fixture-client", targets: ["client"], requires: [], provides: [], resolve: () => () => {} }\n')
     await symlink(source, link, process.platform === 'win32' ? 'junction' : 'dir')
     await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
-      formatVersion: 1, installations: [
-        { id: 'client', plugin: 'fixture-client' },
-        { id: 'disabled', plugin: 'not-installed', disabled: true },
-      ],
+      formatVersion: 1, installations: [{ id: 'client', plugin: 'fixture-client' }],
     }))
-    expect((await prepareNativeClientBundle(project, runtime))?.wire).toMatchObject({
-      modules: [{ id: 'client' }], selections: [{ id: 'client' }],
-    })
-    await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
-      formatVersion: 1, installations: [{ id: 'disabled', plugin: 'not-installed', disabled: 'yes' }],
-    }))
-    await expect(prepareNativeClientBundle(project, runtime)).rejects.toThrow('disabled must be boolean')
-    await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
-      formatVersion: 1, installations: [
-        { id: 'client', plugin: 'fixture-client' },
-        { id: 'disabled', plugin: 'not-installed', disabled: true },
-      ],
-    }))
+    expect((await prepareNativeClientBundle(project, runtime))?.wire.modules).toEqual([{ id: 'client' }])
     await expect(prepareNativeClientBundle(project, runtime, true)).rejects.toThrow('not installed in the profile or runtime')
     await unlink(link)
     await mkdir(link)

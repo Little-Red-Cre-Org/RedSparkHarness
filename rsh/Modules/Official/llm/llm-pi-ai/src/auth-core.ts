@@ -17,12 +17,6 @@ import {
 import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { LlmError } from '@deepseek-ai/dsh-llm/native'
-import { migrateExistingSiwcRegistration } from './siwc.ts'
-import type { SiwcRegistrationStore } from './siwc.ts'
-
-type CredentialOperations = Pick<NativeCredentials,
-  'resolve' | 'readRecord' | 'listRecords' | 'modifyRecord' | 'deleteRecord'
-  | 'modifyMetadata' | 'migrateRecordToMetadata'>
 
 /**
  * The record scope every credential this adapter family stores is written
@@ -31,7 +25,7 @@ type CredentialOperations = Pick<NativeCredentials,
  * provider name — that this plugin owns the format inside the record.
  */
 export const RECORD_SCOPE = 'llm-pi-ai'
-const SIWC_REGISTRATION_KEY = credentialKey(RECORD_SCOPE, 'openai-codex-siwc-registration')
+const INTERNAL_RECORD_IDS = new Set(['openai-codex-siwc-registration'])
 
 /**
  * The record address for one pi-ai provider id.
@@ -114,7 +108,7 @@ function toRecord(credential: Credential): CredentialRecord {
  * @returns the live service.
  * @throws {LlmError} code `NO_CREDENTIAL_STORE` when none is mounted.
  */
-function writableStore(credentials: CredentialOperations | undefined): CredentialOperations {
+function writableStore(credentials: NativeCredentials | undefined): NativeCredentials {
   if (credentials === undefined) {
     throw new LlmError(
       'llm-pi-ai: this composition mounts no credentials service, so there is nowhere to store the'
@@ -142,7 +136,7 @@ function writableStore(credentials: CredentialOperations | undefined): Credentia
  * @param credentials - the credential service, when the composition provides one.
  * @returns the store to hand `createModels()`.
  */
-export function credentialStoreFrom(credentials: CredentialOperations | undefined): CredentialStore {
+export function credentialStoreFrom(credentials: NativeCredentials | undefined): CredentialStore {
   return {
     async read(providerId) {
       if (credentials === undefined) return undefined
@@ -150,12 +144,6 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
       return toPiCredential(await credentials.readRecord(recordKeyFor(providerId)))
     },
     async list(): Promise<readonly CredentialInfo[]> {
-      if (credentials !== undefined) {
-        await writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
-          (current, legacy, readRecord) => migrateExistingSiwcRegistration(
-            current, legacy, toPiCredential(readRecord(recordKeyFor('openai-codex'))),
-          ))
-      }
       const stored = await credentials?.listRecords() ?? []
       const mine: CredentialInfo[] = []
       for (const entry of stored) {
@@ -163,6 +151,7 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
         // their payloads are written in a format pi-ai never agreed to.
         if (credentialKeyScope(entry.key) !== RECORD_SCOPE) continue
         const providerId = credentialKeyId(entry.key)
+        if (INTERNAL_RECORD_IDS.has(providerId)) continue
         mine.push({
           providerId,
           type: entry.kind === 'api-key' ? 'api_key' : 'oauth',
@@ -196,19 +185,6 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
   }
 }
 
-/** Owner-private SIWC metadata storage over the selected credential provider.
- * @param credentials - the selected Native credentials service.
- * @returns the adapter shared by Native and Cordis auth consumers.
- */
-export function siwcRegistrationStoreFrom(credentials: CredentialOperations | undefined): SiwcRegistrationStore {
-  return {
-    reconcile: migrate => writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
-      (current, legacy, readRecord) => migrate(current, legacy,
-        toPiCredential(readRecord(recordKeyFor('openai-codex'))))),
-    modify: mutate => writableStore(credentials).modifyMetadata(SIWC_REGISTRATION_KEY, mutate),
-  }
-}
-
 /**
  * A pi-ai `AuthContext` over the harness credential plane and the host
  * filesystem.
@@ -226,7 +202,7 @@ export function siwcRegistrationStoreFrom(credentials: CredentialOperations | un
  * @returns the auth context to hand `createModels()`.
  */
 export function authContextFrom(
-  credentials: CredentialOperations | undefined,
+  credentials: NativeCredentials | undefined,
   environment: LaunchEnvironmentSnapshot,
 ): AuthContext {
   return {

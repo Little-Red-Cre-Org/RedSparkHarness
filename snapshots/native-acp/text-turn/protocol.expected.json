@@ -112,10 +112,5 @@
       "type": "text",
       "text": "native ACP snapshot reply"
     }
-  },
-  {
-    "sessionUpdate": "usage_update",
-    "used": 1547,
-    "size": 262144
   }
 ]

@@ -22,8 +22,6 @@ import css from './onboarding.module.css'
 
 const WELCOME_ACK_KEY = 'dsh.native.onboarding.welcome'
 const WELCOME_ACK_VERSION = '2026-08-13.1'
-const MODELS_SKIP_KEY = 'dsh.native.onboarding.models'
-const MODELS_SKIP_VERSION = '2026-10-17.1'
 
 type Step = 'welcome' | 'models' | 'done'
 type Translate = (key: ConversationLocaleKey) => string
@@ -113,11 +111,6 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
       ...(entry.declared === undefined ? {} : { declared: entry.declared }),
     }]
   })
-  // The Host's default Session route leads, so the form opens on the provider new Sessions use.
-  // Read only once the form is needed: a catalog refresh can wait on remote model discovery.
-  const defaultProvider = (await client.modelCatalog(signal))?.default.provider
-  const defaultIndex = providers.findIndex(entry => entry.provider === defaultProvider)
-  if (defaultIndex > 0) providers.unshift(...providers.splice(defaultIndex, 1))
   const customNamespace = namespaces.get('llm-pi-ai')
   const protocols = customNamespace === undefined ? [] : modelProtocolChoices(customNamespace, modelSettingsSchema)
   const setup: ModelSetup = {
@@ -130,7 +123,7 @@ async function readModelSetup(client: NativeSessionClient, signal: AbortSignal):
     : { usable: false, setup }
 }
 
-function createModelOperations(client: NativeSessionClient, t: Translate): ModelSettingsOperations {
+function createModelOperations(client: NativeSessionClient): ModelSettingsOperations {
   return {
     async describeCredential(ref) {
       try { return (await client.credentialsDescribe([ref]))[ref] }
@@ -146,7 +139,7 @@ function createModelOperations(client: NativeSessionClient, t: Translate): Model
     },
     async writeSettings(namespace, ops, expectedRevision) {
       if (expectedRevision === undefined) {
-        return { kind: 'refused', message: t('onboardingSettingsUnavailable') }
+        return { kind: 'refused', message: `native onboarding: settings revision is unavailable for ${namespace}` }
       }
       try {
         const view = await client.settingsMutate(namespace, ops, expectedRevision)
@@ -174,8 +167,8 @@ export function NativeOnboarding({ client, localeService, themeService, children
   themeService: NativeThemeService
   children: ReactNode
 }): ReactNode {
-  const [step, setStep] = useState<Step>(() => localStorage.getItem(WELCOME_ACK_KEY) !== WELCOME_ACK_VERSION
-    ? 'welcome' : localStorage.getItem(MODELS_SKIP_KEY) === MODELS_SKIP_VERSION ? 'done' : 'models')
+  const [step, setStep] = useState<Step>(() => localStorage.getItem(WELCOME_ACK_KEY) === WELCOME_ACK_VERSION
+    ? 'models' : 'welcome')
   const [locale, setLocale] = useState(localeService.getSnapshot().locale)
   const [colorScheme, setColorScheme] = useState(themeService.getSnapshot().active.colorScheme)
   const [welcomeError, setWelcomeError] = useState<string>()
@@ -186,7 +179,7 @@ export function NativeOnboarding({ client, localeService, themeService, children
     const dictionary = locale === 'zh' ? zh : en
     return key => dictionary[key]
   }, [locale])
-  const operations = useMemo(() => createModelOperations(client, t), [client, t])
+  const operations = useMemo(() => createModelOperations(client), [client])
 
   const loadModels = useCallback(async (signal: AbortSignal): Promise<void> => {
     setSetupState({ status: 'loading' })
@@ -218,12 +211,6 @@ export function NativeOnboarding({ client, localeService, themeService, children
     } catch {
       setWelcomeError(t('welcomeError'))
     }
-  }
-
-  const configureLater = (): void => {
-    // Settings > Models stays the way back; an unsaved skip only means the step returns next launch.
-    try { localStorage.setItem(MODELS_SKIP_KEY, MODELS_SKIP_VERSION) } catch { /* not persisted */ }
-    setStep('done')
   }
 
   if (step === 'done') return <>{children}</>
@@ -272,7 +259,7 @@ export function NativeOnboarding({ client, localeService, themeService, children
               operations={operations} schema={modelSettingsSchema}
               t={onboardingCopy} readOnly={false} onClose={(changed) => {
                 if (changed) setModelUpdate(value => value + 1)
-                else configureLater()
+                else setStep('done')
               }} />
           </>}
         </section>

@@ -1,6 +1,5 @@
 /** Native adapter from durable Session events to shared chat presentation. */
-import { Fragment, useMemo } from 'react'
-import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@deepseek-ai/dsh-client-ui-workflow-run/native'
+import { useMemo } from 'react'
 import {
   ChatAssistantMessage, ChatContextMessage, ChatMessageActionMeta, ChatMessageActionRow, ChatMessageCopyAction,
   ChatReasoningDisclosure, ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, JsonBlock, MarkdownText,
@@ -17,8 +16,7 @@ import { NativeMessageImage } from './attachments.tsx'
 type Translate = TranslateNS<'nativeApplication'>
 
 interface NativeTurn {
-  readonly key: string
-  readonly turn: number | undefined
+  readonly turn: number
   readonly events: readonly SessionEvent[]
 }
 
@@ -69,31 +67,31 @@ function contextSourceDetails(source: unknown): {
   }
 }
 
-/** Group consecutive rendered Session facts without reordering session-scope runs.
+/** Group rendered Session facts by the durable turn that owns them.
  * @param events - accepted live or restored Session events.
  * @param cards - root Tool presentations indexed by their call event sequence.
- * @returns ordered display segments; session-scope runs have no owning turn.
+ * @returns ordered turns containing only transcript rows with a renderer.
  */
 export function groupNativeTranscriptEvents(
   events: readonly SessionEvent[],
   cards: ReadonlyMap<number, ReturnType<typeof toolCardRecords>[number]['block']>,
 ): readonly NativeTurn[] {
-  const grouped: { key: string; turn: number | undefined; events: SessionEvent[] }[] = []
+  const grouped = new Map<number, SessionEvent[]>()
   let currentTurn: number | undefined
   for (const event of events) {
     if (event.type === 'turn/start') currentTurn = event.data.turn
     const turn = eventTurn(event) ?? currentTurn
     if (turn !== undefined) currentTurn = turn
-    if (cards.has(event.seq) || event.type === 'tool-workflow/run-start' || transcriptMessage(event) !== null) {
-      if (turn !== undefined || event.type === 'tool-workflow/run-start') {
-        const previous = grouped.at(-1)
-        if (turn !== undefined && previous?.turn === turn) previous.events.push(event)
-        else grouped.push({ key: `${turn === undefined ? 'session' : `turn:${turn}`}:${event.seq}`, turn, events: [event] })
+    if (cards.has(event.seq) || transcriptMessage(event) !== null) {
+      if (turn !== undefined) {
+        const rows = grouped.get(turn) ?? []
+        rows.push(event)
+        grouped.set(turn, rows)
       }
     }
     if (event.type === 'turn/end') currentTurn = undefined
   }
-  return grouped
+  return [...grouped].map(([turn, rows]) => ({ turn, events: rows }))
 }
 
 function formatCount(value: number, locale: 'en' | 'zh'): string {
@@ -201,10 +199,6 @@ export function NativeTranscript({
   truncatedClassName: string | undefined
   activity?: string | undefined
 }) {
-  const workflows = useMemo(
-    () => new Map(workflowRunsFromSessionEvents(snapshot.events).map(run => [run.seq, run.data])),
-    [snapshot.events],
-  )
   const cards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const turns = useMemo(() => groupNativeTranscriptEvents(snapshot.events, cards), [snapshot.events, cards])
   const stepStarts = useMemo(() => new Map(snapshot.events.flatMap(event =>
@@ -212,10 +206,8 @@ export function NativeTranscript({
   const liveTurn = turns.at(-1)?.turn
 
   return <ChatTranscript>
-    {turns.map(({ key, turn, events }) => {
-      const rows = events.map((event) => {
-        const workflow = workflows.get(event.seq)
-        if (workflow !== undefined) return <NativeWorkflowRunPanel key={`${sessionId}:${event.seq}`} data={workflow} locale={locale} />
+    {turns.map(({ turn, events }) => <ChatTurnGroup key={turn} turn={turn}>
+      {events.map((event) => {
         const card = cards.get(event.seq)
         return card === undefined
           ? <Message key={event.seq} event={event}
@@ -223,11 +215,8 @@ export function NativeTranscript({
             locale={locale} t={t} sessionId={sessionId} loadImage={loadImage} markdownLabels={markdownLabels}
             imageGroupClassName={imageGroupClassName} />
           : <ToolCard key={event.seq} block={card} locale={locale} cwd={snapshot.header?.cwd} />
-      })
-      return turn === undefined
-        ? <Fragment key={key}>{rows}</Fragment>
-        : <ChatTurnGroup key={key} turn={turn}>{rows}</ChatTurnGroup>
-    })}
+      })}
+    </ChatTurnGroup>)}
     {snapshot.liveText === undefined && activity === undefined ? null : <ChatTurnGroup turn={liveTurn ?? 0}>
       <ChatAssistantMessage streaming>
         {snapshot.liveText === undefined || snapshot.liveText.length === 0 ? <ChatTurnActivity>{activity ?? t('sending')}</ChatTurnActivity>

@@ -39,13 +39,7 @@ async function fixture() {
       for (const event of events) for (const observer of observers) observer(event)
     },
     async readEvents() { await owner.flush(); return (await writer.read()).events },
-    async readCommittedEvents(maxEvents) {
-      await owner.flush()
-      return (await writer.read(0, maxEvents ?? Number.MAX_SAFE_INTEGER)).events
-    },
     messages() { return [] }, async enqueue(message) { return message.id }, async remove() {},
-    async editPendingText() { throw new Error('Native Goal fixture does not exercise pending text edits') },
-    async promotePending() { throw new Error('Native Goal fixture does not exercise pending promotion') },
     retain() { leases++; let released = false; return () => { if (!released) { released = true; leases-- } } },
     retainBackground() { leases++; let released = false; return () => { if (!released) { released = true; leases-- } } },
     onEvent(observer) { observers.add(observer); return () => { observers.delete(observer) } },

@@ -6,7 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { parseNativeEntryManifest } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native-wire'
+import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native'
 import { NativeClientBuildError } from './client-build-error.ts'
 
 const PROFILE_FILENAME = 'rsh.client.json'
@@ -42,16 +42,13 @@ export interface NativeClientBundle {
   readonly watchDirectories: readonly string[]
 }
 
-/** Persisted Client installation row; disabled rows remain in formatVersion 1 profiles. */
-export interface NativeClientInstallation {
+interface NativeClientInstallation {
   readonly id: string
   readonly plugin: string
   readonly config?: unknown
-  readonly disabled?: boolean
 }
 
-/** Strictly parsed native Client profile. */
-export interface NativeClientProfile {
+interface NativeClientProfile {
   readonly formatVersion: 1
   readonly installations: readonly NativeClientInstallation[]
 }
@@ -88,26 +85,18 @@ function nonempty(value: unknown, label: string): string {
   return value
 }
 
-/** Parse formatVersion 1 Client rows, preserving and validating disabled rows.
- * @param value - Untrusted value read from rsh.client.json.
- * @returns Strictly parsed Client rows.
- */
-export function parseNativeClientProfile(value: unknown): NativeClientProfile {
+function parseProfile(value: unknown): NativeClientProfile {
   const profile = object(value, 'native Client profile', ['formatVersion', 'installations'])
   if (profile.formatVersion !== 1) throw new Error('dsh native web: native Client profile has unsupported formatVersion')
   if (!Array.isArray(profile.installations) || profile.installations.length === 0) {
     throw new Error('dsh native web: native Client profile must select at least one installation')
   }
   const installations = profile.installations.map((value): NativeClientInstallation => {
-    const row = object(value, 'native Client installation', ['id', 'plugin', 'config', 'disabled'])
+    const row = object(value, 'native Client installation', ['id', 'plugin', 'config'])
     const id = nonempty(row.id, 'native Client installation id')
     const plugin = nonempty(row.plugin, `native Client installation ${id} plugin`)
     if (!PACKAGE_NAME.test(plugin)) throw new Error(`dsh native web: native Client installation ${id} has invalid package name`)
-    if (row.disabled !== undefined && typeof row.disabled !== 'boolean') {
-      throw new Error(`dsh native web: native Client installation ${id} disabled must be boolean`)
-    }
-    return { id, plugin, ...Object.hasOwn(row, 'config') ? { config: row.config } : {},
-      ...row.disabled === undefined ? {} : { disabled: row.disabled } }
+    return { id, plugin, ...Object.hasOwn(row, 'config') ? { config: row.config } : {} }
   })
   if (new Set(installations.map(row => row.id)).size !== installations.length) {
     throw new Error('dsh native web: native Client profile repeats an installation id')
@@ -154,7 +143,7 @@ function selectedEntries(profile: NativeClientProfile, projectDir: string, runti
   const roots = [realpathSync(projectDir), runtime,
     ...installModules === -1 ? [] : [runtime.split(sep).slice(0, installModules + 1).join(sep)]]
   const sourceWorkspace = installedOnly ? undefined : workspaceRoot(runtime)
-  return profile.installations.filter(row => row.disabled !== true).map((row) => {
+  return profile.installations.map((row) => {
     let packageRoot: string | undefined
     for (const root of roots) {
       const candidate = packageDirectory(root, row.plugin)
@@ -195,28 +184,10 @@ export async function prepareNativeClientBundle(
   if (!existsSync(profilePath)) return undefined
   let profile: NativeClientProfile
   try {
-    profile = parseNativeClientProfile(JSON.parse(readFileSync(profilePath, 'utf8')) as unknown)
+    profile = parseProfile(JSON.parse(readFileSync(profilePath, 'utf8')) as unknown)
   } catch (error) {
     throw new Error(`dsh native web: cannot load ${PROFILE_FILENAME}: ${String(error)}`, { cause: error })
   }
-
-  return prepareNativeClientProfileBundle(projectDir, runtimeDir, profile, installedOnly)
-}
-
-/** Bundle a parsed candidate Client profile without changing its persisted file.
- * @param projectDir - profile-owned package root containing the installed packages.
- * @param runtimeDir - installed runtime root containing shared frontend packages.
- * @param profile - strict formatVersion 1 profile candidate.
- * @param installedOnly - reject packages outside the profile and runtime roots.
- * @returns the generated Client bundle and the exact active boot selections.
- */
-export async function prepareNativeClientProfileBundle(
-  projectDir: string,
-  runtimeDir: string,
-  profile: NativeClientProfile,
-  installedOnly = false,
-): Promise<NativeClientBundle> {
-  const profilePath = join(projectDir, PROFILE_FILENAME)
 
   const entries = selectedEntries(profile, projectDir, runtimeDir, installedOnly)
   const importRows = entries.map((entry, index) => `import * as plugin${index} from ${JSON.stringify(entry.entryPath)}`)
@@ -330,7 +301,7 @@ export async function prepareNativeClientProfileBundle(
       bundle: bundleUrl,
       styles: styleUrls,
       modules: entries.map(entry => ({ id: entry.id })),
-      selections: profile.installations.filter(row => row.disabled !== true).map(row => ({ id: row.id, config: row.config })),
+      selections: profile.installations.map(row => ({ id: row.id, config: row.config })),
     },
     assets,
   }

@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-mixed
-profile: legacy-sdk
+profile: sdk
 composition: default
 recording: live
 header:

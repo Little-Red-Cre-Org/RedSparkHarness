@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { credentialKey, type CredentialKey } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
 import type { CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { NativeSettings, type NativeSettingsSection } from '../../../settings/settings/src/native.ts'
@@ -34,31 +34,7 @@ describe('native account model routes', () => {
   it.each(cases)('keeps $provider routes current across startup and credential updates ($profile)', async ({
     provider, key, account, inferenceOrigin, baseURL,
   }) => {
-    const records = new Map<CredentialKey, CredentialRecord>()
-    const metadata = new Map<CredentialKey, unknown>()
-    type RecordListener = (key: CredentialKey) => void | Promise<void>
-    const recordListeners = new Set<RecordListener>()
-    const pendingRecordCallbacks = new Map<RecordListener, Set<Promise<void>>>()
-    const recordCallbackFailures: unknown[] = []
-    const publishRecordUpdated = (key: CredentialKey): void => {
-      for (const listener of [...recordListeners]) {
-        try {
-          const result = listener(key)
-          if (result === undefined) continue
-          const pending = Promise.resolve(result).then(undefined, (error: unknown) => { recordCallbackFailures.push(error) })
-          const callbacks = pendingRecordCallbacks.get(listener)
-          if (callbacks === undefined) throw new Error('missing native credential listener owner')
-          callbacks.add(pending)
-          void pending.then(() => { callbacks.delete(pending) })
-        } catch (error) {
-          recordCallbackFailures.push(error)
-        }
-      }
-    }
-    const flushRecordCallbacks = async (): Promise<void> => {
-      await Promise.all([...pendingRecordCallbacks.values()].flatMap(callbacks => [...callbacks]))
-      if (recordCallbackFailures.length > 0) throw recordCallbackFailures[0]
-    }
+    const records = new Map<string, CredentialRecord>()
     let apiKeyConfigured = false
     let apiKeyRecordConfigured = false
     let releaseAccountSnapshot!: () => void
@@ -77,16 +53,14 @@ describe('native account model routes', () => {
       persist: async (update) => { settingsDocument = update(settingsDocument); return settingsDocument },
     })
     await settings.start()
-    const credentials: NativeCredentials = {
+    const credentials = {
       async resolve(ref: string) {
         return apiKeyConfigured && ref === 'OPENAI_API_KEY'
           ? { value: 'fixture-api-key', source: 'store' }
           : undefined
       },
       async describe() { return { configured: false, writable: false } },
-      async set() {},
-      async unset() {},
-      async readRecord(recordKey: CredentialKey) {
+      async readRecord(recordKey: string) {
         const record = records.get(recordKey)
         if (holdInitialAccountSnapshot && recordKey === DEEPSEEK_KEY) {
           holdInitialAccountSnapshot = false
@@ -95,26 +69,7 @@ describe('native account model routes', () => {
         }
         return record
       },
-      async readMetadata(key: CredentialKey) {
-        return metadata.get(key)
-      },
-      async modifyMetadata(key: CredentialKey, mutate, options) {
-        options?.signal?.throwIfAborted()
-        const next = await mutate(metadata.get(key))
-        if (next !== undefined) metadata.set(key, next)
-        return metadata.get(key)
-      },
-      async migrateRecordToMetadata(key: CredentialKey, migrate, options) {
-        options?.signal?.throwIfAborted()
-        const result = await migrate(metadata.get(key), records.get(key), (recordKey) => {
-          const record = records.get(recordKey)
-          return record === undefined ? undefined : structuredClone(record)
-        })
-        if (result.value !== undefined) metadata.set(key, result.value)
-        if (result.retireRecord && records.delete(key)) publishRecordUpdated(key)
-        return result.value
-      },
-      async describeRecord(recordKey: CredentialKey) {
+      async describeRecord(recordKey: string) {
         const record = records.get(recordKey)
         return record === undefined
           ? { configured: false, writable: true }
@@ -125,28 +80,11 @@ describe('native account model routes', () => {
           ? [{ key: credentialKey('llm-pi-ai', 'openai'), kind: 'api-key' as const }]
           : []
       },
-      onRecordUpdated(listener) {
-        recordListeners.add(listener)
-        const callbacks = new Set<Promise<void>>()
-        pendingRecordCallbacks.set(listener, callbacks)
-        return async () => {
-          recordListeners.delete(listener)
-          await Promise.all(callbacks)
-        }
-      },
-      async modifyRecord(recordKey, mutate) {
-        const current = records.get(recordKey)
-        const next = await mutate(current)
-        if (next !== undefined) {
-          records.set(recordKey, next)
-          publishRecordUpdated(recordKey)
-        }
-        return next ?? current
-      },
-      async deleteRecord(recordKey) {
-        if (records.delete(recordKey)) publishRecordUpdated(recordKey)
-      },
-    }
+      async modifyRecord() { return undefined },
+      async deleteRecord() {},
+      async set() {},
+      async unset() {},
+    } as unknown as NativeCredentials
     const services: NativePlugin = {
       apiVersion: 1, name: 'native-route-fixtures', targets: ['host'], requires: [],
       provides: ['credentials', 'launchEnvironment', 'settings'],
@@ -166,10 +104,9 @@ describe('native account model routes', () => {
         accountService = context.optional('deepseekAccount')
       },
     }
-    const serviceScope = new NativeScope()
-    const scope = new NativeScope(serviceScope)
+    const scope = new NativeScope()
     const host = new NativeHost(resolveInstallation([
-      { plugin: services, scope: serviceScope, config: undefined },
+      { plugin: services, scope, config: undefined },
       ...(account ? [{ plugin: deepseekAccount, scope, config: inferenceOrigin === undefined ? undefined : { inferenceOrigin } }] : []),
       {
         plugin: piAi, scope,
@@ -187,11 +124,12 @@ describe('native account model routes', () => {
       { plugin: observer, scope, config: undefined },
     ], 'host'))
     const publishAccountGrants = async () => {
-      await credentials.modifyRecord(CODEX_KEY, async () => ({ kind: 'grant', payload: codexGrantPayload() }))
-      await credentials.modifyRecord(DEEPSEEK_KEY, async () => ({
+      records.set(CODEX_KEY, { kind: 'grant', payload: codexGrantPayload() })
+      records.set(DEEPSEEK_KEY, {
         kind: 'grant', payload: { version: 1, token: 'fixture-account-value', issuer: 'https://platform.deepseek.com' },
-      }))
-      await flushRecordCallbacks()
+      })
+      await host.events.parallel(scope, 'credentials/record-updated', CODEX_KEY)
+      await host.events.parallel(scope, 'credentials/record-updated', DEEPSEEK_KEY)
     }
 
     let starting: Promise<void> | undefined
@@ -218,8 +156,8 @@ describe('native account model routes', () => {
         }
       } else {
         expect(directory?.providers().map(row => row.id)).not.toContain(provider)
-        await credentials.modifyRecord(key, async () => ({ kind: 'grant', payload: codexGrantPayload() }))
-        await flushRecordCallbacks()
+        records.set(key, { kind: 'grant', payload: codexGrantPayload() })
+        await host.events.parallel(scope, 'credentials/record-updated', key)
       }
       expect(directory?.providers().map(row => row.id)).toContain(provider)
       expect(modelSettings?.configurableProviders().map(row => row.provider)).toContain(provider)
@@ -279,16 +217,16 @@ describe('native account model routes', () => {
           apiKeyRecordConfigured = true
           expect(await modelSettings?.firstAvailableAccountModel(new AbortController().signal)).toBeUndefined()
           apiKeyRecordConfigured = false
-          await credentials.deleteRecord(key)
-          await flushRecordCallbacks()
+          records.delete(key)
+          await host.events.parallel(scope, 'credentials/record-updated', key)
           if (baseURL === undefined) expect(directory?.providers().map(row => row.id)).not.toContain(provider)
           else expect(directory?.providers().map(row => row.id)).toContain(provider)
           expect(await modelSettings?.firstAvailableAccountModel(new AbortController().signal))
             .toEqual({ provider: 'openai-codex', model: 'fixture-codex-model' })
-          await credentials.modifyRecord(key, async () => ({
+          records.set(key, {
             kind: 'grant', payload: { version: 1, token: 'fixture-account-value', issuer: 'https://platform.deepseek.com' },
-          }))
-          await flushRecordCallbacks()
+          })
+          await host.events.parallel(scope, 'credentials/record-updated', key)
           expect(directory?.providers().map(row => row.id)).toContain(provider)
         } finally {
           vi.unstubAllGlobals()

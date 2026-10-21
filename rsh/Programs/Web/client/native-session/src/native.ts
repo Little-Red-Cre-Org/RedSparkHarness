@@ -3,7 +3,7 @@ import { nativeWebHumanSchema, type NativeWebHumanAnswer, type NativeWebHumanId,
 export type { NativeWebHumanAnswer, NativeWebHumanId, NativeWebHumanPrompt } from './human.ts'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { z } from 'zod'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type {} from '@deepseek-ai/dsh-client-connection/native'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
@@ -17,7 +17,6 @@ import type {
   WorkspaceFileWatchFrame,
 } from '@deepseek-ai/dsh-api-workspace-files/native-types'
 import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
 import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
@@ -25,26 +24,15 @@ import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanMod
 export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
 import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
 import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import { FEEDBACK_CATEGORIES, type SessionFeedbackRecordRequest, type SessionFeedbackRecordResult } from '@deepseek-ai/dsh-command-feedback/types'
-import type {
-  MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult, MessageFeedbackListRequest,
-  MessageFeedbackItem, MessageFeedbackListResult, MessageFeedbackPutRequest, MessageFeedbackPutResult,
-} from '@deepseek-ai/dsh-message-feedback/types'
 import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
 import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
 import { createNativeWorkspaceClients } from './workspaces.ts'
 import { NativeSessionRpcError } from './rpc-error.ts'
 export { NativeSessionRpcError } from './rpc-error.ts'
 import { nativeSubmissionRequestId as brandSubmissionRequestId } from './follow-types.ts'
-import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
-  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot,
-  NativeSubmissionRequestId as NativeSubmissionRequestIdType, NativeSessionFileReceipt, NativeSessionFileReceiptId,
-  NativeSessionInputPart,
-  NativeSessionSubmissionPart } from './follow-types.ts'
+import type { NativePendingSubmission, NativeSubmissionRequestId as NativeSubmissionRequestIdType } from './follow-types.ts'
 export { nativeSubmissionRequestId } from './follow-types.ts'
-export type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult,
-  NativeSubmissionPromotionResult, NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionUpdate,
-  NativeSessionFileReceipt, NativeSessionFileReceiptId, NativeSessionInputPart, NativeSessionSubmissionPart } from './follow-types.ts'
+export type { NativePendingSubmission, NativeSubmissionRequestId, NativeSubmissionUpdate } from './follow-types.ts'
 export type {
   NativeDirectoryEntry, NativeDirectoryListing, NativeDirectoryPickerClient,
   NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
@@ -58,16 +46,6 @@ export interface NativeImageUpload {
   readonly mediaType: NativeSessionImage['mediaType']
   readonly data: string
   readonly name?: string
-}
-
-/** Raw browser body streamed to the selected Native Program. */
-export interface NativeFileUpload {
-  readonly data: Blob | ReadableStream<Uint8Array>
-  readonly name?: string
-}
-
-interface NativeFileUploadGlobal {
-  __DSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
 }
 
 /** Original durable image identity from the Session message protocol. */
@@ -375,30 +353,6 @@ export type NativeAccountBalance =
 
 /** Lifecycle results shared by the native browser composition. */
 export interface NativeSessionClient {
-  /** Record human Session feedback through the Host's durable log writer.
-   * @param request - Session id, optional remark and category.
-   * @param signal - caller cancellation before the append is admitted.
-   * @returns durable acknowledgement or a missing-live-Session result.
-   */
-  sessionFeedbackRecord(request: SessionFeedbackRecordRequest, signal?: AbortSignal): Promise<SessionFeedbackRecordResult>
-  /** List feedback for a persisted Session.
-   * @param request - target Session.
-   * @param signal - caller cancellation.
-   * @returns current immutable message ratings or a missing-Session result.
-   */
-  messageFeedbackList(request: MessageFeedbackListRequest, signal?: AbortSignal): Promise<MessageFeedbackListResult>
-  /** Create or replace feedback for one assistant message.
-   * @param request - target, desired value and observed item version.
-   * @param signal - caller cancellation before the mutation is admitted.
-   * @returns durable item or an explicit business failure.
-   */
-  messageFeedbackPut(request: MessageFeedbackPutRequest, signal?: AbortSignal): Promise<MessageFeedbackPutResult>
-  /** Delete message feedback after observing its current version.
-   * @param request - Session, message and observed version.
-   * @param signal - caller cancellation before the mutation is admitted.
-   * @returns durable absence or an explicit business failure.
-   */
-  messageFeedbackDelete(request: MessageFeedbackDeleteRequest, signal?: AbortSignal): Promise<MessageFeedbackDeleteResult>
   /** List native preset folders and installed standing compositions.
    * @param signal - caller cancellation.
    * @returns current preset catalog; empty with a null default when no Registry is installed.
@@ -653,7 +607,7 @@ export interface NativeSessionClient {
    * @returns visible command descriptions and optional input hints and attachment support.
    */
   commands(sessionId: SessionId, signal?: AbortSignal): Promise<readonly CommandDescriptor[]>
-  /** Cancel owned prompts, streams and uploads, then wait for their settlement.
+  /** Cancel owned prompts and wait for their Host settlement replies.
    * @returns completion after all owned calls settle.
    */
   close(): Promise<void>
@@ -702,13 +656,6 @@ export interface NativeSessionClient {
     readonly events: readonly SessionEvent[]
     readonly inheritedEventCount: number
   }>
-  /** Stream immutable file bytes for one existing Session without opening its Agent.
-   * @param sessionId - existing Session whose selected Program route owns the receipt.
-   * @param file - Blob or one-shot byte stream and optional display name.
-   * @param signal - caller cancellation during transport and storage admission.
-   * @returns process-local receipt consumed by a later prompt, queue, or steer operation.
-   */
-  uploadFile(sessionId: SessionId, file: NativeFileUpload, signal?: AbortSignal): Promise<NativeSessionFileReceipt>
   /** Submit one identified prompt to the active Session's next-turn inbox.
    * @param sessionId - selected Session.
    * @param prompt - non-empty text to run after the active turn.
@@ -717,7 +664,7 @@ export interface NativeSessionClient {
    * @returns accepted queue placement; Host failures retain the request id in error details.
    */
   queue(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
+    signal?: AbortSignal): Promise<NativePendingSubmission>
   /** Submit one identified prompt to the active Session's next-step inbox.
    * @param sessionId - selected Session.
    * @param prompt - non-empty text for the next model step.
@@ -726,25 +673,7 @@ export interface NativeSessionClient {
    * @returns accepted steering placement; Host failures retain the request id in error details.
    */
   steer(sessionId: SessionId, prompt: string, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Submit ordered text, encoded images and staged files to the next-turn inbox.
-   * @param sessionId - selected Session.
-   * @param content - ordered text, encoded image and file receipt parts.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted queue placement; Host failures retain the request id in error details.
-   */
-  queueContent(sessionId: SessionId, content: readonly NativeSessionSubmissionPart[], requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
-  /** Submit ordered text, encoded images and staged files to the next-step inbox.
-   * @param sessionId - selected Session.
-   * @param content - ordered text, encoded image and file receipt parts.
-   * @param requestId - caller-generated stable identity reused as the durable message id.
-   * @param signal - cancellation before durable admission.
-   * @returns accepted steering placement; Host failures retain the request id in error details.
-   */
-  steerContent(sessionId: SessionId, content: readonly NativeSessionSubmissionPart[], requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionAcknowledgement>
+    signal?: AbortSignal): Promise<NativePendingSubmission>
   /** Remove one identified request that is still waiting in a Host inbox.
    * @param sessionId - selected Session.
    * @param requestId - stable identity supplied when the request was queued or steered.
@@ -755,76 +684,26 @@ export interface NativeSessionClient {
   /** Read accepted submissions still waiting in either Host inbox.
    * @param sessionId - selected Session.
    * @param signal - caller cancellation.
-   * @returns pending requests reconstructed from one durable event prefix.
+   * @returns pending queued and steering requests with their stable identities.
    */
-  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<NativeSubmissionsSnapshot>
-  /** Replace all text content on one still-pending request without changing its id or placement.
-   * @param sessionId - selected Session.
-   * @param requestId - stable identity supplied when the request was queued or steered.
-   * @param text - complete replacement text.
-   * @param signal - caller cancellation.
-   * @returns `updated` after durability, or `stale` after prior removal or claim.
-   */
-  editSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType, text: string,
-    signal?: AbortSignal): Promise<NativeSubmissionEditResult>
-  /** Move one still-queued request to the next model-step inbox.
-   * @param sessionId - selected Session.
-   * @param requestId - stable identity supplied when the request was queued.
-   * @param signal - caller cancellation.
-   * @returns the durable move, `stale` after removal, or `not-promotable` when already steering.
-   */
-  promoteSubmission(sessionId: SessionId, requestId: NativeSubmissionRequestIdType,
-    signal?: AbortSignal): Promise<NativeSubmissionPromotionResult>
+  submissions(sessionId: SessionId, signal?: AbortSignal): Promise<readonly NativePendingSubmission[]>
   /**
    * @param sessionId - selected identity.
    * @param text - human input.
    * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
+   * @param signal - abort cancels and drains this turn.
+   * @param observe - synchronous presentation observer; failures cancel and drain the turn.
    * @param images - ordered browser uploads, admitted by the Host before the user message.
    * @param onFollowError - background follow failure after turn settlement, when present.
    * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
    * @returns durable turn settlement.
    */
   prompt(sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal,
     observe?: (frame: NativeSessionFollowFrame) => void, images?: readonly NativeImageUpload[],
-    onFollowError?: (error: unknown) => void, lastSeq?: number, detach?: AbortSignal,
-    onAccepted?: () => void): Promise<{
+    onFollowError?: (error: unknown) => void, lastSeq?: number): Promise<{
     readonly exitCode: number
     readonly answer?: string
   }>
-  /** Start or resume a turn with ordered text, image uploads, and staged files.
-   * @param sessionId - selected identity.
-   * @param content - ordered input; file parts must use receipts from this Program and Session.
-   * @param resume - explicit existing-Session selection.
-   * @param signal - explicit turn cancellation.
-   * @param observe - synchronous presentation observer; follow failures do not cancel the Host turn.
-   * @param onFollowError - background follow failure after turn settlement, when present.
-   * @param lastSeq - highest event already present in the selected view; follow resumes from its next sequence.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @param onAccepted - called after the Host accepts the turn and returns its admission id.
-   * @returns durable turn settlement.
-   */
-  promptContent(sessionId: SessionId, content: readonly NativeSessionInputPart[], resume: boolean, signal?: AbortSignal,
-    observe?: (frame: NativeSessionFollowFrame) => void, onFollowError?: (error: unknown) => void, lastSeq?: number,
-    detach?: AbortSignal, onAccepted?: () => void): Promise<{
-    readonly exitCode: number
-    readonly answer?: string
-  }>
-  /** Resume a running Host turn from durable history and any pending human presentation.
-   * @param sessionId - selected identity.
-   * @param lastSeq - highest event already present in the selected view.
-   * @param observe - required synchronous presentation observer.
-   * @param signal - explicit turn cancellation.
-   * @param onFollowError - report a failure after the turn has settled.
-   * @param detach - page lifetime; aborting it stops following and awaiting without cancelling the Host turn.
-   * @returns durable turn settlement, or `undefined` when no turn is running.
-   */
-  attach(sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void,
-    detach?: AbortSignal): Promise<{ readonly exitCode: number; readonly answer?: string } | undefined>
   /**
    * @param sessionId - selected identity.
    * @param signal - caller cancellation.
@@ -1083,60 +962,8 @@ const workspaceFileWatchFrameSchema = z.discriminatedUnion('kind', [
     z.strictObject({ absolutePath: z.string().min(1), absent: z.literal(true) }),
   ]) }),
 ]) as z.ZodType<WorkspaceFileWatchFrame>
-const messageFeedbackItemSchema = z.strictObject({
-  messageId: z.string().min(1), rating: z.enum(['positive', 'negative']), note: z.string().optional(),
-  category: z.enum(FEEDBACK_CATEGORIES).optional(), version: z.uuid(),
-  createdAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-}).refine(item => item.updatedAt >= item.createdAt) as unknown as z.ZodType<MessageFeedbackItem>
-const feedbackSessionMissingSchema = z.strictObject({ code: z.literal('session-not-found'), sessionId: z.string().min(1) })
-const feedbackConflictSchema = z.strictObject({ code: z.literal('version-conflict'), current: messageFeedbackItemSchema.nullable() })
-const feedbackTargetMissingSchema = z.strictObject({ code: z.literal('target-not-found'), sessionId: z.string().min(1), messageId: z.string().min(1) })
-const feedbackMutationErrorSchema = z.discriminatedUnion('code', [feedbackSessionMissingSchema,
-  feedbackConflictSchema, feedbackTargetMissingSchema, z.strictObject({ code: z.literal('note-blank') }),
-  z.strictObject({ code: z.literal('note-too-large'), maxBytes: z.number().int().positive(), actualBytes: z.number().int().positive() })])
-
-function feedbackReply<T>(
-  value: unknown,
-  success: z.ZodType<T>,
-): { readonly ok: true; readonly value: T } | {
-  readonly ok: false
-  readonly error: z.infer<typeof feedbackMutationErrorSchema>
-} {
-  const data = fields(value)
-  if (data.ok === true) return z.strictObject({ ok: z.literal(true), value: success }).parse(value)
-  return z.strictObject({ ok: z.literal(false), error: feedbackMutationErrorSchema }).parse(value)
-}
-
-function resolveApiUrl(endpoint: string): URL {
-  const pageLocation = Reflect.get(globalThis, 'location') as unknown
-  const origin = typeof pageLocation === 'object' && pageLocation !== null
-    && 'origin' in pageLocation && typeof pageLocation.origin === 'string' && pageLocation.origin !== 'null'
-    ? pageLocation.origin : 'http://dsh.internal'
-  return new URL(`/api/${endpoint}`, origin)
-}
 
 function decodeReply(endpoint: string, value: unknown): unknown {
-  if (endpoint === 'session/file-upload') {
-    const receipt = z.strictObject({ receiptId: z.string().min(1), name: z.string(), bytes: z.number().int().nonnegative() }).parse(value)
-    return { ...receipt, receiptId: brandString<NativeSessionFileReceiptId>(receipt.receiptId) }
-  }
-  if (endpoint === 'feedback/session-record') {
-    const reply = z.union([
-      z.strictObject({ ok: z.literal(true), value: z.strictObject({ recorded: z.literal(true) }) }),
-      z.strictObject({ ok: z.literal(false), error: feedbackSessionMissingSchema }),
-    ]).parse(value)
-    return reply
-  }
-  if (endpoint === 'feedback/message-list') {
-    return feedbackReply(value, z.strictObject({ items: z.array(messageFeedbackItemSchema) }))
-  }
-  if (endpoint === 'feedback/message-put') {
-    return feedbackReply(value, messageFeedbackItemSchema)
-  }
-  if (endpoint === 'feedback/message-delete') {
-    return feedbackReply(value, z.strictObject({ absent: z.literal(true) }))
-  }
   if (endpoint === 'agent-presets/list') return nativeAgentPresetListSchema.parse(value)
   if (endpoint === 'agent-presets/read') return nativeAgentPresetDocumentSchema.parse(value)
   if (endpoint === 'agent-presets/copy' || endpoint === 'agent-presets/delete') {
@@ -1220,7 +1047,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
       ...item.snippet === undefined ? {} : { snippet: item.snippet },
     })), ...page.cursor === undefined ? {} : { cursor: page.cursor } }
   }
-  if (endpoint === 'session/queue' || endpoint === 'session/steer') return submissionAcknowledgement(value)
+  if (endpoint === 'session/queue' || endpoint === 'session/steer') return pendingSubmission(value)
   if (endpoint === 'session/dequeue') {
     const data = fields(value)
     if (Object.keys(data).length !== 1 || typeof data.requestId !== 'string' || data.requestId.length === 0) {
@@ -1228,16 +1055,12 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     }
     return undefined
   }
-  if (endpoint === 'session/submission/edit') return submissionEditResult(value)
-  if (endpoint === 'session/submission/promote') return submissionPromotionResult(value)
   if (endpoint === 'session/submissions') {
     const data = fields(value)
-    if (Object.keys(data).length !== 2 || !Array.isArray(data.submissions)
-      || typeof data.throughSeq !== 'number' || !Number.isSafeInteger(data.throughSeq) || data.throughSeq < -1) {
+    if (Object.keys(data).length !== 1 || !Array.isArray(data.submissions)) {
       throw new TypeError('invalid native Session submissions snapshot')
     }
-    return { throughSeq: data.throughSeq === -1 ? -1 : SessionSeq(data.throughSeq),
-      submissions: data.submissions.map(pendingSubmission) }
+    return { submissions: data.submissions.map(pendingSubmission) }
   }
   const data = fields(value)
   switch (endpoint) {
@@ -1288,11 +1111,6 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/start':
       if (typeof data.admissionId !== 'string' || data.admissionId.length === 0) throw new TypeError('invalid native Session admission')
       break
-    case 'session/attach':
-      if (data.admissionId !== null && (typeof data.admissionId !== 'string' || data.admissionId.length === 0)) {
-        throw new TypeError('invalid native Session admission')
-      }
-      break
     case 'session/create':
       if (typeof data.sessionId !== 'string' || data.sessionId.length === 0) throw new TypeError('invalid native Session identity')
       break
@@ -1340,42 +1158,12 @@ function followFrame(value: unknown): NativeSessionFollowFrame {
   throw new TypeError('native Session follow: invalid frame')
 }
 
-function submissionAcknowledgement(value: unknown): NativeSubmissionAcknowledgement {
+function pendingSubmission(value: unknown): NativePendingSubmission {
   const data = fields(value)
   if (typeof data.requestId !== 'string' || data.requestId.length === 0
     || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
     || Object.keys(data).length !== 3) throw new TypeError('invalid native Session pending submission')
   return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted' }
-}
-
-function pendingSubmission(value: unknown): NativePendingSubmission {
-  const data = fields(value)
-  if (typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.placement !== 'queued' && data.placement !== 'steering' || data.status !== 'accepted'
-    || Object.keys(data).length !== 4) throw new TypeError('invalid native Session pending submission')
-  const message = parseSessionEvent({ type: 'user/message', seq: 0, time: 0, data: data.message, surfaceOp: 'append' }, 0)
-  if (message.type !== 'user/message' || message.data.id !== data.requestId) {
-    throw new TypeError('native Session pending submission identity does not match its message')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), placement: data.placement, status: 'accepted', message: message.data }
-}
-
-function submissionEditResult(value: unknown): NativeSubmissionEditResult {
-  const data = fields(value)
-  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.outcome !== 'updated' && data.outcome !== 'stale') {
-    throw new TypeError('invalid native Session submission edit result')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
-}
-
-function submissionPromotionResult(value: unknown): NativeSubmissionPromotionResult {
-  const data = fields(value)
-  if (Object.keys(data).length !== 2 || typeof data.requestId !== 'string' || data.requestId.length === 0
-    || data.outcome !== 'promoted' && data.outcome !== 'stale' && data.outcome !== 'not-promotable') {
-    throw new TypeError('invalid native Session submission promotion result')
-  }
-  return { requestId: brandSubmissionRequestId(data.requestId), outcome: data.outcome }
 }
 
 function objectConfig(input: unknown): Record<string, unknown> {
@@ -1400,49 +1188,46 @@ export function createNativeSessionClient(
   const pendingPrompts = new Set<Promise<unknown>>()
   const pendingFollows = new Set<Promise<void>>()
   const pendingListFollows = new Set<Promise<void>>()
-  const pendingUploads = new Set<Promise<unknown>>()
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
     if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
     return decodeReply(endpoint, result.value) as T
   }
-  type TurnResult = { readonly exitCode: number; readonly answer?: string }
-  function trackPrompt<T>(pending: Promise<T>): Promise<T> {
-    pendingPrompts.add(pending)
-    const settled = (): void => { pendingPrompts.delete(pending) }
-    void pending.then(settled, settled)
-    return pending
-  }
-  async function runTurn(
-    sessionId: SessionId, admissionId: NativeSessionAdmissionId, signal: AbortSignal | undefined,
-    observe: ((frame: NativeSessionFollowFrame) => void) | undefined,
-    onFollowError: ((error: unknown) => void) | undefined, lastSeq: number, detach: AbortSignal | undefined,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
+  async function prompt(
+    sessionId: SessionId, text: string, resume: boolean, signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
+    images?: readonly NativeImageUpload[], onFollowError?: (error: unknown) => void, lastSeq = -1,
+  ) {
+    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+    accepted.throwIfAborted()
+    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
+      throw new TypeError('native Session Client: invalid follow cursor')
+    }
+    const responseOperation = rpc.response
+    if (observe !== undefined && responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+    const following = new AbortController()
+    // Admission and settlement remain reachable while caller cancellation requests exact Host drain.
+    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, text, resume, follow: observe !== undefined,
+      ...observe === undefined ? {} : { lastSeq },
+      ...images === undefined ? {} : { images } }, undefined, false)
     admissions.set(sessionId, admissionId)
     let cancellation: Promise<unknown> | undefined
     let turnSettled = false
     const wasTurnSettled = (): boolean => turnSettled
     let followFailure: unknown
-    const following = new AbortController()
-    const cancel = (): void => {
-      following.abort(signal?.reason)
+    const abort = (): void => {
+      following.abort(accepted.reason)
       if (!turnSettled) {
         cancellation ??= call('session/cancel', { sessionId, admissionId }, undefined, false)
         // Settlement reports cancellation failures after the original turn's response has drained.
         void cancellation.then(() => undefined, () => undefined)
       }
     }
-    const detachFollow = (): void => { following.abort(detachSignal.reason) }
-    signal?.addEventListener('abort', cancel, { once: true })
-    detachSignal.addEventListener('abort', detachFollow, { once: true })
-    if (signal?.aborted) cancel()
-    if (detachSignal.aborted) detachFollow()
+    accepted.addEventListener('abort', abort, { once: true })
+    if (accepted.aborted) abort()
     let followComplete = false
     const isFollowComplete = (): boolean => followComplete
     let followWork: Promise<void> | undefined
-    const responseOperation = rpc.response
     try {
       if (observe !== undefined && responseOperation !== undefined) {
         const activeFollow = (async () => {
@@ -1480,10 +1265,7 @@ export function createNativeSessionClient(
             }
             if (!terminal) throw new Error('native Session follow: EOF before settlement')
           } catch (error: unknown) {
-            if (!wasTurnSettled() && !detachSignal.aborted && !signal?.aborted) {
-              followFailure = error
-              following.abort(error)
-            }
+            if (!wasTurnSettled() && !accepted.aborted) { followFailure = error; abort() }
             else {
               try { onFollowError?.(error) }
               catch (callbackError: unknown) { console.error('native Session follow error observer failed:', callbackError) }
@@ -1495,20 +1277,15 @@ export function createNativeSessionClient(
         void activeFollow.then(() => { pendingFollows.delete(activeFollow) })
       }
 
-      const settlementWork = call<TurnResult>('session/await', { sessionId, admissionId }, detachSignal, false)
+      const settlementWork = call<{ exitCode: number; answer?: string }>('session/await', { sessionId, admissionId }, undefined, false)
         .then((value) => { turnSettled = true; return { status: 'fulfilled' as const, value } },
-          (reason: unknown) => {
-            if (detachSignal.aborted) return { status: 'detached' as const, reason: detachSignal.reason as unknown }
-            turnSettled = true
-            return { status: 'rejected' as const, reason }
-          })
+          (reason: unknown) => { turnSettled = true; return { status: 'rejected' as const, reason } })
       if (followWork !== undefined) {
         const first = await Promise.race([followWork.then(() => 'follow' as const), settlementWork.then(() => 'settlement' as const)])
         if (first === 'follow') await followWork
       }
       const settlement = await settlementWork
       if (isFollowComplete() && followWork !== undefined) await followWork
-      if (settlement.status === 'detached') throw settlement.reason
       const controls = await Promise.allSettled(cancellation === undefined ? [] : [cancellation])
       const errors: unknown[] = [settlement, ...controls].flatMap(outcome => outcome.status === 'rejected'
         ? [outcome.reason as unknown] : [])
@@ -1519,49 +1296,11 @@ export function createNativeSessionClient(
       return settlement.value
     } finally {
       if (admissions.get(sessionId) === admissionId) admissions.delete(sessionId)
-      signal?.removeEventListener('abort', cancel)
-      if (followWork === undefined || isFollowComplete()) detachSignal.removeEventListener('abort', detachFollow)
-      else void followWork.then(() => { detachSignal.removeEventListener('abort', detachFollow) })
+      if (followWork === undefined || isFollowComplete()) accepted.removeEventListener('abort', abort)
+      else void followWork.then(() => { accepted.removeEventListener('abort', abort) })
     }
-  }
-  async function runPrompt(
-    sessionId: SessionId, input: { readonly text: string; readonly images?: readonly NativeImageUpload[] }
-      | { readonly content: readonly NativeSessionInputPart[] }, resume: boolean,
-    signal?: AbortSignal, observe?: (frame: NativeSessionFollowFrame) => void,
-    onFollowError?: (error: unknown) => void, lastSeq = -1, detach?: AbortSignal, onAccepted?: () => void,
-  ): Promise<TurnResult> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    signal?.throwIfAborted()
-    if (observe !== undefined && (!Number.isSafeInteger(lastSeq) || lastSeq < -1)) {
-      throw new TypeError('native Session Client: invalid follow cursor')
-    }
-    if (observe !== undefined && rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId }>('session/start', { sessionId, resume,
-      follow: observe !== undefined, ...observe === undefined ? {} : { lastSeq },
-      ...'content' in input ? { content: input.content } : { text: input.text, ...input.images === undefined ? {} : { images: input.images } } },
-    detachSignal, false)
-    onAccepted?.()
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
-  }
-  async function attach(
-    sessionId: SessionId, lastSeq: number, observe: (frame: NativeSessionFollowFrame) => void,
-    signal?: AbortSignal, onFollowError?: (error: unknown) => void, detach?: AbortSignal,
-  ): Promise<TurnResult | undefined> {
-    const detachSignal = detach === undefined ? lifetime : AbortSignal.any([lifetime, detach])
-    detachSignal.throwIfAborted()
-    if (!Number.isSafeInteger(lastSeq) || lastSeq < -1) throw new TypeError('native Session Client: invalid follow cursor')
-    if (rpc.response === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
-    const { admissionId } = await call<{ admissionId: NativeSessionAdmissionId | null }>(
-      'session/attach', { sessionId, lastSeq }, detachSignal, false)
-    if (admissionId === null) return undefined
-    return runTurn(sessionId, admissionId, signal, observe, onFollowError, lastSeq, detach)
   }
   return {
-    sessionFeedbackRecord: (request, signal) => call<SessionFeedbackRecordResult>('feedback/session-record', request, signal),
-    messageFeedbackList: (request, signal) => call<MessageFeedbackListResult>('feedback/message-list', request, signal),
-    messageFeedbackPut: (request, signal) => call<MessageFeedbackPutResult>('feedback/message-put', request, signal),
-    messageFeedbackDelete: (request, signal) => call<MessageFeedbackDeleteResult>('feedback/message-delete', request, signal),
     agentPresetsList: signal => call('agent-presets/list', {}, signal),
     agentPresetRead: (id, signal) => call('agent-presets/read', { id }, signal),
     async agentPresetCopy(from, id, name, signal) {
@@ -1645,8 +1384,8 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0 || pendingUploads.size > 0) {
-        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows, ...pendingUploads])
+      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0) {
+        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows])
       }
     },
     async answerHuman(sessionId, id, answer, signal) {
@@ -1706,73 +1445,24 @@ export function createNativeSessionClient(
       'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
-    uploadFile(sessionId, file, signal) {
-      const uploading = (async () => {
-        const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
-        accepted.throwIfAborted()
-        const query = new URLSearchParams({ sessionId })
-        if (file.name !== undefined) query.set('name', file.name)
-        const endpoint = `native-session/file-upload?${query.toString()}`
-        const headers = { 'content-type': 'application/octet-stream' }
-        const request: RequestInit & { duplex?: 'half' } = { method: 'POST', headers, body: file.data, signal: accepted,
-          ...(file.data instanceof ReadableStream ? { duplex: 'half' as const } : {}) }
-        const uploadFetch = (globalThis as NativeFileUploadGlobal).__DSH_FILE_UPLOAD__?.fetch
-        let response: Response
-        if (uploadFetch !== undefined) {
-          response = await uploadFetch(resolveApiUrl(endpoint), request)
-        } else {
-          const responseOperation = rpc.response
-          if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no streaming Fetch operation')
-          response = await responseOperation('/api', endpoint, undefined, accepted, {
-            method: 'POST', headers, body: file.data, ...(file.data instanceof ReadableStream ? { duplex: 'half' } : {}),
-          })
-        }
-        if (!response.ok) throw new Error(`native Session file upload failed with HTTP ${String(response.status)}`)
-        const envelope = fields(await response.json())
-        if (envelope.ok === false) {
-          const failure = fields(envelope.error)
-          if (typeof failure.code !== 'string' || typeof failure.message !== 'string') {
-            throw new TypeError('native Session file upload returned an invalid failure')
-          }
-          throw new NativeSessionRpcError(failure.code, failure.message,
-            typeof failure.details === 'object' && failure.details !== null ? failure.details : {})
-        }
-        if (envelope.ok !== true) throw new TypeError('native Session file upload returned an invalid result')
-        return decodeReply('session/file-upload', envelope.value) as NativeSessionFileReceipt
-      })()
-      pendingUploads.add(uploading)
-      const settled = (): void => { pendingUploads.delete(uploading) }
-      void uploading.then(settled, settled)
-      return uploading
-    },
     queue: (sessionId, prompt, requestId, signal) =>
       call('session/queue', { sessionId, prompt, requestId }, signal),
     steer: (sessionId, prompt, requestId, signal) =>
       call('session/steer', { sessionId, prompt, requestId }, signal),
-    queueContent: (sessionId, content, requestId, signal) =>
-      call('session/queue', { sessionId, content, requestId }, signal),
-    steerContent: (sessionId, content, requestId, signal) =>
-      call('session/steer', { sessionId, content, requestId }, signal),
-    editSubmission: (sessionId, requestId, text, signal) =>
-      call('session/submission/edit', { sessionId, requestId, text }, signal),
-    promoteSubmission: (sessionId, requestId, signal) =>
-      call('session/submission/promote', { sessionId, requestId }, signal),
     async dequeue(sessionId, requestId, signal) {
       await call('session/dequeue', { sessionId, requestId }, signal)
     },
     async submissions(sessionId, signal) {
-      return call<NativeSubmissionsSnapshot>('session/submissions', { sessionId }, signal)
+      return (await call<{ submissions: readonly NativePendingSubmission[] }>(
+        'session/submissions', { sessionId }, signal,
+      )).submissions
     },
-    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { text, ...(images === undefined ? {} : { images }) }, resume,
-        signal, observe, onFollowError, lastSeq, detach, onAccepted))
-    },
-    promptContent(sessionId, content, resume, signal, observe, onFollowError, lastSeq, detach, onAccepted) {
-      return trackPrompt(runPrompt(sessionId, { content }, resume, signal, observe, onFollowError, lastSeq, detach,
-        onAccepted))
-    },
-    attach(sessionId, lastSeq, observe, signal, onFollowError, detach) {
-      return trackPrompt(attach(sessionId, lastSeq, observe, signal, onFollowError, detach))
+    prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq) {
+      const pending = prompt(sessionId, text, resume, signal, observe, images, onFollowError, lastSeq)
+      pendingPrompts.add(pending)
+      const settled = (): void => { pendingPrompts.delete(pending) }
+      void pending.then(settled, settled)
+      return pending
     },
     cancel: (sessionId, signal) => call('session/cancel', { sessionId }, signal),
     status: (sessionId, signal) => call('session/status', { sessionId }, signal),

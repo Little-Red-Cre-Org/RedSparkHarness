@@ -65,7 +65,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] },
         { id: 'fixture-model-next', input: ['text', 'image'], reasoningEfforts: { off: null, high: 'high' } }] } } } },
   ] }))
-  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'acp', '--patch', patch], {
+  const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
     cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
@@ -109,8 +109,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
     expect(result).toMatchObject({ stopReason: 'end_turn' })
     expect(output).toMatchObject([{ sessionUpdate: 'available_commands_update' }, { sessionUpdate: 'config_option_update' },
       { sessionUpdate: 'config_option_update' },
-      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
-      { sessionUpdate: 'usage_update', used: expect.any(Number), size: expect.any(Number) }])
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } }])
     const protocol = JSON.stringify(output.map(({ messageId: _messageId, ...update }) => update), null, 2) + '\n'
     await transport.request('session/close', { sessionId: created.sessionId }, signal)
     const listed = await transport.request('session/list', { cwd: workspace }, signal) as { sessions: unknown[] }
@@ -119,9 +118,8 @@ it('replays a native ACP turn with exact model input, output and durable Session
       configOptions: { id: string; currentValue: string }[]; _meta?: Record<string, unknown> }
     expect(resumed).toMatchObject({ configOptions: [{ id: 'model', currentValue: JSON.stringify(['fixture', 'fixture-model-next']) },
       { id: 'reasoning_effort', currentValue: 'high' }], _meta: policyMetadata })
-    expect(output).toHaveLength(8)
-    expect(output.slice(5)).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
-      { sessionUpdate: 'usage_update', used: expect.any(Number), size: expect.any(Number) },
+    expect(output).toHaveLength(6)
+    expect(output.slice(4)).toMatchObject([{ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: reply } },
       { sessionUpdate: 'available_commands_update' }])
     expect(requests).toHaveLength(1)
     const request = requests[0]

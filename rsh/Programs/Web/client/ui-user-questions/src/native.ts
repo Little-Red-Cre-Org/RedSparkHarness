@@ -22,8 +22,6 @@ export interface NativeQuestionComposerProps {
   readonly disabled: boolean
   /** Submit the complete structured answer batch. */
   readonly onAnswer: (answer: QuestionAnswer) => Promise<void>
-  /** Cancel the entire pending question batch without cancelling the turn. */
-  readonly onCancel?: (() => Promise<void>) | undefined
 }
 
 /** Render the legacy question composer with Native answer actions.
@@ -31,12 +29,12 @@ export interface NativeQuestionComposerProps {
  * @returns generic question flow or supported plan-review card.
  */
 export function NativeQuestionComposer(props: NativeQuestionComposerProps): ReactElement {
-  const { requestKey, questions, locale, disabled, onAnswer, onCancel } = props
+  const { requestKey, questions, locale, disabled, onAnswer } = props
   const dictionary: Record<string, string> = locale === 'zh'
     ? { ...commonZh, ...zh }
     : { ...commonEn, ...en }
   const t: TranslateNS<'question'> = (key, params) => formatLocaleTemplate(dictionary[key] ?? key, params)
-  const pending: QuestionPresentation = { key: requestKey, questions, answer: onAnswer, cancel: onCancel }
+  const pending: QuestionPresentation = { key: requestKey, questions, answer: onAnswer }
   const review = useMemo(() => planReviewOf(questions), [questions])
   const initialProgress = useMemo<QuestionDraftProgress>(() => ({
     index: 0,

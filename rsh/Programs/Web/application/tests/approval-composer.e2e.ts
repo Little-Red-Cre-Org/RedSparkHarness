@@ -18,14 +18,19 @@ import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './suppor
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('../../../../../snapshots/web/approval-composer', import.meta.url))
 const FIXTURE = join(SNAPSHOT_DIR, 'session.v3.jsonl')
+// Windows ships pwsh, so its owner-local script cannot replay the POSIX Session.
+const WINDOWS = process.platform === 'win32'
+const WINDOWS_FIXTURE = fileURLToPath(new URL('./fixtures/approval-composer.windows.json', import.meta.url))
 // The golden covers the stable waiting panel; direct assertions cover its answer.
-const UI_EXPECTED = join(SNAPSHOT_DIR, 'ui.expected.md')
+const UI_EXPECTED = WINDOWS
+  ? fileURLToPath(new URL('./expected/approval-composer.windows.md', import.meta.url))
+  : join(SNAPSHOT_DIR, 'ui.expected.md')
 const MODE = webSnapshotMode()
 
 // Unrelated tokens keep the recorded model from compressing the payload into a
 // short shell loop that would not overflow the card.
 const TOKENS = Array.from({ length: 220 }, (_, index) => `tok${((index + 1) * 7919 % 99991).toString(36)}`).join(' ')
-const PROMPT = `Write a file named notes.txt in the workspace containing exactly this text on one line: ${TOKENS}. Use one bash command with the literal text inline. Then reply with the single word DONE and stop.`
+const PROMPT = `Write a file named notes.txt in the workspace containing exactly this text on one line: ${TOKENS}. Use one ${WINDOWS ? 'PowerShell' : 'bash'} command with the literal text inline. Then reply with the single word DONE and stop.`
 
 /** Draft used to measure the composer's own text cap: enough lines to pass it. */
 const CAP_PROBE = Array.from({ length: 40 }, (_, index) => `line ${index}`).join('\n')
@@ -38,7 +43,10 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
   const sessionEvents: SessionEvent[] = []
 
   beforeAll(async () => {
-    scaffold = await launchWebScaffold(MODE === 'record' ? {} : { replayFixture: FIXTURE, paceMs: 15, compareReplaySession: true })
+    if (WINDOWS && MODE === 'record') throw new Error('Record the canonical Bash Session on a POSIX host; Windows uses a keyless PowerShell script.')
+    scaffold = await launchWebScaffold(MODE === 'record' ? {} : WINDOWS
+      ? { replayFixture: WINDOWS_FIXTURE, replayOverride: WINDOWS_FIXTURE, paceMs: 15, compareReplaySession: false }
+      : { replayFixture: FIXTURE, paceMs: 15, compareReplaySession: true })
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })
     browser = await chromium.launch()
     page = await newEnglishPage(browser)
@@ -55,7 +63,7 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
 
   it('caps the long command, answers through the panel, and runs the escalated command', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-approval'))
-    if (MODE !== 'record') {
+    if (MODE !== 'record' && !WINDOWS) {
       expect(fixtureUserPrompts(await readFile(FIXTURE, 'utf8'))).toEqual([PROMPT])
     }
     const input = page.locator('[data-composer-input]').first()

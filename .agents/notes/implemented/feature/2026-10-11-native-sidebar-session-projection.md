@@ -14,8 +14,6 @@ The native sidebar groups Sessions by the Host registry's `workspaceId` and uses
 
 Workspace expansion only changes the visible group. Its new-session action opens or creates the reusable blank Session through `connectWorkspace`. The sidebar also opens the read-only scheduled-task panel described in the [Native scheduled-task list note](2026-10-12-native-scheduled-task-list.md); drag reordering, moving Sessions, and multi-page search are not presented.
 
-Manual ordering in Workspace groups exposes up/down controls backed by the existing Workspace reorder and Session reorder commands. The Host follow feed supplies the resulting order; the sidebar holds only one pending-write flag, disables ordering controls until settlement, and displays failures without optimistically reordering rows. Hidden archived or blank members retain their registry positions; moves use the next visible anchor, and moving to the visible end appends in the Host membership. Ungrouped and flat rows have no ordering controls.
-
 ## Alternatives considered
 
 - **Treat each cwd as a Workspace identity:** rejected because the Host registry supplies Workspace ids, membership, and order.

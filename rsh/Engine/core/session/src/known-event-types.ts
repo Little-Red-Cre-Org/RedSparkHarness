@@ -21,7 +21,6 @@
  */
 export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'agent-preset/selected',
-  'agent/inbox/moved',
   'agent/inbox/spliced',
   'approval/asked',
   'approval/decided',

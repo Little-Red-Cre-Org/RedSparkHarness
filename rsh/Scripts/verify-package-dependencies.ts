@@ -182,7 +182,6 @@ export function discoverPackageDependencyScope(
 
   const selected: Array<WorkspacePackageManifest & { role: PackageDependencyRole }> = []
   for (const pkg of packages) {
-    if (policy.applicationDistributionDirectories.has(normalizePath(pkg.dir))) continue
     const clientDirectory = pkg.manifestPath.startsWith('rsh/Programs/Web/client/')
     const clientHost = (hasClientDeclaration(pkg.manifest.dsh) || include.has(pkg.name)) && !exclude.has(pkg.name)
     const clientOnly = clientDirectory && !clientHost
@@ -657,10 +656,10 @@ export function collectClientRuntimeDependencyPolicyViolations(
   return violations.sort()
 }
 
-/** Reject stale or unavailable published declaration dependencies.
+/** Reject stale or unknown published declaration dependencies.
  * @param facts - source-derived package observations.
  * @param policy - reviewed declaration dependency relationships.
- * @returns stable errors for unmanaged owners, unavailable dependencies and absent type imports.
+ * @returns stable errors for unknown owners, dependencies and absent type imports.
  */
 export function collectPublishedTypeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
@@ -679,12 +678,7 @@ export function collectPublishedTypeDependencyPolicyViolations(
     }
     for (const dependency of dependencies) {
       if (!fact.workspaceNames.has(dependency) && !dependency.startsWith('@types/')) {
-        const installedExternal = fact.manifest.dependencies?.[dependency]
-        if (installedExternal === undefined || installedExternal.startsWith('workspace:')) {
-          violations.push(
-            `publishedTypeDependencies requires external package ${dependency} as a production dependency`,
-          )
-        }
+        violations.push(`publishedTypeDependencies names unknown workspace package ${dependency}`)
       }
       if (!fact.publishedTypeSourceUses.has(dependency)) {
         violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} without a source type import`)

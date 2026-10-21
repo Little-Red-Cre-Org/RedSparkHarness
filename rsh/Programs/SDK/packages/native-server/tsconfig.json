@@ -9,7 +9,6 @@
     { "path": "../../../../Core/util/json-rpc-line" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../../../Engine/core/native-headless" },
-    { "path": "../../../../Engine/subagent/sdk-protocol" },
     { "path": "../../../../Engine/llm/llm" },
     { "path": "../../../../Engine/core/session" },
     { "path": "../../../../Modules/Official/fs/fs" },

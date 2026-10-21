@@ -1,19 +1,9 @@
 /** Explicit Cordis-free source owners in the native production graph. */
 
-/** Application outputs whose dependency rules are not library peer rules. */
-export type ApplicationDistributionKind = 'native-cli' | 'desktop-app' | 'desktop-host' | 'web-frontend' | 'python-runtime'
-
-/** Application and distribution roots classified by their shipped runtime. */
-export const applicationDistributionDirectories: ReadonlyMap<string, ApplicationDistributionKind> = new Map([
-  ['rsh/Programs/CLI', 'native-cli'],
-  ['rsh/Programs/Desktop', 'desktop-app'],
-  ['rsh/Programs/DesktopHost', 'desktop-host'],
-  ['rsh/Programs/Web/application', 'web-frontend'],
-  ['rsh/Programs/SDK/python/sdk-runtime', 'python-runtime'],
-])
-
 /** Package sources validated from their selected compiler faces by verify-native-dependencies. */
 export const nativePackageDirectories: ReadonlySet<string> = new Set([
+  'rsh/Modules/Official/ide/ide-code-oss',
+  'rsh/Programs/Web/host/native-ide',
   'rsh/Programs/TUI/native-tui',
   'rsh/Programs/TUI/terminal-ui',
   'rsh/Core/identity/anonymous-user-id',
@@ -93,7 +83,6 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/package-manifest',
   'rsh/Core/util/time',
   'rsh/Programs/Web/client/ui-dockkit',
-  'rsh/Programs/Web/client/web',
 ])
 
 /** Native-profile Client packages that do not implement the Cordis module-table entry. */
@@ -104,6 +93,8 @@ export const nativeProfileClientDirectories: ReadonlySet<string> = new Set([
 
 /** Explicit compiler faces for pure packages with a Host-only implementation. */
 export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Modules/Official/ide/ide-code-oss', ['host']],
+  ['rsh/Programs/Web/host/native-ide', ['host']],
   ['rsh/Core/util/http-routes', ['host', 'client']],
   ['rsh/Programs/Web/client/ui-primitives', ['client']],
   ['rsh/Programs/TUI/native-tui', ['host']],
@@ -164,9 +155,6 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/goal/tool-goal', 'Native and Cordis Goal tools share schemas, validation and presentation'],
   ['rsh/Engine/goal/command-goal', 'Native and Cordis Goal commands share lifecycle request facts'],
   ['rsh/Modules/Official/interaction/commands', 'Native command service and Cordis registry share parsed and durable command facts'],
-  ['rsh/Modules/Official/feedback/command-feedback', 'Native and Cordis feedback producers share the Session event and category vocabulary'],
-  ['rsh/Modules/Official/feedback/message-feedback', 'Native and Cordis message feedback Providers share validation, compare-and-set and log projection'],
-  ['rsh/Engine/session/session-telemetry-otel', 'Cordis and Native entries share the selected OTel SDK exporter and feedback-only policy'],
   ['rsh/Engine/compaction/compaction-basic', 'Native and Cordis Providers share range selection, summarization and the durable compaction bracket'],
   ['rsh/Engine/compaction/compaction-tool-result-pruner', 'Native and Cordis pruners share tool-result shadow pricing and replacement'],
   ['rsh/Engine/compaction/command-compact', 'Native and Cordis /compact commands share argument validation and result presentation'],
@@ -238,20 +226,16 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/credentials/authorization', 'Cordis service and native Provider share authorization protocol and error types'],
   ['rsh/Modules/Official/settings/settings-file', 'Cordis and native settings Providers share the document format and atomic file owner'],
   ['rsh/Engine/session/session-persistence-jsonl', 'Cordis service and native storage entry share a package'],
-  ['rsh/Engine/schedule/schedule', 'Native and Cordis reminder Consumers share the durable event fold and serialized management operations'],
   ['rsh/Modules/Official/fs/fs-local', 'Cordis filesystem Provider and native backend share a package'],
   ['rsh/Modules/Official/fs/fs-observation-policy', 'Cordis event policy and native entry share a package'],
   ['rsh/Modules/Official/fs/fs-sandbox', 'Cordis and native filesystem Providers share per-call sandbox enforcement'],
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native title generation delegates through the selected title and model capabilities while its legacy adapter remains optional'],
-  ['rsh/Core/runtime-diagnostics/cordis-bridge', 'Native and Cordis entries share the Cordis context owner and the Native plugin wrapper'],
-  ['rsh/Engine/preset/native-persona', 'Native and Cordis persona entries share the persona section names and the bridged system-prompt service'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Programs/Web/client/ui-attachment', ['client']],
   ['rsh/Programs/Web/client/ui-goal', ['client']],
-  ['rsh/Programs/Web/client/ui-workflow-run', ['client']],
   ['rsh/Programs/Web/client/ui-trajectory', ['client']],
   ['rsh/Modules/Official/spill/spill', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
@@ -266,24 +250,15 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Engine/session/session-persistence', ['host', 'client']],
   ['rsh/Engine/session/session-title', ['host']],
   ['rsh/Programs/Web/client/modules', ['client']],
+  ['rsh/Programs/Web/client/web', ['client']],
   ['rsh/Core/util/launch-environment', ['host', 'client']],
   ['rsh/Modules/Official/credentials/credentials', ['host', 'client']],
   ['rsh/Modules/Official/settings/settings', ['host']],
   ['rsh/Engine/session/session-title-llm', ['host']],
 ])
 
-/** Optional peers whose imports are restricted to package compatibility entries. */
-/** Native entries whose source may reference Cordis to host a Cordis plugin. */
-export const cordisHostingNativeReferences: ReadonlyMap<string, readonly string[]> = new Map([
-  ['rsh/Core/runtime-diagnostics/cordis-bridge', ['@deepseek-ai/cordis']],
-  ['rsh/Engine/preset/native-persona', [
-    '@deepseek-ai/cordis', '@deepseek-ai/dsh-persona', '@deepseek-ai/dsh-system-prompt',
-  ]],
-])
-
+/** Compatibility peers whose imports are restricted to mixed packages' legacy entries. */
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
-  ['rsh/Core/typert/protocol', ['@deepseek-ai/cordis']],
-  ['rsh/Programs/Web/host/directory-picker', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', [
     '@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-agent',
@@ -298,7 +273,6 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
     '@deepseek-ai/dsh-sandbox-policy', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-projection',
     '@deepseek-ai/dsh-user-approval', '@deepseek-ai/dsh-settings',
   ]],
-  ['rsh/Engine/context/session-reference', ['@deepseek-ai/dsh-typert-protocol']],
   ['rsh/Engine/subagent/tool-subagent', ['@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-llm-retry', '@deepseek-ai/dsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools']],
@@ -312,12 +286,6 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/compaction/compaction-tool-result-pruner', ['@deepseek-ai/cordis']],
   ['rsh/Engine/compaction/command-compact', ['@deepseek-ai/cordis']],
   ['rsh/Modules/Official/interaction/commands', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-typert-protocol']],
-  ['rsh/Modules/Official/feedback/command-feedback', ['@deepseek-ai/dsh-typert-protocol']],
-  ['rsh/Modules/Official/feedback/message-feedback', ['@deepseek-ai/dsh-typert-protocol']],
-  ['rsh/Engine/schedule/schedule', [
-    '@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-tools',
-  ]],
-  ['rsh/Engine/session/session-telemetry', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent']],
   ['rsh/Engine/session-query/tool-session-query', ['@deepseek-ai/dsh-tools']],
   ['rsh/Engine/workflow/workflow', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-session']],
   ['rsh/Engine/workflow/workflow-worker-thread', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-tools']],
@@ -341,8 +309,6 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/subagent/subagent-claude-code', ['@deepseek-ai/cordis', '@deepseek-ai/dsh-subagent']],
   ['rsh/Modules/Official/interaction/tool-ask-user', ['@deepseek-ai/dsh-tools']],
   ['rsh/Modules/Official/shell/tool-pwsh', ['@deepseek-ai/dsh-tools']],
-  ['rsh/Modules/Official/shell/tool-bash', ['@deepseek-ai/dsh-tools']],
-  ['rsh/Modules/Official/skill/skill', ['@deepseek-ai/dsh-scope']],
   ['rsh/Modules/Official/fs/fs', ['@deepseek-ai/dsh-invariants', '@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-local', ['@deepseek-ai/dsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-observation-policy', ['@deepseek-ai/dsh-plugin-host']],
@@ -372,9 +338,6 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session-query/session-query-sqlite', ['./core']],
   ['rsh/Engine/goal/goal', ['./types', './projection']],
   ['rsh/Modules/Official/interaction/commands', ['./facts', './brand']],
-  ['rsh/Modules/Official/feedback/command-feedback', ['./types', './native-definition']],
-  ['rsh/Modules/Official/feedback/message-feedback', ['./types', './native-definition']],
-  ['rsh/Engine/session/session-telemetry', ['./types', './records', './native-definition']],
   ['rsh/Programs/Web/client/ui-conversation', ['./tool-records', './conversation-copy', './native-types']],
   ['rsh/Programs/Web/client/ui-tool', ['./native', './tool-renderer']],
   ['rsh/Programs/Web/client/ui-approval', ['./native']],
@@ -385,7 +348,6 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/subagent/subagent-protocol', ['./descriptor', './assistant-output']],
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
   ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
-  ['rsh/Programs/Web/host/directory-picker', ['./types']],
   ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory', './responses-transport']],
@@ -393,7 +355,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/CLI', ['./native-profile']],
   ['rsh/Programs/DesktopHost', ['./native-host']],
   ['rsh/Modules/Official/terminal/terminal', ['./protocol', './error']],
-  ['rsh/Engine/llm/llm', ['./assistant-stream', './brand', './message', './types']],
+  ['rsh/Engine/llm/llm', ['./brand', './message', './types']],
   ['rsh/Engine/llm/llm-retry', ['./types']],
   ['rsh/Modules/Official/interaction/user-questions', ['./protocol', './broker']],
   ['rsh/Core/util/launch-environment', ['./layers']],
@@ -404,14 +366,13 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/llm/deepseek-llm-api-extensions', ['./types']],
   ['rsh/Modules/Official/mcp/mcp-client', ['./types', './acp-config']],
   ['rsh/Engine/core/native-tools', ['./types', './presentation', './json-schema', './code-output', './sdk-typescript', './sdk-python', './ordered-dispatch']],
-  ['rsh/Engine/workflow/tool-workflow', ['./foreground', './types']],
+  ['rsh/Engine/workflow/tool-workflow', ['./foreground']],
   ['rsh/Engine/workflow/tool-ralph', ['./runtime']],
   ['rsh/Engine/workflow/workflow', ['./errors', './types']],
   ['rsh/Engine/core/native-session-execution', ['./root-route', './read-history', './active-session-protocol']],
   ['rsh/Engine/core/native-agent', ['./inbox', './consumed-work', './definition', './turn-boundary']],
   ['rsh/Programs/Web/client/connection', ['./native-host', './native-http-bridge']],
   ['rsh/Programs/Web/host/native-web-assets', ['./native-client']],
-  ['rsh/Programs/Web/client/web', ['./native-wire']],
   ['rsh/Core/storage/storage', ['./backend']],
   ['rsh/Modules/Official/shell/pwsh-local', ['./resolve']],
   ['rsh/Modules/Official/shell/shell-env', ['./definition']],
@@ -434,15 +395,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
   ['rsh/Modules/Official/skill/skill/shared', ['host']],
   ['rsh/Modules/Official/skill/skill/types', ['host']],
-  ['rsh/Modules/Official/feedback/command-feedback/types', ['host', 'client']],
-  ['rsh/Modules/Official/feedback/command-feedback/native-definition', ['host']],
-  ['rsh/Modules/Official/feedback/message-feedback/types', ['host', 'client']],
-  ['rsh/Modules/Official/feedback/message-feedback/native-definition', ['host']],
-  ['rsh/Engine/session/session-telemetry/types', ['host']],
-  ['rsh/Engine/session/session-telemetry/records', ['host']],
-  ['rsh/Engine/session/session-telemetry/native-definition', ['host']],
   ['rsh/Programs/Web/api/workspace-files/native-helpers', ['host']],
-  ['rsh/Programs/Web/client/web/native-wire', ['host']],
   ['rsh/Programs/Web/api/session-controller/client-event-types', ['client']],
   ['rsh/Modules/Official/interaction/permission-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-title/normalize', ['host']],
@@ -505,7 +458,6 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Engine/core/native-tools/sdk-python', ['host']],
   ['rsh/Engine/core/native-tools/ordered-dispatch', ['host']],
   ['rsh/Engine/workflow/tool-workflow/foreground', ['host']],
-  ['rsh/Engine/workflow/tool-workflow/types', ['client']],
   ['rsh/Engine/workflow/tool-ralph/runtime', ['host']],
   ['rsh/Engine/workflow/workflow/errors', ['host']],
   ['rsh/Programs/Web/client/connection/native-host', ['host']],

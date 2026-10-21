@@ -2,7 +2,6 @@
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeScheduleFrame, NativeScheduledJob } from '../src/schedule-types.ts'
 import { createNativeSessionClient, nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
@@ -83,9 +82,6 @@ it('submits identified queue and steering requests and parses pending snapshots'
   const sessionId = 'submission-client' as SessionId
   const queueId = nativeSubmissionRequestId('queue-client-id')
   const steerId = nativeSubmissionRequestId('steer-client-id')
-  let queueMessage = { ...createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'later' }] }), id: MessageId(queueId) }
-  const steerMessage = { ...createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'next step' }] }), id: MessageId(steerId) }
-  let queuePlacement: 'queued' | 'steering' = 'queued'
   const requests: { endpoint: string; payload: unknown }[] = []
   const rpc: ClientConnectionRpc = {
     call: async (_channel, endpoint, payload) => {
@@ -93,17 +89,9 @@ it('submits identified queue and steering requests and parses pending snapshots'
       if (endpoint === 'session/queue') return { ok: true, value: { requestId: queueId, placement: 'queued', status: 'accepted' } }
       if (endpoint === 'session/steer') return { ok: true, value: { requestId: steerId, placement: 'steering', status: 'accepted' } }
       if (endpoint === 'session/dequeue') return { ok: true, value: { requestId: queueId } }
-      if (endpoint === 'session/submission/edit') {
-        queueMessage = { ...queueMessage, content: [{ type: 'text', text: 'edited text' }] }
-        return { ok: true, value: { requestId: queueId, outcome: 'updated' } }
-      }
-      if (endpoint === 'session/submission/promote') {
-        queuePlacement = 'steering'
-        return { ok: true, value: { requestId: queueId, outcome: 'promoted' } }
-      }
-      if (endpoint === 'session/submissions') return { ok: true, value: { throughSeq: 4, submissions: [
-        { requestId: queueId, placement: queuePlacement, status: 'accepted', message: queueMessage },
-        { requestId: steerId, placement: 'steering', status: 'accepted', message: steerMessage },
+      if (endpoint === 'session/submissions') return { ok: true, value: { submissions: [
+        { requestId: queueId, placement: 'queued', status: 'accepted' },
+        { requestId: steerId, placement: 'steering', status: 'accepted' },
       ] } }
       throw new Error(`unexpected RPC endpoint ${endpoint}`)
     },
@@ -131,24 +119,16 @@ it('submits identified queue and steering requests and parses pending snapshots'
     await expect(sessions.steer(sessionId, 'next step', steerId)).resolves.toEqual({
       requestId: steerId, placement: 'steering', status: 'accepted',
     })
-    await expect(sessions.editSubmission(sessionId, queueId, 'edited text')).resolves.toEqual({
-      requestId: queueId, outcome: 'updated',
-    })
-    await expect(sessions.promoteSubmission(sessionId, queueId)).resolves.toEqual({
-      requestId: queueId, outcome: 'promoted',
-    })
-    await expect(sessions.submissions(sessionId)).resolves.toEqual({ throughSeq: 4, submissions: [
-      { requestId: queueId, placement: 'steering', status: 'accepted', message: queueMessage },
-      { requestId: steerId, placement: 'steering', status: 'accepted', message: steerMessage },
-    ] })
     await expect(sessions.dequeue(sessionId, queueId)).resolves.toBeUndefined()
+    await expect(sessions.submissions(sessionId)).resolves.toEqual([
+      { requestId: queueId, placement: 'queued', status: 'accepted' },
+      { requestId: steerId, placement: 'steering', status: 'accepted' },
+    ])
     expect(requests).toEqual([
       { endpoint: 'session/queue', payload: { sessionId, prompt: 'later', requestId: queueId } },
       { endpoint: 'session/steer', payload: { sessionId, prompt: 'next step', requestId: steerId } },
-      { endpoint: 'session/submission/edit', payload: { sessionId, requestId: queueId, text: 'edited text' } },
-      { endpoint: 'session/submission/promote', payload: { sessionId, requestId: queueId } },
-      { endpoint: 'session/submissions', payload: { sessionId } },
       { endpoint: 'session/dequeue', payload: { sessionId, requestId: queueId } },
+      { endpoint: 'session/submissions', payload: { sessionId } },
     ])
   } finally {
     await host.stop()
