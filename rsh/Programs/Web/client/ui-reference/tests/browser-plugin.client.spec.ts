@@ -454,6 +454,31 @@ describe('pick and codec', () => {
   const pick = pickAs('pick')
   const drill = pickAs('drill')
 
+  it.each([
+    ['作业/实验报告.md', '@作业/实验报告.md', '实验报告.md'],
+    ['课程 资料/实验 报告.md', '@"课程 资料/实验 报告.md"', '实验 报告.md'],
+  ])('preserves %s through selection, serialization, and preview', async (path, ref, label) => {
+    const { ctx, source, fiber } = await bench(
+      () => Promise.resolve({ ok: true, value: [{ path, kind: 'file' }] }),
+      () => Promise.resolve({ ok: true, value: [] }),
+    )
+    try {
+      const openResource = vi.spyOn(ctx.sidebarRight, 'openResource')
+      const candidates = await source.candidates(session, request(path))
+      expect(candidates).toHaveLength(1)
+      expect(pick(source, candidates[0]!)).toEqual({
+        insert: { source: 'reference', ref, label, appearance: 'file', clipboardText: ref },
+      })
+      await expect(source.codec?.serialize(ref, new AbortController().signal)).resolves.toBe(ref)
+      expect(source.openReference?.(session, { ref, appearance: 'file' })).toBe(true)
+      expect(openResource).toHaveBeenCalledWith(
+        `dsh-resource://file/session/target/${path.split('/').map(encodeURIComponent).join('/')}`,
+      )
+    } finally {
+      await fiber.dispose()
+    }
+  })
+
   it('settles files and directories as atomic icon labels; drill keeps directory completion open', async () => {
     const { source } = await bench()
     const [directory, file] = await source.candidates(session, request(''))

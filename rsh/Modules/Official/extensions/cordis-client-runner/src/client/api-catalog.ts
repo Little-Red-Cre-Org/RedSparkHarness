@@ -497,7 +497,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ClientConnectionRpc',
-    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal, request?: ConnectionFetchRequest) => Promise<Response>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
+    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => Promise<Response>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
   },
   {
     name: 'ClientRemote',
@@ -510,10 +510,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ComposedProps',
     declaration: 'export type ComposedProps<K extends keyof SlotMap & string, EntryKey extends EntryKeyOf<K>, S extends keyof SlotMap & string, H, I extends object, M = never, N = undefined> = PropsRuntime<K, EntryKey> & PropsRenderSlots<S> & PropsStore<H> & InjectFace<I> & MatchedShare<SlotMap[K], M> & PropsLocale<N>;',
-  },
-  {
-    name: 'ConnectionFetchRequest',
-    declaration: 'export interface ConnectionFetchRequest {\n    readonly method?: string;\n    readonly headers?: HeadersInit;\n    readonly body?: BodyInit | null;\n    readonly duplex?: \'half\';\n}',
   },
   {
     name: 'ConnectionGeneration',
@@ -893,15 +889,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ThemeDefinition',
-    declaration: 'export interface ThemeDefinition {\n    readonly id: string;\n    readonly colorScheme: \'light\' | \'dark\';\n    readonly tokens: Readonly<Record<string, string>>;\n}',
+    declaration: 'export interface ThemeDefinition {\n    id: string;\n    colorScheme: \'light\' | \'dark\';\n    tokens: ThemeTokens;\n}',
   },
   {
     name: 'ThemePreference',
-    declaration: 'export type ThemePreference = \'light\' | \'dark\' | \'system\';',
+    declaration: 'export type ThemePreference = typeof THEME_PREFERENCES[number];',
   },
   {
     name: 'ThemeSnapshot',
-    declaration: 'export interface ThemeSnapshot {\n    readonly preference: ThemePreference;\n    readonly fontSize: number;\n    readonly active: ThemeDefinition;\n    readonly themes: readonly ThemeDefinition[];\n    readonly revision: number;\n}',
+    declaration: 'export interface ThemeSnapshot {\n    preference: ThemePreference;\n    fontSize: number;\n    active: ThemeDefinition;\n    themes: readonly ThemeDefinition[];\n    revision: number;\n}',
   },
   {
     name: 'ThemeTokenModes',
@@ -910,6 +906,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ThemeTokenOverrides',
     declaration: 'export type ThemeTokenOverrides = Record<string, ThemeTokenModes>;',
+  },
+  {
+    name: 'ThemeTokens',
+    declaration: 'export type ThemeTokens = Record<string, string>;',
   },
   {
     name: 'Translate',

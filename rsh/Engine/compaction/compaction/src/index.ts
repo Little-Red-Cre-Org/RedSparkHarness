@@ -11,7 +11,6 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { Session, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
 import type { CompactionResult } from './types.ts'
-import type { CompactionTrigger } from './errors.ts'
 
 export type { CompactionResult } from './types.ts'
 export { CompactionId } from './brand.ts'
@@ -22,8 +21,40 @@ export { toolPairingBalancedAfter, toolPairingBalancedBefore } from './tool-pair
 export { compactCheckpointSource, isCompactCheckpointSource } from './checkpoint.ts'
 export type { CompactionCheckpointSource } from './checkpoint.ts'
 
-export { ManualCompactionError } from './errors.ts'
-export type { CompactionTrigger, ManualCompactionErrorCode } from './errors.ts'
+/** Why automatic policy is asking a backend to consider compaction. */
+export type CompactionTrigger = 'pressure' | 'context-overflow'
+
+/** Expected failure classes for an explicit idle-session compaction request. */
+export type ManualCompactionErrorCode =
+  | 'busy'
+  | 'cancelled'
+  | 'changed'
+  | 'summary'
+  | 'commit'
+  | 'persistence'
+
+/**
+ * Expected manual-compaction failure suitable for a direct human-command result.
+ * Shared durable-lock entry assertions may also throw the `busy` subtype from
+ * automatic compaction paths.
+ */
+export class ManualCompactionError extends Error {
+  override readonly name = 'ManualCompactionError'
+
+  /**
+   * Create one classified compaction failure.
+   * @param code - stable failure class; `busy` may originate from any compaction entry path.
+   * @param message - backend diagnostic retained as the Error message.
+   * @param options - optional original failure.
+   */
+  constructor(
+    readonly code: ManualCompactionErrorCode,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options)
+  }
+}
 
 /** Minimal agent context compaction needs without depending on the agent package. */
 export interface CompactionAgentContext {

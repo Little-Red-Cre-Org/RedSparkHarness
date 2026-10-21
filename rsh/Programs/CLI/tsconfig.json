@@ -54,19 +54,10 @@
       "path": "../../Core/util/home-paths"
     },
     {
-      "path": "../../Modules/Official/settings/settings-file"
-    },
-    {
       "path": "../../Core/runtime-diagnostics/native-runtime"
     },
     {
       "path": "../../Modules/Official/mcp/mcp-client"
-    },
-    {
-      "path": "../../Modules/Official/interaction/native-approval"
-    },
-    {
-      "path": "../Web/host/native-web-assets"
     },
     {
       "path": "../../Tests/test-support/loader-smoke"
@@ -84,13 +75,7 @@
       "path": "../../Modules/Official/shell/tool-bash"
     },
     {
-      "path": "../../Engine/subagent/sdk-runtime"
-    },
-    {
       "path": "../../Engine/llm/native-model-selection/tsconfig.host.json"
-    },
-    {
-      "path": "../../Modules/Official/subagent/acp-child"
     }
   ]
 }

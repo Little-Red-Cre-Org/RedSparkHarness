@@ -88,7 +88,7 @@ Connection facts are re-read once per operation through the optional settings an
 
 ### Provider-specific request fields
 
-When `ctx.deepseekLlmApiExtensions` is present, the Cordis adapter prepares registered top-level fields from the exact serialized base request before `fetch`. Preparation or field collisions fail before HTTP; after a 2xx response, it accepts every captured contribution before consuming SSE. Transport and non-2xx failures do not accept them. Shipped Cordis compositions use this for the optional incremental `dsh_session_log` field and the default-on active `dsh_plugin_packages` inventory; both stay outside model input. The Native provider uses the same fields when its optional `deepseekLlmApiExtensions` service is installed.
+When `ctx.deepseekLlmApiExtensions` is present, the adapter prepares its registered top-level fields from the exact serialized base request before `fetch`. Preparation or field collisions fail before HTTP; after a 2xx response, the adapter accepts every captured contribution before consuming SSE. Transport and non-2xx failures do not accept them. Shipped compositions use this for the optional incremental `dsh_session_log` field and the default-on active `dsh_plugin_packages` inventory; both stay outside model input.
 
 ### Failures and recovery
 
@@ -98,7 +98,7 @@ Non-2xx responses fail with stable codes: `AUTH` (401/403), `QUOTA`, `RATE_LIMIT
 
 ### Native installation
 
-The `./native` entry publishes one selected Model Provider using the same DeepSeekAdapter, connection parser and image serialization. Native credentials and launch environment are required; attachments, Fs, `activeSessions`, and `deepseekLlmApiExtensions` are optional. Connection configuration is fixed for the installation. When the request's `sessionId` matches an active Session, extension preparation uses that owner's Agent scope; otherwise it uses the model installation scope. Without the optional extension service, the model still runs without contribution fields. Metadata lookup and HTTP streams retain their installation ownership until completion, and removal cancels admission, closes iterators and reports cleanup failures. Shipped profiles continue to use the Cordis entry.
+The `./native` entry publishes one selected Model Provider using the same DeepSeekAdapter, connection parser and image serialization. Native credentials and launch environment are required; attachments and Fs are optional. Connection configuration is fixed for the installation. The Cordis entry retains dynamic settings and extension contributions; this native entry does not register a settings editor or request-extension registry. Metadata lookup and HTTP streams retain their installation ownership until completion, and removal cancels admission, closes iterators and reports cleanup failures.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
@@ -159,7 +159,7 @@ The native `modelDirectory` uses this installation’s exact adapter and officia
 
 #### What the model sees
 
-The selected DeepSeek model receives the harness system prompt, message history, tool schemas, stop sequences, and call config (`maxTokens`, `reasoningEffort`, `temperature`) without adapter-authored prompt prose. Cordis and Native provider-specific request-extension fields remain outside model input. The vision model normally receives retained user and tool-result images as Files API references beside attachment handles and request-preview dimensions. It also receives a normalized-object path when the current execution filesystem maps the attachment provider's host object; the descriptor marks this copy read-only and warns that normalization may have resized or re-encoded the upload. A Files resolution failure sends all retained images as inline data URLs instead, and an over-budget older image keeps the access resolved for that request in its placeholder. Reasoning content from a prior assistant turn is passed back verbatim, whether or not that turn called a tool.
+The selected DeepSeek model receives the harness system prompt, message history, tool schemas, stop sequences, and call config (`maxTokens`, `reasoningEffort`, `temperature`) without adapter-authored prompt prose. Provider-specific request-extension fields remain outside model input. The vision model normally receives retained user and tool-result images as Files API references beside attachment handles and request-preview dimensions. It also receives a normalized-object path when the current execution filesystem maps the attachment provider's host object; the descriptor marks this copy read-only and warns that normalization may have resized or re-encoded the upload. A Files resolution failure sends all retained images as inline data URLs instead, and an over-budget older image keeps the access resolved for that request in its placeholder. Reasoning content from a prior assistant turn is passed back verbatim, whether or not that turn called a tool.
 
 #### Token effect
 

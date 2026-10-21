@@ -409,12 +409,6 @@ function bootPatches(
   if (jsonl !== undefined) {
     patches.push({ id: 'session-persistence-jsonl', config: { ...configOf(jsonl), compression: 'none' } })
   }
-  // Persistent task scheduling opens node:sqlite, which this browser Worker
-  // does not provide. Loader also omits the disabled row's dsh.client face.
-  const taskScheduler = find(rows, 'task-scheduler')
-  if (taskScheduler?.name === '@deepseek-ai/dsh-task-scheduler') {
-    patches.push({ id: 'task-scheduler', name: '@deepseek-ai/dsh-task-scheduler', disabled: true })
-  }
   return { patches, presetOverlay }
 }
 

@@ -39,7 +39,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { CredentialProvider } from '@deepseek-ai/dsh-credentials'
-import type { CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRecordEntry, CredentialRecordInfo, CredentialRef, ResolvedCredential } from '@deepseek-ai/dsh-credentials'
+import type { CredentialInfo, CredentialKey, CredentialRecord, CredentialRecordEntry, CredentialRecordInfo, CredentialRef, ResolvedCredential } from '@deepseek-ai/dsh-credentials'
 import { NativeLocalCredentialProvider } from './backend.ts'
 import type { Config } from './document.ts'
 
@@ -80,23 +80,6 @@ export class LocalCredentialProvider extends CredentialProvider {
   override set(ref: CredentialRef, value: string): Promise<void> { return this.backend.set(ref, value) }
   override unset(ref: CredentialRef): Promise<void> { return this.backend.unset(ref) }
   override readRecord(key: CredentialKey): Promise<CredentialRecord | undefined> { return this.backend.readRecord(key) }
-  override readMetadata(key: CredentialKey): Promise<unknown> { return this.backend.readMetadata(key) }
-  override modifyMetadata(
-    key: CredentialKey,
-    mutate: (current: unknown) => Promise<unknown>,
-  ): Promise<unknown> {
-    return this.backend.modifyMetadata(key, mutate)
-  }
-  override migrateRecordToMetadata(
-    key: CredentialKey,
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-  ): Promise<unknown> {
-    return this.backend.migrateRecordToMetadata(key, migrate)
-  }
   override describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> { return this.backend.describeRecord(key) }
   override listRecords(): Promise<readonly CredentialRecordEntry[]> { return this.backend.listRecords() }
   override modifyRecord(

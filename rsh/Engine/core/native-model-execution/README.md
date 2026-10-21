@@ -20,19 +20,13 @@ English | [中文](README.zh.md)
 
 ## Configuration
 
-The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt, unless a recovery policy retries it.
-
-Each request also supplies `rebuildOptions`, which derives fresh options from the current Session. When a recovery policy replaces the visible Session surface and requests a retry, the executor uses this callback before dispatch; prepared model controls must still match the refreshed options. This keeps the retry on the same selected route while using the replacement history.
-
-`onRecovery(policy)` installs a recovery policy and returns its remover. After a failed attempt is recorded, policies receive the normalized failure, the route's retry policy and the Session writer callbacks. The retry policy comes from the model's `retryPolicy(provider)`, or the LLM runtime default when the model declares none. Later registrations run first; each policy may call `next()` at most once, and returning without it claims the failure. A `{ kind: 'retry' }` decision dispatches a fresh attempt for the same step. An adapter that throws is offered the same way; when no policy retries it, the original error is rethrown. A cancelled request is never offered for recovery.
+The `./native` Provider accepts no configuration. Its `execute` call requires an open Session, turn and step numbers, `GenerateOptions`, and append/persist callbacks owned by the Session writer. The caller owns request construction, tool execution, turn closure, and storage lifetime. A model stream must end with one terminal `finish` and cannot emit more chunks afterward. A terminal error or aborted finish fails the step after recording the attempt.
 
 An optional `onChunk` observer receives accepted stream chunks from this same dispatch. Observer failures interrupt the attempt and preserve its recorded partial stream; the observer creates neither another model request nor another writer.
 
 Selected Model Providers can expose `resolveModel` for exact route metadata; an image tool refuses when that capability is absent. `NativeAdapterModel` forwards an actual LLM adapter with installation cancellation, retains accepted metadata and stream operations, and closes paused iterators during removal. A failed or cancelled next call closes and drains its iterator before rejecting with the original request error; iterator cleanup failures remain recorded for the shared close promise. This helper supplies no model catalog or settings authority. Its optional image-pricing operation forwards the same selected adapter’s existing synchronous pricing; adapters without declared pricing return no quote.
 
-The `./model-directory` Definition and `NativeAdapterModelDirectory` expose advisory catalogs from the same selected adapter, without a default store. `prepareStep` binds resolved controls and dispatch to one Provider generation and rejects a `maxTokens` ceiling that generation cannot enforce at the resolved reasoning effort. Consumers persist that exact configuration before `execute`; a foreign prepared identity or different dispatch controls reject. The pure `./model-selection` leaf owns durable selection vocabulary and its history projection.
-
-`captureResponsesOperation(step, route, maxTokens, signal, reasoningEffort)` captures one transport and a nested-generation capability from the exact prepared step. A matching route reuses that step; a changed route prepares the selected child model once with its controls. The returned capability stays bound to that generation and captures an independent transport for each nested operation.
+The `./model-directory` Definition and `NativeAdapterModelDirectory` expose advisory catalogs from the same selected adapter, without a default store. `prepareStep` binds resolved controls and dispatch to one Provider generation. Consumers persist that exact configuration before `execute`; a foreign prepared identity or different dispatch controls reject. The pure `./model-selection` leaf owns durable selection vocabulary and its history projection.
 
 ## Dev Note
 
@@ -56,6 +50,5 @@ The service does not alter the request prefix; any later cache effect follows th
 
 ## Known Limitations and Deferred Work
 
-- The caller still owns the turn and step sequence. Native Headless provides this execution path to the shipped SDK and Web compositions.
-- A prepared adapter call may carry `nativeResponses` from that exact Provider generation. `captureResponses()` requires its route to match the prepared handle; `captureResponsesOperation()` prepares a changed route once, then captures from that route's exact handle. The shipped `llm-pi-ai` SIWC `openai-codex` generation provides the transport for Native external Responses operations. Capture rejects an absent capability or a parent `maxTokens` ceiling that the selected generation cannot enforce; shipped profile templates retain their in-process subagent default and do not install the Codex external driver.
+- The caller still owns the turn and step sequence. Native SDK and Web consumers remain to be migrated.
 - The package manifest and the Session and LLM dependencies retain Cordis during the repository transition.

@@ -286,48 +286,12 @@ Additional instructions from: nested\AGENTS.md`,
 })
 
 describe('normalizeSessionLog', () => {
-  it('normalizes only explicitly owned session clocks', () => {
+  it('normalizes only message-feedback item clocks', () => {
     const item = { messageId: 'answer', version: 'version', createdAt: 123, updatedAt: 456, note: 'keep 123' }
-    const operations = [
-      { kind: 'model-request', requestBody: '{"at":901,"startedAt":902,"finishedAt":903}', at: 1001 },
-      { kind: 'model-response', events: ['{"at":904}'], completed: '{"at":905}', at: 1002 },
-      { kind: 'model-failure', failure: { message: 'failed', at: 906 }, at: 1003 },
-      { kind: 'tool-call', arguments: { at: 907 }, at: 1004 },
-      { kind: 'tool-result', result: { at: 908 }, at: 1005 },
-      { kind: 'tool-settlement', settlementContexts: [{ at: 909 }], at: 1006 },
-    ]
-    const records = [
-      ...['feedback/message-put', 'tool/result'].map(type => ({ type, data: { item } })),
-      { type: 'subagent/external-start', data: { startedAt: 2001, payload: { at: 910, startedAt: 911, finishedAt: 912 } } },
-      ...operations.map(data => ({ type: 'subagent/external-operation', data })),
-      { type: 'subagent/external-end', data: { finishedAt: 2002, payload: { at: 913, startedAt: 914, finishedAt: 915 } } },
-      { type: 'custom/event', data: { at: 916, startedAt: 917, finishedAt: 918 } },
-    ].map((record, index) => JSON.stringify({ ...record, seq: index + 1, time: 500 + index })).join('\n')
-    const output = normalizeSessionLog(records, ctx)
+    const input = ['feedback/message-put', 'tool/result'].map(type => JSON.stringify({ type, data: { item } })).join('\n')
+    const output = normalizeSessionLog(input, ctx)
     expect(output).toContain('"createdAt":0,"updatedAt":0,"note":"keep 123"')
     expect(output).toContain('"createdAt":123,"updatedAt":456,"note":"keep 123"')
-    const normalized = output.trimEnd().split('\n').map(line => JSON.parse(line) as {
-      type: string
-      data: Record<string, unknown>
-    })
-    const started = normalized.find(record => record.type === 'subagent/external-start')
-    const operationRecords = normalized.filter(record => record.type === 'subagent/external-operation')
-    const finished = normalized.find(record => record.type === 'subagent/external-end')
-    const unrelated = normalized.find(record => record.type === 'custom/event')
-    expect(started?.data['startedAt']).toBe(0)
-    expect(operationRecords.map(record => record.data['at'])).toEqual([0, 0, 0, 0, 0, 0])
-    expect(finished?.data['finishedAt']).toBe(0)
-    expect(started?.data['payload']).toEqual({ at: 910, startedAt: 911, finishedAt: 912 })
-    expect(operationRecords[0]?.data['requestBody']).toBe('{"at":901,"startedAt":902,"finishedAt":903}')
-    expect(operationRecords[1]?.data['events']).toEqual(['{"at":904}'])
-    expect(operationRecords[1]?.data['completed']).toBe('{"at":905}')
-    expect(operationRecords[2]?.data['failure']).toEqual({ message: 'failed', at: 906 })
-    expect(operationRecords[3]?.data['arguments']).toEqual({ at: 907 })
-    expect(operationRecords[4]?.data['result']).toEqual({ at: 908 })
-    expect(operationRecords[5]?.data['settlementContexts']).toEqual([{ at: 909 }])
-    expect(finished?.data['payload']).toEqual({ at: 913, startedAt: 914, finishedAt: 915 })
-    expect(unrelated?.data).toEqual({ at: 916, startedAt: 917, finishedAt: 918 })
-    expect(normalizeSessionLog(output, ctx)).toBe(output)
   })
 
   const header = (over: object) => JSON.stringify({ type: 'session', version: 0, id: 's', createdAt: 123, ...over })

@@ -24,7 +24,7 @@ English | [中文](README.md)
 <a id="use-this-package"></a>
 ## 使用本包
 
-SDK 客户端和服务端用本库处理 stdio 分帧；Codex 产品驱动用它处理 app-server 分帧。调用方提供可读流和可写流，调用 `start()`，并在释放流之前关闭传输。`close()` 会拒绝待完成请求并移除监听器，但不会销毁任一流。
+SDK 客户端和服务端用本库处理 stdio 分帧；Codex 适配器用它处理 app-server 分帧。调用方提供可读流和可写流，调用 `start()`，并在释放流之前关闭传输。`close()` 会拒绝待完成请求并移除监听器，但不会销毁任一流。
 
 ```text
 const transport = new JsonRpcLineTransport(input, output)
@@ -34,8 +34,6 @@ transport.close()
 ```
 
 协议错误响应会以 `JsonRpcResponseError` 拒绝请求，并保留数字错误码及可选数据。请求取消、通知、flush 和处理器行为见 [`src/index.ts`](src/index.ts)。
-
-可选的 `onRequestResultWritten()` 观察器只会在传入结果帧的写入回调成功后运行。结果写入同步抛错、写入回调报告失败或观察器抛错时，会向捕获的所有者错误回调报告一次；该回调不得抛错。关闭或替换观察器会抑制迟到回调。请求处理器失败仍返回 `-32603` 错误响应。
 
 -----
 
@@ -61,8 +59,8 @@ transport.close()
 ## 进一步探索
 
 - [工具库目录](../README.zh.md) — 其他共用原语。
-- [SDK 协议](../../../Engine/subagent/sdk-protocol/README.zh.md) — 使用这层传输的 SDK 方法和通知类型。
-- [Codex 产品驱动](../../../Modules/Official/subagent/codex-app-server/README.zh.md) — 使用同一分帧方式承载的 app-server 方法。
+- [SDK 协议](../../../Programs/SDK/packages/protocol/README.zh.md) — 使用这层传输的 SDK 方法和通知类型。
+- [Codex 适配器](../../../Engine/subagent/subagent-codex/README.zh.md) — 使用同一分帧方式承载的 app-server 方法。
 
 -----
 

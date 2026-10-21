@@ -1,6 +1,5 @@
 /** Reversible native tool contributions consumed by a selected application. */
 import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
 import { deepFreeze, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
@@ -9,41 +8,12 @@ import type {
 } from '@deepseek-ai/dsh-session/native'
 import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validateJsonSchemaValue } from './json-schema.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
-import type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
-import {
-  registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, type AsyncPolicyRegistration,
-} from './result-processing.ts'
+import type { NativeToolRestriction } from './types.ts'
+import { registerAsyncPolicy, processAsyncWaterfall, type AsyncPolicyRegistration } from './result-processing.ts'
 export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.ts'
 
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
 export type NativeToolMode = 'native' | 'ptc' | 'both'
-
-/** Exact asynchronous disposer returned by one tool registration. */
-export type NativeToolRegistration = () => Promise<void>
-
-/** Captured Registry entries for one model catalog or program binding set. */
-export interface NativeToolExecutionSnapshot {
-  /** Schemas captured from the exact visible registrations admitted to this operation. */
-  readonly schemas: readonly ToolSchema[]
-  /** Canonical input/output schemas captured for PTC bindings; absent for model-only snapshots. */
-  readonly programSchemas?: readonly ToolSdkSchema[]
-  /**
-   * Return whether this exact registered contribution belongs to the captured catalog.
-   * @param registration - disposer returned by the contribution.
-   * @returns whether the registration identity was captured.
-   */
-  includesRegistration(registration: NativeToolRegistration): boolean
-  /** Cancellation for this snapshot; callers combine it with their operation signal. */
-  readonly signal: AbortSignal
-  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns exact admitted preparation. */
-  prepare(call: NativeToolExecution): Promise<NativePreparedToolInvocation>
-  /** @param call - pending invocation. @returns overlap only when the captured registration permits it. */
-  executionMode(call: Pick<NativeToolExecution, 'agent' | 'name' | 'arguments'>): 'parallel' | 'exclusive'
-  /** @param call - invocation with its original Agent, Session, and parsed arguments. @returns the admitted call and result. */
-  execute(call: NativeToolExecution): Promise<{ readonly call: NativeToolExecution; readonly result: NativeToolResult }>
-  /** Close admission, cancel accepted executions and wait for their body pipelines to settle. */
-  dispose(): Promise<void>
-}
 
 /** One model-requested tool invocation with its Session and cancellation. */
 export interface NativeToolExecution {
@@ -56,10 +26,6 @@ export interface NativeToolExecution {
   readonly signal: AbortSignal
   /** Exact enclosing admitted invocation for a nested program call. */
   readonly parent?: NativeToolExecution
-  /** Exact external-child route and resource ceilings inherited by nested delegation. */
-  readonly delegationContext?: NativeToolDelegationContext
-  /** Exact program/business registrations captured for this external operation's PTC bindings. */
-  readonly programSnapshot?: NativeToolExecutionSnapshot
   /** Unbound application approval authority; the registry binds it to each admitted invocation. */
   readonly approvalAuthority?: NativeToolApprovalAuthority
   /** Append and persist a tool-owned Session event before returning a model-visible result. */
@@ -79,11 +45,6 @@ export interface NativeToolApprovalRequest {
   readonly callId: ToolCallId
   readonly toolName: string
   readonly reason?: string
-  /** Frozen validated parameters and complete tool-owned context, only for ordinary root authorization. */
-  readonly sessionGrant?: {
-    readonly parameters: JsonValue
-    readonly context: NativeToolApprovalContext
-  }
   readonly signal: AbortSignal
 }
 
@@ -106,20 +67,10 @@ export interface NativeToolApprovalAuthority {
 /** Closed answer returned to a tool that handles its own approval outcome. */
 export type NativeToolApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
 
-/** Complete resolved facts supplied by an operation owner; no borrowed paths or reason text. */
-export interface NativeToolApprovalContext {
-  /** Stable filesystem target identity of the effective execution cwd. */
-  readonly cwdKey: string
-  /** Stable identity of the exact resolved target used for execution. */
-  readonly targetKey: string
-}
-
 /** Optional pre-execution approval requested by one tool contribution. */
 export interface NativeToolApproval {
   /** Human-readable explanation for the answerer and durable audit. */
   readonly reason?: string
-  /** Omit unless the tool can reuse the same resolved target and supply complete execution facts. */
-  readonly sessionContext?: NativeToolApprovalContext
 }
 
 /** Model-visible outcome to append once to the authoritative Session. */
@@ -137,44 +88,6 @@ export interface NativeToolResult {
   readonly concludesTurn?: true
 }
 
-/** One wire-parsed product tool call admitted from a recorded external model response. */
-export interface NativeExternalToolCall {
-  readonly callId: ToolCallId
-  readonly name: string
-  readonly arguments: JsonValue
-}
-
-/** Result whose acceptance is deferred until its external-operation event is durable. */
-export interface NativeExternalToolInvocation {
-  readonly result: NativeToolResult
-  /** @returns settlement contexts and turn conclusion after the Engine records this exact result. */
-  acceptRecordedResult(): { readonly settlementContexts: readonly UserMessage[]; readonly concludesTurn: boolean }
-  /**
-   * Read verified bytes referenced by this result and its accepted settlement contexts.
-   * @returns each referenced image once, in first-occurrence order.
-   * @throws before this invocation's result is accepted or after its captured owner closes.
-   */
-  readAcceptedImages(): Promise<readonly StoredImageAttachment[]>
-}
-
-export type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-
-/** Captured Engine tool authority for one external operation. */
-export interface NativeExternalToolOperations {
-  /** Schemas from the exact filtered tool registrations admitted to this operation. */
-  readonly schemas: readonly ToolSchema[]
-  /** Canonical program-only bindings from the same exact filtered Registry registrations. */
-  readonly programSchemas: readonly ToolSdkSchema[]
-  /** Prompt sections rendered against this operation's captured direct and program catalogs. */
-  readonly promptText: string
-  /** @param call - one wire-parsed model call. @param signal - external operation cancellation. @returns its unaccepted result. */
-  execute(call: NativeExternalToolCall, signal: AbortSignal): Promise<NativeExternalToolInvocation>
-  /** Close admission, cancel active calls, and await their body pipelines and cleanup.
-   * The Engine broker owns durable result acceptance and settlement.
-   */
-  dispose(): Promise<void>
-}
-
 /** A tool whose canonical JSON result is validated before presentation or program consumption. */
 export interface NativeValueToolContribution {
   readonly schema: ToolSchema
@@ -183,8 +96,6 @@ export interface NativeValueToolContribution {
   readonly isConcurrencySafe?: NativeToolConcurrencyClassifier
   /** Await tool-owned decoration after result policies and before Session persistence. */
   readonly finalizeResult?: NativeToolResultFinalizer
-  /** Cooperative body budget in milliseconds, enforced only by an installed execution policy. */
-  readonly timeoutMs?: number
   readonly output: {
     readonly schema: JsonSchemaNode
     /**
@@ -228,8 +139,6 @@ export interface NativeToolContribution {
   readonly approval?: NativeToolApproval
   /** Await tool-owned decoration after result policies and before Session persistence. */
   readonly finalizeResult?: NativeToolResultFinalizer
-  /** Cooperative body budget in milliseconds, enforced only by an installed execution policy. */
-  readonly timeoutMs?: number
   execute(call: NativeToolExecution): Promise<NativeToolResult>
 }
 
@@ -276,42 +185,6 @@ export type NativeToolResultFinalizer = (
   call: NativeToolExecution, original: Readonly<NativeToolResult>, selected: NativeToolResult,
 ) => Promise<NativeToolResult>
 
-/** Registered facts about the dispatched contribution that execution policies may enforce. */
-export interface NativeToolDeclaration {
-  /** Positive cooperative body budget declared by the contribution; absent declares none. */
-  readonly timeoutMs?: number
-}
-
-/**
- * Surround one admitted body dispatch, for example to enforce its declared timeout.
- * @param call - admitted invocation; its signal already carries registry, policy and caller cancellation.
- * @param tool - immutable declaration of the dispatched contribution.
- * @param next - delegate exactly once; the supplied signal is fused with `call.signal`, so it can only add cancellation.
- * @returns the body outcome, or a replacement result selected after `next` settles; the registry still awaits `next`.
- */
-export type NativeToolExecutionPolicy = (
-  call: NativeToolExecution, tool: NativeToolDeclaration, next: (signal: AbortSignal) => Promise<NativeToolResult>,
-) => Promise<NativeToolResult>
-
-/** Final model-visible outcome of one tool call after its Session owner recorded it. */
-export interface NativeToolSettlement {
-  readonly agent: NativeAgent
-  readonly session: Session
-  readonly callId: ToolCallId
-  readonly name: string
-  /** Parsed JSON arguments, or the raw argument text when the model sent invalid JSON. */
-  readonly arguments: unknown
-  /** Recorded outcome, including denials, failures and application built-ins. */
-  readonly result: Readonly<NativeToolResult>
-}
-
-/**
- * Derive sourced model context from a recorded tool outcome, including failures and denials.
- * @param settlement - detached immutable facts of the recorded call.
- * @returns user messages placed before the result's own additional contexts; empty when nothing applies.
- */
-export type NativeToolSettlementPolicy = (settlement: NativeToolSettlement) => readonly UserMessage[]
-
 /** Log-only projection of one nested dispatch; program results remain unchanged. */
 export interface NativePtcDispatchLog {
   readonly content: readonly ContentBlock[]
@@ -330,8 +203,7 @@ export type NativePtcDispatchLogPolicy = (
   call: NativeToolExecution, original: Readonly<NativeToolResult>, next: () => Promise<NativePtcDispatchLog>, signal: AbortSignal,
 ) => Promise<NativePtcDispatchLog>
 
-export type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
-export type { ToolSdkSchema } from './ts-types.ts'
+export type { NativeToolRestriction } from './types.ts'
 
 interface CompiledToolRestriction {
   readonly allow?: ReadonlySet<string>
@@ -340,8 +212,6 @@ interface CompiledToolRestriction {
 
 /** One prepared invocation retaining its selected contribution until dispatch or cancellation. */
 export interface NativePreparedToolInvocation {
-  /** Exact frozen invocation admitted by the Registry. */
-  readonly call: NativeToolExecution
   /** @returns the contribution result; rejects cancellation or a second dispatch. */
   execute(): Promise<NativeToolResult>
   /** Release an invocation that will not be dispatched; repeated abandonment has no effect. */
@@ -350,7 +220,6 @@ export interface NativePreparedToolInvocation {
 
 interface ToolRegistration {
   readonly tool: NativeToolContribution
-  readonly declaration: NativeToolDeclaration
   readonly schema: ToolSchema
   readonly outputSchema?: JsonSchemaNode
   readonly isConcurrencySafe?: NativeToolConcurrencyClassifier
@@ -361,10 +230,6 @@ interface ToolRegistration {
 }
 
 type ResultPolicyRegistration = AsyncPolicyRegistration<NativeToolResultPolicy>
-type ExecutionPolicyRegistration = AsyncPolicyRegistration<NativeToolExecutionPolicy>
-
-/** Node schedules longer delays as one millisecond, so a larger declared budget cannot be enforced. */
-const MAX_TOOL_TIMEOUT_MS = 2_147_483_647
 type PtcLogPolicyRegistration = AsyncPolicyRegistration<NativePtcDispatchLogPolicy>
 
 /** A registry whose disposer cancels and drains only the contribution it installed. */
@@ -374,11 +239,6 @@ export class NativeToolRegistry {
   private readonly restrictions: NativeContributions<CompiledToolRestriction>
   private readonly resultObservers: NativeContributions<NativeToolResultObserver>
   private readonly resultPolicies: NativeContributions<ResultPolicyRegistration>
-  private readonly executionPolicies: NativeContributions<ExecutionPolicyRegistration>
-  private readonly executionPolicyRegistrations = new Set<ExecutionPolicyRegistration>()
-  private executionPolicySequence = 0
-  private readonly settlementPolicies: NativeContributions<NativeToolSettlementPolicy>
-  private settlementPolicySequence = 0
   private readonly ptcLogPolicies: NativeContributions<PtcLogPolicyRegistration>
   private readonly ptcLogPolicyRegistrations = new Set<PtcLogPolicyRegistration>()
   private readonly ptcLogPending = new Set<Promise<void>>()
@@ -405,8 +265,6 @@ export class NativeToolRegistry {
     this.guards = new NativeContributions(scope)
     this.resultObservers = new NativeContributions(scope)
     this.resultPolicies = new NativeContributions(scope)
-    this.executionPolicies = new NativeContributions(scope)
-    this.settlementPolicies = new NativeContributions(scope)
     this.ptcLogPolicies = new NativeContributions(scope)
     this.restrictions = new NativeContributions(scope)
   }
@@ -491,57 +349,6 @@ export class NativeToolRegistry {
   }
 
   /**
-   * Surround admitted body dispatch in the executing Agent's scope, including nested program calls.
-   * @param policy - wrapper that delegates exactly once and may replace the body outcome after delegation settles.
-   * @param scope - installation scope, defaulting to the Provider scope.
-   * @returns disposer that closes admission, cancels captured calls and awaits their settlement.
-   */
-  aroundExecution(policy: NativeToolExecutionPolicy, scope?: NativeScope): () => Promise<void> {
-    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    const entry = registerAsyncPolicy(this.executionPolicies, this.executionPolicyRegistrations,
-      `execution:${this.executionPolicySequence++}`, policy, scope)
-    return () => entry.dispose()
-  }
-
-  /**
-   * Register a synchronous context policy over every recorded call outcome in the executing Agent's scope.
-   * @param policy - derives sourced user messages from a detached settlement; a throw fails the recording owner.
-   * @param scope - installation scope, defaulting to the Provider scope.
-   * @returns an exact idempotent disposer owned by the installing module.
-   */
-  onSettlement(policy: NativeToolSettlementPolicy, scope?: NativeScope): () => void {
-    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    return this.settlementPolicies.register(`settlement:${this.settlementPolicySequence++}`, policy, scope)
-  }
-
-  /**
-   * Collect settlement contexts after the Session owner recorded one tool outcome.
-   * @param settlement - recorded call facts; builtin, denied and failed calls are included.
-   * @returns detached sourced messages in policy registration order, to append before the result's own contexts.
-   */
-  settlementContexts(settlement: NativeToolSettlement): UserMessage[] {
-    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    if (this.agents.get(settlement.agent.id) !== settlement.agent) {
-      throw new Error(`native-tools: Agent "${settlement.agent.id}" is not registered`)
-    }
-    const policies = [...this.settlementPolicies.visible(settlement.agent.scope).values()]
-    if (policies.length === 0) return []
-    const detached: NativeToolSettlement = Object.freeze({
-      agent: settlement.agent, session: settlement.session, callId: settlement.callId, name: settlement.name,
-      arguments: deepFreeze(structuredClone(settlement.arguments)), result: deepFreeze(structuredClone(settlement.result)),
-    })
-    const contexts: UserMessage[] = []
-    for (const policy of policies) {
-      for (const message of policy(detached)) {
-        // Policies are third-party code; their declared type is not trusted at runtime.
-        if ((message as { readonly role: unknown }).role !== 'user') throw new Error('native-tools: settlement policies may only add user messages')
-        contexts.push(structuredClone(message))
-      }
-    }
-    return contexts
-  }
-
-  /**
    * Register a scoped log-only waterfall for nested program dispatch settlement.
    * @param policy - projection that delegates exactly once and honors its independent cancellation signal.
    * @param scope - installation scope, defaulting to the Provider scope.
@@ -590,17 +397,8 @@ export class NativeToolRegistry {
 
   private async processResult(
     call: NativeToolExecution, entry: ToolRegistration, policies: readonly ResultPolicyRegistration[],
-    wrappers: readonly ExecutionPolicyRegistration[],
   ): Promise<NativeToolResult> {
-    const executed = wrappers.length === 0
-      ? await entry.tool.execute(call)
-      : await processExecutionChain(wrappers.length, call.signal,
-        signal => entry.tool.execute(signal === call.signal ? call : { ...call, signal }),
-        (index, signal, next) => {
-          const wrapper = wrappers[index]
-          if (wrapper === undefined) throw new Error('native-tools: captured execution policy is missing')
-          return wrapper.policy(signal === call.signal ? call : { ...call, signal }, entry.declaration, next)
-        })
+    const executed = await entry.tool.execute(call)
     call.signal.throwIfAborted()
     if (policies.length === 0 && entry.tool.finalizeResult === undefined) return executed
     const original = deepFreeze(executed)
@@ -614,8 +412,7 @@ export class NativeToolRegistry {
     call.signal.throwIfAborted()
     const snapshot = snapshotJsonValue(finalized)
     if (snapshot === undefined) throw new HarnessError(`tool "${call.name}" returned non-lossless JSON`, 'INVALID_TOOL_OUTPUT')
-    // A policy-selected failure (for example a timeout) has no canonical value; bindings reject it by isError.
-    if (entry.outputSchema !== undefined && !(finalized.isError && finalized.value === undefined)) {
+    if (entry.outputSchema !== undefined) {
       const violations = validateJsonSchemaValue(entry.outputSchema, finalized.value, 'value')
       if (violations.length > 0) throw new HarnessError(`tool "${call.name}" returned invalid output: ${violations.join('; ')}`, 'INVALID_TOOL_OUTPUT')
     }
@@ -670,7 +467,6 @@ export class NativeToolRegistry {
       schema: tool.schema, ...(tool.approval === undefined ? {} : { approval: tool.approval }),
       ...(tool.finalizeResult === undefined ? {} : { finalizeResult: tool.finalizeResult }),
       ...(tool.isConcurrencySafe === undefined ? {} : { isConcurrencySafe: tool.isConcurrencySafe }),
-      ...(tool.timeoutMs === undefined ? {} : { timeoutMs: tool.timeoutMs }),
       async execute(call) {
         const candidate = await tool.execute(call)
         const value = snapshotJsonValue(candidate.value)
@@ -696,23 +492,18 @@ export class NativeToolRegistry {
    * @param scope - installation scope, defaulting to the Provider scope.
    * @returns an idempotent disposer that removes the registration, cancels calls and awaits their settlement.
    */
-  register(tool: NativeToolContribution, scope?: NativeScope): NativeToolRegistration {
+  register(tool: NativeToolContribution, scope?: NativeScope): () => Promise<void> {
     return this.install(tool, scope)
   }
 
-  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): NativeToolRegistration {
+  private install(tool: NativeToolContribution, scope?: NativeScope, outputSchema?: JsonSchemaNode): () => Promise<void> {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
     const schema = structuredClone(tool.schema)
     const parameters = schema.parameters
     assertSupportedJsonSchema(parameters)
-    const { timeoutMs } = tool
-    if (timeoutMs !== undefined && !(Number.isFinite(timeoutMs) && timeoutMs > 0 && timeoutMs <= MAX_TOOL_TIMEOUT_MS)) {
-      throw new Error(`native-tools: tool ${schema.name} timeoutMs must be a positive finite number no greater than ${MAX_TOOL_TIMEOUT_MS}`)
-    }
     let completion: Promise<void> | undefined
     const entry: ToolRegistration = {
       tool, schema, controller: new AbortController(), pending: new Set(),
-      declaration: Object.freeze(timeoutMs === undefined ? {} : { timeoutMs }),
       ...(outputSchema === undefined ? {} : { outputSchema }),
       ...(tool.isConcurrencySafe === undefined ? {} : { isConcurrencySafe: tool.isConcurrencySafe }),
       validate: (args) => {
@@ -759,125 +550,6 @@ export class NativeToolRegistry {
       throw new Error('native-tools: ptc mode requires a visible run_code transport')
     }
     return schemas.filter(schema => this.acceptsModelName(schema.name))
-  }
-
-  /**
-   * Capture exact model-callable registrations for one product operation.
-   * @param names - additional allowlist intersected with the current model-visible catalog.
-   * @param scope - consuming Agent scope, defaulting to the Provider scope.
-   * @returns captured schemas and execution authority that rejects removed or replaced registrations.
-   */
-  captureModelSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
-    return this.captureSnapshot(names, scope, 'model')
-  }
-
-  /**
-   * Capture exact program-bound registrations without treating them as direct model calls.
-   * @param names - additional allowlist intersected with the current SDK binding catalog.
-   * @param scope - consuming Agent scope, defaulting to the Provider scope.
-   * @returns captured schemas, PTC bindings and exact execution authority.
-   */
-  captureProgramSnapshot(names: readonly string[], scope?: NativeScope): NativeToolExecutionSnapshot {
-    return this.captureSnapshot(names, scope, 'program')
-  }
-
-  private captureSnapshot(
-    names: readonly string[], scope: NativeScope | undefined, catalog: 'model' | 'program',
-  ): NativeToolExecutionSnapshot {
-    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    const catalogNames = new Set(catalog === 'model' ? this.modelSchemas(scope).map(schema => schema.name)
-      : this.sdkSchemas(scope).filter(schema => schema.name !== 'run_code').map(schema => schema.name))
-    const allowed = new Set(names)
-    const registrations = new Map([...this.visible(scope)].filter(([name]) => allowed.has(name) && catalogNames.has(name)))
-    const schemas = deepFreeze([...registrations.values()].map(entry => structuredClone(entry.schema)))
-    const programSchemas = catalog === 'program' ? deepFreeze([...registrations.values()].map((entry) => {
-      if (entry.outputSchema === undefined) throw new Error(`native-tools: tool ${entry.schema.name} has no canonical output schema`)
-      return { ...structuredClone(entry.schema), output: structuredClone(entry.outputSchema) }
-    })) : undefined
-    const controller = new AbortController()
-    const pending = new Set<Promise<void>>()
-    const undispatched = new Set<() => void>()
-    let closed = false
-    let disposal: Promise<void> | undefined
-    const registrationHandles = new Set([...registrations.values()].map(entry => entry.dispose))
-    return {
-      schemas,
-      ...(programSchemas === undefined ? {} : { programSchemas }),
-      signal: controller.signal,
-      includesRegistration: registration => registrationHandles.has(registration),
-      prepare: async (call) => {
-        if (closed) throw new Error('native-tools: model snapshot is closed')
-        const entry = registrations.get(call.name)
-        if (entry === undefined) throw new HarnessError(`native-tools: tool ${call.name} is outside the captured catalog`, 'TOOL_DENIED')
-        const completion = Promise.withResolvers<void>()
-        pending.add(completion.promise)
-        const admitted = { ...call, signal: AbortSignal.any([call.signal, controller.signal]) }
-        try {
-          this.assertVisible(admitted, entry)
-          const prepared = await this.prepareSelected(admitted, entry)
-          if (controller.signal.aborted) {
-            prepared.abandon()
-            throw new Error('native-tools: captured snapshot closed during preparation')
-          }
-          let state: 'ready' | 'running' | 'closed' = 'ready'
-          const finish = (): void => {
-            state = 'closed'
-            undispatched.delete(abandon)
-            pending.delete(completion.promise)
-            completion.resolve()
-          }
-          const abandon = (): void => {
-            if (state !== 'ready') return
-            prepared.abandon()
-            finish()
-          }
-          undispatched.add(abandon)
-          return {
-            call: prepared.call,
-            async execute() {
-              if (state !== 'ready') throw new Error('native-tools: captured invocation is already dispatched or abandoned')
-              state = 'running'
-              undispatched.delete(abandon)
-              try { return await prepared.execute() }
-              finally { finish() }
-            },
-            abandon,
-          }
-        } catch (error: unknown) {
-          pending.delete(completion.promise)
-          completion.resolve()
-          throw error
-        }
-      },
-      executionMode: (call) => {
-        if (this.agents.get(call.agent.id) !== call.agent) return 'exclusive'
-        const entry = registrations.get(call.name)
-        if (entry?.isConcurrencySafe === undefined) return 'exclusive'
-        try {
-          if (this.visible(call.agent.scope).get(call.name) !== entry) return 'exclusive'
-          const args = snapshotJsonValue(call.arguments)
-          if (args === undefined) return 'exclusive'
-          entry.validate(args)
-          return entry.isConcurrencySafe(deepFreeze(args)) ? 'parallel' : 'exclusive'
-        } catch {
-          // Invalid arguments or a failed classifier cannot authorize body overlap.
-          return 'exclusive'
-        }
-      },
-      async execute(call) {
-        const prepared = await this.prepare(call)
-        try { return { call: prepared.call, result: await prepared.execute() } }
-        catch (error: unknown) { prepared.abandon(); throw error }
-      },
-      dispose() {
-        if (disposal !== undefined) return disposal
-        closed = true
-        controller.abort(new Error('native-tools: model snapshot closed'))
-        for (const abandon of [...undispatched]) abandon()
-        disposal = Promise.all([...pending]).then(() => {})
-        return disposal
-      },
-    }
   }
 
   /**
@@ -942,42 +614,32 @@ export class NativeToolRegistry {
     if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const entry = this.visible(call.agent.scope).get(call.name)
     if (entry === undefined) throw new Error(`native-tools: unknown tool ${call.name}`)
-    return this.prepareSelected(call, entry)
-  }
-
-  private async prepareSelected(call: NativeToolExecution, entry: ToolRegistration): Promise<NativePreparedToolInvocation> {
-    if (this.agents.get(call.agent.id) !== call.agent) throw new Error(`native-tools: Agent "${call.agent.id}" is not registered`)
     const argumentsValue = snapshotJsonValue(call.arguments)
     if (argumentsValue === undefined) throw new ToolArgsError(['arguments must be lossless JSON'])
     const policies = [...this.resultPolicies.visible(call.agent.scope).values()]
-    const wrappers = [...this.executionPolicies.visible(call.agent.scope).values()]
-    const owners = [...policies, ...wrappers]
-    const signal = AbortSignal.any([call.signal, entry.controller.signal, ...owners.map(policy => policy.controller.signal)])
+    const signal = AbortSignal.any([call.signal, entry.controller.signal, ...policies.map(policy => policy.controller.signal)])
     const authority = call.approvalAuthority
-    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal, ordinary: boolean): NativeToolApprovalRequest => ({
+    const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal): NativeToolApprovalRequest => ({
       agent: call.agent, session: call.session, callId: call.callId, toolName: call.name,
       ...approval.reason === undefined ? {} : { reason: approval.reason },
-      ...!ordinary || call.delegationContext !== undefined || approval.sessionContext === undefined ? {} : {
-        sessionGrant: { parameters: argumentsValue as JsonValue, context: Object.freeze({ ...approval.sessionContext }) },
-      },
       signal: AbortSignal.any([signal, requestedSignal]),
     })
     const admitted: NativeToolExecution = {
       ...call, arguments: deepFreeze(argumentsValue), signal,
       ...authority === undefined ? {} : {
-        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal, true)),
-        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal, false)),
+        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal)),
+        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal)),
       },
     }
     const completion = Promise.withResolvers<void>()
     entry.pending.add(completion.promise)
-    for (const policy of owners) policy.pending.add(completion.promise)
+    for (const policy of policies) policy.pending.add(completion.promise)
     let phase: 'preparing' | 'ready' | 'running' | 'closed' = 'preparing'
     const release = (): void => {
       phase = 'closed'
       signal.removeEventListener('abort', cancelled)
       entry.pending.delete(completion.promise)
-      for (const policy of owners) policy.pending.delete(completion.promise)
+      for (const policy of policies) policy.pending.delete(completion.promise)
       completion.resolve()
     }
     const cancelled = (): void => { if (phase === 'ready') release() }
@@ -1001,9 +663,8 @@ export class NativeToolRegistry {
       const agents = this.agents
       const assertGuards = (): void => { this.assertGuards(admitted) }
       const assertVisible = (): void => { this.assertVisible(admitted, entry) }
-      const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies, wrappers)
+      const processResult = (): Promise<NativeToolResult> => this.processResult(admitted, entry, policies)
       return {
-        call: admitted,
         async execute() {
           signal.throwIfAborted()
           if (phase !== 'ready') throw new Error('native-tools: prepared invocation is already dispatched or abandoned')
@@ -1034,13 +695,11 @@ export class NativeToolRegistry {
     this.disposal = completion.promise
     this.guards.clear()
     this.resultObservers.clear()
-    this.settlementPolicies.clear()
     this.restrictions.clear()
     this.ptcLogController.abort()
     const completions = [
       ...[...this.registrations].map(entry => entry.dispose()),
       ...[...this.policyRegistrations].map(entry => entry.dispose()),
-      ...[...this.executionPolicyRegistrations].map(entry => entry.dispose()),
       ...[...this.ptcLogPolicyRegistrations].map(entry => entry.dispose()),
       ...this.ptcLogPending,
     ]

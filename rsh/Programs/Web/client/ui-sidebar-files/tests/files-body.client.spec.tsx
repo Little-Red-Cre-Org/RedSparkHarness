@@ -49,7 +49,7 @@ describe('FilesBody', () => {
     expect(view.container.querySelector('[data-files-row="loading"]')).not.toBeNull()
     await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
     expect(view.container.querySelector('[data-files-state="tree"]')?.getAttribute('data-files-root')).toBe(ROOT)
-    const path = view.container.querySelector('[data-sidebar-path]')
+    const path = view.container.querySelector('[data-files-path]')
     expect(path?.getAttribute('title')).toBe(ROOT)
     expect([...path?.querySelectorAll('span > span') ?? []].map(span => span.textContent)).toEqual(['/work/', 'app'])
     expect(names(view.container)).toEqual([`${ROOT}/src`, `${ROOT}/.env`, `${ROOT}/pipe`, `${ROOT}/README.md`])
@@ -61,7 +61,7 @@ describe('FilesBody', () => {
   it('heads a separator-only root by the root itself, since it has no final segment', async () => {
     const { view, script } = mountBody('/')
     await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
-    const path = view.container.querySelector('[data-sidebar-path]')
+    const path = view.container.querySelector('[data-files-path]')
     expect([...path?.querySelectorAll('span > span') ?? []].map(span => span.textContent)).toEqual(['/'])
     expect(names(view.container)).toEqual(['/src', '/.env', '/pipe', '/README.md'])
   })
@@ -89,9 +89,9 @@ describe('FilesBody', () => {
     try {
       const { view, script } = mountBody()
       await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
-      const path = view.container.querySelector<HTMLElement>('[data-sidebar-path]')
+      const path = view.container.querySelector<HTMLElement>('[data-files-path]')
       const text = path?.firstElementChild
-      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(false)
+      expect(path?.hasAttribute('data-files-path-clipped')).toBe(false)
       const observer = FakeResizeObserver.latest
       if (observer === undefined) throw new Error('expected the path to observe its size')
       expect(observer.observe).toHaveBeenCalledWith(path)
@@ -99,11 +99,11 @@ describe('FilesBody', () => {
 
       boxWidth = 120
       act(() => { observer.fire() })
-      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(true)
+      expect(path?.hasAttribute('data-files-path-clipped')).toBe(true)
 
       boxWidth = 300
       act(() => { observer.fire() })
-      expect(path?.hasAttribute('data-sidebar-path-clipped')).toBe(false)
+      expect(path?.hasAttribute('data-files-path-clipped')).toBe(false)
       view.unmount()
       expect(observer.disconnect).toHaveBeenCalledTimes(1)
     } finally {

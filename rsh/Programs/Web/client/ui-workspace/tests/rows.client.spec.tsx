@@ -5,8 +5,8 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/clie
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import type { RowDragProps } from '@deepseek-ai/dsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
-import { ProjectRowItem, SearchResultItem, SessionNodeItem } from '@deepseek-ai/dsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
+import type { RowDragProps } from '../src/client/rows/Rows.tsx'
+import { ProjectRowItem, SearchResultItem, SessionNodeItem } from '../src/client/rows/Rows.tsx'
 import type { GroupNode, SearchResultNode, SessionNode } from '../src/client/tree.ts'
 import { zh } from '../src/client/locales.ts'
 
@@ -57,40 +57,6 @@ function fireDrag(row: HTMLElement, kind: 'dragOver' | 'drop', clientY: number):
 }
 
 describe('workspace browser rows', () => {
-  it.each([
-    { key: 'Enter', name: 'Enter' },
-    { key: ' ', name: 'Space' },
-  ])('activates focused workspace and session rows with $name', ({ key }) => {
-    const onToggle = vi.fn()
-    const onOpen = vi.fn()
-    const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
-      sessionCount: 1, expanded: true, containsCurrent: false, sessions: [],
-    }
-    const node: SessionNode = {
-      id: sid('s1'), title: 'One', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
-    render(<>
-      <ProjectRowItem group={group} onToggle={onToggle} onCreate={vi.fn()} actions={{ rename: vi.fn(), delete: vi.fn() }} t={t} />
-      <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen}
-        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />
-    </>)
-
-    const [projectRow, sessionRow] = screen.getAllByRole('treeitem')
-    expect(projectRow?.tabIndex).toBe(0)
-    expect(sessionRow?.tabIndex).toBe(0)
-    fireEvent.keyDown(projectRow!, { key })
-    fireEvent.keyDown(sessionRow!, { key })
-    expect(onToggle).toHaveBeenCalledOnce()
-    expect(onOpen).toHaveBeenCalledWith(node.id)
-
-    fireEvent.keyDown(screen.getByRole('button', { name: '工作区“Project”的操作' }), { key })
-    fireEvent.keyDown(screen.getByRole('button', { name: '会话“One”的操作' }), { key })
-    expect(onToggle).toHaveBeenCalledOnce()
-    expect(onOpen).toHaveBeenCalledOnce()
-  })
-
   it('omits only an empty leading status slot in the hierarchy-free flat list', () => {
     const idle: SessionNode = {
       id: sid('flat'), title: 'Flat Session', blank: false, running: false,

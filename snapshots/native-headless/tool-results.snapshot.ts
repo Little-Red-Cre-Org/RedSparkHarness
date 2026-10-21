@@ -48,7 +48,7 @@ it('records mode-selected tool results, extra model input and whole-batch conclu
   const modelDir = join(modules, 'native-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
-    name: 'native-fixture-model', version: '0.0.0', type: 'module', dependencies: { '@deepseek-ai/dsh-llm': '*' },
+    name: 'native-fixture-model', type: 'module', dependencies: { '@deepseek-ai/dsh-llm': '*' },
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['tools'], optional: [], provides: ['model'] } },
   }))

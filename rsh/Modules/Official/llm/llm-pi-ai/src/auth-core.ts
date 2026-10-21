@@ -17,12 +17,6 @@ import {
 import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
 import { LlmError } from '@deepseek-ai/dsh-llm/native'
-import { migrateExistingSiwcRegistration } from './siwc.ts'
-import type { SiwcRegistrationStore } from './siwc.ts'
-
-type CredentialOperations = Pick<NativeCredentials,
-  'resolve' | 'readRecord' | 'listRecords' | 'modifyRecord' | 'deleteRecord'
-  | 'modifyMetadata' | 'migrateRecordToMetadata'>
 
 /**
  * The record scope every credential this adapter family stores is written
@@ -31,7 +25,6 @@ type CredentialOperations = Pick<NativeCredentials,
  * provider name — that this plugin owns the format inside the record.
  */
 export const RECORD_SCOPE = 'llm-pi-ai'
-const SIWC_REGISTRATION_KEY = credentialKey(RECORD_SCOPE, 'openai-codex-siwc-registration')
 
 /**
  * The record address for one pi-ai provider id.
@@ -114,7 +107,7 @@ function toRecord(credential: Credential): CredentialRecord {
  * @returns the live service.
  * @throws {LlmError} code `NO_CREDENTIAL_STORE` when none is mounted.
  */
-function writableStore(credentials: CredentialOperations | undefined): CredentialOperations {
+function writableStore(credentials: NativeCredentials | undefined): NativeCredentials {
   if (credentials === undefined) {
     throw new LlmError(
       'llm-pi-ai: this composition mounts no credentials service, so there is nowhere to store the'
@@ -142,7 +135,7 @@ function writableStore(credentials: CredentialOperations | undefined): Credentia
  * @param credentials - the credential service, when the composition provides one.
  * @returns the store to hand `createModels()`.
  */
-export function credentialStoreFrom(credentials: CredentialOperations | undefined): CredentialStore {
+export function credentialStoreFrom(credentials: NativeCredentials | undefined): CredentialStore {
   return {
     async read(providerId) {
       if (credentials === undefined) return undefined
@@ -150,27 +143,20 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
       return toPiCredential(await credentials.readRecord(recordKeyFor(providerId)))
     },
     async list(): Promise<readonly CredentialInfo[]> {
-      if (credentials !== undefined) {
-        await writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
-          (current, legacy, readRecord) => migrateExistingSiwcRegistration(
-            current, legacy, toPiCredential(readRecord(recordKeyFor('openai-codex'))),
-          ))
-      }
       const stored = await credentials?.listRecords() ?? []
       const mine: CredentialInfo[] = []
       for (const entry of stored) {
         // Records another plugin owns are not this collection's to report:
         // their payloads are written in a format pi-ai never agreed to.
         if (credentialKeyScope(entry.key) !== RECORD_SCOPE) continue
-        const providerId = credentialKeyId(entry.key)
         mine.push({
-          providerId,
+          providerId: credentialKeyId(entry.key),
           type: entry.kind === 'api-key' ? 'api_key' : 'oauth',
         })
       }
       return mine
     },
-    async modify(providerId, mutate, options) {
+    async modify(providerId, mutate) {
       if (!isCredentialKeySegment(providerId)) {
         throw new LlmError(
           `llm-pi-ai: provider id "${providerId}" cannot address a stored credential record (a record id is a`
@@ -182,30 +168,16 @@ export function credentialStoreFrom(credentials: CredentialOperations | undefine
       const stored = await writableStore(credentials).modifyRecord(recordKeyFor(providerId), async (current) => {
         const next = await mutate(toPiCredential(current))
         return next === undefined ? undefined : toRecord(next)
-      }, options?.signal === undefined ? {} : { signal: options.signal })
+      })
       return toPiCredential(stored)
     },
     // `async` so a missing service reaches the caller as a rejection: pi-ai's
     // store contract is promise-returning, and a synchronous throw would
     // escape the `ModelsError` wrapper every other storage failure gets.
-    async delete(providerId, options) {
+    async delete(providerId) {
       if (!isCredentialKeySegment(providerId)) return
-      await writableStore(credentials).deleteRecord(
-        recordKeyFor(providerId), options?.signal === undefined ? {} : { signal: options.signal })
+      await writableStore(credentials).deleteRecord(recordKeyFor(providerId))
     },
-  }
-}
-
-/** Owner-private SIWC metadata storage over the selected credential provider.
- * @param credentials - the selected Native credentials service.
- * @returns the adapter shared by Native and Cordis auth consumers.
- */
-export function siwcRegistrationStoreFrom(credentials: CredentialOperations | undefined): SiwcRegistrationStore {
-  return {
-    reconcile: migrate => writableStore(credentials).migrateRecordToMetadata(SIWC_REGISTRATION_KEY,
-      (current, legacy, readRecord) => migrate(current, legacy,
-        toPiCredential(readRecord(recordKeyFor('openai-codex'))))),
-    modify: mutate => writableStore(credentials).modifyMetadata(SIWC_REGISTRATION_KEY, mutate),
   }
 }
 
@@ -226,7 +198,7 @@ export function siwcRegistrationStoreFrom(credentials: CredentialOperations | un
  * @returns the auth context to hand `createModels()`.
  */
 export function authContextFrom(
-  credentials: CredentialOperations | undefined,
+  credentials: NativeCredentials | undefined,
   environment: LaunchEnvironmentSnapshot,
 ): AuthContext {
   return {

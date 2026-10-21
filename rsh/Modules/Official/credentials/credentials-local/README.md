@@ -106,7 +106,7 @@ records:
     kind: api-key               # neither: the owner confirmed the ambient credential chain
 ```
 
-You can edit the file directly — the store reloads it automatically and picks up the change, including a key or record you delete. `refs` holds key values by environment-variable name; `records` holds per-plugin credentials by `<owner>/<id>`, each tagged `api-key` or `grant`, whose grant payload the store keeps verbatim because only its owner can interpret it. Owner metadata lives in the separate versioned `<path>.metadata.json` sidecar and is not a reference or record. Comments and the formatting of untouched entries survive product writes; a comment directly above an entry is that entry's note and is removed with it. The credential document holds only credentials, so anything else is refused loudly rather than silently ignored: a non-mapping root, an unknown top-level key, a key that is not addressable in its space, a wrong-typed or empty value, an unknown record tag or field, duplicate keys, and malformed YAML all fail at startup, and on a live reload the last good content keeps serving with a warning.
+You can edit the file directly — the store reloads it automatically and picks up the change, including a key or record you delete. `refs` holds key values by environment-variable name; `records` holds per-plugin credentials by `<owner>/<id>`, each tagged `api-key` or `grant`, whose grant payload the store keeps verbatim because only its owner can interpret it. Comments and the formatting of untouched entries survive product writes; a comment directly above an entry is that entry's note and is removed with it. The file holds only credentials, so anything else is refused loudly rather than silently ignored: a non-mapping root, an unknown top-level key, a key that is not addressable in its space, a wrong-typed or empty value, an unknown record tag or field, duplicate keys, and malformed YAML all fail at startup, and on a live reload the last good content keeps serving with a warning.
 
 A key's value can be any text, multi-line values included — no quoting tricks needed. An empty value means "no key", which is why an empty string in the file is rejected: removing a key deletes it, it does not blank it. A `grant` payload must survive a JSON round trip, enforced on the way in and on the way out, so the store refuses a value it could not read back exactly as written. If the file on disk no longer parses, saving fails instead of overwriting content the product could not read.
 
@@ -142,9 +142,7 @@ This section explains the design decisions behind the provider and points at the
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis Service adapter over the shared backend |
-| [`src/native.ts`](src/native.ts) | Native Host Provider entry and selected-service publication |
-| [`src/backend.ts`](src/backend.ts) | Shared document reads and writes, provider-scoped record notifications, and watcher lifecycle |
+| [`src/index.ts`](src/index.ts) | Provider: environment layering, reference and record writes under the writer lock, and watcher lifecycle |
 | [`src/document.ts`](src/document.ts) | Shared document parser and renderer, file permissions check, and storage defaults |
 | — | No runtime invariant companion is published; the Service Definition companion (`dsh-credentials/invariant`) owns the `credentials/reference-updated` lifecycle contract; this provider's file/environment layering is asynchronous I/O pinned by its unit suite. |
 
@@ -152,13 +150,11 @@ This section explains the design decisions behind the provider and points at the
 
 `resolve` and `describe` read the inherited environment snapshot, the parsed document snapshot, and the `.env` fallbacks in precedence order. `set`/`unset` queue onto one exclusive operation chain: entry checks reject early (disposed, empty value, environment-shadowed), and the queue re-judges them at run time before a read-modify-write under the writer lock commits and fires `credentials/reference-updated` exactly once.
 
-`modifyRecord` runs on the same chain and lock: it re-reads the document, passes the record as it stands to the mutation, admits the result — a non-empty API key, a grant payload that survives a JSON round trip — renders the record wholesale, and commits. Native consumers on the selected service receive one address-only callback; Cordis consumers receive one `credentials/record-updated` event. A composition the product CLI did not boot has only the inherited environment as its layer.
-
-Metadata reads and writes use a version-1 JSON sidecar at `<path>.metadata.json`, created with owner-only mode `0600` on POSIX, and the same cross-process file lock as the credential document. Mutations read back and verify the committed value; migration callbacks receive detached values from the locked record snapshot, and migration verifies metadata before removing a legacy record. Metadata is absent from credential resolution, record listing, and provider configuration status.
+`modifyRecord` runs on the same chain and lock: it re-reads the document, passes the record as it stands to the mutation, admits the result — a non-empty API key, a grant payload that survives a JSON round trip — renders the record wholesale, and commits, firing `credentials/record-updated` once. A composition the product CLI did not boot has only the inherited environment as its layer.
 
 ### Reload lifecycle
 
-A watcher event or the ready-time reconciliation queues a refresh behind the same chain. `reconcileFromDisk` re-checks permissions, re-reads the text, replaces both snapshots wholesale when the text differs, and reports each changed reference or record once; content equal to the text cache — including the provider's own writes — is a no-op. Native record subscribers stop receiving new callbacks when disposed, and provider teardown waits for callbacks already in progress as well as queued operations.
+A watcher event or the ready-time reconciliation queues a refresh behind the same chain. `reconcileFromDisk` re-checks permissions, re-reads the text, replaces both snapshots wholesale when the text differs, and publishes one event per changed reference or record; content equal to the text cache — including the provider's own writes — is a no-op. Disposal sets the closed flag, stops accepting events, closes the watcher, and waits out queued operations so nothing publishes after teardown.
 
 ### Document versioning
 

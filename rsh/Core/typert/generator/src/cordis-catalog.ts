@@ -124,8 +124,6 @@ export interface CordisCatalogPolicy {
   readonly runtimeServices?: readonly ServiceEntry[]
   /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
   readonly runtimeServiceExclusions?: ReadonlySet<string>
-  /** Source types omitted from runtime type closure by exact `package#name`. */
-  readonly runtimeTypeExclusions?: ReadonlySet<string>
   /** Registered source packages used as Context Service Definitions and inherited projected Services. */
   readonly serviceDefinitionPackages?: readonly string[]
   /** Manually curated framework events inherited by every plugin. */
@@ -400,7 +398,6 @@ export class CordisCatalogProjector {
     const candidates = new Map<string, SourceDeclarationModel[]>()
     for (const declaration of this.sourceDeclarations) {
       if (declaration.face !== this.face.face || declaration.kind === 'enum'
-        || this.policy.runtimeTypeExclusions?.has(`${declaration.package}#${declaration.name}`)
         || !/^(?:.*\/)?src\/.+\.tsx?$/.test(declaration.location.file)) continue
       const declarations = candidates.get(declaration.name) ?? []
       declarations.push(declaration)

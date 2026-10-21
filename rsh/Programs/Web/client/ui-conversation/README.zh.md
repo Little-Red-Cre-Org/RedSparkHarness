@@ -14,7 +14,6 @@ kind: "package-reference"
 ## 目录
 
 - [Conversation 组装](#conversation-assembly)
-- [Native target 类型](#native-target-types)
 - [Shell 与标准 props](#shell-and-standard-props)
 - [临时 composer entry](#temporary-composer-entries)
 - [模型体验](#model-experience)
@@ -33,11 +32,6 @@ kind: "package-reference"
 shell 选择解析出 target 或 target source 收到首个 subscriber 时，该 target 进入 active 状态。assembler 从当前 Context 对它执行一次 replace，并使它参与后续增量 flush；创建 source 不会激活 target，取消订阅也不会停用 target。
 
 target package 通过 declaration merge 扩展 snapshot 与 Location data map，再调用 `ctx.uiConversation.events.register(...)` 和 `ctx.uiConversation.views.register(...)`。target 通过 `ctx.uiConversation.binding(binding).target(targetId)` 读取其 Session-owned source。注册属于 Cordis effect，返回的 disposer 从同一个 registry 移除 contribution。共享的请求检查服务于每个 target：`ctx.uiConversation.inspectSystemPrompt(previous, event)` 将系统消息与位置替换解释为不可变的已加载 surface 状态。它按 surface 顺序选择最后一个非空的存活系统节点，为连续重写只保留存活的替换位置；遇到未建立索引的更早端点后，提示词保持不可用，直到向前补页回放提供其顺序。target 自有的 Definition 独立保留历史卡片。`ctx.uiConversation.inspectRequestPrompt(previous, header, system)` 根据该有效提示词分类请求变更；普通消息与流式分片无需处理系统状态。
-
-<a id="native-target-types"></a>
-## Native target 类型
-
-实现 Conversation target 的 Native Client 包从 `@deepseek-ai/dsh-client-ui-conversation/native-types` 导入共享事件、节点、提示词、View 与图片渲染类型。该入口只提供类型声明，不生成运行时代码。
 
 <a id="shell-and-standard-props"></a>
 ## Shell 与标准 props

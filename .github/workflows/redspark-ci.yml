@@ -42,88 +42,10 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-      - name: CI workflow regressions
-        if: runner.os == 'Linux'
-        run: pnpm exec vitest run rsh/Scripts/ci-workflow.spec.ts
-      - name: Package publication rules
-        if: runner.os == 'Linux'
-        run: pnpm run check:ci:package-publication
-      - name: Prepare Linux workspace-write sandbox
-        if: runner.os == 'Linux'
-        shell: bash
-        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
       - name: Build Web and desktop sources
         run: pnpm run build
       - name: Typecheck
         run: pnpm run typecheck:contracts-ready
-      - name: Lint
-        if: runner.os == 'Linux'
-        run: pnpm run lint:contracts-ready
-      - name: Documentation checks
-        if: runner.os == 'Linux'
-        run: pnpm run doc-sync
-      - uses: actions/setup-python@v6.3.0
-        with:
-          python-version: '3.10'
-      - name: Prepare keyless Python SDK runner
-        id: sdk-python
-        run: |
-          python -m pip install uv==0.11.23
-          if ($LASTEXITCODE -ne 0) { throw "Installing uv failed with exit code $LASTEXITCODE" }
-          $sdkPython = (& uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python -c "import sys; print(sys.executable)" | Select-Object -Last 1).Trim()
-          if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
-          "python=$sdkPython" >> $env:GITHUB_OUTPUT
-      - name: Native profile and pi-ai lifecycle regressions
-        run: pnpm exec vitest run rsh/Programs/CLI/tests/native-profile-template.spec.ts rsh/Modules/Official/llm/llm-pi-ai/tests/native-responses.spec.ts rsh/Modules/Community/experimental/webworker-runtime/tests/vfs-example-fixture.spec.ts
-      - name: Native request context, skill, Archify, and TUI regressions
-        run: >-
-          pnpm exec vitest run
-          rsh/Engine/context/request-context/tests/registry.spec.ts
-          rsh/Modules/Official/skill/skill/tests/native.spec.ts
-          rsh/Modules/Official/skill/skill-filesystem/tests/native.spec.ts
-          rsh/Modules/Official/skill/archify/tests/archify.spec.ts
-          rsh/Programs/TUI/native-tui/tests/skill-routing.spec.ts
-          rsh/Programs/TUI/native-tui/tests/lifecycle.spec.ts
-      - name: Native tool visibility regressions
-        run: >-
-          pnpm exec vitest run
-          rsh/Engine/core/native-tools/tests/lifecycle.spec.ts
-          rsh/Engine/core/native-headless/tests/native.spec.ts
-          -t 'reports only exact registrations captured by a model request|passes the current Session to builtin/PTC code runtime'
-      - name: Native SDK and ACP workspace instructions regressions
-        run: >-
-          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
-          rsh/Programs/CLI/tests/profiles/native-sdk/native-sdk-dsh-child.e2e.ts
-          rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts
-          rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
-          && pnpm exec vitest run --config vitest.snapshot.config.ts
-          snapshots/native-sdk/scheduled-root-origin.snapshot.ts
-          snapshots/native-sdk/external-operation.snapshot.ts
-          snapshots/native-sdk/skills.snapshot.ts
-          snapshots/native-sdk/archify.snapshot.ts
-          snapshots/native-sdk/text-turn.snapshot.ts
-      - name: SDK child bwrap mount and SDK snapshot regressions
-        if: runner.os == 'Linux'
-        run: >-
-          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
-          rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
-          && pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
-        env:
-          DSH_REQUIRE_BWRAP_E2E: '1'
-      - name: Windows SDK child operator path regression
-        if: runner.os == 'Windows'
-        run: >-
-          pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
-          rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
-      - name: Python SDK workspace instructions replay
-        run: >-
-          pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1
-          snapshots/native-sdk/scheduled-root-origin.snapshot.ts
-          snapshots/native-sdk/external-operation.snapshot.ts
-          snapshots/native-sdk/skills.snapshot.ts
-          snapshots/native-sdk/archify.snapshot.ts
-        env:
-          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions
         run: pnpm --filter @deepseek-ai/dsh-rsh test
       - name: RSH profile smoke
@@ -132,66 +54,12 @@ jobs:
           DSH_EXAMPLE_MODE: lib
       - name: Client tests (no API credentials)
         run: pnpm run test:gui --maxWorkers=2
-
-  packed:
-    name: SPH packed / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2025]
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: pnpm
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Prepare Linux workspace-write sandbox
+      - name: Lint
         if: runner.os == 'Linux'
-        shell: bash
-        run: bash rsh/Scripts/prepare-ci-bubblewrap.sh
-      - name: Build official Web and desktop sources
-        run: pnpm run build:official
-      # Packed consumer verification starts here; keep shared setup above.
-      - name: Pack dsh release tarballs for consumer verification
-        run: pnpm run release:pack --family dsh --out dist/npm --concurrency 4
-      - name: Pack vendored framework for consumer verification
-        run: pnpm run release:pack --family vendor --out dist/npm-vendor
-      - name: Pack Landlock entry for consumer verification
-        run: |
-          pnpm --dir rsh/Core/native/system run build:ts
-          pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
-      - name: Verify independently packed dsh consumer
-        run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
-      - uses: actions/setup-python@v6.3.0
-        if: runner.os == 'Windows'
-        with:
-          python-version: '3.10'
-      - name: Prepare keyless Python SDK runner
-        if: runner.os == 'Windows'
-        id: sdk-python
-        run: |
-          python -m pip install uv==0.11.23
-          if ($LASTEXITCODE -ne 0) { throw "Installing uv failed with exit code $LASTEXITCODE" }
-          $sdkPython = (& uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python -c "import sys; print(sys.executable)" | Select-Object -Last 1).Trim()
-          if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
-          "python=$sdkPython" >> $env:GITHUB_OUTPUT
-      - name: Windows SDK snapshot regressions
-        if: runner.os == 'Windows'
-        run: |
-          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Windows Python SDK text-turn replay
-        if: runner.os == 'Windows'
-        run: pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/text-turn.snapshot.ts
-        env:
-          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
+        run: pnpm run lint:contracts-ready
+      - name: Documentation checks
+        if: runner.os == 'Linux'
+        run: pnpm run doc-sync
+      - name: Package publication rules
+        if: runner.os == 'Linux'
+        run: pnpm run check:ci:package-publication

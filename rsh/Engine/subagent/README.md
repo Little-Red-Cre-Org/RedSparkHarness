@@ -28,12 +28,13 @@ The subagent package family lets an agent delegate a task to a child, continue t
 | [`subagent-in-process-driver/`](subagent-in-process-driver/README.md) | Provides the shared in-process run driver | — |
 | [`subagent-spawn-in-process/`](subagent-spawn-in-process/README.md) | Runs a fresh in-process child | registers on `ctx.subagents` |
 | [`subagent-fork-in-process/`](subagent-fork-in-process/README.md) | Runs an in-process child seeded from the parent's completed history | registers on `ctx.subagents` |
-| [`codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) | Provides the official app-server product driver for Native external subagents | `externalSubagentDriver` |
-| [`subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md) | Runs a real Codex child through the official app-server protocol in compatibility profiles | registers on `ctx.subagents` |
+| [`subagent-acp/`](subagent-acp/README.md) | Runs an out-of-process child over the Agent Client Protocol | registers on `ctx.subagents` |
+| [`subagent-codex/`](subagent-codex/README.md) | Runs a real Codex child through the official app-server protocol | registers on `ctx.subagents` |
+| [`subagent-claude-code/`](subagent-claude-code/README.md) | Runs a real Claude Code child through the official Agent SDK | registers on `ctx.subagents` |
+| [`subagent-dsh-sdk/`](subagent-dsh-sdk/README.md) | Runs an out-of-process Harness child through the TypeScript SDK | registers on `ctx.subagents` |
 | [`tool-subagent/`](tool-subagent/README.md) | Exposes delegation to the model | registers on `ctx.tools` |
 | [`tool-subagent-control/`](tool-subagent-control/README.md) | Exposes adjacent-agent messaging, interrupt, and listing to the model | registers on `ctx.tools` |
 | [`native-subagent/`](native-subagent/README.md) | Provides native delegation and continuable children through the selected Program | `subagents` |
-| [`sdk-child`](../../Modules/Official/subagent/sdk-child/README.md) | Runs the opt-in Native SDK external child through a fixed Program launcher | `externalSubagentDriver` |
 | [`native-tool-subagent-list-agents/`](native-tool-subagent-list-agents/README.md) | Lists native continuable children through the selected Program catalog | registers on `tools` |
 
 -----
@@ -42,8 +43,6 @@ The subagent package family lets an agent delegate a task to a child, continue t
 ## Related documentation
 
 - [Subagent subsystem](../../Docs/subsystems/subagent.md) — the service contract, provider contract, and terminal result semantics.
-- [Native SDK external child](../../Modules/Official/subagent/sdk-child/README.md) — the opt-in Native Module and its current authority limits.
-- [DSH SDK compatibility provider](../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.md) — the legacy Cordis provider retained for compatibility profiles.
 - [Subagent capability seam](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md) — the design record for the delegation capability family.
 - [Continuable subagents](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md) — durable children that accept follow-up turns.
 - [tool-subagent-control README](tool-subagent-control/README.md) — the follow-up, interrupt, and listing surface.

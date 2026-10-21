@@ -2,19 +2,12 @@
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult,
-  NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
+import type { NativeSubagentOptions, NativeSubagentResult, NativeExternalSubagentResult,
+  NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
+import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
 import type {} from '@deepseek-ai/dsh-native-tool-jobs'
 
 interface Config { readonly toolName: string; readonly options: NativeSubagentOptions; readonly backgroundMode: 'one-shot' | 'continuable' }
-
-function responsesGeneration(call: NativeToolExecution): NativeToolExecution['responsesGeneration'] {
-  for (let current: NativeToolExecution | undefined = call; current !== undefined; current = current.parent) {
-    if (current.responsesGeneration !== undefined) return current.responsesGeneration
-  }
-  return undefined
-}
 
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native tool-subagent: configuration must be an object')
@@ -129,23 +122,8 @@ export const plugin: NativePlugin = {
         async execute(call) {
           const args = call.arguments as { description: string; prompt: string; run_in_background?: boolean }
           if (args.description.length === 0 || args.prompt.length === 0) throw new Error('subagent: description and prompt must be nonempty')
-          const approvalAuthority = call.approvalAuthority
-          const approvalRequester = approvalAuthority === undefined ? undefined : async (
-            approval: NativeExternalSubagentApprovalRequest,
-          ) => approvalAuthority.request({
-            agent: call.agent, session: call.session, callId: call.callId, toolName: approval.toolName,
-            reason: [
-              `External child ${approval.operationId} request ${approval.requestId} (child call ${approval.callId}).`,
-              approval.reason,
-            ].filter((part): part is string => part !== undefined).join(' '),
-            signal: AbortSignal.any([call.signal, approval.signal]),
-          })
-          const generation = responsesGeneration(call)
           const request = subagents.resolve({ agent: call.agent, session: call.session, label: args.description,
-            prompt: [{ type: 'text', text: args.prompt }], options: config.options,
-            ...call.delegationContext === undefined ? {} : { delegationContext: call.delegationContext },
-            ...generation === undefined ? {} : { responsesGeneration: generation },
-            ...approvalRequester === undefined ? {} : { approvalRequester } })
+            prompt: [{ type: 'text', text: args.prompt }], options: config.options })
           return continuation && args.run_in_background !== false ? subagents.startContinuable(request, call.signal)
             : args.run_in_background === true ? subagents.startBackground(request, call.signal) : subagents.run(request, call.signal)
         },

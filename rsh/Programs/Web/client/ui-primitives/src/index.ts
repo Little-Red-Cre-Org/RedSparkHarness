@@ -15,38 +15,17 @@ export { Switch } from './Switch.tsx'
 export { Input } from './Input.tsx'
 export { Menu } from './Menu.tsx'
 export type { MenuEntry, MenuItem, MenuSeparator, MenuLabel } from './Menu.tsx'
-export { ModelPicker } from './ModelPicker.tsx'
-export type {
-  ModelPickerEffort, ModelPickerFailure, ModelPickerGroup, ModelPickerLocaleKey,
-  ModelPickerModel, ModelPickerProps, ModelPickerSelection, ModelPickerState, ModelPickerTranslate,
-} from './ModelPicker.tsx'
 export { useAnchoredMaxHeight } from './useAnchoredMaxHeight.ts'
 export { useAnchoredPosition } from './useAnchoredPosition.ts'
 export type { AnchoredPositionOptions } from './useAnchoredPosition.ts'
 export { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer.ts'
 export { HoverCard } from './HoverCard.tsx'
 export { Modal } from './Modal.tsx'
-export { SettingsPanel } from './SettingsPanel.tsx'
-export type { SettingsPanelProps, SettingsPanelRow } from './SettingsPanel.tsx'
-export * from './models-settings/index.ts'
 export { OnboardingSurface } from './OnboardingSurface.tsx'
-export { OnboardingModal } from './OnboardingModal.tsx'
-export { WelcomeNoticeView } from './WelcomeNoticeView.tsx'
-export { ModelOnboardingView } from './ModelOnboardingView.tsx'
-export type { ModelOnboardingCopyKey, ModelOnboardingProvider, ModelOnboardingViewProps } from './ModelOnboardingView.tsx'
 export { RiskConfirmation } from './RiskConfirmation.tsx'
 export type { RiskConfirmationProps } from './RiskConfirmation.tsx'
 export { ConnectionIndicator } from './ConnectionIndicator.tsx'
 export type { ConnectionIndicatorState } from './ConnectionIndicator.tsx'
-export {
-  ChatAssistantMessage, ChatComposerButton, ChatComposerCard, ChatComposerSelect, ChatComposerToolbar,
-  ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, ChatWelcome,
-} from './chat/ChatPresentation.tsx'
-export { ChatReasoningDisclosure } from './chat/ChatReasoningDisclosure.tsx'
-export { ChatMessageActionRow, ChatMessageActionMeta, ChatMessageCopyAction } from './chat/ChatMessageActions.tsx'
-export { ChatContextMessage } from './chat/ChatContextMessage.tsx'
-export type { ChatContextMessageProps } from './chat/ChatContextMessage.tsx'
-export { ChatMascotHero } from './chat/ChatMascotHero.tsx'
 export { FishLogo, FISH_LOGO_PATH, FISH_LOGO_VIEWBOX } from './FishLogo.tsx'
 export { BrandWordmark } from './BrandWordmark.tsx'
 export type { BrandWordmarkProps } from './BrandWordmark.tsx'
@@ -58,7 +37,6 @@ export { FileTypeIcon, classifyFileType, fileExtension } from './FileTypeIcon.ts
 export type {
   CodeFileType, FileType, FileTypeIconProps, FileTypeKind, FileTypeProjectContext,
 } from './FileTypeIcon.tsx'
-export { isCodeFileType } from './code-file-types.ts'
 export { projectUserText, type UserTextReferences } from './user-text.tsx'
 export { Tooltip } from './Tooltip.tsx'
 export type { TooltipSide } from './Tooltip.tsx'
@@ -68,34 +46,6 @@ export { writeClipboard } from './clipboard.ts'
 export { relativeTime } from './relative-time.ts'
 export { rankByName } from './rank-by-name.ts'
 export type { RelativeTime, RelativeTimeUnit } from './relative-time.ts'
-export { ProjectRowItem, SearchResultItem, SessionNodeItem } from './workspace-rows/Rows.tsx'
-export type {
-  SessionPendingInteractionStatus, SessionRowNode, SessionSearchRow, WorkspaceGroupRow,
-  WorkspaceRowKey, WorkspaceRowTranslate,
-} from './workspace-rows/types.ts'
-export { WorkspaceSectionEmpty, WorkspaceSectionHeader } from './workspace-rows/WorkspaceSection.tsx'
-export { workspaceLabel } from './workspace-rows/workspace-label.ts'
-export { DirectoryBrowser } from './DirectoryBrowser.tsx'
-export type {
-  DirectoryBrowserEntry, DirectoryBrowserKey, DirectoryBrowserListing, DirectoryBrowserProps, DirectoryBrowserTranslate,
-} from './DirectoryBrowser.tsx'
-export { SidebarPathBar } from './SidebarPathBar.tsx'
-export { WorkspaceFileTreeRows, orderWorkspaceFileEntries } from './WorkspaceFileTreeRows.tsx'
-export type { WorkspaceFileTreeLabels, WorkspaceFileTreeLevel, WorkspaceFileTreeRowsProps } from './WorkspaceFileTreeRows.tsx'
-export {
-  WorkspaceCodePreview, WorkspaceHtmlPreview, WorkspaceImagePreview, WorkspaceMarkdownPreview,
-  workspaceImageMediaType,
-} from './WorkspaceFilePreview.tsx'
-export type {
-  WorkspaceCodePreviewProps, WorkspaceHtmlPreviewProps, WorkspaceImagePreviewProps,
-  WorkspaceMarkdownPreviewProps,
-} from './WorkspaceFilePreview.tsx'
-export { LoadingIndicator } from './LoadingIndicator.tsx'
-export {
-  createWorkspaceHtmlDocument, htmlRelativePath, packWorkspaceHtml,
-} from './workspace-html.ts'
-export type { HtmlAsset, HtmlBundle, ReadHtmlRelative } from './workspace-html.ts'
-export { CODE_EXTENSIONS, languageForPath } from './workspace-code-languages.ts'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'

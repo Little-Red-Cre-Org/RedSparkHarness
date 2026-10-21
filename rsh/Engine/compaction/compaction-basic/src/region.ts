@@ -13,32 +13,20 @@ import {
   compactCheckpointSource,
   toolPairingBalancedAfter,
   toolPairingBalancedBefore,
-} from '@deepseek-ai/dsh-compaction/native'
-import type { CompactionResult } from '@deepseek-ai/dsh-compaction/native'
+} from '@deepseek-ai/dsh-compaction'
+import type { CompactionResult } from '@deepseek-ai/dsh-compaction'
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm/native'
-import type { Message, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeTokenMeterOperations, TokenMeasurement } from '@deepseek-ai/dsh-token-meter/native'
-import { SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
+import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
+import type { TokenMeasurement, TokenMeter } from '@deepseek-ai/dsh-token-meter'
+import { SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import { frameSummary } from './summarizer.ts'
 import type { SummarizationInput, SummaryResult } from './summarizer.ts'
 
-/** Replay pricing every compaction decision reads; Cordis and native meters both satisfy it. */
-export type RegionMeter = Pick<NativeTokenMeterOperations, 'measure' | 'estimateMessage'>
-
-/**
- * Pricing and summarization bound for one transaction. `TCaller` is the
- * runtime-specific identity the summarizer resolves its route from.
- */
-export interface RegionDependencies<TCaller> {
-  readonly meter: RegionMeter
-  summarize(input: SummarizationInput, caller: TCaller, signal?: AbortSignal): Promise<SummaryResult>
-}
-
-/** Live Session plus the sole writer every compaction append goes through. */
-export interface RegionTarget {
-  readonly session: Session
-  readonly append: Session['append']
+interface RegionDependencies {
+  readonly meter: TokenMeter
+  summarize(input: SummarizationInput, agent: Agent, signal?: AbortSignal): Promise<SummaryResult>
 }
 
 /** One validated inclusive span of current surface positions. */
@@ -64,8 +52,7 @@ type SummarizedCompaction = PreparedCompaction & SummaryResult & {
   readonly checkpointMessage: UserMessage
 }
 
-/** Bracket ownership, stability rule, and durability options for one region transaction. */
-export interface CompactionTransactionOptions {
+interface CompactionTransactionOptions {
   /** `current-turn` derives a numbered owner; `null` writes a standalone bracket. */
   readonly owner: 'current-turn' | null
   /** Surface relationship that must survive asynchronous summarization. */
@@ -91,7 +78,7 @@ class SurfaceChangedError extends Error {}
 
 /** Whether the summary may still replace the span it was built from. */
 type StabilityCheck = (
-  dependencies: Pick<RegionDependencies<unknown>, 'meter'>,
+  dependencies: RegionDependencies,
   session: Session,
   prepared: PreparedCompaction,
 ) => void
@@ -175,24 +162,23 @@ export function selectCompactableRange(
  * exactly one `compaction/end` attempt; a failed close deliberately leaves the
  * unmatched start detectable.
  * @param dependencies - conversation meter and dynamically dispatched summarizer hook.
- * @param target - Session whose surface is mutated and the writer used for every append.
+ * @param session - session whose surface is mutated.
  * @param start - inclusive first surface-node seq.
  * @param end - inclusive last surface-node seq.
- * @param caller - runtime identity passed to the summarizer.
+ * @param agent - agent used by the summarizer.
  * @param options - bracket owner, stability rule, and optional durability checkpoint.
  * @param signal - optional summarization cancellation signal.
  * @returns the successful durable compaction result.
  */
-export async function compactSurfaceRegion<TCaller>(
-  dependencies: RegionDependencies<TCaller>,
-  target: RegionTarget,
+export async function compactSurfaceRegion(
+  dependencies: RegionDependencies,
+  session: Session,
   start: SessionSeq,
   end: SessionSeq,
-  caller: TCaller,
+  agent: Agent,
   options: CompactionTransactionOptions,
   signal?: AbortSignal,
 ): Promise<CompactionResult> {
-  const { session } = target
   if (options.owner === null) signal?.throwIfAborted()
   const selection = validateSurfaceRegion(session, start, end)
   const entryState = inspectCompactionEntryState(session)
@@ -221,7 +207,7 @@ export async function compactSurfaceRegion<TCaller>(
     ...options.sourceCommandId === undefined ? {} : { sourceCommandId: options.sourceCommandId },
     turn: owner,
   }
-  const startEvent = target.append('compaction/start', lifecycle)
+  const startEvent = session.append('compaction/start', lifecycle)
   const assertStable: StabilityCheck = options.stability === 'whole-surface'
     ? assertWholeSurfaceUnchanged
     : assertSelectedSpanStable
@@ -237,7 +223,7 @@ export async function compactSurfaceRegion<TCaller>(
     const summarized = await summarizeCompaction(
       dependencies,
       prepared,
-      caller,
+      agent,
       compactionId,
       options.sourceCommandId,
       signal,
@@ -245,9 +231,9 @@ export async function compactSurfaceRegion<TCaller>(
     if (options.owner === null) signal?.throwIfAborted()
     assertStable(dependencies, session, summarized)
     stage = 'commit'
-    const pending = commitCompactionBody(target, startEvent, summarized)
+    const pending = commitCompactionBody(session, startEvent, summarized)
     closing = true
-    const endEvent = target.append('compaction/end', lifecycle)
+    const endEvent = session.append('compaction/end', lifecycle)
     closed = true
     result = completeCompaction(pending, endEvent)
   } catch (error: unknown) {
@@ -255,7 +241,7 @@ export async function compactSurfaceRegion<TCaller>(
     if (!closing) {
       closing = true
       try {
-        target.append('compaction/end', { ...lifecycle, error: errorChain(error) })
+        session.append('compaction/end', { ...lifecycle, error: errorChain(error) })
         closed = true
       } catch (closeError: unknown) {
         failure = { error: closeError, stage: 'commit' }
@@ -372,7 +358,7 @@ function validateSurfaceRegion(session: Session, start: SessionSeq, end: Session
 
 /** Snapshot pricing and replay input for a validated surface range. */
 function prepareCompaction(
-  dependencies: Pick<RegionDependencies<unknown>, 'meter'>,
+  dependencies: RegionDependencies,
   session: Session,
   selection: SurfaceSelection,
 ): PreparedCompaction {
@@ -397,15 +383,15 @@ function prepareCompaction(
 }
 
 /** Run the summarizer and frame its replacement checkpoint. */
-async function summarizeCompaction<TCaller>(
-  dependencies: RegionDependencies<TCaller>,
+async function summarizeCompaction(
+  dependencies: RegionDependencies,
   prepared: PreparedCompaction,
-  caller: TCaller,
+  agent: Agent,
   compactionId: CompactionResult['compactionId'],
   sourceCommandId: CommandId | undefined,
   signal?: AbortSignal,
 ): Promise<SummarizedCompaction> {
-  const summaryResult = await dependencies.summarize(prepared.input, caller, signal)
+  const summaryResult = await dependencies.summarize(prepared.input, agent, signal)
   const checkpointMessage = createUserMessage({
     content: frameSummary(summaryResult.summary),
     source: compactCheckpointSource(compactionId, sourceCommandId),
@@ -428,7 +414,7 @@ async function summarizeCompaction<TCaller>(
 
 /** Reject a summary prepared against any earlier surface generation. */
 function assertWholeSurfaceUnchanged(
-  dependencies: Pick<RegionDependencies<unknown>, 'meter'>,
+  dependencies: RegionDependencies,
   session: Session,
   prepared: PreparedCompaction,
 ): void {
@@ -444,7 +430,7 @@ function assertWholeSurfaceUnchanged(
  * visible and do not invalidate the summary.
  */
 function assertSelectedSpanStable(
-  dependencies: Pick<RegionDependencies<unknown>, 'meter'>,
+  dependencies: RegionDependencies,
   session: Session,
   prepared: PreparedCompaction,
 ): void {
@@ -468,7 +454,7 @@ function assertSelectedSpanStable(
 
 /** Append one completed summary record and replacement body without yielding. */
 function commitCompactionBody(
-  target: RegionTarget,
+  session: Session,
   startEvent: SessionEvent<'compaction/start'>,
   summarized: SummarizedCompaction,
 ): Omit<CompactionResult, 'endSeq'> {
@@ -487,7 +473,7 @@ function commitCompactionBody(
   const callProvenance = summarized.llmStreamCall === true
     ? { rawOutput: summarized.rawOutput, llmStreamCall: true as const }
     : summarized.rawOutput === undefined ? {} : { rawOutput: summarized.rawOutput }
-  const summaryEvent = target.append('compaction/summary', {
+  const summaryEvent = session.append('compaction/summary', {
     compactionId: startEvent.data.compactionId,
     ...startEvent.data.sourceCommandId === undefined
       ? {}
@@ -502,7 +488,7 @@ function commitCompactionBody(
     ...maxTokens === undefined ? {} : { maxTokens },
     ...usage === undefined ? {} : { usage },
   })
-  target.append('user/message', checkpointMessage, {
+  session.append('user/message', checkpointMessage, {
     surfaceOp: { op: 'replace', startSeq: start, endSeq: end },
     sourceEventSeqs: [startEvent.seq, summaryEvent.seq, ...shadowedSeqs],
   })

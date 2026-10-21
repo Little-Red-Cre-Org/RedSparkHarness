@@ -2,7 +2,6 @@
 
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-agent/types'
 
 type InboxProjection = Record<'next-turn' | 'next-step', UserMessage[]>
 
@@ -10,16 +9,9 @@ type InboxProjection = Record<'next-turn' | 'next-step', UserMessage[]>
 function pendingInboxMessages(events: readonly SessionEvent[]): UserMessage[] {
   const inbox: InboxProjection = { 'next-turn': [], 'next-step': [] }
   for (const event of events) {
-    if (event.type === 'agent/inbox/moved') {
-      const index = inbox['next-turn'].findIndex(message => message.id === event.data.messageId)
-      if (index < 0) throw new Error(`agent-team: invalid persisted inbox move at seq ${event.seq}`)
-      const [message] = inbox['next-turn'].splice(index, 1)
-      if (message === undefined) throw new Error(`agent-team: moved inbox message disappeared at seq ${event.seq}`)
-      inbox['next-step'].push(message)
-    } else if (event.type === 'agent/inbox/spliced') {
-      const pending = inbox[event.data.target]
-      pending.splice(event.data.start, event.data.removedCount ?? 0, ...event.data.inserted)
-    }
+    if (event.type !== 'agent/inbox/spliced') continue
+    const pending = inbox[event.data.target]
+    pending.splice(event.data.start, event.data.removedCount ?? 0, ...event.data.inserted)
   }
   return [...inbox['next-turn'], ...inbox['next-step']]
 }

@@ -3,7 +3,6 @@ import { en, zh } from '@deepseek-ai/dsh-client-ui-conversation/conversation-cop
 import { en as commonEn, zh as commonZh, formatLocaleTemplate } from '@deepseek-ai/dsh-client-locale/dictionary'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { GenericToolCard } from '../client/tool/toolviews/GenericToolCard.tsx'
-import css from '../client/tool/ToolCallTree.module.css'
 export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
 import type { ToolCallOwnerProps } from '../tool-renderer-types.ts'
 
@@ -24,12 +23,5 @@ export function NativeToolCard({ locale, ...props }: NativeToolCardProps) {
     const template = key in dictionary ? dictionary[key as keyof typeof dictionary] : common[key as keyof typeof common]
     return formatLocaleTemplate(template, params)
   }
-  const { block } = props
-  return <div className={css.callRow} data-chat-call-id={block.callId}>
-    <GenericToolCard {...props} t={t} />
-    {block.subCalls.length === 0 ? null : <div className={css.subCalls} data-subcalls>
-      {block.subCalls.map(child => <NativeToolCard key={child.callId} {...props} locale={locale} callId={child.callId} block={child}
-        toolName={'kind' in child ? child.call?.name ?? child.callId : child.name} />)}
-    </div>}
-  </div>
+  return <GenericToolCard {...props} t={t} />
 }

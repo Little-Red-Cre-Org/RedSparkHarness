@@ -2,9 +2,9 @@
 
 English | [中文](skills.zh.md)
 
-The [skill capability family](../../Modules/Official/skill) includes the Cordis Service Definition ([dsh-skill](../../Modules/Official/skill/skill), `ctx.skills`) and its Native Host service, the local Service Provider ([dsh-skill-filesystem](../../Modules/Official/skill/skill-filesystem)), the optional packaged badge provider ([dsh-skill-badge](../../Modules/Official/skill/skill-badge)), and the Consumer ([dsh-tool-skill](../../Modules/Official/skill/tool-skill)). The registries merge provider catalogs across their host and per-scope layers; providers contribute local or packaged skills; the Consumer owns the initial and replacement catalogs plus the model-facing `skill` tool. Skills are optional instructions, not session events, so their vocabulary lives here rather than in [core.md](core.md).
+The [skill capability family](../../Modules/Official/skill) includes the Service Definition ([dsh-skill](../../Modules/Official/skill/skill), `ctx.skills`), the local Service Provider ([dsh-skill-filesystem](../../Modules/Official/skill/skill-filesystem)), the optional packaged badge provider ([dsh-skill-badge](../../Modules/Official/skill/skill-badge)), and the Consumer ([dsh-tool-skill](../../Modules/Official/skill/tool-skill)). The registry merges provider catalogs across its host and per-scope layers; providers contribute local or packaged skills; the Consumer owns the initial and replacement catalogs plus the model-facing `skill` tool. Skills are optional instructions, not session events, so their vocabulary lives here rather than in [core.md](core.md).
 
-Source: [`rsh/Modules/Official/skill/skill/src/index.ts`](../../Modules/Official/skill/skill/src/index.ts), [`rsh/Modules/Official/skill/skill/src/native.ts`](../../Modules/Official/skill/skill/src/native.ts), [`rsh/Modules/Official/skill/skill-filesystem/src/index.ts`](../../Modules/Official/skill/skill-filesystem/src/index.ts), [`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../../Modules/Official/skill/skill-badge/src/index.ts), and [`rsh/Modules/Official/skill/tool-skill/src/index.ts`](../../Modules/Official/skill/tool-skill/src/index.ts).
+Source: [`rsh/Modules/Official/skill/skill/src/index.ts`](../../Modules/Official/skill/skill/src/index.ts), [`rsh/Modules/Official/skill/skill-filesystem/src/index.ts`](../../Modules/Official/skill/skill-filesystem/src/index.ts), [`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../../Modules/Official/skill/skill-badge/src/index.ts), and [`rsh/Modules/Official/skill/tool-skill/src/index.ts`](../../Modules/Official/skill/tool-skill/src/index.ts).
 
 ## Provider registry
 
@@ -29,25 +29,22 @@ interface SkillProviderObservation {
 ```ts type-equiv
 /** Provider interface for one source of skills, such as local directories or a remote registry. */
 interface SkillProvider {
-  /** Unique provider name in the registry. */
+  /** Unique provider name in the `ctx.skills` registry. */
   readonly name: string
   /**
-   * Discover candidates on demand. Registration is synchronous; defer asynchronous initialization,
-   * authentication, and discovery until this method is awaited by the registry.
-   * Stop promptly when `options.signal` is aborted. Returning an array asserts that discovery is
-   * complete; return an observation with `complete: false` whenever a required source could not be
-   * fully read.
+   * List available skill candidates for the current lookup context. Provider
+   * plugins register synchronously during `apply()`; remote initialization,
+   * authentication, and discovery are awaited inside this method. Implementations
+   * should settle promptly when `options.signal` aborts.
    * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
-   * @returns candidates or an explicit completeness observation.
+   * @returns provider candidates as a complete-array shorthand, or an explicit
+   *   observation when usable candidates came from incomplete discovery.
    */
-  readonly list: (
-    options: SkillLookupOptions,
-  ) => Promise<
-    readonly SkillCandidate[] | SkillProviderObservation
-  >
-  /** Load the winning candidate's full definition on demand.
+  readonly list: (options: SkillLookupOptions) => Promise<readonly SkillCandidate[] | SkillProviderObservation>
+  /**
+   * Load a complete skill body for a previously listed candidate.
    * @param candidate - the winning candidate originally returned by this provider.
-   * @param options - lookup options.
+   * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
    * @returns the full skill body, or `undefined` if it is no longer loadable.
    */
   readonly get: (candidate: SkillCandidate, options: SkillLookupOptions) => Promise<SkillDefinition | undefined>
@@ -59,90 +56,8 @@ interface SkillProvider {
 interface SkillProviderControl {
   /** Aborts if registration fails or when the exact provider registration is disposed. */
   readonly signal: AbortSignal
-  /** Invalidates completed catalogs only while the exact registration remains active. */
+  /** Invalidate completed catalogs and notify consumers only while the exact registration remains active. */
   readonly invalidate: () => void
-}
-```
-
-## Native host service
-
-`dsh-skill` also provides a Native Host service under the `skills` key. Native providers and runtime contributions register against a `NativeScope`; reads select an Agent scope and include entries visible from its ancestry. `NativeSkillLookupOptions` adds that required scope to the shared cwd and cancellation options. Removing a provider aborts its registration signal and drains its outstanding calls.
-
-```ts type-equiv
-/** Lookup context for one dynamic Agent scope. */
-interface NativeSkillLookupOptions extends SkillLookupOptions {
-  /** Agent scope whose local and ancestor skills are visible. */
-  readonly scope: NativeScope
-}
-```
-
-```ts type-equiv
-/** Native skill catalog and provider registration service. */
-interface NativeSkills {
-  /**
-   * Register one provider in a Native scope.
-   * @param scope - registration scope within this Provider realm.
-   * @param create - provider factory receiving its exact lifecycle and invalidation control.
-   * @returns exact idempotent removal that aborts and drains this registration's provider work.
-   */
-  registerProvider(scope: NativeScope, create: (control: SkillProviderControl) => SkillProvider): () => Promise<void>
-  /**
-   * Register an in-memory skill in a Native scope.
-   * @param scope - registration scope within this Provider realm.
-   * @param skill - skill definition; omitted invocation and provider values receive the legacy defaults.
-   * @returns exact idempotent removal of this skill.
-   */
-  register(scope: NativeScope, skill: SkillRegistration): () => Promise<void>
-  /**
-   * List sorted invocation-neutral summaries from the selected scope ancestry.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the current winning summaries.
-   */
-  list(options: NativeSkillLookupOptions): Promise<SkillSummary[]>
-  /**
-   * Observe the winning catalog and whether every provider completed against a stable registry revision.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the current summaries and completeness state.
-   */
-  snapshot(options: NativeSkillLookupOptions): Promise<SkillCatalogSnapshot>
-  /**
-   * Load the winning definition for one skill name.
-   * @param name - kebab-case skill name.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the full definition, or `undefined` when no provider owns the name.
-   */
-  get(name: string, options: NativeSkillLookupOptions): Promise<SkillDefinition | undefined>
-  /** Close provider admission and drain outstanding list and get operations. @returns completion of registry disposal. */
-  dispose(): Promise<void>
-}
-```
-
-`dsh-tool-skill` supplies `skillInvocations` for manual Native Skill routing. The consumer accepts a lookup only when the caller supplies its exact selected `requestContexts` registry, the consumer installation scope contains the selected Agent scope, and the consumer's exact request-context registration remains the nearest visible winner before and after Skill resolution; an aborted lookup rejects.
-
-```ts type-equiv
-/** Lookup request from a Program that can route a manual invocation. */
-interface NativeSkillInvocationOptions {
-  /** Dynamic Agent scope whose winning Skill body is requested. */
-  readonly scope: NativeScope
-  /** Session working directory used by the Skill provider. */
-  readonly cwd?: string | undefined
-  /** Program and request cancellation. */
-  readonly signal: AbortSignal
-  /** Exact request-context registry captured by the selected Program. */
-  readonly requestContexts: NativeRequestContexts
-}
-```
-
-```ts type-equiv
-/** Native capability supplied by the installed manual Skill consumer. */
-interface NativeSkillInvocations {
-  /**
-   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
-   * @param name - exact Skill name from the slash command.
-   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
-   * @returns whether the live consumer and exact durable provider can consume this invocation.
-   */
-  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
 }
 ```
 
@@ -167,10 +82,10 @@ Chokidar watches existing roots for direct bundle/flat-entry additions and remov
 
 ## Skill identity
 
-Skill names are kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`). The source label is prompt-visible metadata, not precedence on its own. The local provider accepts directory bundles (`<name>/SKILL.md`) and flat Markdown files (`<name>.md`). Nested recursive `**/SKILL.md` discovery is not supported.
+Skill names are kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`). The local provider accepts directory bundles (`<name>/SKILL.md`) and flat Markdown files (`<name>.md`). Nested recursive `**/SKILL.md` discovery is not supported.
 
 ```ts type-equiv
-/** Origin bucket for a skill contribution. */
+/** Origin bucket for a skill contribution. The value is prompt-visible metadata, not precedence by itself. */
 type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
 ```
 
@@ -189,7 +104,7 @@ interface SkillInvocationPolicy {
 ```
 
 ```ts type-equiv
-/** Invocation-neutral skill metadata returned by a registry lookup. */
+/** Invocation-neutral skill metadata returned by `ctx.skills.list()`. */
 interface SkillSummary {
   /** Absolute instruction file path when supplied by the provider; absent for virtual skills. */
   readonly path?: string
@@ -227,7 +142,7 @@ interface SkillCatalogSnapshot {
 `SkillCandidate` is the provider-to-registry shape. `locator` is opaque provider state; the registry only stores it and gives it back to the winning provider's `get()`.
 
 ```ts type-equiv
-/** Provider catalog entry used by a registry to merge and later load skills. */
+/** Provider catalog entry used by the registry to merge and later load skills. */
 interface SkillCandidate extends SkillSummary {
   /** Lower ranks win duplicate skill names before provider registration order is considered. */
   readonly rank: number
@@ -249,7 +164,7 @@ type SkillResourceBase =
 ```
 
 ```ts type-equiv
-/** Complete parsed skill definition, including the body loaded from a candidate. */
+/** Complete parsed skill definition, including the body loaded by `ctx.skills.get()`. */
 interface SkillDefinition extends SkillSummary {
   /** Markdown instruction body after any provider-specific metadata removal. */
   readonly content: string
@@ -261,7 +176,7 @@ interface SkillDefinition extends SkillSummary {
 Runtime skill inputs may omit invocation controls and the provider label. The registry resolves both defaults once, then uses the same complete definition shape and first-wins collection order as providers. The returned disposer removes the contribution and invalidates discovery caches.
 
 ```ts type-equiv
-/** Runtime skill contribution accepted by a registry. */
+/** Runtime skill contribution accepted by `ctx.skills.register()`. */
 type SkillRegistration = Omit<SkillDefinition, 'invocation' | 'provider'> & {
   /** Invocation controls; omission permits both model and user surfaces. */
   readonly invocation?: SkillInvocationPolicy
@@ -316,23 +231,6 @@ interface Config {
 Before each later model step, the consumer applies exact tool visibility and digests the exact rendered entries between the `<available_skills>` tags from a complete snapshot. It derives the comparison baseline from the same entries in the newest recognizable visible catalog message sourced by the plugin. A changed digest appends a durable full replacement through `agent.inject()`; deleting every skill appends an explicit empty replacement. Incomplete snapshots preserve the last-good model view. If compaction hides every historical catalog message, the next complete snapshot re-establishes the current catalog; an empty view with no prior catalog emits nothing. These catalog messages are session history, not World State.
 
 The model-facing `skill({ name })` tool validates the kebab-case name, finds the summary in the invocation-neutral catalog, rejects it before loading unless `isModelInvocable` permits access, then rereads the complete definition for the calling agent cwd and rechecks the policy before returning content. It reports an unresolved skill as unknown or no longer available and returns a tool result containing `<skill_content name="...">`, `<skill_resources>`, and `<skill_instructions>`. `resourceBase` resolves explicitly referenced scripts, references, and assets only as needed; the loaded result does not enumerate a skill directory. Body-only edits therefore change later tool calls without producing catalog messages or rewriting earlier tool results.
-
-<a id="automatic-archify-invocation"></a>
-
-## Automatic Archify invocation
-
-The [`@deepseek-ai/dsh-archify` package](../../Modules/Official/skill/archify/README.md) exports this source from both its Cordis and Native entries. It identifies the message that carries Archify instructions selected from a direct-user diagram-delivery request.
-
-```ts type-equiv
-/** Durable source for one host-selected Archify instruction injection. */
-interface ArchifyAutoInvocationSource {
-  readonly kind: 'archify-auto-invocation'
-  /** The Skill body is injected as model instructions. */
-  readonly form: 'instructions'
-  /** The exact deterministic route that selected Archify. */
-  readonly reason: 'diagram-delivery-request'
-}
-```
 
 ## Browser Session catalog
 

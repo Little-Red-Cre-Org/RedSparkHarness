@@ -157,49 +157,6 @@ The [local provider](../../Modules/Official/sandbox/sandbox-local/README.md) own
 
 Provider selection, probing, caching, and backend-specific enforcement reports belong to the [local provider](../../Modules/Official/sandbox/sandbox-local/README.md).
 
-Native consumers use the `ProcessSandbox` service declared by the Host-only `./native` export. It is separate from `ctx.sandbox`; `confineChildProcess()` adds its launcher-owned `privateHome` as the only additional caller-supplied writable path, retains existing policy grants, and exposes the selected `cwd` read-only unless an existing grant includes it.
-
-```ts type-equiv
-/** Native service implemented by a process-confinement Provider. */
-interface ProcessSandbox {
-  /**
-   * Wrap exact argv under a per-call file policy or fail closed.
-   * @param argv - original program and arguments.
-   * @param policy - complete confined policy for this call.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confine(argv: readonly string[], policy: SandboxPolicy): ConfinedArgv
-  /**
-   * Confine a fixed child runtime while exposing its selected cwd and private home.
-   * The launcher-owned `privateHome` is an additional writable path. Existing
-   * policy grants, including backend-managed temporary paths, remain in force.
-   * The selected cwd is visible and read-only unless an existing policy grant
-   * contains it.
-   * @param argv - the exact child program and arguments.
-   * @param policy - the child's resolved file-effect policy.
-   * @param paths - canonical child cwd and launcher-owned private home.
-   * @returns enforcing runner argv and classification facts.
-   */
-  confineChildProcess(argv: readonly string[], policy: SandboxPolicy, paths: ProcessSandboxChildPaths): ConfinedArgv
-  /**
-   * Prepare and return the existing per-session writable temp root for a policy, when this backend owns one.
-   * @param policy - complete workspace-write policy for the owning session.
-   * @returns the runner temp root reused by {@link confine}, or `undefined` when this backend does not expose one.
-   */
-  prepareWritableTempRoot?(policy: SandboxPolicy): string | undefined
-}
-```
-
-```ts type-equiv
-/** Canonical paths required to start one confined SDK child. */
-interface ProcessSandboxChildPaths {
-  /** Existing canonical directory used as the child's process cwd. */
-  cwd: string
-  /** Existing canonical directory created and owned by the child launcher. */
-  privateHome: string
-}
-```
-
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

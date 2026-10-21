@@ -58,7 +58,6 @@
   "devDependencies": {
     "@deepseek-ai/dsh-sandbox-local": "workspace:^",
     "@deepseek-ai/dsh-subprocess-local": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
     "tsx": "^4.22.4"
   }
 }

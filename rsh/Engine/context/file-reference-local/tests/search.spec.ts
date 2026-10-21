@@ -97,6 +97,18 @@ describe('file-reference grammar', () => {
 })
 
 describe('WorkspaceFileSearch', () => {
+  it.each([
+    ['作业/实验报告.md', '实验报告', '@作业/实验报告.md'],
+    ['课程 资料/实验 报告.md', '课程 资料/实验', '@"课程 资料/实验 报告.md"'],
+  ])('discovers and quotes the exact workspace path %s', async (path, query, mention) => {
+    const root = await workspace()
+    await mkdir(join(root, path.slice(0, path.lastIndexOf('/'))), { recursive: true })
+    await writeFile(join(root, path), 'reference fixture')
+    const candidates = await search(root).list(query, new AbortController().signal)
+    expect(candidates).toEqual([{ path, kind: 'file' }])
+    expect(formatFileMention(candidates[0]!, false)).toBe(mention)
+  })
+
   it('lists live directory levels, descends, quotes spaces, and filters hidden/excluded entries', async () => {
     const root = await workspace()
     const files = search(root)

@@ -840,30 +840,6 @@ describe('direct-child Queue residency routing', () => {
     expect(loaded.events.filter(event => event.type === 'subagent/descriptor')).toHaveLength(1)
   })
 
-  it('rejects inherited Native authority before a shared Provider can cold-resume it', async () => {
-    const { ctx, parent } = await setup([textResponse('first')])
-    const started = await ctx.subagents.startContinuable(startSpec(parent))
-    await waitNoActivation(ctx, started.childId)
-    const query = ctx.sessionQuery
-    const observe = query.observeSession.bind(query)
-    const spy = vi.spyOn(query, 'observeSession').mockImplementation(async (id, options) => {
-      const observation = await observe(id, options)
-      if (id !== started.childId) return observation
-      const events = observation.events.map(event => event.type === 'subagent/descriptor'
-        ? { ...event, data: { ...event.data, delegationContext: {
-          depth: 1, maxDepth: 3, cwd: parent.session.header.cwd ?? process.cwd(), provider: 'mock', model: 'mock', maxSteps: 4,
-          toolNames: ['read'], builtinToolNames: ['read'], programToolNames: [],
-        } } } as SessionEvent
-        : event)
-      return Object.assign(Object.create(observation) as typeof observation, { events })
-    })
-
-    await expect(queuePrompt(ctx, parent, started.childId, message('resume inherited child')))
-      .rejects.toMatchObject({ code: 'NOT_RESUMABLE' })
-    expect(ctx.agents.get(started.childId)).toBeUndefined()
-    spy.mockRestore()
-  })
-
   it('cold-resumes after the initial provider unregisters', async () => {
     const { ctx, parent } = await setup([textResponse('first'), textResponse('after resume')])
     await ctx.plugin(InvariantRegistry)

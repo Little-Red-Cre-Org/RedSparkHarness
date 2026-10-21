@@ -139,6 +139,14 @@ const homeAndGuide = pairedPages([
     order: 3,
   },
   {
+    source: 'rsh/Docs/user/guide/file-references.md',
+    route: 'guide/file-references.md',
+    label: { root: '文件引用与费用', en: 'File references and costs' },
+    sidebar: { root: 'zh-guide', en: 'en-guide' },
+    section: { root: '入门', en: 'Guide' },
+    order: 4,
+  },
+  {
     source: 'rsh/Docs/user/guide/python-sdk.md',
     route: 'guide/python-sdk.md',
     label: { root: 'Python', en: 'Python' },
@@ -285,14 +293,6 @@ const cordisPrimerReference = pairedPages([
     sidebar: { root: 'zh-reference', en: 'en-reference' },
     section: { root: '概念', en: 'Concepts' },
     order: 1,
-  },
-  {
-    source: 'rsh/Docs/native-config-migration.md',
-    route: 'reference/native-config-migration.md',
-    label: { root: '原生配置迁移', en: 'Native configuration migration' },
-    sidebar: { root: 'zh-reference', en: 'en-reference' },
-    section: { root: '概念', en: 'Concepts' },
-    order: 6,
   },
 ])
 

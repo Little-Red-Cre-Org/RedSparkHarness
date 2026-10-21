@@ -29,8 +29,6 @@ interface PendingResponse {
   removeAbort?: () => void
 }
 
-const MAX_STDERR_CHARS = 64 * 1024
-
 function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
   if (typeof message !== 'object' || message === null || !('type' in message)) return false
   const candidate = message as Record<string, unknown>
@@ -38,11 +36,7 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'ready':
       return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
     case 'fatal':
-      return ['AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'UnknownError', 'ValidationError']
-        .includes(candidate.errorType as string)
-        && (candidate.path === undefined || Array.isArray(candidate.path)
-          && candidate.path.every((part: unknown) => typeof part === 'string' || typeof part === 'number'))
-        && (candidate.rule === undefined || typeof candidate.rule === 'string')
+      return typeof candidate.message === 'string'
     default:
       return false
   }
@@ -90,7 +84,6 @@ export class DesktopHostProcess {
   private exitPromise: Promise<void> | undefined
   private stderr = ''
   private failureReported = false
-  private stopping = false
 
   /**
    * @param node - absolute bundled upstream Node.js executable.
@@ -99,7 +92,6 @@ export class DesktopHostProcess {
    * @param inspectPort - optional loopback inspector port for workspace development.
    * @param environment - Child environment; runtime and package-manager overrides are removed.
    * @param onFailure - Receives the first fatal child or transport failure, including after readiness.
-   * @param logError - Persists stderr and child failure details.
    */
   constructor(
     private readonly node: string,
@@ -108,15 +100,11 @@ export class DesktopHostProcess {
     private readonly inspectPort?: number,
     private readonly environment: NodeJS.ProcessEnv = process.env,
     private readonly onFailure?: (error: Error) => void,
-    private readonly logError: (label: string, error: unknown) => void = (label, error) => { console.error(label, error) },
   ) {}
 
   /** Start the child once and resolve only after its complete composition is active. */
   async start(): Promise<DesktopHostReady> {
     if (this.child !== undefined) return this.readyPromise
-    // A Host instance starts at most once, so a teardown that ran before this call must not
-    // suppress the failures of the child this call is about to spawn.
-    this.stopping = false
     const entry = join(this.runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'index.js')
     const child = spawn(this.node, [
       ...(this.inspectPort === undefined ? [] : [`--inspect=127.0.0.1:${String(this.inspectPort)}`]),
@@ -141,12 +129,10 @@ export class DesktopHostProcess {
     this.requestPipe = requestPipe
     this.responsePipe = responsePipe
     child.stderr?.setEncoding('utf8')
-    child.stderr?.on('data', (chunk: string) => { this.stderr = (this.stderr + chunk).slice(-MAX_STDERR_CHARS) })
+    child.stderr?.on('data', (chunk: string) => { this.stderr += chunk })
     child.stdout?.pipe(process.stdout)
     responsePipe.on('data', (chunk: Buffer) => { this.acceptResponseBytes(chunk) })
     responsePipe.once('end', () => {
-      // `stop()` closes the pipes on purpose; EOF there is the expected teardown result.
-      if (this.stopping) return
       try {
         this.responseDecoder.finish()
         this.fail(new Error('dsh desktop host response pipe ended'))
@@ -154,8 +140,8 @@ export class DesktopHostProcess {
         this.fail(errorOf(error, 'dsh desktop host response pipe failed'))
       }
     })
-    requestPipe.once('error', (error) => { this.failUnlessStopping(error) })
-    responsePipe.once('error', (error) => { this.failUnlessStopping(error) })
+    requestPipe.once('error', (error) => { this.fail(error) })
+    responsePipe.once('error', (error) => { this.fail(error) })
     child.on('message', (message: unknown) => {
       if (!isDesktopHostEvent(message)) {
         this.fail(new Error('dsh desktop host sent an invalid IPC event'))
@@ -168,9 +154,8 @@ export class DesktopHostProcess {
     this.exitPromise = new Promise<void>((resolve) => {
       child.once('close', (code) => {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
-        if (suffix !== '') this.logError('Desktop Host stderr', this.stderr.trim())
         if (code !== 0 && code !== null) this.fail(new Error(`dsh desktop host exited with ${String(code)}${suffix}`))
-        else if (!this.stopping) this.fail(new Error(`dsh desktop host stopped${suffix}`))
+        else this.fail(new Error(`dsh desktop host stopped${suffix}`))
         resolve()
       })
     })
@@ -224,9 +209,6 @@ export class DesktopHostProcess {
   async stop(): Promise<void> {
     const child = this.child
     if (child === undefined) return
-    // Mark the teardown first: every pipe EOF, disconnect, and zero exit below is the
-    // outcome this call asked for, not a transport failure to report.
-    this.stopping = true
     this.blockedResponses.clear()
     this.responsePipe?.resume()
     if (child.connected) this.send({ type: 'shutdown' })
@@ -417,28 +399,11 @@ export class DesktopHostProcess {
         this.readyResolve(message)
         return
       case 'fatal':
-        const error = new Error()
-        error.name = message.errorType
-        if (message.path !== undefined) Object.assign(error, {
-          issues: [{ path: message.path, ...message.rule === undefined ? {} : { rule: message.rule } }],
-        })
-        this.fail(error)
+        this.fail(new Error(message.message))
         return
       default:
         message satisfies never
     }
-  }
-
-  /**
-   * Report a pipe failure except during an intentional teardown.
-   *
-   * `stop()` closes both pipes itself, so an error they emit once teardown started is the
-   * expected consequence of that close. A child that fails on its own is reported by the exit
-   * handler, which keeps a non-zero exit visible even while stopping.
-   * @param error - failure raised by a pipe stream.
-   */
-  private failUnlessStopping(error: Error): void {
-    if (!this.stopping) this.fail(error)
   }
 
   private fail(error: Error): void {
@@ -446,7 +411,7 @@ export class DesktopHostProcess {
     if (!this.failureReported) {
       this.failureReported = true
       try { this.onFailure?.(error) } catch (listenerError) {
-        this.logError('desktop host failure listener failed', listenerError)
+        console.error('desktop host failure listener failed', listenerError)
       }
     }
     for (const pending of this.pending.values()) {

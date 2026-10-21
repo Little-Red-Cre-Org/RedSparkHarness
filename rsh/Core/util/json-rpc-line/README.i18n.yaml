@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Core/util/json-rpc-line/README.md
-README.md: cebfa92dfbcb1d43e1f599cc567b65bfcc11b828
-README.zh.md: f64d49bd0354fe582b0ac592fd8f9e8b9ee5f870
+README.md: ffb7ea1c6fce7a23f0cac1a6358d27708a82bdbc
+README.zh.md: 925e8ef868b4c630108ead4a722f15d630da9ba9

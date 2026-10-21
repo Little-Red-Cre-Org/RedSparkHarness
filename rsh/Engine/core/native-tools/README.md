@@ -25,15 +25,7 @@ The `./native` entry accepts `mode: native | ptc | both` (default `both`). Nativ
 
 Value contributions declare an output schema; the registry captures it, validates detached JSON and renders the canonical result. Scoped restrictions and guards run before approval and again before executor entry. Removing a contribution closes admission, cancels captured calls and drains their actual work before its disposer resolves. Result policies must delegate exactly once; finalizers finish before the application records the result. Only `acceptResult()` notifies result observers after that record is accepted. Sourced additional contexts remain separate from canonical JSON.
 
-An operation owner may pass `sessionContext: { cwdKey, targetKey }` to ordinary `authorize` only when those identities describe its effective cwd and exact resolved execution target. The registry binds the frozen validated parameters; the application owns matching and persistence. Missing or incomplete context cannot advertise remembered approval. `requestApproval` always discards reusable context for one-call sandbox escalation, and delegated calls do not receive a reusable candidate.
-
-`captureModelSnapshot()` and `captureProgramSnapshot()` bind schemas and execution authority to exact registrations. `includesRegistration()` tests the captured disposer identity. Consumers use the snapshots that supplied the model schemas or PTC bindings for visibility and execution; a same-name replacement is not the captured registration. An empty program snapshot is an explicit empty binding set, while an absent program snapshot means that execution has no captured PTC route.
-
-An Engine external-operation invocation defers `acceptResult()` until its complete tool-result event is durable. After the broker also records the accepted settlement, `readAcceptedImages()` resolves image references from that exact result and its settlement contexts through the captured Native attachment service; it accepts no caller-supplied references and returns verified stored bytes.
-
-A contribution may declare a positive `timeoutMs` body budget; the registry only records it. `aroundExecution(policy, scope?)` installs a policy around every body, outside result processing. The policy receives the frozen tool declaration and must call `next(signal?)` exactly once. A replacement signal is combined with the caller's signal, and the policy's own result is the outcome. Earlier registrations surround later ones. `onSettlement(policy, scope?)` installs a synchronous policy that sees each recorded result with frozen copies of its parsed arguments and may return only user messages. Applications call `settlementContexts()` once for each result they record, and PTC dispatch does the same for nested calls. These two hooks back the native timeout and repeat-call guards.
-
-The pure `./types` and `./presentation` exports share durable PTC event payloads, generic call views and file diffs with Host and Client consumers. `./presentation` owns `GenericCallView`, `ToolCallKind` and `FileLocation`; compatibility Tools re-exports those declarations. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
+The pure `./types` and `./presentation` exports share durable PTC event payloads and file diffs with Host and Client consumers. The registry entry is Host-only. These declarations do not install a PTC executor or change Session event names or payload fields.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -53,7 +45,7 @@ The consuming application owns request-prefix changes from registered schemas.
 
 No invariant companion is published because there is no independent observation of the owning application's durable result acceptance.
 
-The framework-free `./presentation` export owns generic call views, search-card path and grouped-match result types, and file diffs. Compatibility Tools re-export these same types; native search results persist their bounded metadata with the authoritative Tool result.
+The framework-free `./presentation` export owns search-card path and grouped-match result types as well as file diffs. Compatibility Tools re-export these same types; native search results persist their bounded metadata with the authoritative Tool result.
 
 <a id="dev-note"></a>
 ### Dev Note

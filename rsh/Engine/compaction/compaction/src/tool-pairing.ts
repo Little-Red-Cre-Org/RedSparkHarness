@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-compaction/tool-pairing
  */
 
-import type { Session, SessionEvent, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { Session, SessionEvent, SessionSeq } from '@deepseek-ai/dsh-session'
 
 /** Incremental balance state for one session surface generation. */
 interface BalanceCache {

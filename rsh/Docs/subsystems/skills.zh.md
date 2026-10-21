@@ -2,9 +2,9 @@
 
 [English](skills.md) | 中文
 
-[skill（技能）能力族](../../Modules/Official/skill) 包含 Cordis Service Definition（[dsh-skill](../../Modules/Official/skill/skill)，`ctx.skills`）及其 Native Host 服务、本地 Service Provider（[dsh-skill-filesystem](../../Modules/Official/skill/skill-filesystem)）、可选的随包徽章提供方（[dsh-skill-badge](../../Modules/Official/skill/skill-badge)）和 Consumer（[dsh-tool-skill](../../Modules/Official/skill/tool-skill)）。注册表在其宿主层与各 scope 层之间合并各提供方的目录；提供方贡献本地或随包 skill；Consumer 拥有初始目录和替换目录，以及面向模型的 `skill` 工具。skill 是可选的指令而非会话事件，因此其词汇定义在此处而非 [core.md](core.zh.md)。
+[skill（技能）能力族](../../Modules/Official/skill) 包含 Service Definition（[dsh-skill](../../Modules/Official/skill/skill)，`ctx.skills`）、本地 Service Provider（[dsh-skill-filesystem](../../Modules/Official/skill/skill-filesystem)）、可选的随包徽章提供方（[dsh-skill-badge](../../Modules/Official/skill/skill-badge)）和 Consumer（[dsh-tool-skill](../../Modules/Official/skill/tool-skill)）。注册表在其宿主层与各 scope 层之间合并各提供方的目录；提供方贡献本地或随包 skill；Consumer 拥有初始目录和替换目录，以及面向模型的 `skill` 工具。skill 是可选的指令而非会话事件，因此其词汇定义在此处而非 [core.md](core.zh.md)。
 
-源码：[`rsh/Modules/Official/skill/skill/src/index.ts`](../../Modules/Official/skill/skill/src/index.ts)、[`rsh/Modules/Official/skill/skill/src/native.ts`](../../Modules/Official/skill/skill/src/native.ts)、[`rsh/Modules/Official/skill/skill-filesystem/src/index.ts`](../../Modules/Official/skill/skill-filesystem/src/index.ts)、[`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../../Modules/Official/skill/skill-badge/src/index.ts) 与 [`rsh/Modules/Official/skill/tool-skill/src/index.ts`](../../Modules/Official/skill/tool-skill/src/index.ts)。
+源码：[`rsh/Modules/Official/skill/skill/src/index.ts`](../../Modules/Official/skill/skill/src/index.ts)、[`rsh/Modules/Official/skill/skill-filesystem/src/index.ts`](../../Modules/Official/skill/skill-filesystem/src/index.ts)、[`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../../Modules/Official/skill/skill-badge/src/index.ts) 与 [`rsh/Modules/Official/skill/tool-skill/src/index.ts`](../../Modules/Official/skill/tool-skill/src/index.ts)。
 
 ## 提供方注册表
 
@@ -29,25 +29,22 @@ interface SkillProviderObservation {
 ```ts type-equiv
 /** Provider interface for one source of skills, such as local directories or a remote registry. */
 interface SkillProvider {
-  /** Unique provider name in the registry. */
+  /** Unique provider name in the `ctx.skills` registry. */
   readonly name: string
   /**
-   * Discover candidates on demand. Registration is synchronous; defer asynchronous initialization,
-   * authentication, and discovery until this method is awaited by the registry.
-   * Stop promptly when `options.signal` is aborted. Returning an array asserts that discovery is
-   * complete; return an observation with `complete: false` whenever a required source could not be
-   * fully read.
+   * List available skill candidates for the current lookup context. Provider
+   * plugins register synchronously during `apply()`; remote initialization,
+   * authentication, and discovery are awaited inside this method. Implementations
+   * should settle promptly when `options.signal` aborts.
    * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
-   * @returns candidates or an explicit completeness observation.
+   * @returns provider candidates as a complete-array shorthand, or an explicit
+   *   observation when usable candidates came from incomplete discovery.
    */
-  readonly list: (
-    options: SkillLookupOptions,
-  ) => Promise<
-    readonly SkillCandidate[] | SkillProviderObservation
-  >
-  /** Load the winning candidate's full definition on demand.
+  readonly list: (options: SkillLookupOptions) => Promise<readonly SkillCandidate[] | SkillProviderObservation>
+  /**
+   * Load a complete skill body for a previously listed candidate.
    * @param candidate - the winning candidate originally returned by this provider.
-   * @param options - lookup options.
+   * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
    * @returns the full skill body, or `undefined` if it is no longer loadable.
    */
   readonly get: (candidate: SkillCandidate, options: SkillLookupOptions) => Promise<SkillDefinition | undefined>
@@ -59,90 +56,8 @@ interface SkillProvider {
 interface SkillProviderControl {
   /** Aborts if registration fails or when the exact provider registration is disposed. */
   readonly signal: AbortSignal
-  /** Invalidates completed catalogs only while the exact registration remains active. */
+  /** Invalidate completed catalogs and notify consumers only while the exact registration remains active. */
   readonly invalidate: () => void
-}
-```
-
-## Native Host 服务
-
-`dsh-skill` 还会在 `skills` 键下提供 Native Host 服务。Native 提供方和运行时 skill 贡献按 `NativeScope` 注册；读取时选择一个 Agent scope，并包含其祖先中可见的条目。`NativeSkillLookupOptions` 在共享的 cwd 与取消选项上增加必需 scope。移除提供方会中止其注册信号，并等待该注册尚未完成的调用排空。
-
-```ts type-equiv
-/** Lookup context for one dynamic Agent scope. */
-interface NativeSkillLookupOptions extends SkillLookupOptions {
-  /** Agent scope whose local and ancestor skills are visible. */
-  readonly scope: NativeScope
-}
-```
-
-```ts type-equiv
-/** Native skill catalog and provider registration service. */
-interface NativeSkills {
-  /**
-   * Register one provider in a Native scope.
-   * @param scope - registration scope within this Provider realm.
-   * @param create - provider factory receiving its exact lifecycle and invalidation control.
-   * @returns exact idempotent removal that aborts and drains this registration's provider work.
-   */
-  registerProvider(scope: NativeScope, create: (control: SkillProviderControl) => SkillProvider): () => Promise<void>
-  /**
-   * Register an in-memory skill in a Native scope.
-   * @param scope - registration scope within this Provider realm.
-   * @param skill - skill definition; omitted invocation and provider values receive the legacy defaults.
-   * @returns exact idempotent removal of this skill.
-   */
-  register(scope: NativeScope, skill: SkillRegistration): () => Promise<void>
-  /**
-   * List sorted invocation-neutral summaries from the selected scope ancestry.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the current winning summaries.
-   */
-  list(options: NativeSkillLookupOptions): Promise<SkillSummary[]>
-  /**
-   * Observe the winning catalog and whether every provider completed against a stable registry revision.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the current summaries and completeness state.
-   */
-  snapshot(options: NativeSkillLookupOptions): Promise<SkillCatalogSnapshot>
-  /**
-   * Load the winning definition for one skill name.
-   * @param name - kebab-case skill name.
-   * @param options - dynamic scope, optional workspace root, and cancellation.
-   * @returns the full definition, or `undefined` when no provider owns the name.
-   */
-  get(name: string, options: NativeSkillLookupOptions): Promise<SkillDefinition | undefined>
-  /** Close provider admission and drain outstanding list and get operations. @returns completion of registry disposal. */
-  dispose(): Promise<void>
-}
-```
-
-`dsh-tool-skill` 提供 `skillInvocations`，供 Native 手动 Skill 路由使用。仅当调用方传入选定 Program 的精确 `requestContexts` 注册表、消费方安装 scope 包含所选 Agent scope，且消费方的精确 request-context 注册在 Skill 解析前后仍是最近的可见胜者时，能力才会接受该查询；请求取消时查询会拒绝。
-
-```ts type-equiv
-/** Lookup request from a Program that can route a manual invocation. */
-interface NativeSkillInvocationOptions {
-  /** Dynamic Agent scope whose winning Skill body is requested. */
-  readonly scope: NativeScope
-  /** Session working directory used by the Skill provider. */
-  readonly cwd?: string | undefined
-  /** Program and request cancellation. */
-  readonly signal: AbortSignal
-  /** Exact request-context registry captured by the selected Program. */
-  readonly requestContexts: NativeRequestContexts
-}
-```
-
-```ts type-equiv
-/** Native capability supplied by the installed manual Skill consumer. */
-interface NativeSkillInvocations {
-  /**
-   * Check whether the installed manual consumer can load and durably prepare this user-invocable Skill.
-   * @param name - exact Skill name from the slash command.
-   * @param options - selected Agent scope, Session cwd, cancellation, and Program request-context registry.
-   * @returns whether the live consumer and exact durable provider can consume this invocation.
-   */
-  canInvoke(name: string, options: NativeSkillInvocationOptions): Promise<boolean>
 }
 ```
 
@@ -167,10 +82,10 @@ Chokidar 会监视现有根目录中直属 bundle 和平铺条目的添加与移
 
 ## skill 身份
 
-skill 名称为 kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`）。来源标签是面向提示的元数据，本身不决定优先级。本地提供方接受目录包（`<name>/SKILL.md`）和扁平 Markdown 文件（`<name>.md`）。嵌套递归的 `**/SKILL.md` 发现不受支持。
+skill 名称为 kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`）。本地提供方接受目录包（`<name>/SKILL.md`）和扁平 Markdown 文件（`<name>.md`）。嵌套递归的 `**/SKILL.md` 发现不受支持。
 
 ```ts type-equiv
-/** Origin bucket for a skill contribution. */
+/** Origin bucket for a skill contribution. The value is prompt-visible metadata, not precedence by itself. */
 type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
 ```
 
@@ -189,7 +104,7 @@ interface SkillInvocationPolicy {
 ```
 
 ```ts type-equiv
-/** Invocation-neutral skill metadata returned by a registry lookup. */
+/** Invocation-neutral skill metadata returned by `ctx.skills.list()`. */
 interface SkillSummary {
   /** Absolute instruction file path when supplied by the provider; absent for virtual skills. */
   readonly path?: string
@@ -227,7 +142,7 @@ interface SkillCatalogSnapshot {
 `SkillCandidate` 是提供方到注册表的形状。`locator` 是提供方的不透明状态；注册表只存储它并在调用获胜提供方的 `get()` 时传回。
 
 ```ts type-equiv
-/** Provider catalog entry used by a registry to merge and later load skills. */
+/** Provider catalog entry used by the registry to merge and later load skills. */
 interface SkillCandidate extends SkillSummary {
   /** Lower ranks win duplicate skill names before provider registration order is considered. */
   readonly rank: number
@@ -249,7 +164,7 @@ type SkillResourceBase =
 ```
 
 ```ts type-equiv
-/** Complete parsed skill definition, including the body loaded from a candidate. */
+/** Complete parsed skill definition, including the body loaded by `ctx.skills.get()`. */
 interface SkillDefinition extends SkillSummary {
   /** Markdown instruction body after any provider-specific metadata removal. */
   readonly content: string
@@ -261,7 +176,7 @@ interface SkillDefinition extends SkillSummary {
 运行时 skill 输入可以省略调用控制和提供方标签。注册表会一次性补全这两项默认值，随后使用与提供方相同的完整定义形状和先到先得收集顺序。返回的 disposer 移除该贡献并使发现缓存失效。
 
 ```ts type-equiv
-/** Runtime skill contribution accepted by a registry. */
+/** Runtime skill contribution accepted by `ctx.skills.register()`. */
 type SkillRegistration = Omit<SkillDefinition, 'invocation' | 'provider'> & {
   /** Invocation controls; omission permits both model and user surfaces. */
   readonly invocation?: SkillInvocationPolicy
@@ -316,23 +231,6 @@ interface Config {
 在后续每个模型步骤之前，消费方都会应用精确的工具可见性，并对完整快照中 `<available_skills>` 标签之间精确渲染的条目计算 digest。它以该插件所发布、最新一条可识别且仍可见的目录消息中的相同条目作为比较基线。digest 发生变化时，会通过 `agent.inject()` 追加一条持久的完整目录替换；删除所有 skill 时会追加一条显式的空替换。不完整快照会保留上一份可用模型视图。如果压缩（compaction）隐藏了所有历史目录消息，下一份完整快照会重新建立当前目录；如果视图为空且从未发布目录，则不发送任何内容。这些目录消息属于会话历史，而非 World State。
 
 面向模型的 `skill({ name })` 工具校验 kebab-case 名称，在与调用策略无关的目录中查找摘要，并在加载前通过 `isModelInvocable` 拒绝无权访问的 skill；随后它根据调用方 agent 的 cwd 重新读取完整定义，并在返回内容前再次检查策略。该工具将无法解析的 skill 报告为未知或已不可用，并返回包含 `<skill_content name="...">`、`<skill_resources>` 和 `<skill_instructions>` 的工具结果。`resourceBase` 仅按需解析显式引用的脚本、参考资料和资产；加载结果不枚举 skill 目录。因此，仅修改正文会改变后续工具调用，而不会生成目录消息或改写先前工具结果。
-
-<a id="automatic-archify-invocation"></a>
-
-## Archify 自动调用
-
-[`@deepseek-ai/dsh-archify` 包](../../Modules/Official/skill/archify/README.zh.md)会从 Cordis 与 Native 两个入口导出此来源类型。它标识从直接用户图表交付需求中选出的 Archify 指令消息。
-
-```ts type-equiv
-/** Durable source for one host-selected Archify instruction injection. */
-interface ArchifyAutoInvocationSource {
-  readonly kind: 'archify-auto-invocation'
-  /** The Skill body is injected as model instructions. */
-  readonly form: 'instructions'
-  /** The exact deterministic route that selected Archify. */
-  readonly reason: 'diagram-delivery-request'
-}
-```
 
 ## 浏览器 Session 目录
 

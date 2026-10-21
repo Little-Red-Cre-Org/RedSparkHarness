@@ -40,8 +40,6 @@ An explicit configured path has the highest precedence, then `$DSH_HOME`, then t
 
 `dshCachePath(...segments)` derives paths from the resolved home's `cache` directory. With no segments it returns the cache directory itself. Pass an initial options object, `dshCachePath({ dshHome: home }, ...segments)`, to use an explicit configured home with the same precedence and tilde expansion. It returns an absolute path without creating directories.
 
-`resolveDshProfileExecution(name, home)` reads the selected profile's `package.json` and returns its declared runtime and reload mode. A missing manifest selects legacy execution; an existing manifest must declare `runtime: 'native'` with `config: 'rsh.profile.json'`, or declare `bundles: [...]` for legacy execution. `runtime: 'legacy'` cannot declare native config fields. The parser reads without writing and rejects an existing manifest that declares neither runtime nor bundles. The CLI and SDK share this parser so source launch decisions match CLI startup; see the [native configuration migration reference](../../../Docs/native-config-migration.md) for the full rules.
-
 ### Displaying a home
 
 For user-facing paths, render the root symbolically rather than as a machine path: the default home displays as `~/.dsh` and any configured home displays as `$DSH_HOME`. The display form never leaks an absolute machine path.
@@ -69,7 +67,6 @@ The package is built on one principle: all harness user data lives under one roo
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Home resolution, path joining, display, tilde expansion, and watch-path canonicalization |
-| [`src/profile-runtime.ts`](src/profile-runtime.ts) | Strict profile runtime marker parsing shared with CLI launchers |
 | — | No runtime invariant companion is published; this pure utility owns no event stream or mutable runtime data; its resolution rules and value algebra are enforced by unit tests. |
 
 ### Resolution rules

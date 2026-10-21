@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-12-shared-chat-presentation.md
-2026-10-12-shared-chat-presentation.md: f6469115f0cf98607b1b88d659fb82b29ef191c2
-2026-10-12-shared-chat-presentation.zh.md: efcf515a664afb981a50cd05eafbc2671ee79681

@@ -11,16 +11,6 @@
     "directory": "rsh/Modules/Official/feedback/command-feedback"
   },
   "type": "module",
-  "dsh": {
-    "native": {
-      "apiVersion": 1,
-      "entry": "./native",
-      "targets": ["host"],
-      "requires": ["activeSessions"],
-      "optional": ["commands"],
-      "provides": ["sessionFeedback"]
-    }
-  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -40,21 +30,11 @@
       "types": "./lib/typert.remote-client.d.ts",
       "default": "./lib/typert.remote-client.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
-    "./native-definition": {
-      "types": "./lib/types/native-definition.d.ts",
-      "default": "./lib/types/native-definition.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
-    "lib/native.js",
-    "lib/shared-*.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
     "lib/typert.host.js",
@@ -68,20 +48,11 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-typert-protocol": { "optional": true },
-    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
-  "scripts": { "bundle": "tsdown" },
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-include": "workspace:^",
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
@@ -92,9 +63,6 @@
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^"
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
   }
 }

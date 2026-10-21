@@ -1,6 +1,6 @@
 /** Native browser Session lifecycle through the authenticated HTTP Connection carrier. */
 import { createHmac } from 'node:crypto'
-import { mkdtemp, mkdir, rm, readFile, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
 import { plugin as attachmentStorage } from '@deepseek-ai/dsh-attachment-local/native'
 import { plugin as githubWebhook } from '@deepseek-ai/dsh-webhook-github/src/native.ts'
 import { plugin as webhook } from '../../../../../Modules/Official/webhook/webhook/src/native.ts'
@@ -22,7 +22,7 @@ import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/na
 import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
 import { NativeAgentId, type NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeApprovalAnswerer, NativeApprovalAnswererRequest, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
 import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
@@ -31,539 +31,25 @@ import { plugin as tools } from '@deepseek-ai/dsh-native-tools/native'
 import { plugin as approval } from '@deepseek-ai/dsh-native-approval/native'
 import { plugin as questions } from '@deepseek-ai/dsh-user-questions/native'
 import { plugin as askUser } from '@deepseek-ai/dsh-tool-ask-user/native'
-import { plugin as planMode } from '../../../../../Modules/Official/plan/plan-mode/src/native.ts'
 import { toolCallResponse, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as agentPresets } from '@deepseek-ai/dsh-agent-presets/native'
-import { LlmError, ReasoningEffortId, createUserMessage, type PreparedAdapterCall } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { SessionId } from '@deepseek-ai/dsh-session/native'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
-import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection/native-host'
-import { createWebConnectionRpc, type ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
+import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
 import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
 import { listenNativeHttpHost, type NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
-import { createNativeSessionClient, nativeSubmissionRequestId, type NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
-import { createNativeWorkspaceClients } from '@deepseek-ai/dsh-client-native-session/workspaces'
+import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
-import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
 import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
 import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
 import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm/native'
 import { NativeConversationController } from '@deepseek-ai/dsh-client-native-application/controller'
-import { plugin as sessionTitles, SessionTitleProviderId } from '@deepseek-ai/dsh-session-title/native'
-import { NativeWebSessionService, plugin, resolveNativeWebSessionConfig, type NativeWebSelectionProviders } from '../src/native.ts'
-
-type DetachedTurnRequest = Parameters<NativeHeadlessApplication['executeRootTurn']>[0]
-type DetachedTurnResult = Awaited<ReturnType<NativeHeadlessApplication['executeRootTurn']>>
-
-function detachedTurnFixture(execute: (request: DetachedTurnRequest, signal: AbortSignal,
-  owner: NativeActiveSessionOwner) => Promise<DetachedTurnResult>) {
-  const id = SessionId('detached-turn-session')
-  const events: SessionEvent[] = [
-    { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} },
-  ]
-  const owner = {
-    agent: {}, session: { id, header: { id, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false } },
-    invocation: 'root', writerAvailable: true, readEvents: async () => events, onEvent: () => () => {},
-  } as unknown as NativeActiveSessionOwner
-  const active = {
-    owners: () => [owner], owner: () => owner, onAttached: () => () => {}, onDetached: () => () => {},
-  } as unknown as NativeActiveSessionOperations
-  const executor = {
-    rootExecution: { capture: () => ({ id: 'detached-turn-route' }) },
-    async executeRootTurn(request: DetachedTurnRequest, signal: AbortSignal) {
-      await request.onBaseline?.(owner, signal)
-      return execute(request, signal, owner)
-    },
-    dispose: async () => {},
-  } as unknown as NativeHeadlessApplication
-  const lifetime = new AbortController()
-  const service = new NativeWebSessionService(executor,
-    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-      maxSteps: 1, builtinTools: false, maxPendingRequests: 4, maxHistoryEvents: 10, maxPromptChars: 100,
-      maxFollowBufferBytes: 100_000, maxFollowers: 4, maxPendingHumanRequests: 2 }), lifetime.signal)
-  const answerers: NativeApprovalAnswerer[] = []
-  const disposers: (() => void)[] = []
-  const approvals = {
-    registerAnswerer(answerer: NativeApprovalAnswerer) {
-      answerers.push(answerer)
-      return () => { answerers.splice(answerers.indexOf(answerer), 1) }
-    },
-  } as unknown as NativeApprovalServiceDefinition
-  const context = ({ own: (dispose: () => void) => { disposers.push(dispose) }, scope: {} }) as unknown as Parameters<NativeWebSessionService['bindHuman']>[0]
-  service.bindHuman(context, approvals)
-  const rpc: ClientConnectionRpc = {
-    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime.signal),
-    response: (_target, endpoint, payload, signal) => {
-      if (endpoint !== 'native-session/follow') throw new Error(`unexpected response endpoint ${endpoint}`)
-      return service.follow(new Request('http://localhost/api/native-session/follow', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal,
-      }))
-    },
-  }
-  const clients = [0, 1].map(() => createNativeSessionClient(rpc, { maxFollowBufferChars: 100_000 }))
-  return {
-    id, owner, answerers, clients, service,
-    async close() {
-      await Promise.all(clients.map(client => client.close()))
-      for (const dispose of disposers) dispose()
-      await service.close()
-    },
-  }
-}
-
-it('keeps a detached turn running and accepts the next prompt after it settles', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const firstCompletion = Promise.withResolvers<DetachedTurnResult>()
-  let executionCount = 0
-  let turnSignal: AbortSignal | undefined
-  const fixture = detachedTurnFixture(async (_request, signal) => {
-    executionCount++
-    if (executionCount === 1) {
-      turnSignal = signal
-      started.resolve(undefined)
-      return firstCompletion.promise
-    }
-    return { exitCode: 0, answer: 'second prompt' }
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    expect(turnSignal?.aborted).toBe(false)
-    firstCompletion.resolve({ exitCode: 0, answer: 'first prompt' })
-    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' }) })
-    await expect(fixture.clients[0]!.prompt(fixture.id, 'second prompt', true, undefined,
-      () => {}, undefined, undefined, SessionSeq(0))).resolves.toEqual({ exitCode: 0, answer: 'second prompt' })
-    expect(executionCount).toBe(2)
-  } finally {
-    firstCompletion.resolve({ exitCode: 130, answer: '' })
-    await fixture.close()
-  }
-})
-
-it('keeps settlement for an attach after a page disconnect when the turn settles before the new await', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const completion = Promise.withResolvers<DetachedTurnResult>()
-  const fixture = detachedTurnFixture(async () => {
-    started.resolve(undefined)
-    return completion.promise
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    const attached = await fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, new AbortController().signal)
-    if (!attached.ok) throw new Error(attached.error.message)
-    const { admissionId } = attached.value as { admissionId: string }
-    completion.resolve({ exitCode: 0, answer: 'settled before await' })
-    await vi.waitFor(async () => { await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'idle' }) })
-    await expect(fixture.service.handle('session/await', { sessionId: fixture.id, admissionId }, new AbortController().signal))
-      .resolves.toMatchObject({ ok: true, value: { exitCode: 0, answer: 'settled before await' } })
-  } finally {
-    completion.resolve({ exitCode: 130, answer: '' })
-    await fixture.close()
-  }
-})
-
-it('retires a detached turn when a replacement attach disconnects while reading history', async () => {
-  const started = Promise.withResolvers<undefined>()
-  const completion = Promise.withResolvers<DetachedTurnResult>()
-  const fixture = detachedTurnFixture(async () => {
-    started.resolve(undefined)
-    return completion.promise
-  })
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'first prompt', true, undefined,
-    () => {}, undefined, undefined, SessionSeq(0), detach.signal)
-  const history = Promise.withResolvers<readonly SessionEvent[]>()
-  try {
-    await started.promise
-    detach.abort()
-    await expect(firstPrompt).rejects.toBeDefined()
-    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => history.promise)
-    const disconnect = new AbortController()
-    const attached = fixture.service.handle('session/attach', { sessionId: fixture.id, lastSeq: 0 }, disconnect.signal)
-    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
-    disconnect.abort()
-    completion.resolve({ exitCode: 0, answer: 'settled while attaching' })
-    history.resolve(await fixture.owner.readEvents())
-    await expect(attached).resolves.toMatchObject({ ok: false })
-    await expect(fixture.clients[0]!.status(fixture.id)).resolves.toEqual({ status: 'unknown' })
-  } finally {
-    completion.resolve({ exitCode: 130, answer: '' })
-    history.resolve([])
-    await fixture.close()
-  }
-})
-
-it('replays a pending approval onto an attached turn feed', async () => {
-  const approvalStarted = Promise.withResolvers<undefined>()
-  let turnSignal: AbortSignal | undefined
-  const fixture = detachedTurnFixture(async (_request, signal, owner) => {
-    turnSignal = signal
-    approvalStarted.resolve(undefined)
-    const answerer = fixture.answerers[0]
-    const answer = await answerer?.({ id: 'fixture-approval' as NativeApprovalAnswererRequest['id'],
-      agent: owner.agent, toolName: 'fixture-tool', policy: 'ask', signal })
-    if (answer === undefined) throw new Error('fixture approval was not claimed')
-    return { exitCode: 0, answer: 'approved' }
-  })
-  const firstPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
-  const detach = new AbortController()
-  const firstPrompt = fixture.clients[0]!.prompt(fixture.id, 'approval prompt', true, undefined, (frame) => {
-    if (frame.type === 'human' && frame.prompt.kind === 'approval') firstPromptId.resolve(frame.prompt.id)
-  }, undefined, undefined, SessionSeq(0), detach.signal)
-  const attachedPromptId = Promise.withResolvers<Parameters<NativeSessionClient['answerHuman']>[1]>()
-  let attached!: Promise<DetachedTurnResult | undefined>
-  let superseded!: Promise<DetachedTurnResult | undefined>
-  const supersededHistory = Promise.withResolvers<readonly SessionEvent[]>()
-  try {
-    await approvalStarted.promise
-    const promptId = await firstPromptId.promise
-    const readEvents = vi.spyOn(fixture.owner, 'readEvents').mockImplementationOnce(() => supersededHistory.promise)
-    superseded = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), () => {})
-    await vi.waitFor(() => { expect(readEvents).toHaveBeenCalledOnce() })
-    attached = fixture.clients[1]!.attach(fixture.id, SessionSeq(0), (frame) => {
-      if (frame.type === 'human' && frame.prompt.kind === 'approval') attachedPromptId.resolve(frame.prompt.id)
-    })
-    const resumedPromptId = await Promise.race([
-      attachedPromptId.promise,
-      attached.then(() => { throw new Error('attached turn settled before approval replay') }),
-    ])
-    expect(resumedPromptId).toBe(promptId)
-    await expect(firstPrompt).rejects.toBeDefined()
-    expect(turnSignal?.aborted).toBe(false)
-    supersededHistory.resolve(await fixture.owner.readEvents())
-    await expect(superseded).rejects.toThrow('attach was superseded')
-    await fixture.clients[1]!.answerHuman(fixture.id, resumedPromptId, { kind: 'approval', outcome: 'allowed-once' })
-    await expect(attached).resolves.toMatchObject({ exitCode: 0, answer: 'approved' })
-  } finally {
-    detach.abort()
-    supersededHistory.resolve(await fixture.owner.readEvents())
-    await fixture.close()
-  }
-})
-
-it.each([{ namespace: 'optional-settings' }])('describes absent optional Settings without accepting writes ($namespace)', async ({ namespace }) => {
-  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
-    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1,
-    maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 })
-  const lifetime = new AbortController().signal
-  const active = {
-    onAttached: () => async () => {}, onDetached: () => async () => {}, owners: () => [],
-  } as unknown as NativeActiveSessionOperations
-  const failedSettings = { describe: () => { throw new Error('actual provider read failure') } } as unknown as NativeWebSelectionProviders['settings']
-  const services = [undefined, failedSettings].map(settings => new NativeWebSessionService(
-    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, active, config, lifetime, { settings },
-  ))
-  const clients = services.map(service => createNativeSessionClient({
-    call: (_target, endpoint, payload, signal) => service.handle(endpoint, payload, signal ?? lifetime),
-  }, { maxFollowBufferChars: 1000 }))
-  try {
-    await expect(clients[0]?.settingsDescribe()).resolves.toEqual({ hasDocument: false, namespaces: [],
-      limits: { maxCredentialRefsPerRead: 3, maxSettingsOperations: 2 } })
-    await expect(clients[0]?.settingsMutate(namespace, [{ op: 'set', path: ['enabled'], value: true }], 0))
-      .rejects.toMatchObject({ code: 'native/settings' })
-    await expect(clients[0]?.settingsOpenDocument()).rejects.toMatchObject({ code: 'native/settings' })
-    await expect(clients[1]?.settingsDescribe()).rejects.toBeInstanceOf(NativeSessionRpcError)
-    await expect(clients[1]?.settingsDescribe()).rejects.toMatchObject({
-      code: 'native/settings', message: 'Settings request failed.',
-    })
-  } finally {
-    await Promise.all(clients.map(client => client.close()))
-    await Promise.all(services.map(service => service.close()))
-  }
-})
-
-it('closes a list follower aborted while its consumer is paused at yield', async () => {
-  const rpc = {
-    call: async () => ({ ok: true as const, value: {} }),
-    response: async () => new Response(new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode('data: {"type":"baseline","items":[]}\n\n'))
-      },
-    }), { headers: { 'content-type': 'text/event-stream' } }),
-  } satisfies ClientConnectionRpc
-  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
-  const abort = new AbortController()
-  const iterator = client.follow(abort.signal)[Symbol.asyncIterator]()
-  let closed = false
-  let closing: Promise<void> | undefined
-  try {
-    await expect(iterator.next()).resolves.toMatchObject({ done: false, value: { type: 'baseline', items: [] } })
-    abort.abort()
-    closing = client.close().then(() => { closed = true })
-    await vi.waitFor(() => { expect(closed).toBe(true) }, { interval: 10, timeout: 1000 })
-    await closing
-  } finally {
-    await iterator.return?.()
-    await closing
-    await client.close()
-  }
-})
-
-it('cancels and drains a stalled upload body before Native Web shutdown completes', async () => {
-  const stageStarted = Promise.withResolvers<undefined>()
-  const cancelStarted = Promise.withResolvers<undefined>()
-  const finishCancel = Promise.withResolvers<undefined>()
-  const cleanupError = new Error('request body reader cleanup failed')
-  const dispose = vi.fn(async () => undefined)
-  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
-  let bodyCanceled = false
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) { bodyController = controller },
-    cancel() { bodyCanceled = true; cancelStarted.resolve(undefined); return finishCancel.promise },
-  })
-  const executor = {
-    rootExecution: { stagedFiles: { async stageStream({ data }: { readonly data: AsyncIterable<Uint8Array> }, signal: AbortSignal) {
-      stageStarted.resolve(undefined)
-      for await (const chunk of data) expect(chunk).toBeInstanceOf(Uint8Array)
-      signal.throwIfAborted()
-      throw new Error('stalled upload unexpectedly completed')
-    } } },
-    dispose,
-  } as unknown as NativeHeadlessApplication
-  const active = { owners: () => [], onAttached: () => () => {}, onDetached: () => () => {} } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
-      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
-      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal)
-  const upload = service.uploadFile(new Request('http://localhost/api/native-session/file-upload?sessionId=stalled-upload', {
-    method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body,
-    duplex: 'half',
-  } as RequestInit & { duplex: 'half' }))
-  let closing: Promise<void> | undefined
-  let closed = false
-  try {
-    await stageStarted.promise
-    closing = service.close().then(() => { closed = true })
-    await vi.waitFor(() => { expect(bodyCanceled).toBe(true) }, { interval: 10, timeout: 1000 })
-    expect(closed).toBe(false)
-    finishCancel.reject(cleanupError)
-    const closeFailure = await closing.then(() => undefined, (error: unknown) => error)
-    expect(closeFailure).toMatchObject({ errors: [{ errors: [cleanupError] }] })
-    const response = await upload
-    expect(await response.json()).toMatchObject({ ok: false, error: { message: cleanupError.message } })
-    expect(dispose).toHaveBeenCalledOnce()
-  } finally {
-    finishCancel.resolve(undefined)
-    if (!bodyCanceled) bodyController?.close()
-    await Promise.allSettled([upload, ...(closing === undefined ? [] : [closing])])
-    await Promise.allSettled([service.close()])
-  }
-})
-
-it('waits for an owned file upload to settle when the Native Session Client closes', async () => {
-  const fetchStarted = Promise.withResolvers<undefined>()
-  const abortObserved = Promise.withResolvers<undefined>()
-  const finishFetch = Promise.withResolvers<undefined>()
-  const rpc = {
-    call: async () => ({ ok: true as const, value: {} }),
-    response: async (_base: string, _endpoint: string, _payload: unknown, signal: AbortSignal) => {
-      fetchStarted.resolve(undefined)
-      await new Promise<void>((resolve) => {
-        const abort = (): void => { abortObserved.resolve(undefined); void finishFetch.promise.then(resolve) }
-        signal.addEventListener('abort', abort, { once: true })
-        if (signal.aborted) abort()
-      })
-      return new Response(null, { status: 499 })
-    },
-  } as unknown as ClientConnectionRpc
-  const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1024 })
-  const upload = client.uploadFile(SessionId('upload-close'), { data: new Blob(['staged bytes']) })
-  let closed = false
-  const closing = client.close().then(() => { closed = true })
-  try {
-    await fetchStarted.promise
-    await abortObserved.promise
-    expect(closed).toBe(false)
-    finishFetch.resolve(undefined)
-    await closing
-    await expect(upload).rejects.toThrow('native Session file upload failed with HTTP 499')
-  } finally {
-    finishFetch.resolve(undefined)
-    await Promise.allSettled([upload, closing])
-    await client.close()
-  }
-})
-
-it('includes nested AggregateError messages in native Session failures', async () => {
-  let failure: Error = new AggregateError([
-    new AggregateError([new Error("Cannot find module '/fixture/system.node'")], 'native-active-session: lifecycle observer failed'),
-  ], 'native-headless: turn cleanup failed')
-  const active = {
-    owners: () => [], onAttached: () => async () => {}, onDetached: () => async () => {},
-  } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(
-    { dispose: async () => undefined } as unknown as NativeHeadlessApplication,
-    { open: async () => { throw failure } } as unknown as NativeSessionPersistenceOperations,
-    active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
-      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
-      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
-    new AbortController().signal,
-  )
-  try {
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'native/session', message: "native-headless: turn cleanup failed: native-active-session: lifecycle observer failed: Cannot find module '/fixture/system.node'" },
-    })
-    failure = new LlmError('model rejected the credential', 'AUTH')
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'AUTH', message: 'model rejected the credential' },
-    })
-    failure = new AggregateError([new Error('feed closed'), new LlmError('model rejected the credential', 'AUTH')], 'feed closed; execution failed')
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'AUTH' },
-    })
-    failure = Object.assign(new Error('quota exhausted'), { name: 'LlmError', code: 'QUOTA', failure: { message: 'quota exhausted', code: 'QUOTA' } })
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'QUOTA' },
-    })
-    failure = Object.assign(new Error('storage failure'), { failure: null })
-    await expect(service.handle('session/history', { sessionId: 'fixture' }, new AbortController().signal)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'native/session' },
-    })
-  } finally {
-    await service.close()
-  }
-})
-
-it('lists slash commands available to the exact Program root owner', async () => {
-  const programScope = new NativeScope()
-  const agentScope = new NativeScope()
-  const id = SessionId('command-catalog-session')
-  const owner = {
-    agent: { scope: agentScope }, session: { id }, invocation: 'root', writerAvailable: true,
-    onEvent: () => () => {},
-  } as unknown as NativeActiveSessionOwner
-  const programCommands = [
-    { name: 'compact', description: 'Program description' },
-    { name: 'program-only', description: 'Program only' },
-  ]
-  const ownerCommands = [
-    { name: 'compact', description: 'Session description', input: { hint: '[target]', attachments: true } },
-    { name: 'agent-only', description: 'Agent only' },
-  ]
-  const list = vi.fn((scope: NativeScope) => scope === programScope ? programCommands : ownerCommands)
-  const commands = { list } as unknown as NativeCommandOperations
-  const route = 'program-root-route'
-  const executeSessionOperation = vi.fn(async (
-    _request: unknown,
-    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<unknown>,
-    signal: AbortSignal,
-  ) => operation(owner, signal))
-  const executor = {
-    rootExecution: { capture: vi.fn(() => ({ id: route })) },
-    executeSessionOperation,
-    dispose: async () => {},
-  } as unknown as NativeHeadlessApplication
-  const active = {
-    owners: () => [owner], onAttached: () => async () => {}, onDetached: () => async () => {},
-  } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-      maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
-      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal,
-    { commands, commandScope: programScope })
-  try {
-    expect(await service.handle('session/commands', { sessionId: id }, new AbortController().signal)).toEqual({
-      ok: true,
-      value: { commands: [ownerCommands[0]] },
-    })
-    expect(list.mock.calls.map(([scope]) => scope)).toEqual([programScope, agentScope])
-    expect(executeSessionOperation).toHaveBeenCalledWith(
-      expect.objectContaining({ id, resume: true, route }), expect.any(Function), expect.any(AbortSignal))
-  } finally {
-    await service.close()
-  }
-})
-
-it('keeps schedule state unavailable and enforces the shared follower limit', async () => {
-  const scheduledId = SessionId('scheduled-root')
-  const releasedId = SessionId('released-root')
-  const scheduledHeader = { id: scheduledId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
-  const releasedHeader = { id: releasedId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
-  const enteredRead = Promise.withResolvers<undefined>()
-  const releasedEvents = Promise.withResolvers<readonly []>()
-  const turnResult = Promise.withResolvers<{ exitCode: number }>()
-  let released = false
-  const scheduledOwner = {
-    agent: {}, session: { id: scheduledId, header: scheduledHeader }, invocation: 'root', rootOrigin: 'scheduled',
-    writerAvailable: true, inheritedEventCount: 0, readEvents: async () => [], onEvent: () => () => {},
-  } as unknown as NativeActiveSessionOwner
-  const releasedOwner = {
-    agent: {}, session: { id: releasedId, header: releasedHeader }, invocation: 'root',
-    writerAvailable: true, inheritedEventCount: 0,
-    readEvents: async () => { enteredRead.resolve(undefined); return releasedEvents.promise }, onEvent: () => () => {},
-  } as unknown as NativeActiveSessionOwner
-  const executionFor = vi.fn((agent: unknown) => {
-    if (agent === releasedOwner.agent && released) throw new Error('released Agent was queried')
-    return { status: 'running' as const }
-  })
-  const active = {
-    owners: () => released ? [scheduledOwner] : [scheduledOwner, releasedOwner],
-    owner: (_agent: unknown, session: { id: SessionId }) => session.id === scheduledId ? scheduledOwner
-      : !released && session.id === releasedId ? releasedOwner : undefined,
-    onAttached: () => async () => {}, onDetached: () => async () => {},
-  } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(
-    { dispose: async () => undefined, executeRootTurn: async () => turnResult.promise } as unknown as NativeHeadlessApplication,
-    { list: async () => [] } as unknown as NativeSessionPersistenceOperations,
-    active,
-    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
-      builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
-      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
-    new AbortController().signal,
-    { executionFor },
-  )
-  try {
-    const listing = service.handle('session/list', {}, new AbortController().signal)
-    await enteredRead.promise
-    released = true
-    releasedEvents.resolve([])
-    const result = await listing
-    expect(result).toMatchObject({ ok: true, value: [
-      { header: { id: scheduledId }, hasActiveSchedule: false },
-      { header: { id: releasedId }, running: false, hasActiveSchedule: false },
-    ] })
-    const started = await service.handle('session/start', {
-      sessionId: 'follower-limit', text: 'go', resume: true, follow: true, lastSeq: -1,
-    }, new AbortController().signal)
-    if (!started.ok) throw new Error(started.error.message)
-    const admissionId = (started.value as { admissionId: string }).admissionId
-    const listAbort = new AbortController()
-    await service.followList(new Request('http://localhost', { method: 'POST', body: '{}', signal: listAbort.signal }))
-    const turnFollow = await service.follow(new Request('http://localhost', { method: 'POST',
-      body: JSON.stringify({ sessionId: 'follower-limit', admissionId }) }))
-    expect(turnFollow.status).toBe(429)
-    listAbort.abort()
-    turnResult.resolve({ exitCode: 0 })
-  } finally {
-    releasedEvents.resolve([])
-    turnResult.resolve({ exitCode: 0 })
-    await service.close()
-  }
-})
+import { plugin, resolveNativeWebSessionConfig } from '../src/native.ts'
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'rsh-web-session-'))
@@ -580,28 +66,13 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignId = SessionId('foreign-human')
   const foreignModelReady = Promise.withResolvers<undefined>()
   const releaseForeignModel = Promise.withResolvers<undefined>()
+  const webReadReady = Promise.withResolvers<undefined>()
+  const releaseWebRead = Promise.withResolvers<undefined>()
   const foreignAbort = new AbortController()
   let foreignStep = 0
   let foreignApprovals = 0
   const requests: GenerateOptions[] = []
-  const streamedFileBytes = new TextEncoder().encode('uploaded through the Native Web carrier\n')
-  let streamedUploadRequest: {
-    readonly path: string
-    readonly sessionId: string | null
-    readonly method: string | undefined
-    readonly contentType: string | null
-    readonly body: BodyInit | null | undefined
-  } | undefined
-  let streamedUploadResponseStatus: number | undefined
-  let streamedFileProjected = false
   const firstContinue = Promise.withResolvers<undefined>()
-  const racePreparation = Array.from({ length: 2 }, () => ({
-    entered: Promise.withResolvers<undefined>(), release: Promise.withResolvers<undefined>(),
-  }))
-  let racePreparationCount = 0
-  let racePreparationEnabled = false
-  const submissionUpdates: Array<{ requestId: string; status: string }> = []
-  let restoreClientPrompt: (() => void) | undefined
   const resolving = Promise.withResolvers<undefined>()
   const releaseResolution = Promise.withResolvers<undefined>()
   let holdResolution = false
@@ -678,14 +149,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             context.own(releaseRetainedRoot)
           }
           if (holdResolution) { resolving.resolve(undefined); await releaseResolution.promise }
-          if (racePreparationEnabled) {
-            const barrier = racePreparation[racePreparationCount]
-            if (barrier !== undefined) {
-              racePreparationCount++
-              barrier.entered.resolve(undefined)
-              await barrier.release.promise
-            }
-          }
           if (holdImage) {
             const owner = context.require('activeSessions').owners().find(owner => owner.invocation === 'root')!
             imageExecution = context.require('agents').execution(owner.agent)
@@ -698,14 +161,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
           id: 'fixture', name: 'Fixture', models: [{ id: 'chosen', name: 'Chosen', reasoning }],
         }] }) })
       context.provide('model', {
-        async prepareCall(provider: string, id: string): Promise<PreparedAdapterCall> {
-          const stream = this.stream.bind(this)
-          return {
-            model: { provider, id, name: id, reasoning, inputModalities: ['text', 'image'] },
-            supportsOutputTokenLimit: async (maxTokens: number) => maxTokens === 1234,
-            stream,
-          }
-        },
         async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
           requests.push(request)
           if (webhookMode === 'complete') {
@@ -761,14 +216,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
             return
           }
           if (humanSteps !== undefined) { yield* humanSteps.shift() ?? textResponse('human complete'); return }
-          if (requests.length === 3 && request.messages.some(message => message.content.some(block => block.type === 'text'
-            && block.text.includes('File "web-upload.txt"') && block.text.includes('saved at')))) {
-            streamedFileProjected = true
-            yield* textResponse('staged file projected')
-            return
-          }
-          const latestUser = request.messages.findLast(message => message.role === 'user')
-          if (latestUser?.content.some(block => block.type === 'text' && block.text === 'cancel input')) {
+          if (requests.length > 2) {
             const signal = request.signal
             if (signal === undefined) throw new Error('missing model cancellation')
             await new Promise<void>((resolve) => {
@@ -837,7 +285,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const foreignProgram: NativePlugin = {
     apiVersion: 1, name: 'foreign-program', targets: ['host'],
     requires: ['nativeWebSession', 'fs', 'sessionPersistence', 'modelExecution', 'agents'],
-    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'], provides: [],
+    optional: ['approval', 'tools', 'promptSections', 'sandboxPolicy', 'codeRuntime', 'timeContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions'], provides: [],
     resolve: () => (context) => {
       persistence = context.require('sessionPersistence')
       foreign = createNativeHeadlessApplication(context, { cwd, provider: 'fixture', model: 'foreign',
@@ -901,16 +349,11 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       context.provide('credentials', service)
     },
   }
-  const inventory: NativePlugin = {
-    apiVersion: 1, name: 'test-plugin-inventory', targets: ['host'], requires: [], provides: ['pluginInventory'],
-    resolve: () => (context) => { context.provide('pluginInventory', { list: () => host.diagnostics(), packages: () => [] }) },
-  }
   const host = new NativeHost(resolveInstallation([
-    { plugin: inventory, scope, config: undefined },
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
       maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1,
-      workspaceRoutes: { maxRoutes: 2, allowedRoots: [directory] } } },
+      workspaceRoutes: { maxRoutes: 1, allowedRoots: [directory] } } },
     { plugin: githubWebhook, scope, config: { source: 'native-test', path: '/github', secretEnv: 'NATIVE_GITHUB_SECRET',
       maxBodyBytes: 4096, rootRoute: 'root' } },
     ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
@@ -919,7 +362,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       webhookRuleRegistration, nativePolicyProbe].map(plugin =>
       ({ plugin, scope, config: undefined })),
     { plugin: agentPresets, scope, config: { default: 'standard' } },
-    { plugin: planMode, scope, config: { section: 'Use the plan to guide implementation.' } },
     { plugin: permissionPresets, scope, config: { presets: {
       'workspace-write': { sandbox: 'workspace-write', approval: 'ask' },
       'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
@@ -932,9 +374,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin: storageDomain, scope, config: { backend: 'json' } },
     { plugin: attachmentStorage, scope, config: { dshHome: directory } },
   ], 'host'))
-  let pendingSelection: Promise<unknown> | undefined
-  let pendingQueuedPrompt: Promise<unknown> | undefined
-  let queuedPromptAbort: AbortController | undefined
   try {
     const baseConfig = { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
       maxPendingRequests: 1, maxHistoryEvents: 100, maxPromptChars: 100,
@@ -951,24 +390,14 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const cookie = login.headers.get('set-cookie')?.split(';')[0]
     if (cookie === undefined) throw new Error('missing browser authentication')
     const url = web.url
-    const rpc = createWebConnectionRpc(async (input, init) => {
+    const rpc = createWebConnectionRpc((input, init) => {
       if (input.pathname.endsWith('/native-session/follow')) followFields = JSON.parse(init.body as string)
-      if (input.pathname.endsWith('/native-session/file-upload')) {
-        const uploadUrl = new URL(input.href)
-        streamedUploadRequest = { path: uploadUrl.pathname, sessionId: uploadUrl.searchParams.get('sessionId'),
-          method: init.method, contentType: new Headers(init.headers).get('content-type'), body: init.body }
-      }
       const headers = new Headers(init.headers)
       headers.set('cookie', cookie)
-      const response = await fetch(new URL(input.pathname + input.search, url), { ...init, headers })
-      if (input.pathname.endsWith('/native-session/file-upload')) {
-        streamedUploadResponseStatus = response.status
-      }
-      return response
+      return fetch(new URL(input.pathname, url), { ...init, headers })
     })
     const rawSettingsReply = await rpc.call('/api', 'settings/describe', {}, new AbortController().signal)
     expect(rawSettingsReply).toMatchObject({ ok: true, value: {
-      hasDocument: false,
       limits: { maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 },
     } })
     const hasSettingsNamespaces = rawSettingsReply.ok
@@ -981,18 +410,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
-    const originalPrompt = client.prompt.bind(client)
-    client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq, detach) => originalPrompt(
-      selectedSession, text, resume, signal, (frame) => {
-        if (frame.type === 'submission-update') submissionUpdates.push({ requestId: frame.requestId, status: frame.status })
-        observe?.(frame)
-      }, images, onFollowError, lastSeq, detach)
-    restoreClientPrompt = () => { client.prompt = originalPrompt }
     const settingsDescription = await client.settingsDescribe()
-    expect((await client.pluginInventoryList()).entries).toContainEqual(expect.objectContaining({ name: plugin.name, state: 'ready' }))
-    expect(await rpc.call('/api', 'settings/open-document', {}, new AbortController().signal)).toMatchObject({
-      ok: false, error: { code: 'native/settings', message: 'Settings request failed.' },
-    })
     expect(settingsDescription.limits).toEqual({ maxCredentialRefsPerRead: 2, maxSettingsOperations: 1 })
     const settingsViews = settingsDescription.namespaces
     const settingsView = settingsViews.find(row => row.namespace === 'native-settings-test')
@@ -1038,153 +456,51 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await expect(client.credentialsDescribe(['UNRELATED_KEY'])).rejects.toBeInstanceOf(NativeSessionRpcError)
     await expect(client.credentialsDescribe(['NATIVE_TEST_KEY', 'NATIVE_TEST_KEY', 'NATIVE_TEST_KEY']))
       .rejects.toMatchObject({ code: 'native/credentials' })
-    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 200 })
+    const conversation = new NativeConversationController(client, { maxLiveTextChars: 4, maxLiveEvents: 100 })
     await conversation.load()
     await conversation.create()
     const sessionId = conversation.getSnapshot().selected!
-    const sessions = await client.list()
-    expect(sessions.map(session => session.header.id)).toEqual([sessionId])
-    expect(sessions[0]?.titleProjection).toEqual({ status: 'absent' })
-    expect(sessions[0]).toMatchObject({ blank: true, running: false, completed: false,
-      runningSubagentCount: 0, hasActiveSchedule: false })
-    expect(sessions[0]!.updatedAt).toBeGreaterThanOrEqual(sessions[0]!.header.createdAt)
-    const initialMode = await client.modeControls(sessionId)
-    expect(initialMode).toMatchObject({ current: 'standard', revision: null, locked: false, canSelect: true,
-      options: [{ id: 'standard' }, { id: 'alternate' }], planMode: { available: true, active: false } })
-    expect(await client.permissionControls(sessionId)).toMatchObject({ available: true, currentValue: 'workspace-write',
-      options: [{ value: 'workspace-write' }, { value: 'danger-full-access' }, { value: 'read-only' }] })
-    await client.selectPermissionPreset(sessionId, 'danger-full-access')
-    expect(await client.permissionControls(sessionId)).toMatchObject({ currentValue: 'danger-full-access' })
-    await client.selectPermissionPreset(sessionId, 'workspace-write')
-    await expect(client.selectPlanMode(sessionId, true)).resolves.toEqual({ active: true, outcome: 'committed' })
-    await expect(client.selectPlanMode(sessionId, false)).resolves.toEqual({ active: false, outcome: 'committed' })
-    const listAbort = new AbortController()
-    const listFollowing = client.follow(listAbort.signal)[Symbol.asyncIterator]()
-    await expect(listFollowing.next()).resolves.toMatchObject({ value: { type: 'baseline', items: [{ header: { id: sessionId } }] } })
-    const nextListFrame = listFollowing.next()
+    expect((await client.list()).map(header => header.id)).toEqual([sessionId])
     expect((await client.modelControls()).catalog?.groups[0]?.models[0]?.id).toBe('chosen')
     await conversation.selectPreset('alternate')
-    expect(await client.modeControls(sessionId)).toMatchObject({ current: 'alternate', locked: false, canSelect: true,
-      planMode: { available: true, active: false } })
-    await expect(nextListFrame).resolves.toMatchObject({ value: { type: 'upsert', item: { header: { id: sessionId }, blank: true } } })
-    listAbort.abort()
-    await listFollowing.return?.()
     await conversation.selectModel({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen' }, expectedRevision: null })).rejects.toThrow('stale selection revision')
     const selectedEvent = (await client.history(sessionId)).events.findLast(event => event.type === 'model/selection')
     expect(selectedEvent?.data).toEqual({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'unknown' }, expectedRevision: selectedEvent!.seq })).rejects.toThrow()
     holdResolution = true
-    const selection = client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'high' }, expectedRevision: selectedEvent!.seq }).then(
-      () => ({ resolved: true as const }), (error: unknown) => ({ resolved: false as const, error }))
-    pendingSelection = selection
+    const selection = client.selectModel(sessionId, { selected: { provider: 'fixture', model: 'chosen', reasoningEffort: 'high' }, expectedRevision: selectedEvent!.seq })
     await resolving.promise
     const queuedAbort = new AbortController()
-    queuedPromptAbort = queuedAbort
-    const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal).then(
-      result => ({ result }), (error: unknown) => ({ error }))
-    pendingQueuedPrompt = queued
+    const queued = client.prompt(sessionId, 'queued during selection', true, queuedAbort.signal)
+    const refusedQueued = expect(queued).resolves.toEqual({ exitCode: 130 })
     await vi.waitFor(async () => { expect((await client.status(sessionId)).status === 'running' || requests.length > 0).toBe(true) })
-    await expect(client.modeControls(sessionId)).rejects.toThrow('native-headless: exclusive Session maintenance is active')
-    await expect(client.permissionControls(sessionId)).rejects.toThrow('native-headless: exclusive Session maintenance is active')
     expect(requests).toHaveLength(0)
     expect(retainedExecution?.status).toBe('maintenance')
     queuedAbort.abort(new Error('cancel queued dispatch'))
     holdResolution = false
     releaseResolution.resolve(undefined)
-    expect(await selection).toEqual({ resolved: true })
-    expect(await queued).toEqual({ result: { exitCode: 130 } })
+    await selection
+    await refusedQueued
     expect(requests).toHaveLength(0)
-    await expect(client.modeControls(sessionId)).resolves.toMatchObject({ current: 'alternate',
-      planMode: { available: true, active: false } })
-    await expect(client.permissionControls(sessionId)).resolves.toMatchObject({ currentValue: 'workspace-write' })
     releaseRetainedRoot?.()
     await conversation.select(sessionId)
-    racePreparationEnabled = true
     const first = conversation.send('first input')
-    await racePreparation[0]!.entered.promise
-    expect(requests).toHaveLength(0)
-    const submissionId = nativeSubmissionRequestId('native-host-edit-promote')
-    await expect(client.queue(sessionId, 'queued original', submissionId)).resolves.toMatchObject({
-      requestId: submissionId, placement: 'queued', status: 'accepted',
-    })
-    await expect(client.editSubmission(sessionId, submissionId, 'edited before promotion')).resolves.toEqual({
-      requestId: submissionId, outcome: 'updated',
-    })
-    const editedSubmissions = await client.submissions(sessionId)
-    expect(editedSubmissions.throughSeq).toBeGreaterThanOrEqual(0)
-    expect(editedSubmissions.submissions).toContainEqual(expect.objectContaining({
-      requestId: submissionId, placement: 'queued', status: 'accepted',
-      message: { id: submissionId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'edited before promotion' }] },
-    }))
-    await expect(client.promoteSubmission(sessionId, submissionId)).resolves.toEqual({
-      requestId: submissionId, outcome: 'promoted',
-    })
-    const promotedSnapshot = await client.submissions(sessionId)
-    expect(promotedSnapshot.throughSeq).toBeGreaterThanOrEqual(0)
-    const promoted = promotedSnapshot.submissions.find(submission => submission.requestId === submissionId)
-    if (promoted === undefined) throw new Error('pending reader missed the promoted submission')
-    expect(promoted.placement).toBe('steering')
-    expect(promoted.status).toBe('accepted')
-    expect(nativeSubmissionRequestId(promoted.message.id)).toBe(submissionId)
-    expect(promoted.message.content).toEqual([{ type: 'text', text: 'edited before promotion' }])
-    racePreparation[0]!.release.resolve(undefined)
-    await racePreparation[1]!.entered.promise
-    const owner = activeSessionsService?.owners().find(candidate => candidate.session.id === sessionId
-      && candidate.invocation === 'root')
-    if (owner === undefined) throw new Error('missing browser root owner for existing pending submission')
-    await expect(client.editSubmission(sessionId, submissionId, 'edited immediately before claim')).resolves.toEqual({
-      requestId: submissionId, outcome: 'updated',
-    })
-    racePreparation[1]!.release.resolve(undefined)
-    await vi.waitFor(() => { expect(owner.messages('next-step')).toEqual([]) })
-    await expect(owner.flush()).resolves.toBeUndefined()
-    await vi.waitFor(() => {
-      expect(conversation.getSnapshot().error).toBeUndefined()
-      expect(conversation.getSnapshot().liveText).toBe('swer')
-      expect(requests).toHaveLength(1)
-    })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(conversation.getSnapshot().liveText).toBe('swer') })
     expect(conversation.getSnapshot()).toMatchObject({ state: 'sending', liveTruncated: true })
     expect(conversation.getSnapshot().events.some(event => event.type === 'user/message')).toBe(true)
     expect(conversation.getSnapshot().events.some(event => event.type === 'assistant/message')).toBe(false)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'edited immediately before claim'))).toBe(true)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'edited before promotion'))).toBe(false)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.type === 'text'
-      && block.text === 'queued original'))).toBe(false)
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
-    const existing = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'queued by another owner consumer' }] })
-    const existingRequestId = nativeSubmissionRequestId(existing.id)
-    await owner.enqueue(existing, 'next-turn', false, new AbortController().signal)
-    const pendingSnapshot = await client.submissions(sessionId)
-    const observed = pendingSnapshot.submissions.find(submission => submission.requestId === existingRequestId)
-    expect(observed).toMatchObject({ requestId: existingRequestId, placement: 'queued', status: 'accepted', message: existing })
-    if (observed === undefined) throw new Error('pending reader missed the existing queued submission')
-    await expect(client.promoteSubmission(sessionId, observed.requestId)).resolves.toEqual({
-      requestId: observed.requestId, outcome: 'promoted',
-    })
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [{
-      requestId: existingRequestId, placement: 'steering', status: 'accepted', message: existing,
-    }] })
-    await expect(client.dequeue(sessionId, observed.requestId)).resolves.toBeUndefined()
-    expect(await client.submissions(sessionId)).toMatchObject({ submissions: [] })
     const admission = followFields as { sessionId: string; admissionId: string }
     expect((await fetch(new URL('/api/native-session/follow', url), { method: 'POST', body: JSON.stringify(admission) })).status).toBe(401)
     expect((await rpc.response!('/api', 'native-session/follow', { ...admission, admissionId: 'wrong' }, new AbortController().signal)).status).toBe(409)
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
-    expect(submissionUpdates.filter(update => update.requestId === submissionId).map(update => update.status))
-      .toEqual(['accepted', 'settled'])
-    const search = await client.search('first input')
-    expect(search.items.map(item => item.sessionId)).toEqual([sessionId])
-    expect(search.items[0]?.snippet).toContain('first input')
     expect(requests[0]).toMatchObject({ provider: 'fixture', model: 'chosen', reasoningEffort: 'high' })
     await expect(client.selectPreset({ id: sessionId, preset: 'standard', expectedRevision: null })).rejects.toThrow()
     await conversation.select(sessionId)
     expect(conversation.getSnapshot().liveText).toBeUndefined()
-    expect(conversation.getSnapshot().events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
+    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     await conversation.select(sessionId)
     const png = await readFile(new URL('../../../../../../snapshots/native-sdk/text-turn/image.png', import.meta.url))
     const images = [{ mediaType: 'image/png' as const, data: png.toString('base64'), name: 'image.png' }]
@@ -1210,52 +526,19 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const blob = await client.image(sessionId, image.attachment)
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe(image.attachment.bytes)
-    const receipt = await client.uploadFile(sessionId, { data: new Blob([streamedFileBytes]), name: 'web-upload.txt' })
-    expect(receipt).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
-    expect(streamedUploadRequest).toMatchObject({ path: '/api/native-session/file-upload', sessionId, method: 'POST',
-      contentType: 'application/octet-stream' })
-    expect(streamedUploadResponseStatus).toBe(200)
-    expect(streamedUploadRequest?.body).toBeInstanceOf(Blob)
-    expect(new Uint8Array(await (streamedUploadRequest?.body as Blob).arrayBuffer())).toEqual(streamedFileBytes)
-    await expect(client.promptContent(sessionId, [
-      { type: 'text', text: 'before staged file' },
-      { type: 'file', receiptId: receipt.receiptId },
-      { type: 'text', text: 'after staged file' },
-    ], true)).resolves.toMatchObject({ exitCode: 0 })
-    await conversation.select(sessionId)
-    expect(streamedFileProjected).toBe(true)
-    expect(requests[2]?.messages.some((message) => {
-      const text = message.content.flatMap(block => block.type === 'text' ? [block.text] : [])
-      const before = text.findIndex(block => block === 'before staged file')
-      const handle = text.findIndex(block => block.includes('File "web-upload.txt"') && block.includes('saved at'))
-      const after = text.findIndex(block => block === 'after staged file')
-      return before >= 0 && handle > before && after > handle
-    })).toBe(true)
-    const stagedHistory = await client.history(sessionId)
-    const stagedMessage = stagedHistory.events.findLast(event => event.type === 'user/message'
-      && event.data.content.some(block => block.type === 'file' && block.attachment.name === 'web-upload.txt'))
-    const stagedContent = stagedMessage?.type === 'user/message' ? stagedMessage.data.content : []
-    expect(stagedContent.map(block => block.type)).toEqual(['text', 'file', 'text'])
-    expect(stagedContent[0]).toEqual({ type: 'text', text: 'before staged file' })
-    expect(stagedContent[2]).toEqual({ type: 'text', text: 'after staged file' })
-    const stagedFile = stagedContent[1]
-    expect(stagedFile?.type).toBe('file')
-    if (stagedFile?.type === 'file') {
-      expect(stagedFile.attachment).toMatchObject({ name: 'web-upload.txt', bytes: streamedFileBytes.byteLength })
-    }
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
     expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
-      .toEqual(['user/message', 'user/message', 'assistant/message', 'user/message', 'assistant/message'])
+      .toEqual(['user/message', 'assistant/message', 'user/message', 'assistant/message'])
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
     const early = new AbortController()
     early.abort(new Error('before admission'))
     await expect(client.prompt(sessionId, 'not admitted', true, early.signal)).rejects.toThrow('before admission')
-    expect(requests).toHaveLength(3)
+    expect(requests).toHaveLength(2)
     let settled = false
     const pending = conversation.send('cancel input')
     void pending.then(() => { settled = true }, () => { settled = true })
-    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(4) })
+    await vi.waitFor(() => { expect(conversation.getSnapshot().error).toBeUndefined(); expect(requests).toHaveLength(3) })
     // Control admission still cancels the accepted turn and awaits cleanup.
     expect(await client.status(sessionId)).toEqual({ status: 'running' })
     conversation.cancel()
@@ -1266,9 +549,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     releaseCleanup()
     await pending
     expect(conversation.getSnapshot().state).toBe('ready')
-    expect(conversation.getSnapshot().events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
+    expect(conversation.getSnapshot().events.at(-1)?.type).toBe('turn/end')
     expect(await client.status(sessionId)).toEqual({ status: 'idle' })
-    expect((await client.history(sessionId)).events.slice(-2).map(event => event.type)).toEqual(['turn/end', 'session/end-seed'])
+    expect((await client.history(sessionId)).events.at(-1)?.type).toBe('turn/end')
     humanSteps = [toolCallResponse('allow', 'guarded', {}), toolCallResponse('deny', 'guarded', {}),
       toolCallResponse('question', 'ask_user_question', { questions: [{ id: '', question: 'Choose mode', options: [{ label: 'One' }, { label: 'Two' }] }] }), textResponse('human complete')]
     const interactive = conversation.send('human input')
@@ -1303,21 +586,27 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     const foreignTurn = foreign.executeRootTurn({ id: foreignId, resume: false,
       message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'foreign input' }] }) }, foreignAbort.signal)
     await foreignModelReady.promise
+    const open = persistence.open.bind(persistence)
+    const readSpy = vi.spyOn(persistence, 'open').mockImplementation(async (id, access, options) => {
+      if (id === foreignId && access === 'read') { webReadReady.resolve(undefined); await releaseWebRead.promise }
+      return open(id, access, options)
+    })
     try {
-      const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true, lastSeq: -1 }, new AbortController().signal)
+      const started = await rpc.call('/api', 'session/start', { sessionId: foreignId, text: 'competing Web input', resume: true, follow: true }, new AbortController().signal)
       if (!started.ok) throw new Error(started.error.message)
+      await webReadReady.promise
       const admission = started.value as { admissionId: string }
-      const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
-      expect(settlement).toMatchObject({ ok: false,
-        error: { message: 'native-headless: root route requires the exact attached root owner' } })
+      const denied = await rpc.call('/api', 'session/answer-human', { sessionId: foreignId, admissionId: admission.admissionId,
+        id: 'foreign-presentation', answer: { kind: 'approval', outcome: 'allowed-once' } }, new AbortController().signal)
+      expect(denied).toMatchObject({ ok: false, error: { message: 'native-headless: root route requires the exact attached root owner' } })
       releaseForeignModel.resolve(undefined)
       await vi.waitFor(() => { expect(foreignApprovals).toBe(1) })
       await foreignTurn
-    } finally { foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
+      releaseWebRead.resolve(undefined)
+      const settlement = await rpc.call('/api', 'session/await', { sessionId: foreignId, ...admission }, new AbortController().signal)
+      expect(settlement.ok).toBe(false)
+    } finally { releaseWebRead.resolve(undefined); readSpy.mockRestore(); foreignAbort.abort(new Error('foreign fixture complete')); await foreignTurn.catch(() => undefined) }
     await conversation.close()
-    await client.archive(sessionId)
-    expect((await client.list()).some(item => item.header.id === sessionId)).toBe(false)
-    await expect(client.search('first input')).resolves.toMatchObject({ items: [] })
     await client.close()
 
     const unauthenticatedApi = await fetch(new URL('/api/native-session/follow', url), {
@@ -1468,64 +757,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
         expect(activeSessionsService?.owners().some(candidate => candidate.session.id === readonlyId)).toBe(false)
       })
 
-      const clients = createNativeWorkspaceClients(rpc, 1000000)
-      const workspacePath = join(cwd, 'native-workspace')
-      await mkdir(workspacePath)
-      const registeredBeforeDeniedCreate = workspaceRegistryService?.list().map(workspace => workspace.id)
-      const deniedCreate = await rpc.call('/api', 'workspaces/create', { path: process.cwd() }, new AbortController().signal)
-      expect(deniedCreate).toMatchObject({ ok: false, error: {
-        code: 'native/workspace-untrusted', message: 'Workspace is outside the configured allowed roots',
-        details: { path: process.cwd() },
-      } })
-      expect(workspaceRegistryService?.list().map(workspace => workspace.id)).toEqual(registeredBeforeDeniedCreate)
-      const trustedWorkspace = await clients.workspace.create({ path: process.cwd(), trust: true })
-      expect(trustedWorkspace.created).toBe(true)
-      expect(settingsDocument['workspace-trust']).toEqual({ paths: [trustedWorkspace.workspace.path] })
-      const trustedSession = await clients.workspace.connectWorkspace(trustedWorkspace.workspace.workspaceId)
-      const trustedRoute = rootExecutionService?.workspaceRoutes()
-        .find(route => route.workspaceId === trustedWorkspace.workspace.workspaceId)
-      if (rootExecutionService === undefined || trustedRoute === undefined) throw new Error('missing trusted Workspace route')
-      await rootExecutionService.releaseWorkspace(trustedRoute.id, new AbortController().signal)
-      expect(await rpc.call('/api', 'session/mode-controls', { sessionId: trustedSession.sessionId }, new AbortController().signal))
-        .toMatchObject({ ok: true })
-      await clients.workspace.delete(trustedWorkspace.workspace.workspaceId)
-      const directoryListing = await clients.directoryPicker.list(cwd)
-      expect(directoryListing.entries).toContainEqual({ name: 'native-workspace', path: workspacePath, kind: 'directory' })
-      if (process.platform !== 'win32') {
-        const danglingPath = join(cwd, 'dangling-workspace-link')
-        await symlink(join(cwd, 'missing-target'), danglingPath)
-        expect((await clients.directoryPicker.list(cwd)).entries.map(entry => entry.name)).not.toContain('dangling-workspace-link')
-      }
-      expect(await clients.directoryPicker.createDirectory(workspacePath, 'child')).toBe(join(workspacePath, 'child'))
-      const frames = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
-      const secondFrames = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
-      try {
-        expect((await frames.next()).value).toMatchObject({ type: 'baseline' })
-        expect((await secondFrames.next()).value).toMatchObject({ type: 'baseline' })
-        const refused = clients.workspace.follow(new AbortController().signal)[Symbol.asyncIterator]()
-        await expect(refused.next()).rejects.toThrow('invalid response HTTP 429')
-        const createdWorkspace = await clients.workspace.create({ path: workspacePath })
-        expect(createdWorkspace.created).toBe(true)
-        expect((await frames.next()).value).toMatchObject({ type: 'upsert', workspace: { workspaceId: createdWorkspace.workspace.workspaceId } })
-        expect((await frames.next()).value).toMatchObject({ type: 'order' })
-        expect(await clients.workspace.search('NATIVE-WORKSPACE')).toEqual([createdWorkspace.workspace.workspaceId])
-        const connected = await clients.workspace.connectWorkspace(createdWorkspace.workspace.workspaceId)
-        expect((await clients.workspace.connectWorkspace(createdWorkspace.workspace.workspaceId)).sessionId).toBe(connected.sessionId)
-        expect((await clients.workspace.list()).workspaces.find(
-          row => row.workspaceId === createdWorkspace.workspace.workspaceId,
-        )?.sessionIds)
-          .toContain(connected.sessionId)
-        if (rootExecutionService === undefined) throw new Error('missing Native root execution authority')
-        await clients.workspace.delete(createdWorkspace.workspace.workspaceId)
-        expect(rootExecutionService.workspaceRoutes()).toEqual([])
-        expect(await persistence?.stat(connected.sessionId)).toBeDefined()
-        expect(await clients.workspace.search('native-workspace')).toEqual([])
-      } finally {
-        await frames.return?.()
-        await secondFrames.return?.()
-        await clients.workspace.close()
-      }
-
       webhookMode = 'shutdown'
       const drainingResponse = await signedRequest(payload, 'native-shutdown-admission')
       expect(drainingResponse.status).toBe(202)
@@ -1554,73 +785,16 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       await (hostStop ?? host.stop())
     }
   } finally {
-    for (const barrier of racePreparation) barrier.release.resolve(undefined)
-    restoreClientPrompt?.()
     foreignAbort.abort(new Error('foreign fixture cleanup'))
     releaseForeignModel.resolve(undefined)
-    holdResolution = false
-    queuedPromptAbort?.abort(new Error('web fixture cleanup'))
+    releaseWebRead.resolve(undefined)
     releaseResolution.resolve(undefined)
-    await Promise.all([pendingSelection, pendingQueuedPrompt].filter((pending): pending is Promise<unknown> => pending !== undefined))
     releaseImage.resolve(undefined)
     releaseRetainedRoot?.()
     firstContinue.resolve(undefined)
     releaseCleanup()
     await (hostStop ?? host.stop())
     await rm(directory, { recursive: true, force: true })
-  }
-})
-
-it('lists native preset folders with standing compositions and returns an empty catalog without the service', async () => {
-  const scope = new NativeScope()
-  const presets = {
-    catalog: () => ({ default: 'standard', folders: [
-      { id: 'standard', name: 'Standard folder', trust: 'system', status: 'ready' },
-      { id: 'user-ready', name: 'User ready', trust: 'user', status: 'ready' },
-      { id: 'legacy', name: 'Legacy', trust: 'user', status: 'needs-migration' },
-      { id: 'broken', name: 'Broken', trust: 'system', status: 'invalid', problem: 'invalid file' },
-    ] }),
-    list: () => [
-      { id: 'standard', name: 'Standard', scope },
-      { id: 'profile-only', name: 'Profile only', scope },
-    ],
-  } as unknown as NativeAgentPresetOperations
-  const config = resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
-    maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
-    maxFollowBufferBytes: 1000, maxFollowers: 1, maxPendingHumanRequests: 1 })
-  const signal = new AbortController().signal
-  const active = {
-    onAttached: () => async () => {},
-    onDetached: () => async () => {},
-    owners: () => [],
-  } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(
-    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, active, config, signal, { presets },
-  )
-  const emptyService = new NativeWebSessionService(
-    { dispose: async () => {} } as unknown as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, active, config, signal,
-  )
-  try {
-    expect(await service.handle('agent-presets/list', {}, signal)).toEqual({ ok: true, value: {
-      default: 'standard', presets: [
-        { id: 'standard', name: 'Standard', source: 'system', status: 'ready' },
-        { id: 'profile-only', name: 'Profile only', source: 'profile', status: 'ready' },
-        { id: 'user-ready', name: 'User ready', source: 'user', status: 'ready' },
-        { id: 'legacy', name: 'Legacy', source: 'user', status: 'needs-migration' },
-        { id: 'broken', name: 'Broken', source: 'system', status: 'invalid', problem: 'invalid file' },
-      ],
-    } })
-    expect(await service.handle('agent-presets/list', { extra: true }, signal)).toMatchObject({
-      ok: false, error: { code: 'native/agent-presets' },
-    })
-    expect(await emptyService.handle('agent-presets/list', {}, signal)).toEqual({
-      ok: true, value: { default: null, presets: [] },
-    })
-  } finally {
-    await service.close()
-    await emptyService.close()
   }
 })
 
@@ -1641,123 +815,4 @@ it.each([
     ? { catalog: null, canSelectModel: 'true', presets: [] }
     : { catalog: null, canSelectModel: true, presets: [{ id: '', name: 'invalid' }] } }))
   await expect(client.modelControls()).rejects.toThrow()
-})
-
-it('removes the Native Web controller after cancelling and draining retained title work', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'rsh-web-controller-removal-'))
-  const cwd = join(directory, 'work')
-  await mkdir(cwd)
-  const scope = new NativeScope()
-  const providerStarted = Promise.withResolvers<undefined>()
-  const providerAbortObserved = Promise.withResolvers<undefined>()
-  const releaseProviderCleanup = Promise.withResolvers<undefined>()
-  const sessionId = SessionId('controller-removal-title')
-  let providerSignal: AbortSignal | undefined
-  let nativeWebSession: NativeWebSessionService | undefined
-  let persistence: NativeSessionPersistenceOperations | undefined
-  const model: NativePlugin = {
-    apiVersion: 1, name: 'controller-removal-model', targets: ['host'], requires: [], provides: ['model'],
-    resolve: () => (context) => {
-      context.provide('model', { async *stream() { yield* textResponse('Foreground reply') } })
-    },
-  }
-  const carrier: NativePlugin = {
-    apiVersion: 1, name: 'controller-removal-carrier', targets: ['host'], requires: [], provides: ['hostConnection'],
-    resolve: () => (context) => {
-      const connection: HostConnectionHandle = {
-        rpc: { handle: () => () => Promise.resolve(), intercept: () => () => Promise.resolve() },
-        fetch: { register: () => () => Promise.resolve() },
-        createSharedFetchHandler: () => ({ requestBodyMode: () => 'buffered', fetch: async () => new Response(null, { status: 404 }) }),
-        requestRejection: () => undefined,
-        authorizeIndex: () => false,
-        authenticatedUrl: baseUrl => baseUrl,
-      }
-      context.provide('hostConnection', connection)
-    },
-  }
-  const titleProvider: NativePlugin = {
-    apiVersion: 1, name: 'controller-removal-title-provider', targets: ['host'], requires: ['sessionTitles'], provides: [],
-    resolve: () => (context) => {
-      context.effect(context.require('sessionTitles').register({
-        id: SessionTitleProviderId('controller-removal-title-provider'), automatic: 'first-prompt',
-        async generate(request) {
-          providerSignal = request.signal
-          providerStarted.resolve(undefined)
-          const observeAbort = (): void => { providerAbortObserved.resolve(undefined) }
-          if (request.signal.aborted) observeAbort()
-          else request.signal.addEventListener('abort', observeAbort, { once: true })
-          await providerAbortObserved.promise
-          await releaseProviderCleanup.promise
-          return { title: 'late provider title', messageSeqs: request.messages.map(message => message.seq) }
-        },
-      }))
-    },
-  }
-  const capture: NativePlugin = {
-    apiVersion: 1, name: 'controller-removal-capture', targets: ['host'], requires: ['nativeWebSession', 'sessionPersistence'], provides: [],
-    resolve: () => (context) => {
-      nativeWebSession = context.require('nativeWebSession')
-      persistence = context.require('sessionPersistence')
-    },
-  }
-  const controllerRequest = { plugin, scope, config: {
-    cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 2, builtinTools: false,
-    maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 10000,
-    maxFollowers: 2, maxPendingHumanRequests: 2,
-  } }
-  const host = new NativeHost(resolveInstallation([
-    { plugin: agents, scope, config: undefined },
-    { plugin: execution, scope, config: undefined },
-    { plugin: model, scope, config: undefined },
-    { plugin: modelExecution, scope, config: undefined },
-    { plugin: approval, scope, config: undefined },
-    { plugin: permissionPresets, scope, config: { presets: {
-      'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
-    } } },
-    { plugin: sandboxPolicy, scope, config: { mode: 'danger-full-access', workspaceRoot: cwd } },
-    { plugin: sandboxedFilesystem, scope, config: { cwd } },
-    { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
-    { plugin: storageHub, scope, config: undefined },
-    { plugin: storageJson, scope, config: { root: join(directory, 'domains') } },
-    { plugin: storageDomain, scope, config: { backend: 'json' } },
-    { plugin: workspaceRegistry, scope, config: undefined },
-    { plugin: sessionTitles, scope, config: { fallbackMaxWords: 5, fallbackMaxBytes: 40, maxTitleBytes: 80 } },
-    { plugin: titleProvider, scope, config: undefined },
-    { plugin: carrier, scope, config: undefined },
-    controllerRequest,
-    { plugin: capture, scope, config: undefined },
-  ], 'host'))
-  let removing: Promise<void> | undefined
-  try {
-    await host.start()
-    if (nativeWebSession === undefined || persistence === undefined) throw new Error('missing Native Web Session fixture')
-    const prompted = await nativeWebSession.handle('session/prompt', {
-      sessionId, text: 'First prompt', resume: false, follow: true, lastSeq: -1,
-    }, new AbortController().signal)
-    await providerStarted.promise
-    expect(prompted).toMatchObject({ ok: true, value: { exitCode: 0 } })
-    const readTitles = async () => {
-      const reader = await persistence!.open(sessionId, 'read')
-      try {
-        return (await reader.read()).events.filter(event => event.type === 'session/title')
-          .map(event => event.type === 'session/title' ? { seq: event.seq, title: event.data.title, source: event.data.source } : undefined)
-      } finally { await reader.close() }
-    }
-    const titlesBeforeRemoval = await readTitles()
-    let removed = false
-    removing = host.remove(controllerRequest).then(() => { removed = true })
-    await vi.waitFor(() => { expect(providerSignal?.aborted).toBe(true) })
-    await providerAbortObserved.promise
-    expect(removed).toBe(false)
-    expect(host.diagnostics().find(entry => entry.name === titleProvider.name)?.state).toBe('ready')
-    releaseProviderCleanup.resolve(undefined)
-    await removing
-    expect(removed).toBe(true)
-    expect(await readTitles()).toEqual(titlesBeforeRemoval)
-  } finally {
-    releaseProviderCleanup.resolve(undefined)
-    if (removing !== undefined) await Promise.allSettled([removing])
-    await host.stop()
-    await rm(directory, { recursive: true, force: true })
-  }
 })

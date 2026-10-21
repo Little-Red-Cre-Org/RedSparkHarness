@@ -12,7 +12,7 @@ native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收�
 
 ## 启动运行时
 
-Python SDK 没有独立的应用入口。默认情况下，它以 `--profile sdk` 启动内置的 `dsh` CLI。新建的标准 `sdk` profile 会选择 Native Runtime；已有 profile 则继续使用其 `package.json` 声明的 runtime。所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。`native-sdk` 仍是显式 Native 别名。
+Python SDK 没有独立的应用入口。它以 `--profile sdk` 启动内置的 `dsh` CLI（命令行界面）；所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。
 
 每次启动都必须显式指定 Harness home。请传入 `dsh_home`，或在子进程环境中提供非空的 `DSH_HOME`。SDK 刻意不会发现 `~/.dsh`。
 
@@ -32,13 +32,11 @@ with DeepSeekHarness(
 print(result.final_response)
 ```
 
-`DeepSeekHarness` 延迟启动运行时，并在调用 `close()` 或退出上下文管理器前复用该进程。首次 profile 握手通过 `initialize_timeout_seconds` 使用独立的 30 秒默认上限；普通轮次在未设置 `request_timeout_seconds` 时仍不设上限。超时诊断会指明所选 profile，并包含保留的运行时诊断。`cwd` 是 agent workspace；`runtime_cwd` 独立选择子进程工作目录。两者都会在启动前转成绝对路径。`provider`、`model`、可选的 `reasoning_effort` 和可选的正整数 `max_tokens` 通过 JSON-RPC 初始化发送。Native SDK profile 还可协商可选正整数 `max_steps`；响应必须返回不大于请求值的正有效上限。兼容 Cordis server 会明确拒绝此 Native 专属字段。`base_url` 与 `api_key` 会显式覆盖子进程环境中的 `DEEPSEEK_BASE_URL` 与 `DEEPSEEK_API_KEY`。
+`DeepSeekHarness` 延迟启动运行时，并在调用 `close()` 或退出上下文管理器前复用该进程。首次 profile 握手通过 `initialize_timeout_seconds` 使用独立的 30 秒默认上限；普通轮次在未设置 `request_timeout_seconds` 时仍不设上限。超时诊断会指明所选 profile，并包含保留的运行时诊断。`cwd` 是 agent workspace；`runtime_cwd` 独立选择子进程工作目录。两者都会在启动前转成绝对路径。`provider`、`model`、可选的 `reasoning_effort` 和可选的正整数 `max_tokens` 通过 JSON-RPC 初始化发送。`base_url` 与 `api_key` 会显式覆盖子进程环境中的 `DEEPSEEK_BASE_URL` 与 `DEEPSEEK_API_KEY`。
 
-Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`Session.cancel()` 与 `HarnessClient.session_cancel(session_id)` 等待已接收轮次取消；无活动轮次时返回 False。`on_notification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
+显式选择 `profile="native-sdk"` 后，`Session.cancel()` 与 `HarnessClient.session_cancel(session_id)` 等待已接收轮次取消；无活动轮次时返回 False。`on_notification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
-Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`run` 还接受与文本混合的编码栅格图片字典（`{"type": "image", "data": ..., "mimeType": "image/png"}`）；原生附件 Provider 负责校验与持久化存储。
-
-`Session.upload_file(data, name=None)` 为后续 Native 提示词或 steer 保存原始字节，并返回进程内 `NativeStagedFileReceipt`。将 `{"type": "file", "receiptId": receipt.receipt_id}` 放入 Native 内容块可保留其在持久化消息中的位置；Cordis profile 不接受文件回执或 `session/upload-file`。回执仅在本地运行时进程内有效，重启后需重新上传字节。
+显式选择 `profile="native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片字典（`{"type": "image", "data": ..., "mimeType": "image/png"}`）；原生附件 Provider 负责校验与持久化存储。
 
 `Session.steer(input)` 与 `HarnessClient.session_steer(session_id, content_blocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发。turn 中断后若 root 已暂停，steer 会唤醒它；显式重新启用之前，Goal 工作仍保持关闭。空闲或未知 Session 及兼容 profile 拒绝该请求。
 
@@ -46,19 +44,17 @@ Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`run` 还
 
 原生会话树订阅观察已接收根任务及其委派后代；[原生服务端参考](../../packages/native-server/README.zh.md#configuration)定义所有权与通知限制。
 
-`HarnessClient.next_approval_request()` 接收绑定 parent 的 Native SDK child approval 问题，`respond_approval(request, outcome)` 使用请求中的 operation/request 身份回复。可用结果为 `allowed-once`、`rejected`、`cancelled` 和 `unavailable`；调用方应通过 parent policy 路由这些问题。
-
 ## 自定义插件
 
-持久自定义属于 `dsh` profile。使用运行时 wheel 包提供的 `dsh` 命令显式创建 Cordis profile，并安装外部 bundle：
+持久自定义属于 `dsh` profile。使用运行时 wheel 包提供的 `dsh` 命令初始化随附的 SDK profile，并安装外部 bundle：
 
 ```sh
 export DSH_HOME=/absolute/path/to/isolated-dsh-home
-dsh --profile legacy-sdk --from-default-profile sdk --help
-dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
+dsh --profile sdk --dump-default-config >/dev/null
+dsh plugin --profile sdk add file:/absolute/path/to/my-plugin-bundle
 ```
 
-自定义 `legacy-sdk` 名称会明确保留 Cordis 应用。`file:` 形式会把本地 bundle 安装到 profile 包树中，使其 peer import 可以到达内置安装后备。profile manifest（元数据清单）会记录已安装依赖与有序 bundle 层；`$DSH_HOME/profiles/legacy-sdk/cordis.patch.yml` 是持久用户 patch。`dsh plugin` 会拒绝 Native profile；应编辑其 `rsh.profile.json` installations。只有管理外部包时，`dsh plugin` 才需要 `pnpm`。运行 SDK 不需要系统 Node.js。
+`file:` 形式会把本地 bundle 安装到 profile 包树中，使其 peer import 可以到达内置安装后备。profile manifest（元数据清单）会记录已安装依赖与有序 bundle 层；`$DSH_HOME/profiles/sdk/cordis.patch.yml` 是持久用户 patch。只有管理外部包时，`dsh plugin` 才需要 `pnpm`。运行 SDK 不需要系统 Node.js。
 
 对于单次调用的变更，可传入一个或多个 patch 文件。它们会转成绝对路径，并在 profile 层与 home patch 层之后按顺序传给 CLI：
 
@@ -66,16 +62,14 @@ dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
 with DeepSeekHarness(
     dsh_home="/absolute/path/to/isolated-dsh-home",
     profile="sdk",
-    patches=("/absolute/path/to/first.patch.json", "/absolute/path/to/last.patch.json"),
+    patches=("/absolute/path/to/first.patch.yml", "/absolute/path/to/last.patch.yml"),
 ) as harness:
     result = harness.run("Make the requested code change.")
 ```
 
-新建的标准 `sdk` profile 使用版本化 JSON Native patch，包含 `formatVersion: 1` 与 `installations` 行，例如 `{"formatVersion":1,"installations":[{"id":"app","config":{"systemPrompt":"遵循项目说明。"}}]}`。已有 profile manifest 保持权威且不会被重写。[CLI reference](../../../CLI/reference/README.zh.md) 说明接受的字段和显式创建 legacy profile 的方法。
-
 `profile` 可以选择另一个已存在的 profile，但该组合必须保留 `@deepseek-ai/dsh-sdk-app` 或另一个 `@deepseek-ai/dsh-sdk-jsonrpc-server` 配置项。配置错误会在 CLI 启动或 SDK 初始化时失败；不存在完整配置回退。`dsh_bin` 可以选择另一个 `dsh` 可执行程序，同时保持相同的 profile 语法。任意 argv 替换仅是内部 fake-runtime 测试适配器，不属于公开 API。
 
-`provider` 选择指定运行时组合所注册的提供方路由；`model` 是该适配器解析出的模型 ID。`reasoning_effort` 是该确切路由可选的非空适配器自有标识符；省略时保留模型自身的默认值。`max_tokens` 是一个可选的正整数，用于限制根 agent 及其进程内后代在每次请求中输出的 token 数量；省略该参数时，由提供方的默认行为决定输出上限。Native SDK 的 `max_steps` 限制现有 Native Headless turn loop，并被裁剪到所选 profile 上限；兼容 Cordis runtime 会明确拒绝此字段。缺少适配器、模型不可用或推理强度不受支持时，初始化会在提示词运行前拒绝。压缩（compaction）摘要继续使用压缩插件单独配置的上限。内置默认组合注册 `deepseek-official`。自定义组合可以挂载 `llm-pi-ai`，在其中配置各提供方专属的凭据和端点，并选择 pi-ai 已安装 catalog 中存在的任意提供方／模型组合。
+`provider` 选择指定 Cordis 组合所注册的提供方路由；`model` 是该适配器解析出的模型 ID。`reasoning_effort` 是该确切路由可选的非空适配器自有标识符；省略时保留模型自身的默认值。`max_tokens` 是一个可选的正整数，用于限制根 agent 及其进程内后代在每次请求中输出的 token 数量；省略该参数时，由提供方的默认行为决定输出上限。缺少适配器、模型不可用或推理强度不受支持时，初始化会在提示词运行前拒绝。压缩（compaction）摘要继续使用压缩插件单独配置的上限。内置默认组合注册 `deepseek-official`。自定义组合可以挂载 `llm-pi-ai`，在其中配置各提供方专属的凭据和端点，并选择 pi-ai 已安装 catalog 中存在的任意提供方／模型组合。
 
 随附的 `sdk-minimal` profile 是独立显式配置树，而不是 `dsh-base` 上的 overlay。使用 `profile="sdk-minimal"` 选择它；普通 `model` 参数是唯一运行时模型选择，也适用于不在适配器建议目录中的模型 ID。它只提供按平台选择的持久 shell、本地执行与 JSONL 会话；文件系统工具、设置、托管凭据、遥测、Web 工具与完整默认工具清单仍由独立的完整 `sdk` 与 `web` profile 提供。
 
@@ -83,7 +77,7 @@ with DeepSeekHarness(
 
 `Session.run()` 的活动区间从提示词被持久 inbox 接收时开始，到整个 agent 下一次进入空闲状态时结束，并返回 `RunResult(session_id, final_response, finish_reason, events, notifications)`。`final_response` 是该区间内根会话最后提交的助手文本。`finish_reason` 是最后一个根会话 `turn/end` 的 `kind`，例如 `completed`、`max-tokens` 或 `error`；没有轮次结束时为 `None`。缺少字符串 `data.reason.kind` 的 `turn/end` 违反协议，并会抛出 `SdkProtocolError`。
 
-`HarnessClient` 会在运行时进程的整个生命周期内保留已发现的 subagent 谱系。在 `Session.run()` 期间，`RunResult.notifications` 与 `on_notification` 按协议顺序接收根会话和已知后代的通知。`RunResult.events` 只包含根会话事件，因此后代输出不会替换根响应。`subagent/external-operation` 会以原始 JSON object 转发，保留六种 `kind` 及其所有字段；对应的 `session.event` 通知携带同一 object。底层 `session_prompt()` 会立即返回已排队消息的 id；绕过 `Session.run()` 的调用方自行负责后续活动边界。
+`HarnessClient` 会在运行时进程的整个生命周期内保留已发现的 subagent 谱系。在 `Session.run()` 期间，`RunResult.notifications` 与 `on_notification` 按协议顺序接收根会话和已知后代的通知。`RunResult.events` 只包含根会话事件，因此后代输出不会替换根响应。底层 `session_prompt()` 会立即返回已排队消息的 id；绕过 `Session.run()` 的调用方自行负责后续活动边界。
 
 所选 home 保存 profile、插件与每个 profile 自有的持久资源。完整 `sdk` profile 使用其中的凭据、设置与会话存储；`sdk-minimal` 只使用自己的 JSONL 会话存储。需要隔离这些资源时应使用新的 home；独立工作应使用新的会话 ID。同时复用 harness 与会话 ID 会延续持久对话和会话资源。
 

@@ -35,7 +35,7 @@ export async function runCli(): Promise<void> {
   switch (invocation.mode) {
     case 'profile': {
       const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
-      if (invocation.fromDefaultProfile !== undefined && SHIPPED_NATIVE_PROFILES().includes(invocation.profile)) {
+      if (invocation.fromDefaultProfile !== undefined && (SHIPPED_NATIVE_PROFILES as readonly string[]).includes(invocation.profile)) {
         throw new Error('native profile cannot use --from-default-profile')
       }
       ensureShippedNativeProfile(invocation.profile)
@@ -48,7 +48,7 @@ export async function runCli(): Promise<void> {
       }
       requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-launch-environment/layers')
+      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-app-boot')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,
@@ -59,18 +59,17 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'plugin': {
-      ensureShippedNativeProfile(invocation.profile)
-      const { profileRuntime } = await import('./native-profile-config.ts')
-      if (profileRuntime(invocation.profile) === 'native') {
-        throw new Error(`dsh: dsh plugin does not manage native profile ${invocation.profile}; edit its rsh.profile.json installations instead (see rsh/Docs/native-config-migration.md)`)
-      }
       requireCompatibilityRuntime()
       const { runPlugin } = await import('./plugin.ts')
       process.exit(runPlugin(invocation.profile, invocation.args))
       break
     }
     case 'dump-config': {
-      const { ensureShippedNativeProfile } = await import('./native-profile-template.ts')
+      const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
+      if ((SHIPPED_NATIVE_PROFILES as readonly string[]).includes(invocation.profile)) {
+        if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
+        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
+      }
       ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {

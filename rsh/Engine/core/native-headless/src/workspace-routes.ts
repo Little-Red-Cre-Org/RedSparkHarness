@@ -1,7 +1,5 @@
 /** Program-owned immutable Workspace routes; directory choice never changes filesystem or policy Providers. */
-import { realpathSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import { isAbsolute, relative, resolve, parse } from 'node:path'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
@@ -41,22 +39,6 @@ const within = (root: string, path: string): boolean => {
   return difference === '' || !isAbsolute(difference) && difference !== '..' && !difference.startsWith('../') && !difference.startsWith('..\\')
 }
 
-const posixSystemDirectories = ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/usr', '/var',
-  '/System', '/Library', '/private/etc', '/private/var']
-const windowsSystemDirectories = ['windows', 'program files', 'program files (x86)', 'programdata']
-
-function isProtectedSystemDirectory(path: string): boolean {
-  if (parse(path).root === path) return true
-  if (process.platform === 'win32') {
-    // Drive and UNC roots alike, so \\host\C$\Windows is still protected.
-    const root = parse(path).root
-    return windowsSystemDirectories.some(name => within(resolve(root, name).toLowerCase(), path.toLowerCase()))
-  }
-  // The user temp tree (macOS keeps it under /private/var/folders) stays usable; /private itself is a parent only.
-  if (within(realpathSync(tmpdir()), path)) return false
-  return path === '/private' || posixSystemDirectories.some(root => within(root, path))
-}
-
 interface WorkspaceRouteRegistry {
   get(id: WorkspaceId): Workspace | undefined
   create?(path: string): Promise<Workspace>
@@ -68,8 +50,6 @@ export class NativeWorkspaceRoutes {
   private readonly pending = new Map<WorkspaceId, Set<Promise<Readonly<NativeRootRoute>>>>()
   private readonly pendingPaths = new Map<string, Promise<Readonly<NativeRootRoute>>>()
   private readonly pendingCanonicalPaths = new Map<string, Promise<Readonly<NativeRootRoute>>>()
-  private readonly releasing = new Set<NativeRootRouteId>()
-  private readonly releases = new Set<Promise<void>>()
   private readonly controller = new AbortController()
   private closing: Promise<void> | undefined
 
@@ -80,7 +60,7 @@ export class NativeWorkspaceRoutes {
    * @param fs - selected filesystem used to verify that its execution path matches the registered directory.
    * @param policy - existing scoped confinement configuration; selection never changes it.
    * @param lifetime - Program shutdown cancellation.
-   * @param busy - whether Agent, writer or admission ownership prevents route release.
+   * @param busy - exact Program Agent, writer and admission ownership test before route release.
    */
   constructor(private readonly base: Readonly<NativeRootRoute>,
     private readonly configuration: NativeWorkspaceRouteConfiguration | undefined,
@@ -96,7 +76,6 @@ export class NativeWorkspaceRoutes {
    */
   resolve(id: NativeRootRouteId): Readonly<NativeRootRoute> {
     this.assertOpen()
-    if (this.releasing.has(id)) throw new Error('Workspace route is busy')
     const route = id === this.base.id ? this.base : this.selected.get(id)
     if (route === undefined) throw new Error('native-headless: unknown root route')
     return route
@@ -113,16 +92,13 @@ export class NativeWorkspaceRoutes {
    * @param caller - authenticated caller cancellation composed with Program lifetime.
    * @returns accepted route after directory, policy, capacity and cancellation checks.
    */
-  select(baseRoute: NativeRootRouteId, workspaceId: WorkspaceId, caller: AbortSignal,
-    trusted = false): Promise<Readonly<NativeRootRoute>> {
+  select(baseRoute: NativeRootRouteId, workspaceId: WorkspaceId, caller: AbortSignal): Promise<Readonly<NativeRootRoute>> {
     this.assertOpen()
     if (baseRoute !== this.base.id) throw new Error('workspace selection requires the configured base route')
     if (this.configuration === undefined || this.registry === undefined) throw new Error('Workspace route selection is disabled')
-    const routeId = brandString<NativeRootRouteId>(JSON.stringify([this.base.id, workspaceId]))
-    if (this.releasing.has(routeId)) throw new Error('Workspace route is busy')
     const signal = AbortSignal.any([caller, this.lifetime, this.controller.signal])
     signal.throwIfAborted()
-    const operation = this.admit(workspaceId, this.configuration, this.registry, signal, trusted)
+    const operation = this.admit(workspaceId, this.configuration, this.registry, signal)
     let owned = this.pending.get(workspaceId)
     if (owned === undefined) { owned = new Set(); this.pending.set(workspaceId, owned) }
     owned.add(operation)
@@ -137,7 +113,7 @@ export class NativeWorkspaceRoutes {
    * @param caller - request cancellation composed with Program lifetime.
    * @returns the selected route after Workspace and path admission.
    */
-  createWorkspace(baseRoute: NativeRootRouteId, path: string, caller: AbortSignal, trusted = false): Promise<Readonly<NativeRootRoute>> {
+  createWorkspace(baseRoute: NativeRootRouteId, path: string, caller: AbortSignal): Promise<Readonly<NativeRootRoute>> {
     this.assertOpen()
     if (baseRoute !== this.base.id) throw new Error('workspace creation requires the configured base route')
     if (this.configuration === undefined || this.registry?.create === undefined) {
@@ -149,21 +125,19 @@ export class NativeWorkspaceRoutes {
     if (current !== undefined) return current
     const pending = Promise.withResolvers<Readonly<NativeRootRoute>>()
     this.pendingPaths.set(path, pending.promise)
-    void this.createAccepted(baseRoute, path, signal, pending.promise, trusted).then(pending.resolve, pending.reject)
+    void this.createAccepted(baseRoute, path, signal, pending.promise).then(pending.resolve, pending.reject)
     const settle = (): void => { if (this.pendingPaths.get(path) === pending.promise) this.pendingPaths.delete(path) }
     void pending.promise.then(settle, settle)
     return pending.promise
   }
 
   private async createAccepted(baseRoute: NativeRootRouteId, path: string, signal: AbortSignal,
-    operation: Promise<Readonly<NativeRootRoute>>, trusted: boolean): Promise<Readonly<NativeRootRoute>> {
+    operation: Promise<Readonly<NativeRootRoute>>): Promise<Readonly<NativeRootRoute>> {
     if (!isAbsolute(path)) throw new Error('Workspace path must be absolute')
     const canonical = await realpath(path)
-    // Trust was confirmed for this exact canonical path; a target that changed since must be confirmed again.
-    if (trusted && canonical !== path) throw new Error('Workspace is outside the configured allowed roots')
     const configuration = this.configuration
     if (configuration === undefined) throw new Error('Workspace route creation is unavailable')
-    await this.validatePath(canonical, configuration, signal, trusted)
+    await this.validatePath(canonical, configuration, signal)
     signal.throwIfAborted()
     this.assertOpen()
     const registry = this.registry
@@ -171,28 +145,27 @@ export class NativeWorkspaceRoutes {
     const current = this.pendingCanonicalPaths.get(canonical)
     if (current !== undefined) return current
     const existing = [...this.selected.values()].find(route => route.configuration.cwd === canonical)
-    if (existing?.workspaceId !== undefined) return this.select(baseRoute, existing.workspaceId, signal, trusted)
+    if (existing?.workspaceId !== undefined) return this.select(baseRoute, existing.workspaceId, signal)
     if (this.routeCapacityUsed() >= configuration.maxRoutes) throw new Error('Workspace route capacity is exhausted')
     this.pendingCanonicalPaths.set(canonical, operation)
     try {
       // Workspace creation is the durable commit point after canonical path and sandbox admission.
       // Later Session failure releases this temporary route but retains valid Workspace metadata.
       const workspace = await registry.create(canonical)
-      if (trusted && workspace.path !== canonical) throw new Error('Workspace is outside the configured allowed roots')
-      return await this.select(baseRoute, workspace.id, signal, trusted)
+      return await this.select(baseRoute, workspace.id, signal)
     } finally {
       if (this.pendingCanonicalPaths.get(canonical) === operation) this.pendingCanonicalPaths.delete(canonical)
     }
   }
 
   private async admit(id: WorkspaceId, configuration: NativeWorkspaceRouteConfiguration,
-    registry: WorkspaceRouteRegistry, signal: AbortSignal, trusted: boolean): Promise<Readonly<NativeRootRoute>> {
+    registry: WorkspaceRouteRegistry, signal: AbortSignal): Promise<Readonly<NativeRootRoute>> {
     const workspace = registry.get(id)
     if (workspace === undefined) throw new Error('unknown Workspace identity')
     if (await workspace.status() !== 'ok') throw new Error('Workspace directory is unavailable')
     const path = await realpath(workspace.path)
     if (path !== workspace.path || !(await stat(path)).isDirectory()) throw new Error('Workspace directory identity changed')
-    await this.validatePath(path, configuration, signal, trusted)
+    await this.validatePath(path, configuration, signal)
     signal.throwIfAborted()
     this.assertOpen()
     if (registry.get(id) !== workspace) throw new Error('Workspace was removed during route selection')
@@ -215,45 +188,33 @@ export class NativeWorkspaceRoutes {
     return this.selected.size + pendingRoutes.length
   }
 
-  private async validatePath(path: string, configuration: NativeWorkspaceRouteConfiguration, signal: AbortSignal,
-    trusted: boolean): Promise<void> {
+  private async validatePath(path: string, configuration: NativeWorkspaceRouteConfiguration, signal: AbortSignal): Promise<void> {
     if (!isAbsolute(path) || !(await stat(path)).isDirectory()) throw new Error('Workspace path must be an existing absolute directory')
-    if (isProtectedSystemDirectory(path)) throw new Error('Workspace is a protected system directory')
     const roots = await Promise.all(configuration.allowedRoots.map(async (root) => {
       const canonical = await realpath(root)
       if (!(await stat(canonical)).isDirectory()) throw new Error('Workspace allowed root is not a directory')
       return canonical
     }))
-    if (!trusted && !roots.some(root => within(root, path))) throw new Error('Workspace is outside the configured allowed roots')
+    if (!roots.some(root => within(root, path))) throw new Error('Workspace is outside the configured allowed roots')
     if (this.fs.sandboxMode !== undefined && this.policy === undefined) throw new Error('confined Workspace routing requires its selected sandbox policy')
+    if (this.policy !== undefined && this.policy.config.mode !== 'danger-full-access') {
+      const policyRoot = await realpath(this.policy.config.workspaceRoot)
+      if (!within(policyRoot, path)) throw new Error('Workspace is outside the selected sandbox policy root')
+    }
     const target = await this.fs.resolve(path, { cwd: this.base.configuration.cwd, signal })
     if (resolve(this.fs.processPath(target)) !== resolve(path)) throw new Error('Workspace requires a matching filesystem execution directory')
     signal.throwIfAborted()
   }
 
-  /** Retire quiescent route-owned Sessions before withdrawing a dynamic route.
-   * Resolution is blocked during cleanup; failure keeps the route selected.
+  /** Withdraw an idle dynamic route; active or pending exact ownership is refused.
    * @param id - selected dynamic route identity; the base route cannot be released.
-   * @param retire - cleanup for idle Sessions that have no live Program ownership.
    */
-  release(id: NativeRootRouteId, retire: (route: Readonly<NativeRootRoute>) => Promise<void>): Promise<void> {
+  release(id: NativeRootRouteId): void {
     this.assertOpen()
     const route = this.selected.get(id)
     if (route === undefined || route.workspaceId === undefined) throw new Error('unknown dynamic Workspace route')
-    const workspaceId = route.workspaceId
-    if (this.releasing.has(id) || this.busy(id) || this.pending.has(workspaceId)) throw new Error('Workspace route is busy')
-    this.releasing.add(id)
-    const release = (async () => {
-      try {
-        await retire(route)
-        if (this.busy(id) || this.pending.has(workspaceId)) throw new Error('Workspace route is busy')
-        this.selected.delete(id)
-      } finally { this.releasing.delete(id) }
-    })()
-    this.releases.add(release)
-    const settled = (): void => { this.releases.delete(release) }
-    void release.then(settled, settled)
-    return release
+    if (this.busy(id) || this.pending.has(route.workspaceId)) throw new Error('Workspace route is busy')
+    this.selected.delete(id)
   }
 
   /** Close admission, cancel and drain actual directory selections, then withdraw all advertisements.
@@ -264,7 +225,6 @@ export class NativeWorkspaceRoutes {
     return this.closing ??= Promise.allSettled([
       ...[...this.pending.values()].flatMap(tasks => [...tasks]),
       ...this.pendingPaths.values(),
-      ...this.releases,
     ])
       .then(() => { this.selected.clear() })
   }

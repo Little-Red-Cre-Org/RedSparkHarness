@@ -73,7 +73,7 @@
       "path": "../../../Programs/Web/client/modules"
     },
     {
-      "path": "../../../Compatibility/DSH/web/frontend"
+      "path": "../../../Programs/Web/client/web"
     },
     {
       "path": "../remote-mock"

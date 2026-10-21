@@ -64,7 +64,7 @@ interface SessionTitleSnapshot extends SessionTitleEventData {
 
 ## 辅助请求记录
 
-共享 LLM 辅助组件会在调用模型前，记录每一项已经过验证且可分发的标题请求。即使后续生成失败，载荷仍会复现模型可见的系统输入与消息输入、路由、提供方归属和源消息归因；仅当路由接受输出上限时才会包含该字段。
+共享 LLM 辅助组件会在调用模型前，记录每一项已经过验证且可分发的标题请求。即使后续生成失败，载荷仍会复现模型可见的系统输入与消息输入、路由、输出上限、提供方归属和源消息归因。
 
 ```ts type-equiv
 /** Exact model-visible request recorded before one auxiliary title dispatch. */
@@ -79,8 +79,8 @@ interface SessionTitleLlmRequestEventData {
   readonly system: string
   /** Exact auxiliary message list. */
   readonly messages: Message[]
-  /** Exact auxiliary output-token cap; omitted for openai-codex routes that reject it. */
-  readonly maxTokens?: number
+  /** Exact auxiliary output-token cap. */
+  readonly maxTokens: number
 }
 ```
 
@@ -130,8 +130,8 @@ interface SessionTitleProviderResult {
 ```
 
 ```ts type-equiv
-/** Title implementation contract shared by both runtimes; `R` is the runtime's request shape. */
-interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = SessionTitleProviderRequest> {
+/** One optional asynchronous title implementation registered with the service. */
+interface SessionTitleProvider {
   /** Stable id of the provider recorded with the title. */
   readonly id: SessionTitleProviderId
   /** When new human prompts start automatic generation. */
@@ -141,13 +141,8 @@ interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = Ses
    * @param request - message snapshot, current route, session, and cancellation.
    * @returns proposed title plus exact input seqs and the optional provider/model route used to generate it.
    */
-  generate(request: R): Promise<SessionTitleProviderResult>
+  generate(request: SessionTitleProviderRequest): Promise<SessionTitleProviderResult>
 }
-```
-
-```ts type-equiv
-/** One optional asynchronous title implementation registered with the service. */
-interface SessionTitleProvider extends SessionTitleEngineProvider {}
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
@@ -162,7 +157,7 @@ Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by 
 
 ### `ctx.sessionTitle` — `SessionTitleService`
 
-Log-backed title fold plus asynchronous fallback generation. The title behavior is the shared framework-free SessionTitleEngine; this service is the Cordis glue: projections, event wiring, and lifetime.
+Log-backed title fold plus asynchronous fallback generation.
 
 ```ts cordis-catalog
 /**
