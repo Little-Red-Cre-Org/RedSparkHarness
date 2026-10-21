@@ -1,7 +1,0 @@
-- text: {{cwd}}/a.txt
-- button "Open with": Plain text
-- button "Line wrap" [pressed]:
-  - img
-- button "Read the file again":
-  - img
-- text: alpha

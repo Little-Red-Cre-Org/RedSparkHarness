@@ -1,9 +1,0 @@
-version: 1
-scenario: archify-auto-routing
-profile: legacy-headless
-composition: default
-recording: authored
-header:
-  class: archify-pwsh
-  pin: true
-platform: pwsh

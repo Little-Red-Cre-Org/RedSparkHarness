@@ -1,7 +1,0 @@
-version: 1
-scenario: bash-spill
-profile: legacy-headless
-composition: fs
-recording: authored
-header:
-  class: fs

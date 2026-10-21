@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/simplification/2026-09-06-agent-request-freeze-provenance.md
-2026-09-06-agent-request-freeze-provenance.md: 8ec4427ef92d62cef1db8edb7fbc77fe2e1eb5c2
-2026-09-06-agent-request-freeze-provenance.zh.md: ba1aa9abb287f25533b1ef8e18a7425480ddfef4

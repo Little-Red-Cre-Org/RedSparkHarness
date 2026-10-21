@@ -1,0 +1,14 @@
+packages:
+  - .
+
+nodeLinker: hoisted
+autoInstallPeers: false
+strictDepBuilds: true
+allowBuilds:
+  node-pty: true
+  koffi: true
+  fs-ext: true
+  "@deepseek-ai/dsh-subprocess-local": true
+  '@google/genai': false
+  protobufjs: false
+  node-addon-require-builtin: false

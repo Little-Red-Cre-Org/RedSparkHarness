@@ -1,9 +1,0 @@
-version: 1
-scenario: web-fetch
-profile: legacy-headless
-composition: web
-recording: live
-permission: workspace-write
-header:
-  class: web
-  pin: true

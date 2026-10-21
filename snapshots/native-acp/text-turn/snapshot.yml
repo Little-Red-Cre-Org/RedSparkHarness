@@ -1,8 +1,0 @@
-version: 1
-scenario: text-turn
-profile: acp
-composition: native-acp-text-turn
-recording: authored
-header:
-  class: native-acp-text-turn
-  pin: true

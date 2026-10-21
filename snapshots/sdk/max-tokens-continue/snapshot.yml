@@ -1,7 +1,0 @@
-version: 1
-scenario: max-tokens-continue
-profile: legacy-sdk
-composition: default
-recording: authored
-header:
-  class: default

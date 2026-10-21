@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write rsh/Engine/workflow/workflow-worker-thread/README.md
-README.md: 829706e9a7c9f132efeeaa11e9bf79f2cbd99492
-README.zh.md: e5e46b83e4048540d2fb86bda0c237595caf7efc

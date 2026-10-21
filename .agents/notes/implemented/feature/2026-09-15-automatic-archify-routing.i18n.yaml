@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-15-automatic-archify-routing.md
-2026-09-15-automatic-archify-routing.md: 2344a39f8681d8766a71beb43811ff3a13b79fe0
-2026-09-15-automatic-archify-routing.zh.md: 8a86718d1d0f664156bce94f3ca40605c117b252
