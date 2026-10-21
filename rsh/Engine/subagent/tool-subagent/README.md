@@ -25,10 +25,6 @@ Use this package to give an agent a named tool that delegates work to a configur
 <a id="use-this-package"></a>
 ## Use this package
 
-The ./native entry consumes native-subagent. Configuration requires toolName and maxDepth; maxSteps, provider, model, reasoningEffort, maxTokens, persona and toolFilter are optional deployment choices. backgroundMode defaults to one-shot: run_in_background requires jobs and jobControls, returns after readiness, and job_output/job_kill observe or cancel the Agent-owned job. The Provider backgroundJobs, selected jobs and jobControls.jobs must identify the same registry; mismatches fail loading. backgroundMode:continuable defaults to durable initial-message acceptance; run_in_background:false waits for an ordinary one-shot result. Continuable mode requires subagentControls bound to the same selected Provider and its continuationTools registry. NativeTools validates arguments and records actual results.
-
-The package root remains the Cordis plugin entry and loads its compatibility implementation only when `apply` runs. Its Cordis peer dependencies are optional for package-manager installation; native compositions should select `./native`, while Cordis compositions must install the peers required by the compatibility entry.
-
 Mount one instance per delegation target, each with a distinct `toolName`. The tool exists exactly while its provider does, so sibling load order and provider reloads never strand it.
 
 ### Minimal configuration
@@ -86,8 +82,6 @@ This section explains how the tool mirrors provider lifecycle and settles runs; 
 
 One instance is one provider plus one tool name. The plugin mirrors provider lifecycle: it registers the tool when the named provider appears and disposes it when the provider leaves, so sibling load order and HMR replacement cannot strand a dangling tool. Direct Agent setup passes its unpublished Session explicitly and awaits installation before publication. A settings-backed standing preset receives each matching Agent from lifecycle events, selects policy from its Session, and installs through its Context. A numeric `maxDepth` or configured LLM selection the provider cannot enforce fails the mount instead of the first delegation. At most one instance in a tool scope may own model selection because `list_subagent_models` has a global name.
 
-The `./native` entry passes the nearest `responsesGeneration` from the external-child tool's existing PTC parent-call chain to `subagents.resolve` as process-local state, not durable `delegationContext`; generation reuse, override, and close ownership are defined by [native-subagent](../native-subagent/README.md#known-limitations-and-deferred-work).
-
 ### Foreground settlement
 
 A foreground call awaits `run.result`, maps every non-completed stop reason to an error headline, appends the provider diagnostic and any preserved partial assistant text, and always awaits `run.dispose()` before returning; when result collection and disposal both reject, the errored result preserves both failures.
@@ -104,9 +98,7 @@ The tool's description derives from `provider.inheritsParentContext`: a fresh ch
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Public Cordis facade and lazy compatibility loading |
-| [`src/compat.ts`](src/compat.ts) | Tool registration, lifecycle mirroring, mode resolution, result settlement |
-| [`src/config.ts`](src/config.ts) | Public configuration type and schema |
+| [`src/index.ts`](src/index.ts) | Tool registration, lifecycle mirroring, mode resolution, result settlement |
 | [`src/model-selection.ts`](src/model-selection.ts) | Request/config merge and live LLM route preflight |
 | [`src/model-selection-settings.ts`](src/model-selection-settings.ts) | Host-owned opt-in setting sampled for new Sessions |
 | [`src/model-selection-state.ts`](src/model-selection-state.ts) | Session event that records and inherits the sampled decision |

@@ -3,8 +3,8 @@
 import { isAbsolute } from 'node:path'
 import * as yaml from 'js-yaml'
 
-/** Public `dsh` profile name used to control a recorded-session scenario. */
-export type SnapshotProfile = 'compat' | 'headless' | 'legacy-headless' | 'native-headless' | 'native-headless-query' | 'native-sdk' | 'native-acp' | 'native-tui' | 'native-web' | 'sdk' | 'legacy-sdk' | 'acp' | 'legacy-acp' | 'desktop' | 'web'
+/** Public `dsh` profile used to control a recorded-session scenario. */
+export type SnapshotProfile = 'headless' | 'native-headless' | 'sdk' | 'acp' | 'web'
 
 /** How a canonical session may be regenerated. */
 export type SnapshotRecording = 'live' | 'authored'
@@ -97,7 +97,7 @@ export interface SnapshotManifest {
   version: 1
   /** Scenario directory name, repeated for reviewable move and copy diagnostics. */
   scenario?: string
-  /** Public dsh profile name used by the scenario. */
+  /** Shipped profile whose public interface controls the scenario. */
   profile: SnapshotProfile
   /** Composition id whose sole pin owns its profile patches. */
   composition?: string
@@ -142,7 +142,7 @@ export function writesCurrentSessionFixtures(
   return mode !== 'replay' && manifest.session === undefined && manifest.sessionFormat === undefined
 }
 
-const PROFILES = new Set<SnapshotProfile>(['compat', 'headless', 'legacy-headless', 'native-headless', 'native-headless-query', 'native-sdk', 'native-acp', 'native-tui', 'native-web', 'sdk', 'legacy-sdk', 'acp', 'legacy-acp', 'desktop', 'web'])
+const PROFILES = new Set<SnapshotProfile>(['headless', 'native-headless', 'sdk', 'acp', 'web'])
 const RECORDINGS = new Set<SnapshotRecording>(['live', 'authored'])
 const PLATFORMS = new Set<SnapshotPlatform>(['posix', 'pwsh'])
 const PERMISSIONS = new Set<SnapshotPermission>(['read-only', 'workspace-write', 'danger-full-access'])
@@ -225,7 +225,7 @@ export function parseSnapshotManifest(source: string, path = 'snapshot.yml'): Sn
     if (root.version !== 1) throw new Error('manifest.version must equal 1')
     const scenario = root.scenario === undefined ? undefined : name(root.scenario, 'manifest.scenario')
     if (typeof root.profile !== 'string' || !PROFILES.has(root.profile as SnapshotProfile)) {
-      throw new Error('manifest.profile must be compat, headless, legacy-headless, native-headless, native-headless-query, native-sdk, native-acp, native-tui, native-web, sdk, legacy-sdk, acp, legacy-acp, desktop, or web')
+      throw new Error('manifest.profile must be headless, sdk, acp, or web')
     }
 
     const composition = root.composition === undefined

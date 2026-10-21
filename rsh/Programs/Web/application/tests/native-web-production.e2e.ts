@@ -12,16 +12,13 @@ const PLUGIN_SOURCE = `export const plugins = { renderer: { plugin: {
   name: 'renderer',
   targets: ['client'],
   requires: [],
-  provides: ['clientApplication', 'clientRenderer'],
-  resolve: () => (context) => {
-    context.provide('clientApplication', { render: () => null })
-    context.provide('clientRenderer', {
-      mount: (container) => {
-        container.textContent = 'native-client-ready'
-        return () => { container.dataset.unmounted = 'true' }
-      },
-    })
-  },
+  provides: ['clientRenderer'],
+  resolve: () => (context) => context.provide('clientRenderer', {
+    mount: (container) => {
+      container.textContent = 'native-client-ready'
+      return () => { container.dataset.unmounted = 'true' }
+    },
+  }),
 } } }
 `
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -49,8 +46,7 @@ async function routeBuiltApplication(page: Page, boot?: unknown): Promise<void> 
       await route.fulfill({ status: 200, contentType: 'text/javascript', body: PLUGIN_SOURCE })
       return
     }
-    const pathname = decodeURIComponent(url.pathname)
-    const target = resolve(DIST_ROOT, pathname === '/native.html' || pathname === '/' ? './index.html' : `.${pathname}`)
+    const target = resolve(DIST_ROOT, `.${decodeURIComponent(url.pathname)}`)
     if (target !== DIST_ROOT && !target.startsWith(`${DIST_ROOT}${sep}`)) {
       await route.fulfill({ status: 403 })
       return
@@ -101,8 +97,7 @@ it('shows a visible error when Host profile data is absent', async () => {
   try {
     await page.goto('https://dsh.example/native.html')
     await page.waitForFunction(() => document.querySelector('#root')?.getAttribute('data-native-boot-state') === 'failed')
-    const expected = await readFile(fileURLToPath(new URL('./snapshots/native-boot/failure.expected.md', import.meta.url)), 'utf8')
-    expect((await page.getByRole('alert').innerText()).replace(/\r\n/gu, '\n')).toBe(expected.trimEnd())
+    expect(await page.getByRole('alert').textContent()).toBe('native web: Host did not inject Client profile data')
     expect(requests.some(path => path.startsWith('/.dsh/native-client/'))).toBe(false)
   } finally {
     await page.close()

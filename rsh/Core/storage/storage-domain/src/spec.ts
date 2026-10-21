@@ -9,7 +9,7 @@
  */
 
 import type { ZodType } from 'zod'
-import { UNIT_NAME_RE, type KvUnitDescriptor } from '@deepseek-ai/dsh-storage/backend'
+import { UNIT_NAME_RE, type KvUnitDescriptor } from '@deepseek-ai/dsh-storage'
 
 /** Global singleton declaration: schema plus the value used before the first write. */
 export interface DomainGlobalSpec<G> {

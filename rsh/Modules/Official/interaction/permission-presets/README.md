@@ -27,8 +27,6 @@ Permission presets give users one selector for applying sandbox mode and approva
 
 Choose this service when a deployment wants to offer users one Permissions selector instead of separate sandbox and approval controls. It bundles the knobs; execution and approval keep their own values, so removing the package later leaves the last selection in effect.
 
-Native hosts can compose `@deepseek-ai/dsh-permission-presets/native` explicitly. Its `permissionPresets` capability reads the current matching preset or derived `custom` value and available choices for an exact writable root owner, resolves configured bundles, and applies one through the Program-owned writer, awaiting the durable flush. This entry does not provide the Cordis settings namespace, `/permission` command, or client projection; sandbox and approval Providers enforce the recorded policy values.
-
 ### Configuring presets
 
 The plugin config defines the preset table and the default for fresh sessions. Each preset name bundles one sandbox mode with one approval policy; `name` and `description` are optional client presentation.
@@ -81,9 +79,6 @@ The observable behavior is covered in [Use this package](#use-this-package); thi
 |---|---|
 | [`src/index.ts`](src/index.ts) | `PermissionPresetService`: preset table, write path, settings namespace, session pinning, children |
 | [`src/types.ts`](src/types.ts) | `permissions` projection-key declaration and select payload types |
-| [`src/native.ts`](src/native.ts) | Native host Provider that reads permission controls and applies durable policy events through the root owner |
-| [`src/native-definition.ts`](src/native-definition.ts) | Cordis-free Native operations and preset bundle Definition |
-| [`src/presets.ts`](src/presets.ts) | Shared default preset table and presentation fields |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion validating that `permission/preset` names a resolvable preset |
 
 ### Write path

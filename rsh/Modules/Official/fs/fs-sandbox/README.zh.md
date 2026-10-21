@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-fs-sandbox` 提供 Cordis 与 Native 文件系统入口，按每次调用的沙箱策略约束模型写入与编辑，同时保留本地读取行为。`read-only` 拒绝变更；`workspace-write` 只允许目标位于工作区或平台临时根目录内；`danger-full-access` 不做路径围栏，直接委托。两个入口共享规范化包含检查与本地原子后端。被拒绝的操作返回 `FS_SANDBOX_DENIED`，文件系统工具会显示当前模式和同轮次升级提示。
+`dsh-fs-sandbox` 按各会话的沙箱模式限制模型对文件的写入与编辑，同时保留本地文件系统的读取行为。`read-only` 拒绝所有变更；`workspace-write` 只允许目标位于会话工作区或平台临时根目录内；`danger-full-access` 不限制变更。当会话需要将文件变更限制在工作区内时，使用它代替 `fs-local`，并加载 `ctx.sandboxPolicy`。被拒绝的操作返回 `FS_SANDBOX_DENIED`，文件系统工具会显示当前模式和同轮次升级提示。
 
 ## 目录
 
@@ -25,9 +25,9 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当模型写入与编辑必须遵循会话沙箱模式、而读取保持不受约束时，选择此提供方替代 `fs-local`。围栏按调用生效：工具层把调用会话的模式与工作区根目录解析为与 bash runner 收到的相同策略，因此文件系统与 shell 两个能力族绝不会约束到不同根目录。
+当模型的文件写入与编辑必须受会话沙箱模式约束、而读取保持不受约束时，挂载此后端以替代 `fs-local`。围栏按调用生效：工具层把调用会话的模式与工作区根目录解析为与 bash runner 收到的相同策略，因此文件系统与 shell 两个能力族绝不会约束到不同根目录。
 
-### Cordis 组合
+### 最小组合
 
 先加载共享策略服务，再加载此后端，最后加载工具；编辑前读取策略插件仍为可选。
 
@@ -40,12 +40,6 @@ kind: "package-reference"
 ```
 
 后端的配置与本地后端完全相同（`cwd` 解析默认值与 `diffBasisMaxBytes` 覆写上限）；[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-fs-sandbox)是完整配置的真源。
-
-### Native profile 组合
-
-本包还导出仅支持 Host 的 `./native` 入口，由 `LocalFileSystemBackend` 提供相同的 `fs` 服务，并要求 `dsh-native-sandbox-policy` 提供 `sandboxPolicy` 服务。关闭开始后，Native 入口会拒绝新的变更，并等待已准入的写入与编辑（包括包含检查和后端 I/O）结束，再停止 Host 安装。请显式选择 Native 策略与此提供方；任一提供方缺失时都不会安装本地文件系统回退。
-
-`runtime` 入口仍是 Cordis 适配器，并继续要求 `dsh-sandbox-policy`。可选 peer 元数据允许仅安装 Native 入口时省略 Cordis、Plugin Host 与旧策略包；它不会选择入口，也不保证 Cordis 入口在缺少其宿主和策略提供方时能加载。
 
 ### 围栏行为
 
@@ -67,20 +61,18 @@ kind: "package-reference"
 
 ### 设计理念
 
-围栏在可信代码中检查模型控制路径的策略。它在本地后端变更调用方目标前，重新验证包含关系和解析目标身份。不可信代码的内核级隔离仍由 `ctx.shell` 负责。
+围栏是在可信代码中检查模型控制路径的策略，而非内核边界。操作属于 seam 自身（open、rename），只有目标路径不可信，因此「规范化后检查包含关系」就是该接口的完整答案。不可信代码的内核级隔离仍由 `ctx.shell` 负责。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | `SandboxedFileSystem`：`writeText`/`editText` 上的模式围栏、`sandboxMode` 事实 |
-| [`src/native.ts`](src/native.ts) | Native Host 提供方，使用相同本地后端并要求 Native 策略 |
-| [`src/policy.ts`](src/policy.ts) | 两个提供方入口共享的逐调用目标检查 |
 | [`src/containment.ts`](src/containment.ts) | 祖先包含检查，带词法快速路径与基于身份的兜底 |
 
 ### 变更如何被围栏
 
-每次变更先解析按调用策略（`danger-full-access` 原样返回调用方目标；`read-only` 抛出 `FS_SANDBOX_DENIED`）。在 `workspace-write` 下，共享检查重新解析展示路径，并要求目标位于某个 `writableRoots` 根目录之下。不同的 `targetKey` 会以 `FS_STALE_VERSION` 拒绝；调用方必须在重试前重新解析并授权新目标。身份未变时返回原 FsTarget 进行变更。Native 与 Cordis 入口保留同一包含关系检查，不能将已批准的操作重定向到另一个工作区内目标。
+每次变更先解析按调用策略（`danger-full-access` 原样返回调用方目标；`read-only` 抛出 `FS_SANDBOX_DENIED`），`workspace-write` 则立即重新规范化目标，并要求它位于由唯一的 `writableRoots` 函数派生的某个可写根之下——与 Seatbelt profile 授权的集合相同，因此 fs 围栏与 bash runner 不会漂移。被变更的正是这个新目标，因此工具解析后被替换的符号链接祖先也会被发现。
 
 ### 威胁模型
 
@@ -98,8 +90,7 @@ kind: "package-reference"
 - [文件系统子系统](../../../../Docs/subsystems/filesystem.zh.md)——穷尽式提供方约定、策略事件与错误分类体系。
 - [dsh-fs](../fs/README.zh.md)——本后端实现的 `ctx.fs` 约定。
 - [fs-local](../fs-local/README.zh.md)——本后端扩展的本地后端。
-- [sandbox-policy](../../sandbox/sandbox-policy/README.zh.md)——Cordis 逐会话策略解析器。
-- [native-sandbox-policy](../../sandbox/native-sandbox-policy/README.zh.md)——Native 逐会话策略提供方。
+- [sandbox-policy](../../sandbox/sandbox-policy/README.zh.md)——本后端所需的共享逐会话策略解析器。
 - [进程沙箱子系统](../../../../Docs/subsystems/sandbox.zh.md)——模式、逐调用策略与故障关闭错误。
 - [跨能力族 fs 沙箱决策](../../../../../.agents/notes/implemented/feature/2026-07-14-cross-family-fs-sandbox.zh.md)——共享模式围栏及其升级编排。
 
@@ -112,11 +103,11 @@ kind: "package-reference"
 
 #### 模型看到的内容
 
-在 Cordis 组合中，策略归属方贡献与具体能力无关的 `sandbox:policy` 上下文。任一入口的 `FS_SANDBOX_DENIED` 拒绝都会由 `dsh-tool-fs` 渲染为 `[sandbox: file access denied under <mode> mode]` 标记和同轮次升级提示。
+策略归属方贡献与具体能力无关的 `sandbox:policy` 上下文。作为间接影响，`dsh-tool-fs` 会把本后端的 `FS_SANDBOX_DENIED` 拒绝渲染为 `[sandbox: file access denied under <mode> mode]` 标记和同轮次升级提示。
 
 #### Token 影响
 
-Cordis 沙箱后端挂载期间，当前策略条款会增加一条简短的运行时上下文消息；拒绝则会把有界标记与升级提示追加到对话历史。Native 提供方按每次变更收到的策略实施约束。
+该后端挂载期间，当前策略条款会增加一条简短的运行时上下文消息；拒绝则会把有界标记与升级提示追加到对话历史。
 
 #### KV Cache 影响
 
@@ -131,7 +122,7 @@ Cordis 沙箱后端挂载期间，当前策略条款会增加一条简短的运�
 
 - **策略围栏，而非内核边界**：该检查是可信代码处理模型控制的路径，因此解析到系统调用之间残留的 TOCTOU 会被原位重新规范化缩小，但不会消除；对抗性宿主进程不在范围内。不可信代码的内核级隔离仍属于 `ctx.shell`。
 - **围栏与 runner 的一致性由单一所有方派生**：可写集合来自 `writableRoots`，该函数与 Seatbelt profile 共享；在其他位置定义可写集合的 runner profile 会发生漂移。
-- **所选入口必须组合相应策略提供方**：Cordis 使用 `ctx.sandboxPolicy`；Native 要求 `sandboxPolicy` 服务。任一入口都不会在策略缺失时回退到不受约束的提供方。
+- **要求 `ctx.sandboxPolicy`**：工具使用它解析每个会话策略，后端用它处理无 agent（智能体）调用的回退；未组合该服务时，后端不会实施约束。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -25,8 +25,6 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-共享描述符、助手输出归并与委派权限文本由 subagent-protocol 导出。此兼容服务重新导出这些值；原生前台组合使用 native-subagent 与原生 tool-subagent 入口。
-
 本包是每个委派组合都共享的约定。你通过把服务与一个或多个提供方后端以及面向模型的委派工具一起挂载来启用它；此后 agent 即可委派工作，服务会把每个请求路由到具名提供方。
 
 ### 启用委派
@@ -120,7 +118,7 @@ kind: "package-reference"
 - [Subagent 能力 seam](../../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)——委派能力家族的设计记录。
 - [可继续的 subagent](../../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)——接受后续轮次的持久子级。
 - [进程内 spawn 后端](../subagent-spawn-in-process/README.zh.md)——最容易组合的提供方。
-- [进程外 ACP 后端](../../../Compatibility/DSH/subagent/subagent-acp/README.zh.md)——经 Agent Client Protocol 拥有自有运行时的子级。
+- [进程外 ACP 后端](../subagent-acp/README.zh.md)——经 Agent Client Protocol 拥有自有运行时的子级。
 - [tool-subagent-control README](../tool-subagent-control/README.zh.md)——后续消息、中断与列举面。
 
 -----

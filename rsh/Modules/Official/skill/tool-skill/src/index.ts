@@ -20,13 +20,32 @@ import {
   type SkillInvocationSource,
   type SkillSummary,
 } from '@deepseek-ai/dsh-skill'
-import type { SkillCatalogSource } from './types.ts'
-export type { SkillCatalogSource } from './types.ts'
 
 export const name = 'tool-skill'
 export const inject = ['agents', 'tools', 'skills']
 
 const DEFAULT_CATALOG_DESCRIPTION_MAX_LENGTH = 500
+/**
+ * Durable provider and item records for one published session skill catalog. The catalog is a
+ * `catalog`-form context, so it records the entries it published beside the
+ * model-facing prose: a consumer presenting the list must not re-parse the
+ * `<available_skills>` block, whose framing exists for the model.
+ */
+export interface SkillCatalogSource {
+  readonly kind: 'skill-catalog'
+  readonly form: 'catalog'
+  /** Marks a replacement catalog rather than this session's first publication. */
+  readonly update?: true
+  /** Exactly the entries this message published, in catalog order. */
+  readonly entries: readonly { readonly name: string; readonly description: string }[]
+}
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'skill-catalog': SkillCatalogSource
+  }
+}
+
 /** Durable entry list mirroring the rendered catalog lines, for non-model consumers. */
 function catalogSourceEntries(
   skills: SkillSummary[],

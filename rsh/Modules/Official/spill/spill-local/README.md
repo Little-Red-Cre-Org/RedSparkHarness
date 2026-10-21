@@ -27,8 +27,6 @@ English | [中文](README.zh.md)
 
 Mount this backend in a composition that spills text to the local filesystem. It registers as the `ctx.spillStore` service that the `dsh-spill-policy` plugin and other callers use.
 
-`dsh-spill` and NativeRuntime remain required peer dependencies because this package implements their provider seams. Cordis stays optional for package-manager installation; native compositions can select `./native` without installing Cordis.
-
 ### Minimal configuration
 
 Loading the plugin with no config is safe: files land in a lazily-created private (0700) per-process directory under the OS temp directory. Set `root` when the files must live under a known location.
@@ -128,8 +126,6 @@ These limits define when the local backend is a poor fit or needs operational ca
 
 - **A long-lived deployment is not swept until restart** — the one-shot sweep runs only after activation, so files that cross the age cutoff during a run are reclaimed on the next start.
 - **Locators require a co-located filesystem consumer** — a remote or virtual deployment needs another `SpillStore` backend whose locator and retrieval hint are meaningful there.
-
-The `./native` Provider uses the same private roots, session directories, exclusive writes, locator guidance and startup sweep as the Cordis service. Its `root` and `cleanupPeriodDays` fields retain the same defaults; unknown configuration fields fail at load. Provider disposal closes admission and awaits accepted saves and the startup sweep. Native file search can retrieve a saved complete result by passing the returned locator to `grep`; a filesystem consumer may impose additional read confinement.
 
 <a id="dev-note"></a>
 ### Dev Note

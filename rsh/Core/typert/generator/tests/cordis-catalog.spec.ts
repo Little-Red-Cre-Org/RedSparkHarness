@@ -100,25 +100,5 @@ describe('Typert-backed Cordis catalog', () => {
     expect(byKey.has('headlessIo')).toBe(false)
     expect(byKey.has('dshHomePath')).toBe(false)
     expect(byKey.has('launcherEnvironment')).toBe(false)
-
-    const settingsMethods = byKey.get('settings')?.methods.map(method => method.signature) ?? []
-    expect(settingsMethods).toEqual(expect.arrayContaining([
-      expect.stringContaining('writable'),
-      expect.stringContaining('documentPath'),
-      expect.stringContaining('prepareDocument'),
-      expect.stringContaining('describe'),
-      expect.stringContaining('get'),
-      expect.stringContaining('update'),
-      expect.stringContaining('replace'),
-      expect.stringContaining('mutate'),
-    ]))
-    expect(projection().projector.renderRuntimeApi(projection().model)).toContain('SettingsDescriptor')
-    const webServer = byKey.get('webServer')
-    expect(webServer?.methods.map(method => method.signature)).toContain('register(route: HttpRoute): () => Promise<void>')
-    expect(webServer?.inheritedTypes).toContain('HttpRouteListener')
-    const runtimeApi = projection().projector.renderRuntimeApi(projection().model)
-    for (const type of ['HttpRouteListener', 'HttpRoute', 'HttpUpgradeRoute', 'IndexInjection', 'IndexInjectionPlacement']) {
-      expect(runtimeApi).toContain("name: '" + type + "'")
-    }
   })
 })

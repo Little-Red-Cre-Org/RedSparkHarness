@@ -1,6 +1,5 @@
 /** Native Agent-owned background work registry for native Host profiles. */
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 import { type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 
@@ -29,8 +28,6 @@ export interface NativeJobOutcome {
   readonly status: Exclude<NativeJobStatus, 'running' | 'stopping'>
   readonly detail?: string
   readonly output?: string
-  /** Whether the producer omitted output before supplying its final display. */
-  readonly outputTruncated?: boolean
 }
 
 /** Immutable view of one Agent-owned job. */
@@ -50,12 +47,8 @@ export interface NativeJobStart {
   readonly agent: NativeAgent
   readonly kind: string
   readonly label: string
-  /** Run cooperative work; the output callback stops accepting text at cancellation or settlement.
-   * @param signal - cooperative cancellation; the runner must await owned cleanup.
-   * @param publishOutput - append observed UTF-8 text without recording a Session event.
-   * @returns terminal outcome after runner-owned cleanup.
-   */
-  run(signal: AbortSignal, publishOutput: (text: string) => void): Promise<NativeJobOutcome>
+  /** Run cooperative work; cancellation reaches it through the supplied signal. */
+  run(signal: AbortSignal): Promise<NativeJobOutcome>
 }
 
 interface Entry {
@@ -70,8 +63,7 @@ interface Entry {
   status: NativeJobStatus
   finishedAt: number | undefined
   detail: string | undefined
-  output: TextRetainer
-  outputTruncated: boolean
+  output: string | undefined
 }
 
 const JOB_KIND = /^[a-z][a-z0-9-]*$/
@@ -82,7 +74,7 @@ function failure(error: unknown): NativeJobOutcome {
 
 /**
  * Owns Agent-scoped background work. The registry records only lifecycle and
- * bounded live and final output; applications record collected output in their Session.
+ * final output; applications decide whether and how either enters a Session.
  */
 export class NativeJobRegistry {
   private readonly entries = new Map<NativeJobId, Entry>()
@@ -93,10 +85,8 @@ export class NativeJobRegistry {
   /**
    * @param agents - exact Agent registry used for admission and access fences.
    * @param maxConcurrentPerAgent - live-job ceiling for each exact Agent.
-   * @param maxOutputBytes - retained UTF-8 output tail budget per job.
    */
-  constructor(private readonly agents: NativeAgentRegistry, private readonly maxConcurrentPerAgent: number,
-    private readonly maxOutputBytes = 262_144) {
+  constructor(private readonly agents: NativeAgentRegistry, private readonly maxConcurrentPerAgent: number) {
     if (!Number.isSafeInteger(maxConcurrentPerAgent) || maxConcurrentPerAgent < 1) {
       throw new Error('native-jobs: maxConcurrentPerAgent must be a positive safe integer')
     }
@@ -121,9 +111,7 @@ export class NativeJobRegistry {
     const entry: Entry = {
       id: NativeJobId(`${spec.kind}-${number}`), kind: spec.kind, label: spec.label, agent: spec.agent,
       startedAt: Date.now(), controller: new AbortController(), completed: Promise.withResolvers(),
-      releaseAgentCleanup: undefined, status: 'running', finishedAt: undefined, detail: undefined,
-      output: new TextRetainer({ kind: 'tail', maxBytes: this.maxOutputBytes }),
-      outputTruncated: false,
+      releaseAgentCleanup: undefined, status: 'running', finishedAt: undefined, detail: undefined, output: undefined,
     }
     this.entries.set(entry.id, entry)
     entry.releaseAgentCleanup = this.agents.onDispose(spec.agent, async () => {
@@ -136,11 +124,7 @@ export class NativeJobRegistry {
     })
     let run: Promise<NativeJobOutcome>
     try {
-      run = spec.run(entry.controller.signal, (text) => {
-        if (entry.controller.signal.aborted) return
-        if (entry.status !== 'running' && entry.status !== 'stopping') return
-        entry.output.push(text)
-      })
+      run = spec.run(entry.controller.signal)
     } catch (error) {
       this.settle(entry, failure(error))
       return entry.id
@@ -175,20 +159,15 @@ export class NativeJobRegistry {
   }
 
   /**
-   * Return the retained output without consuming it, including while the job remains live.
+   * Return final output after settlement, or an empty string while the job remains live.
    * @param id - registry id to read.
    * @param agent - exact registered Agent that owns the job.
    * @returns output together with its current job snapshot.
    */
-  read(id: NativeJobId, agent: NativeAgent): {
-    readonly output: string
-    readonly truncated: boolean
-    readonly snapshot: NativeJobSnapshot
-  } {
+  read(id: NativeJobId, agent: NativeAgent): { readonly output: string; readonly snapshot: NativeJobSnapshot } {
     this.assertReadable()
     const entry = this.access(id, agent)
-    const retained = entry.output.finish()
-    return { output: retained.text, truncated: retained.truncated || entry.outputTruncated, snapshot: this.snapshot(entry) }
+    return { output: entry.status === 'running' || entry.status === 'stopping' ? '' : entry.output ?? '', snapshot: this.snapshot(entry) }
   }
 
   /**
@@ -279,11 +258,7 @@ export class NativeJobRegistry {
     entry.status = outcome.status
     entry.finishedAt = Date.now()
     entry.detail = outcome.detail
-    if (outcome.output !== undefined) {
-      entry.output = new TextRetainer({ kind: 'tail', maxBytes: this.maxOutputBytes })
-      entry.output.push(outcome.output)
-      entry.outputTruncated = outcome.outputTruncated ?? false
-    }
+    entry.output = outcome.output
     entry.releaseAgentCleanup?.()
     entry.releaseAgentCleanup = undefined
     entry.completed.resolve(this.snapshot(entry))
@@ -318,7 +293,7 @@ export const plugin: NativePlugin = {
       throw new Error('native-jobs: configuration must be an object')
     }
     const fields = input as Record<string, unknown> | undefined
-    if (fields !== undefined && Object.keys(fields).some(key => key !== 'maxConcurrentPerAgent' && key !== 'maxOutputBytes')) {
+    if (fields !== undefined && Object.keys(fields).some(key => key !== 'maxConcurrentPerAgent')) {
       throw new Error('native-jobs: unknown configuration field')
     }
     const configuredLimit: unknown = fields?.maxConcurrentPerAgent ?? 10
@@ -326,12 +301,8 @@ export const plugin: NativePlugin = {
       throw new Error('native-jobs: maxConcurrentPerAgent must be a positive safe integer')
     }
     const maxConcurrentPerAgent = configuredLimit
-    const maxOutputBytes = fields?.maxOutputBytes ?? 262_144
-    if (typeof maxOutputBytes !== 'number' || !Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 1) {
-      throw new Error('native-jobs: maxOutputBytes must be a positive safe integer')
-    }
     return (context) => {
-      const registry = new NativeJobRegistry(context.require('agents'), maxConcurrentPerAgent, maxOutputBytes)
+      const registry = new NativeJobRegistry(context.require('agents'), maxConcurrentPerAgent)
       context.own(() => registry.dispose())
       context.provide('jobs', registry)
     }

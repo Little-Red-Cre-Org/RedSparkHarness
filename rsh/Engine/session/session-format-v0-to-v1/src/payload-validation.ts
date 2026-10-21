@@ -145,7 +145,6 @@ export function assertReleasedPayloadSemantics(event: SessionFormatEvent, versio
       nonEmptyString(data['provider'], `${label} provider`)
       nonEmptyString(data['model'], `${label} model`)
       if (data['reasoningEffort'] !== undefined) nonEmptyString(data['reasoningEffort'], `${label} reasoningEffort`)
-      if (data['maxTokens'] !== undefined) positiveIntegerValue(data['maxTokens'], `${label} maxTokens`)
       return
     case 'permission/preset':
       nonEmptyString(data['preset'], `${label} preset`)

@@ -1,5 +1,5 @@
 ---
-description: "Explicit Cordis adapters for selected native runtimes and compatibility-profile consumers during the staged migration."
+description: "Explicit native-runtime adapters for selected Cordis packages during the staged migration."
 kind: "package-group"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Compatibility bridges let native profiles select narrowly supported Cordis contributions without loading a legacy application bundle, and keep profile-specific Cordis wiring outside Engine owners. Runtime bridges preserve native Agent, Session, and tool-result ownership and release mounted plugins with the native installation. The group also owns declaration packages and explicit Settings adapters for legacy Cordis profiles.
+Compatibility bridges let native profiles select narrowly supported Cordis contributions without loading a legacy application bundle. Each bridge keeps native Agent, Session, and tool-result ownership intact and releases its mounted plugin with the native installation.
 
 The optional [`compat-dsh-runtime`](compat-dsh-runtime/README.md) owns one shared Cordis Context for the selected bridges. Leave it out of a native installation plan to keep Cordis unloaded.
 
@@ -20,10 +20,7 @@ The [filesystem subsystem](../../../Docs/subsystems/filesystem.md) defines the s
 | Package | Purpose |
 |---|---|
 | [`compat-dsh-runtime/`](compat-dsh-runtime/README.md) | Optional shared Cordis Context and allowlisted DSH plugin mounts |
-| [`compat-settings-definition/`](compat-settings-definition/README.md) | Cordis Settings Context and event declarations |
-| [`compat-settings-adapters/`](compat-settings-adapters/README.md) | Owner-scoped Cordis Settings adapters for selected Engine services |
 | [`compat-fs-local/`](compat-fs-local/README.md) | Local filesystem Provider for native consumers |
 | [`compat-fs-policy/`](compat-fs-policy/README.md) | Filesystem observation policy for native events |
 | [`compat-fs-sandbox/`](compat-fs-sandbox/README.md) | Policy-required sandbox filesystem Provider |
 | [`compat-tool-fs/`](compat-tool-fs/README.md) | Legacy filesystem tool and prompt contributions |
-| [`subagent-codex/`](subagent-codex/README.md) | Codex app-server subagent adapter for Cordis compatibility profiles |

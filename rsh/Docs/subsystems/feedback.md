@@ -211,17 +211,16 @@ type MessageFeedbackDeleteResult =
 
 Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts`](../../Modules/Official/feedback/command-feedback/src/types.ts)
 
-```ts
-/** Durable feedback category ids in the order product surfaces present them. */
-const FEEDBACK_CATEGORIES = [
-  'task-result', 'instruction-following', 'product-interaction', 'service-stability',
-  'resource-cost', 'security-privacy-permission', 'other',
-] as const
-```
-
 ```ts type-equiv
-/** One of the fixed feedback categories. */
-type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number]
+/** One of the fixed feedback categories; the ids are durable log vocabulary. */
+type FeedbackCategory =
+  | 'task-result'
+  | 'instruction-following'
+  | 'product-interaction'
+  | 'service-stability'
+  | 'resource-cost'
+  | 'security-privacy-permission'
+  | 'other'
 ```
 
 ```ts type-equiv
@@ -253,7 +252,7 @@ interface SessionFeedbackRecordRequest {
 ```ts type-equiv
 /** Stable postcondition of a recorded remark. */
 interface SessionFeedbackRecordValue {
-  /** The selected recorder accepted the remark for the Session log. */
+  /** The remark is appended to the Session log; flushing follows the Session's own schedule. */
   readonly recorded: true
 }
 ```
@@ -291,7 +290,7 @@ Successful message-feedback mutations await canonical persistence: live operatio
 
 Plugin disposal closes operation admission and drains accepted per-Session queue work.
 
-When explicitly enabled, [`session-log-deepseek`](../../Modules/Official/llm/session-log-deepseek/README.md) carries feedback as part of the ordinary `dsh_session_log` suffix on subsequent eligible DeepSeek requests. Recording feedback does not trigger an LLM request or a separate `dsh_feedback` upload. For non-DeepSeek routes, the [OTel backend](../../Engine/session/session-telemetry-otel/README.md) can release the canonical prefix through recorded feedback. The command acknowledgement confirms recording and identifies the Session and anonymous user; it reports neither telemetry policy nor delivery.
+When explicitly enabled, [`session-log-deepseek`](../../Engine/session/session-log-deepseek/README.md) carries feedback as part of the ordinary `dsh_session_log` suffix on subsequent eligible DeepSeek requests. Recording feedback does not trigger an LLM request or a separate `dsh_feedback` upload. For non-DeepSeek routes, the [OTel backend](../../Engine/session/session-telemetry-otel/README.md) can release the canonical prefix through recorded feedback. The command acknowledgement confirms recording and identifies the Session and anonymous user; it reports neither telemetry policy nor delivery.
 
 ## Web surface
 

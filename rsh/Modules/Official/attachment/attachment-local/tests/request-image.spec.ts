@@ -6,9 +6,6 @@ import sharp from 'sharp'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CompressionLimiter } from '../src/compression-limiter.ts'
 import LocalAttachmentStore from '../src/index.ts'
-import { LocalImageRequestStore } from '../src/request-store.ts'
-import { LocalAttachmentBackend } from '../src/backend.ts'
-import { NativeLocalAttachmentStore } from '../src/native.ts'
 
 const homes: string[] = []
 
@@ -51,19 +48,6 @@ afterEach(async () => {
 })
 
 describe('local request-image cache', () => {
-  it('reads a legacy-persisted image through the independent request store', async () => {
-    const dshHome = await home()
-    const attachments = new LocalAttachmentStore(new Context(), { dshHome })
-    const attachment = await attachments.saveImage({ data: await image(32, 16), mediaType: 'image/png' })
-    const requests = new LocalImageRequestStore(dshHome, 2)
-    const policy = { maxPixels: 16 * 16, maxBytes: 4_096 }
-
-    expect(requests.imageHostPath(attachment)).toBe(attachments.imageHostPath(attachment))
-    await expect(requests.readImageRequest(attachment, policy))
-      .resolves.toEqual(await attachments.readImageRequest(attachment, policy))
-    expect(() => new LocalImageRequestStore(dshHome, 0)).toThrow('concurrency must be a positive integer')
-  })
-
   it('rebuilds a cleared cache without moving or losing durable attachments', async () => {
     const fallbackHome = await home()
     vi.stubEnv('DSH_HOME', fallbackHome)
@@ -345,42 +329,35 @@ describe('local request-image cache', () => {
     const attachment = await attachments.saveImage({
       data: await image(2048, 1024), mediaType: 'image/png', name: 'replace.png',
     })
-    const release = Promise.withResolvers<undefined>()
+    const actualRead = attachments.readImage.bind(attachments)
     let calls = 0
-    const backend = new LocalAttachmentBackend({ dshHome: await home() }, (ref, signal) => {
+    vi.spyOn(attachments, 'readImage').mockImplementation((ref, signal) => {
       calls += 1
       if (calls === 1) {
         return new Promise((_resolve, reject) => {
           signal?.addEventListener('abort', () => {
-            void release.promise.then(() => { reject(new Error('request transform aborted', { cause: signal.reason })) })
+            reject(new Error('request transform aborted', { cause: signal.reason }))
           }, { once: true })
         })
       }
-      return attachments.readImage(ref, signal)
+      return actualRead(ref, signal)
     })
-    const native = new NativeLocalAttachmentStore(backend)
     const controller = new AbortController()
     const policy = { maxPixels: 640_000, maxBytes: 1024 * 1024 }
-    const cancelled = native.readImageRequest(attachment, policy, controller.signal)
-    await vi.waitFor(() => { expect(calls).toBe(1) })
+    const cancelled = attachments.readImageRequest(attachment, policy, controller.signal)
+    await vi.waitFor(() => {
+      expect(calls).toBe(1)
+    })
+
     controller.abort('cancelled')
-    const replacement = native.readImageRequest(attachment, policy)
-    try {
-      await expect(cancelled).rejects.toMatchObject({
-        message: 'Attachment request cancelled with a non-Error reason.', cause: 'cancelled',
-      })
-      await expect(replacement).resolves.toMatchObject({ width: 1130, height: 565 })
-      expect(calls).toBe(2)
-      let closed = false
-      const closing = native.close().then(() => { closed = true })
-      await new Promise(resolve => setImmediate(resolve))
-      expect(closed).toBe(false)
-      release.resolve(undefined)
-      await closing
-      expect(closed).toBe(true)
-    } finally {
-      release.resolve(undefined)
-      await native.close()
-    }
+    const replacement = attachments.readImageRequest(attachment, policy)
+
+    await expect(cancelled).rejects.toMatchObject({
+      message: 'Attachment request cancelled with a non-Error reason.',
+      cause: 'cancelled',
+    })
+    await expect(replacement).resolves.toMatchObject({ width: 1130, height: 565 })
+    expect(calls).toBe(2)
   })
+
 })

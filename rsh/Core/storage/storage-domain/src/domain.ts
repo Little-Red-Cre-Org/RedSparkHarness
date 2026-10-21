@@ -9,18 +9,11 @@
  * @module @deepseek-ai/dsh-storage-domain/src/domain
  */
 
-import type { KvUnit } from '@deepseek-ai/dsh-storage/backend'
+import type { Context } from '@deepseek-ai/cordis'
+import type { KvUnit } from '@deepseek-ai/dsh-storage'
 import { DomainError } from './error.ts'
 import type { DomainSpec, DomainGlobalSpec, TableKeyOf, TableValueOf } from './spec.ts'
-import type { DomainChanged } from './event-types.ts'
-
-/** Post-durability observers; failures cannot roll back already committed domain state. */
-export interface DomainRuntimeEffects {
-  /** Dispatch an exact committed snapshot. @param change - durable operation and current value. */
-  changed(change: DomainChanged): void
-  /** Report a synchronous observer failure. @param message - owned domain and failed observer details. */
-  warning(message: string): void
-}
+import type { DomainChanged } from './events.ts'
 
 /** Handle on a domain's global singleton. */
 export interface DomainGlobal<G> {
@@ -161,7 +154,7 @@ export class DomainImpl {
   private disposal?: Promise<void>
 
   /**
-   * @param effects - post-durability change dispatcher and observer error reporter.
+   * @param ctx - Context that carries `domain/changed` emissions.
    * @param spec - The domain declaration.
    * @param unit - The opened backend unit; this instance owns its lifecycle.
    * @param records - Validated records from the unit's `loadAll`, one entry
@@ -173,7 +166,7 @@ export class DomainImpl {
    * the domain name for a later open.
    */
   constructor(
-    private readonly effects: DomainRuntimeEffects,
+    private readonly ctx: Context,
     spec: DomainSpec,
     private readonly unit: KvUnit,
     records: Map<string, Map<string, unknown>>,
@@ -257,13 +250,13 @@ export class DomainImpl {
    */
   private emitChanged(change: DomainChanged): void {
     try {
-      this.effects.changed(change)
+      this.ctx.emit('domain/changed', change)
     } catch (error) {
       // Swallows synchronous observer exceptions only: emit dispatches
       // listeners inline and nothing else runs in the try. The event is a
       // notification, not a transaction participant — the commit point has
       // passed, so containment (with a log) is the only correct outcome.
-      this.effects.warning(`domain '${this.name}': domain/changed listener failed: ${String(error)}`)
+      this.ctx.logger.warn(`domain '${this.name}': domain/changed listener failed: ${String(error)}`)
     }
   }
 

@@ -36,7 +36,7 @@
       "path": "../../../../Modules/Official/extensions/cordis-host-runner"
     },
     {
-      "path": "../../../../Engine/goal/goal/tsconfig.client.json"
+      "path": "../../../../Engine/goal/goal"
     },
     {
       "path": "../../../../Modules/Official/feedback/message-feedback"
@@ -51,7 +51,7 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
+      "path": "../../../../Engine/preset/agent-presets"
     },
     {
       "path": "../../../../Modules/Official/settings/settings"
@@ -60,10 +60,10 @@
       "path": "../../../../Engine/subagent/subagent"
     },
     {
-      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
+      "path": "../../../../Modules/Official/interaction/user-approval"
     },
     {
-      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.client.json"
+      "path": "../../../../Modules/Official/interaction/user-questions"
     },
     {
       "path": "../session-controller/tsconfig.client.json"
@@ -82,12 +82,6 @@
     },
     {
       "path": "../../../../Modules/Official/feedback/command-feedback"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
-    },
-    {
-      "path": "../../../../Core/settings/settings-definition/tsconfig.client.json"
     }
   ]
 }

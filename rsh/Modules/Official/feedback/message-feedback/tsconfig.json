@@ -27,19 +27,13 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
+      "path": "../../../../Engine/session/session-persistence"
     },
     {
       "path": "../../../../Core/typert/protocol"
     },
     {
       "path": "../command-feedback"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
-      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
     }
   ]
 }

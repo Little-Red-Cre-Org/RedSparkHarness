@@ -6,20 +6,73 @@
  */
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type {
-  FileDiff,
-  FileLocation,
-  GenericCallView,
-  SearchResultView,
-} from '@deepseek-ai/dsh-native-tools/presentation'
 
-export type { FileDiff, FileLocation, GenericCallView, ToolCallKind } from '@deepseek-ai/dsh-native-tools/presentation'
+/**
+ * Category of a tool call, used by a UI to pick an icon or treatment. The
+ * provider-neutral vocabulary lets tools describe themselves without depending
+ * on a particular client; `other` is the default.
+ */
+export type ToolCallKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'fetch' | 'other'
+
+/**
+ * A file location a tool reads or modifies, so a capable UI can "follow along" —
+ * highlight or jump to the file (and line) as the tool runs. `path` is what the
+ * tool operated on (the model-facing path); `line` is an optional 1-based line
+ * to focus (e.g. a read's offset).
+ */
+export interface FileLocation {
+  path: string
+  line?: number
+}
+
+/**
+ * A single-file change a tool is about to make, for a UI that renders inline
+ * diffs. `oldText` is `null` for a new-file create (nothing to diff against);
+ * an overwrite also uses `null`, because a call-time presenter has no access to
+ * the file's prior content.
+ */
+export interface FileDiff {
+  path: string
+  /** Prior content, or `null` for a new file / an overwrite (no prior content available at call time). */
+  oldText: string | null
+  /** Content after the change. */
+  newText: string
+}
 
 /**
  * Provider-neutral pending-call presentation. Tools declare one tagged intent;
  * UI bridges map it without special-casing tool names.
  */
 export type ToolCallView = GenericCallView | TerminalCallView | DiffCallView
+
+/**
+ * The default card: a titled tool-call row with an optional category icon, a
+ * salient raw input, extra content blocks, and follow-along file locations. Any
+ * tool whose call is not a terminal or a diff uses this.
+ */
+export interface GenericCallView {
+  card: 'generic'
+  /**
+   * Human-readable, always-visible label describing what THIS call does. Keep it
+   * short — a UI shows it as a card header / log line.
+   */
+  title: string
+  /** Category for icon/treatment; defaults to `other` when omitted. */
+  kind?: ToolCallKind
+  /**
+   * The salient input to show in a detail/expanded view (e.g. a background
+   * job id). Omit to show nothing; a string renders as-is, an object as pretty
+   * JSON. NOT the full raw args object unless that is genuinely what a reader wants.
+   */
+  rawInput?: unknown
+  /**
+   * UI-facing content blocks to show on the pending call alongside the title.
+   * Omit to show none. A UI maps these to its own content blocks.
+   */
+  content?: ContentBlock[]
+  /** Files this call reads/modifies, for editor follow-along. Omit for a call that touches no file. */
+  locations?: FileLocation[]
+}
 
 /**
  * A call that IS a shell command running in a working directory: a capable UI
@@ -136,7 +189,82 @@ export interface DiffResultView {
   diffs: FileDiff[]
 }
 
-export type { SearchLineMatch, SearchFileMatches, SearchMatchesResultView, SearchPathsResultView, SearchResultView } from '@deepseek-ai/dsh-native-tools/presentation'
+/** One matched line inside a {@link SearchFileMatches} group: its 1-based line number and text. */
+export interface SearchLineMatch {
+  /** 1-based line number of the match within its file. */
+  lineNumber: number
+  /** The matched line text, as the tool surfaced it (the per-line preview budget already applied). */
+  line: string
+}
+
+/** One file's grouped content matches for a {@link SearchMatchesResultView}, in first-seen file order. */
+export interface SearchFileMatches {
+  /** The file the matches belong to (the model-facing display path). */
+  path: string
+  /** The file's matched lines, in output order. */
+  matches: SearchLineMatch[]
+}
+
+/**
+ * A completed content search (`grep`) rendered as a search card whose matches are
+ * grouped by file, so a capable UI can list each file as an expandable group of
+ * its matched lines. `shape: 'matches'` discriminates this variant from the path
+ * variant ({@link SearchPathsResultView}) within {@link SearchResultView}. The
+ * discriminant is `shape`, not `kind`, so it never collides with the
+ * {@link ToolCallKind} `kind` an icon-picking bridge reads off a call view.
+ */
+export interface SearchMatchesResultView {
+  card: 'search'
+  shape: 'matches'
+  /** Replacement title for the completed call. Omit to keep the pending-state title. */
+  title?: string
+  /** Matched lines grouped by file, in first-seen file order. */
+  files: SearchFileMatches[]
+  /**
+   * Whether the tool capped the inline result: `files` carries only the retained
+   * matches, not every match the search found. A UI shows a capped indicator so it
+   * never presents a partial group as complete.
+   */
+  truncated: boolean
+  /** Total matches the search found before capping (equals the retained count when not `truncated`). */
+  total: number
+}
+
+/**
+ * A completed path search (`glob`) rendered as a search card whose result is a flat
+ * path list. `shape: 'paths'` discriminates this variant from the grouped-matches
+ * variant ({@link SearchMatchesResultView}) within {@link SearchResultView}.
+ */
+export interface SearchPathsResultView {
+  card: 'search'
+  shape: 'paths'
+  /** Replacement title for the completed call. Omit to keep the pending-state title. */
+  title?: string
+  /** The discovered paths, in the tool's result order (the retained page when `truncated`). */
+  paths: string[]
+  /**
+   * Whether the tool capped the inline result: `paths` carries only the retained
+   * page, not every path the search found. A UI shows a capped indicator so it
+   * never presents a partial list as complete.
+   */
+  truncated: boolean
+  /** Total paths the search found before capping (equals `paths.length` when not `truncated`). */
+  total: number
+}
+
+/**
+ * A completed search rendered as a search card, the result-time view a discovery
+ * tool (`grep`, `glob`) returns from `presentResult`. One `card: 'search'` view
+ * with two `shape`-discriminated variants: grouped-by-file content matches
+ * ({@link SearchMatchesResultView}) and a flat path list
+ * ({@link SearchPathsResultView}). Both carry a `truncated`/`total` signal so a UI
+ * never presents a capped result as complete. The view carries no result text: a
+ * UI without a search card falls back to the raw `tool/result` content. There is
+ * no call-time analogue: a search call stays a {@link GenericCallView}
+ * (`kind: 'search'`) because the pending state has no matches or paths to show —
+ * the structured shape exists only after `execute`.
+ */
+export type SearchResultView = SearchMatchesResultView | SearchPathsResultView
 
 /**
  * A completed file read rendered as a line-numbered, optionally syntax-highlighted

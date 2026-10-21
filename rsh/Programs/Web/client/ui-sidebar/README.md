@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The dsh web client sidebar shows the active build, starts sessions, collapses navigation to a 56px rail, browses Workspaces and Sessions, and opens Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining navigation controls and rail geometry. The native-web profile shares the shell, with native Session rows, a live read-only scheduled-task list, and compact appearance controls.
+The dsh web client sidebar lets users recognize the active build, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining the navigation controls and rail geometry.
 
 ## Table of Contents
 
@@ -26,8 +26,6 @@ The dsh web client sidebar shows the active build, starts sessions, collapses na
 ## Use this package
 
 The sidebar is the navigation shell: users see the brand, start new sessions, collapse the rail, and reach Settings. Feature plugins fill its seats — ui-workspace fills `sidebar.workspaces`, ui-settings registers the trigger row and settings panel at `sidebar.settings`.
-
-In the native-web profile, the native application fills these seats with a Host-backed Session roster and Settings panel. The workspace section groups rows by registered `workspaceId`, follows Session activity and Workspace changes, supports recent-activity/manual ordering, grouped or flat views, Session search and archive, and Workspace creation, selection, rename, and deletion. When a Workspace path is outside configured roots, the sidebar asks whether to trust that path and retries the same operation after approval. Opening an existing Session from the roster or search first admits its Workspace, so a cold untrusted Workspace asks for trust before the Session loads. The sidebar recognizes trust and system-directory refusals by RPC code, not error class. Protected system directories remain forbidden and show a localized reason. The directory browser also opens from the collapsed rail. In manual ordering with Workspace grouping, up/down buttons persist Workspace and group-member order through the Host; controls disable during a write and failed writes leave the followed order intact. Workspace creation uses the shared in-app directory browser. The scheduled-tasks header action opens a read-only list that follows Host changes while selected; compact language and theme controls stay in the sidebar footer. The Native tree has one roving treeitem tab stop: Arrow Up/Down and Home/End move focus, Arrow Right expands a collapsed Workspace, Arrow Left collapses an expanded Workspace, and Enter/Space activates rows.
 
 ### Brand and New Session
 
@@ -92,10 +90,8 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define what the shell owns versus what its occupants own; they are current package constraints.
 
-- **The legacy Workspace browser remains owned by ui-workspace** — the Native sidebar composes its Host-backed rows here and shares row and directory-browser presentation components.
-- **Native Workspace rows do not support drag reordering or moving Sessions** — up/down controls provide persisted ordering; drag gestures and cross-Workspace moves remain unavailable.
-- **Native Session search shows one Host page** — additional pages are not presented.
-- **The Native Schedule list is read-only** — it shows task names, states, schedule times, and next runs without prompts or management actions.
+- **Session state-dot rendering is owned by ui-workspace** — no done/error notification sources are available to this shell.
+- **Workspace browser behavior is composition-owned** — grouping, ordering, search, and row state belong to ui-workspace, not this shell.
 - **"New task completed" unread marking is local viewing state** — completion-time > last-seen never reaches the host.
 
 <a id="dev-note"></a>

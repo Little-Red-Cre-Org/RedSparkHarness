@@ -83,7 +83,6 @@ export class ConnectionController {
   private immediateRetry = false
   private networkAvailable = true
   private lastState: ConnectionState | undefined
-  private loopCompletion: Promise<void> | undefined
   private readonly config: Required<ConnectionRecoveryConfig>
 
   constructor(
@@ -98,7 +97,7 @@ export class ConnectionController {
   start(): void {
     if (this.running) return
     this.running = true
-    this.loopCompletion = this.loop()
+    void this.loop()
   }
 
   /** Stop the loop and abort the current generation source. */
@@ -108,12 +107,6 @@ export class ConnectionController {
     this.current = null
     this.retryDelay?.abort()
     this.retryDelay = null
-  }
-
-  /** Abort active work and wait until its generation source releases its resources. */
-  async stopAndWait(): Promise<void> {
-    this.stop()
-    await this.loopCompletion
   }
 
   /** Reset the retry sequence and replace the current generation or retry delay immediately. */

@@ -9,7 +9,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseDshArgs } from './args.ts'
-import { ensureShippedNativeProfile } from './native-profile-template.ts'
 import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
 // Both the source tree (rsh/Programs/CLI/src) and the bundled bin (rsh/Programs/CLI/lib) sit
@@ -28,17 +27,9 @@ function readVersion(): string {
  */
 export async function runCli(): Promise<void> {
   const invocation = parseDshArgs(process.argv.slice(2), readVersion())
-  if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
-    ensureShippedNativeProfile(invocation.profile)
-  }
 
   switch (invocation.mode) {
     case 'profile': {
-      const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
-      if (invocation.fromDefaultProfile !== undefined && SHIPPED_NATIVE_PROFILES().includes(invocation.profile)) {
-        throw new Error('native profile cannot use --from-default-profile')
-      }
-      ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
         if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
@@ -48,7 +39,7 @@ export async function runCli(): Promise<void> {
       }
       requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-launch-environment/layers')
+      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-app-boot')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,
@@ -59,19 +50,12 @@ export async function runCli(): Promise<void> {
       break
     }
     case 'plugin': {
-      ensureShippedNativeProfile(invocation.profile)
-      const { profileRuntime } = await import('./native-profile-config.ts')
-      if (profileRuntime(invocation.profile) === 'native') {
-        throw new Error(`dsh: dsh plugin does not manage native profile ${invocation.profile}; edit its rsh.profile.json installations instead (see rsh/Docs/native-config-migration.md)`)
-      }
       requireCompatibilityRuntime()
       const { runPlugin } = await import('./plugin.ts')
       process.exit(runPlugin(invocation.profile, invocation.args))
       break
     }
     case 'dump-config': {
-      const { ensureShippedNativeProfile } = await import('./native-profile-template.ts')
-      ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
         if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')

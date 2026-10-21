@@ -6,7 +6,7 @@
  */
 
 import type { UserMessage } from '@deepseek-ai/dsh-llm/message'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
 import type { OptionalSessionSeq, SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Durable source session, cited event seqs, and snapshot facts for prepared cross-session context. */
@@ -31,7 +31,7 @@ export interface SessionReferenceSource {
   }[]
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     'session-reference': SessionReferenceSource
   }
@@ -71,7 +71,7 @@ export interface SessionReferenceMentionCandidate extends SessionReferenceCandid
 
 /** Direct message content and optional referenced-session context. */
 export interface PreparedReferencedMessage {
-  /** A clone of the direct message content supplied to preparation. */
+  /** Readable message content after host mention tokens are removed. */
   content: ContentBlock[]
   /** Aggregated untrusted snapshot, absent when the message has no references. */
   additionalContext?: UserMessage

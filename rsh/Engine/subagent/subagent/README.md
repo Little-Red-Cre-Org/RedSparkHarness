@@ -25,8 +25,6 @@ Use `dsh-subagent` to delegate work to named child agents, collect their results
 <a id="use-this-package"></a>
 ## Use this package
 
-The shared descriptor, assistant-output folding and delegation permission text are exported by subagent-protocol. This compatibility service re-exports those values; native foreground composition uses native-subagent and the native tool-subagent entry.
-
 This package is the contract every delegation setup shares. You enable it by mounting the service together with one or more provider backends and the model-facing delegation tool; from then on, an agent can delegate work and the service routes each request to the named provider.
 
 ### Enabling delegation
@@ -120,7 +118,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Subagent capability seam](../../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md) — the design record for the delegation capability family.
 - [Continuable subagents](../../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md) — durable children that accept follow-up turns.
 - [In-process spawn backend](../subagent-spawn-in-process/README.md) — the simplest provider to compose.
-- [Out-of-process ACP backend](../../../Compatibility/DSH/subagent/subagent-acp/README.md) — children with their own runtime over the Agent Client Protocol.
+- [Out-of-process ACP backend](../subagent-acp/README.md) — children with their own runtime over the Agent Client Protocol.
 - [tool-subagent-control README](../tool-subagent-control/README.md) — the follow-up, interrupt, and listing surface.
 
 -----

@@ -8,7 +8,6 @@ import {
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
-  nativePackageTargets,
   nativeSafeSourceSubpaths,
 } from './native-package-policy.ts'
 import { collectNativeDependencyViolations, nativeSourceViolations } from './verify-native-dependencies.ts'
@@ -27,20 +26,8 @@ function fixture(content: string, dependency?: string): string {
   const dir = 'rsh/Core/runtime-diagnostics/native-runtime'
   for (const owner of nativePackageDirectories) {
     if (owner === dir) continue
-    const entries = nativeSafeSourceSubpaths.get(owner) ?? []
-    const exports = Object.fromEntries(entries.map(entry => [entry, {
-      types: `./lib/types/${entry.slice(2)}.d.ts`, default: `./lib/${entry.slice(2)}.js`,
-    }]))
-    if (mixedNativeLibraryDirectories.has(owner)) {
-      exports['./native'] = { types: './lib/types/native.d.ts', default: './lib/native.js' }
-    }
-    const name = owner === 'rsh/Programs/SDK/packages/client'
-      ? '@deepseek-ai/dsh-sdk-client'
-      : `@deepseek-ai/dsh-${owner.split('/').at(-1)}`
-    write(`${owner}/package.json`, JSON.stringify({ name, exports }))
-    for (const entry of entries) write(`${owner}/src/${entry.slice(2)}.ts`, 'export {}')
+    write(`${owner}/package.json`, JSON.stringify({ name: `@deepseek-ai/dsh-${owner.split('/').at(-1)}` }))
     write(`${owner}/src/index.ts`, 'export {}')
-    if (mixedNativeLibraryDirectories.has(owner)) write(`${owner}/src/native.ts`, 'export {}')
   }
   write(`${dir}/package.json`, JSON.stringify({
     name: '@deepseek-ai/dsh-native-runtime',
@@ -49,13 +36,13 @@ function fixture(content: string, dependency?: string): string {
   write(`${dir}/src/index.ts`, content)
   write(`${dir}/src/local.ts`, 'export interface Local {}')
   write('rsh/Core/vendor/cordis/src/index.ts', 'export interface Context {}')
-  write('rsh/Programs/SDK/packages/native-server/src/index.ts', 'export interface ProgramServer {}')
+  write('rsh/Programs/SDK/packages/protocol/src/index.ts', 'export interface Protocol {}')
   write('tsconfig.host.json', JSON.stringify({
     compilerOptions: {
       noLib: true, moduleResolution: 'bundler', module: 'esnext',
       paths: {
         'hidden-framework': ['./rsh/Core/vendor/cordis/src/index.ts'],
-        'hidden-program': ['./rsh/Programs/SDK/packages/native-server/src/index.ts'],
+        'hidden-program': ['./rsh/Programs/SDK/packages/protocol/src/index.ts'],
         'hidden-engine': ['./rsh/Engine/core/native-agent/src/index.ts'],
       },
     },
@@ -65,17 +52,17 @@ function fixture(content: string, dependency?: string): string {
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
     ])]
-      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]),
+      .map(owner => `${owner}/src/**/*.ts`),
   }))
   write('client.ts', 'export {}')
   write('tsconfig.client.json', JSON.stringify({
     compilerOptions: { noLib: true },
     include: ['client.ts', ...[...nativePackageDirectories]
       .filter(owner => owner.startsWith('rsh/Programs/Web/client/'))
-      .flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`]), ...[
+      .map(owner => `${owner}/src/**/*.ts`), ...[
       ...mixedNativeLibraryDirectories.keys(),
       ...nativeSafeSourceSubpaths.keys(),
-    ].flatMap(owner => [`${owner}/src/**/*.ts`, `${owner}/src/**/*.tsx`])],
+    ].map(owner => `${owner}/src/**/*.ts`)],
   }))
   return root
 }
@@ -107,10 +94,6 @@ it('allows resolved native owners without scanning comments or ordinary string d
     const label = '@deepseek-ai/cordis'
   `, ts.ScriptTarget.Latest, true)
   expect(nativeSourceViolations(source, specifier => specifier === './scope.ts')).toEqual([])
-  const loader = '/rsh/Programs/CLI/src/native-profile-loader.ts'
-  expect(nativeSourceViolations(ts.createSourceFile(loader, 'import(pathToFileURL(entryPath).href)', ts.ScriptTarget.Latest, true), () => false)).toEqual([])
-  expect(nativeSourceViolations(ts.createSourceFile(loader, 'import(pathToFileURL(otherPath).href)', ts.ScriptTarget.Latest, true), () => false)).toHaveLength(1)
-  expect(nativeSourceViolations(ts.createSourceFile('entry.ts', 'import(pathToFileURL(entryPath).href)', ts.ScriptTarget.Latest, true), () => false)).toHaveLength(1)
 })
 
 it.each([
@@ -147,16 +130,6 @@ it('admits a strict native local and Node built-in edge', () => {
   writeFileSync(join(root, owner, 'src/index.ts'), 'import type { Local } from "./local.ts"\nimport type { Stats } from "node:fs"')
   writeFileSync(join(root, owner, 'src/local.ts'), 'export interface Local {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
-})
-
-it('checks the Cordis-free SDK client in its Host compiler face', () => {
-  const owner = 'rsh/Programs/SDK/packages/client'
-  expect(nativePackageTargets.get(owner)).toEqual(['host'])
-  const root = fixture('export {}')
-  writeFileSync(join(root, owner, 'src/index.ts'), 'import type { Context } from "hidden-framework"')
-  expect(collectNativeDependencyViolations(root)).toContainEqual(
-    expect.stringContaining('src/index.ts:0: native source cannot reference hidden-framework'),
-  )
 })
 
 it('accepts Client bundle inputs from devDependencies but rejects them from Host runtime sources', () => {
@@ -205,16 +178,11 @@ it('keeps a mixed Cordis and native package explicitly classified', () => {
   const root = fixture('export {}')
   const dir = join(root, 'rsh/Modules/Official/fs/fs-local')
   mkdirSync(join(dir, 'src'), { recursive: true })
-  writeFileSync(join(dir, 'src/backend.ts'), 'export {}')
   writeFileSync(join(dir, 'src/native.ts'), 'export {}')
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-fs-local', exports: {
-      './native': { types: './lib/types/native.d.ts', default: './lib/native.js' },
-      './backend': { types: './lib/types/backend.d.ts', default: './lib/backend.js' },
-    },
+    name: '@deepseek-ai/dsh-fs-local', exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['fs'] } },
   }))
-  writeFileSync(join(dir, 'src/backend.ts'), 'export {}')
   expect(collectNativeDependencyViolations(root)).toEqual([])
 })
 
@@ -233,35 +201,16 @@ it('checks a mixed native library export without an installer manifest', () => {
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
 })
 
-it.each(['rsh/Programs/Web/client/ui-trajectory'])('checks a TSX native source in the compiler face for %s', (owner) => {
-  const root = fixture('export {}')
-  mkdirSync(join(root, owner, 'src'), { recursive: true })
-  writeFileSync(join(root, owner, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-client-ui-trajectory',
-    exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-  }))
-  writeFileSync(join(root, owner, 'src/native.tsx'), 'export {}')
-  expect(collectNativeDependencyViolations(root)).toEqual([])
-})
-
 it('checks a declared Cordis-free subpath in a mixed package', () => {
   const root = fixture('export {}')
   const dir = join(root, 'rsh/Modules/Official/attachment/attachment')
-  const subpaths = ['native', 'types', 'brand', 'error', 'admission', 'request-projection']
   mkdirSync(join(dir, 'src'), { recursive: true })
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: '@deepseek-ai/dsh-attachment',
-    exports: Object.fromEntries(subpaths.map(subpath => [`./${subpath}`, {
-      types: `./lib/types/${subpath}.d.ts`, default: `./lib/${subpath}.js`,
-    }])),
+    exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types.js' } },
   }))
-  writeFileSync(join(dir, 'src/native.ts'), 'export type { Attachment } from "./types.ts"')
   writeFileSync(join(dir, 'src/types.ts'), 'export type { Attachment } from "./safe.ts"')
-  for (const subpath of subpaths.slice(2)) writeFileSync(join(dir, `src/${subpath}.ts`), 'export {}')
   writeFileSync(join(dir, 'src/safe.ts'), 'export interface Attachment {}')
-  for (const entry of ['brand', 'error', 'admission', 'request-projection']) {
-    writeFileSync(join(dir, `src/${entry}.ts`), 'export {}')
-  }
   expect(collectNativeDependencyViolations(root)).toEqual([])
   writeFileSync(join(dir, 'src/safe.ts'), 'import type { Context } from "@deepseek-ai/cordis"\nexport interface Attachment {}')
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
@@ -329,55 +278,4 @@ it('rejects a native manifest whose entry is not a published export', () => {
   } }
   writeFileSync(path, JSON.stringify(manifest))
   expect(collectNativeDependencyViolations(root)).toContainEqual(expect.stringContaining('published package export'))
-})
-
-it.each([
-  ['export interface Backend {}', false],
-  ['import type { Context } from "@deepseek-ai/cordis"\nexport interface Backend {}', true],
-])('checks the Host-only storage backend source without requiring a Client owner: %s', (source, forbidden) => {
-  const root = fixture('export {}')
-  const owner = 'rsh/Core/storage/storage'
-  mkdirSync(join(root, owner, 'src'), { recursive: true })
-  writeFileSync(join(root, owner, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-storage',
-    exports: {
-      './native': { types: './lib/types/native.d.ts', default: './lib/native.js' },
-      './backend': { types: './lib/types/backend.d.ts', default: './lib/types/backend.js' },
-    },
-    dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['storage'] } },
-  }))
-  writeFileSync(join(root, owner, 'src/native.ts'), 'export {}')
-  writeFileSync(join(root, owner, 'src/backend.ts'), source)
-  const clientPath = join(root, 'tsconfig.client.json')
-  const client = JSON.parse(readFileSync(clientPath, 'utf8')) as { include: string[] }
-  client.include = client.include.filter(path => !path.startsWith(owner + '/'))
-  writeFileSync(clientPath, JSON.stringify(client))
-  const errors = collectNativeDependencyViolations(root)
-  if (forbidden) expect(errors).toContainEqual(expect.stringContaining('@deepseek-ai/cordis'))
-  else expect(errors).toEqual([])
-})
-
-it('admits existing Client stylesheets while rejecting missing assets and Host stylesheet edges', () => {
-  const root = fixture('export {}')
-  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
-  writeFileSync(join(owner, 'index.ts'), 'import "./card.module.css"')
-  writeFileSync(join(owner, 'card.module.css'), '.card {}')
-  expect(collectNativeDependencyViolations(root)).toEqual([])
-  writeFileSync(join(owner, 'index.ts'), 'import "./missing.module.css"')
-  expect(collectNativeDependencyViolations(root).some(error => error.includes('missing.module.css'))).toBe(true)
-  writeFileSync(join(owner, 'index.ts'), 'export {}')
-  const host = join(root, 'rsh/Core/runtime-diagnostics/native-runtime/src')
-  writeFileSync(join(host, 'index.ts'), 'import "./card.module.css"')
-  writeFileSync(join(host, 'card.module.css'), '.card {}')
-  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./card.module.css'))).toBe(true)
-})
-
-it('admits only the Client producer’s explicit inline CSS query', () => {
-  const root = fixture('export {}')
-  const owner = join(root, 'rsh/Programs/Web/client/ui-primitives/src')
-  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?inline"; export { css }')
-  writeFileSync(join(owner, 'theme.css'), '.root { color: red; }')
-  expect(collectNativeDependencyViolations(root)).toEqual([])
-  writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?raw"; export { css }')
-  expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./theme.css?raw'))).toBe(true)
 })

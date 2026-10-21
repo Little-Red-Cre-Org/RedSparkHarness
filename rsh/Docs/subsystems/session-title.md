@@ -64,7 +64,7 @@ interface SessionTitleSnapshot extends SessionTitleEventData {
 
 ## Auxiliary request record
 
-The shared LLM helper records each validated, dispatchable title request before calling the model. The payload reproduces the model-visible system and message input, routing, provider ownership, and source-message attribution even when generation later fails; it includes an output limit only when the route accepts one.
+The shared LLM helper records each validated, dispatchable title request before calling the model. The payload reproduces the model-visible system and message input, routing, output limit, provider ownership, and source-message attribution even when generation later fails.
 
 ```ts type-equiv
 /** Exact model-visible request recorded before one auxiliary title dispatch. */
@@ -79,8 +79,8 @@ interface SessionTitleLlmRequestEventData {
   readonly system: string
   /** Exact auxiliary message list. */
   readonly messages: Message[]
-  /** Exact auxiliary output-token cap; omitted for openai-codex routes that reject it. */
-  readonly maxTokens?: number
+  /** Exact auxiliary output-token cap. */
+  readonly maxTokens: number
 }
 ```
 
@@ -130,8 +130,8 @@ interface SessionTitleProviderResult {
 ```
 
 ```ts type-equiv
-/** Title implementation contract shared by both runtimes; `R` is the runtime's request shape. */
-interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = SessionTitleProviderRequest> {
+/** One optional asynchronous title implementation registered with the service. */
+interface SessionTitleProvider {
   /** Stable id of the provider recorded with the title. */
   readonly id: SessionTitleProviderId
   /** When new human prompts start automatic generation. */
@@ -141,13 +141,8 @@ interface SessionTitleEngineProvider<R extends SessionTitleProviderRequest = Ses
    * @param request - message snapshot, current route, session, and cancellation.
    * @returns proposed title plus exact input seqs and the optional provider/model route used to generate it.
    */
-  generate(request: R): Promise<SessionTitleProviderResult>
+  generate(request: SessionTitleProviderRequest): Promise<SessionTitleProviderResult>
 }
-```
-
-```ts type-equiv
-/** One optional asynchronous title implementation registered with the service. */
-interface SessionTitleProvider extends SessionTitleEngineProvider {}
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
@@ -162,7 +157,7 @@ Generated from source by `rsh/Scripts/gen-cordis-catalog.ts` (verified fresh by 
 
 ### `ctx.sessionTitle` — `SessionTitleService`
 
-Log-backed title fold plus asynchronous fallback generation. The title behavior is the shared framework-free SessionTitleEngine; this service is the Cordis glue: projections, event wiring, and lifetime.
+Log-backed title fold plus asynchronous fallback generation.
 
 ```ts cordis-catalog
 /**

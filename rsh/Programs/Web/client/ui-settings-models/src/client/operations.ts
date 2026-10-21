@@ -7,19 +7,71 @@
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {
-  SettingsPathOpView,
+  CredentialInfo, LlmDiscoveredModel, LlmModelDiscoveryRequest,
+  SettingsNamespaceView, SettingsPathOpView,
 } from '@deepseek-ai/dsh-api-remotes/client'
-import type {
-  ModelSettingsOperations, ModelSettingsWriteOutcome,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ModelDiscoveryOutcome } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** What one namespace write answered. */
-export type SettingsWriteOutcome = ModelSettingsWriteOutcome
-export type { ModelDiscoveryOutcome }
+export type SettingsWriteOutcome =
+  /** Committed; the view carries the stored user subtree and the new revision. */
+  | { readonly kind: 'written'; readonly view: SettingsNamespaceView }
+  /**
+   * The stored revision moved after the card read it, so the draft is stale.
+   * The message stays for callers that report the Host diagnostic as it is.
+   */
+  | { readonly kind: 'conflict'; readonly message: string }
+  /** Any other refusal, with the Host's own diagnostic. */
+  | { readonly kind: 'refused'; readonly message: string }
+
+/** What one endpoint interrogation answered. */
+export type ModelDiscoveryOutcome =
+  /** The candidates the provider disclosed, in its own order. */
+  | { readonly kind: 'found'; readonly models: readonly LlmDiscoveredModel[] }
+  /** The interrogation was refused, with the Host's own diagnostic. */
+  | { readonly kind: 'refused'; readonly message: string }
 
 /** The Host operations the Models page and its cards invoke. */
-export type ModelsOperations = ModelSettingsOperations
+export interface ModelsOperations {
+  /**
+   * Read one credential reference's state.
+   * @param ref - credential reference name.
+   * @returns the state, or undefined when the reference is unknown or the read was refused.
+   */
+  describeCredential(ref: string): Promise<CredentialInfo | undefined>
+  /**
+   * Store one credential literal under its reference.
+   * @param ref - credential reference name.
+   * @param value - the literal to store.
+   * @returns the refusal message, or undefined once stored.
+   */
+  storeCredential(ref: string, value: string): Promise<string | undefined>
+  /**
+   * Remove one credential reference (idempotent).
+   * @param ref - credential reference name.
+   * @returns the refusal message, or undefined once removed.
+   */
+  removeCredential(ref: string): Promise<string | undefined>
+  /**
+   * Apply path operations to one settings namespace.
+   * @param ns - settings namespace identity.
+   * @param ops - ordered path operations against the stored section, as the
+   * wire takes them (the Remote signature owns the array).
+   * @param expectedRevision - revision the draft was opened at, or undefined to write unfenced.
+   * @returns the write outcome the card renders from.
+   */
+  writeSettings(
+    ns: string,
+    ops: SettingsPathOpView[],
+    expectedRevision: number | undefined,
+  ): Promise<SettingsWriteOutcome>
+  /**
+   * Ask a provider endpoint what models it serves.
+   * @param settingsNs - namespace whose adapter family answers.
+   * @param request - endpoint facts as the form currently shows them.
+   * @returns the candidates, or the refusal.
+   */
+  discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest): Promise<ModelDiscoveryOutcome>
+}
 
 /**
  * Bind the page's Host operations to the plugin's own Remote namespaces.
@@ -42,11 +94,8 @@ export function createModelsOperations(ctx: ClientContext): ModelsOperations {
       return response.ok ? undefined : response.error.message
     },
     writeSettings: async (ns, ops, expectedRevision) => {
-      const response = await ctx.remote.settings.mutate(ns, ops as SettingsPathOpView[], expectedRevision)
-      if (response.ok) return { kind: 'written', view: {
-        user: response.value.user,
-        revision: response.value.revision,
-      } }
+      const response = await ctx.remote.settings.mutate(ns, ops, expectedRevision)
+      if (response.ok) return { kind: 'written', view: response.value }
       const { code, message } = response.error
       return code === 'settings/conflict' ? { kind: 'conflict', message } : { kind: 'refused', message }
     },

@@ -60,7 +60,7 @@
       "path": "../../../../Engine/llm/llm-retry"
     },
     {
-      "path": "../../../../Modules/Official/workspace/workspace/tsconfig.client.json"
+      "path": "../../../../Modules/Official/workspace/workspace"
     },
     {
       "path": "../../../../Engine/llm/token-meter"
@@ -69,7 +69,7 @@
       "path": "../../../../Modules/Official/plan/plan-mode"
     },
     {
-      "path": "../../../../Engine/goal/goal/tsconfig.client.json"
+      "path": "../../../../Engine/goal/goal"
     },
     {
       "path": "../../../../Modules/Official/todo/tool-todo"
@@ -91,9 +91,6 @@
     },
     {
       "path": "../../../../Core/util/workspace-path"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ],
   "exclude": [

@@ -2,7 +2,7 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { retainSettingsOwner } from './settings-owner.ts'
+import type {} from '@deepseek-ai/dsh-settings'
 import {
   AllowedModelRouteSchema,
   assertAllowedModelRoutes,
@@ -60,12 +60,20 @@ export class SubagentModelSelectionConfig extends Service {
     }
     this.validate(entry)
     this.source = () => entry
-    retainSettingsOwner(this, ctx, {
-      entry: { ...entry, allowedModels: entry.allowedModels.map(route => ({ ...route })) },
-      bindSource: (source?: () => SubagentModelSelectionSettings) => {
-        this.source = source ?? (() => entry)
-      },
-      validate: (value: SubagentModelSelectionSettings) => { this.validate(value) },
+    ctx.inject(['settings'], (settingsCtx) => {
+      settingsCtx.settings.installSection(
+        ctx,
+        SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE,
+        SUBAGENT_MODEL_SELECTION_SETTINGS_SCHEMA,
+        entry,
+        {
+          setSource: (source) => { this.source = source },
+          validate: (value) => { this.validate(value) },
+          // Consumers snapshot per Session, so a settings update never rebuilds
+          // the tool definitions of a Session that is already running.
+          onChange: () => {},
+        },
+      )
     })
   }
 

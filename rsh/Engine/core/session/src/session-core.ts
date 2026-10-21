@@ -10,11 +10,9 @@ import { deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
 import type { Message } from '@deepseek-ai/dsh-llm/native'
 import { SESSION_FORMAT_VERSION, SessionLogOffset, SessionSeq } from './types.ts'
 import type { EpochHeader, RequestContext, SessionEvent, SessionEventMap, SessionEventType, SessionHeader, SessionId, SessionSeedEventState, SurfaceIntent, SurfaceEventType } from './types.ts'
-import { deriveEventMessage, SurfaceManager, validateSessionEventData } from './surface.ts'
+import { deriveEventMessage, SurfaceManager, validateSessionEventData, validateSurfaceMetadata } from './surface.ts'
 import type { SessionSurface } from './surface.ts'
 import { foldRequestHeader } from './request-header.ts'
-import { assertSessionEventEnvelope } from './event-validation.ts'
-export { adoptSessionEvent, snapshotSessionEvent } from './event-validation.ts'
 
 export * from './types.ts'
 export { SessionPreparation } from './preparation.ts'
@@ -25,19 +23,6 @@ export type { SessionSurface, SurfaceFoldReplacement, SurfaceFoldResult } from '
 export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSurfaceEvent, isSurfaceEvent, isSurfaceEligibleType } from './surface.ts'
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
-
-/** Options admitted with one event in a Session append batch. */
-export type SessionAppendOptions<T extends SessionEventType> = T extends SurfaceEventType
-  ? SurfaceIntent<T>
-  : { readonly ignorable?: true; readonly sourceEventSeqs?: never; readonly surfaceOp?: never }
-
-/** Typed input admitted with all other inputs before any batch event is published. */
-export type SessionAppendInput = {
-  [T in SessionEventType]: { readonly type: T; readonly data: SessionEventMap[T] }
-    & (T extends SurfaceEventType
-      ? { readonly opts: SessionAppendOptions<T> }
-      : { readonly opts?: SessionAppendOptions<T> })
-}[SessionEventType]
 
 /** Validate and freeze one detached creation header in place. */
 function validateSessionHeader(id: SessionId, input: unknown): SessionHeader {
@@ -105,6 +90,244 @@ function snapshotSessionHeader(id: SessionId, source?: SessionHeader): SessionHe
   return validateSessionHeader(id, snapshot)
 }
 
+/**
+ * Validate an exclusively owned event and deeply freeze its identified message
+ * without copying the event. The caller transfers an object graph that no
+ * producer retains and that shares no mutable children with another event.
+ * Use {@link snapshotSessionEvent} when exclusive ownership is not guaranteed.
+ * @param event - exclusively owned event imported across a trusted boundary.
+ * @returns the same event object with a validated, deeply frozen message.
+ * @throws when event-local surface metadata, request-header fields, or message invariants are invalid; history relations are not checked.
+ */
+export function adoptSessionEvent<T extends SessionEvent>(event: T): T {
+  validateSessionEventData(event, `session event at seq ${event.seq}`)
+  validateSurfaceMetadata(event)
+  assertMessageEventShape(
+    event,
+    `session event at seq ${event.seq}`,
+  )
+  switch (event.type) {
+    case 'user/message':
+      deepFreeze(event.data)
+      break
+    case 'system/message':
+    case 'assistant/message':
+    case 'tool/result':
+      deepFreeze(event.data.message)
+      break
+    default:
+      // SessionEventMap is merge-extensible; plugin-owned events carry no core message.
+      break
+  }
+  return event
+}
+
+/**
+ * Detach one event while preserving deep immutability for its identified message.
+ * @param event - event imported across a query or persistence boundary.
+ * @returns a detached event snapshot with a validated, deeply frozen message.
+ */
+export function snapshotSessionEvent<T extends SessionEvent>(event: T): T {
+  return adoptSessionEvent(structuredClone(event))
+}
+
+/** Validate the fixed event envelope after one-pass JSON materialization. */
+function assertSessionEventEnvelope(value: unknown, index: number): asserts value is SessionEvent {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`seed event at index ${index} has an invalid event envelope`)
+  }
+  const event = value as Record<string, unknown>
+  for (const key in event) {
+    switch (key) {
+      case 'type':
+      case 'seq':
+      case 'time':
+      case 'data':
+      case 'surfaceOp':
+      case 'sourceEventSeqs':
+      case 'ignorable':
+        break
+      default:
+        throw new Error(`seed event at index ${index} has an invalid event envelope`)
+    }
+  }
+  const type = event['type']
+  const seq = event['seq']
+  const time = event['time']
+  if (typeof type !== 'string'
+    || typeof seq !== 'number' || !Number.isSafeInteger(seq) || seq < 0 || Object.is(seq, -0)
+    || typeof time !== 'number' || !Number.isSafeInteger(time)
+    || event['data'] === undefined
+    || (event['ignorable'] !== undefined && event['ignorable'] !== true)) {
+    throw new Error(`seed event at index ${index} has an invalid event envelope`)
+  }
+  validateSessionEventData(event as SessionEvent, `seed ${type} at index ${index}`)
+  switch (type) {
+    case 'request/header':
+    case 'system/message':
+    case 'user/message':
+    case 'assistant/attempt':
+    case 'assistant/message':
+    case 'tool/result':
+      assertCurrentLlmShape(event, index)
+      break
+  }
+}
+
+/** Reject obsolete request headers and malformed messages at the seed/load boundary. */
+function assertCurrentLlmShape(event: Record<string, unknown>, index: number): void {
+  const data = event['data']
+  const record = typeof data === 'object' && data !== null
+    ? data as Record<string, unknown>
+    : undefined
+  if (event['type'] === 'request/header') {
+    const headerRecord = record?.['header'] as Record<string, unknown>
+    const config = headerRecord['config']
+    if (!hasProviderModel(config)) throw new Error(`seed request/header at index ${index} lacks provider/model`)
+    const configRecord = config as Record<string, unknown>
+    const reasoningEffort = configRecord['reasoningEffort']
+    if (reasoningEffort !== undefined
+      && (typeof reasoningEffort !== 'string' || reasoningEffort.length === 0)) {
+      throw new Error(`seed request/header at index ${index} has an invalid reasoningEffort`)
+    }
+    assertAdapterDefaults(headerRecord['adapterDefaults'], configRecord, index)
+    const reason = record?.['reason']
+    if (reason !== 'initial' && reason !== 'resume' && reason !== 'change' && reason !== 'series') {
+      throw new Error(`seed request/header at index ${index} has an invalid reason`)
+    }
+    if (record?.['startsSeries'] !== undefined && record['startsSeries'] !== true) {
+      throw new Error(`seed request/header at index ${index} has an invalid startsSeries marker`)
+    }
+  }
+  const type = event['type']
+  if (type === 'assistant/attempt') {
+    assertAssistantSettlementShape(record, type, index)
+    return
+  }
+  if (!isMessageEventType(type)) return
+  assertMessageEventShape(event, `seed ${type} at index ${index}`)
+  if (type === 'assistant/message') {
+    assertAssistantSettlementShape(record, type, index)
+  }
+}
+
+/** Validate fields used directly by restored Session lifecycle logic without replaying the embedded stream. */
+function assertAssistantSettlementShape(
+  data: Record<string, unknown> | undefined,
+  type: 'assistant/attempt' | 'assistant/message',
+  index: number,
+): void {
+  const turn = data?.['turn']
+  const step = data?.['step']
+  if (typeof turn !== 'number' || !Number.isSafeInteger(turn) || turn < 0 || Object.is(turn, -0)
+    || typeof step !== 'number' || !Number.isSafeInteger(step) || step < 0 || Object.is(step, -0)
+    || !Array.isArray(data?.['stream'])) {
+    throw new Error(`seed ${type} at index ${index} has invalid settlement fields`)
+  }
+}
+
+const allowedAdapterKeys = new Set(['reasoningEffort', 'maxTokens'])
+
+/** Validate adapter-default markers imported from a durable request header. */
+function assertAdapterDefaults(
+  value: unknown,
+  config: Record<string, unknown>,
+  index: number,
+): void {
+  if (value === undefined) return
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`seed request/header at index ${index} has invalid adapterDefaults`)
+  }
+  const defaults = value as Record<string, unknown>
+  if (Object.keys(defaults).some(key => !allowedAdapterKeys.has(key))
+    || Object.values(defaults).some(marker => marker !== true)
+    || defaults['reasoningEffort'] === true && config['reasoningEffort'] === undefined
+    || defaults['maxTokens'] === true && config['maxTokens'] === undefined) {
+    throw new Error(`seed request/header at index ${index} has invalid adapterDefaults`)
+  }
+}
+
+/** The four surface event types whose payload carries an identified message. */
+function isMessageEventType(type: unknown): type is SurfaceEventType {
+  return type === 'system/message' || type === 'user/message'
+    || type === 'assistant/message' || type === 'tool/result'
+}
+
+const MESSAGE_ROLE_BY_TYPE: Record<SurfaceEventType, Message['role']> = {
+  'system/message': 'system',
+  'user/message': 'user',
+  'assistant/message': 'assistant',
+  'tool/result': 'user',
+}
+
+/** Validate only the event-specific invariants needed to safely replay a message. */
+function assertMessageEventShape(event: Record<string, unknown>, subject: string): void {
+  const type = event['type']
+  if (!isMessageEventType(type)) return
+  const data = event['data']
+  const record = typeof data === 'object' && data !== null
+    ? data as Record<string, unknown>
+    : undefined
+  const message = type === 'user/message' ? record : record?.['message']
+  if (typeof message !== 'object' || message === null
+    || typeof (message as Record<string, unknown>)['id'] !== 'string'
+    || (message as Record<string, unknown>)['id'] === '') {
+    throw new Error(`${subject} lacks an identified message`)
+  }
+  const messageRecord = message as Record<string, unknown>
+  const expectedRole = MESSAGE_ROLE_BY_TYPE[type]
+  if (messageRecord['role'] !== expectedRole) {
+    throw new Error(`${subject} message must have role "${expectedRole}"`)
+  }
+  const source = messageRecord['source']
+  if (typeof source !== 'object' || source === null
+    || typeof (source as Record<string, unknown>)['kind'] !== 'string'
+    || (source as Record<string, unknown>)['kind'] === '') {
+    throw new Error(`${subject} message has invalid source`)
+  }
+  if (!Array.isArray(messageRecord['content'])) {
+    throw new Error(`${subject} message has invalid content`)
+  }
+  const sourceRecord = source as Record<string, unknown>
+  if (type === 'system/message') {
+    if (sourceRecord['kind'] !== 'plugin' || typeof sourceRecord['plugin'] !== 'string'
+      || sourceRecord['plugin'] === '') {
+      throw new Error(`${subject} message must have plugin source`)
+    }
+    return
+  }
+  if (type === 'assistant/message') {
+    if (sourceRecord['kind'] !== 'model' || !hasProviderModel(sourceRecord)) {
+      throw new Error(`${subject} message must have model source`)
+    }
+    return
+  }
+  if (type !== 'tool/result') return
+  if (sourceRecord['kind'] !== 'tool'
+    || typeof sourceRecord['callId'] !== 'string'
+    || sourceRecord['callId'] === '') {
+    throw new Error(`${subject} message must have tool source`)
+  }
+  const content = messageRecord['content'] as unknown[]
+  const block = content[0]
+  if (content.length !== 1 || typeof block !== 'object' || block === null
+    || (block as Record<string, unknown>)['type'] !== 'tool-result'
+    || !Array.isArray((block as Record<string, unknown>)['content'])) {
+    throw new Error(`${subject} message must contain one tool-result block`)
+  }
+  if ((block as Record<string, unknown>)['toolCallId'] !== sourceRecord['callId']) {
+    throw new Error(`${subject} message has mismatched tool call ids`)
+  }
+}
+
+/** Whether an unknown value carries the current provider/model pair. */
+function hasProviderModel(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const pair = value as Record<string, unknown>
+  return typeof pair['provider'] === 'string' && pair['provider'].length > 0
+    && typeof pair['model'] === 'string' && pair['model'].length > 0
+}
+
 /** Store-owned publication hook; a detached Session has no hook. */
 export interface SessionPublication {
   appending: boolean
@@ -151,8 +374,6 @@ export function hasSessionPublication(session: Session): boolean {
  */
 export class Session {
   private log: SessionEvent[] = []
-  private readonly appendGuards = new Set<(event: SessionEvent) => void>()
-  private checkingAppendGuards = false
   /** Single incremental owner of surface acceptance and projection state. */
   private readonly surfaceManager = new SurfaceManager(this.log)
 
@@ -211,7 +432,6 @@ export class Session {
    * @param seed - optional borrowed replay or fork events.
    * @param header - optional borrowed storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
-   * @param onConstructorEvent - receives a newly appended seed marker for persistence by the sole owner.
    * @returns a detached session.
    */
   static create(
@@ -219,9 +439,8 @@ export class Session {
     seed?: readonly SessionEvent[],
     header?: SessionHeader,
     inheritedEventCount?: SessionLogOffset,
-    onConstructorEvent?: (event: SessionEvent) => void,
   ): Session {
-    return new Session(id, seed, header, 'snapshot', inheritedEventCount, onConstructorEvent)
+    return new Session(id, seed, header, 'snapshot', inheritedEventCount)
   }
 
   /**
@@ -387,26 +606,6 @@ export class Session {
   }
 
   /**
-   * Check whether this exact immutable event was accepted by this Session.
-   * @param event - candidate event supplied to a synchronous policy projection.
-   * @returns whether the log holds the same object at its assigned sequence.
-   */
-  hasAcceptedEvent(event: SessionEvent): boolean { return this.log[event.seq] === event }
-
-  /**
-   * Register a synchronous veto before an event changes this Session's log.
-   * Guards receive the validated immutable event and must not append recursively.
-   * Historical restore events are not dispatched to guards.
-   * @param guard - check that throws to reject an event without changing the log.
-   * @returns exact registration disposer; removal is idempotent.
-   */
-  onBeforeAppend(guard: (event: SessionEvent) => void): () => void {
-    const contribution = (event: SessionEvent) => { guard(event) }
-    this.appendGuards.add(contribution)
-    return () => { this.appendGuards.delete(contribution) }
-  }
-
-  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
@@ -448,7 +647,6 @@ export class Session {
     data: SessionEventMap[T],
     ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
   ): SessionEvent<T> {
-    if (this.checkingAppendGuards) throw new Error('session append cannot reenter an append guard')
     const surfaceOpts: SurfaceIntent | undefined = opts[0]
     const surfaceMetadata = {
       ...surfaceOpts?.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
@@ -474,10 +672,6 @@ export class Session {
       ...(surfaceMetadataSnapshot as { surfaceOp?: unknown; sourceEventSeqs?: unknown }),
     } as unknown as SessionEvent<T>)
     validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`)
-    this.checkingAppendGuards = true
-    try {
-      for (const guard of [...this.appendGuards]) guard(event as SessionEvent)
-    } finally { this.checkingAppendGuards = false }
     this.surfaceManager.validateNext(event as SessionEvent)
 
     if (entry !== undefined) entry.appending = true
@@ -493,56 +687,6 @@ export class Session {
         if (entry.detachRequested && !entry.announcing) entry.detach()
       }
     }
-  }
-
-  /**
-   * Admit related facts together after every payload, guard, surface transition and
-   * publication callback has been validated. Guards observe the pre-batch log;
-   * publication observers see the complete accepted batch in sequence order.
-   * Persistence remains the selected writer's asynchronous durability barrier.
-   * @param inputs - ordered typed facts and required surface metadata; a log-only event may set
-   *   `ignorable: true` when older readers can safely skip it.
-   * @returns immutable accepted events with contiguous sequences.
-   * @throws before changing the log if any input or synchronous acceptance check fails.
-   */
-  appendBatch(inputs: readonly SessionAppendInput[]): readonly SessionEvent[] {
-    if (this.checkingAppendGuards) throw new Error('session append cannot reenter an append guard')
-    const entry = attachments.get(this)
-    if (entry?.appending) throw new Error('session append cannot reenter while another append is being published')
-    this.checkingAppendGuards = true
-    try {
-      const candidates: SessionEvent[] = []
-      const candidateLog = [...this.log]
-      const surface = new SurfaceManager(candidateLog)
-      const guards = [...this.appendGuards]
-      for (const input of inputs) {
-        const options = input.opts
-        const snapshot = snapshotJsonValue({ type: input.type, data: input.data,
-          ...options !== undefined && 'ignorable' in options ? { ignorable: true } : {},
-          ...options !== undefined && 'sourceEventSeqs' in options ? { sourceEventSeqs: options.sourceEventSeqs } : {},
-          ...options !== undefined && 'surfaceOp' in options ? { surfaceOp: options.surfaceOp } : {} })
-        if (snapshot === undefined) throw new Error(`session event "${input.type}" carries non-JSON-serializable data or surface metadata`)
-        const event = deepFreeze({ ...snapshot, seq: SessionSeq(candidateLog.length), time: Date.now() } as unknown as SessionEvent)
-        validateSessionEventData(event, `session event "${event.type}" at seq ${event.seq}`)
-        for (const guard of guards) guard(event)
-        surface.validateNext(event)
-        candidateLog.push(event)
-        candidates.push(event)
-      }
-      if (entry !== undefined) entry.appending = true
-      try {
-        const publications = candidates.map(event => entry?.capture(event))
-        for (const event of candidates) this.log.push(event)
-        if (candidates.length > 0) this.eventsSnapshot = undefined
-        for (const publish of publications) publish?.()
-        return Object.freeze(candidates)
-      } finally {
-        if (entry !== undefined) {
-          entry.appending = false
-          if (entry.detachRequested && !entry.announcing) entry.detach()
-        }
-      }
-    } finally { this.checkingAppendGuards = false }
   }
 
   /** Cached fold of the request-header events — see {@link requestHeader}. */

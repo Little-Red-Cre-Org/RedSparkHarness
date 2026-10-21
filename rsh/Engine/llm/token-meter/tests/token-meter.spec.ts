@@ -507,8 +507,8 @@ describe('malformed replay and listener lifecycle', () => {
     }, { surfaceOp: 'append' })
     const service = meter()
     const states = (service as unknown as {
-      meter: { states: WeakMap<Session, { surface: unknown[] }> }
-    }).meter.states
+      states: WeakMap<Session, { surface: unknown[] }>
+    }).states
     expectRepeatedFailure(service, session, /no matching step\/start/)
     const state = states.get(session)
     expect(state?.surface).toEqual([])

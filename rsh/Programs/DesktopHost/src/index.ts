@@ -4,17 +4,30 @@
  * @module @deepseek-ai/dsh-desktop-host
  */
 
-import { mkdirSync, readFileSync } from 'node:fs'
+import { closeSync, createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { once } from 'node:events'
-import { createRequire } from 'node:module'
-import { join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
-import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
-import type { DesktopHostRuntime } from './runtime.ts'
-import { openDesktopHostPipes } from './pipes.ts'
+import { dirname, join, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { Context } from '@deepseek-ai/cordis'
+import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
+import {
+  boot,
+  composeEntries,
+  loadLayeredEnv,
+  loadProfileDirectory,
+  loadOverlayPatches,
+} from '@deepseek-ai/dsh-app-boot'
+import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
+import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
+import type {} from '@deepseek-ai/dsh-api-gateway'
+import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
+import { prepareNativeClientBundle } from './native-client.ts'
+import { createDesktopAssetHandler, DESKTOP_STREAM_PATH } from './web-assets.ts'
 import {
   DESKTOP_HOST_PROTOCOL_VERSION,
   DESKTOP_PIPE_CHUNK_BYTES,
+  DESKTOP_REQUEST_PIPE_FD,
+  DESKTOP_RESPONSE_PIPE_FD,
   DesktopHostRequestDecoder,
   encodeDesktopResponseData,
   encodeDesktopResponseEnd,
@@ -47,72 +60,7 @@ export type DesktopHostEvent = {
   readonly dshVersion: string
 } | {
   readonly type: 'fatal'
-  readonly errorType: 'AggregateError' | 'Error' | 'RangeError' | 'SyntaxError' | 'TypeError' | 'UnknownError' | 'ValidationError'
-  readonly path?: readonly (string | number)[]
-  readonly rule?: string
-}
-
-type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
-
-const errorTypes = new Set<DesktopHostFailure['errorType']>([
-  'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
-])
-const COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
-
-async function createCompatibilityRuntime(
-  runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
-): Promise<DesktopHostRuntime> {
-  const require = createRequire(join(projectDir, 'package.json'))
-  let entry: string
-  try {
-    entry = require.resolve(COMPATIBILITY_HOST_PACKAGE)
-  } catch (error) {
-    throw new Error('dsh desktop: legacy bundles require the separately installed Desktop compatibility Host; profile files were preserved', { cause: error })
-  }
-  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@deepseek-ai/dsh-desktop-host-compatibility')
-  return compatibility.createLegacyDesktopRuntime(runtimeDir, projectDir, allowLinkedPackages)
-}
-
-function failureEvent(error: unknown): DesktopHostFailure {
-  const errors = errorChain(error)
-  // Only producer-sanitized issues carry a rule; raw validator issues may name user dictionary keys.
-  const issueOf = (candidate: Error): unknown => {
-    const issues = (candidate as Error & { issues?: unknown }).issues
-    const issue: unknown = Array.isArray(issues) ? (issues as unknown[])[0] : undefined
-    return typeof issue === 'object' && issue !== null && 'rule' in issue && typeof issue.rule === 'string' ? issue : undefined
-  }
-  const source = errors.find(candidate => issueOf(candidate) !== undefined) ?? errors[0]
-  const issue = source === undefined ? undefined : issueOf(source)
-  const path: (string | number)[] | undefined = typeof issue === 'object' && issue !== null && 'path' in issue && Array.isArray(issue.path)
-    ? (issue.path as unknown[]).filter((part: unknown): part is string | number => typeof part === 'string' || typeof part === 'number')
-    : undefined
-  const rule = typeof issue === 'object' && issue !== null && 'rule' in issue && typeof issue.rule === 'string'
-    ? issue.rule
-    : undefined
-  return {
-    type: 'fatal',
-    errorType: source === undefined ? 'Error'
-      : errorTypes.has(source.name as DesktopHostFailure['errorType']) ? source.name as DesktopHostFailure['errorType'] : 'Error',
-    ...path === undefined ? {} : { path },
-    ...rule === undefined ? {} : { rule },
-  }
-}
-
-function errorChain(error: unknown): Error[] {
-  const pending = [error]
-  const seen = new Set<Error>()
-  const errors: Error[] = []
-  for (let cursor = 0; cursor < pending.length; cursor += 1) {
-    const value = pending[cursor]
-    if (!(value instanceof Error) || seen.has(value)) continue
-    seen.add(value)
-    errors.push(value)
-    if ('cause' in value) pending.push(value.cause)
-    if (value instanceof AggregateError) {
-      for (const nested of value.errors as unknown[]) pending.push(nested)
-    }
-  }
-  return errors
+  readonly message: string
 }
 
 /** Controller returned to tests and the self-executing process entry. */
@@ -136,10 +84,111 @@ function isDesktopHostCommand(message: unknown): message is DesktopHostCommand {
     && (message as Record<string, unknown>).type === 'shutdown'
 }
 
+interface PackageManifest {
+  readonly name?: string
+  readonly version?: string
+}
+
+const DESKTOP_PATCH = fileURLToPath(new URL('../config/desktop.cordis.patch.yml', import.meta.url))
+const ROOT_CONFIG = '# Electron desktop composition root; package transactions own this file.\n[]\n'
+const ROOT_CONFIG_FILENAME = 'desktop.cordis.yml'
+
+function readManifest(path: string): PackageManifest {
+  const value: unknown = JSON.parse(readFileSync(path, 'utf8'))
+  if (!isRecord(value)) throw new Error(`dsh desktop: ${path} must contain a package manifest`)
+  return {
+    ...(typeof value.name === 'string' ? { name: value.name } : {}),
+    ...(typeof value.version === 'string' ? { version: value.version } : {}),
+  }
+}
+
+function packageManifestPath(projectDir: string, packageName: string): string {
+  const path = join(projectDir, 'node_modules', ...packageName.split('/'), 'package.json')
+  if (!existsSync(path)) throw new Error(`dsh desktop: installed package ${JSON.stringify(packageName)} has no manifest`)
+  return path
+}
+
+function isProjectPath(projectDir: string, target: string): boolean {
+  const root = realpathSync(projectDir)
+  const path = realpathSync(target)
+  return path === root || path.startsWith(root + sep)
+}
+
+function desktopPatches(runtimeDir: string, projectDir: string, allowLinkedPackages: boolean): PatchOptions[] {
+  const dshRoot = dirname(packageManifestPath(runtimeDir, '@deepseek-ai/dsh'))
+  const profile = loadProfileDirectory('dsh desktop', projectDir, join(dshRoot, 'package.json'))
+  for (const layer of profile.layers) {
+    if (!allowLinkedPackages && !isProjectPath(projectDir, layer.packageDir) && !isProjectPath(runtimeDir, layer.packageDir)) {
+      throw new Error(`dsh desktop: profile bundle ${JSON.stringify(layer.packageName)} resolved outside the Desktop runtime and profile`)
+    }
+  }
+  const layers = [
+    ...profile.layers.map(layer => layer.patches),
+    profile.patches,
+    loadOverlayPatches('dsh desktop', DESKTOP_PATCH),
+  ]
+  const rows = new Map(composeEntries(layers).flatMap(row => typeof row.id === 'string' ? [[row.id, row] as const] : []))
+  const agentPresets = rows.get('agent-presets')
+  if (agentPresets !== undefined) {
+    layers.push([{
+      id: 'agent-presets',
+      config: {
+        ...(agentPresets.config ?? {}) as Record<string, unknown>,
+        roots: [{ path: join(dshRoot, 'config', 'agent-presets'), trust: 'system' }],
+      },
+    }])
+  }
+  return layers.flat()
+}
+
 function dshVersion(runtimeDir: string): string {
-  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), 'utf8'))
-  if (!isRecord(value) || typeof value.version !== 'string') throw new Error('dsh desktop: installed dsh manifest has no version')
-  return value.version
+  const manifest = readManifest(packageManifestPath(runtimeDir, '@deepseek-ai/dsh'))
+  if (typeof manifest.version !== 'string') throw new Error('dsh desktop: installed dsh manifest has no version')
+  return manifest.version
+}
+
+function remoteStreamHandler(ctx: Context): ConnectionFetchHandler {
+  return {
+    requestBodyMode: () => 'buffered',
+    async fetch(request): Promise<Response> {
+      if (request.method !== 'POST') return new Response(null, { status: 405 })
+      const gateway = ctx.get('typertGateway')
+      if (gateway === undefined) return new Response('gateway unavailable', { status: 503 })
+      let body: unknown
+      try {
+        body = await request.json()
+      } catch {
+        return new Response('body is not JSON', { status: 400 })
+      }
+      if (!isRecord(body) || typeof body.endpoint !== 'string') {
+        return new Response('invalid stream request', { status: 400 })
+      }
+      const abort = new AbortController()
+      const cancel = (): void => { abort.abort(request.signal.reason) }
+      request.signal.addEventListener('abort', cancel, { once: true })
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            const values = await gateway.wireStream.open(body.endpoint as string, body.payload, abort.signal)
+            for await (const value of values) {
+              controller.enqueue(encoder.encode(`${JSON.stringify(value)}\n`))
+            }
+            controller.close()
+          } catch (error) {
+            controller.error(error)
+          } finally {
+            request.signal.removeEventListener('abort', cancel)
+          }
+        },
+        cancel(reason) {
+          abort.abort(reason)
+          request.signal.removeEventListener('abort', cancel)
+        },
+      })
+      return new Response(stream, { headers: { 'content-type': 'application/x-ndjson' } })
+    },
+  }
 }
 
 interface NodeRequestInit extends RequestInit {
@@ -162,12 +211,31 @@ export async function runDesktopHost(
 ): Promise<DesktopHostController> {
   const absoluteProject = resolve(projectDir)
   mkdirSync(absoluteProject, { recursive: true })
-  const absoluteRuntime = resolve(runtimeDir)
-  const version = dshVersion(absoluteRuntime)
-  const allowLinkedPackages = options.allowLinkedPackages === true
-  const runtime = profileDirectoryRuntime(absoluteProject) === 'native'
-    ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
-    : await createCompatibilityRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages)
+  const nativeClient = await prepareNativeClientBundle(absoluteProject, resolve(runtimeDir))
+  const rootConfig = join(absoluteProject, ROOT_CONFIG_FILENAME)
+  writeFileSync(rootConfig, ROOT_CONFIG)
+  const environment = loadLayeredEnv('dsh desktop')
+  let current: Context | undefined
+  const ctx = await boot('dsh desktop', rootConfig, structuredClone(desktopPatches(
+    resolve(runtimeDir),
+    absoluteProject,
+    options.allowLinkedPackages === true,
+  )), (hostCtx) => {
+    current = hostCtx
+    hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
+    provideCmdline(hostCtx, { args: [], exit: () => {} })
+  })
+  current = ctx
+  const connection = ctx.get('connection')
+  const clientModules = ctx.get('clientModules')
+  const gateway = ctx.get('typertGateway')
+  if (connection === undefined || clientModules === undefined || gateway === undefined) {
+    await ctx.fiber.dispose()
+    throw new Error('dsh desktop: composition did not provide connection, typertGateway, and clientModules')
+  }
+  const api = connection.createSharedFetchHandler('/api')
+  const assets = createDesktopAssetHandler(ctx, resolve(runtimeDir), nativeClient)
+  const streams = remoteStreamHandler(ctx)
   const requests = new Map<number, AbortController>()
   let disposing: Promise<void> | undefined
 
@@ -175,13 +243,14 @@ export async function runDesktopHost(
     disposing ??= (async () => {
       for (const controller of requests.values()) controller.abort()
       requests.clear()
-      await runtime.dispose()
+      await current?.fiber.dispose()
+      current = undefined
     })()
     await disposing
   }
 
   return {
-    dshVersion: version,
+    dshVersion: dshVersion(resolve(runtimeDir)),
     cancel(streamId) {
       requests.get(streamId)?.abort()
     },
@@ -198,7 +267,11 @@ export async function runDesktopHost(
           signal: controller.signal,
         }
         const request = new Request(url, init)
-        const response = await runtime.fetch(request)
+        const response = url.pathname === DESKTOP_STREAM_PATH
+          ? await streams.fetch(request)
+          : url.pathname.startsWith('/api/')
+            ? await api.fetch(request)
+            : await assets.fetch(request)
         await writeResponse(encodeDesktopResponseStart(command.streamId, {
           status: response.status,
           headers: [...response.headers.entries()],
@@ -241,9 +314,8 @@ async function main(): Promise<void> {
   if (option !== undefined && option !== '--allow-linked-profile') {
     throw new Error(`dsh desktop: unsupported internal option ${JSON.stringify(option)}`)
   }
-  const pipes = openDesktopHostPipes()
-  const requestPipe = pipes.requests
-  const responsePipe = pipes.responses
+  const requestPipe = createReadStream('', { fd: DESKTOP_REQUEST_PIPE_FD, autoClose: false })
+  const responsePipe = createWriteStream('', { fd: DESKTOP_RESPONSE_PIPE_FD, autoClose: false })
   let responseWriteTail: Promise<void> = Promise.resolve()
   const writeResponse = (frame: Buffer): Promise<void> => {
     const write = responseWriteTail.then(async () => {
@@ -292,12 +364,16 @@ async function main(): Promise<void> {
       requestBodies.clear()
       blockedRequests.clear()
       discardedRequestBodies.clear()
-      // Closing the request end stops further reads; the pipe owns descriptor 3.
       requestPipe.destroy()
+      closeSync(DESKTOP_REQUEST_PIPE_FD)
       await controller.dispose()
       await Promise.allSettled([...runs])
       await responseWriteTail.catch(() => undefined)
-      await pipes.close()
+      if (!responsePipe.destroyed) {
+        await new Promise<void>((resolvePromise) => { responsePipe.end(resolvePromise) })
+        responsePipe.destroy()
+      }
+      closeSync(DESKTOP_RESPONSE_PIPE_FD)
       if (process.connected) process.disconnect()
       process.exitCode = requestedExitCode
     })()
@@ -305,8 +381,8 @@ async function main(): Promise<void> {
   }
 
   const failTransport = (error: unknown): void => {
-    console.error('Desktop Host transport failed', error)
-    send(failureEvent(error))
+    const message = error instanceof Error ? error.message : String(error)
+    send({ type: 'fatal', message })
     void stop(1)
   }
 
@@ -422,7 +498,7 @@ async function main(): Promise<void> {
   responsePipe.once('error', failTransport)
   process.on('message', (message: unknown) => {
     if (!isDesktopHostCommand(message)) {
-      send({ type: 'fatal', errorType: 'Error' })
+      send({ type: 'fatal', message: 'dsh desktop: invalid Electron IPC command' })
       void stop(1)
       return
     }
@@ -436,8 +512,7 @@ async function main(): Promise<void> {
 if (import.meta.main) {
   main().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
-    console.error('Desktop Host startup failed', error)
-    if (process.send !== undefined) process.send(failureEvent(error))
+    if (process.send !== undefined) process.send({ type: 'fatal', message } satisfies DesktopHostEvent)
     else process.stderr.write(`dsh desktop: ${message}\n`)
     process.exitCode = 1
   })

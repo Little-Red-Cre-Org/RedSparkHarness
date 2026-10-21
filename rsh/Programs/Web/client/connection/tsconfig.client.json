@@ -11,10 +11,8 @@
     "src/client/connection.ts",
     "src/client/fixture.ts",
     "src/client/index.ts",
-    "src/client/native-core.ts",
     "src/client/random-uuid.ts",
     "src/client/rpc.ts",
-    "src/native.ts",
     "src/loopback-hostname.ts",
     "src/recovery-config.ts",
     "src/rpc.ts"
@@ -22,9 +20,6 @@
   "references": [
     {
       "path": "../../../../Core/vendor/cordis"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
       "path": "../../../../Core/vendor/schemastery"
@@ -58,9 +53,6 @@
     },
     {
       "path": "../../../../Core/util/brand"
-    },
-    {
-      "path": "../../../../Core/settings/settings-definition/tsconfig.client.json"
     }
   ]
 }

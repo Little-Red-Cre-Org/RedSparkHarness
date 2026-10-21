@@ -598,7 +598,6 @@ interface GenerateOptions {
   /** Tool schemas (adapters map to the provider's `tools` field). */
   tools?: ToolSchema[]
   temperature?: number
-  /** Requested output-token limit; the selected route may expose whether it can enforce it exactly. */
   maxTokens?: number
   /**
    * Stop sequences: generation halts as soon as the model produces any one of
@@ -748,61 +747,11 @@ interface LlmCallConfigAdapterDefaults {
 
 `ctx.deepseekLlmApiExtensions` 是用于向 `deepseek-official` 请求添加顶层字段的提供方特定注册表。贡献插件通过 `register(field, provider)` 认领一个字段；适配器在序列化基础正文后调用 `prepare(request)`，并在 HTTP 前合并返回字段。已准备的 `accept()` 事务会在 2xx 后运行，因此贡献方可以提交交付状态，而不会把传输失败或提供方拒绝当作接受。准备、冲突与接受失败会使用 `REQUEST_EXTENSION`，并使模型请求失败。
 
-[协议参考](../deepseek-llm-api-wire-extensions.zh.md)定义确切的请求标头、扩展事务、字段版本和接收方义务。随附组合会将 [`dsh_session_log`](../../Modules/Official/llm/session-log-deepseek/README.zh.md) 注册为无损增量权威日志后缀，并将 [`dsh_plugin_packages`](../../Modules/Official/llm/plugin-package-inventory-deepseek/README.zh.md) 注册为完整存活 Loader 包集合。这些字段仍位于模型消息之外，也不会进入 pi-ai 适配器路径。
-
-Native Host 配置通过独立的 `@deepseek-ai/dsh-deepseek-llm-api-extensions/native` 入口使用扩展；该入口提供显式作用域的 `deepseekLlmApiExtensions` 服务。`llm-deepseek` 会将此服务声明为可选，因此未安装 Native 贡献 Provider 时模型调用仍可运行。存在 `activeSessions` 时，匹配请求 `sessionId` 会选择该所有者的 Agent 作用域；否则 Provider 查找使用模型安装作用域。Native 入口是显式 Host 包子路径；随附 profile 继续组合 Cordis 入口。
-
-```ts type-equiv
-/** Scoped Native API for registering and preparing DeepSeek request fields. */
-interface NativeDeepSeekLlmApiExtensions {
-  /**
-   * Register one field in a visible Native scope.
-   * @param scope - exact installation scope that owns the contribution.
-   * @param field - declaration-merged request field.
-   * @param provider - request-time field preparation and optional acceptance behavior.
-   * @returns a disposer for the registration.
-   */
-  register<K extends keyof DeepSeekLlmApiExtensionMap>(
-    scope: NativeScope,
-    field: K,
-    provider: DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiExtensionMap[K]>,
-  ): () => void
-  /**
-   * Prepare fields visible from one exact request scope.
-   * @param scope - active Agent scope, or the model installation scope without an active owner.
-   * @param request - exact serialized request facts and cancellation signal.
-   * @returns detached fields and their one post-2xx acceptance transaction.
-   */
-  prepare(scope: NativeScope, request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
-}
-```
+[协议参考](../deepseek-llm-api-wire-extensions.zh.md)定义确切的请求标头、扩展事务、字段版本和接收方义务。随附组合会将 [`dsh_session_log`](../../Engine/session/session-log-deepseek/README.zh.md) 注册为无损增量权威日志后缀，并将 [`dsh_plugin_packages`](../../Engine/llm/plugin-package-inventory-deepseek/README.zh.md) 注册为完整存活 Loader 包集合。这些字段仍位于模型消息之外，也不会进入 pi-ai 适配器路径。
 
 ## 服务与提供方约定
 
-`PreparedAdapterCall.supportsOutputTokenLimit()` 会报告被捕获的 adapter 代际能否在指定推理强度下执行请求的确切输出上限。该路由报告不支持时，运行时会拒绝带上限的请求。
-
-```ts type-equiv
-/** One adapter-owned model-resolution generation bound to its eventual stream call. */
-interface PreparedAdapterCall {
-  /** Exact model metadata from the same adapter generation as {@link stream}. */
-  readonly model: LlmResolvedModelInfo
-  /**
-   * Whether this generation enforces this exact output limit under the resolved reasoning effort.
-   * @param maxTokens - requested positive output-token ceiling.
-   * @param reasoningEffort - effective effort for this model request, if selected.
-   * @returns true only when this route can apply that exact ceiling without widening it.
-   */
-  supportsOutputTokenLimit(maxTokens: number, reasoningEffort?: ReasoningEffortId): Promise<boolean>
-  /** Dispatch through that generation without re-reading dynamic connection facts. */
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
-}
-```
-
-Native external Responses 执行可使用同一预备调用上的可选 `nativeResponses` 能力。嵌套捕获会保留确切预备代际，不会查找之后的适配器；provider 支持与捕获所有权见 [native-model-execution](../../Engine/core/native-model-execution/README.zh.md)。
-
-
 `LlmAdapter` 是提供方约定：创建子类、实现 `stream()`，再用 `ctx.llm.registerAdapter(providers, adapter)` 注册一个适配器实例。`GenerateOptions.provider` 选择已注册适配器；`GenerateOptions.model` 会传给该适配器，无需在生命周期启动时注册。重复提供方路由会原子失败。可选的 `providerRetryPolicy()` 会按路由捕获并填入 normal 默认值，`providerInfo()` 与异步 `listModels()` 方法则为 `LlmRuntime.listProviders()` / `listModels()` 提供分离的 selector 元数据。该目录仅供参考，不是请求白名单：适配器仍是权威，并可接受未列出的模型 id。单次异步 `resolveModel()` 查询返回确切模型身份，以及可选的对正确性敏感的上下文容量、适配器配置的 `defaultMaxTokens`、由模型持有的有序推理强度 ID 和可选的部署默认值；字段缺失表示元数据不可用或保留提供方持有的行为，而不表示目录成员关系无效。解析器会接收可选的取消信号，并且必须在信号中止后迅速完成结算。`LlmRuntime.resolveModelInfo()` 会校验聚合结果并返回分离值。在最终适配器边界，`resolveCallConfig()` 仅在 `maxTokens` 缺失时填入输出默认值，并校验和填入推理强度，因此直接调用也无法绕过任何一项已配置行为；直接分派会在等待解析前捕获一项适配器注册。agent loop 则使用 `prepareCall()`，使模型解析、请求头持久记录和分派全程使用同一项注册，保留来自同一次查询的分离上下文元数据，并报告适配器填入的配置字段。适配器查找发生在 `llm/stream` waterfall 的终端 continuation，因此 listener 可以在查找前短路调用，或路由一个可变的一次性请求。AgentLoop 在外层 waterfall 返回流句柄时观察到一次请求尝试；这个有限边界不能证明惰性终端适配器已构造完成或开始提供方 I/O。`block-start` / `block-end` 的 `index` 关联与 assembler 共同意味着适配器只需 emit 格式正确的分片——块重组不是每个适配器各自的问题。`ctx.llm.stream()` 与 `llm/stream` waterfall 在一个轮次中的位置见 [architecture.md](../architecture.zh.md#turn-flow)。
-
 
 ```ts type-equiv
 /** One model call whose config and adapter registration were resolved together. */
@@ -865,10 +814,9 @@ declare abstract class LlmAdapter {
    * The result is advisory: an adapter may accept unlisted model ids, and
    * consumers must not turn absence into request rejection.
    * @param _provider - one provider route owned by this adapter.
-   * @param _signal - optional cancellation for this catalog lookup.
    * @returns discoverable models in adapter-preferred order.
    */
-  listModels(_provider: string, _signal?: AbortSignal): Promise<readonly LlmModelInfo[]>;
+  listModels(_provider: string): Promise<readonly LlmModelInfo[]>;
   /**
    * Resolve all metadata available for one exact model. This query is
    * independent of the advisory catalog and does not validate request routing.
@@ -887,13 +835,10 @@ declare abstract class LlmAdapter {
    * Bind exact model metadata and the eventual request dispatch to one adapter generation.
    * Dynamic adapters override this so settings changes between preparation and
    * dispatch cannot combine one generation's capabilities with another's endpoint.
-   * The returned capability must describe this exact route generation and
-   * reject output limits the transport cannot enforce without widening under
-   * the request's effective reasoning effort.
    * @param provider - registered provider route.
    * @param model - exact model id.
    * @param signal - cancellation for model resolution.
-   * @returns model metadata, the generation's output-limit predicate, and its stream entry point.
+   * @returns model metadata and a one-generation stream entry point.
    */
   async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;
   /**
@@ -940,7 +885,7 @@ register<K extends keyof DeepSeekLlmApiExtensionMap>( field: K, provider: DeepSe
 async prepare(request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
 ```
 
-Source: [`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)
+Source: [`rsh/Engine/llm/deepseek-llm-api-extensions/src/index.ts`](../../Engine/llm/deepseek-llm-api-extensions/src/index.ts)
 
 <a id="ctxllm--llmruntime"></a>
 
@@ -1045,10 +990,9 @@ fileRequestText(ref: FileAttachmentRef): string
  * Discover models advertised by one registered provider. Catalog membership
  * is advisory and never changes routing or request validation.
  * @param provider - registered provider route to inspect.
- * @param signal - optional cancellation forwarded to the owning adapter.
  * @returns detached model metadata in adapter-preferred order.
  */
-async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]>
+async listModels(provider: string): Promise<LlmModelInfo[]>
 
 /**
  * Resolve and validate all metadata from the adapter that owns one exact

@@ -286,14 +286,6 @@ const cordisPrimerReference = pairedPages([
     section: { root: '概念', en: 'Concepts' },
     order: 1,
   },
-  {
-    source: 'rsh/Docs/native-config-migration.md',
-    route: 'reference/native-config-migration.md',
-    label: { root: '原生配置迁移', en: 'Native configuration migration' },
-    sidebar: { root: 'zh-reference', en: 'en-reference' },
-    section: { root: '概念', en: 'Concepts' },
-    order: 6,
-  },
 ])
 
 /**
@@ -351,7 +343,6 @@ const subsystemGroups = [
     ['schedule.md', '定时提醒', 'Scheduled reminders'],
   ]],
   ['平台与接入', 'Platform and access', [
-    ['http-routes.md', 'HTTP 路由约定', 'HTTP route contracts'],
     ['web-server.md', 'HTTP 服务器', 'HTTP server'],
     ['web-client.md', 'Web Client 架构', 'Web Client architecture'],
     ['client-modules.md', '客户端模块', 'Client modules'],

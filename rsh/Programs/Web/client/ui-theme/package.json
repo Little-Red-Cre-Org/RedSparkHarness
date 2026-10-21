@@ -22,14 +22,6 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
-    "./theme-contract": {
-      "types": "./lib/types/theme-contract.d.ts",
-      "default": "./lib/theme-contract.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -44,28 +36,11 @@
       ],
       "platform": "web",
       "immediately": true
-    },
-    "native": {
-      "apiVersion": 1,
-      "entry": "./native",
-      "targets": [
-        "client"
-      ],
-      "requires": [],
-      "optional": [],
-      "provides": [
-        "clientNativeTheme"
-      ]
     }
   },
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -78,9 +53,7 @@
     "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
     "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
+    "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
     "@deepseek-ai/dsh-settings": "workspace:^",
@@ -89,8 +62,6 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "lib/native.js",
-    "lib/theme-contract.js",
     "lib/styles",
     "lib/types/**/*.d.ts"
   ],
@@ -99,7 +70,6 @@
     "watch": "tsdown --watch"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^"
   }
 }

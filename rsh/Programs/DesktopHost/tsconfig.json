@@ -6,11 +6,16 @@
   },
   "include": ["src"],
   "references": [
+    { "path": "../../Core/vendor/cordis" },
+    { "path": "../../Core/vendor/include" },
     { "path": "../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../Web/api/gateway/tsconfig.host.json" },
+    { "path": "../../Compatibility/DSH/boot/app-boot" },
+    { "path": "../../Compatibility/DSH/boot/cmdline" },
     { "path": "../Web/client/connection/tsconfig.host.json" },
-    { "path": "../CLI" },
-    { "path": "../Web/host/native-web-assets" },
-    { "path": "../Web/api/native-web-session-controller" },
-    { "path": "../../Compatibility/DSH/boot/desktop-host-compatibility" }
+    { "path": "../Web/client/modules" },
+    { "path": "../Web/client/web" },
+    { "path": "../Web/host/webserver" },
+    { "path": "../../Core/util/launch-environment" }
   ]
 }

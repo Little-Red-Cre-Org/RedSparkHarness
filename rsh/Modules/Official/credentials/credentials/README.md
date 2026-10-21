@@ -80,8 +80,6 @@ await ctx.credentials.deleteRecord(key)                  // no-op when absent
 
 `modifyRecord` is the only write path: it hands your mutation the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Records have no empty-value rule — a record carrying neither a key nor environment values states that its owner confirmed ambient authentication — and a configuration UI can enumerate every record to show what you are authorized for and find records a removed plugin left behind.
 
-Credential providers expose owner-scoped JSON metadata through `readMetadata` and `modifyMetadata`, plus `migrateRecordToMetadata` for moving a legacy record under the same write lock. Its decision callback can inspect detached sibling records from that locked snapshot. Metadata is separate from credentials: it never appears in `listRecords`, record descriptions, or record-update events. The local provider verifies a sidecar write before migration removes the old record.
-
 ### Using a key in configuration
 
 A settings section or `cordis.yml` entry names a key instead of containing it — an LLM adapter, for example, takes `apiKeyEnv`:
@@ -118,30 +116,27 @@ One doctrine and four consequences:
 - **Records are durable, and presence is the fact.** A record is stored per `<scope>/<id>` and survives restarts; the empty-value rule does not apply, so an `api-key` record carrying neither a key nor environment values is a deliberate statement, not a blank.
 - **Listener failures are contained.** `notifyUpdated` fans `credentials/reference-updated` out so every listener runs; a sync throw or async rejection is logged without changing the committed operation's outcome, except `INVARIANT`-coded failures, which rethrow after every listener ran.
 
-### Credential change notifications
+### The credentials/reference-updated event
 
 `credentials/reference-updated (ref)` fires after a committed change to a provider-managed source — a `set`, an `unset`, or an external edit observed in storage. Ambient process-environment changes are not observable and never emit. Consumers do not need the event (they re-resolve per operation); it exists for configuration UIs refreshing a "configured" badge.
 
-Cordis emits `credentials/record-updated (key)` after a committed record write or removal, or an external edit adopted from storage. Native Host consumers subscribe with `NativeCredentials.onRecordUpdated` on the selected service instance. Both paths pass only the branded record address, never its payload; Native listeners run synchronously after the provider updates its committed snapshot, while their asynchronous work does not delay the write.
+`credentials/record-updated (key)` fires after a committed change to a stored record — a `modifyRecord` that wrote, a `deleteRecord` that removed, or an external edit observed in storage. It stays a separate event because the two key grammars are disjoint: a listener receiving both spaces on one event could not tell which one a subject belongs to.
 
 ### Record write and read paths
 
 `modifyRecord` is the only record write path because a correct write depends on the current value: a token refresh is read-decide-replace, and the mutation sees the record as it stands at the moment the write is exclusive — returning `undefined` leaves the entry untouched. Exclusion holds across processes where the backing store supports it, which is what stops two processes rotating one refresh token from losing whichever wrote first. Reads mirror the reference half but never layer: nothing can shadow a record, and a `grant` payload is returned exactly as its owner wrote it, because only the owning plugin can interpret it.
-
-Metadata operations use the provider's owner-scoped write lock but do not create credential records or credential events. `migrateRecordToMetadata` reads current metadata, the legacy record, and any needed sibling records from one locked snapshot; it writes and reads back metadata before retiring the legacy record.
 
 ### Source map
 
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition: the `credentialRef`/`credentialKey` brands, `ResolvedCredential`/`CredentialRecordInfo`, the abstract provider over both key spaces, contained fan-out |
-| [`src/types.ts`](src/types.ts) | Cordis event declarations and client-safe credential brands and record types |
-| [`src/native.ts`](src/native.ts) | Native Host service Definition: selected-provider record notifications and durable record operations |
+| [`src/types.ts`](src/types.ts) | Client-safe type surface: the `CredentialRef` and `CredentialKey` brands, the stored-record union, the `CredentialInfo` reference view, the `credentials/reference-updated` and `credentials/record-updated` declarations |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `credentials/reference-updated` only fires while a credentials service is live |
 
 ### Client-safe types
 
-The `./types` subpath export holds the Cordis event declarations together with the `CredentialRef` and `CredentialKey` brands, the stored-record union they name, and the `CredentialInfo` reference view a configuration surface reads, and the package root re-exports them. Native Host consumers import the `./native` Definition, which pairs selected-provider notifications with the record methods.
+The `./types` subpath export holds the event declarations together with the `CredentialRef` and `CredentialKey` brands, the stored-record union they name, and the `CredentialInfo` reference view a configuration surface reads, and the package root re-exports them. A consumer outside the Host compilation face therefore reads the very signature the Host emits instead of restating it.
 
 ### Lifecycle
 

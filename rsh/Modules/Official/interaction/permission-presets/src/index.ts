@@ -20,21 +20,15 @@ import { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 // Side-effect type import: declaration-merges `ctx.shell` (the capability fact
 // `sandboxMode` this service reads), without a value dependency on the seam.
 import type {} from '@deepseek-ai/dsh-shell'
-import type { ApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
-import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
-import { CUSTOM_PRESET, defaultPermissionPresets } from './presets.ts'
-import type { PresetSpec } from './presets.ts'
-import type {} from '@deepseek-ai/dsh-user-approval'
+import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
+import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-settings'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 // Type-only: resolves the optional projection and command children.
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-commands'
 import type { PermissionSelect, PresetOption } from './types.ts'
 
 export type * from './types.ts'
-export type { PresetSpec } from './presets.ts'
-export { CUSTOM_PRESET } from './presets.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -48,6 +42,36 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     permissions: PermissionProjectionState
   }
 }
+
+declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /**
+     * Records the selected preset as durable, log-only user intent. The knob
+     * events follow in the same turn and control execution; this event stays
+     * out of the model transcript and lets the permission projection unit
+     * preserve a selection when bundles match.
+     */
+    'permission/preset': { preset: string }
+  }
+}
+
+/** One preset's sandbox/approval bundle and optional client presentation. */
+export interface PresetSpec {
+  /** The `sandbox/mode` value the preset writes through. */
+  sandbox: SandboxMode
+  /** The `approval/policy` value the preset writes through. */
+  approval: ApprovalPolicy
+  /** The display label a client shows for this preset; the raw table key when omitted. */
+  name?: string
+  /** One user-facing sentence on what the preset means; omitted when not configured. */
+  description?: string
+}
+
+/**
+ * Returned when effective knob values match no table entry. Clients may show
+ * it as the current value, but it is never a switch target or event payload.
+ */
+export const CUSTOM_PRESET = 'custom'
 
 /** Settings namespace carrying the default for future sessions. */
 export const PERMISSION_SETTINGS_NAMESPACE = 'permission'
@@ -144,7 +168,16 @@ export class PermissionPresetService extends Service {
       approval: z.union(APPROVAL_POLICIES as ApprovalPolicy[]).required(),
       name: z.string(),
       description: z.string(),
-    })).default(defaultPermissionPresets),
+    })).default({
+      'workspace-write': {
+        sandbox: 'workspace-write', approval: 'ask',
+        name: 'workspace-write', description: 'Write inside the workspace and permitted temporary directories; wider retries require approval.',
+      },
+      'danger-full-access': {
+        sandbox: 'danger-full-access', approval: 'never',
+        name: 'danger-full-access', description: 'Full file access without approval prompts.',
+      },
+    }),
     defaultPreset: z.string(),
   })
 
@@ -174,7 +207,7 @@ export class PermissionPresetService extends Service {
     const presetChoices = this.names.map((name) => {
       const choice = z.const(name)
       const label = this.presets[name]?.name
-      return label == null ? choice : choice.description(label)
+      return label === undefined ? choice : choice.description(label)
     })
     const settingsSchema: z<PermissionSettings> = z.object({
       defaultPreset: z.union(presetChoices).required(),
@@ -336,7 +369,7 @@ export class PermissionPresetService extends Service {
       return { value: CUSTOM_PRESET, name: 'Custom', description: 'Current sandbox and approval settings do not match a preset.' }
     }
     const spec = this.resolve(name)
-    return { value: name, name: spec.name ?? name, ...spec.description != null ? { description: spec.description } : {} }
+    return { value: name, name: spec.name ?? name, ...spec.description !== undefined ? { description: spec.description } : {} }
   }
 
   /**

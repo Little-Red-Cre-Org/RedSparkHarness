@@ -23,16 +23,11 @@
       "default": "./lib/native.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./deletion": {
-      "types": "./lib/types/deletion.d.ts",
-      "default": "./lib/deletion.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/native.js",
-    "lib/deletion.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -44,9 +39,7 @@
     "@deepseek-ai/dsh-timeout": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
+    "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -56,7 +49,6 @@
     "@deepseek-ai/dsh-timeout": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-util-values": "workspace:^"
   }
 }

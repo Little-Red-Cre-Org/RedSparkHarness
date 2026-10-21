@@ -21,19 +21,7 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
-      "path": "../../core/native-session-execution/tsconfig.active-session-protocol.json"
-    },
-    {
-      "path": "../../session/session-projection"
-    },
-    {
-      "path": "../../session/session-projection-cache"
-    },
-    {
-      "path": "../../session/session-persistence/tsconfig.host.json"
+      "path": "../../session/session-persistence"
     },
     {
       "path": "../session-query"

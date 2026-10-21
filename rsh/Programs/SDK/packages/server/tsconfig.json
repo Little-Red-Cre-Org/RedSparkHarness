@@ -18,7 +18,7 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Modules/Official/llm/llm-deepseek"
+      "path": "../../../../Engine/llm/llm-deepseek"
     },
     {
       "path": "../../../../Engine/core/agent"
@@ -30,7 +30,7 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/subagent/sdk-protocol"
+      "path": "../protocol"
     },
     {
       "path": "../../../../Engine/subagent/subagent"

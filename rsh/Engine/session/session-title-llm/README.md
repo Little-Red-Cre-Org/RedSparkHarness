@@ -33,11 +33,7 @@ A provider plugin calls `registerSessionTitleLlmProvider(ctx, config, id, automa
 
 ### Route and failure contract
 
-`provider` and `model` overrides are optional but must be supplied together as non-empty strings. Without that pair, the helper uses the exact provider/model route captured from the current session's logged `request/header`, so an explicit refresh before any route exists needs overrides. The helper measures the final JSON-framed user prompt against `maxInputBytes` before logging or dispatch instead of truncating it, and rechecks timeout and caller cancellation while consuming the stream and after it completes, so a late successful result cannot be accepted even if an interceptor or adapter ignores abort. The helper omits `maxTokens` for `openai-codex` routes, which reject output-token caps; other routes receive the configured `maxOutputTokens`. Malformed or empty output, tool calls, and non-stop finish reasons reject; the session-title service decides whether that rejection is an automatic warning or an explicit caller failure.
-
-### Native runtime
-
-The `./native` entry exports the same framework-free generation (`generateSessionTitle`, config validation, and the `selectFirstPrompt`/`selectAllPrompts` selectors) plus `nativeSessionTitleLlmPlugin(spec)`, which builds a native provider plugin that requires `sessionTitles` and `model`. It streams through the selected `model` adapter and records `session/title-llm-request` through the title service's `appendEvent` before dispatch. The Cordis helper and the native plugin call the same generation code; only the model stream and the record writer differ.
+`provider` and `model` overrides are optional but must be supplied together as non-empty strings. Without that pair, the helper uses the exact provider/model route captured from the current session's logged `request/header`, so an explicit refresh before any route exists needs overrides. The helper measures the final JSON-framed user prompt against `maxInputBytes` before logging or dispatch instead of truncating it, and rechecks timeout and caller cancellation while consuming the stream and after it completes, so a late successful result cannot be accepted even if an interceptor or adapter ignores abort. Malformed or empty output, tool calls, and non-stop finish reasons reject; the session-title service decides whether that rejection is an automatic warning or an explicit caller failure.
 
 ### Configuration
 
@@ -72,9 +68,7 @@ One shared policy so provider plugins cannot drift: config validation, route res
 
 | File | Role |
 |---|---|
-| [`src/core.ts`](src/core.ts) | Framework-free policy shared by both entries: the request event, config validation, route resolution, framing, dispatch, output validation, and message selectors |
-| [`src/index.ts`](src/index.ts) | Cordis glue: Loader config schema and the provider registration helper over `ctx.sessionTitle` and `ctx.llm` |
-| [`src/native.ts`](src/native.ts) | Native glue: `nativeSessionTitleLlmPlugin` over the native `sessionTitles` and `model` services |
+| [`src/index.ts`](src/index.ts) | Config schema and validation, provider registration helper, request framing, dispatch, and output validation |
 
 ### Request flow
 

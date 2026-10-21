@@ -27,8 +27,6 @@ kind: "package-reference"
 
 在需要把文本 spill 到本地文件系统的组合中挂载此后端。它注册为 `dsh-spill-policy` 插件与其他调用方使用的 `ctx.spillStore` 服务。
 
-本包实现 provider seam，因此 `dsh-spill` 与 NativeRuntime 保持必需对等依赖（peer dependency）。Cordis 对等依赖对于包管理器安装保持可选；原生组合可选择 `./native` 而不安装 Cordis。
-
 ### 最小配置
 
 不带配置加载插件是安全的：文件会落在操作系统临时目录下延迟创建的私有（0700）每进程目录中。当文件必须位于已知位置时，设置 `root`。
@@ -128,8 +126,6 @@ kind: "package-reference"
 
 - **长期运行的部署要等到重启才会被扫描**——一次性扫描只在激活后运行，因此运行期间超过年龄截止值的文件会在下次启动时回收。
 - **定位信息需要与其位于同一文件系统的消费方**——远程或虚拟部署需要另一个 `SpillStore` 后端，其定位信息与取回提示在该环境中有明确含义。
-
-通过 `./native` 暴露的 Provider 与 Cordis 服务共用私有根目录、Session 目录、独占写入、定位符提示及启动清理流程。`root`、`cleanupPeriodDays` 保持相同默认值，未知配置字段在加载时拒绝。Provider 释放时关闭新请求，等待已接受的保存及启动清理结束。原生文件搜索可以把返回的定位符传入 `grep` 读取完整结果；文件系统 Consumer 可能另行限制读取范围。
 
 <a id="dev-note"></a>
 ### 开发备注

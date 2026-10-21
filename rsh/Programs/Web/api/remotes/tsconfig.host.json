@@ -30,10 +30,10 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Engine/goal/goal/tsconfig.host.json"
+      "path": "../../../../Engine/goal/goal"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+      "path": "../../../../Engine/preset/agent-presets"
     },
     {
       "path": "../../../../Modules/Official/extensions/cordis-host-runner"
@@ -51,10 +51,10 @@
       "path": "../../../../Core/util/values"
     },
     {
-      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
+      "path": "../../../../Modules/Official/interaction/user-approval"
     },
     {
-      "path": "../../../../Modules/Official/interaction/user-questions/tsconfig.host.json"
+      "path": "../../../../Modules/Official/interaction/user-questions"
     },
     {
       "path": "../session-controller/tsconfig.host.json"
@@ -67,12 +67,6 @@
     },
     {
       "path": "../../../../Core/typert/protocol"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
-    },
-    {
-      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

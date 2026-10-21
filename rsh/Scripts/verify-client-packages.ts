@@ -6,7 +6,6 @@ import { globSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
-import { nativeProfileClientDirectories } from './native-package-policy.ts'
 import { TypeScriptProject } from './ts-project.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
@@ -14,7 +13,7 @@ const GATE = 'verify-client-packages'
 const CLIENT_MANIFEST_GLOB = 'rsh/Programs/Web/client/*/package.json'
 const MANIFEST_GLOBS = [...WORKSPACE_MANIFEST_GLOBS, 'rsh/**/package.json'] as const
 const CONFIG_GLOB = 'rsh/Programs/Web/client/*/tsdown.config.ts'
-const PLATFORM_SOURCE = 'rsh/Compatibility/DSH/web/frontend/src/platform.ts'
+const PLATFORM_SOURCE = 'rsh/Programs/Web/client/web/src/platform.ts'
 const PARSER_PRELOAD_SOURCE = 'rsh/Programs/Web/client/modules/src/index.ts'
 const STATIC_PRESET_SOURCE = 'rsh/Programs/Web/client/tsdown.client.ts'
 const CORDIS = '@deepseek-ai/cordis'
@@ -34,10 +33,6 @@ export interface ClientDeclaration {
 
 /** One package directly under rsh/client. */
 export interface ClientPackage extends ClientDeclaration {
-  /** This package is selected by native-profile rows rather than the legacy Client module table. */
-  readonly nativeProfileOnly?: boolean
-  /** Its manifest selects the Client target and exports the native entry required by that profile. */
-  readonly nativeProfileEntryValid?: boolean
   readonly staticLinked: boolean
   readonly sourceUses: Readonly<Record<string, readonly string[]>>
   readonly dependencies: Readonly<Record<string, string>>
@@ -282,14 +277,7 @@ function normalizeClientArray(
 function collectModeViolations(facts: ClientPackageFacts): string[] {
   const violations: string[] = []
   for (const pkg of facts.packages) {
-    if (pkg.nativeProfileOnly) {
-      if (!pkg.nativeProfileEntryValid || pkg.dynamic || pkg.staticLinked) {
-        violations.push(
-          pkg.manifest + ': ' + pkg.name + ' must select the native Client target and export ./native, without'
-          + ' declaring dsh.client or using the staticLinked preset',
-        )
-      }
-    } else if (pkg.dynamic && pkg.staticLinked) {
+    if (pkg.dynamic && pkg.staticLinked) {
       violations.push(
         pkg.manifest + ': ' + pkg.name + ' declares dsh.client and uses the staticLinked preset;'
         + ' a client package must be dynamic or statically linked, not both',
@@ -457,7 +445,6 @@ function formatCycle(
 interface Manifest {
   name?: unknown
   dsh?: unknown
-  exports?: unknown
   dependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   devDependencies?: Record<string, string>
@@ -620,9 +607,6 @@ async function readFacts(root: string): Promise<ClientPackageFacts> {
     const sourceUses = new Map<string, Set<string>>()
     const runtimeSourceUses = new Map<string, Set<string>>()
     const packageDirectory = dirname(manifestPath)
-    const dsh = isRecord(manifest.dsh) ? manifest.dsh : undefined
-    const native = isRecord(dsh?.native) ? dsh.native : undefined
-    const exports = isRecord(manifest.exports) ? manifest.exports : undefined
     const sourcePrefix = packageDirectory + '/src/'
     for (const sourceFile of sourceFiles) {
       if (sourceFile.isDeclarationFile) continue
@@ -641,9 +625,6 @@ async function readFacts(root: string): Promise<ClientPackageFacts> {
     }
     packages.push({
       ...declaration,
-      nativeProfileOnly: nativeProfileClientDirectories.has(packageDirectory),
-      nativeProfileEntryValid: Array.isArray(native?.targets) && native.targets.includes('client')
-        && exports !== undefined && Object.hasOwn(exports, './native'),
       staticLinked: staticLinkedPackages.has(declaration.name),
       sourceUses: Object.fromEntries(
         [...sourceUses].sort(([left], [right]) => left.localeCompare(right))
@@ -721,13 +702,10 @@ async function main(): Promise<void> {
   }
 
   const dynamic = facts.packages.filter(pkg => pkg.dynamic).length
-  const nativeProfile = facts.packages.filter(pkg => pkg.nativeProfileOnly).length
-  const staticLinked = facts.packages.length - dynamic - nativeProfile
   const requests = facts.declarations.reduce((total, pkg) => total + pkg.external.length, 0)
   console.log(
     GATE + ': ' + String(facts.packages.length) + ' client packages (' + String(dynamic) + ' dynamic, '
-    + String(staticLinked) + ' statically linked, ' + String(nativeProfile) + ' native-profile) satisfy '
-    + 'package-mode and module-request rules; '
+    + String(facts.packages.length - dynamic) + ' statically linked) satisfy package-mode and module-request rules; '
     + String(requests) + ' explicit external request(s).',
   )
 }

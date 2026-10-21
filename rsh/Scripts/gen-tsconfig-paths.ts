@@ -23,7 +23,6 @@ import { readFileSync, writeFileSync, existsSync, globSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
-import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const CONFIG = join(ROOT, 'tsconfig.base.json')
@@ -128,21 +127,19 @@ export function collectNativeEntryAliases(): NativeEntryAlias[] {
       if (exported === null || typeof exported !== 'object' || Array.isArray(exported)) continue
       const types = (exported as { types?: unknown }).types
       if (typeof types !== 'string' || !types.startsWith('./lib/types/') || !types.endsWith('.d.ts')) continue
-      const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length)
+      const sourceRelative = types.slice('./lib/types/'.length, -'.d.ts'.length) + '.ts'
       const sourceRoot = resolve(packageDir, 'src')
-      const sourcePath = resolve(sourceRoot, sourceRelative + '.ts')
-      const sourceTsxPath = resolve(sourceRoot, sourceRelative + '.tsx')
-      const resolvedSourcePath = existsSync(sourcePath) ? sourcePath : sourceTsxPath
+      const sourcePath = resolve(sourceRoot, sourceRelative)
       const within = relative(sourceRoot, sourcePath)
       if (within.startsWith('..') || isAbsolute(within)) {
         throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' escapes its source directory')
       }
-      if (!existsSync(resolvedSourcePath)) {
+      if (!existsSync(sourcePath)) {
         throw new Error('gen-tsconfig-paths: ' + name + ' native export ' + entryName + ' has no source ' + sourcePath)
       }
       aliases.push({
         specifier: name + entryName.slice(1),
-        source: './' + relativePath + '/src/' + relative(sourceRoot, resolvedSourcePath).replaceAll('\\', '/'),
+        source: './' + relativePath + '/src/' + sourceRelative.replaceAll('\\', '/'),
       })
     }
   }
@@ -203,7 +200,7 @@ export function collectPackageNames(): string[] {
 /** Collect every native export and the package source root its alias must target. */
 export function collectNativeExportAliases(root = ROOT): Map<string, string> {
   const aliases = new Map<string, string>()
-  for (const manifestPath of globSync([...WORKSPACE_MANIFEST_GLOBS], { cwd: root }).sort()) {
+  for (const manifestPath of globSync('rsh/**/package.json', { cwd: root }).sort()) {
     const manifest = JSON.parse(readFileSync(resolve(root, manifestPath), 'utf8')) as {
       name?: unknown
       exports?: Record<string, unknown>

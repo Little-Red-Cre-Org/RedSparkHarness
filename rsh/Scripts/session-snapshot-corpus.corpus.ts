@@ -21,59 +21,14 @@ import { assertSnapshotCorpusPolicy } from './session-snapshot-corpus-policy.ts'
 
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const corpusRoot = join(repoRoot, 'snapshots')
-const profiles = ['acp', 'compat', 'desktop', 'native-acp', 'native-headless', 'native-headless-query', 'native-sdk', 'native-tui', 'sdk', 'session', 'web'] as const
-const expectedProfilesByDirectory: Partial<Record<typeof profiles[number], readonly string[]>> = {
-  acp: ['acp', 'legacy-acp'],
-  'native-acp': ['native-acp', 'acp'],
-  'native-sdk': ['native-sdk', 'sdk'],
-  sdk: ['sdk', 'legacy-sdk'],
-  session: ['headless', 'legacy-headless'],
-  web: ['web', 'native-web'],
-}
+const profiles = ['acp', 'compat', 'native-headless', 'sdk', 'session', 'web'] as const
 const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/message-feedback-protocol.snapshot.ts',
   'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
-  'snapshots/web/native-session-core.snapshot.ts',
-  'snapshots/web/native-github-webhook.snapshot.ts',
   'snapshots/acp/acp.snapshot.ts',
   'snapshots/compat/compat.snapshot.ts',
-  'snapshots/desktop/native-session-core.snapshot.ts',
-  'snapshots/native-acp/external-child.snapshot.ts',
-  'snapshots/native-acp/text-turn.snapshot.ts',
-  'snapshots/native-headless/goal-continuation.snapshot.ts',
-  'snapshots/native-headless/human-question.snapshot.ts',
-  'snapshots/native-headless/fs-sandbox-tool-round.snapshot.ts',
-  'snapshots/native-headless/external-operation.snapshot.ts',
-  'snapshots/native-headless/mcp-image-native.snapshot.ts',
-  'snapshots/native-headless/model-choice-native.snapshot.ts',
   'snapshots/native-headless/native-headless.snapshot.ts',
-  'snapshots/native-headless/ptc-jobs.snapshot.ts',
-  'snapshots/native-headless/ptc-external-cancel.snapshot.ts',
-  'snapshots/native-headless/claude-code.snapshot.ts',
-  'snapshots/native-headless/read-image-native.snapshot.ts',
-  'snapshots/native-headless/schedule.snapshot.ts',
-  'snapshots/native-headless/search-native.snapshot.ts',
-  'snapshots/native-headless-query/session-query.snapshot.ts',
-  'snapshots/native-headless/terminal-lifecycle.snapshot.ts',
-  'snapshots/native-headless/todo-native.snapshot.ts',
-  'snapshots/native-headless/tool-results.snapshot.ts',
-  'snapshots/native-headless/web-tools-native.snapshot.ts',
-  'snapshots/native-headless/workflow-native.snapshot.ts',
-  'snapshots/native-sdk/text-turn.snapshot.ts',
-  'snapshots/native-sdk/staged-files.snapshot.ts',
-  'snapshots/native-sdk/external-operation.snapshot.ts',
-  'snapshots/native-sdk/inbox-moved.snapshot.ts',
-  'snapshots/native-sdk/skills.snapshot.ts',
-  'snapshots/native-sdk/archify.snapshot.ts',
-  'snapshots/native-sdk/goal-control.snapshot.ts',
-  'snapshots/native-sdk/scheduled-root-origin.snapshot.ts',
-  'snapshots/native-tui/native-tui.snapshot.ts',
-  'snapshots/native-tui/task-schedule.snapshot.ts',
-  'snapshots/native-tui/model-controls.snapshot.ts',
-  'snapshots/native-tui/preset-controls.snapshot.ts',
-  'snapshots/native-tui/commands-presets.snapshot.ts',
-  'snapshots/native-tui/human-interaction.snapshot.ts',
   'snapshots/sdk/sdk.snapshot.ts',
   'snapshots/session/headless.snapshot.ts',
 ] as const
@@ -101,8 +56,9 @@ async function scenarios(): Promise<Scenario[]> {
       expect(existsSync(path), `${profile}/${entry.name}/snapshot.yml`).toBe(true)
       const manifest = parseSnapshotManifest(await readFile(path, 'utf8'), path)
       expect(manifest.scenario, `${profile}/${entry.name}: scenario`).toBe(entry.name)
-      const expectedProfiles = expectedProfilesByDirectory[profile] ?? [profile]
-      expect(expectedProfiles, `${profile}/${entry.name}: profile`).toContain(manifest.profile)
+      expect(manifest.profile, `${profile}/${entry.name}: profile`).toBe(
+        profile === 'session' || profile === 'compat' ? 'headless' : profile,
+      )
       expect(manifest.composition, `${profile}/${entry.name}: composition`).toBeTypeOf('string')
       expect(manifest.recording, `${profile}/${entry.name}: recording`).toMatch(/^(live|authored)$/)
       expect(manifest.header, `${profile}/${entry.name}: header`).toBeDefined()
@@ -146,7 +102,7 @@ async function snapshotNamedTests(): Promise<string[]> {
 }
 
 it('reserves the snapshot test suffix for recorded-session adapters', async () => {
-  expect(await snapshotNamedTests()).toEqual([...snapshotAdapters].sort())
+  expect(await snapshotNamedTests()).toEqual([...snapshotAdapters])
 })
 
 it('keeps every recorded session owned, pinned, redacted, and header-scrubbed', async () => {

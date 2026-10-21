@@ -5,8 +5,8 @@ import { accessSync, constants as fsConstants } from 'node:fs'
 import { extname, isAbsolute } from 'node:path'
 import { inspect } from 'node:util'
 import { fileURLToPath } from 'node:url'
-import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
-import { childEnv, subprocessEnvironment } from './spawn.ts'
+import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import { childEnv } from './spawn.ts'
 
 /** The one private environment variable consumed before target state is restored. */
 export const SUBPROCESS_RUNNER_ENV = 'DSH_SUBPROCESS_RUNNER' as const
@@ -155,13 +155,15 @@ function validateNoNullByte(property: string, value: string, argument = false): 
  * @returns complete target environment after Node-equivalent validation.
  */
 export function targetEnvironment(
-  spec: Pick<SubprocessSpawnSpec, 'argv' | 'cwd' | 'env' | 'envMode'>,
+  spec: Pick<SubprocessSpawnSpec, 'argv' | 'cwd' | 'env'>,
 ): Record<string, string> {
   spec.argv.forEach((value, index) => {
     validateNoNullByte(index === 0 ? 'file' : `args[${String(index - 1)}]`, value, true)
   })
   validateNoNullByte('options.cwd', spec.cwd)
-  const env = subprocessEnvironment(spec)
+  const env = Object.fromEntries(
+    Object.entries(childEnv(spec.env)).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  )
   for (const [key, value] of Object.entries(env)) {
     validateNoNullByte(`options.env['${key}']`, key)
     validateNoNullByte(`options.env['${key}']`, value)

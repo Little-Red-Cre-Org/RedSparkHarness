@@ -19,9 +19,6 @@
     },
     {
       "path": "../../util/launch-environment"
-    },
-    {
-      "path": "../../runtime-diagnostics/native-runtime"
     }
   ]
 }

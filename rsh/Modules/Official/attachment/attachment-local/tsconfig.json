@@ -7,7 +7,6 @@
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/vendor/schemastery" },
     { "path": "../attachment" },
-    { "path": "../../../../Core/util/home-paths" },
-    { "path": "../../../../Core/runtime-diagnostics/native-runtime" }
+    { "path": "../../../../Core/util/home-paths" }
   ]
 }

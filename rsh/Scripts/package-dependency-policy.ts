@@ -1,10 +1,6 @@
 /** Explicit exceptions and Host packages for the published dependency policy. */
 
-import {
-  applicationDistributionDirectories,
-  nativePackageDirectories,
-  type ApplicationDistributionKind,
-} from './native-package-policy.ts'
+import { nativePackageDirectories } from './native-package-policy.ts'
 
 /** Packages treated as Client/Host packages without declaring `dsh.client`. */
 const CLIENT_FACE_INCLUDE: readonly string[] = []
@@ -15,136 +11,11 @@ const CLIENT_FACE_EXCLUDE: readonly string[] = [
   '@deepseek-ai/dsh-api-workspace-controller',
 ]
 
-/** Explicit Host packages whose published dependency edges need manual classification. */
+/** Host-only packages whose peer relays are deliberately flattened. */
 const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
-  '@deepseek-ai/dsh-codex-app-server',
   '@deepseek-ai/dsh-llm',
-  '@deepseek-ai/dsh-permission-presets',
   '@deepseek-ai/dsh-session',
-  '@deepseek-ai/dsh-session-telemetry-otel',
-  '@deepseek-ai/dsh-webhook',
 ]
-
-/** Type imports retained by public declarations in independently installed packages. */
-const PUBLISHED_TYPE_DEPENDENCIES = {
-  '@deepseek-ai/dsh-codex-app-server': [
-    '@deepseek-ai/dsh-llm',
-    '@deepseek-ai/dsh-native-model-execution',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-subagent',
-    '@deepseek-ai/dsh-native-tools',
-  ],
-  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
-  '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
-  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
-  '@deepseek-ai/dsh-client-native-session': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-client-connection',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-agent-presets',
-    '@deepseek-ai/dsh-brand',
-    '@deepseek-ai/dsh-commands',
-    '@deepseek-ai/dsh-authorization',
-    '@deepseek-ai/dsh-api-workspace-files',
-    '@deepseek-ai/dsh-command-feedback',
-    '@deepseek-ai/dsh-message-feedback',
-  ],
-  '@deepseek-ai/dsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
-  '@deepseek-ai/dsh-client-native-application': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-native-tools',
-  ],
-  '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
-  '@deepseek-ai/dsh-client-ui-goal': [
-    '@deepseek-ai/dsh-session',
-    '@types/react',
-  ],
-  '@deepseek-ai/dsh-client-ui-trajectory': [
-    '@deepseek-ai/dsh-client-ui-conversation',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-session',
-    '@types/react',
-  ],
-  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
-  '@deepseek-ai/dsh-client-ui-session': [
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-session',
-  ],
-  '@deepseek-ai/dsh-client-ui-layout': [
-    '@deepseek-ai/dsh-brand',
-    '@deepseek-ai/dsh-client-store',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-native-runtime',
-  ],
-  '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
-  '@deepseek-ai/dsh-client-ui-sidebar': [
-    '@deepseek-ai/dsh-client-ui-layout',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-workspace-definition',
-  ],
-  '@deepseek-ai/dsh-task-scheduler': [
-    '@deepseek-ai/dsh-native-agent',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-typert-protocol',
-  ],
-} as const satisfies Readonly<Record<string, readonly string[]>>
-
-/** Published type imports whose provider must be installed by the consumer. */
-const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-user-questions': ['@deepseek-ai/dsh-user-questions'],
-  '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-session-telemetry-otel': [
-    '@deepseek-ai/dsh-launch-environment',
-    '@deepseek-ai/dsh-native-runtime',
-  ],
-  '@deepseek-ai/dsh-session-log-export': [
-    '@deepseek-ai/dsh-attachment',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-session-persistence',
-    '@deepseek-ai/dsh-session-query',
-  ],
-  '@deepseek-ai/dsh-permission-presets': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-sandbox',
-  ],
-  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
-  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-webhook': [
-    '@deepseek-ai/dsh-agent-presets',
-    '@deepseek-ai/dsh-native-model-execution',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-permission-presets',
-    '@deepseek-ai/dsh-workspace',
-  ],
-} as const satisfies Readonly<Record<string, readonly string[]>>
-
-/** Peer packages that own contracts for Native services required by a mixed package's Host entry. */
-const NATIVE_SERVICE_PEER_DEPENDENCIES = {
-  '@deepseek-ai/dsh-session-log-export': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
-  },
-  '@deepseek-ai/dsh-command-feedback': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
-  },
-  '@deepseek-ai/dsh-message-feedback': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
-  },
-  '@deepseek-ai/dsh-permission-presets': {
-    agents: '@deepseek-ai/dsh-native-agent',
-    sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
-  },
-} as const satisfies Readonly<Record<string, Readonly<Record<string, string>>>>
 
 /** Development-only package relationships not represented by source imports. */
 const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
@@ -160,94 +31,10 @@ const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
   '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
-/** Runtime dependencies retained by published Client packages. */
+/** Third-party imports retained by published Client library ESM at runtime. */
 const CLIENT_RUNTIME_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-primitives': ['@shikijs/langs','anser','clsx','katex','mdast-util-from-markdown','mdast-util-gfm','mdast-util-math','micromark-core-commonmark','micromark-extension-gfm','micromark-extension-math','micromark-factory-space','micromark-util-character','micromark-util-classify-character','micromark-util-sanitize-uri','micromark-util-symbol','shiki'],
   '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
-  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
-  '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod', '@deepseek-ai/dsh-command-feedback'],
-  '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
-  '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
-  '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment', '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory', '@deepseek-ai/dsh-client-ui-workflow-run'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
-  '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
-  '@deepseek-ai/dsh-client-ui-sidebar': [
-    '@deepseek-ai/dsh-client-store',
-    '@deepseek-ai/dsh-client-ui-primitives',
-    '@deepseek-ai/dsh-client-ui-slots',
-  ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
-
-/** Legacy Host peers omitted by the separately published native entry. */
-export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-tool-pwsh': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-tool-bash': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-file-reference': ['@deepseek-ai/dsh-agent'],
-  '@deepseek-ai/dsh-skill': ['@deepseek-ai/dsh-scope'],
-  '@deepseek-ai/dsh-workflow': ['@deepseek-ai/dsh-agent'],
-  '@deepseek-ai/dsh-fs-sandbox': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy'],
-  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
-  '@deepseek-ai/dsh-permission-presets': [
-    '@deepseek-ai/dsh-compat-settings-definition',
-    '@deepseek-ai/dsh-shell',
-    '@deepseek-ai/dsh-commands',
-    '@deepseek-ai/dsh-invariants',
-    '@deepseek-ai/dsh-sandbox-policy',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-session-projection',
-    '@deepseek-ai/dsh-user-approval',
-  ],
-  '@deepseek-ai/dsh-session-title': ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-compaction': ['@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-session-reference': [
-    '@deepseek-ai/dsh-agent',
-    '@deepseek-ai/dsh-system-prompt',
-    '@deepseek-ai/dsh-typert-protocol',
-  ],
-  '@deepseek-ai/dsh-command-feedback': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-message-feedback': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-authorization': ['@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-webhook': [
-    '@deepseek-ai/dsh-agent',
-    '@deepseek-ai/dsh-agent-default-model',
-    '@deepseek-ai/dsh-invariants',
-  ],
-  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-tool-session-query': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-web': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-fetch-http': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-search-deepseek': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-compat-settings-definition', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-native-tools', '@deepseek-ai/dsh-settings-definition'],
-  '@deepseek-ai/dsh-web-search-exa': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-search-perplexity': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-tool-web': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools'],
-}
-
-/** Client runtime peers whose values must resolve to the shared application instances. */
-export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-client-ui-approval': ['react'],
-  '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
-  '@deepseek-ai/dsh-client-ui-tool': ['react'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['react'],
-  '@deepseek-ai/dsh-client-ui-goal': ['react'],
-  '@deepseek-ai/dsh-client-ui-workflow-run': ['react'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
-  '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-  '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-native-application': [
-    'react',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-client-ui-tool',
-    '@deepseek-ai/dsh-client-ui-approval',
-    '@deepseek-ai/dsh-client-ui-user-questions',
-    '@deepseek-ai/dsh-tool-todo',
-  ],
-  '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
-}
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
 const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
@@ -264,15 +51,8 @@ const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
  * prominent heading in the pull request description.
  */
 const SAFE_HOST_DEPENDENCY_EXPORTS = {
+  '@deepseek-ai/dsh-credentials': ['credentialKey'],
   '@deepseek-ai/dsh-deque': ['Deque'],
-  '@deepseek-ai/dsh-approval-definition': ['sessionApprovalPolicy'],
-  '@deepseek-ai/dsh-approval-definition/legacy': ['APPROVAL_POLICIES', 'setApprovalPolicy'],
-  '@deepseek-ai/dsh-commands/brand': ['CommandDefinitionId'],
-  '@deepseek-ai/dsh-llm': ['boundContextSummary', 'errorChain'],
-  '@deepseek-ai/dsh-llm/native': ['boundContextSummary'],
-  '@deepseek-ai/dsh-json-rpc-line': ['JsonRpcLineTransport'],
-  '@deepseek-ai/dsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
-  '@deepseek-ai/dsh-subprocess/native': ['disposeChildConnection'],
   '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
   '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
   '@deepseek-ai/schemastery': ['default'],
@@ -280,32 +60,11 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
-  '@deepseek-ai/dsh-goal/projection': ['foldGoal'],
-  '@deepseek-ai/dsh-client-ui-primitives': [
-    'Button', 'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
-    'IconCheckOutline14', 'IconChevronDownOutline14', 'IconChevronLeftOutline14', 'IconChevronRightOutline14',
-    'IconChevronUpOutline14', 'IconCloseFill14', 'IconCloseOutline16',
-    'IconCodeOutline16', 'IconEditOutline16', 'IconGoalOutline16', 'IconInspectOutline12', 'IconSearchOutline16', 'IconSparkle16',
-    'ReadBlock', 'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension', 'fileSizeText',
-    'IconSettingsOutline16', 'IconUserOutline16', 'JsonTree', 'MarkdownText', 'Tooltip', 'extractMarkdownPlainText',
-  ],
-  '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
-  '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
-  '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],
-  '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
   '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
-  '@deepseek-ai/dsh-llm': ['APP_IDENTITY', 'createUserMessage'],
-  '@deepseek-ai/dsh-llm/native': ['APP_IDENTITY', 'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText'],
-  '@deepseek-ai/dsh-anonymous-user-id': ['getOrCreateAnonymousUserId'],
-  '@deepseek-ai/dsh-native-subagent/native': ['serializeNativeExternalJson'],
+  '@deepseek-ai/dsh-llm': ['createUserMessage'],
   '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
-  '@deepseek-ai/dsh-session': ['Session', 'SessionId'],
-  '@deepseek-ai/dsh-session-telemetry': ['SessionTelemetryBackend', 'SessionTelemetryCoordinator'],
-  '@deepseek-ai/dsh-session-telemetry/records': ['isFeedbackEvent', 'ledgerRecord'],
-  '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
-  '@deepseek-ai/dsh-session/native': ['SessionId'],
-  '@deepseek-ai/dsh-session-persistence/native': ['SessionPersistenceNotFoundError'],
-  '@deepseek-ai/dsh-session-title/normalize': ['normalizeSessionTitle'],
+  '@deepseek-ai/dsh-session': ['SESSION_FORMAT_VERSION', 'SessionId'],
+  '@deepseek-ai/dsh-session-persistence': ['SessionPersistenceNotFoundError'],
   '@deepseek-ai/dsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
 
@@ -316,17 +75,11 @@ type HostDependencyExports = Readonly<Record<string, readonly string[]>>
 export interface PackageDependencyPolicy {
   /** Package sources whose selected native entry does not require Cordis. */
   readonly cordisFreePackageDirectories: ReadonlySet<string>
-  /** Application outputs governed by their own assembled runtime closure. */
-  readonly applicationDistributionDirectories: ReadonlyMap<string, ApplicationDistributionKind>
   readonly clientFaceInclude: readonly string[]
   readonly clientFaceExclude: readonly string[]
   readonly hostPackages: readonly string[]
   readonly configurationOnlyDevDependencies: Readonly<Record<string, readonly string[]>>
   readonly clientRuntimeDependencies: Readonly<Record<string, readonly string[]>>
-  readonly sharedClientRuntimePeers: Readonly<Record<string, readonly string[]>>
-  readonly publishedTypeDependencies?: Readonly<Record<string, readonly string[]>>
-  readonly publishedTypePeerDependencies?: Readonly<Record<string, readonly string[]>>
-  readonly nativeServicePeerDependencies?: Readonly<Record<string, Readonly<Record<string, string>>>>
   readonly duplicateSafePackages?: readonly string[]
   readonly safeHostDependencyExports: HostDependencyExports
   readonly peerRequiredHostExports: HostDependencyExports
@@ -335,16 +88,11 @@ export interface PackageDependencyPolicy {
 /** Repository dependency policy consumed by verification and benchmarking. */
 export const PACKAGE_DEPENDENCY_POLICY: PackageDependencyPolicy = {
   cordisFreePackageDirectories: nativePackageDirectories,
-  applicationDistributionDirectories,
   clientFaceInclude: CLIENT_FACE_INCLUDE,
   clientFaceExclude: CLIENT_FACE_EXCLUDE,
   hostPackages: HOST_DEPENDENCY_PACKAGES,
   configurationOnlyDevDependencies: CONFIGURATION_ONLY_DEV_DEPENDENCIES,
   clientRuntimeDependencies: CLIENT_RUNTIME_DEPENDENCIES,
-  sharedClientRuntimePeers: SHARED_CLIENT_RUNTIME_PEERS,
-  publishedTypeDependencies: PUBLISHED_TYPE_DEPENDENCIES,
-  publishedTypePeerDependencies: PUBLISHED_TYPE_PEER_DEPENDENCIES,
-  nativeServicePeerDependencies: NATIVE_SERVICE_PEER_DEPENDENCIES,
   duplicateSafePackages: DUPLICATE_SAFE_PACKAGES,
   safeHostDependencyExports: SAFE_HOST_DEPENDENCY_EXPORTS,
   peerRequiredHostExports: PEER_REQUIRED_HOST_EXPORTS,

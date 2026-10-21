@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-13-native-request-context-acceptance.md
-2026-10-13-native-request-context-acceptance.md: b4943b4db77dd0032be97b0c1c5fa05724a0568d
-2026-10-13-native-request-context-acceptance.zh.md: 7da6d662b3ae8a1e5443a98b1ea483dc63153441

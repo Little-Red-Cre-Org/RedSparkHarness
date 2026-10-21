@@ -63,7 +63,6 @@ describe('native job tools', () => {
       })
       const execute = (name: string, args: unknown, actor = owner) => state.tools.execute({
         agent: actor, callId: ToolCallId(name), name, arguments: args, session: state.session, signal: new AbortController().signal,
-        appendEvent: async (type, data, ...opts) => state.session.append(type, data, ...opts),
       })
       expect((await execute('job_list', {})).content).toMatchObject([{ text: 'subagent-1 [subagent] running — inspect' }])
       expect((await execute('job_output', { job_id: id, wait: true, timeout_ms: 1 })).content)
@@ -91,13 +90,12 @@ describe('native job tools', () => {
       await state.jobs.wait(id, alice, 1_000)
       const call = (name: string, args: unknown) => state.tools.execute({
         agent: bob, callId: ToolCallId(name), name, arguments: args, session: state.session, signal: new AbortController().signal,
-        appendEvent: async (type, data, ...opts) => state.session.append(type, data, ...opts),
       })
       expect((await call('job_list', {})).content).toMatchObject([{ text: '(no background jobs)' }])
       await expect(call('job_output', { job_id: id })).rejects.toThrow('belongs to another Agent')
       await expect(call('job_kill', { job_id: id })).rejects.toThrow('belongs to another Agent')
       await expect(call('job_output', { job_id: id, timeout_ms: 10 })).rejects.toThrow('requires wait: true')
-      await expect(call('job_list', { extra: true })).rejects.toThrow('additionalProperties: false')
+      await expect(call('job_list', { extra: true })).rejects.toThrow('unexpected argument')
     } finally {
       await releaseBob()
       await releaseAlice()
@@ -118,7 +116,6 @@ describe('native job tools', () => {
       const result = await state.tools.execute({
         agent: owner, callId: ToolCallId('large'), name: 'job_output', arguments: { job_id: id },
         session: state.session, signal: new AbortController().signal,
-        appendEvent: async (type, data, ...opts) => state.session.append(type, data, ...opts),
       })
       const text = result.content[0]?.type === 'text' ? result.content[0].text : ''
       expect(Buffer.byteLength(text, 'utf8')).toBeLessThanOrEqual(128)
@@ -146,7 +143,6 @@ describe('native job tools', () => {
         agent: owner, callId: ToolCallId('wait'), name: 'job_output',
         arguments: { job_id: id, wait: true, timeout_ms: 60_000 },
         session: state.session, signal: controller.signal,
-        appendEvent: async (type, data, ...opts) => state.session.append(type, data, ...opts),
       })
       controller.abort(new Error('turn cancelled'))
       await expect(waiting).rejects.toThrow('turn cancelled')

@@ -268,22 +268,6 @@ export function virtualManifest(
 
 const workspaceLinkedManifestCache = new Map<string, VirtualManifest | undefined>()
 
-/** Locate pnpm's configured virtual store, including a store outside this checkout.
- * @param nodeModules - installed workspace's node_modules directory.
- * @returns configured store followed by the conventional local store.
- */
-export function virtualStoreDirectories(nodeModules: string): string[] {
-  const metadataPath = resolve(nodeModules, '.modules.yaml')
-  const metadata = existsSync(metadataPath)
-    ? yaml.load(readFileSync(metadataPath, 'utf8')) as { virtualStoreDir?: unknown } | undefined
-    : undefined
-  const configured = metadata?.virtualStoreDir
-  if (configured !== undefined && (typeof configured !== 'string' || configured.length === 0)) {
-    throw new Error(`gen-third-party-notices: invalid virtualStoreDir in ${metadataPath}`)
-  }
-  return [...new Set([...(configured === undefined ? [] : [resolve(nodeModules, configured)]), resolve(nodeModules, '.pnpm')])]
-}
-
 /**
  * Resolve the package version selected for a declaring workspace instead of an
  * unrelated historical version that still occupies the shared virtual store.
@@ -306,7 +290,7 @@ function workspaceLinkedManifest(name: string, manifests: Map<string, Manifest>)
   return undefined
 }
 
-/** Resolve one installed external package manifest from pnpm's configured stores. */
+/** Resolve one installed external package manifest from either pnpm store. */
 function installedManifest(name: string, manifests: Map<string, Manifest>, expectedVersion?: string): VirtualManifest | undefined {
   const linked = workspaceLinkedManifest(name, manifests)
   if (linked !== undefined && (expectedVersion === undefined || linked.version === expectedVersion)) return linked
@@ -322,11 +306,9 @@ function installedManifest(name: string, manifests: Map<string, Manifest>, expec
         break
       }
     }
-    for (const virtual of virtualStoreDirectories(resolve(root, store))) {
-      if (!existsSync(virtual)) continue
-      manifest = virtualManifest(virtual, name, expectedVersion)
-      if (manifest !== undefined) break
-    }
+    const virtual = resolve(root, store, '.pnpm')
+    if (!existsSync(virtual)) continue
+    manifest = virtualManifest(virtual, name, expectedVersion)
     if (manifest !== undefined) break
   }
   return manifest

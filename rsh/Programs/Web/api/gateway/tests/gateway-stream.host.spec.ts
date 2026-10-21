@@ -1,4 +1,3 @@
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -17,7 +16,7 @@ import {
 } from '@deepseek-ai/dsh-typert-protocol'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     'fixture/rejected': { readonly retryable: boolean }
     'fixture/broken': { readonly count: bigint }

@@ -228,12 +228,6 @@ Program-only SDK bindings:
 - **PTC mode 中间值只存在于执行局部，且没有字节上限**：它们无法从会话回放重建，并可能耗尽进程或 worker 内存；只有外层 `run_code` 输出受 worker 可配置的硬上限约束。
 - **每次运行都会获得全新的 `run_code` 状态**：MVP 不采用持久 REPL 风格内核，因为跨调用状态不会出现在日志中。
 
-`./types` 的 PTC 事件 payload 与 `./presentation` 的 `FileDiff` 转发 `dsh-native-tools` 拥有的纯声明。导入这些兼容出口会保留 Session 事件扩展，不安装原生注册表。
-
-旧工具包的 JSON Schema 出口转发原生校验器与 schema 类型，使模型 API 目录为每个 schema 类型保留唯一声明。
-
-搜索卡片结果类型从 `dsh-native-tools/presentation` 重新导出，兼容和原生搜索共用一份与 Provider 无关的类型定义。
-
 <a id="dev-note"></a>
 ### 开发备注
 

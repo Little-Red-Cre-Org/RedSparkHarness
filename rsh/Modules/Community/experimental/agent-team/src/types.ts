@@ -120,7 +120,7 @@ export interface TeamMessageSource {
   readonly senderName: string
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     'team-message': TeamMessageSource
   }

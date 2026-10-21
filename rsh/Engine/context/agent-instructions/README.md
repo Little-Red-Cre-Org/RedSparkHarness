@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-agent-instructions` gives agents workspace guidance from user-global and project-level `AGENTS.md`-compatible files. It loads the applicable chain for the first request. It does not watch external edits continuously: successful filesystem operations discover newly relevant nested files and make later changes or removals visible, while session resume reconciles the baseline. `dsh-base` enables this behavior by default, while profiles can disable it. Shipped Native SDK, SDK-child and ACP profiles install it with a 65,536-byte budget through their selected filesystem Provider. The budget bounds injected context: broader files are omitted before the most specific file is truncated, and an empty chain adds nothing.
+`dsh-agent-instructions` gives agents workspace guidance from user-global and project-level `AGENTS.md`-compatible files. It loads the applicable chain for the first request. It does not watch external edits continuously: successful filesystem operations discover newly relevant nested files and make later changes or removals visible, while session resume reconciles the baseline. `dsh-base` enables this behavior by default, while profiles can disable it. A byte budget bounds the injected context: broader files are omitted before the most specific file is truncated, and an empty chain adds nothing.
 
 ## Table of Contents
 
@@ -28,8 +28,6 @@ English | [中文](README.zh.md)
 Mount this plugin when agents should work from the workspace's own instruction files. `dsh-base` already includes it with a 65,536-byte budget, so base-backed profiles only need to replace the row when they want another `maxBytes`; providerless trees load nothing until a filesystem provider is present.
 
 ### What the agent gets
-
-The native `./native` entry provides `agentInstructions` over the selected `fs` Provider. The Program awaits instruction preparation after input admission and appends the returned user message before deriving model history. Accepted native filesystem results enable nested discovery on the following request; reads remain request-owned and installation cancellation prevents late context. Native and Cordis entries share discovery, digest deduplication, byte budgeting and reconciliation. Cold restore also derives discovery paths from committed filesystem calls paired with successful results, so a final-step file access remains discoverable after a step limit; failed results do not add paths. PTC filesystem paths require matching dispatch-start and successful dispatch events inside an outer call with an accepted result; a failed enclosing program retains its already successful filesystem observations.
 
 The first request includes one durable baseline message with the user-global `$DSH_HOME/AGENTS.md` followed by the project chain — every existing candidate file from the project root down to the session working directory, in broad-to-specific order. Sibling files whose content matches after trimming render once, so a `CLAUDE.md` that duplicates its `AGENTS.md` is not repeated. After a successful `read`, `write`, or `edit` call reaches a deeper directory, the next request includes the newly applicable instruction file; a changed file replaces its content, and a file that disappears or duplicates an earlier candidate produces a removal notice.
 

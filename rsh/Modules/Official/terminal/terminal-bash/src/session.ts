@@ -7,8 +7,8 @@ import type {
   SubprocessOutcome,
   SubprocessTerminalForeground,
   SubprocessTerminalHandle,
-} from '@deepseek-ai/dsh-subprocess/native'
-import { TerminalError } from '@deepseek-ai/dsh-terminal/error'
+} from '@deepseek-ai/dsh-subprocess'
+import { TerminalError } from '@deepseek-ai/dsh-terminal'
 import type {
   TerminalBackendSession,
   TerminalReadRequest,
@@ -21,7 +21,7 @@ import type {
   TerminalSignal,
   TerminalSignalResult,
   TerminalWaitReason,
-} from '@deepseek-ai/dsh-terminal/protocol'
+} from '@deepseek-ai/dsh-terminal'
 import type { ResolvedConfig } from './config.ts'
 import { CONTROLLED_PROMPT, TerminalSanitizer } from './sanitize.ts'
 
@@ -91,7 +91,6 @@ class LocalSendOperation implements TerminalSendOperation {
     maxBytes: number,
     readonly startedAt: number,
     private readonly onCancel: () => void,
-    private readonly onOutput?: (text: string) => void,
   ) {
     this.output = new BoundedTextBuffer(maxBytes)
     this.promise = Promise.withResolvers<TerminalSendResult>()
@@ -111,10 +110,7 @@ class LocalSendOperation implements TerminalSendOperation {
   }
 
   append(text: string): void {
-    if (!this.finished) {
-      this.output.append(text)
-      this.onOutput?.(text)
-    }
+    if (!this.finished) this.output.append(text)
   }
 
   settle(waitReason: TerminalWaitReason, sessionStatus: TerminalSessionStatus, inheritedTruncation: boolean): void {
@@ -269,7 +265,6 @@ export class LocalPtySession implements TerminalBackendSession {
       this.config.maxReadBytes,
       Date.now(),
       () => { this.interrupt(operation) },
-      request.onOutput,
     )
     this.active = operation
     this.resetReadinessEvidence()

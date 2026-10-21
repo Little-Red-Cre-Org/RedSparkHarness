@@ -6,7 +6,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
-  SessionPersistence, type NativeSessionDeletionOperations,
+  SessionPersistence,
   type SessionAccess, type SessionHandle,
   type SessionPersistenceCreateOptions, type SessionPersistenceListOptions,
   type SessionPersistenceOpenOptions, type SessionPersistenceSnapshot,
@@ -26,14 +26,11 @@ class JsonlSessionPersistence extends SessionPersistence {
   })
 
   override readonly name = 'session-persistence-jsonl'
-  /** Same explicit deletion capability as the native selected JSONL Provider. */
-  override readonly deletions: NativeSessionDeletionOperations
   private readonly backend: JsonlSessionBackend
 
   constructor(ctx: Context, public config: Config) {
     super(ctx)
     this.backend = new JsonlSessionBackend(config, (message) => { ctx.logger.warn(message) })
-    this.deletions = this.backend.deletions
     ctx.on('session/event', (session, event) => {
       this.backend.onSessionEvent(session, event, (message) => { ctx.logger.warn(message) })
     })

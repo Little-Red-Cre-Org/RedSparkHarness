@@ -131,11 +131,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Validate request-header, tool-result, and scheduled-root payload facts.
+ * Reject noncanonical request-header fields and contradictory tool failure metadata.
  * This does not validate complete event payloads or embedded provider streams.
  * @param event - event whose locally related payload fields are inspected.
  * @param subject - event location to include in validation errors.
- * @throws when request data/header is invalid, tool failure metadata contradicts its message, or scheduled-root data is not canonical.
+ * @throws when request data/header is not an object, optional header fields are empty, or tool failure metadata contradicts its message.
  */
 export function validateSessionEventData(
   event: Pick<SessionEvent, 'type' | 'data'>,
@@ -162,10 +162,6 @@ export function validateSessionEventData(
     const block: unknown = Array.isArray(content) ? content[0] : undefined
     if (!isRecord(block) || block['isError'] !== true) {
       throw new Error(`${subject} error requires message content[0].isError === true`)
-    }
-  } else if (event.type === 'session/root-origin') {
-    if (!isRecord(data) || Object.keys(data).length !== 1 || data['origin'] !== 'scheduled') {
-      throw new Error(`${subject} root origin data must contain only origin: "scheduled"`)
     }
   }
 }

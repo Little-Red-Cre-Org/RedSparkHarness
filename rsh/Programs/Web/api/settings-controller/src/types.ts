@@ -1,18 +1,17 @@
 /**
  * Browser-safe failure vocabulary of the configuration surfaces this package
  * serves. The redacted views themselves live with their seam in
- * `@deepseek-ai/dsh-settings-definition/types`, which carries the Client-safe
- * Settings values without importing the Cordis compatibility face.
+ * `@deepseek-ai/dsh-settings/types`, whose Cordis event declarations already
+ * register that file for the Client compilation face.
  *
  * @module @deepseek-ai/dsh-api-settings-controller/types
  */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { AuthorizationEntry, AuthorizationNotice, AuthorizationPromptOption } from '@deepseek-ai/dsh-authorization/types'
 import type { CredentialRecord } from '@deepseek-ai/dsh-credentials/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     /**
      * Every seam refusal that is not a stale write: an unregistered or malformed
@@ -73,7 +72,7 @@ export type AuthorizationFrame =
   }
   | { type: 'settled'; status: 'authorized' | 'cancelled' }
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     'authorization/rejected': { readonly authorizationCode?: string }
     'authorization/prompt-not-found': {

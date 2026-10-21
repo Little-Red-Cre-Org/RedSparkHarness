@@ -1,8 +1,0 @@
-version: 1
-scenario: codex-subscription-replay-metadata
-profile: legacy-headless
-composition: codex-subscription
-recording: authored
-header:
-  class: codex-subscription
-  pin: true

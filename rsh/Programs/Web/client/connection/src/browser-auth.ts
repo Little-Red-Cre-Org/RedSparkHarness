@@ -1,16 +1,15 @@
 /** Browser-session authentication for the Host Connection carrier. */
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { CredentialProvider, CredentialRecord } from '@deepseek-ai/dsh-credentials'
 import type {
   ConnectionIndexRequest,
   ConnectionIndexResponse,
   ConnectionTrustRequest,
 } from './rpc.ts'
 
-/** Fixed record address with two valid credential-key segments. */
-const AUTH_RECORD_KEY = brandString<CredentialKey>('client-connection/browser-session')
+const AUTH_RECORD_KEY = credentialKey('client-connection', 'browser-session')
 const DAY_MILLISECONDS = 24 * 60 * 60 * 1000
 const SECRET_BYTES = 32
 const TOKEN_QUERY = 'token'
@@ -159,7 +158,7 @@ function decodeCookie(value: string, secret: Buffer): BrowserCookiePayload | und
   return decoded as unknown as BrowserCookiePayload
 }
 
-async function initializeSecret(credentials: Pick<NativeCredentials, 'modifyRecord'>): Promise<Buffer> {
+async function initializeSecret(credentials: CredentialProvider): Promise<Buffer> {
   const generated: StoredSecretPayload = {
     version: STORED_SECRET_VERSION,
     secret: encodeBase64Url(randomBytes(SECRET_BYTES)),
@@ -210,7 +209,7 @@ export class BrowserAuth {
    */
   static async create(
     processOwner: object,
-    credentials: Pick<NativeCredentials, 'modifyRecord'>,
+    credentials: CredentialProvider,
     maxAgeDays: number,
   ): Promise<BrowserAuth> {
     return new BrowserAuth(processOwner, await initializeSecret(credentials), maxAgeDays)

@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { canonicalizeWatchPath } from '@deepseek-ai/dsh-home-paths'
 import type { LaunchEnvironmentEntry, LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialMetadataMigration, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
+import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
 import { assertJsonValue, assertOwnerOnly, assertStorableApiKey, DOCUMENT_LOCK_WAIT_MS, DOCUMENT_VERSION, isENOENT, parseCredentialsDocument, renderFlatLayoutMigration, renderRecord, renderRef, resolveSpec, sameJsonValue, type Config, type ResolvedSpec } from './document.ts'
 
 /** Host resources and notifications supplied by the selected application runtime. */
@@ -17,19 +17,7 @@ export interface NativeCredentialRuntime {
     error(message: unknown, ...args: unknown[]): void
   }
   referenceUpdated(ref: CredentialRef): void
-  recordUpdated?(key: CredentialKey): void
-}
-
-interface RecordUpdatedSubscription {
-  readonly listener: (key: CredentialKey) => void | Promise<void>
-  readonly pending: Set<Promise<void>>
-  active: boolean
-  disposal?: Promise<void>
-}
-
-/** Render every owner-keyed metadata value into the versioned JSON sidecar. */
-function renderMetadataDocument(entries: ReadonlyMap<string, unknown>): string {
-  return `${JSON.stringify({ version: 1, entries: Object.fromEntries(entries) }, null, 2)}\n`
+  recordUpdated(key: CredentialKey): void
 }
 
 /** File-backed credentials provider (`$DSH_HOME/.credentials.yaml`). */
@@ -54,53 +42,10 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
   /** Set at dispose: refuse new writes and let in-flight work no-op. */
   private closed = false
   private watcher?: ReturnType<typeof chokidarWatch>
-  private readonly recordUpdatedSubscriptions = new Set<RecordUpdatedSubscription>()
 
   /** Opaque read of {@link closed}: control flow cannot narrow it across awaits. */
   private isClosed(): boolean {
     return this.closed
-  }
-
-  /** Versioned JSON sidecar stored apart from the enumerable credential document. */
-  private get metadataFilename(): string {
-    return `${this.spec.filename}.metadata.json`
-  }
-
-  /** Read and validate the versioned sidecar without quoting its contents in errors. */
-  private async readMetadataDocument(): Promise<Map<string, unknown>> {
-    const filename = this.metadataFilename
-    await assertOwnerOnly(filename)
-    let text: string
-    try {
-      text = await readFile(filename, 'utf8')
-    } catch (error) {
-      if (isENOENT(error)) return new Map()
-      throw error
-    }
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      throw new Error(`credentials-local: metadata document ${filename} is invalid JSON`)
-    }
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error(`credentials-local: metadata document ${filename} must be an object`)
-    }
-    const document = parsed as { version?: unknown; entries?: unknown }
-    if (document.version !== 1 || document.entries === null || typeof document.entries !== 'object'
-      || Array.isArray(document.entries)) {
-      throw new Error(`credentials-local: metadata document ${filename} has an unsupported version or entries`)
-    }
-    if (Object.keys(document).some(key => key !== 'version' && key !== 'entries')) {
-      throw new Error(`credentials-local: metadata document ${filename} has unsupported fields`)
-    }
-    const entries = new Map<string, unknown>()
-    for (const [key, value] of Object.entries(document.entries)) {
-      parseCredentialKey(key)
-      assertJsonValue(`metadata "${key}"`, value, new Set())
-      entries.set(key, value)
-    }
-    return entries
   }
   /* jscpd:ignore-end */
 
@@ -165,10 +110,8 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
   /** Refuse new work, close the watcher, then drain queued operations. */
   async dispose(): Promise<void> {
     this.closed = true
-    const subscriptions = [...this.recordUpdatedSubscriptions].map(subscription => this.disposeRecordUpdatedSubscription(subscription))
     await this.watcher?.close()
     await this.operations
-    await Promise.all(subscriptions)
   }
 
   resolve(ref: CredentialRef): Promise<NativeResolvedCredential | undefined> {
@@ -210,102 +153,6 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     return Promise.resolve(this.records.get(key))
   }
 
-  async readMetadata(key: CredentialKey): Promise<unknown> {
-    parseCredentialKey(key)
-    return this.enqueue(async () => {
-      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
-      return withFileLock(this.spec.filename, async () => {
-        const entries = await this.readMetadataDocument()
-        return entries.get(key)
-      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
-    })
-  }
-
-  async modifyMetadata(
-    key: CredentialKey,
-    mutate: (current: unknown) => Promise<unknown>,
-    options?: NativeCredentialWriteOptions,
-  ): Promise<unknown> {
-    parseCredentialKey(key)
-    if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot modify metadata "${key}"`)
-    return this.enqueue(async () => {
-      options?.signal?.throwIfAborted()
-      if (this.isClosed()) {
-        throw new Error(`credentials-local was disposed before metadata modify "${key}" ran`)
-      }
-      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
-      return withFileLock(this.spec.filename, async () => {
-        const entries = await this.readMetadataDocument()
-        const current = entries.get(key)
-        const working = current === undefined ? undefined : structuredClone(current)
-        const next = await mutate(working)
-        if (next === undefined) return current
-        assertJsonValue(`metadata "${key}"`, next, new Set())
-        if (sameJsonValue(current, next)) return current
-        entries.set(key, next)
-        await writeFileAtomic(this.metadataFilename, renderMetadataDocument(entries), { mode: 0o600, dirMode: 0o700 })
-        const committed = (await this.readMetadataDocument()).get(key)
-        if (!sameJsonValue(committed, next)) {
-          throw new Error(`credentials-local: metadata "${key}" did not match after its atomic write`)
-        }
-        return committed
-      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
-    })
-  }
-
-  async migrateRecordToMetadata(
-    key: CredentialKey,
-    migrate: (
-      current: unknown,
-      legacy: CredentialRecord | undefined,
-      readRecord: (key: CredentialKey) => CredentialRecord | undefined,
-    ) => Promise<CredentialMetadataMigration>,
-    options?: NativeCredentialWriteOptions,
-  ): Promise<unknown> {
-    parseCredentialKey(key)
-    if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot migrate "${key}"`)
-    return this.enqueue(async () => {
-      options?.signal?.throwIfAborted()
-      if (this.isClosed()) throw new Error(`credentials-local was disposed before migration "${key}" ran`)
-      await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
-      return withFileLock(this.spec.filename, async () => {
-        await this.reconcileFromDisk()
-        if (this.isClosed()) throw new Error(`credentials-local was disposed before migration "${key}" ran`)
-        const entries = await this.readMetadataDocument()
-        const current = entries.get(key)
-        const legacy = this.records.get(key)
-        const workingCurrent = current === undefined ? undefined : structuredClone(current)
-        const workingLegacy = legacy === undefined ? undefined : structuredClone(legacy)
-        const decision = await migrate(workingCurrent, workingLegacy, (recordKey) => {
-          const record = this.records.get(recordKey)
-          return record === undefined ? undefined : structuredClone(record)
-        })
-        if (decision.retireRecord && decision.value === undefined) {
-          throw new Error(`credentials-local: migration "${key}" cannot retire a record without metadata`)
-        }
-        if (decision.value !== undefined) {
-          assertJsonValue(`metadata "${key}"`, decision.value, new Set())
-          if (!sameJsonValue(current, decision.value)) {
-            entries.set(key, decision.value)
-            await writeFileAtomic(this.metadataFilename, renderMetadataDocument(entries), { mode: 0o600, dirMode: 0o700 })
-          }
-          const verified = (await this.readMetadataDocument()).get(key)
-          if (!sameJsonValue(verified, decision.value)) {
-            throw new Error(`credentials-local: metadata "${key}" did not match after migration`)
-          }
-        }
-        if (decision.retireRecord && legacy !== undefined) {
-          const nextText = renderRecord(this.text, key, undefined)
-          await writeFileAtomic(this.spec.filename, nextText, { mode: 0o600, dirMode: 0o700 })
-          this.text = nextText
-          this.records.delete(key)
-          this.notifyRecordUpdated(key)
-        }
-        return decision.value
-      }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
-    })
-  }
-
   describeRecord(key: CredentialKey): Promise<NativeCredentialRecordInfo> {
     const stored = this.records.get(key)
     // Presence is the whole fact here: no layer ranks above this document for
@@ -324,26 +171,12 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     })))
   }
 
-  /**
-   * Subscribe to committed changes owned by this Provider instance.
-   * @param listener - callback receiving the changed record address.
-   * @returns idempotent removal that drains admitted callback work.
-   */
-  onRecordUpdated(listener: (key: CredentialKey) => void | Promise<void>): () => Promise<void> {
-    if (this.closed) throw new Error('credentials-local is disposed: cannot subscribe to record updates')
-    const subscription: RecordUpdatedSubscription = { listener, pending: new Set(), active: true }
-    this.recordUpdatedSubscriptions.add(subscription)
-    return () => this.disposeRecordUpdatedSubscription(subscription)
-  }
-
   async modifyRecord(
     key: CredentialKey,
     mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
-    options?: NativeCredentialWriteOptions,
   ): Promise<CredentialRecord | undefined> {
     if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot modify "${key}"`)
     return this.enqueue(async () => {
-      options?.signal?.throwIfAborted()
       if (this.isClosed()) {
         throw new Error(`credentials-local was disposed before the queued "${key}" modify ran`)
       }
@@ -355,7 +188,6 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
         await this.reconcileFromDisk()
         const current = this.records.get(key)
         const next = await mutate(current)
-        // Once mutate starts, commit even if the caller aborts: it may have rotated a refresh token.
         if (next === undefined) return current
         // Admitted before it is rendered: what the read path would refuse is
         // refused here first, so a caller can never persist a document the
@@ -368,30 +200,27 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
         this.text = nextText
         this.records.set(key, next)
         // After the commit, on the same terms as a reference write.
-        this.notifyRecordUpdated(key)
+        this.runtime.recordUpdated(key)
         return next
       }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
     })
   }
 
-  async deleteRecord(key: CredentialKey, options?: NativeCredentialDeleteOptions): Promise<void> {
+  async deleteRecord(key: CredentialKey): Promise<void> {
     if (this.isClosed()) throw new Error(`credentials-local is disposed: cannot delete "${key}"`)
     await this.enqueue(async () => {
-      options?.signal?.throwIfAborted()
       if (this.isClosed()) {
         throw new Error(`credentials-local was disposed before the queued "${key}" delete ran`)
       }
       await mkdir(dirname(this.spec.filename), { recursive: true, mode: 0o700 })
       await withFileLock(this.spec.filename, async () => {
         await this.reconcileFromDisk()
-        const current = this.records.get(key)
-        if (current === undefined || options?.when?.(current) === false) return
-        options?.signal?.throwIfAborted()
+        if (!this.records.has(key)) return
         const nextText = renderRecord(this.text, key, undefined)
         await writeFileAtomic(this.spec.filename, nextText, { mode: 0o600, dirMode: 0o700 })
         this.text = nextText
         this.records.delete(key)
-        this.notifyRecordUpdated(key)
+        this.runtime.recordUpdated(key)
       }, { waitMs: DOCUMENT_LOCK_WAIT_MS })
     })
   }
@@ -419,35 +248,6 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     })
   }
   /* jscpd:ignore-end */
-
-  /** Close one listener's admission and drain its already-started work. */
-  private disposeRecordUpdatedSubscription(subscription: RecordUpdatedSubscription): Promise<void> {
-    if (subscription.disposal !== undefined) return subscription.disposal
-    subscription.active = false
-    this.recordUpdatedSubscriptions.delete(subscription)
-    return subscription.disposal = Promise.all(subscription.pending).then(() => undefined)
-  }
-
-  /** Invoke subscribers synchronously after a record commit, then contain async failures. */
-  private notifyRecordUpdated(key: CredentialKey): void {
-    for (const subscription of [...this.recordUpdatedSubscriptions]) {
-      if (!subscription.active) continue
-      try {
-        const result = subscription.listener(key)
-        if (result === undefined) continue
-        const pending = Promise.resolve(result).catch((error: unknown) => {
-          this.runtime.logger.warn('credentials-local: record update listener failed for %s', key)
-          this.runtime.logger.warn(error)
-        })
-        subscription.pending.add(pending)
-        void pending.then(() => { subscription.pending.delete(pending) })
-      } catch (error) {
-        this.runtime.logger.warn('credentials-local: record update listener failed for %s', key)
-        this.runtime.logger.warn(error)
-      }
-    }
-    this.runtime.recordUpdated?.(key)
-  }
 
   /** Queue one line edit; entry checks reject early, the queue re-judges them at run time. */
   private async write(ref: CredentialRef, value: string | undefined): Promise<void> {
@@ -604,7 +404,7 @@ export class NativeLocalCredentialProvider implements NativeCredentials {
     this.values = next.refs
     this.records = next.records
     for (const ref of changedRefs) this.runtime.referenceUpdated(ref)
-    for (const key of changedRecords) this.notifyRecordUpdated(key)
+    for (const key of changedRecords) this.runtime.recordUpdated(key)
   }
   /* jscpd:ignore-end */
 

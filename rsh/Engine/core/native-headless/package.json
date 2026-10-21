@@ -2,9 +2,7 @@
   "name": "@deepseek-ai/dsh-native-headless",
   "description": "Native headless Agent composition for DeepSeek Harness",
   "version": "0.1.5-rc.2",
-  "publishConfig": {
-    "access": "public"
-  },
+  "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
@@ -15,103 +13,34 @@
     "native": {
       "apiVersion": 1,
       "entry": "./native",
-      "targets": [
-        "host"
-      ],
-      "requires": [
-        "fs",
-        "sessionPersistence",
-        "modelExecution",
-        "agents"
-      ],
-      "optional": [
-        "tools",
-        "promptSections",
-        "sandboxPolicy",
-        "approval",
-        "codeRuntime",
-        "timeContext",
-        "tmuxContext",
-        "sessionExecution",
-        "activeSessions",
-        "modelSelection",
-        "agentPresets",
-        "workspaceRegistry",
-        "agentInstructions",
-        "attachments",
-        "requestContexts"
-      ],
-      "provides": [
-        "application",
-        "rootExecution"
-      ]
+      "targets": ["host"],
+      "requires": ["fs", "sessionPersistence", "modelExecution", "agents"],
+      "optional": ["tools", "promptSections", "sandboxPolicy", "approval", "codeRuntime", "timeContext"],
+      "provides": ["application"]
     }
   },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./lib/types/index.d.ts",
-      "default": "./lib/index.js"
-    },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
     "./package.json": "./package.json"
   },
-  "files": [
-    "lib/index.js",
-    "lib/native.js",
-    "lib/shared-*.js",
-    "lib/types/**/*.d.ts"
-  ],
+  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "devDependencies": {
-    "@deepseek-ai/dsh-tool-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-token-meter": "workspace:^",
-    "@deepseek-ai/dsh-native-approval": "workspace:^",
-    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-file-reference-local": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-request-context": "workspace:^",
-    "@deepseek-ai/dsh-file-reference": "workspace:^",
-    "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
-    "@deepseek-ai/dsh-tool-fs": "workspace:^",
-    "@deepseek-ai/dsh-tool-skill": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent": "workspace:^",
-    "@deepseek-ai/dsh-llm-retry": "workspace:^",
-    "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:^",
-    "@deepseek-ai/dsh-repeat-tool-reminder": "workspace:^",
-    "zod": "^4.4.3"
-  },
   "dependencies": {
     "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/dsh-native-agent": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-native-tools": "workspace:^",
     "@deepseek-ai/dsh-native-prompt": "workspace:^",
     "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-approval-definition": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
+    "@deepseek-ai/dsh-native-approval": "workspace:^",
+    "@deepseek-ai/dsh-native-code-runtime": "workspace:^",
     "@deepseek-ai/dsh-native-time-context": "workspace:^",
-    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-workspace": "workspace:^",
-    "@deepseek-ai/dsh-workspace-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-instructions": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-request-context-definition": "workspace:^"
+    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
   }
 }

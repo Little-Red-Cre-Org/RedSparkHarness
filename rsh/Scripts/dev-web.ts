@@ -14,7 +14,7 @@
  * artifact, so an edit appears to do nothing.
  *
  * MUST NOT run concurrently with `pnpm run build`: both write the same
- * `lib/`, `rsh/Programs/Web/application/dist/`, and compatibility `dist/` trees.
+ * `lib/` and `rsh/Programs/Web/application/dist/` trees.
  *
  * Usage: `pnpm exec tsx rsh/Scripts/dev-web.ts [--poll[=ms]]`. Requires one prior
  * `pnpm run build`: every stage is incremental over the previous stage's output
@@ -39,7 +39,6 @@ import {
   clientBuildProcessEnvironment,
   repositoryClientBuildEnvironment,
 } from './client-build-environment.ts'
-import { nativeProfileClientDirectories } from './native-package-policy.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
@@ -47,11 +46,8 @@ const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 /** Client-face type emit feeding every tsdown lib entry in the watch set. */
 const CLIENT_TYPE_PROGRAM = 'tsconfig.client.json'
 
-/** Cordis-free Native application workspace. */
+/** Compile-shell workspace whose dist `dsh web` serves. */
 const SHELL_PACKAGE = '@deepseek-ai/dsh-web-frontend'
-
-/** Explicit Cordis compatibility shell workspace. */
-const COMPATIBILITY_PACKAGE = '@deepseek-ai/dsh-web-compatibility'
 
 /**
  * Test infrastructure builds through the client preset but never enters the
@@ -109,7 +105,6 @@ export function discoverLibraryDirs(root = repoRoot): string[] {
   for (const configPath of globSync([...configGlobs], { cwd: root }).sort()) {
     const dir = dirname(configPath).split(sep).join('/')
     if (dir.startsWith(TEST_INFRASTRUCTURE_PREFIX)) continue
-    if (nativeProfileClientDirectories.has(dir)) continue
     if (!readFileSync(join(root, configPath), 'utf8').includes('tsdown.client.ts')) continue
     const manifest = JSON.parse(readFileSync(join(root, dir, 'package.json'), 'utf8')) as {
       dsh?: { client?: unknown }
@@ -117,18 +112,6 @@ export function discoverLibraryDirs(root = repoRoot): string[] {
     if (manifest.dsh?.client === undefined) dirs.push(dir)
   }
   return dirs
-}
-
-/**
- * Discover selected native-profile Client package builds separately from the
- * legacy browser module table and static shell libraries.
- * @param root - repository root containing the grouped package directories.
- * @returns workspace-relative native-profile package directories.
- */
-export function discoverNativeProfileDirs(root = repoRoot): string[] {
-  const configs = WORKSPACE_MANIFEST_GLOBS.map(pattern => pattern.replace(/package\.json$/, 'tsdown.config.ts'))
-  return globSync(configs, { cwd: root }).map(path => dirname(path).split(sep).join('/')).sort()
-    .filter(dir => nativeProfileClientDirectories.has(dir))
 }
 
 /**
@@ -224,7 +207,6 @@ if (isMain) {
 
   const pluginDirs = discoverPluginDirs()
   const libraryDirs = discoverLibraryDirs()
-  const nativeProfileDirs = discoverNativeProfileDirs()
   if (pluginDirs.length === 0) {
     console.error('dev-web: no dsh.client (platform "web") packages found in the workspace')
     process.exit(1)
@@ -268,21 +250,19 @@ if (isMain) {
   // first build reads current lib bundles rather than whatever the last full
   // build left. Its own watch then covers later lib rewrites — those files are
   // in its module graph.
-  await watchClientPlugins(repoRoot, [...pluginDirs, ...libraryDirs, ...nativeProfileDirs], pollInterval)
+  await watchClientPlugins(repoRoot, [...pluginDirs, ...libraryDirs], pollInterval)
   // Through the shell's own `watch` script rather than vite's API: vite is not a
   // repository-root dependency, and more importantly the vite root is its
   // working directory — `resolve.dedupe` resolves react from that root, so
   // running vite from anywhere but rsh/Programs/Web/application silently switches which react copy
   // the bundle gets.
-  spawnStage('Native Vite build --watch', 'pnpm', ['--filter', SHELL_PACKAGE, 'run', 'watch'], false)
-  spawnStage('compatibility Vite build --watch', 'pnpm', ['--filter', COMPATIBILITY_PACKAGE, 'run', 'watch'], false)
+  spawnStage('vite build --watch', 'pnpm', ['--filter', SHELL_PACKAGE, 'run', 'watch'], false)
 
   console.log(
     `dev-web: watching ${String(pluginDirs.length)} dsh.client plugin packages`
-    + `, ${String(libraryDirs.length)} statically linked library packages`
-    + ` and ${String(nativeProfileDirs.length)} native-profile Client packages`
+    + ` and ${String(libraryDirs.length)} statically linked library packages`
     + (pollInterval !== undefined ? ` (polling ${String(pollInterval)}ms)` : '')
-    + `, plus tsc -b ${CLIENT_TYPE_PROGRAM}, the ${SHELL_PACKAGE} dist build and the ${COMPATIBILITY_PACKAGE} dist build:\n  `
-    + [...pluginDirs, ...libraryDirs, ...nativeProfileDirs].join('\n  '),
+    + `, plus tsc -b ${CLIENT_TYPE_PROGRAM} and the ${SHELL_PACKAGE} dist build:\n  `
+    + [...pluginDirs, ...libraryDirs].join('\n  '),
   )
 }

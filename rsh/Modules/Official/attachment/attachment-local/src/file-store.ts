@@ -3,11 +3,10 @@
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { join } from 'node:path'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment/brand'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
+import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
 import type {
   FileAttachmentRef, SaveFileAttachment, SaveFileStreamAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@deepseek-ai/dsh-attachment'
 import {
   publishImmutableAlias, publishImmutableObject, publishImmutableObjectStream,
 } from './store.ts'

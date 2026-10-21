@@ -42,7 +42,7 @@ e2e 断言应重新运行命令或从外部重新读取文件；对 agent 自身
 
 ## 测试解析：仅限源码
 
-- Vitest 配置通过 `vite-tsconfig-paths` 和 `tsconfig.base.json` 将工作区导入映射到 `src`（[布局](development.zh.md#typescript-project-layout)），避免陈旧 `lib/` 产物加载重复的模块单例。产品入口导入的已发布浏览器子路径也必须配置源码别名，使源码平面构建无需生成 `lib/`。构建产物仅用于 `lib` 模式子进程及下文冒烟测试。
+- 每个 vitest 配置都将 vite-tsconfig-paths 指向 `tsconfig.base.json`；工作区包的裸导入解析到 `src`（[布局](development.zh.md#typescript-project-layout)），绝不会经由包的 `exports` 解析到构建后的 `lib/`，因为其中的陈旧产物会加载第二份模块单例。构建产物只在显式指定时使用：以 `lib` 模式运行的子进程，以及下文的构建产物冒烟测试。
 
 ## 测试子进程启动模式
 
@@ -52,4 +52,4 @@ e2e 断言应重新运行命令或从外部重新读取文件；对 agent 自身
 
 ## 何时需要快照测试
 
-非平凡的模型可见、协议可见或人类可见变更，在同一个 PR 中包含无密钥 Session 快照；mock 不能替代组装后的 transcript。[快照规则](../../snapshots/AGENTS.md) 定义规范数据的所有权。非 Session 输出保留在所属方的 `tests/expected/` 下，不使用 `*.snapshot.ts`。[`dsh-session-snapshot`](../Tests/test-support/session-snapshot/README.zh.md) 拥有存储与适配器。Loop、生命周期和 `SessionEventMap` 变更更新 TypeScript 与 Python 投影；它们的[兼容](../../snapshots/sdk)与 [Native](../../snapshots/native-sdk) 场景拥有录制输出。[Native installed-wheel fixture](../Scripts/snapshots/python-sdk-single-exe/native-sdk) 引用 Native 规范数据，并要求实际执行 wheel 的证据；[平台策略](../../.agents/notes/implemented/process/2026-09-06-master-only-platform-ci.zh.md) 定义调度。新增 capability seam、生命周期或 transcript 变体时，规划所需层级。
+每项非平凡的模型可见、协议可见或人类可见变更，都在同一 PR 中添加或更新无密钥录制会话场景；包级、e2e、仅 mock 和 PR 理由证据不能取代组装后的 transcript。Headless、SDK、ACP 和 Web 录制分别位于 `snapshots/session/`、`snapshots/sdk/`、`snapshots/acp/` 和 `snapshots/web/`；Web 渲染可以显式借用另一个场景的规范会话。不由录制会话驱动的预期输出保留在所属应用、包或脚本的 `tests/expected/` 下，并且不使用 `*.snapshot.ts` 后缀。[`dsh-session-snapshot`](../Tests/test-support/session-snapshot/README.zh.md) 拥有共享存储规则和 profile 适配器。Agent loop、会话生命周期和 `SessionEventMap` 变更应更新两个 SDK 投影：`snapshots/sdk/` 拥有 TypeScript，[Python 运行时 CI](../../.agents/notes/implemented/process/2026-09-06-master-only-platform-ci.zh.md) 拥有 `rsh/Scripts/snapshots/python-sdk-single-exe/`。新增 capability seam、生命周期或 transcript 变体应在计划阶段列出每个必需层级。

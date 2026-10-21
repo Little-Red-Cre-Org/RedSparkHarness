@@ -43,12 +43,10 @@
  *   attempt arrive before the protocol failure (partial-output retention probe).
  * - `FAKE_IGNORE_EOF` + `FAKE_SIGTERM_FILE`: keep running after stdin EOF; touch the file on SIGTERM (ladder probe).
  * - `FAKE_TRAP_SIGTERM`: with `FAKE_IGNORE_EOF`, survive SIGTERM too (SIGKILL-rung probe).
- * - `FAKE_NONREADING_STDIN`: never consume stdin; exit after 2.5 seconds as a test-leak failsafe.
  * - `FAKE_EXIT_BEFORE_INIT`: exit 3 immediately (spawn-then-die probe).
  * - `FAKE_STDERR`: write this line to stderr at boot (diagnostics-tail probe).
  * - `FAKE_STDERR_NO_NEWLINE`: write this to stderr WITHOUT a newline (buffer-flush probe).
  * - `FAKE_RECORD_INIT`: append each `initialize` params JSON to this file (handshake probe).
- * - `FAKE_SHUTDOWN_FILE`: append each received `shutdown` request JSON to this file.
  */
 
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
@@ -223,18 +221,9 @@ function sessionIdOf(params: Record<string, unknown> | undefined): string {
 }
 
 const reader = createInterface({ input: process.stdin })
-if (env.FAKE_NONREADING_STDIN !== undefined) {
-  reader.close()
-  setInterval(() => {}, 1_000)
-  setTimeout(() => { process.exit(0) }, 2_500)
-}
 reader.on('line', (line) => {
   if (line.trim().length === 0) return
   const frame = JSON.parse(line) as { id?: string | number; method?: string; params?: Record<string, unknown> }
-  if (frame.method === undefined && frame.id !== undefined) {
-    if (env.FAKE_APPROVAL_RESPONSE !== undefined) writeFileSync(env.FAKE_APPROVAL_RESPONSE, JSON.stringify(frame) + '\n')
-    return
-  }
   if (frame.method === undefined || frame.id === undefined) return
   const respond = (result: object): void => { write({ jsonrpc: '2.0', id: frame.id, result }) }
   switch (frame.method) {
@@ -273,9 +262,6 @@ reader.on('line', (line) => {
       return
     case 'session/prompt': {
       const sessionId = sessionIdOf(frame.params)
-      if (env.FAKE_APPROVAL_REQUEST !== undefined) write({ jsonrpc: '2.0', id: 'approval-fixture-1',
-        method: 'approval/request', params: { operationId: 'sdk-root-fixture', requestId: 'approval-once-fixture',
-          sessionId, toolName: 'write_file', callId: 'write-call-fixture', reason: 'fixture write' } })
       const messageId = `fake-user-${seq}`
       event(sessionId, 'agent/inbox/spliced', {
         target: 'next-turn',
@@ -326,9 +312,6 @@ reader.on('line', (line) => {
       return
     }
     case 'shutdown':
-      if (env.FAKE_SHUTDOWN_FILE !== undefined) {
-        writeFileSync(env.FAKE_SHUTDOWN_FILE, JSON.stringify(frame) + '\n', { flag: 'a' })
-      }
       respond({})
       // An EOF-ignoring fake also refuses the protocol exit, so the client's
       // dispose ladder (not this cooperative path) must reap it.

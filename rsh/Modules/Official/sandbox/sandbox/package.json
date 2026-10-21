@@ -22,23 +22,12 @@
       "types": "./lib/types/native-types.d.ts",
       "default": "./lib/native-types.js"
     },
-    "./roots": {
-      "types": "./lib/types/roots.d.ts",
-      "default": "./lib/roots.js"
-    },
     "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/native-types.js",
-    "lib/native.js",
-    "lib/roots.js",
-    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -48,12 +37,7 @@
     "@deepseek-ai/dsh-session": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
-    }
+    "@deepseek-ai/cordis": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -61,8 +45,6 @@
     "@deepseek-ai/dsh-session": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-errors": "workspace:^"
+    "@deepseek-ai/dsh-util-values": "workspace:^"
   }
 }

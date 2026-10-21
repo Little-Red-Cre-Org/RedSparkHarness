@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `dsh-subprocess-local` to run host processes. It resolves executables, manages Linux and Windows process ranges, and provides `node-pty` sessions; unsupported hosts use the documented weaker fallback. Spawn requests set stdio, limits, terminal dimensions, and grace. Output keeps a bounded tail, with optional spill recovery. Ordinary subprocesses use scrub-overlay; child connections can request full environment replacement.
-
-`./native` installs the shared process owner in a Native Host; the root remains its Cordis adapter. Standalone clients can use `./child-connection` to create and explicitly dispose the same owner without `NativeHost`. Neither entry accepts configuration.
+Mount `dsh-subprocess-local` in any composition that runs child processes on the host. It resolves local executables, gives ordinary Linux and Windows commands plus supported Linux terminal sessions an OS-owned managed range, and provides real terminal sessions through `node-pty`; unsupported hosts use an explicit weaker fallback. It has no configuration, so every disposition, limit, terminal size, and grace arrives on the spawn request from the calling capability seam. Output collection keeps a bounded in-memory tail with optional spill files for full-stream recovery, children start from a scrubbed environment, and disposal terminates and joins every selected range or session.
 
 ## Table of Contents
 
@@ -65,8 +63,6 @@ An executable that cannot be resolved fails loud with a stable error. `done` rej
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
-Windows PTY startup can publish PID 0 before the shell starts. The handle exposes the first positive shell PID when it becomes available and retains it after exit; its first process-table observation captures the shell's start identity. PID 0 is never used for foreground inspection or descendant adoption.
-
 <details>
 <summary>Implementation internals — click to expand</summary>
 
@@ -81,7 +77,6 @@ Each spawn selects one owner for both signalling and quiescence. Supported Linux
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service wiring: live-handle sets, disposal, host-exit finalization, executable lookup |
-| [`src/child-connection.ts`](src/child-connection.ts) | Standalone local owner factory for raw-pipe child connections |
 | [`src/spawn.ts`](src/spawn.ts) | Shared process plumbing: direct outcomes, tail-keep collection, spill files, and fallback spawning |
 | [`src/managed-owner.ts`](src/managed-owner.ts) | Private signal-and-wait owner used by each ordinary handle |
 | [`src/linux-scope.ts`](src/linux-scope.ts) | Linux user-systemd capability checks, scope launch, signalling, and quiescence |
@@ -121,9 +116,6 @@ Read these pages when the provider-level contract is not enough. They move from 
 -----
 
 <a id="model-experience"></a>
-
-Collection observers receive bytes from the existing stdout/stderr data listener after capture.
-
 ## Model Experience
 
 Indirectly, through consumer seams such as the bash executor family, which own all model-facing rendering of spawned process output and lifecycle.

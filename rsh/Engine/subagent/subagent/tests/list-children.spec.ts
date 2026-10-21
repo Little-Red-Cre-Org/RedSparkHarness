@@ -25,7 +25,6 @@ import {
 import SubagentRuntime, {
   SUBAGENT_DESCRIPTOR_VERSION,
   SubagentError,
-  type SubagentDescriptorData,
 } from '@deepseek-ai/dsh-subagent'
 import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import * as SubagentFork from '@deepseek-ai/dsh-subagent-fork-in-process'
@@ -184,8 +183,8 @@ function childEvents(descriptor: unknown): SessionEvent[] {
   ] as SessionEvent[]
 }
 
-function descriptorPayload(label: string): SubagentDescriptorData {
-  return { version: SUBAGENT_DESCRIPTOR_VERSION, mode: 'continuable', provider: 'spawn', label }
+function descriptorPayload(label: string, version = SUBAGENT_DESCRIPTOR_VERSION) {
+  return { version, mode: 'continuable' as const, provider: 'spawn', label }
 }
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
@@ -695,7 +694,7 @@ describe('SubagentRuntime.listChildren', () => {
     const future = await authorChild(ctx, '00000000-0000-4000-8000-0000000000aa', {
       parentSession: parent.id,
       origin: 'subagent',
-    }, childEvents({ version: SUBAGENT_DESCRIPTOR_VERSION + 1, mode: 'continuable', provider: 'spawn', label: 'from the future' }))
+    }, childEvents(descriptorPayload('from the future', SUBAGENT_DESCRIPTOR_VERSION + 1)))
     // The projection fold does not distinguish an unrecognized version from
     // other invalid descriptors: both serve no identity, and a settled
     // no-value candidate is corrupt.
@@ -1309,7 +1308,7 @@ describe('SubagentRuntime.listDescendants', () => {
       parentSession: parent.id,
       createdAt: 1,
       origin: 'subagent',
-    }, childEvents({ version: 999, mode: 'continuable', provider: 'spawn', label: 'unsupported descriptor' }))
+    }, childEvents(descriptorPayload('unsupported descriptor', 999)))
     const below = await authorChild(ctx, '00000000-0000-4000-8000-00000000ccc2', {
       parentSession: corrupt,
       createdAt: 2,

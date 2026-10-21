@@ -53,8 +53,6 @@ PNG, JPEG, GIF, WebP, BMP, ICO, and SVG render through Blob URLs in an `<img>` s
 
 Shared copy comes from `sidebarDocumentPreview`; each builtin renderer owns its localized labels.
 
-Code, Markdown, HTML, image, and loading presentations live in Cordis-free `ui-primitives` and are shared with Native Session file previews. This package retains the legacy tab registry, Remote reads, resource navigation, and PDF.js viewer.
-
 Initial reads, additional pages, and HTML/PDF/image preparation share a loading indicator that respects reduced-motion preferences. Loaded pages stay visible while another page loads. PDF pages form one vertical, width-fitted sequence and render lazily near the viewport. Code previews show source line numbers by default without including them in copied text; plain text uses the same font size and line height as code. Code sits on the pane's own background rather than the chat card's fill; its banner is adjacent to a full-height inner scrollport, so both scrollbars begin below the copy control.
 
 <a id="navigation"></a>

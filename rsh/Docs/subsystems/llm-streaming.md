@@ -592,7 +592,6 @@ interface GenerateOptions {
   /** Tool schemas (adapters map to the provider's `tools` field). */
   tools?: ToolSchema[]
   temperature?: number
-  /** Requested output-token limit; the selected route may expose whether it can enforce it exactly. */
   maxTokens?: number
   /**
    * Stop sequences: generation halts as soon as the model produces any one of
@@ -742,61 +741,11 @@ interface LlmCallConfigAdapterDefaults {
 
 `ctx.deepseekLlmApiExtensions` is the provider-specific registry for additive top-level fields on `deepseek-official` requests. Contributor plugins use `register(field, provider)` to claim one field; the adapter calls `prepare(request)` after serializing its base body and merges the returned fields before HTTP. The prepared `accept()` transaction runs after 2xx, so a contributor can commit delivery state without treating a transport or provider rejection as acceptance. Preparation, collision, and acceptance failures use `REQUEST_EXTENSION` and fail the model request.
 
-The [wire reference](../deepseek-llm-api-wire-extensions.md) defines the exact request headers, extension transaction, field versions, and receiver obligations. The shipped composition registers [`dsh_session_log`](../../Modules/Official/llm/session-log-deepseek/README.md) as a lossless incremental canonical-log suffix and [`dsh_plugin_packages`](../../Modules/Official/llm/plugin-package-inventory-deepseek/README.md) as the complete active Loader-backed package set. These fields remain outside model messages and are absent from the pi-ai adapter path.
-
-Native Host profiles use the separate `@deepseek-ai/dsh-deepseek-llm-api-extensions/native` entry, which provides the scope-explicit `deepseekLlmApiExtensions` service. `llm-deepseek` consumes that service optionally, so model calls still work when no Native contribution provider is installed. With `activeSessions` present, a matching request `sessionId` selects that owner's Agent scope; otherwise provider lookup uses the model installation scope. Native entries are explicit Host package subpaths; shipped profiles continue to assemble Cordis entries.
-
-```ts type-equiv
-/** Scoped Native API for registering and preparing DeepSeek request fields. */
-interface NativeDeepSeekLlmApiExtensions {
-  /**
-   * Register one field in a visible Native scope.
-   * @param scope - exact installation scope that owns the contribution.
-   * @param field - declaration-merged request field.
-   * @param provider - request-time field preparation and optional acceptance behavior.
-   * @returns a disposer for the registration.
-   */
-  register<K extends keyof DeepSeekLlmApiExtensionMap>(
-    scope: NativeScope,
-    field: K,
-    provider: DeepSeekLlmApiExtensionProvider<DeepSeekLlmApiExtensionMap[K]>,
-  ): () => void
-  /**
-   * Prepare fields visible from one exact request scope.
-   * @param scope - active Agent scope, or the model installation scope without an active owner.
-   * @param request - exact serialized request facts and cancellation signal.
-   * @returns detached fields and their one post-2xx acceptance transaction.
-   */
-  prepare(scope: NativeScope, request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
-}
-```
+The [wire reference](../deepseek-llm-api-wire-extensions.md) defines the exact request headers, extension transaction, field versions, and receiver obligations. The shipped composition registers [`dsh_session_log`](../../Engine/session/session-log-deepseek/README.md) as a lossless incremental canonical-log suffix and [`dsh_plugin_packages`](../../Engine/llm/plugin-package-inventory-deepseek/README.md) as the complete active Loader-backed package set. These fields remain outside model messages and are absent from the pi-ai adapter path.
 
 ## Service and provider contracts
 
-`PreparedAdapterCall.supportsOutputTokenLimit()` reports whether the captured adapter generation can enforce a requested exact output cap for a reasoning effort. The runtime rejects a capped request when that route reports false.
-
-```ts type-equiv
-/** One adapter-owned model-resolution generation bound to its eventual stream call. */
-interface PreparedAdapterCall {
-  /** Exact model metadata from the same adapter generation as {@link stream}. */
-  readonly model: LlmResolvedModelInfo
-  /**
-   * Whether this generation enforces this exact output limit under the resolved reasoning effort.
-   * @param maxTokens - requested positive output-token ceiling.
-   * @param reasoningEffort - effective effort for this model request, if selected.
-   * @returns true only when this route can apply that exact ceiling without widening it.
-   */
-  supportsOutputTokenLimit(maxTokens: number, reasoningEffort?: ReasoningEffortId): Promise<boolean>
-  /** Dispatch through that generation without re-reading dynamic connection facts. */
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
-}
-```
-
-Native external Responses execution may use the optional `nativeResponses` capability on that same prepared call. Nested captures retain the exact prepared generation instead of looking up a later adapter; provider support and capture ownership are documented in [native-model-execution](../../Engine/core/native-model-execution/README.md).
-
-
 `LlmAdapter` is the provider contract: subclass, implement `stream()`, and register one adapter instance with `ctx.llm.registerAdapter(providers, adapter)`. `GenerateOptions.provider` selects the registered adapter; `GenerateOptions.model` is passed to that adapter and need not be registered at lifecycle start. Duplicate provider routes fail atomically. Optional `providerRetryPolicy()` is captured per route with normal defaults, while `providerInfo()` and asynchronous `listModels()` feed `LlmRuntime.listProviders()` / `listModels()` with detached selector metadata. That catalog is advisory rather than a request whitelist: the adapter remains authoritative and may accept unlisted model ids. One asynchronous `resolveModel()` query returns exact model identity plus optional correctness-sensitive context capacity, an adapter-configured `defaultMaxTokens`, and ordered model-owned reasoning ids with an optional deployment default; absent fields mean unavailable metadata or provider-owned behavior, not invalid catalog membership. The resolver receives optional cancellation and must settle promptly after abort. `LlmRuntime.resolveModelInfo()` validates and detaches the aggregate. At the final adapter boundary, `resolveCallConfig()` materializes the output default only when `maxTokens` is absent and validates and materializes reasoning, so direct calls cannot bypass either configured behavior; direct dispatch captures one registration before awaiting that resolution. The agent loop instead uses `prepareCall()` to keep the same registration across model resolution, durable header logging, and dispatch, retain detached context metadata from that exact lookup, and report which config fields the adapter defaulted. Adapter lookup happens at the terminal continuation of the `llm/stream` waterfall, so a listener may short-circuit the call or route a mutable one-shot request before lookup. AgentLoop observes a request attempt once the outer waterfall returns a stream handle; that limited boundary does not prove a lazy terminal adapter was constructed or began provider I/O. The `block-start` / `block-end` `index` correlation and the assembler together mean an adapter only has to emit well-formed chunks — block reassembly is not each adapter's problem. [architecture.md](../architecture.md#turn-flow) shows where `ctx.llm.stream()` and the `llm/stream` waterfall sit in one turn.
-
 
 ```ts type-equiv
 /** One model call whose config and adapter registration were resolved together. */
@@ -859,10 +808,9 @@ declare abstract class LlmAdapter {
    * The result is advisory: an adapter may accept unlisted model ids, and
    * consumers must not turn absence into request rejection.
    * @param _provider - one provider route owned by this adapter.
-   * @param _signal - optional cancellation for this catalog lookup.
    * @returns discoverable models in adapter-preferred order.
    */
-  listModels(_provider: string, _signal?: AbortSignal): Promise<readonly LlmModelInfo[]>;
+  listModels(_provider: string): Promise<readonly LlmModelInfo[]>;
   /**
    * Resolve all metadata available for one exact model. This query is
    * independent of the advisory catalog and does not validate request routing.
@@ -881,13 +829,10 @@ declare abstract class LlmAdapter {
    * Bind exact model metadata and the eventual request dispatch to one adapter generation.
    * Dynamic adapters override this so settings changes between preparation and
    * dispatch cannot combine one generation's capabilities with another's endpoint.
-   * The returned capability must describe this exact route generation and
-   * reject output limits the transport cannot enforce without widening under
-   * the request's effective reasoning effort.
    * @param provider - registered provider route.
    * @param model - exact model id.
    * @param signal - cancellation for model resolution.
-   * @returns model metadata, the generation's output-limit predicate, and its stream entry point.
+   * @returns model metadata and a one-generation stream entry point.
    */
   async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;
   /**
@@ -934,7 +879,7 @@ register<K extends keyof DeepSeekLlmApiExtensionMap>( field: K, provider: DeepSe
 async prepare(request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
 ```
 
-Source: [`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)
+Source: [`rsh/Engine/llm/deepseek-llm-api-extensions/src/index.ts`](../../Engine/llm/deepseek-llm-api-extensions/src/index.ts)
 
 <a id="ctxllm--llmruntime"></a>
 
@@ -1039,10 +984,9 @@ fileRequestText(ref: FileAttachmentRef): string
  * Discover models advertised by one registered provider. Catalog membership
  * is advisory and never changes routing or request validation.
  * @param provider - registered provider route to inspect.
- * @param signal - optional cancellation forwarded to the owning adapter.
  * @returns detached model metadata in adapter-preferred order.
  */
-async listModels(provider: string, signal?: AbortSignal): Promise<LlmModelInfo[]>
+async listModels(provider: string): Promise<LlmModelInfo[]>
 
 /**
  * Resolve and validate all metadata from the adapter that owns one exact

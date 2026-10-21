@@ -9,9 +9,6 @@
   ],
   "references": [
     {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {
@@ -28,12 +25,6 @@
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
-    },
-    {
-      "path": "../../../../Core/settings/settings-definition"
     }
   ]
 }

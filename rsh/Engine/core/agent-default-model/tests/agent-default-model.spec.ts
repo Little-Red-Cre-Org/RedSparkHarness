@@ -6,7 +6,6 @@ import AgentDefaultModelConfig, { AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE } from 
 import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import AgentDefaultModelSettingsAdapter from '@deepseek-ai/dsh-compat-settings-adapters/agent-default-model'
 
 /** The smallest real provider: one in-memory document, always writable. */
 class MemorySettings extends SettingsProvider {
@@ -29,7 +28,6 @@ class MemorySettings extends SettingsProvider {
 async function boot(): Promise<{
   ctx: Context
   settingsFiber: Context['fiber']
-  adapterFiber: Context['fiber']
   defaultModel: AgentDefaultModelConfig
 }> {
   const ctx = new Context()
@@ -39,9 +37,7 @@ async function boot(): Promise<{
     provider: 'deepseek-official',
     model: 'deepseek-v4-flash',
   })
-  const adapterFiber = ctx.plugin(AgentDefaultModelSettingsAdapter)
-  await adapterFiber.await()
-  return { ctx, settingsFiber, adapterFiber, defaultModel: ctx.agentDefaultModel }
+  return { ctx, settingsFiber, defaultModel: ctx.agentDefaultModel }
 }
 
 describe('AgentDefaultModelConfig', () => {
@@ -81,17 +77,11 @@ describe('AgentDefaultModelConfig', () => {
     await bench.ctx.fiber.dispose()
   })
 
-  it.each([
-    ['provider', (bench: Awaited<ReturnType<typeof boot>>) => bench.settingsFiber.dispose()],
-    ['adapter', (bench: Awaited<ReturnType<typeof boot>>) => bench.adapterFiber.dispose()],
-  ] as const)('falls back and keeps saves optional after %s detach', async (_owner, detach) => {
+  it('falls back to the composition entry when the settings provider detaches', async () => {
     const bench = await boot()
     await bench.defaultModel.saveSelection({ provider: 'acme-gateway', model: 'acme-large' })
-    await detach(bench)
-    expect(bench.defaultModel.currentSelection()).toEqual({
-      provider: 'deepseek-official', model: 'deepseek-v4-flash',
-    })
-    await expect(bench.defaultModel.saveSelection({ provider: 'other', model: 'other' })).resolves.toBeUndefined()
+    expect(bench.defaultModel.currentSelection().provider).toBe('acme-gateway')
+    await bench.settingsFiber.dispose()
     expect(bench.defaultModel.currentSelection()).toEqual({
       provider: 'deepseek-official', model: 'deepseek-v4-flash',
     })

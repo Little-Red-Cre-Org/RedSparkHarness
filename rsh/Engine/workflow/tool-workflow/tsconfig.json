@@ -30,19 +30,10 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../../core/native-tools/tsconfig.host.json"
-    },
-    {
-      "path": "../../core/native-prompt"
-    },
-    {
-      "path": "../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../workflow/tsconfig.host.json"
+      "path": "../workflow"
     },
     {
       "path": "../../../Core/runtime-diagnostics/invariants"

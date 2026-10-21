@@ -6,7 +6,6 @@
  * @module @deepseek-ai/dsh-subagent/control-types
  */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import type { PromptContentPart } from '@deepseek-ai/dsh-attachment/types'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -129,7 +128,7 @@ export interface SubagentInterruptReceipt {
  * Failure details the control surface answers with. Catalog reads, prompts,
  * and interrupts share this vocabulary with the Client Remote result.
  */
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     /** A browser-supplied zone is neither UTC nor a canonical IANA name. */
     'subagent/invalid-time-zone': { readonly value: string }

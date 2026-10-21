@@ -20,5 +20,3 @@ export const plugin: NativePlugin = {
     return (context) => { context.provide('modelExecution', new NativeModelExecution(context.require('model'))) }
   },
 }
-
-export { NativeAdapterModel } from './index.ts'

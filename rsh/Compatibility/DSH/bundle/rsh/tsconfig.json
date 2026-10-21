@@ -10,7 +10,6 @@
     "src"
   ],
   "references": [
-    { "path": "../../../../Programs/TUI/terminal-ui" },
     {
       "path": "../../../../Core/vendor/cordis"
     },
@@ -27,7 +26,7 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+      "path": "../../../../Engine/preset/agent-presets"
     }
   ]
 }

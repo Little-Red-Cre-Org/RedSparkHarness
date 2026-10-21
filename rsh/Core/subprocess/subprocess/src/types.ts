@@ -42,10 +42,6 @@ export type SubprocessStdinMode = 'ignore' | 'pipe' | { readonly data: string }
  * the complete stream recoverable up to its cap (the bash tool shape).
  */
 export interface SubprocessCollect {
-  /** Observe captured bytes without consuming retained output; the callback must not throw.
-   * @param chunk - bytes delivered by this stream before process settlement.
-   */
-  onData?: (chunk: Uint8Array) => void
   /** In-memory cap in bytes; overflow keeps the TAIL. */
   maxBytes: number
   /** Full-stream spill file; absent disables spilling entirely. */
@@ -69,9 +65,6 @@ export interface SubprocessStdio {
   stdout: SubprocessOutputMode
   stderr: SubprocessOutputMode
 }
-
-/** Child environment base policy; the default is the credential-scrubbed parent overlay. */
-export type SubprocessEnvironmentMode = 'scrub-overlay' | 'replace'
 
 /**
  * A fully-specified spawn request. This seam applies no defaults: every
@@ -109,35 +102,6 @@ export interface SubprocessSpawnSpec {
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
-  /**
-   * Environment materialization policy. Omission preserves the scrub-overlay
-   * contract above; `replace` passes only `env` entries to the child, matching
-   * Node's full-environment spawn behavior.
-   */
-  envMode?: SubprocessEnvironmentMode | undefined
-}
-
-/**
- * Fully specified child stdio connection. Unlike general subprocess requests,
- * all three streams are always piped and owned by the connection consumer.
- */
-export interface ChildConnectionSpec extends Omit<SubprocessSpawnSpec, 'stdio' | 'envMode'> {
-  /** Required so the caller chooses between the Core default and a full environment replacement. */
-  envMode: SubprocessEnvironmentMode
-}
-
-/**
- * Framework-free child connection Definition shared by external protocols and
- * selected process Providers. Its streams and process range stay under the
- * returned handle's lifetime contract.
- */
-export interface ChildConnectionDefinition {
-  /**
-   * Connect one child process over raw stdin/stdout/stderr pipes.
-   * @param spec - argv, cwd, environment policy, termination grace, and cancellation.
-   * @returns a live connection with direct outcome and managed-range ownership.
-   */
-  connect(spec: ChildConnectionSpec): ChildConnectionHandle
 }
 
 /**
@@ -227,16 +191,6 @@ export interface SubprocessHandle {
   waitForExit(signal?: AbortSignal): Promise<boolean>
 }
 
-/** One child connection with all three stdio streams requested as pipes. */
-export interface ChildConnectionHandle extends SubprocessHandle {
-  /** The child's stdin, present because ChildConnectionDefinition always requests a pipe. */
-  readonly stdin: Writable
-  /** The child's stdout, present because ChildConnectionDefinition always requests a pipe. */
-  readonly stdout: Readable
-  /** The child's stderr, present because ChildConnectionDefinition always requests a pipe. */
-  readonly stderr: Readable
-}
-
 /**
  * Signals supported by the terminal-process primitive. Kept member-identical
  * to `TerminalSignal` in `@deepseek-ai/dsh-terminal` without a cross-seam dependency;
@@ -305,28 +259,4 @@ export interface SubprocessTerminalHandle {
    * Providers document substrate-specific observability limits.
    */
   terminate(): Promise<void>
-}
-
-/** Managed process operations shared by Cordis and native Providers. */
-export interface SubprocessOperations {
-  /**
-   * Resolve an absolute executable or a bare PATH name in this Provider's execution world.
-   * @param command - executable path or bare name; relative paths with separators are rejected.
-   * @param env - explicit environment entries used during lookup.
-   * @param signal - cancellation of the lookup.
-   * @returns a verified executable path.
-   */
-  resolveExecutable(command: string, env?: Readonly<Record<string, string>>, signal?: AbortSignal): Promise<string>
-  /**
-   * Start a managed process with explicit environment, stdio, directory, and cancellation.
-   * @param spec - complete spawn request; this service applies no defaults.
-   * @returns a live handle whose waitForExit observes the owned process range.
-   */
-  spawn(spec: SubprocessSpawnSpec): SubprocessHandle
-  /**
-   * Allocate a terminal and start one owned process session.
-   * @param spec - complete terminal spawn request.
-   * @returns a live terminal handle after allocation succeeds.
-   */
-  spawnTerminal(spec: SubprocessTerminalSpawnSpec): Promise<SubprocessTerminalHandle>
 }

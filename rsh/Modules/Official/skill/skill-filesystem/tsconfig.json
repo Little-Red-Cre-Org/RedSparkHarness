@@ -9,7 +9,6 @@
     { "path": "../../../../Core/vendor/cosmokit" },
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/vendor/schemastery" },
-    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
     { "path": "../../fs/fs" },
     { "path": "../../../../Core/util/home-paths" },
     { "path": "../skill" }

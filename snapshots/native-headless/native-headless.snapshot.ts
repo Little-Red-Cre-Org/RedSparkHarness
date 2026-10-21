@@ -1,5 +1,5 @@
 /** Built dsh entry executes a native headless profile with only its model substituted. */
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -34,73 +34,30 @@ it('executes and restores a native profile through the published dsh command', a
   const modelAudit = join(home, 'model-requests.jsonl')
   const patchPath = join(home, 'native-file-round.patch.json')
   const modules = join(profileDir, 'node_modules')
-  const shellFixture = join(profileDir, 'tmux-shell-fixture.sh')
-  const shellFixtureBin = join(profileDir, 'tmux-shell-bin')
-  const shellAudit = join(home, 'tmux-shell-audit.txt')
   mkdirSync(workspace, { recursive: true })
   mkdirSync(profileDir, { recursive: true })
   copyFileSync(join(shippedProfile, 'package.json'), join(profileDir, 'package.json'))
-  const composition = JSON.parse(readFileSync(join(shippedProfile, 'rsh.profile.json'), 'utf8')) as { installations: unknown[] }
-  composition.installations.push(
-    { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: 'root' },
-    { id: 'shell', plugin: '@deepseek-ai/dsh-bash-local', scope: 'root', config: {
-      bashPath: process.platform === 'win32' ? join(process.env.ProgramFiles ?? 'C:/Program Files', 'Git/bin/bash.exe') : 'bash',
-    } },
-    { id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: 'root', disabled: true },
-  )
-  composition.installations.push({ id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
-  writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify(composition))
-  copyFileSync(join(scenario, 'workspace/AGENTS.md'), join(workspace, 'AGENTS.md'))
+  copyFileSync(join(shippedProfile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
   for (const [name, path] of [
-    ['dsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-code-runtime', 'rsh/Modules/Official/code-runtime/native-code-runtime'],
+    ['dsh-native-code-runtime', 'rsh/Engine/core/native-code-runtime'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
     ['dsh-native-jobs', 'rsh/Engine/core/native-jobs'],
     ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
     ['dsh-native-tool-jobs', 'rsh/Engine/jobs/native-tool-jobs'],
     ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
     ['dsh-native-time-context', 'rsh/Engine/context/native-time-context'],
-    ['dsh-tmux-context-definition', 'rsh/Engine/context/tmux-context-definition'],
-    ['dsh-native-tmux-context', 'rsh/Modules/Official/terminal/native-tmux-context'],
-    ['dsh-shell', 'rsh/Modules/Official/shell/shell'],
-    ['dsh-shell-process-local', 'rsh/Modules/Official/shell/shell-process-local'],
-    ['dsh-bash-local', 'rsh/Modules/Official/shell/bash-local'],
-    ['dsh-subprocess', 'rsh/Core/subprocess/subprocess'],
-    ['dsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
     ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
     ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
     ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
   ] as const) {
     symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
   }
-  mkdirSync(shellFixtureBin)
-  writeFileSync(join(shellFixtureBin, 'ps'), `#!/bin/sh
-printf 'ps:%s\\n' "$*" >> "$TMUX_FIXTURE_AUDIT"
-printf '%s\\n' 'pts/42'
-`)
-  writeFileSync(join(shellFixtureBin, 'tmux'), `#!/bin/sh
-printf 'tmux:%s\\n' "$*" >> "$TMUX_FIXTURE_AUDIT"
-case "$*" in
-  *'#{pane_tty}'*) printf '%s\\n' '/dev/pts/42' ;;
-  *) printf '%s\\n' 'work\\t2\\teditor\\t1\\t%3\\t1\\t1\\tlayout-3' ;;
-esac
-`)
-  chmodSync(join(shellFixtureBin, 'ps'), 0o755)
-  chmodSync(join(shellFixtureBin, 'tmux'), 0o755)
-  writeFileSync(shellFixture, `if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
-  fixture_script=$(cygpath -u "$BASH_ENV") || return
-else
-  fixture_script=$BASH_ENV
-fi
-fixture_dir=${'${fixture_script%/*}'}/tmux-shell-bin
-export PATH="$fixture_dir:$PATH"
-`)
   const modelDir = join(modules, 'native-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
-    name: 'native-fixture-model', version: '0.0.0', type: 'module',
+    name: 'native-fixture-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))
@@ -140,10 +97,9 @@ export PATH="$fixture_dir:$PATH"
     { id: 'app', config: { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Use the filesystem tool.', maxSteps: 3 } },
     { id: 'storage', config: { root: sessionRoot, compression: 'none' } },
     { id: 'fs', config: { cwd: workspace } },
-    { id: 'tmux-context', disabled: false },
   ] }
   writeFileSync(patchPath, JSON.stringify(patch))
-  const env = { ...process.env, DSH_HOME: home, TMUX_PANE: '%3', TMUX_FIXTURE_AUDIT: shellAudit, BASH_ENV: shellFixture }
+  const env = { ...process.env, DSH_HOME: home }
   const invoke = (args: string[], extraEnv: Record<string, string> = {}) => execa(process.execPath, ['--import', contextProbeUrl, bin, '--profile', 'native-headless', '--patch', patchPath, ...args], {
     env: { ...env, ...extraEnv }, reject: false, timeout: 30_000,
   })
@@ -158,40 +114,30 @@ export PATH="$fixture_dir:$PATH"
     expect(first.exitCode, first.stderr).toBe(0)
     expect(first.stdout).toBe('done')
     expect(readFileSync(join(workspace, 'created.txt'), 'utf8')).toBe('from-native-profile\n')
-    const shellAuditLines = readFileSync(shellAudit, 'utf8').trim().split('\n')
-    expect(shellAuditLines).toHaveLength(3)
-    expect(shellAuditLines[0]).toMatch(/^ps:.*-o tty= -p \d+$/)
-    expect(shellAuditLines.slice(1).every(line => line.startsWith('tmux:display-message -t %3 -p '))).toBe(true)
     const requests = readFileSync(modelAudit, 'utf8').trim().split('\n').map(line => JSON.parse(line) as {
       messages: { content: { type: string; text?: string; toolCallId?: string; content?: { type: string; text?: string }[] }[] }[]; tools: { name: string }[]
     })
     expect(requests).toHaveLength(3)
-    expect(JSON.stringify(requests[0]?.messages)).toContain('Follow the workspace instruction fixture.')
     expect(requests[0]?.tools.map(tool => tool.name)).toContain('write_file')
     expect(requests[0]?.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['job_output', 'job_list', 'job_kill']))
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'tool-result'))).toBe(true)
     expect(requests[2]?.messages.some(message => message.content.some(block => block.type === 'tool-result'
       && block.toolCallId === 'jobs-1' && block.content?.some(part => part.text?.includes('(no background jobs)'))))).toBe(true)
     expect(requests[0]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 1')))).toBe(true)
-    expect(requests[0]?.messages.some(message => message.content.some(block => block.text?.includes('tmux location (turn 1):\nsession work, window 2 "editor", pane 1 %3\nwindow active=1, pane active=1, layout layout-3')))).toBe(true)
     expect(requests[1]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 2')))).toBe(true)
     expect(requests[2]?.messages.some(message => message.content.some(block => block.text?.includes('Time sampled while preparing turn 1, step 3')))).toBe(true)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('native profile did not persist a Session')
-      copyFileSync(join(scenario, 'workspace.expected/AGENTS.md'), join(workspace, 'AGENTS.md'))
       const second = await invoke(['--resume', id, 'continue'])
       expect(second.exitCode, second.stderr).toBe(0)
       const reader = await storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
         expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
-        expect(events.filter(event => event.type === 'user/message' && event.data.source.kind === 'agent-instructions')).toHaveLength(2)
         expect(events.filter(event => event.type === 'user/message'
           && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-time-context')).toHaveLength(4)
-        expect(events.filter(event => event.type === 'user/message'
-          && event.data.source.kind === 'plugin' && event.data.source.plugin === 'native-tmux-context')).toHaveLength(1)
       } finally { await reader.close() }
       const currentName = sessionFixtureName(0, SESSION_FORMAT_VERSION)
       const storedName = readdirSync(sessionRoot, { recursive: true })

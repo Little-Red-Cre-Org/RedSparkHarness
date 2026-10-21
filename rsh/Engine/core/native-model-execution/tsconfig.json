@@ -1,11 +1,10 @@
 {
-  "files": [],
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
   "references": [
-    {
-      "path": "./tsconfig.host.json"
-    },
-    {
-      "path": "./tsconfig.client.json"
-    }
+    { "path": "../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../session" },
+    { "path": "../../llm/llm" }
   ]
 }

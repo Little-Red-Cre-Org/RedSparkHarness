@@ -3,17 +3,15 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { Sharp } from 'sharp'
-import { ImageVariantId } from '@deepseek-ai/dsh-attachment/brand'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import { requestImageDimensions } from '@deepseek-ai/dsh-attachment/request-projection'
+import sharp, { type Sharp } from 'sharp'
+import { AttachmentError, ImageVariantId, requestImageDimensions } from '@deepseek-ai/dsh-attachment'
 import type {
   ImageMediaType,
   ImageAttachmentRef,
   ImageRequestPolicy,
   RequestImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@deepseek-ai/dsh-attachment'
 import {
   IMAGE_ENCODING_QUALITIES,
   WEBP_ENCODING_EFFORT,
@@ -22,7 +20,6 @@ import {
   isExhaustedEncoding,
 } from './encoding.ts'
 import { detectImage, encodedAlphaIsCompatible, probeImage } from './image.ts'
-import { openSupportedImage } from './signature.ts'
 
 /** Transform version included in every cache and upload-index identity. */
 export const REQUEST_IMAGE_TRANSFORM_VERSION = 'request-image-v5'
@@ -89,7 +86,7 @@ function pipeline(attachment: StoredImageAttachment, width: number, height: numb
 }
 
 function sourcePipeline(attachment: StoredImageAttachment): Sharp {
-  return openSupportedImage(attachment.data).toColourspace('srgb')
+  return sharp(attachment.data, { failOn: 'error', limitInputPixels: false }).toColourspace('srgb')
 }
 
 async function createRequestImage(

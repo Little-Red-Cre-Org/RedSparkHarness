@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import os
 import queue
@@ -13,12 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, TypeAlias, TypeVar
 
-from pydantic import BaseModel, StrictBool, StrictStr
+from pydantic import BaseModel
 
-from .errors import JsonRpcError, SdkProtocolError, TransportClosedError
-from .models import (ApprovalOutcome, ApprovalRequest, IncomingRequest, InitializeResponse, JsonObject,
-                     JsonValue, NativeStagedFileReceipt, NativeSdkPromptContentBlock, Notification,
-                     SdkPromptContentBlock)
+from .errors import JsonRpcError, TransportClosedError
+from .models import IncomingRequest, InitializeResponse, JsonObject, JsonValue, Notification
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 NotificationFilter: TypeAlias = Callable[[Notification], bool]
@@ -37,18 +34,6 @@ class HarnessConfig:
     initialize_timeout_seconds: float = 30.0
     request_timeout_seconds: float | None = None
     shutdown_timeout_seconds: float | None = 1.0
-
-
-class _SessionCancelResponse(BaseModel):
-    cancelled: StrictBool
-
-
-class _SessionSteerResponse(BaseModel):
-    messageId: StrictStr
-
-
-class _SessionForkResponse(BaseModel):
-    sessionId: StrictStr
 
 
 class HarnessClient:
@@ -153,44 +138,23 @@ class HarnessClient:
         model: str,
         reasoning_effort: str | None = None,
         max_tokens: int | None = None,
-        max_steps: int | None = None,
-        allowed_tools: tuple[str, ...] | list[str] | None = None,
-        workspace_write_root: str | None = None,
     ) -> InitializeResponse:
+        payload: JsonObject = {
+            "cwd": str(Path(cwd).resolve()),
+            "provider": provider,
+            "model": model,
+        }
+        if reasoning_effort is not None:
+            payload["reasoningEffort"] = reasoning_effort
+        if max_tokens is not None:
+            payload["maxTokens"] = max_tokens
         try:
-            if max_steps is not None and (isinstance(max_steps, bool) or not isinstance(max_steps, int)
-                                          or not 0 < max_steps <= 9_007_199_254_740_991):
-                raise ValueError("initialize max_steps must be a positive safe integer")
-            if allowed_tools is not None and (any(not isinstance(name, str) or not name for name in allowed_tools)
-                                              or len(set(allowed_tools)) != len(allowed_tools)):
-                raise ValueError("initialize allowed_tools must contain unique non-empty names")
-            if workspace_write_root is not None and (not isinstance(workspace_write_root, str)
-                                                      or not Path(workspace_write_root).is_absolute()):
-                raise ValueError("initialize workspace_write_root must be an absolute path")
-            payload: JsonObject = {
-                "cwd": str(Path(cwd).resolve()),
-                "provider": provider,
-                "model": model,
-            }
-            if reasoning_effort is not None:
-                payload["reasoningEffort"] = reasoning_effort
-            if max_tokens is not None:
-                payload["maxTokens"] = max_tokens
-            if max_steps is not None:
-                payload["maxSteps"] = max_steps
-            if allowed_tools is not None:
-                payload["allowedTools"] = list(allowed_tools)
-            if workspace_write_root is not None:
-                payload["workspaceWriteRoot"] = str(Path(workspace_write_root).resolve())
-            result = self.request(
+            return self.request(
                 "initialize",
                 payload,
                 response_model=InitializeResponse,
                 timeout_seconds=self.config.initialize_timeout_seconds,
             )
-            if max_steps is not None and (result.maxSteps is None or result.maxSteps > max_steps):
-                raise SdkProtocolError(f"initialize did not negotiate maxSteps at or below {max_steps}")
-            return result
         except TimeoutError as error:
             self.close()
             raise TimeoutError(f"{error}\nselected dsh profile {self.config.profile!r}") from error
@@ -208,7 +172,7 @@ class HarnessClient:
     def session_prompt(
         self,
         session_id: str,
-        content_blocks: list[SdkPromptContentBlock],
+        content_blocks: list[JsonObject],
         *,
         on_notification: Callable[[Notification], None] | None = None,
         notification_subscription: "NotificationSubscription | None" = None,
@@ -223,47 +187,6 @@ class HarnessClient:
             notification_subscription=notification_subscription,
         )
         return response.messageId
-
-    def session_upload_file(self, session_id: str, data: bytes, name: str | None = None) -> NativeStagedFileReceipt:
-        """Store file bytes and return a Native-only receipt for this Session."""
-        payload: JsonObject = {"sessionId": session_id, "data": base64.b64encode(data).decode("ascii")}
-        if name is not None:
-            payload["name"] = name
-        return self.request("session/upload-file", payload, response_model=NativeStagedFileReceipt)
-
-    def session_steer(self, session_id: str, content_blocks: list[NativeSdkPromptContentBlock]) -> str:
-        """Durably queue the active native SDK root's next-step input without interrupting dispatch.
-
-        Idle or unknown Sessions and unsupported profiles reject the request.
-        """
-        result = self.request("session/steer", {"sessionId": session_id, "contentBlocks": content_blocks},
-            response_model=_SessionSteerResponse)
-        if not result.messageId:
-            raise SdkProtocolError("session/steer returned no message id")
-        return result.messageId
-
-    def session_cancel(self, session_id: str) -> bool:
-        """Cancel an admitted native-sdk turn and await cleanup; other Sessions remain running.
-
-        Returns False when no turn was admitted. Unsupported profiles return a protocol error.
-        """
-        return self.request(
-            "session/cancel", {"sessionId": session_id}, response_model=_SessionCancelResponse
-        ).cancelled
-
-    def session_fork(self, session_id: str, destination_session_id: str, at_seq: int | None = None) -> str:
-        """Copy a closed native-sdk turn into a fresh Session without running it.
-
-        The optional source event must belong to a closed turn; omission selects the last closed turn.
-        Existing destinations and unsupported profiles reject the request.
-        """
-        payload: JsonObject = {"sessionId": session_id, "destinationSessionId": destination_session_id}
-        if at_seq is not None:
-            payload["atSeq"] = at_seq
-        result = self.request("session/fork", payload, response_model=_SessionForkResponse)
-        if result.sessionId != destination_session_id:
-            raise SdkProtocolError("session/fork returned a different Session identity")
-        return result.sessionId
 
     def request(
         self,
@@ -319,20 +242,6 @@ class HarnessClient:
         if isinstance(item, BaseException):
             raise item
         return item
-
-    def next_approval_request(self) -> ApprovalRequest:
-        """Wait for one parent-bound Native SDK approval request."""
-        return ApprovalRequest.from_incoming(self.next_request())
-
-    def respond_approval(self, request: ApprovalRequest, outcome: ApprovalOutcome) -> None:
-        """Answer only the operation and request identities carried by this question."""
-        if outcome not in {"allowed-once", "rejected", "cancelled", "unavailable"}:
-            raise ValueError("approval outcome is invalid")
-        self.respond(request.rpc_id, {
-            "operationId": request.operation_id,
-            "requestId": request.request_id,
-            "outcome": outcome,
-        })
 
     def respond(self, request_id: str | int, result: JsonValue) -> None:
         self._write_message({"jsonrpc": "2.0", "id": request_id, "result": result})

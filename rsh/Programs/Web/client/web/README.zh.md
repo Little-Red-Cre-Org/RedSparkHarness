@@ -1,5 +1,5 @@
 ---
-description: "Cordis-free Native 浏览器启动 API 与无框架进度页，供 Host 组合选中的 Client 插件。"
+description: "面向用户与维护者的 web GUI 启动内核说明：客户端插件树的两阶段启动、无框架启动页与共享模块表，用于组合或排查浏览器应用。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-client-web` 提供无 Cordis 的浏览器 API，用于导入选中的 Native Client 行、在 `NativeHost` 中安装它们并挂载必需的渲染器。无框架启动页会在渲染器挂载前报告进度与失败。包根和 `./native` 导出相同的 Native API；`./native-wire` 仅导出 Host 注入数据的类型声明。本包不包含 Cordis Loader 或兼容模块表。模型永远看不到本包。
+`dsh-client-web` 启动 web GUI：它先从 Host 提供的启动图加载客户端模块系统，再在应用挂载前激活每一个客户端插件，因此只有当所有插件都就绪时完整 UI 才会出现。无框架启动页会逐 entry 报告状态，因此失败的 bundle 或插件保持可见，而不是白屏。它还定义共享模块表（`PLATFORM_MODULES`），每个动态 bundle 都依据它解析 external。模型永远看不到本包。
 
 ## 目录
 
@@ -25,23 +25,23 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-Host 准备了 Client 行和浏览器模块图后，可调用 `bootNativeClient`。该调用会导入每个已选模块，校验其 Native plugin 导出，解析组合并挂载必需的 `clientRenderer`。返回的 host 拥有组合生命周期：导航或关闭时调用并等待 `stop()`；热重载时使用完整的新选择与模块图调用 `replace()`。
+组装浏览器应用时使用它：`rsh/Programs/Web/application` 的 Vite 入口对挂载点运行 `new AppWebEntry(container).run()`，启动页会在激活过程中向用户展示进度。普通浏览器调用方不传任何选项。默认使用预注入的页面传输，除非提供 `seams` 覆盖：当 `globalThis.__DSH_TRANSPORT__` 携带 `loadBundle` 时，模块阶段将其采纳为 bundle 传输并跳过 `immediately` 层级的 HTTP 预取，而显式 `seams` 仍然优先（例如外部 `<script>` 执行无法到达页面上下文的 jsdom 测试）。
 
-可选的 `AbortSignal` 会在待处理导入完成后阻止插件激活，并在中止时停止已启动的组合。`./boot-page` 导出共享的无框架启动页；`./base.css` 导出浏览器基础样式。`@deepseek-ai/dsh-web-compatibility` 拥有 `AppWebEntry`、Cordis Loader 启动和共享模块表。默认 Web `index.html` 使用 Native API，而兼容包分别构建旧版页面和 worker preview。
+独立的 `@deepseek-ai/dsh-client-web/native` 入口接收明确选中的原生 Client 行，经浏览器模块图导入其 `plugin` 导出，使用 `NativeHost` 解析服务，再挂载必需的 `clientRenderer` 服务。其发布的 JavaScript 内含原生运行时，公开声明不导入其他包，因此隔离消费者不安装 Cordis 也能导入并完成类型检查。可选的 `AbortSignal` 会在待处理导入完成后阻止插件激活，并在中止时停止已启动的组合；调用方也可停止返回的 host，等待卸载和插件清理完成。当前应用入口仍使用 `AppWebEntry`；Host 下发的原生选择列表与原生渲染器接通前，这条路径不能替换生产启动。
 
 外壳基础样式会在支持的浏览器中为普通内容自动添加中西文间距。语义化代码以及终端、diff、读取和搜索输出容器会保留源码中的原始间距和列对齐；不支持 `text-autospace` 的浏览器会忽略这两项声明。
 
 ### 启动过程是怎样的
 
-Host 提供模块清单、导入操作和选中的安装行。`bootNativeClient` 导入选中的行，校验 Native plugin 导出，解析完整安装并启动带渲染器挂载插件的单个 `NativeHost`。`replace()` 会先导入并解析后继组合再替换当前安装；导入或解析失败时当前 UI 保持挂载。
+启动分两个阶段：模块阶段接纳 parser 已加载的 bootstrap 批次，从 Host 提供的启动图构建模块系统，并通过只执行一次的共享 application 批次 URL 预取 `immediately` 层级。插件阶段随后激活每个图 entry 并等待全部就绪，之后才把带标记的启动 DOM 交给 UI 渲染器，由它 hydrate 并切换到完整 UI。
 
 ### 启动页
 
-启动页只使用原生 DOM 与本地 CSS，因此 bundle 与插件激活失败保持可见：它显示一个 spinner 节点，其 CSS 圆弧随 entry 激活而增长，并逐 entry 报告状态。spinner 及其动画相位会一直保留，直到完整 UI 替换启动页。渲染器交接失败时，启动页会先重新接管挂载点，再报告错误。导入或激活失败的插件会按名称报告并给出原因（缺失服务、导入错误或状态），而不是白屏。
+启动页只使用原生 DOM 与本地 CSS，因此 bundle 与插件激活失败保持可见：它显示一个 spinner 节点，其 CSS 圆弧随 entry 激活而增长，并逐 entry 报告状态。spinner 及其动画相位会一直保留，直到完整 UI 替换启动页。导入或激活失败的插件会按名称报告并给出原因（缺失服务、导入错误或状态），而不是白屏。
 
 ### 共享模块表
 
-Cordis 模块表属于 [`dsh-web-compatibility`](../../../../Compatibility/DSH/web/frontend/README.zh.md)，不属于此 Native 包。Native 浏览器 bundle 使用 Host 编写的模块清单和显式 Native plugin 导出。
+`PLATFORM_MODULES`（位于 `src/platform.ts`）列出外壳预置的共享模块——React、Cordis 与静态 UI 库——并与 `PRELOADED_CLIENT_EXTERNALS`（parser 预载的运行时行）一起定义每个动态 bundle 解析所依据的隐式 external 基座。`dsh.client.external` 只添加基座之外的精确请求；参见[共享模块与模块图](../AGENTS.md#shared-modules-and-the-module-graph)。
 
 ### 配置
 
@@ -59,11 +59,11 @@ Cordis 模块表属于 [`dsh-web-compatibility`](../../../../Compatibility/DSH/w
 
 ### 设计理念
 
-本包拥有 Native 浏览器组合 API 与进度页。Host 拥有模块图构建、选择和资源交付；`bootNativeClient` 只导入选中行，并在安装成功后向渲染器提供挂载点。
+内核恰好拥有三样东西：模块系统、Cordis Loader 与启动页。Graph、批次 preload 与 loader facade 归 Host 所有，因此 `AppWebEntry` 永不感知 bootstrap 包 id，也不解析协议格式（wire format）。动态 UI 渲染器只在每个客户端 entry 激活后收到挂载点。
 
 ### 两阶段启动
 
-`bootNativeClient()` 通过 Host 提供的图导入选中的模块，校验其 `plugin` 导出，解析完整 Native 安装，并启动一个需要 `clientApplication` 和 `clientRenderer` 的挂载插件。返回的 host 串行处理替换，并拥有卸载与 Provider 清理。兼容 Loader 及其启动协议位于独立兼容包。
+`run()` 调用 Host 安装的 `window.__ModuleLoader__.create({ boot, staticModules, ...seams })`；facade 接纳 parser 已加载的 bootstrap 批次后返回构造好的模块系统与已解析 manifest（元数据清单）。模块阶段通过一个共享的 application 批次 URL 预取 `immediately` 层级。插件阶段挂载 Loader、把 `loader.internal` 赋为 `modules`、统一创建全部图 entry、等待完全停稳，然后审计激活：任何导入失败、因缺失服务而 pending，或落入其他非 active 状态的 entry，都会抛出一个聚合错误，点名每个失败 entry。
 
 ### 启动页机制
 
@@ -73,11 +73,14 @@ Cordis 模块表属于 [`dsh-web-compatibility`](../../../../Compatibility/DSH/w
 
 | 文件 | 职责 |
 |---|---|
-| [`src/native-boot.ts`](src/native-boot.ts) | 原生 Client 行安装、进度报告、渲染器挂载与归属清理 |
-| [`src/index.ts`](src/index.ts) | 包根重新导出 Native 浏览器 API |
-| [`src/boot-page.ts`](src/boot-page.ts) | Native 与兼容外壳共享的无 Cordis 进度页 |
-| [`src/native-wire.ts`](src/native-wire.ts) | Host 注入浏览器数据的无 DOM 类型声明，也由 `./native` 重新导出 |
-| [`src/base.css`](src/base.css) | 浏览器基础样式，构建为 `lib/base.css` 并通过 `./base.css` 导出 |
+| [`src/index.ts`](src/index.ts) | 库入口：`AppWebEntry`、`getStaticModules`、平台表 |
+| [`src/boot.ts`](src/boot.ts) | `AppWebEntry`：模块阶段、启动页、immediately 层级预取，随后调用 `bootClient` + `mountClient` |
+| [`src/boot-client.ts`](src/boot-client.ts) | `bootClient` / `assertEntriesActive`：挂载 Loader、每个 manifest 行一个 entry、激活审计 |
+| [`src/native-boot.ts`](src/native-boot.ts) | 原生 Client 行安装、渲染器挂载与归属清理 |
+| [`src/mount.ts`](src/mount.ts) | `mountClient`：经 `uiRenderer` 依赖 fiber 完成渲染器交接 |
+| [`src/boot-page.ts`](src/boot-page.ts) | 无框架启动页：spinner、逐 entry 状态、失败渲染 |
+| [`src/platform.ts`](src/platform.ts) | `PLATFORM_MODULES` / `PRELOADED_CLIENT_EXTERNALS`：隐式 external 基座 |
+| [`src/seed.ts`](src/seed.ts) | 启动时交给 loader 的静态模块表 |
 
 </details>
 
@@ -86,12 +89,13 @@ Cordis 模块表属于 [`dsh-web-compatibility`](../../../../Compatibility/DSH/w
 <a id="further-exploration"></a>
 ## 进一步探索
 
-当 Native 组合约定不够用时，阅读 Native runtime、渲染器和独立兼容外壳的文档。
+当启动约定不够用时阅读以下页面：它所启动的模块系统、挂载应用的渲染器，以及基座背后的客户端编写规则。
 
-- [Native runtime](../../../../Core/native/system/README.zh.md)——Native plugin 解析与生命周期。
+- [客户端模块系统](../modules/README.zh.md)——本内核消费的惰性模块表与启动图。
 - [UI 渲染器](../ui-renderer/README.zh.md)——接收挂载点并把 slot 数据绑定到 React。
-- [兼容浏览器 owner](../../../../Compatibility/DSH/web/frontend/README.zh.md)——旧版 Cordis 启动和 worker preview。
-- [Client 组图](../README.zh.md)——此包所属的浏览器 Client 部分。
+- [客户端模块子系统](../../../../Docs/subsystems/client-modules.zh.md)——web 插件表、启动图协议与 bundle 路由。
+- [客户端编写规则](../AGENTS.md#shared-modules-and-the-module-graph)——共享模块基座与 `dsh.client.external` 语义。
+- [客户端组地图](../README.zh.md)——本包所属的浏览器半侧。
 
 -----
 
@@ -123,4 +127,4 @@ Cordis 模块表属于 [`dsh-web-compatibility`](../../../../Compatibility/DSH/w
 
 </details>
 
-**运行时不变式：** Native API 包没有 Cordis 依赖或 Loader entry。Host 提供的图和选中的 Native plugin 行决定组合；`NativeHost` 拥有安装及渲染器清理。此 API 不发布运行时不变式 companion，因为包本身没有可独立变化的注册表状态。
+**运行时不变式：** 不发布伴生入口。这是 Vite entry shell，只负责 boot glue 与 module-table seeding，不发出 Cordis 事件或持有跨插件可变状态；boot chain（加载页 → 启动就绪 → 一次切换至 UI）由真实 carrier 上的 web e2e 冒烟测试验证。

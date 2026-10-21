@@ -211,17 +211,16 @@ type MessageFeedbackDeleteResult =
 
 来源：[`rsh/Modules/Official/feedback/command-feedback/src/types.ts`](../../Modules/Official/feedback/command-feedback/src/types.ts)
 
-```ts
-/** Durable feedback category ids in the order product surfaces present them. */
-const FEEDBACK_CATEGORIES = [
-  'task-result', 'instruction-following', 'product-interaction', 'service-stability',
-  'resource-cost', 'security-privacy-permission', 'other',
-] as const
-```
-
 ```ts type-equiv
-/** One of the fixed feedback categories. */
-type FeedbackCategory = typeof FEEDBACK_CATEGORIES[number]
+/** One of the fixed feedback categories; the ids are durable log vocabulary. */
+type FeedbackCategory =
+  | 'task-result'
+  | 'instruction-following'
+  | 'product-interaction'
+  | 'service-stability'
+  | 'resource-cost'
+  | 'security-privacy-permission'
+  | 'other'
 ```
 
 ```ts type-equiv
@@ -253,7 +252,7 @@ interface SessionFeedbackRecordRequest {
 ```ts type-equiv
 /** Stable postcondition of a recorded remark. */
 interface SessionFeedbackRecordValue {
-  /** The selected recorder accepted the remark for the Session log. */
+  /** The remark is appended to the Session log; flushing follows the Session's own schedule. */
   readonly recorded: true
 }
 ```
@@ -291,7 +290,7 @@ fork 种子可以包含父 Session 的反馈事件，但 payload 保留父级 `s
 
 插件释放会关闭操作接纳，并排空已进入各 Session 队列的工作。
 
-显式启用后，[`session-log-deepseek`](../../Modules/Official/llm/session-log-deepseek/README.zh.md) 会在后续符合条件的 DeepSeek 请求中，把反馈作为普通 `dsh_session_log` 后缀的一部分传送。记录反馈不会触发 LLM 请求，也不会单独上传 `dsh_feedback`。对于非 DeepSeek 路由，[OTel 后端](../../Engine/session/session-telemetry-otel/README.zh.md)可以将权威日志前缀释放至已记录的反馈。命令确认文本确认记录并标识 Session 与匿名用户，不报告遥测策略或投递结果。
+显式启用后，[`session-log-deepseek`](../../Engine/session/session-log-deepseek/README.zh.md) 会在后续符合条件的 DeepSeek 请求中，把反馈作为普通 `dsh_session_log` 后缀的一部分传送。记录反馈不会触发 LLM 请求，也不会单独上传 `dsh_feedback`。对于非 DeepSeek 路由，[OTel 后端](../../Engine/session/session-telemetry-otel/README.zh.md)可以将权威日志前缀释放至已记录的反馈。命令确认文本确认记录并标识 Session 与匿名用户，不报告遥测策略或投递结果。
 
 ## Web 界面
 

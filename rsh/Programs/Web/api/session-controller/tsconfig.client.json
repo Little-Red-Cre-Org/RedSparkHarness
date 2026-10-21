@@ -6,13 +6,11 @@
     "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
   },
   "include": [
-    "src/client-event-types.ts",
     "src/client/**/*.ts",
     "src/types.ts",
     "src/remote-events.ts"
   ],
   "references": [
-    { "path": "../../../../Engine/core/native-model-execution/tsconfig.client.json" },
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../gateway/tsconfig.client.json" },
     { "path": "../../../../Modules/Official/attachment/attachment" },
@@ -29,7 +27,7 @@
     { "path": "../../../../Core/util/brand" },
     { "path": "../../../../Core/util/crypto" },
     { "path": "../../../../Core/util/workspace-path" },
-    { "path": "../../../../Modules/Official/workspace/workspace/tsconfig.client.json" },
+    { "path": "../../../../Modules/Official/workspace/workspace" },
     { "path": "../../../../Core/typert/protocol" }
   ]
 }

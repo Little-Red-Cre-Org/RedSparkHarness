@@ -52,8 +52,6 @@ Every log read and write flows through the returned `SessionHandle`; there are n
 
 `create` and `open(id, 'write')` take in-process single-writer ownership: a second write open while an owner is active rejects with `SessionAlreadyOwnedError`, `create` on an occupied id rejects with `SessionAlreadyExistsError`, and a mutation on a `read` handle rejects with `SessionReadOnlyError` — one handle type, runtime refusal. Any operation on a closed handle rejects with `SessionHandleClosedError`, and `SessionOwnershipLostError` marks a write handle whose ownership is permanently gone (close it and reopen). A created session is observable in this process from the moment `create` resolves, while the backend may defer physical materialization until the first `append` or `flush`; other processes see only materialized sessions, and a session that never materialized before a crash never existed.
 
-The optional `deletions` capability removes a stored Session from the live namespace while retaining every generation for restoration. `./deletion` contains the branded receipt and Provider-neutral operations without Host runtime imports. Host and Client compiler programs expose explicit faces; the solution root compiles neither face implicitly.
-
 ### The live write path and shutdown drain
 
 The backend owns the live write path: it installs the session listeners once and routes every published session's events by id to that session's active write handle — `session/event` copies into a bounded internal batching window, `session/flush` is the immediate durability and error-observation barrier, and `session/disposed` runs the final drain and closes the handle. A published session without an active write handle persists nothing. A background write failure retains its events in order, pauses the automatic path, and is logged; the next explicit flush retries and rejects loudly. `close()` itself drains the routed buffer through the still-open storage before releasing ownership, so backend teardown's close sweep keeps application shutdown lossless even though root-fiber disposal runs fibers' disposers concurrently.
@@ -123,8 +121,6 @@ Read these pages when the package-level contract is not enough. They move from t
 - [JSONL persistence backend](../session-persistence-jsonl/README.md) — the shipped per-session-file backend.
 - [Session checkpoint policy](../session-checkpoint-policy/README.md) — the plugin that flushes through `session/flush` at semantic boundaries.
 - [Session package map](../README.md) — adjacent persistence, projection, title, and telemetry packages.
-
-`./native` owns `NativeSessionPersistenceOperations` and the native `sessionPersistence` service. Its five operations retain the existing handle, freshness, cancellation and single-writer obligations. The compatibility Service implements that Definition and inherits its method documentation. Provider teardown stays with the selected Provider; Consumers do not receive service-wide close ownership.
 
 -----
 

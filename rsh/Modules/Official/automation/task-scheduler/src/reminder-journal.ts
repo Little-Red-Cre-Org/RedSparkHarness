@@ -8,8 +8,7 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type { Task, Run } from './types.ts'
 import type { TaskStore } from './store.ts'
-import { isDirectReminder } from './time.ts'
-import { formatReminderRecord } from './reminder-format.ts'
+import { isDirectReminder, readableBeijingTime } from './time.ts'
 
 /** Replay is idempotent: a committed message identity is the durable occurrence checkpoint.
  * @param session - Shared reminder conversation.
@@ -19,12 +18,15 @@ import { formatReminderRecord } from './reminder-format.ts'
 export function appendReminderRecords(session: Session, task: Task, runs: Run[]): void {
   const seen = new Set(session.deriveMessages().map(message => String(message.id)))
   for (const run of [...runs].sort((a, b) => a.scheduledAt - b.scheduledAt)) {
-    const record = formatReminderRecord(task, run)
-    if (run.state === 'running' || seen.has(record.id)) continue
-    const message = createUserMessage({ source: { kind: 'plugin', plugin: 'task-scheduler', form: 'notice', summary: record.summary },
-      content: [{ type: 'text', text: record.text }] })
-    session.append('user/message', { ...message, id: brandString<typeof message.id>(record.id) }, { surfaceOp: 'append' })
-    seen.add(record.id)
+    const id = `reminder-${run.id}`
+    if (run.state === 'running' || seen.has(id)) continue
+    const when = readableBeijingTime(run.finishedAt ?? run.startedAt)
+    const status = run.state === 'completed' ? '已提醒' : '未完成'
+    const summary = `${when} · ${task.title} · ${status}`.slice(0, 120)
+    const message = createUserMessage({ source: { kind: 'plugin', plugin: 'task-scheduler', form: 'notice', summary },
+      content: [{ type: 'text', text: `${summary}\n${task.prompt}\n计划时间：${readableBeijingTime(run.scheduledAt)}\n实际时间：${when}` }] })
+    session.append('user/message', { ...message, id: brandString<typeof message.id>(id) }, { surfaceOp: 'append' })
+    seen.add(id)
   }
 }
 
@@ -86,8 +88,6 @@ export function startReminderJournal(ctx: Context, store: TaskStore): () => Prom
  * @param run - Receipt to remove from the journal.
  */
 export async function removeReminderRecord(ctx: Context, store: TaskStore, task: Task, run: Run): Promise<void> {
-  if (task.nativeRoute !== undefined || task.agentPreset === undefined) throw new Error('Reminder journals require compatibility Agent presets')
-  const agentPreset = task.agentPreset
   if (!run.sessionId) return
   const oldId = SessionId(run.sessionId)
   const existing = ctx.agents.get(oldId)
@@ -95,9 +95,9 @@ export async function removeReminderRecord(ctx: Context, store: TaskStore, task:
   if (existing) await ctx.sessions.flush(existing.session)
   const source = await ctx.sessionPersistence.open(oldId, 'read')
   const id = SessionId(`scheduled-reminder-${randomUUID()}`)
-  const handle = await ctx.agents.create({ sessionId: id, meta: { cwd: task.workspace, agentPreset },
+  const handle = await ctx.agents.create({ sessionId: id, meta: { cwd: task.workspace, agentPreset: task.agentPreset },
     agentOptions: { provider: task.provider, model: task.model },
-    setup: async (scope) => { await ctx.agentPresets.mount(scope, agentPreset) },
+    setup: async (scope) => { await ctx.agentPresets.mount(scope, task.agentPreset) },
   })
   try {
     const seen = new Set<string>()

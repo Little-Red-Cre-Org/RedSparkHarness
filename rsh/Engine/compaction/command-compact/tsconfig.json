@@ -19,9 +19,6 @@
     },
     {
       "path": "../compaction"
-    },
-    {
-      "path": "../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

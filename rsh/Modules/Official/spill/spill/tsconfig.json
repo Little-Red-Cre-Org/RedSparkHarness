@@ -4,9 +4,7 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../../../Core/vendor/cosmokit"
@@ -22,9 +20,6 @@
     },
     {
       "path": "../../../../Engine/core/session"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

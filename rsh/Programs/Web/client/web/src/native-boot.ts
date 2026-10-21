@@ -1,17 +1,26 @@
 /** Native browser plugin composition over the host-authored module graph. */
-import { dequal } from 'dequal'
 import {
   NativeHost, NativeScope, resolveInstallation,
   type InstallationRequest, type NativePlugin,
 } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeClientSelection } from './native-wire.ts'
 
-export type { NativeClientBootWire, NativeClientSelection } from './native-wire.ts'
+/** Renderer capability supplied by a selected native Client plugin. */
+export interface NativeClientRenderer {
+  /**
+   * Mount the application after all native Client providers activate.
+   * @param container - Browser application mount point.
+   * @param signal - Aborted when this installation stops.
+   * @returns Optional unmount operation awaited before provider cleanup.
+   */
+  mount(container: HTMLElement, signal: AbortSignal): void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>
+}
 
-export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-slots/native'
-
-/** Module import and installation states exposed to the native loading page. */
-export type NativeClientEntryState = 'loading' | 'active' | 'failed'
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices {
+    /** Browser application renderer selected by the native Client composition. */
+    clientRenderer: NativeClientRenderer
+  }
+}
 
 /** Browser graph operations consumed by native installation. */
 export interface NativeClientModuleSource {
@@ -22,18 +31,28 @@ export interface NativeClientModuleSource {
 
 /** Host lifetime exposed to the browser shell. */
 export interface NativeClientHost {
-  /** Whole-composition cancellation; replacing one installation does not abort it. */
-  readonly signal: AbortSignal
-  /**
-   * Validate the complete successor graph, drain changed installations and remount affected UI.
-   * @param composition - served module graph and complete selected Client roster.
-   * @returns replacement completion; import or resolution failures preserve the current UI.
-   */
-  replace(composition: Pick<NativeClientBootOptions, 'modules' | 'selections'>): Promise<void>
   /** Stop admission, unmount the UI, and await provider cleanup. */
   stop(): Promise<void>
   /** Observe installation state without exposing plugin configuration. */
   diagnostics(): readonly { readonly name: string; readonly state: string }[]
+}
+
+/** One explicitly selected native Client row with its profile configuration. */
+export interface NativeClientSelection {
+  readonly id: string
+  readonly config: unknown
+}
+
+/** Host-injected browser module graph and selections for one Client composition. */
+export interface NativeClientBootWire {
+  readonly formatVersion: 1
+  /** One ESM bundle containing every selected Client entry. */
+  readonly bundle: string
+  /** Stylesheets emitted while the Host bundled the selected entries. */
+  readonly styles: readonly string[]
+  /** Installation ids exported by `bundle.plugins`. */
+  readonly modules: readonly { readonly id: string }[]
+  readonly selections: readonly NativeClientSelection[]
 }
 
 /** Inputs for a browser composition; every selected id must be in the served graph. */
@@ -43,11 +62,6 @@ export interface NativeClientBootOptions {
   readonly container: HTMLElement
   /** Skip activation after pending imports settle or stop the composition after it starts. */
   readonly signal?: AbortSignal
-  /**
-   * Report initial module import and completed installation without exposing plugin configuration.
-   * Callback failure stops the composition.
-   */
-  readonly onEntryState?: (id: string, state: NativeClientEntryState) => void
 }
 
 function nativePlugin(value: unknown, id: string): NativePlugin {
@@ -75,72 +89,38 @@ function nativePlugin(value: unknown, id: string): NativePlugin {
  * @returns the active host; callers own and await `stop()` on navigation or shutdown.
  */
 export async function bootNativeClient(options: NativeClientBootOptions): Promise<NativeClientHost> {
-  const { container, signal } = options
+  const { modules, selections, container, signal } = options
   signal?.throwIfAborted()
-  const scope = new NativeScope()
-  const lifetime = new AbortController()
-  const admission = signal === undefined ? lifetime.signal : AbortSignal.any([signal, lifetime.signal])
-  const prepare = async (
-    { modules, selections }: Pick<NativeClientBootOptions, 'modules' | 'selections'>,
-    previous: ReadonlyMap<string, InstallationRequest>,
-    onEntryState?: NativeClientBootOptions['onEntryState'],
-  ): Promise<Map<string, InstallationRequest>> => {
-    admission.throwIfAborted()
-    const graphIds = new Set(modules.manifest.modules.map(row => row.id))
-    const seen = new Set<string>()
-    for (const selection of selections) {
-      if (!graphIds.has(selection.id)) throw new Error(`native client: ${selection.id} is absent from the boot graph`)
-      if (seen.has(selection.id)) throw new Error(`native client: duplicate selection ${selection.id}`)
-      seen.add(selection.id)
-    }
-    const requests = new Map<string, InstallationRequest>()
-    for (const selection of selections) {
-      admission.throwIfAborted()
-      onEntryState?.(selection.id, 'loading')
-      let plugin: NativePlugin
-      try {
-        const exports = await modules.import(selection.id, '', {})
-        admission.throwIfAborted()
-        plugin = nativePlugin(exports, selection.id)
-      } catch (error) {
-        onEntryState?.(selection.id, 'failed')
-        throw error
-      }
-      const prior = previous.get(selection.id)
-      requests.set(selection.id, prior !== undefined && prior.plugin === plugin && dequal(prior.config, selection.config)
-        ? prior : { plugin, scope, config: selection.config })
-    }
-    return requests
+  const graphIds = new Set(modules.manifest.modules.map(row => row.id))
+  const seen = new Set<string>()
+  for (const selection of selections) {
+    if (!graphIds.has(selection.id)) throw new Error(`native client: ${selection.id} is absent from the boot graph`)
+    if (seen.has(selection.id)) throw new Error(`native client: duplicate selection ${selection.id}`)
+    seen.add(selection.id)
   }
-  let requests = await prepare(options, new Map(), options.onEntryState)
-  admission.throwIfAborted()
+  const scope = new NativeScope()
+  const requests: InstallationRequest[] = []
+  for (const selection of selections) {
+    signal?.throwIfAborted()
+    const exports = await modules.import(selection.id, '', {})
+    signal?.throwIfAborted()
+    requests.push({ plugin: nativePlugin(exports, selection.id), scope, config: selection.config })
+  }
+  signal?.throwIfAborted()
   const mountPlugin: NativePlugin = {
     apiVersion: 1, name: 'native-client-mount', targets: ['client'],
-    requires: ['clientApplication', 'clientRenderer'], provides: [],
-    resolve: () => (context) => {
-      const unmount = context.require('clientRenderer').mount(
-        container,
-        context.require('clientApplication'),
-        context.signal,
-      )
-      context.own(unmount)
+    requires: ['clientRenderer'], provides: [],
+    resolve: () => async (context) => {
+      const unmount = await context.require('clientRenderer').mount(container, context.signal)
+      if (unmount !== undefined) context.own(unmount)
     },
   }
-  const mount = { plugin: mountPlugin, scope, config: undefined }
-  const runtime = new NativeHost(resolveInstallation([...requests.values(), mount], 'client'))
-  let replacing = Promise.resolve()
+  requests.push({ plugin: mountPlugin, scope, config: undefined })
+  const runtime = new NativeHost(resolveInstallation(requests, 'client'))
   let stopping: Promise<void> | undefined
   const stop = (): Promise<void> => {
     signal?.removeEventListener('abort', stopOnAbort)
-    if (stopping !== undefined) return stopping
-    const completion = Promise.withResolvers<void>()
-    stopping = completion.promise
-    lifetime.abort()
-    void Promise.allSettled([runtime.stop(), replacing]).then(([cleanup]) => {
-      if (cleanup.status === 'rejected') completion.reject(cleanup.reason)
-      else completion.resolve()
-    })
-    return stopping
+    return stopping ??= runtime.stop()
   }
   const stopOnAbort = (): void => { void stop().catch(() => undefined) }
   const startup = runtime.start()
@@ -152,23 +132,10 @@ export async function bootNativeClient(options: NativeClientBootOptions): Promis
       await stop()
       signal.throwIfAborted()
     }
-    for (const selection of options.selections) options.onEntryState?.(selection.id, 'active')
   } catch (error) {
-    await stop().catch(() => undefined)
+    signal?.removeEventListener('abort', stopOnAbort)
+    await stopping?.catch(() => undefined)
     throw error
   }
-  return {
-    signal: AbortSignal.any([admission, runtime.signal]), stop, diagnostics: () => runtime.diagnostics(),
-    replace: (composition) => {
-      const operation = replacing.then(async () => {
-        runtime.signal.throwIfAborted()
-        const successor = await prepare(composition, requests)
-        admission.throwIfAborted()
-        await runtime.replace(resolveInstallation([...successor.values(), mount], 'client'))
-        requests = successor
-      })
-      replacing = operation.catch(() => undefined)
-      return operation
-    },
-  }
+  return { stop, diagnostics: () => runtime.diagnostics() }
 }

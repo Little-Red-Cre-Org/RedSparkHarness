@@ -14,7 +14,6 @@ English | [中文](README.zh.md)
 ## Table of Contents
 
 - [Conversation assembly](#conversation-assembly)
-- [Native target types](#native-target-types)
 - [Shell and standard props](#shell-and-standard-props)
 - [Temporary composer entries](#temporary-composer-entries)
 - [Model Experience](#model-experience)
@@ -33,11 +32,6 @@ The adapter passes each `SessionEventLikeEntry` directly to the assembler. Its o
 A target becomes active when shell selection resolves it or when its source receives a first subscriber. The assembler replaces that target from current Contexts once and keeps it active for later incremental flushes; creating a source does not activate it and unsubscription does not deactivate it.
 
 Target packages declaration-merge their snapshot and Location data maps, then register with `ctx.uiConversation.events.register(...)` and `ctx.uiConversation.views.register(...)`. A target reads its Session-owned source with `ctx.uiConversation.binding(binding).target(targetId)`. Registrations are Cordis effects and their returned disposers remove the contribution from the same registry. The shared request inspection serves every target: `ctx.uiConversation.inspectSystemPrompt(previous, event)` interprets system messages and positional replacements as immutable loaded-surface state. It selects the last nonempty surviving system node in surface order, retains only surviving replacement positions for chained rewrites, and withholds the prompt after an unindexed older endpoint until prepend replay supplies its order. Target-owned Definitions retain historical cards independently. `ctx.uiConversation.inspectRequestPrompt(previous, header, system)` classifies request changes against that effective prompt; ordinary messages and stream chunks require no system-state work.
-
-<a id="native-target-types"></a>
-## Native target types
-
-Native Client packages that implement Conversation targets import shared event, node, prompt, View, and image-rendering types from `@deepseek-ai/dsh-client-ui-conversation/native-types`. The entry contains type declarations and no runtime code.
 
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
@@ -130,8 +124,6 @@ None; Conversation assembly and browser input state do not alter provider-side p
 
 <a id="dev-note"></a>
 ### Dev Note
-
-The Cordis-free `./tool-records` export owns the Tool call/result and image-loader vocabulary used by both renderers. `./conversation-copy` exports the existing typed dictionaries and namespace declaration without creating a Conversation service. The compatibility root and `./client` entries retain their existing installers.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>

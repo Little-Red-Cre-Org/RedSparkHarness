@@ -31,15 +31,6 @@ export type RpcStreamOpen = (
 export function createWebConnectionRpc(doFetch?: RpcFetch, openStream?: RpcStreamOpen): ClientConnectionRpc {
   const send: RpcFetch = doFetch ?? ((input, init) => globalThis.fetch(input, init))
   return {
-    response(channel, endpoint, payload, signal, request) {
-      assertTarget(channel, endpoint, request !== undefined)
-      const init: RequestInit & { duplex?: 'half' } = request === undefined
-        ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal }
-        : { method: request.method ?? 'POST', ...(request.headers === undefined ? {} : { headers: request.headers }),
-          ...(request.body === undefined ? {} : { body: request.body }), signal,
-          ...(request.duplex === undefined ? {} : { duplex: request.duplex }) }
-      return send(new URL(`${channel}/${endpoint}`, resolveBase()), init)
-    },
     async call(channel, endpoint, payload, signal) {
       assertTarget(channel, endpoint)
       const rpcId = RpcId(randomUuid())
@@ -119,12 +110,11 @@ function resolveBase(): string {
   return location?.origin !== undefined && location.origin !== 'null' ? location.origin : INTERNAL_BASE
 }
 
-function assertTarget(channel: string, endpoint: string, allowQuery = false): void {
-  const path = allowQuery ? endpoint.split('?', 1)[0] ?? '' : endpoint
-  const segments = path.split('/')
+function assertTarget(channel: string, endpoint: string): void {
+  const segments = endpoint.split('/')
   if (!CHANNEL_PATTERN.test(channel)
-    || endpoint.includes('#') || segments.some(segment =>
-    segment === '' || segment === '.' || segment === '..' || !ENDPOINT_SEGMENT_PATTERN.test(segment))) {
+    || segments.some(segment =>
+      segment === '' || segment === '.' || segment === '..' || !ENDPOINT_SEGMENT_PATTERN.test(segment))) {
     throw new Error(`connection: invalid RPC target ${JSON.stringify(`${channel}/${endpoint}`)}`)
   }
 }

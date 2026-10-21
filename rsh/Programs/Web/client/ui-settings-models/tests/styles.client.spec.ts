@@ -10,7 +10,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const css = readFileSync(fileURLToPath(new URL('../../ui-primitives/src/models-settings/ModelsSection.module.css', import.meta.url)), 'utf8')
+const css = readFileSync(fileURLToPath(new URL('../src/client/ModelsSection.module.css', import.meta.url)), 'utf8')
 // The theme package maps `./styles/*` to `./src/styles/*`, so the declarations
 // stay on the source plane rather than needing a build.
 // Every theme sheet, not just the platform tokens: font and scrollbar
@@ -67,11 +67,11 @@ describe('ModelsSection theme styles', () => {
     // control on the page. `.selectInput` is what removes it, reserves the
     // right pad, and paints the shared chevron; a `<select>` that takes
     // `.input` alone silently keeps the OS one.
-    const sources = readdirSync(fileURLToPath(new URL('../../ui-primitives/src/models-settings/', import.meta.url)))
+    const sources = readdirSync(fileURLToPath(new URL('../src/client/', import.meta.url)))
       .filter(name => name.endsWith('.tsx'))
       .map(name => ({
         name,
-        text: readFileSync(fileURLToPath(new URL(`../../ui-primitives/src/models-settings/${name}`, import.meta.url)), 'utf8'),
+        text: readFileSync(fileURLToPath(new URL(`../src/client/${name}`, import.meta.url)), 'utf8'),
       }))
     const bare = sources.flatMap(({ name, text }) => text
       .split('<select')

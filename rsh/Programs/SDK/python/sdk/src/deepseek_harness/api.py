@@ -7,8 +7,7 @@ from typing import Callable
 
 from .client import HarnessClient, HarnessConfig
 from .errors import SdkProtocolError
-from .models import (InitializeResponse, JsonObject, NativeSdkPromptContentBlock, NativeStagedFileReceipt,
-                     Notification, SdkPromptContentBlock)
+from .models import JsonObject, Notification
 
 
 @dataclass(slots=True)
@@ -24,9 +23,6 @@ class DeepSeekHarnessConfig:
     model: str = "deepseek-v4-flash"
     reasoning_effort: str | None = None
     max_tokens: int | None = None
-    max_steps: int | None = None
-    allowed_tools: tuple[str, ...] | None = None
-    workspace_write_root: str | None = None
     cwd: str | None = None
     runtime_cwd: str | None = None
     dsh_bin: str | None = None
@@ -92,7 +88,6 @@ class DeepSeekHarness:
             _launch_args=_launch_args,
         )
         self._initialized = False
-        self._initialize_result: InitializeResponse | None = None
 
     def __enter__(self) -> "DeepSeekHarness":
         self.start()
@@ -105,31 +100,22 @@ class DeepSeekHarness:
     def client(self) -> HarnessClient:
         return self._client
 
-    @property
-    def initialize_result(self) -> InitializeResponse | None:
-        """The selected runtime's response to initialize, after a successful start."""
-        return self._initialize_result
-
     def start(self) -> None:
         if self._initialized:
             return
         self._client.start()
-        self._initialize_result = self._client.initialize(
+        self._client.initialize(
             cwd=self._cwd,
             provider=self.config.provider,
             model=self.config.model,
             reasoning_effort=self.config.reasoning_effort,
             max_tokens=self.config.max_tokens,
-            max_steps=self.config.max_steps,
-            allowed_tools=self.config.allowed_tools,
-            workspace_write_root=self.config.workspace_write_root,
         )
         self._initialized = True
 
     def close(self) -> None:
         self._client.close()
         self._initialized = False
-        self._initialize_result = None
 
     def start_session(self, session_id: str | None = None) -> "Session":
         self.start()
@@ -137,7 +123,7 @@ class DeepSeekHarness:
 
     def run(
         self,
-        input: str | list[SdkPromptContentBlock],
+        input: str | list[JsonObject],
         *,
         session_id: str | None = None,
         on_notification: Callable[[Notification], None] | None = None,
@@ -150,37 +136,9 @@ class Session:
         self.harness = harness
         self.id = session_id
 
-    def steer(self, input: str | list[NativeSdkPromptContentBlock]) -> str:
-        """Queue input for this admitted native SDK root's next step and wake it after an interruption.
-
-        Returns the durable message id; idle Sessions and unsupported profiles reject.
-        """
-        self.harness.start()
-        content_blocks = [{"type": "text", "text": input}] if isinstance(input, str) else input
-        return self.harness.client.session_steer(self.id, content_blocks)
-
-    def upload_file(self, data: bytes, name: str | None = None) -> NativeStagedFileReceipt:
-        """Store file bytes and return a receipt for a later Native SDK prompt or steer."""
-        self.harness.start()
-        return self.harness.client.session_upload_file(self.id, data, name)
-
-    def cancel(self) -> bool:
-        """Cancel this Session's admitted native-sdk turn and await owned cleanup.
-
-        Returns False when no turn was admitted; unsupported profiles reject the request.
-        """
-        self.harness.start()
-        return self.harness.client.session_cancel(self.id)
-
-    def fork(self, destination_session_id: str, at_seq: int | None = None) -> Session:
-        """Fork a closed native-sdk turn into a fresh handle; its next run resumes copied history."""
-        self.harness.start()
-        session_id = self.harness.client.session_fork(self.id, destination_session_id, at_seq)
-        return self.harness.start_session(session_id)
-
     def run(
         self,
-        input: str | list[SdkPromptContentBlock],
+        input: str | list[JsonObject],
         *,
         on_notification: Callable[[Notification], None] | None = None,
     ) -> RunResult:
@@ -244,7 +202,7 @@ def _is_inbox_receipt(notification: Notification, session_id: str, message_id: s
     )
 
 
-def normalize_input(input: str | list[SdkPromptContentBlock]) -> list[SdkPromptContentBlock]:
+def normalize_input(input: str | list[JsonObject]) -> list[JsonObject]:
     if isinstance(input, str):
         return [{"type": "text", "text": input}]
     return input

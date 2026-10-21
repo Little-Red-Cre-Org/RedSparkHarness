@@ -1,13 +1,15 @@
 /** Native JSONL Session storage uses the released generation and single-writer backend. */
 import { isAbsolute, resolve } from 'node:path'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { JsonlSessionBackend, type Config, type JsonlCompression } from './backend.ts'
+import { JsonlSessionBackend, type Config } from './backend.ts'
 
 export { JsonlSessionBackend }
-export type { JsonlCompression }
-export { inspectSessionRootCompression } from './native-inspection.ts'
 
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices {
+    sessionPersistence: JsonlSessionBackend
+  }
+}
 
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -39,7 +41,7 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveConfig(input)
     return (context) => {
-      const backend = new JsonlSessionBackend(config) satisfies NativeSessionPersistenceOperations
+      const backend = new JsonlSessionBackend(config)
       context.own(() => backend.close())
       context.provide('sessionPersistence', backend)
     }

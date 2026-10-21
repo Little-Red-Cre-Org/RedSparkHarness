@@ -25,15 +25,6 @@
     },
     {
       "path": "../subagent"
-    },
-    {
-      "path": "../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
-      "path": "../../core/native-tools/tsconfig.host.json"
-    },
-    {
-      "path": "../native-subagent"
     }
   ]
 }

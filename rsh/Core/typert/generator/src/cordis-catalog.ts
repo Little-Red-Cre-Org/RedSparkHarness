@@ -16,8 +16,6 @@ import type {
   SignatureModel,
   SourceDeclarationModel,
   SourceLocation,
-  SymbolId,
-  TypeDeclarationModel,
   TypertFace,
   TypeNodeId,
 } from './model.ts'
@@ -96,8 +94,6 @@ export interface ServiceEntry {
   doc: string
   /** Public methods (bodies stripped), in source order. */
   methods: ServiceMethodEntry[]
-  /** Base declaration names whose shapes complete inherited members. */
-  inheritedTypes?: readonly string[]
   /** Source pointer of the class declaration. */
   source: string
 }
@@ -124,10 +120,6 @@ export interface CordisCatalogPolicy {
   readonly runtimeServices?: readonly ServiceEntry[]
   /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
   readonly runtimeServiceExclusions?: ReadonlySet<string>
-  /** Source types omitted from runtime type closure by exact `package#name`. */
-  readonly runtimeTypeExclusions?: ReadonlySet<string>
-  /** Registered source packages used as Context Service Definitions and inherited projected Services. */
-  readonly serviceDefinitionPackages?: readonly string[]
   /** Manually curated framework events inherited by every plugin. */
   readonly inheritedEvents: readonly InheritedEntry[]
   /** Manually curated framework context members inherited by every plugin. */
@@ -268,14 +260,12 @@ export class CordisCatalogProjector {
       for (const service of packageModel.services) {
         const declaration = this.renderer.declaration(service.symbol)
         const owner = /^(?:.*\/)?src\//.exec(service.location.file)?.[0]
-        const definitionPackage = service.symbol.slice(0, service.symbol.indexOf(':'))
-        const importedDefinition = this.policy.serviceDefinitionPackages?.includes(definitionPackage) === true
         if ((declaration.kind !== 'class' && declaration.kind !== 'interface')
           || owner === undefined
           || (this.face.face === 'host'
             ? !/^(?:.*\/)?src\/[^/]+\.tsx?$/.test(service.location.file)
             : !/^(?:.*\/)?src\/client\/.+\.tsx?$/.test(service.location.file))
-          || (!declaration.location.file.startsWith(owner) && !importedDefinition)) continue
+          || !declaration.location.file.startsWith(owner)) continue
         const current = chosen.get(service.key)
         if (current !== undefined && this.renderer.declaration(current.symbol).kind === 'class') continue
         chosen.set(service.key, service)
@@ -298,24 +288,14 @@ export class CordisCatalogProjector {
         violations.push(`service ctx.${service.key} (${source}): ${declaration.kind} ${declaration.name} has no JSDoc.`)
       }
       const methods: ServiceMethodEntry[] = []
-      const resolvedMembers = service.resolvedMembers ?? []
-      const resolvedNames = new Set(resolvedMembers.map(member => member.name))
-      const inheritedTypes = new Set<string>()
-      const inheritedMembers = this.serviceMembers(declaration, service.members, new Set(), inheritedTypes)
-      const members = [
-        ...resolvedMembers,
-        ...inheritedMembers.filter(member => !resolvedNames.has(member.name)),
-      ]
-      for (const member of members) {
+      for (const memberId of service.members) {
+        const member = this.renderer.member(memberId)
         if (member.name.startsWith('[')) continue
-        const inherited = /@inheritdoc\b/u.test(member.jsDoc ?? '')
-          ? this.inheritedServiceMember(declaration, member, new Set()) : undefined
-        const jsDoc = inherited?.jsDoc ?? member.jsDoc
-        const parsed = parseJsDoc(jsDoc ?? '')
+        const parsed = parseJsDoc(member.jsDoc ?? '')
         if (parsed.deprecated) continue
         if (member.kind === 'property') {
-          if (jsDoc === undefined) continue
-          methods.push({ kind: 'property', signature: member.text || this.renderer.renderMember(member), jsDoc })
+          if (member.jsDoc === undefined) continue
+          methods.push({ kind: 'property', signature: member.text, jsDoc: member.jsDoc })
           continue
         }
         if (member.kind !== 'method') continue
@@ -323,8 +303,8 @@ export class CordisCatalogProjector {
         if (this.face.face === 'host') {
           checkTypeLinks(where, signatureTypeNames(this.renderer, member.signature), this.policy, typeLinkViolations)
         }
-        methods.push({ kind: 'method', signature: member.text || this.renderer.renderMember(member), jsDoc: jsDoc ?? '' })
-        if (jsDoc === undefined) {
+        methods.push({ kind: 'method', signature: member.text, jsDoc: member.jsDoc ?? '' })
+        if (member.jsDoc === undefined) {
           violations.push(`${where} has no JSDoc.`)
           continue
         }
@@ -339,7 +319,6 @@ export class CordisCatalogProjector {
         abstract: declaration.abstract,
         doc,
         methods,
-        inheritedTypes: [...inheritedTypes].sort(),
         source,
       })
     }
@@ -348,77 +327,29 @@ export class CordisCatalogProjector {
     return entries.sort((left, right) => left.key.localeCompare(right.key))
   }
 
-  private serviceMembers(declaration: TypeDeclarationModel, memberIds: readonly string[],
-    visited = new Set<SymbolId>(), inheritedTypes = new Set<string>()): MemberModel[] {
-    if (visited.has(declaration.id)) return []
-    visited.add(declaration.id)
-
-    const members = memberIds.map(memberId => this.renderer.member(memberId))
-      .filter(member => member.name !== 'typertRemote')
-    const names = new Set(members.map(member => member.name))
-    for (const baseId of declaration.extends) {
-      const base = this.renderer.node(baseId)
-      if (base.kind !== 'reference' || base.target.kind !== 'declaration') continue
-      const baseDeclaration = this.renderer.declaration(base.target.symbol)
-      inheritedTypes.add(baseDeclaration.name)
-      const inherited = this.serviceMembers(
-        baseDeclaration,
-        baseDeclaration.members.map(member => member.id),
-        visited,
-        inheritedTypes,
-      )
-      const inheritedNames = new Set(inherited.map(member => member.name))
-      for (const name of inheritedNames) {
-        if (names.has(name)) continue
-        members.push(...inherited.filter(member => member.name === name))
-        names.add(name)
-      }
-    }
-    return members
-  }
-
-  private inheritedServiceMember(owner: TypeDeclarationModel, member: MemberModel,
-    visited: Set<SymbolId>): MemberModel | undefined {
-    if (visited.has(owner.id)) return undefined
-    visited.add(owner.id)
-    for (const baseId of [...owner.extends, ...owner.implements]) {
-      const base = this.renderer.node(baseId)
-      if (base.kind !== 'reference' || base.target.kind !== 'declaration') continue
-      const declaration = this.renderer.declaration(base.target.symbol)
-      const inherited = declaration.members.find(value => value.name === member.name && value.kind === member.kind)
-      if (inherited !== undefined && !/@inheritdoc\b/u.test(inherited.jsDoc ?? '')) return inherited
-      const ancestor = this.inheritedServiceMember(declaration, member, visited)
-      if (ancestor !== undefined) return ancestor
-    }
-    return undefined
-  }
-
   private runtimeTypes(
     services: readonly ServiceEntry[],
     events: readonly EventEntry[],
   ): { name: string; declaration: string }[] {
-    const candidates = new Map<string, SourceDeclarationModel[]>()
+    const declarations = new Map<string, string>()
+    const ambiguous = new Set<string>()
     for (const declaration of this.sourceDeclarations) {
       if (declaration.face !== this.face.face || declaration.kind === 'enum'
-        || this.policy.runtimeTypeExclusions?.has(`${declaration.package}#${declaration.name}`)
         || !/^(?:.*\/)?src\/.+\.tsx?$/.test(declaration.location.file)) continue
-      const declarations = candidates.get(declaration.name) ?? []
-      declarations.push(declaration)
-      candidates.set(declaration.name, declarations)
+      if (declarations.has(declaration.name)) {
+        ambiguous.add(declaration.name)
+        continue
+      }
+      declarations.set(
+        declaration.name,
+        declaration.text.length > MAX_DECL_CHARS
+          ? `${declaration.text.slice(0, MAX_DECL_CHARS)} /* …truncated — full shape in source */`
+          : declaration.text,
+      )
     }
-    const definitionPackages = new Set(this.policy.serviceDefinitionPackages ?? [])
-    const declarations = new Map<string, string>()
-    for (const [name, options] of candidates) {
-      const definitions = options.filter(option => definitionPackages.has(option.package))
-      const selected = definitions.length === 1 ? definitions[0] : definitions.length === 0 && options.length === 1 ? options[0] : undefined
-      if (selected === undefined) continue
-      declarations.set(name, selected.text.length > MAX_DECL_CHARS
-        ? `${selected.text.slice(0, MAX_DECL_CHARS)} /* …truncated — full shape in source */`
-        : selected.text)
-    }
+    for (const name of ambiguous) declarations.delete(name)
     return referencedTypes([
       ...services.flatMap(service => service.methods.map(method => method.signature)),
-      ...services.flatMap(service => service.inheritedTypes ?? []),
       ...events.map(event => event.signature),
     ], declarations)
   }
@@ -441,13 +372,7 @@ export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPoli
     faces: [targetFace],
     checkDiagnostics: false,
     caches,
-    ...(policy.serviceDefinitionPackages === undefined ? {} : { serviceDefinitionPackages: policy.serviceDefinitionPackages }),
-  }).discoverPackages(policy.serviceDefinitionPackages)
-  for (const packageName of policy.serviceDefinitionPackages ?? []) {
-    if (!discovery.some(candidate => candidate.package === packageName && candidate.faces.includes(targetFace))) {
-      throw new Error(`gen-cordis-catalog: Service Definition package '${packageName}' is not registered for ${targetFace}`)
-    }
-  }
+  }).discoverPackages()
   const packages = discovery.filter(candidate => candidate.faces.includes(targetFace))
     .map(candidate => candidate.package)
   const workspace = new WorkspaceAnalyzer({
@@ -456,7 +381,6 @@ export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPoli
     packages,
     checkDiagnostics: false,
     caches,
-    ...(policy.serviceDefinitionPackages === undefined ? {} : { serviceDefinitionPackages: policy.serviceDefinitionPackages }),
   }).analyzeInBatches()
   const face = workspace.faces.find(candidate => candidate.face === targetFace)
   if (face === undefined) throw new Error(`gen-cordis-catalog: Typert produced no ${targetFace} face`)
@@ -792,8 +716,6 @@ function renderRuntimeApi(
     '  summary: string',
     '  /** Complete service description. */',
     '  description: string',
-    '  /** Base type shapes needed to interpret inherited service members. */',
-    '  inheritedTypes?: readonly string[]',
     '  /** Public methods, bodies stripped, in source order. */',
     '  methods: readonly ServiceApiMethod[]',
     '}',
@@ -838,9 +760,6 @@ function renderRuntimeApi(
     lines.push(`    key: ${quote(service.key)},`)
     lines.push(`    summary: ${quote(firstSentence(service.doc))},`)
     lines.push(`    description: ${quote(service.doc)},`)
-    if (service.inheritedTypes !== undefined && service.inheritedTypes.length > 0) {
-      lines.push(`    inheritedTypes: ${quoteList(service.inheritedTypes)},`)
-    }
     if (service.methods.length === 0) {
       lines.push('    methods: [],')
     } else {
@@ -879,7 +798,7 @@ function renderRuntimeApi(
   lines.push(
     ']',
     '',
-    '/** Shapes of every exported type the Service and Event signatures or inherited service shapes reference (transitively), sorted by name. */',
+    '/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */',
     'export const TYPE_API: readonly TypeApiEntry[] = [',
   )
   for (const type of types) {
@@ -951,7 +870,7 @@ function renderRuntimeApi(
     '      },',
     '      methods: service.methods,',
     '    },',
-    '    referencedTypes: referencedTypeClosure([...(service.inheritedTypes ?? []), ...service.methods.map(method => method.signature)]),',
+    '    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),',
     '  }',
     '}',
     '',

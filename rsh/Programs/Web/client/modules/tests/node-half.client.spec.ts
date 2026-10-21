@@ -9,8 +9,7 @@ import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { Context, type Fiber } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { renderIndexInjections } from '@deepseek-ai/dsh-http-routes/client'
-import type { HttpWebServer as WebServer, WebRoute } from '@deepseek-ai/dsh-http-routes-cordis'
+import { renderIndexInjections, type WebServer, type WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import * as modulesClient from '../src/client/index.ts'
 import { ClientModuleRegistry, bootInjections, orderByModuleGraph } from '../src/index.ts'
 import type { ClientModuleLoaderTarget, WebBootEntry, WebBootGraph } from '../src/client/index.ts'
@@ -87,7 +86,7 @@ function constructWithRoute(
     port: 0,
     register: (candidate) => {
       if (candidate.path === '/plugins') route = candidate
-      return async () => {}
+      return () => {}
     },
     tapIndex: () => () => {},
   }
@@ -562,8 +561,8 @@ describe('client bundle activation', () => {
   })
 
   it('splits startup combos before the map-form URL exceeds 3 KiB', async () => {
-    const packageNames = Array.from({ length: 21 }, (_, index) => (
-      `@fixture/combo-url-${String(index).padStart(3, '0')}-${'x'.repeat(114)}`
+    const packageNames = Array.from({ length: 48 }, (_, index) => (
+      `@fixture/combo-url-${String(index).padStart(3, '0')}-${'x'.repeat(40)}`
     ))
     const sourceMap = JSON.stringify({
       version: 3,

@@ -28,9 +28,7 @@
 
 各层按此顺序应用在空条目列表之上：先按 profile 列出的顺序应用每个组合包，然后是 profile 的 `cordis.patch.yml`，然后是 home 级的那份，最后是任意 `--patch` overlay。一条 patch 按 id 定位某个条目并替换其整个 config，或插入新条目。
 
-自定义 profile 默认实时重载。`web` 实时重载；`headless`、`sdk`、`sdk-minimal` 与 `acp` 只加载一次，因为工作开始后替换依赖会破坏一次性或 stdio 生命周期。持久化服务尚未就绪时，由 Loader 管理的新 Agent 会等待组合完成。
-
-Native `native-web` 将 `dsh.profile.configReload` 设为 `live`，以监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，再替换 Host 安装计划。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` 仍只在启动时加载。详见 [CLI 重载契约](../Programs/CLI/reference/README.zh.md)；Host 配置重载独立于 Cordis patch 重载和 Web Client 资源重建。
+自定义 profile 默认实时重载 patch。随附的 `web` profile 使用实时重载；`headless`、`sdk`、`sdk-minimal` 和 `acp` 则只在启动时应用一次所有配置层，因为一次性应用或 stdio 应用拥有工作之后，替换其依赖会破坏该生命周期。
 
 要查看你的机器启动的配置树：
 
@@ -116,15 +114,15 @@ turn/end
 
 `agent/pre-step` 决定接纳的输入。监听器可以改写或拒绝已领取消息；首次领取被拒绝或为空时，关闭不含步骤的持久轮次。enter 决策可设置 `startsRequestSeries`：循环记录新的 `request/header`（原因为 `series`，或在封装同时变化时为携带 `startsSeries: true` 的 `change`）。包装监听器通过 `{ ...decision, messages }` 保留该声明。组装与 `step/start` 之后，`agent/request` 和 `prepareCall()` 先解析实际路由，再提交系统提示词与已接纳用户消息；在任一异步阶段取消都不会提交这两者。提示词准入依据已准备调用的能力，而非先前的 `request/context`。每次尝试同步协调同一份已渲染组装结果、仅在首次尝试追加用户消息、按需记录 header/context、派生并冻结请求，再通过绑定调用发起流式请求。重试不重复组装或 `agent/pre-step`。附接后的 surface 替换开启新请求序列，包括恢复后的首次 pre-step 中发生的替换；未变化的恢复延续序列。首次接纳的步骤在用户消息之前预留系统头节点，即使提示词为空（不产生协议消息）。提示词仅通过 `system/message` 历史传递：空渲染文本清除所有生效的系统节点，模型不再看到旧提示词；具备能力的路由可在缓存前缀之后追加非空更新；不具备能力的路由与新请求序列将非空提示词文本归并到首个系统节点，并为非空的后续系统节点记录空内容替换（[决策](../../.agents/notes/implemented/architecture/2026-09-02-system-prompt-as-surface-node.zh.md)；[决策规则](../Engine/core/agent-loop/README.zh.md#understand-the-implementation)）。
 
-Native Headless 的 root 与 delegated Program 共用 request-context 路径。Program 会先准备 instructions、time、tmux 与 request-context 贡献，再执行最终的同步准入检查；随后通过精确活动 Session owner，依次追加 step start、system 消息、已准入输入与 selection、instructions 及其他上下文消息、request-context 消息，以及 request header/context。该单一写入路径完成 flush 后，Program 才提交准备好的 Provider 状态或开始模型执行。Request-context Provider 从模型与 PTC 执行快照读取精确 registration identity，因此沿用同一 allowlist 和 delegation 限制，无需另建可见性目录。可见 Provider 必须有精确活动 owner；即使可见 Provider 集合为空，也会进入正常接受回调。被拒绝的准备状态不会提交；追加或 flush 一旦开始，owner 会排空写入而不回滚。详见 [request-context 子系统](subsystems/request-context.zh.md)与[接受决策](../../.agents/notes/implemented/architecture/2026-10-13-native-request-context-acceptance.zh.md)。
-
 循环发送不可变请求，同时保留实时取消能力。只有已由该循环完整冻结的消息对象身份才能复用冻结证明；[agent-loop](../Engine/core/agent-loop/README.zh.md)拥有请求构造规则。
 
 详情见[时序图](agent-lifecycle.zh.md)、[工具流水线](tool-execution-pipeline.zh.md)和[取消与错误恢复](subsystems/core.zh.md#the-agent-handle)。
 
 ## 会话日志
 
-会话日志提供模型可见历史；`deriveMessages()` 据此投影请求消息，持久结算记录供恢复、文本记录、遥测与持久化使用。实时 UI 更新来自 `agent/assistant-stream`（[stream 决策](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.zh.md)）。[Session 子系统](subsystems/session.zh.md)负责记录行为；[agent loop](../Engine/core/agent-loop/README.zh.md)负责请求与 stream 行为；[Session 格式版本与发布状态](session-format-status.zh.md)和[已发布格式迁移决策](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.zh.md)规定存储格式。
+会话日志是模型所见上下文的来源。`deriveMessages()` 从中投影出模型历史。每个 `assistant/message` 都嵌入产生其组装内容的精确紧凑带时间 stream；`assistant/attempt` 保留已到达 settlement 的失败、重试、取消与 stream error attempt，且不添加模型历史。fork、恢复、transcript（文本记录）、遥测与持久化都从这些持久 settlement 派生，实时 UI 增量则来自 `agent/assistant-stream`；如果进程在 settlement 前硬中断，则不会留下持久 attempt stream（见[决策](../../.agents/notes/implemented/architecture/2026-09-01-v2-embedded-assistant-streams.zh.md)）。
+
+Session 消费方只了解当前逻辑格式。仅 header 的 `stat` 与 `list` 会重新扫描每个 Session 目录，选择数值最高的规范 generation，并在不加载事件或发布后继的情况下转换受支持的历史 header。已存储 Session 的 `open` 选择同一 generation，拒绝未来版本，或只 Decode 并组合一次构建时静态确定的相邻迁移链，再返回经过校验的当前逻辑事件。只读 open 直接使用这份内存结果，不发布后继；写 open 则先编码、校验并在未改变源的旁边排他发布最终版本命名的后继。未被后续事件封住的普通中断尾部仍由句柄消费方修复；只有在后续 `turn/start` 已经封住一种有限的已发布 restart 时，migration 才会插入缺失的 interrupted `turn/end`。JSONL v0 使用 `session.jsonl[.zstd]`，v1 及后续版本使用小写 `session.vN.jsonl[.zstd]`；已提交 generation 路径绝不重命名、替换或删除。JSONL provider 负责物理 framing、压缩、generation 选择与排他发布，每个相邻迁移包只负责一个 `vN -> vN+1` 步骤（[决策](../../.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.zh.md)）。
 
 **模型可见即已记录。** 抵达模型请求的一切都必须能从日志重建，并由一项运行时不变量断言这一点。因此，新增一项模型可见输入就需要新增一个会话事件：扩展 `SessionEventMap` 并从日志渲染。
 

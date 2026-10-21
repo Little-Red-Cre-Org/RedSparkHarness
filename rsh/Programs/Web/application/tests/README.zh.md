@@ -8,7 +8,7 @@
 
 依赖状态的用例使用 Workspace、接纳、附件和模型流屏障，区分可见中间状态与已完成操作。详情关闭等待框架过渡结束；归档验证为 seed Session 设置显式标题，并跨重载跟踪该身份。参见 [CI fixture 同步决策](../../../../../.agents/notes/implemented/testing/2026-09-08-ci-completion-observations.zh.md)。
 
-原生页面测试覆盖 Host 注入缺失、模块加载进度、启动取消、pagehide 清理以及构建后的 `native.html` 入口。Desktop Host 单元测试验证 profile 校验、已安装包解析、单图打包、Cordis 拒绝、启动数据注入和原生资源路由。生产浏览器冒烟仍使用合成的 Host 路由 renderer bundle，因此它验证无 Cordis 启动页、浏览器交接与生命周期，不启动 Desktop Host 进程本身。
+原生页面测试覆盖 Host 注入缺失、启动取消、pagehide 清理以及构建后的 `native.html` 入口。Desktop Host 单元测试验证 profile 校验、已安装包解析、单图打包、Cordis 拒绝、启动数据注入和原生资源路由。生产浏览器冒烟仍使用合成的 Host 路由 renderer bundle，因此它验证浏览器启动和生命周期，不启动 Desktop Host 进程本身。
 
 ## 这些是 Host 面的测试
 
@@ -20,6 +20,6 @@ import 一个 Client 包——无论值还是类型——都会把它整个 Type
 
 当某个场景需要 Client 持有的常量或纯函数时，改为在此处镜像一份，并紧挨着一条注释掉的 import 点明源模块。这样漂移会表现为选择器未命中或镜像值陈旧——是响亮的失败，绝不会是静默通过。`scaffold.ts` 按此规则镜像 welcome-notice 的 namespace、确认字段、版本和被断言的中文文案。
 
-有一类 Client import 是长期成立的。`assembled-boot.ts` 驱动兼容 shell 本身，因此它从 `@deepseek-ai/dsh-web-compatibility` import `AppWebEntry`、从 `@deepseek-ai/dsh-client-modules/client` import boot manifest（元数据清单）类型：启动真实 shell 正是该 harness 的用途，且这两个包本来就在 Host 图中。chat 场景则在 `support.ts` 中镜像 `conversationContextKey`，而不 import 其 Client owner。
+有一类 Client import 是长期成立的。`assembled-boot.ts` 驱动 shell 本身，因此它从 `@deepseek-ai/dsh-client-web` import `AppWebEntry`、从 `@deepseek-ai/dsh-client-modules/client` import boot manifest（元数据清单）类型：启动真实 shell 正是该 harness 的用途，且这两个包本来就在 Host 图中。chat 场景则在 `support.ts` 中镜像 `conversationContextKey`，而不 import 其 Client owner。
 
 没有任何机制强制这条规则；靠 review 守住它。

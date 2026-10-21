@@ -423,7 +423,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     await expect.poll(() => column.locator('[data-dockkit-tab-title]').allTextContents(), { timeout: 5_000 }).toEqual(['a.txt'])
     // Path label survives from the recorded args (a.txt).
     await expect.poll(() => page.getByText('a.txt', { exact: false }).count(), { timeout: 5_000 }).toBeGreaterThan(0)
-    const path = column.locator('[data-sidebar-path]')
+    const path = column.locator('[data-textpreview-path]')
     const absolutePath = join(scaffold.workspaceCwd, 'a.txt')
     await expect.poll(() => path.textContent()).toBe(absolutePath)
     expect(await path.getAttribute('title')).toBe(absolutePath)

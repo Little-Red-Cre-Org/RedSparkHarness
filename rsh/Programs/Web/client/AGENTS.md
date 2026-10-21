@@ -58,12 +58,12 @@ Non-negotiables across the layers:
 
 Npm sections describe installation and development relationships; each build face independently decides what its artifact contains. [`verify-package-dependencies`](../../../Scripts/verify-package-dependencies.ts) checks and repairs these rules; [`verify-client-packages`](../../../Scripts/verify-client-packages.ts) owns Client loading and module requests.
 
-1. **Legacy `dsh.client` packages keep Cordis in matching `peerDependencies` and `devDependencies`.** This includes their statically linked packages because their Node face participates in the same Cordis plugin contract. The explicit `nativeProfileClientDirectories` set is Cordis-free and has no `./client` module-table entry.
-2. **A package under `rsh/Programs/Web/client/` is covered unless [`nativeProfileClientDirectories`](../../../Scripts/native-package-policy.ts) classifies it as native-profile only.** Those packages must select the Client target in `dsh.native`, export `./native`, and omit both `dsh.client` and the `staticLinked` preset. `dsh.client` marks a Client/Host package outside this directory; explicit include/exclude entries handle other exceptions. Every covered package's Host entry is scanned, while a `./client` export alone does not select dependency policy.
-3. **Browser and type relationships are ordinarily development-only.** Workspace and third-party Client imports, module augmentations, TypeScript project references, `dsh.client.inject`, and metadata-only peers belong in `devDependencies`. A workspace package retained by a published declaration belongs in the exact `publishedTypeDependencies` map and in `dependencies`; this installs its types without activating its `NativePlugin`. Configuration-only entries absent from imports are listed in the dependency policy; Node companion value imports follow the Host rules below.
+1. **Every client package keeps Cordis in matching `peerDependencies` and `devDependencies`.** This includes the static packages because their Node face participates in the same Cordis plugin contract.
+2. **A package under `rsh/Programs/Web/client/` is always covered; `dsh.client` marks a Client/Host package outside that directory.** Explicit include/exclude entries handle exceptions. Every covered package's Host entry is scanned, while a `./client` export alone does not select dependency policy.
+3. **Browser and type relationships are development-only.** Workspace and third-party Client imports, type-only imports, module augmentations, TypeScript project references, `dsh.client.inject`, and metadata-only peers belong only in `devDependencies`. Configuration-only entries absent from imports are listed in the dependency policy; Node companion value imports follow the Host rules below.
 4. **Host value imports require classified exports.** A workspace value reached from the package's Host entry belongs only in `dependencies` when its exact module specifier and runtime export appear in `safeHostDependencyExports`. Exports whose identity or module state must be shared appear in `peerRequiredHostExports` and keep the whole package edge in matching `peerDependencies` and `devDependencies`. The verifier rejects unclassified exports before `--fix` writes manifests.
-5. **Only Host runtime libraries and reviewed published-type providers require installation dependencies.** Browser-only third-party implementations belong in `devDependencies`, whether inlined into `lib/client.js` or retained as bare imports in a static browser library. Static libraries are Web-shell build inputs; the final Vite build merges their imports and styles. Distributed browser code remains subject to runtime license disclosure ([decision](../../../../.agents/notes/implemented/process/2026-09-08-browser-third-party-build-inputs.md)).
-6. **Build faces declare externality independently.** A dynamic browser half uses the baseline plus `dsh.client.external`; a statically linked face externalizes every bare specifier; a native-profile Client entry is selected through `dsh.native`; a Node face externalizes its production dependencies ([`tsdown.client.ts`](tsdown.client.ts)). Moving a name between npm sections must not silently change bundle contents.
+5. **Only Host runtime libraries require installation dependencies.** Browser-only third-party implementations belong in `devDependencies`, whether inlined into `lib/client.js` or retained as bare imports in a static browser library. Static libraries are Web-shell build inputs; the final Vite build merges their imports and styles. Distributed browser code remains subject to runtime license disclosure ([decision](../../../../.agents/notes/implemented/process/2026-09-08-browser-third-party-build-inputs.md)).
+6. **Browser and Node build faces declare externality independently.** A dynamic browser half uses the baseline plus `dsh.client.external`; a statically linked face externalizes every bare specifier; a Node face externalizes its production dependencies ([`tsdown.client.ts`](tsdown.client.ts)). Moving a name between npm sections must not silently change bundle contents.
 7. **Keep the published payload closed.** Every relative runtime import and emitted asset must be covered by `files`; the repository publint pass checks the exact publication view.
 
 ## Build-time browser environment
@@ -72,7 +72,7 @@ Client business code may statically read `process.env.DSH_CLIENT_*`; every refer
 
 ## Shared modules and the module graph
 
-A dynamic browser half either carries a module privately or requests the shared module-table identity. The compatibility shell baseline is centralized in [`PLATFORM_MODULES`](../../../../Compatibility/DSH/web/frontend/src/platform.ts): it names shell-seeded React, Cordis, and static Client libraries; `PRELOADED_CLIENT_EXTERNALS` is reserved for dynamic rows whose factories must arrive before shell boot and is empty when no such row exists.
+A dynamic browser half either carries a module privately or requests the shared module-table identity. The client baseline is centralized in [`web/src/platform.ts`](web/src/platform.ts): `PLATFORM_MODULES` names shell-seeded React, Cordis, and static Client libraries; `PRELOADED_CLIENT_EXTERNALS` is reserved for dynamic rows whose factories must arrive before shell boot and is empty when no such row exists.
 
 1. **Baseline externals are implicit for every dynamic bundle.** Do not repeat React, Cordis, `client/store`, `ui-primitives`, `ui-slots`, or `ui-dockkit` in package manifests.
 2. **`dsh.client.external` is not a feature-plugin dependency mechanism.** Only infrastructure, transport, or generated assembly may add a package-specific non-baseline value request whose dynamic row must be materialized through the module table. Declare the exact import specifier; only a trailing `/client` aliases the package row.
@@ -94,7 +94,7 @@ Three declarations read like dependency edges and none is interchangeable: Cordi
 
 The seam is `loader.internal = modules`: cordis reaches plugin code through `EntryTree.import`, so every module request must be satisfiable before cordis can order activation above it. The modules node half emits rows in topological order, and `ClientModuleSystem.import`/`prefetch` recursively registers dynamic provider factories before their consumers materialize. This module order is independent from Cordis activation: a provider that injects services can register first and activate last.
 
-`rsh/Programs/Web/client/web` is a Cordis-free Native browser API, not a Loader entry. The compatibility shell in `rsh/Compatibility/DSH/web/frontend` seeds `PLATFORM_MODULES`; parser-preloaded dynamic rows remain ordinary Loader entries and ordinary `lib/client.js` artifacts.
+`rsh/Programs/Web/client/web` is not a Loader entry. Its static imports seed `PLATFORM_MODULES`; parser-preloaded dynamic rows remain ordinary Loader entries and ordinary `lib/client.js` artifacts.
 
 ## Conversation Node discipline
 
@@ -132,8 +132,6 @@ Run the narrowest rung that covers what you touched; escalate only when the chan
 If `test:gui` is red on code you did not touch, neither silently fix nor ignore it: note it in your handoff so it lands in the next PR window's sweep.
 
 ## New plugin package checklist
-
-This checklist covers legacy UI plugins loaded through `dsh.client`. A native-profile-only Client package instead uses the exact classification and entry rules above; it does not add a Cordis stub or a `./client` export.
 
 Bringing up a new `rsh/Programs/Web/client/<name>` plugin package (ui-workspace is a complete example; ui-sidebar/ui-user-questions are minimal skeletons):
 

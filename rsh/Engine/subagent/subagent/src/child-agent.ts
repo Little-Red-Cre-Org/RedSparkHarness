@@ -8,7 +8,6 @@
  * @module @deepseek-ai/dsh-subagent/child-agent
  */
 
-import { SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, AgentOptions, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
@@ -20,8 +19,7 @@ import type { ToolRestriction } from '@deepseek-ai/dsh-tools'
 // opportunistically (the documented `ctx.get` pattern), never as a hard dep —
 // and merge the `sandbox/mode` / `approval/policy` session-event payloads.
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import type {} from '@deepseek-ai/dsh-approval-definition'
-import type {} from '@deepseek-ai/dsh-approval-definition/legacy'
+import type {} from '@deepseek-ai/dsh-user-approval'
 // Type-only: make `ctx.get('agentPresets')` resolve to the preset roster when
 // composed — a child inherits its parent's composition opportunistically (the
 // documented `ctx.get` pattern), never as a hard dep. A rosterless deployment
@@ -170,7 +168,11 @@ export interface ChildComposition {
  * runtime-context contribution rather than a system-prompt section, so the
  * deployment's system prompt stays uniform across parents and children.
  */
-export { SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
+export const SUBAGENT_DELEGATION_CONTEXT
+  = 'You are a delegated subagent: your permission scope was fixed when you were started and cannot be '
+    + 'widened from inside this session — operations that require approval are rejected automatically. '
+    + 'When the task needs access beyond that scope, do not retry the denied operation; state the '
+    + 'limitation in your reply so the delegating agent can handle it.'
 
 /**
  * Compose one child inside its creation window: join its parent's preset,

@@ -18,16 +18,10 @@
       "path": "../../../../Core/subprocess/subprocess"
     },
     {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
-    },
-    {
       "path": "../../sandbox/sandbox"
     },
     {
-      "path": "../../settings/settings/tsconfig.json"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
+      "path": "../../settings/settings"
     }
   ]
 }

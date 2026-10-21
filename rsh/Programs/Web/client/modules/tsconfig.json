@@ -10,8 +10,7 @@
   "references": [
     { "path": "../../../../Core/vendor/cordis" },
     { "path": "../../../../Core/vendor/loader" },
-    { "path": "../../../../Core/util/http-routes/tsconfig.host.json" },
-    { "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis" },
+    { "path": "../../host/webserver" },
     { "path": "../../../../Core/util/package-manifest" },
     { "path": "../../../../Core/runtime-diagnostics/invariants" }
   ]

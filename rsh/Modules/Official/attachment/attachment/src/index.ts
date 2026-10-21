@@ -1,7 +1,7 @@
 /** Durable attachment storage seam (`ctx.attachments`). @module @deepseek-ai/dsh-attachment */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import { admitEncodedFile as admitFileInput, admitPromptContent as admitPromptInput, validateImageBatch as validateBatch } from './admission.ts'
+import { admitEncodedFile as admitFileInput, admitEncodedImages } from './admission.ts'
 import { AttachmentError, isAttachmentError as matchesAttachmentError } from './error.ts'
 import type {
   AdmittedPromptContentPart,
@@ -34,7 +34,6 @@ export type {
   FileAttachmentRef,
   ImageAttachmentLimits,
   ImageAttachmentRef,
-  ImageRequestAttachmentStore,
   ImageRequestPolicy,
   ImageMediaType,
   PromptContentPart,
@@ -77,7 +76,19 @@ export abstract class AttachmentStore extends Service implements AttachmentHostP
    * @returns durable references in the exact input order.
    */
   protected validateImageBatch(inputs: readonly SaveImageAttachment[]): void {
-    validateBatch(this.imageLimits, inputs)
+    const { maxImagesPerMessage, maxMessageImageBytes, mediaTypes } = this.imageLimits
+    if (inputs.length > maxImagesPerMessage) {
+      throw new AttachmentError('Image batch exceeds the configured image-count limit.', 'TOO_MANY_IMAGES')
+    }
+    const totalBytes = inputs.reduce((sum, input) => sum + input.data.byteLength, 0)
+    if (totalBytes > maxMessageImageBytes) {
+      throw new AttachmentError('Image batch exceeds the configured aggregate image-byte limit.', 'IMAGES_TOO_LARGE')
+    }
+    for (const input of inputs) {
+      if (!mediaTypes.includes(input.mediaType)) {
+        throw new AttachmentError(`Image type ${input.mediaType} is not accepted by this deployment.`, 'UNSUPPORTED_IMAGE_TYPE')
+      }
+    }
   }
 
   /**
@@ -104,7 +115,18 @@ export abstract class AttachmentStore extends Service implements AttachmentHostP
   async admitPromptContent(
     content: readonly AttachmentAdmissionPart[],
   ): Promise<AdmittedPromptContentPart[]> {
-    return admitPromptInput(this, content)
+    if (content.every(part => part.type !== 'image')) {
+      return content.map(part => part.type === 'text'
+        ? { type: 'text', text: part.text }
+        : { type: 'file', attachment: part.attachment })
+    }
+    const refs = await admitEncodedImages(this, content.filter(part => part.type === 'image'))
+    let next = 0
+    return content.map((part) => {
+      if (part.type === 'text') return { type: 'text', text: part.text }
+      if (part.type === 'file') return { type: 'file', attachment: part.attachment }
+      return { type: 'image', attachment: refs[next++] as ImageAttachmentRef }
+    })
   }
 
   /**

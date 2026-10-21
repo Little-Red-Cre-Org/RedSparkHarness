@@ -63,7 +63,7 @@ files:
 
 ### 设计理念
 
-生成器遵循一项核心分离原则：提取与生成通过与编译器无关的模型解耦。`WorkspaceAnalyzer` 读取以 face aggregate tsconfig 为种子的 TypeScript 程序，产出 `FaceModel` 与 `TypeGraph` 数据；`FaceModelEmitter` 只消费该模型，绝不接收编译器节点。模型保留声明标识、泛型参数及应用、显式继承、条件类型与映射类型、导入属性、abstract 修饰符与源码 JSDoc，并排除构造函数、静态成员与非公共成员。Service 提取包含继承的公共成员，保留派生类声明的覆盖，并排除 Typert 绑定元数据。
+生成器遵循一项核心分离原则：提取与生成通过与编译器无关的模型解耦。`WorkspaceAnalyzer` 读取以 face aggregate tsconfig 为种子的 TypeScript 程序，产出 `FaceModel` 与 `TypeGraph` 数据；`FaceModelEmitter` 只消费该模型，绝不接收编译器节点。模型保留声明标识、泛型参数及应用、显式继承、条件类型与映射类型、导入属性、abstract 修饰符与源码 JSDoc，并排除构造函数、静态成员与非公共成员。
 
 ### 源码地图
 
@@ -79,7 +79,7 @@ files:
 
 ### 分析与 face
 
-Host 与 Client 是两个独立的 TypeScript 程序。直接项目引用确定编译器 face 的成员归属，`dsh.client` 包子路径则确定运行时 face 的贡献；没有 `dsh.client` 的包若使用独立 `tsconfig.client.json`，只贡献源文件属于该 Client 项目的导出。`package.json#exports` 划定所有跨包公开边界，跨 face 的边只能来自导入或重新导出。解析到本包内部模块的相对导入会沿该模块的重新导出继续追踪，直到出现包说明符，因此包内转发模块保留原始声明引用；解析到其他包的相对导入会失败。`check` 模式遇到语法或语义诊断、缺失的公开类型标注、跨包私有引用，以及模型无法无损保留的可达声明合并时都会失败；`write` 模式插入类型检查器推导出的标注，并返回无诊断的 check 模式模型。NPM 依赖拥有的类型继续以 `external` 引用表示，不会被展开。
+Host 与 Client 是两个独立的 TypeScript 程序。直接项目引用确定编译器 face 的成员归属，`dsh.client` 包子路径则确定运行时 face 的贡献；`package.json#exports` 划定所有跨包公开边界，跨 face 的边只能来自导入或重新导出。解析到本包内部模块的相对导入会沿该模块的重新导出继续追踪，直到出现包说明符，因此包内转发模块保留原始声明引用；解析到其他包的相对导入会失败。`check` 模式遇到语法或语义诊断、缺失的公开类型标注、跨包私有引用，以及模型无法无损保留的可达声明合并时都会失败；`write` 模式插入类型检查器推导出的标注，并返回无诊断的 check 模式模型。NPM 依赖拥有的类型继续以 `external` 引用表示，不会被展开。
 
 ### 生成与发布约定
 
@@ -103,8 +103,6 @@ Host 与 Client 是两个独立的 TypeScript 程序。直接项目引用确定�
 - [Typert 注册表](../registry/README.zh.md)——生成产物所供给的运行时存储。
 - [API 网关参考](../../../Docs/api-gateway.zh.md)——生成的 Remote 描述符如何端到端被调用。
 - [与编译器无关的模型 Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-27-compiler-independent-typert-model.zh.md)——模型设计、备选方案与后果。
-
-显式标记 `@inheritdoc` 的服务成员使用其声明的 `extends` 或 `implements` 接口中的文档，并保留原有签名。目录仍拒绝所有者声明中缺失的参数或返回值文档。兼容 Service 和原生 Definition 共用可观察义务，不重复方法文档。
 
 -----
 

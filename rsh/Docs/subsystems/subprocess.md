@@ -57,10 +57,6 @@ type SubprocessStdinMode = 'ignore' | 'pipe' | { readonly data: string }
  * the complete stream recoverable up to its cap (the bash tool shape).
  */
 interface SubprocessCollect {
-  /** Observe captured bytes without consuming retained output; the callback must not throw.
-   * @param chunk - bytes delivered by this stream before process settlement.
-   */
-  onData?: (chunk: Uint8Array) => void
   /** In-memory cap in bytes; overflow keeps the TAIL. */
   maxBytes: number
   /** Full-stream spill file; absent disables spilling entirely. */
@@ -92,7 +88,7 @@ interface SubprocessStdio {
 
 ## The fully-explicit spawn spec
 
-The spec explicitly supplies `argv`, `cwd`, each stdio disposition, limits, and grace. Omitted `envMode` keeps the scrub-overlay environment; `'replace'` passes only `env`. `argv` is never shell-interpreted.
+The seam applies no defaults: every disposition, limit, and directory is explicit on the spec, so the caller's own config — not a hidden subprocess-service default — decides them. `argv` is never shell-interpreted.
 
 ```ts type-equiv
 /**
@@ -131,12 +127,6 @@ interface SubprocessSpawnSpec {
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
-  /**
-   * Environment materialization policy. Omission preserves the scrub-overlay
-   * contract above; `replace` passes only `env` entries to the child, matching
-   * Node's full-environment spawn behavior.
-   */
-  envMode?: SubprocessEnvironmentMode | undefined
 }
 ```
 

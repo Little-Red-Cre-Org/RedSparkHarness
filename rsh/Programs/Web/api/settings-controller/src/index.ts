@@ -17,11 +17,10 @@ import {
   openNativePath,
   openNativeTextFile,
 } from '@deepseek-ai/dsh-native-command'
-import type { SettingsDescriptor, SettingsPathOp, SettingsService } from '@deepseek-ai/dsh-settings-definition'
+import type { SettingsDescriptor, SettingsPathOp, SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type {
   SettingsDescribeValue, SettingsNamespaceView, SettingsPathOpView,
-} from '@deepseek-ai/dsh-settings-definition/types'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+} from '@deepseek-ai/dsh-settings/types'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { z } from 'zod'
@@ -295,7 +294,7 @@ export class SettingsController extends TypertRemoteService {
   }
 
   /** Resolve the optional provider or report how to supply it. */
-  private provider(): SettingsService {
+  private provider(): SettingsProvider {
     const settings = this.ctx.get('settings')
     if (settings === undefined) {
       throw new RemoteError(

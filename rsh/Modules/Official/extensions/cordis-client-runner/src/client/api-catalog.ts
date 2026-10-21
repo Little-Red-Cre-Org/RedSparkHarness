@@ -43,8 +43,6 @@ export interface ServiceApiEntry {
   summary: string
   /** Complete service description. */
   description: string
-  /** Base type shapes needed to interpret inherited service members. */
-  inheritedTypes?: readonly string[]
   /** Public methods, bodies stripped, in source order. */
   methods: readonly ServiceApiMethod[]
 }
@@ -234,19 +232,20 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'slots',
-    summary: 'Cordis service that owns SlotRuntime registrations by plugin fiber.',
-    description: 'Cordis service that owns SlotRuntime registrations by plugin fiber.',
+    summary: 'cordis Service layer of the slot system; see the module doc for the split with SlotCore.',
+    description: 'cordis Service layer of the slot system; see the module doc for the split with SlotCore.',
     methods: [
       {
         signature: 'declare readonly register: SlotCore[\'register\']',
-        description: 'The typed registration face is the SlotCore API; Cordis owns its disposer.',
+        description: 'The single registration API. The typed face IS the core\'s register (both overloads reused verbatim — one authority, no structural copy; see SlotCore.register for children declaration, store seat, inject face, load-time validation, and the unload cascade). This layer adds: disposal through the caller\'s ctx.effect (fiber unload = cascade), exclusive-factory minting (`store: createXxxStore` becomes a per-entry handle), the registrant diagnostics stamp, and store-instance lifecycle on the entry axis.\n\nDeclared here, implemented by prototype assignment below the class: it MUST stay a prototype method (never an instance arrow) — the cordis service proxy binds `this.ctx` to the CALLER\'s context at call time, which is what routes the effect (and the unload cascade) into the caller\'s fiber. An arrow property would freeze `this` to the service\'s own root ctx and silently break per-plugin disposal.',
         parameters: [],
       },
       {
         signature: 'inject(key: keyof SlotMap & string, callback: () => SlotInjectionEffect): () => void',
-        description: 'Run setup for each live declaration and bind the controller to the caller\'s fiber.',
+        description: 'Install an effect for each declaration lifetime of a slot. The callback runs synchronously when the declaration already exists; otherwise it runs inside the declaring `register()` call after the declaration is committed. Collapse disposes the effect and a later declaration runs it again. Callback effects are synchronous disposers; iterable effects install transactionally and dispose in reverse order. The controller belongs to the caller\'s fiber, so plugin unload cancels a pending wait and removes any active contribution.',
         parameters: [{ name: 'key', description: 'declared SlotMap key to depend on.' }, { name: 'callback', description: 'creates one disposer or an iterable of disposers.' }],
         returns: 'idempotent disposer for the wait and active effect.',
+        throws: ['callback setup failures synchronously when the slot is already declared.'],
       },
     ],
   },
@@ -453,7 +452,7 @@ export const EVENT_API: readonly EventApiEntry[] = [
   },
 ]
 
-/** Shapes of every exported type the Service and Event signatures or inherited service shapes reference (transitively), sorted by name. */
+/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */
 export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ActionsDecl',
@@ -497,7 +496,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ClientConnectionRpc',
-    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly response?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal, request?: ConnectionFetchRequest) => Promise<Response>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
+    declaration: 'export interface ClientConnectionRpc {\n    call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<ConnectionRpcResult<unknown>>;\n    readonly open?: (channel: string, endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>;\n}',
   },
   {
     name: 'ClientRemote',
@@ -510,10 +509,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ComposedProps',
     declaration: 'export type ComposedProps<K extends keyof SlotMap & string, EntryKey extends EntryKeyOf<K>, S extends keyof SlotMap & string, H, I extends object, M = never, N = undefined> = PropsRuntime<K, EntryKey> & PropsRenderSlots<S> & PropsStore<H> & InjectFace<I> & MatchedShare<SlotMap[K], M> & PropsLocale<N>;',
-  },
-  {
-    name: 'ConnectionFetchRequest',
-    declaration: 'export interface ConnectionFetchRequest {\n    readonly method?: string;\n    readonly headers?: HeadersInit;\n    readonly body?: BodyInit | null;\n    readonly duplex?: \'half\';\n}',
   },
   {
     name: 'ConnectionGeneration',
@@ -832,10 +827,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SlotInjectFace<I extends object> = I extends {\n    hooks: infer HS extends object;\n} ? Omit<I, \'hooks\'> & PropsSlotHooks<HS> : I;',
   },
   {
-    name: 'SlotInjectionEffect',
-    declaration: 'export type SlotInjectionEffect = (() => void) | Iterable<() => void, void, void>;',
-  },
-  {
     name: 'SlotInjectOf',
     declaration: 'export type SlotInjectOf<K extends keyof SlotMap & string> = SlotMap[K] extends {\n    inject: infer Injected extends object;\n} ? Injected : object;',
   },
@@ -893,15 +884,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ThemeDefinition',
-    declaration: 'export interface ThemeDefinition {\n    readonly id: string;\n    readonly colorScheme: \'light\' | \'dark\';\n    readonly tokens: Readonly<Record<string, string>>;\n}',
+    declaration: 'export interface ThemeDefinition {\n    id: string;\n    colorScheme: \'light\' | \'dark\';\n    tokens: ThemeTokens;\n}',
   },
   {
     name: 'ThemePreference',
-    declaration: 'export type ThemePreference = \'light\' | \'dark\' | \'system\';',
+    declaration: 'export type ThemePreference = typeof THEME_PREFERENCES[number];',
   },
   {
     name: 'ThemeSnapshot',
-    declaration: 'export interface ThemeSnapshot {\n    readonly preference: ThemePreference;\n    readonly fontSize: number;\n    readonly active: ThemeDefinition;\n    readonly themes: readonly ThemeDefinition[];\n    readonly revision: number;\n}',
+    declaration: 'export interface ThemeSnapshot {\n    preference: ThemePreference;\n    fontSize: number;\n    active: ThemeDefinition;\n    themes: readonly ThemeDefinition[];\n    revision: number;\n}',
   },
   {
     name: 'ThemeTokenModes',
@@ -910,6 +901,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ThemeTokenOverrides',
     declaration: 'export type ThemeTokenOverrides = Record<string, ThemeTokenModes>;',
+  },
+  {
+    name: 'ThemeTokens',
+    declaration: 'export type ThemeTokens = Record<string, string>;',
   },
   {
     name: 'Translate',
@@ -990,7 +985,7 @@ export function queryServiceApi(key?: string, services: readonly ServiceApiEntry
       },
       methods: service.methods,
     },
-    referencedTypes: referencedTypeClosure([...(service.inheritedTypes ?? []), ...service.methods.map(method => method.signature)]),
+    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),
   }
 }
 

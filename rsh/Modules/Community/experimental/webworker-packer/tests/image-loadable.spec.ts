@@ -16,8 +16,7 @@
  * and the active loader are module-level slots. The "starts with nothing loaded"
  * case asserts the instance the spec holds is the one that did the work.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -33,102 +32,6 @@ import { indexWorkspacePackages, previewFixtures } from '../src/repository.ts'
 import { DEFAULT_ROOT, MANIFEST_PATH, packVfsImage, packVfsOverlay } from '../src/pack.ts'
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
-
-describe('runtime export roots', () => {
-  it('skips type-only and stylesheet faces, loads shared client code, and rejects a missing runtime target', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'dsh-export-roots-'))
-    const name = '@deepseek-ai/dsh-http-routes'
-    const packageDirectory = join(directory, 'package')
-    const packageJson = join(packageDirectory, 'package.json')
-    const manifest: { name: string; files: string[]; exports: Record<string, unknown> } = {
-      name,
-      files: ['lib', 'src/base.css'],
-      exports: {
-        '.': { types: './lib/types/index.d.ts', default: './lib/index.js' },
-        './client': { types: './lib/types/client.d.ts', default: './lib/client.js' },
-        './types': { types: './lib/types/index.d.ts' },
-        './base.css': './src/base.css',
-      },
-    }
-    mkdirSync(join(packageDirectory, 'lib'), { recursive: true })
-    mkdirSync(join(packageDirectory, 'src'), { recursive: true })
-    writeFileSync(join(packageDirectory, 'lib/index.js'), 'module.exports = { ready: true }\n')
-    writeFileSync(join(packageDirectory, 'lib/client.js'),
-      'export const renderIndexInjections = html => html + "<script>__DSH_BOOT_READY__</script>"\n')
-    writeFileSync(join(packageDirectory, 'src/base.css'), 'body { color: black }\n')
-    writeFileSync(packageJson, `${JSON.stringify(manifest)}\n`)
-
-    const options = {
-      config: `- id: subject\n  name: '${name}'\n`,
-      profile: 'runtime-export-roots-check',
-      workspaces: new Map([[name, packageDirectory]]),
-      resolveFrom: repoRoot,
-      entries: [],
-    }
-
-    try {
-      const result = packVfsImage(options)
-      expect(result.files[`node_modules/${name}/lib/index.js`]).toBeDefined()
-      expect(new TextDecoder().decode(result.files[`node_modules/${name}/lib/client.js`]))
-        .not.toMatch(/\bexport\s+(?:\*|default|const|let|var|function|class|\{)/)
-      expect(result.files[`node_modules/${name}/src/base.css`]).toBeUndefined()
-
-      const vfs = loadVfsImage(await inflateImage(result.image, 'the HTTP routes client image'), DEFAULT_ROOT)
-      const loader = new WorkerModuleLoader({
-        vfs,
-        root: DEFAULT_ROOT,
-        staticModules: createNodeBuiltins(),
-        staticModulePrefixes: REPLACED_PREFIXES,
-      })
-      const renderer = loader.requireFrom(`${DEFAULT_ROOT}/workspace`)(`${name}/client`) as {
-        renderIndexInjections(html: string): string
-      }
-      expect(renderer.renderIndexInjections('<html></html>')).toContain('__DSH_BOOT_READY__')
-
-      manifest.exports['./missing'] = { types: './lib/types/missing.d.ts', default: './lib/missing.js' }
-      writeFileSync(packageJson, `${JSON.stringify(manifest)}\n`)
-      expect(() => packVfsImage(options)).toThrow(/cannot resolve/)
-    } finally {
-      rmSync(directory, { recursive: true, force: true })
-    }
-  })
-
-  const cordisClientBundle = join(repoRoot, 'rsh/Modules/Official/extensions/ui-cordis/lib/client.js')
-  it.skipIf(!existsSync(cordisClientBundle))('keeps the Cordis client module table as a page asset', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'dsh-cordis-page-asset-'))
-    const name = '@deepseek-ai/dsh-client-ui-cordis'
-    const packageDirectory = join(directory, 'package')
-    const clientDirectory = join(packageDirectory, 'lib')
-    const original = readFileSync(cordisClientBundle, 'utf8')
-    mkdirSync(clientDirectory, { recursive: true })
-    writeFileSync(join(packageDirectory, 'package.json'), `${JSON.stringify({
-      name,
-      files: ['lib'],
-      exports: {
-        '.': { types: './lib/types/index.d.ts', default: './lib/index.js' },
-        './client': { types: './lib/types/client/index.d.ts', default: './lib/client.js' },
-      },
-    })}\n`)
-    writeFileSync(join(clientDirectory, 'index.js'), 'module.exports = {}\n')
-    writeFileSync(join(clientDirectory, 'client.js'), original)
-
-    try {
-      const result = packVfsImage({
-        config: `- id: cordis-ui\n  name: '${name}'\n`,
-        profile: 'cordis-page-asset-check',
-        workspaces: new Map([[name, packageDirectory]]),
-        resolveFrom: repoRoot,
-        entries: [],
-      })
-      const packed = new TextDecoder().decode(result.files[`node_modules/${name}/lib/client.js`])
-      expect(packed).toContain('window.__ModuleLoader__.load')
-      expect(packed.slice(0, packed.lastIndexOf('\n//# sourceURL=')))
-        .toBe(original.replace(/\n\/\/# sourceMappingURL=\S+\s*$/, '\n'))
-    } finally {
-      rmSync(directory, { recursive: true, force: true })
-    }
-  })
-})
 
 /** A leaf workspace package: real build output, no dependencies to drag in. */
 const SUBJECT = '@deepseek-ai/dsh-timeout'
@@ -183,7 +86,7 @@ const subjectBuilt = [
   'rsh/Core/vendor/include/lib/index.js',
   'rsh/Core/vendor/loader/lib/index.js',
   'rsh/Programs/Web/host/webserver/lib/index.js',
-  'rsh/Modules/Official/llm/plugin-package-inventory-deepseek/lib/index.js',
+  'rsh/Engine/llm/plugin-package-inventory-deepseek/lib/index.js',
   'rsh/Core/native/system/packages/entry/lib/index.js',
   'rsh/Engine/preset/agent-presets/lib/typert.host.js',
   'rsh/Engine/preset/agent-presets/lib/typert.remote-client.js',

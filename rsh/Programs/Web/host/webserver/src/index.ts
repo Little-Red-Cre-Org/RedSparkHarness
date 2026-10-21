@@ -11,20 +11,63 @@ import type { IncomingMessage, ServerResponse, Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Duplex } from 'node:stream'
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { HttpRoute, HttpUpgradeRoute } from '@deepseek-ai/dsh-http-routes/host'
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
-import type { HttpWebServer, HttpWebServerConfig } from '@deepseek-ai/dsh-http-routes-cordis'
 import z from '@deepseek-ai/schemastery'
 import compressionMiddleware from 'compression'
 import Negotiator from 'negotiator'
-import { renderIndexInjections } from './injections.ts'
-import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
+import { renderIndexInjections, type IndexInjection } from './injections.ts'
 
 export { renderIndexInjections } from './injections.ts'
-export type { IndexInjection, IndexInjectionPlacement } from '@deepseek-ai/dsh-http-routes/client'
-export type { WebRoute, WebRouteKind, WebUpgradeRoute } from '@deepseek-ai/dsh-http-routes-cordis'
-export type { HttpWebServerConfig as Config } from '@deepseek-ai/dsh-http-routes-cordis'
-type Config = HttpWebServerConfig
+export type { IndexInjection, IndexInjectionPlacement } from './injections.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    webServer: WebServer
+  }
+  interface Events {
+    /**
+     * Collect the structured index injection table. Emitted on every index
+     * render and every worker boot-payload request; listeners push their
+     * current rows, so a row's data is read fresh at emit time.
+     * @param table - Mutable row table; listeners append in activation order.
+     * @mode emit
+     */
+    'webserver/index-inject'(table: IndexInjection[]): void
+  }
+}
+
+/** Route match kind: 'exact' matches the pathname verbatim; 'prefix' p matches p and p/<anything>. */
+export type WebRouteKind = 'exact' | 'prefix'
+
+/** One named route registration. */
+export interface WebRoute {
+  kind: WebRouteKind
+  /** Absolute pathname, no trailing slash. */
+  path: string
+  /** Owns the full response lifecycle (may hold the response open, e.g. SSE). */
+  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
+}
+
+/** One exact-path HTTP upgrade registration. */
+export interface WebUpgradeRoute {
+  /** Absolute pathname, no trailing slash. */
+  path: string
+  /** Owns protocol negotiation and the upgraded socket after dispatch. */
+  handler: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>
+}
+
+/** Web server listen and response-compression config. */
+export interface Config {
+  /** Listen host; the two supported values are loopback and all-interfaces. */
+  host: '127.0.0.1' | '0.0.0.0'
+  /** Listen port; zero requests an OS-assigned port. */
+  port: number
+  /** Response compression for socket-backed HTTP requests. @default 'none' */
+  compression?: 'none' | 'gzip'
+  /** Gzip DEFLATE level from 0 through 9. @default 1 */
+  compressionLevel?: number
+  /** Minimum known response length eligible for gzip; unknown-length streams are eligible. @default 1024 */
+  compressionThresholdBytes?: number
+}
 
 const DEFAULT_COMPRESSION = 'none' as const
 const DEFAULT_COMPRESSION_LEVEL = 1
@@ -78,7 +121,7 @@ function createGzipMiddleware(config: ResolvedConfig): NodeMiddleware {
  * during startup with 404 until its owner registers. A listen failure rejects
  * initialization, and the boot process reports the failed fiber.
  */
-export class WebServer extends Service implements HttpWebServer {
+export class WebServer extends Service {
   static Config: z<Config> = z.object({
     host: z.union([z.const('127.0.0.1'), z.const('0.0.0.0')]).required(),
     port: z.natural().max(65535).required(),
@@ -87,10 +130,12 @@ export class WebServer extends Service implements HttpWebServer {
     compressionThresholdBytes: z.natural().default(DEFAULT_COMPRESSION_THRESHOLD_BYTES),
   })
 
-  private readonly routes = new HttpRouteTable()
+  private readonly exact = new Map<string, WebRoute>()
+  private readonly prefixes = new Map<string, WebRoute>()
+  private readonly upgrades = new Map<string, WebUpgradeRoute>()
   private readonly upgradedSockets = new Set<Duplex>()
   private readonly indexTaps: ((html: string) => string)[] = []
-  private fallback: HttpRoute['handler'] | undefined
+  private fallback: WebRoute['handler'] | undefined
   private server!: Server
   private listenedPort!: number
   private readonly gzip: NodeMiddleware | undefined
@@ -115,20 +160,29 @@ export class WebServer extends Service implements HttpWebServer {
    * Register a named route. Duplicate (kind, path) throws — route patterns are
    * a composition-level contract, so a collision is a misconfiguration.
    * @param route - kind, path, and the owning handler.
-   * @returns a disposer that removes the route and drains admitted handlers.
+   * @returns the disposer removing the route.
    */
-  register(route: HttpRoute): () => Promise<void> {
-    return this.routes.register(route)
+  register(route: WebRoute): () => void {
+    const table = route.kind === 'exact' ? this.exact : this.prefixes
+    if (table.has(route.path)) {
+      throw new Error(`webserver: duplicate ${route.kind} route "${route.path}"`)
+    }
+    table.set(route.path, route)
+    return () => { table.delete(route.path) }
   }
 
   /**
    * Register an exact-path HTTP upgrade route. Duplicate paths throw because
    * one socket can have only one protocol owner.
    * @param route - pathname and handler owning negotiation plus socket use.
-   * @returns a disposer that removes the route and drains admitted handlers.
+   * @returns the disposer removing the route.
    */
-  registerUpgrade(route: HttpUpgradeRoute): () => Promise<void> {
-    return this.routes.registerUpgrade(route)
+  registerUpgrade(route: WebUpgradeRoute): () => void {
+    if (this.upgrades.has(route.path)) {
+      throw new Error(`webserver: duplicate upgrade route "${route.path}"`)
+    }
+    this.upgrades.set(route.path, route)
+    return () => { this.upgrades.delete(route.path) }
   }
 
   /**
@@ -139,7 +193,7 @@ export class WebServer extends Service implements HttpWebServer {
    * @param handler - owns the full response lifecycle of unmatched requests.
    * @returns the disposer releasing the seat.
    */
-  registerFallback(handler: HttpRoute['handler']): () => void {
+  registerFallback(handler: WebRoute['handler']): () => void {
     if (this.fallback !== undefined) {
       throw new Error('webserver: fallback already registered')
     }
@@ -168,7 +222,11 @@ export class WebServer extends Service implements HttpWebServer {
       /* v8 ignore next -- `?? '/'` arm: node:http always sets url on server
       requests; the field is only optional on the client-side IncomingMessage type */
       const rawPath = new URL(req.url ?? '/', 'http://x').pathname
-      if (await this.routes.dispatch(rawPath, req, res)) return
+      const route = this.match(rawPath)
+      if (route !== undefined) {
+        await route.handler(req, res)
+        return
+      }
       const fallback = this.fallback
       if (fallback === undefined) {
         res.writeHead(404)
@@ -206,22 +264,29 @@ export class WebServer extends Service implements HttpWebServer {
         socket.off('error', onError)
         this.upgradedSockets.delete(socket)
       })
-      let pathname: string
+      let route: WebUpgradeRoute | undefined
       try {
         /* v8 ignore next -- node:http always sets url on server requests. */
-        pathname = new URL(req.url ?? '/', 'http://x').pathname
+        route = this.upgrades.get(new URL(req.url ?? '/', 'http://x').pathname)
       } catch (error) {
         this.ctx.logger.warn(error instanceof Error ? error : new Error(String(error)))
         socket.destroy()
         return
       }
+      if (route === undefined) {
+        socket.destroy()
+        return
+      }
       this.upgradedSockets.add(socket)
-      void this.routes.dispatchUpgrade(pathname, req, socket, head).then((handled) => {
-        if (!handled) socket.destroy()
-      }).catch((error: unknown) => {
+      try {
+        Promise.resolve(route.handler(req, socket, head)).catch((error: unknown) => {
+          this.ctx.logger.warn(error instanceof Error ? error : new Error(String(error)))
+          socket.destroy()
+        })
+      } catch (error) {
         this.ctx.logger.warn(error instanceof Error ? error : new Error(String(error)))
         socket.destroy()
-      })
+      }
     })
 
     await new Promise<void>((resolve, reject) => {
@@ -237,18 +302,28 @@ export class WebServer extends Service implements HttpWebServer {
     // Node does not include upgraded sockets in closeAllConnections(). The service
     // owns them with the other connections, so it tracks and destroys them explicitly.
     this.ctx.effect(() => async () => {
-      const routeDrain = this.routes.close()
       const serverClosed = new Promise<void>((resolve) => {
         this.server.close(() => { resolve() })
       })
+      this.server.closeAllConnections()
       const upgradedClosed = [...this.upgradedSockets].map(socket => new Promise<void>((resolve) => {
         socket.once('close', () => { resolve() })
         socket.destroy()
       }))
-      await routeDrain
-      this.server.closeAllConnections()
       await Promise.all([serverClosed, ...upgradedClosed])
     }, 'webServer.listen')
+  }
+
+  /** Longest-prefix-wins over the prefix table after an exact-table miss. */
+  private match(pathname: string): WebRoute | undefined {
+    const exact = this.exact.get(pathname)
+    if (exact !== undefined) return exact
+    let best: WebRoute | undefined
+    for (const [prefix, route] of this.prefixes) {
+      if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) continue
+      if (best === undefined || prefix.length > best.path.length) best = route
+    }
+    return best
   }
 
   /**

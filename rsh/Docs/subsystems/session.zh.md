@@ -156,12 +156,6 @@ interface SessionEventMap {
    * so tolerating concurrent writers needs a signal beyond the log.
    */
   'session/end-seed': { inherited?: true }
-  /**
-   * Program-selected classification for a scheduled root. It is informational;
-   * older readers may skip it, while current Programs use it to keep scheduled
-   * roots ineligible for interactive management after replacement or restore.
-   */
-  'session/root-origin': { origin: 'scheduled' }
 }
 ```
 
@@ -451,7 +445,6 @@ declare class Session {
    * @param seed - optional borrowed replay or fork events.
    * @param header - optional borrowed storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
-   * @param onConstructorEvent - receives a newly appended seed marker for persistence by the sole owner.
    * @returns a detached session.
    */
   static create(
@@ -459,7 +452,6 @@ declare class Session {
     seed?: readonly SessionEvent[],
     header?: SessionHeader,
     inheritedEventCount?: SessionLogOffset,
-    onConstructorEvent?: (event: SessionEvent) => void,
   ): Session;
   /**
    * Restore a detached session by adopting an independently owned or deeply frozen seed.
@@ -521,20 +513,6 @@ declare class Session {
   /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
   get seq(): SessionLogOffset;
   /**
-   * Check whether this exact immutable event was accepted by this Session.
-   * @param event - candidate event supplied to a synchronous policy projection.
-   * @returns whether the log holds the same object at its assigned sequence.
-   */
-  hasAcceptedEvent(event: SessionEvent): boolean;
-  /**
-   * Register a synchronous veto before an event changes this Session's log.
-   * Guards receive the validated immutable event and must not append recursively.
-   * Historical restore events are not dispatched to guards.
-   * @param guard - check that throws to reject an event without changing the log.
-   * @returns exact registration disposer; removal is idempotent.
-   */
-  onBeforeAppend(guard: (event: SessionEvent) => void): () => void;
-  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
@@ -576,17 +554,6 @@ declare class Session {
     data: SessionEventMap[T],
     ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
   ): SessionEvent<T>;
-  /**
-   * Admit related facts together after every payload, guard, surface transition and
-   * publication callback has been validated. Guards observe the pre-batch log;
-   * publication observers see the complete accepted batch in sequence order.
-   * Persistence remains the selected writer's asynchronous durability barrier.
-   * @param inputs - ordered typed facts and required surface metadata; a log-only event may set
-   *   `ignorable: true` when older readers can safely skip it.
-   * @returns immutable accepted events with contiguous sequences.
-   * @throws before changing the log if any input or synchronous acceptance check fails.
-   */
-  appendBatch(inputs: readonly SessionAppendInput[]): readonly SessionEvent[];
   /**
    * The {@link EpochHeader} in force after the log's last header event — the
    * header the NEXT request will be compared against — or undefined before

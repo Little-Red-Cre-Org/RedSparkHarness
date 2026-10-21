@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 import {
   checkDshFamilyVersion,
   checkCordisPeerPolicy,
-  checkWorkspaceManifest,
   collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
@@ -157,18 +156,18 @@ describe('runtime-layer constraints', () => {
     ])
   })
 
-  it('rejects a Module dependency on the Program-owned SDK server', () => {
+  it('rejects a renewed Codex dependency on the Program-owned SDK protocol', () => {
     expect(collectRuntimeLayerViolations([{
-      dir: 'rsh/Programs/SDK/packages/native-server',
-      manifest: { name: '@deepseek-ai/dsh-native-sdk-server' },
+      dir: 'rsh/Programs/SDK/packages/protocol',
+      manifest: { name: '@deepseek-ai/dsh-sdk-protocol' },
     }, {
-      dir: 'rsh/Modules/Official/subagent/codex-app-server',
+      dir: 'rsh/Engine/subagent/subagent-codex',
       manifest: {
-        name: '@deepseek-ai/dsh-codex-app-server',
-        dependencies: { '@deepseek-ai/dsh-native-sdk-server': 'workspace:^' },
+        name: '@deepseek-ai/dsh-subagent-codex',
+        dependencies: { '@deepseek-ai/dsh-sdk-protocol': 'workspace:^' },
       },
     }])).toEqual([
-      '@deepseek-ai/dsh-codex-app-server: dependencies.@deepseek-ai/dsh-native-sdk-server violates runtime-layer policy: Module packages may not consume Program packages',
+      '@deepseek-ai/dsh-subagent-codex: dependencies.@deepseek-ai/dsh-sdk-protocol violates runtime-layer policy: Engine packages may not consume Program packages',
     ])
   })
 
@@ -217,79 +216,7 @@ describe('dsh family version coherence', () => {
   })
 })
 
-describe('private Desktop compatibility assembly constraints', () => {
-  const owner: WorkspaceManifest = {
-    dir: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
-    manifest: {
-      name: '@deepseek-ai/dsh-desktop-host-compatibility',
-      version: '0.1.5-rc.2',
-      private: true,
-      repository: {
-        type: 'git',
-        url: 'git+https://github.com/deepseek-ai/deepseek-harness.git',
-        directory: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
-      },
-      type: 'module',
-      main: 'lib/index.js',
-      types: 'lib/types/index.d.ts',
-      files: ['lib/index.js', 'config/desktop.cordis.patch.yml', 'lib/types/**/*.d.ts'],
-      peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-      devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-      exports: { '.': { types: './lib/types/index.d.ts', default: './lib/index.js' } },
-    },
-  }
-
-  it('keeps the private assembly repository and payload exact', () => {
-    expect(checkWorkspaceManifest(owner)).toEqual([])
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: { ...owner.manifest, private: false },
-    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly must set "private": true')
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: { ...owner.manifest, files: ['lib/index.js', 'lib/types/**/*.d.ts'] },
-    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: package.json files must be ["lib/index.js","config/desktop.cordis.patch.yml","lib/types/**/*.d.ts"]')
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: {
-        ...owner.manifest,
-        repository: { ...owner.manifest.repository, directory: 'rsh/Programs/DesktopHost' },
-      },
-    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/deepseek-ai/deepseek-harness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
-  })
-})
-
 describe('Cordis peer classification', () => {
-  it.each([
-    {
-      name: 'application distribution and ordinary schema dependency',
-      manifests: [
-        { dir: 'rsh/Programs/CLI', manifest: { name: '@deepseek-ai/dsh' } },
-        {
-          dir: 'rsh/Programs/Web/api/native-web-session-controller',
-          manifest: {
-            name: '@deepseek-ai/dsh-native-web-session-controller',
-            dependencies: { '@deepseek-ai/schemastery': 'workspace:^' },
-          },
-        },
-      ],
-    },
-    {
-      name: 'registered compatibility-only optional Cordis peer',
-      manifests: [{
-        dir: 'rsh/Core/typert/protocol',
-        manifest: {
-          name: '@deepseek-ai/dsh-typert-protocol',
-          peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-          peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
-          devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-        },
-      }],
-    },
-  ] satisfies Array<{ name: string; manifests: WorkspaceManifest[] }>)('$name passes the library Cordis policy', ({ manifests }) => {
-    for (const manifest of manifests) expect(checkCordisPeerPolicy(manifest)).toEqual([])
-  })
-
   it('requires Cordis for compatibility-only packages', () => {
     expect(checkCordisPeerPolicy({
       dir: 'rsh/Engine/core/agent-loop',
@@ -324,33 +251,6 @@ describe('Cordis peer classification', () => {
     })).toContain('@deepseek-ai/dsh-native-agent: native runtime must not declare Cordis dependencies')
   })
 
-  it('classifies the TypeScript SDK client as a Cordis-free native package', () => {
-    expect(checkCordisPeerPolicy({
-      dir: 'rsh/Programs/SDK/packages/client',
-      manifest: {
-        name: '@deepseek-ai/dsh-sdk-client',
-        dependencies: { '@deepseek-ai/dsh': 'workspace:*' },
-        peerDependencies: {
-          '@deepseek-ai/dsh-llm': 'workspace:^',
-          '@deepseek-ai/dsh-sdk-protocol': 'workspace:^',
-          '@deepseek-ai/dsh-session': 'workspace:^',
-        },
-        devDependencies: {
-          '@deepseek-ai/dsh-llm': 'workspace:^',
-          '@deepseek-ai/dsh-sdk-protocol': 'workspace:^',
-          '@deepseek-ai/dsh-session': 'workspace:^',
-        },
-      },
-    })).toEqual([])
-    expect(checkCordisPeerPolicy({
-      dir: 'rsh/Programs/SDK/packages/client',
-      manifest: {
-        name: '@deepseek-ai/dsh-sdk-client',
-        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-      },
-    })).toContain('@deepseek-ai/dsh-sdk-client: native runtime must not declare Cordis dependencies')
-  })
-
   it('requires optional Cordis peers for mixed native packages', () => {
     expect(checkCordisPeerPolicy({
       dir: 'rsh/Modules/Official/fs/fs-local',
@@ -362,9 +262,9 @@ describe('Cordis peer classification', () => {
       },
     })).toEqual([])
     expect(checkCordisPeerPolicy({
-      dir: 'rsh/Modules/Official/webhook/webhook',
+      dir: 'rsh/Programs/Web/client/web',
       manifest: {
-        name: '@deepseek-ai/dsh-webhook',
+        name: '@deepseek-ai/dsh-client-web',
         peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
         peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
         devDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
@@ -379,7 +279,6 @@ describe('Cordis peer classification', () => {
       },
     })).toContain('@deepseek-ai/dsh-fs-local: mixed native package must mark the Cordis peer as optional')
   })
-
 })
 
 describe('package payload constraints', () => {
@@ -418,22 +317,7 @@ describe('package payload constraints', () => {
   it.each([
     ['@deepseek-ai/dsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
     ['@deepseek-ai/dsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-task-scheduler', ['lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-subprocess-local', [
-      'lib/native.js', 'lib/child-connection.js', 'lib/shared-*.js', 'lib/runner.js', 'lib/runner-*.js', 'scripts/ensure-spawn-helper.mjs',
-    ]],
-    ['@deepseek-ai/dsh-settings', ['lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css']],
-    ['@deepseek-ai/dsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-subagent-claude-code', ['lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-tool-session-query', ['lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-session-query-sqlite', ['lib/core.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-session-projection-cache', ['lib/native.js', 'lib/shared-*.js']],
-    ['@deepseek-ai/dsh-native-agent', ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js']],
+    ['@deepseek-ai/dsh-launch-environment', ['lib/native.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
     expect(expectedDshPackageFiles({ name })).toEqual([
       'lib/index.js',
@@ -442,55 +326,9 @@ describe('package payload constraints', () => {
     ])
   })
 
-  it('includes the emitted Workflow type module required by its root bundle', () => {
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-workflow' })).toContain('lib/types.js')
-  })
-
-  it('includes the separately published Todo Client entry', () => {
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-tool-todo' })).toContain('lib/client-native.js')
-  })
-
-  it('keeps the Native archive bundle beside the Client entry', () => {
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-session-log-export' })).toEqual([
-      'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
-    ])
-  })
-
-  it('publishes the ACP child research license with its native entries', () => {
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-acp-child' })).toEqual([
-      'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
-    ])
-  })
-
-  it('includes the Native projection bundle and emitted type runtime', () => {
-    expect(expectedDshPackageFiles({
-      name: '@deepseek-ai/dsh-session-projection',
-      exports: {
-        './types': {
-          types: './lib/types/types.d.ts',
-          default: './lib/types/types.js',
-        },
-      },
-    })).toEqual([
-      'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.js', 'lib/types/**/*.d.ts',
-    ])
-  })
-
-  it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {
+  it('includes the Cordis-free sandbox policy type entry in the package', () => {
     expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sandbox' })).toEqual([
-      'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
-    ])
-  })
-
-  it('keeps the SDK client shared chunks while requiring exact owner package files', () => {
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-client' })).toEqual([
-      'lib/*.js', 'lib/types/**/*.d.ts',
-    ])
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-runtime' })).toEqual([
-      'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
-    ])
-    expect(expectedDshPackageFiles({ name: '@deepseek-ai/dsh-sdk-child' })).toEqual([
-      'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
+      'lib/index.js', 'lib/native-types.js', 'lib/types/**/*.d.ts',
     ])
   })
 })

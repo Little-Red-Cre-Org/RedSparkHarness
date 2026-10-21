@@ -83,26 +83,11 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-Sources: [`rsh/Engine/core/session/src/types.ts:411`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:419`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:441`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:472`](../Engine/core/session/src/types.ts)
+Sources: [`rsh/Engine/core/session/src/types.ts:404`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:412`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:434`](../Engine/core/session/src/types.ts) · [`rsh/Engine/core/session/src/types.ts:465`](../Engine/core/session/src/types.ts)
 
 ## Events
 
 ### `agent/*`
-
-<a id="agentinboxmoved--log-only"></a>
-
-#### `agent/inbox/moved` — log-only
-
-```ts persistence-catalog
-/**
- * Move one queued message to the end of the next-step list as one replayable fact.
- * @param data - exact queued message identity to move.
- * @param data.messageId - stable id already pending in `next-turn`.
- */
-'agent/inbox/moved': { messageId: MessageId }
-```
-
-Source: [`rsh/Engine/core/native-agent/src/inbox.ts:75`](../Engine/core/native-agent/src/inbox.ts)
 
 <a id="agentinboxspliced--log-only"></a>
 
@@ -113,7 +98,6 @@ Source: [`rsh/Engine/core/native-agent/src/inbox.ts:75`](../Engine/core/native-a
  * One normalized mutation of an agent's durable pending-message lists.
  * The session-projection registry applies the committed event before
  * `Session.append()` returns; Inbox live notifications follow that commit.
- * @param data - selected list splice and optional cancellation attribution.
  */
 'agent/inbox/spliced': {
   target: InboxTarget
@@ -124,7 +108,7 @@ Source: [`rsh/Engine/core/native-agent/src/inbox.ts:75`](../Engine/core/native-a
 }
 ```
 
-Source: [`rsh/Engine/core/native-agent/src/inbox.ts:63`](../Engine/core/native-agent/src/inbox.ts)
+Source: [`rsh/Engine/core/agent/src/types.ts:87`](../Engine/core/agent/src/types.ts)
 
 ### `agent-preset/*`
 
@@ -134,13 +118,15 @@ Source: [`rsh/Engine/core/native-agent/src/inbox.ts:63`](../Engine/core/native-a
 
 ```ts persistence-catalog
 /**
- * A blank Session selects its subsequent Agent composition.
- * @param agentPreset - selected deployment preset identifier.
+ * The session's agent preset was chosen after creation, while the session
+ * was still blank. Log-only: it records the composition later turns ran
+ * under, so a resumed or forked session rebuilds the same one instead of
+ * the header's creation-time value.
  */
 'agent-preset/selected': { agentPreset: string }
 ```
 
-Source: [`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine/preset/agent-presets/src/selection-events.ts)
+Source: [`rsh/Engine/preset/agent-presets/src/session.ts:28`](../Engine/preset/agent-presets/src/session.ts)
 
 ### `approval/*`
 
@@ -149,7 +135,14 @@ Source: [`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine
 #### `approval/asked` — log-only
 
 ```ts persistence-catalog
-/** One compatibility approval question before its matching decision. */
+/**
+ * An approval question was put to the answerer chain — log-only audit
+ * (like `hook/*`; NOT a surface event, carries no `surfaceOp`). `id` pairs
+ * it with the `approval/decided` that always follows; `toolName` is the
+ * tool the question is about, `callId` the exact tool call when the asker
+ * had one, `reason` the asker's human-readable explanation (e.g. a hook's
+ * permission-decision reason).
+ */
 'approval/asked': {
   id: ApprovalRequestId
   toolName: string
@@ -160,29 +153,47 @@ Source: [`rsh/Engine/preset/agent-presets/src/selection-events.ts:10`](../Engine
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:92`](../Engine/core/approval-definition/src/legacy.ts)
+Source: [`rsh/Modules/Official/interaction/user-approval/src/types.ts:44`](../Modules/Official/interaction/user-approval/src/types.ts)
 
 <a id="approvaldecided--log-only"></a>
 
 #### `approval/decided` — log-only
 
 ```ts persistence-catalog
-/** Closed outcome paired with a preceding compatibility approval question. */
-'approval/decided': { id: ApprovalRequestId; outcome: ApprovalOutcome }
+/**
+ * The outcome of a prior `approval/asked` (same `id`) — log-only audit.
+ * Exactly one per ask, appended when the outcome is known: a decision, a
+ * cancellation, or the fail-closed `'unavailable'`.
+ */
+'approval/decided': {
+  id: ApprovalRequestId
+  outcome: ApprovalOutcome
+}
 ```
 
-Source: [`rsh/Engine/core/approval-definition/src/legacy.ts:99`](../Engine/core/approval-definition/src/legacy.ts)
+Source: [`rsh/Modules/Official/interaction/user-approval/src/types.ts:55`](../Modules/Official/interaction/user-approval/src/types.ts)
 
 <a id="approvalpolicy--log-only"></a>
 
 #### `approval/policy` — log-only
 
 ```ts persistence-catalog
-/** Durable per-Session approval override shared by Native and compatibility consumers. */
-'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }
+/**
+ * The session's approval policy was switched — log-only, durable,
+ * replayable, never in the model transcript (the model learns the policy
+ * from the runtime-context snapshot and live switch notices). The LAST
+ * such event is the session's override.
+ * `source: 'delegation'` marks an override seeded into a child; an absent
+ * source is a runtime switch.
+ */
+'approval/policy': {
+  policy: ApprovalPolicy
+  /** Marks an override seeded into a child at delegation. */
+  source?: 'delegation'
+}
 ```
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:118`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/user-approval/src/index.ts:33`](../Modules/Official/interaction/user-approval/src/index.ts)
 
 ### `assistant/*`
 
@@ -199,7 +210,7 @@ Source: [`rsh/Engine/core/approval-definition/src/index.ts:118`](../Engine/core/
 'assistant/attempt': { turn: number; step: number; stream: AssistantStreamRecord[] }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:336`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:335`](../Engine/core/session/src/types.ts)
 
 <a id="assistantmessage--surface"></a>
 
@@ -229,7 +240,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:336`](../Engine/core/session/src/
 
 Types: [TokenUsage](subsystems/llm-streaming.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:322`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:321`](../Engine/core/session/src/types.ts)
 
 ### `command/*`
 
@@ -252,7 +263,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:322`](../Engine/core/session/src/
 }
 ```
 
-Source: [`rsh/Modules/Official/interaction/commands/src/facts.ts:87`](../Modules/Official/interaction/commands/src/facts.ts)
+Source: [`rsh/Modules/Official/interaction/commands/src/types.ts:112`](../Modules/Official/interaction/commands/src/types.ts)
 
 <a id="commandrun--log-only"></a>
 
@@ -272,7 +283,7 @@ Source: [`rsh/Modules/Official/interaction/commands/src/facts.ts:87`](../Modules
 'command/run': { commandId: CommandId; name: string; args?: string; source: CommandSource }
 ```
 
-Source: [`rsh/Modules/Official/interaction/commands/src/facts.ts:80`](../Modules/Official/interaction/commands/src/facts.ts)
+Source: [`rsh/Modules/Official/interaction/commands/src/types.ts:105`](../Modules/Official/interaction/commands/src/types.ts)
 
 ### `compaction/*`
 
@@ -400,19 +411,6 @@ Types: [ToolCallId](subsystems/core.md)
 
 Source: [`rsh/Modules/Official/fs/tool-present/src/types.ts:15`](../Modules/Official/fs/tool-present/src/types.ts)
 
-### `execution/*`
-
-<a id="executionpolicy--log-only"></a>
-
-#### `execution/policy` — log-only
-
-```ts persistence-catalog
-/** Required execution authority; consumers must refuse to run when they cannot enforce it. */
-'execution/policy': NativeSessionExecutionPolicy
-```
-
-Source: [`rsh/Engine/core/native-session-execution/src/execution-policy.ts:66`](../Engine/core/native-session-execution/src/execution-policy.ts)
-
 ### `feedback/*`
 
 <a id="feedbackmessage-delete--log-only"></a>
@@ -449,7 +447,7 @@ Source: [`rsh/Modules/Official/feedback/message-feedback/src/types.ts:56`](../Mo
 'feedback/record': FeedbackRecord
 ```
 
-Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:38`](../Modules/Official/feedback/command-feedback/src/types.ts)
+Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:40`](../Modules/Official/feedback/command-feedback/src/types.ts)
 
 ### `goal/*`
 
@@ -464,7 +462,7 @@ Source: [`rsh/Modules/Official/feedback/command-feedback/src/types.ts:38`](../Mo
 'goal/change': GoalChangeMeta
 ```
 
-Source: [`rsh/Engine/goal/goal/src/facts.ts:57`](../Engine/goal/goal/src/facts.ts)
+Source: [`rsh/Engine/goal/goal/src/domain.ts:66`](../Engine/goal/goal/src/domain.ts)
 
 ### `hook/*`
 
@@ -547,11 +545,14 @@ Source: [`rsh/Engine/llm/llm-retry/src/types.ts:11`](../Engine/llm/llm-retry/src
 #### `model/selection` — log-only
 
 ```ts persistence-catalog
-/** Complete validated selection for subsequent prompt assembly; excluded from model history. */
+/**
+ * Complete validated model selection requested for subsequent prompt
+ * assembly. Log-only: it never enters derived model history.
+ */
 'model/selection': ModelSelection
 ```
 
-Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../Engine/core/native-model-execution/src/model-selection.ts)
+Source: [`rsh/Programs/Web/api/session-controller/src/types.ts:40`](../Programs/Web/api/session-controller/src/types.ts)
 
 ### `native-approval/*`
 
@@ -560,7 +561,7 @@ Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../E
 #### `native-approval/asked` — log-only
 
 ```ts persistence-catalog
-/** One native approval question before its matching decision is recorded. */
+/** One native approval question before a matching decision is recorded. */
 'native-approval/asked': {
   id: NativeApprovalRequestId
   toolName: string
@@ -571,23 +572,22 @@ Source: [`rsh/Engine/core/native-model-execution/src/model-selection.ts:7`](../E
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:122`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:38`](../Modules/Official/interaction/native-approval/src/types.ts)
 
 <a id="native-approvaldecided--log-only"></a>
 
 #### `native-approval/decided` — log-only
 
 ```ts persistence-catalog
-/** Closed native approval outcome paired with a preceding native asked event. */
+/** Closed native approval outcome paired with a preceding native-approval/asked event. */
 'native-approval/decided': {
   id: NativeApprovalRequestId
   policy: NativeApprovalPolicy
   outcome: NativeApprovalOutcome
-  sessionGrant?: NativeApprovalSessionGrant
 }
 ```
 
-Source: [`rsh/Engine/core/approval-definition/src/index.ts:129`](../Engine/core/approval-definition/src/index.ts)
+Source: [`rsh/Modules/Official/interaction/native-approval/src/types.ts:45`](../Modules/Official/interaction/native-approval/src/types.ts)
 
 ### `permission/*`
 
@@ -605,7 +605,7 @@ Source: [`rsh/Engine/core/approval-definition/src/index.ts:129`](../Engine/core/
 'permission/preset': { preset: string }
 ```
 
-Source: [`rsh/Modules/Official/interaction/permission-presets/src/types.ts:57`](../Modules/Official/interaction/permission-presets/src/types.ts)
+Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts:54`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
 ### `plan/*`
 
@@ -617,13 +617,12 @@ Source: [`rsh/Modules/Official/interaction/permission-presets/src/types.ts:57`](
 /**
  * Whether plan mode is in force from this point on: log-only, non-surface,
  * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through the projection unit's fold (Cordis) or the native
- * plan state fold.
+ * inactive through the projection unit's fold.
  */
 'plan/mode': { active: boolean }
 ```
 
-Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Official/plan/plan-mode/src/common.ts)
+Source: [`rsh/Modules/Official/plan/plan-mode/src/index.ts:47`](../Modules/Official/plan/plan-mode/src/index.ts)
 
 ### `request/*`
 
@@ -641,7 +640,7 @@ Source: [`rsh/Modules/Official/plan/plan-mode/src/common.ts:19`](../Modules/Offi
 'request/context': RequestContext
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:378`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:377`](../Engine/core/session/src/types.ts)
 
 <a id="requestheader--log-only"></a>
 
@@ -660,7 +659,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:378`](../Engine/core/session/src/
 }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:366`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:365`](../Engine/core/session/src/types.ts)
 
 ### `sandbox/*`
 
@@ -669,7 +668,13 @@ Source: [`rsh/Engine/core/session/src/types.ts:366`](../Engine/core/session/src/
 #### `sandbox/mode` — log-only
 
 ```ts persistence-catalog
-/** Durable, log-only mode override folded by every native and compatibility policy consumer. */
+/**
+ * The session's sandbox mode was switched — log-only (like `approval/*`;
+ * NOT a surface event, carries no `surfaceOp`): durable and replayable,
+ * never in the model transcript. The LAST such event is the session's
+ * override (folded by the sandboxMode projection unit). `source: 'delegation'` marks
+ * an override seeded into a child; an absent source is a runtime switch.
+ */
 'sandbox/mode': {
   mode: SandboxMode
   /** Marks an override seeded into a child at delegation. */
@@ -677,7 +682,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:366`](../Engine/core/session/src/
 }
 ```
 
-Source: [`rsh/Modules/Official/sandbox/sandbox/src/native-types.ts:16`](../Modules/Official/sandbox/sandbox/src/native-types.ts)
+Source: [`rsh/Modules/Official/sandbox/sandbox-policy/src/session-mode.ts:33`](../Modules/Official/sandbox/sandbox-policy/src/session-mode.ts)
 
 ### `schedule/*`
 
@@ -729,22 +734,7 @@ Source: [`rsh/Engine/schedule/schedule/src/types.ts:219`](../Engine/schedule/sch
 'session/end-seed': { inherited?: true }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:401`](../Engine/core/session/src/types.ts)
-
-<a id="sessionroot-origin--log-only"></a>
-
-#### `session/root-origin` — log-only
-
-```ts persistence-catalog
-/**
- * Program-selected classification for a scheduled root. It is informational;
- * older readers may skip it, while current Programs use it to keep scheduled
- * roots ineligible for interactive management after replacement or restore.
- */
-'session/root-origin': { origin: 'scheduled' }
-```
-
-Source: [`rsh/Engine/core/session/src/types.ts:407`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:400`](../Engine/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 
@@ -760,7 +750,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:407`](../Engine/core/session/src/
 
 Types: [SessionTitleEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/session-title/src/facts.ts)
+Source: [`rsh/Engine/session/session-title/src/index.ts:77`](../Engine/session/session-title/src/index.ts)
 
 <a id="sessiontitle-llm-request--log-only"></a>
 
@@ -773,7 +763,7 @@ Source: [`rsh/Engine/session/session-title/src/facts.ts:30`](../Engine/session/s
 
 Types: [SessionTitleLlmRequestEventData](subsystems/session-title.md)
 
-Source: [`rsh/Engine/session/session-title-llm/src/core.ts:41`](../Engine/session/session-title-llm/src/core.ts)
+Source: [`rsh/Engine/session/session-title-llm/src/index.ts:45`](../Engine/session/session-title-llm/src/index.ts)
 
 ### `session-log-deepseek/*`
 
@@ -793,7 +783,7 @@ Source: [`rsh/Engine/session/session-title-llm/src/core.ts:41`](../Engine/sessio
 }
 ```
 
-Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/types.ts:81`](../Modules/Official/llm/session-log-deepseek/src/types.ts)
+Source: [`rsh/Engine/session/session-log-deepseek/src/types.ts:81`](../Engine/session/session-log-deepseek/src/types.ts)
 
 ### `step/*`
 
@@ -806,7 +796,7 @@ Source: [`rsh/Modules/Official/llm/session-log-deepseek/src/types.ts:81`](../Mod
 'step/end': { turn: number; step: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:290`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:289`](../Engine/core/session/src/types.ts)
 
 <a id="stepstart--log-only"></a>
 
@@ -817,7 +807,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:290`](../Engine/core/session/src/
 'step/start': { turn: number; step: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:288`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:287`](../Engine/core/session/src/types.ts)
 
 ### `subagent/*`
 
@@ -842,60 +832,15 @@ Source: [`rsh/Engine/subagent/subagent/src/catalog.ts:40`](../Engine/subagent/su
 ```ts persistence-catalog
 /**
  * Durable identity and lifecycle mode of a session-backed subagent child,
- * appended once by the establishing provider during fresh materialization,
- * before its first request. Continuable records also carry their
+ * appended once by the establishing provider inside the child's initial
+ * turn, before its first request. Continuable records also carry their
  * resumable composition. Log-only: it carries no `surfaceOp`, never enters
  * model history, and survives compaction.
  */
 'subagent/descriptor': SubagentDescriptorData
 ```
 
-Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:42`](../Engine/subagent/subagent-protocol/src/descriptor.ts)
-
-<a id="subagentexternal-end--log-only"></a>
-
-#### `subagent/external-end` — log-only
-
-```ts persistence-catalog
-/**
- * Records settlement only after the product confirms complete owned-range cleanup; a failed startup has no pair.
- */
-'subagent/external-end': NativeExternalSubagentFinishedEvent
-```
-
-Types: [NativeExternalSubagentFinishedEvent](subsystems/subagent.md)
-
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:402`](../Engine/subagent/native-subagent/src/external-driver.ts)
-
-<a id="subagentexternal-operation--log-only"></a>
-
-#### `subagent/external-operation` — log-only
-
-```ts persistence-catalog
-/**
- * Records complete model request and outcome JSON before the external product forwards or consumes it.
- * Parent and invocation-root ids and captured epochs bind every attempt to the exact admitted owners.
- */
-'subagent/external-operation': NativeExternalOperationEvent
-```
-
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:407`](../Engine/subagent/native-subagent/src/external-driver.ts)
-
-<a id="subagentexternal-start--log-only"></a>
-
-#### `subagent/external-start` — log-only
-
-```ts persistence-catalog
-/**
- * Records a product child only after its real readiness handshake, with the exact Native parent and active-root lineage.
- * The owning parent Session writer flushes this event before Native publishes the child to consumers.
- */
-'subagent/external-start': NativeExternalSubagentStartedEvent
-```
-
-Types: [NativeExternalSubagentStartedEvent](subsystems/subagent.md)
-
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:398`](../Engine/subagent/native-subagent/src/external-driver.ts)
+Source: [`rsh/Engine/subagent/subagent/src/descriptor.ts:38`](../Engine/subagent/subagent/src/descriptor.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 
@@ -938,7 +883,7 @@ Source: [`rsh/Engine/subagent/tool-subagent/src/model-selection-state.ts:17`](..
 'system/message': { turn: number; step: number; message: SystemMessage }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:311`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:310`](../Engine/core/session/src/types.ts)
 
 ### `team/*`
 
@@ -1012,7 +957,7 @@ Source: [`rsh/Modules/Community/experimental/agent-team/src/types.ts:223`](../Mo
 
 Types: [TodoItem](subsystems/todo.md)
 
-Source: [`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/Official/todo/tool-todo/src/todo-types.ts)
+Source: [`rsh/Modules/Official/todo/tool-todo/src/types.ts:31`](../Modules/Official/todo/tool-todo/src/types.ts)
 
 ### `tool/*`
 
@@ -1031,7 +976,7 @@ Source: [`rsh/Modules/Official/todo/tool-todo/src/todo-types.ts:22`](../Modules/
 
 Types: [ToolCallId](subsystems/core.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:342`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:341`](../Engine/core/session/src/types.ts)
 
 <a id="toolptc-dispatch--log-only"></a>
 
@@ -1056,7 +1001,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:342`](../Engine/core/session/src/
 'tool/ptc-dispatch': PtcDispatchEventData
 ```
 
-Source: [`rsh/Engine/core/native-tools/src/types.ts:80`](../Engine/core/native-tools/src/types.ts)
+Source: [`rsh/Engine/core/tools/src/types.ts:56`](../Engine/core/tools/src/types.ts)
 
 <a id="toolptc-dispatch-start--log-only"></a>
 
@@ -1079,7 +1024,7 @@ Source: [`rsh/Engine/core/native-tools/src/types.ts:80`](../Engine/core/native-t
 'tool/ptc-dispatch-start': PtcDispatchStartEventData
 ```
 
-Source: [`rsh/Engine/core/native-tools/src/types.ts:64`](../Engine/core/native-tools/src/types.ts)
+Source: [`rsh/Engine/core/tools/src/types.ts:40`](../Engine/core/tools/src/types.ts)
 
 <a id="toolresult--surface"></a>
 
@@ -1107,7 +1052,7 @@ Source: [`rsh/Engine/core/native-tools/src/types.ts:64`](../Engine/core/native-t
 }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:354`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:353`](../Engine/core/session/src/types.ts)
 
 ### `tool-workflow/*`
 
@@ -1187,7 +1132,7 @@ Source: [`rsh/Engine/workflow/tool-workflow/src/types.ts:47`](../Engine/workflow
 
 Types: [TurnEndReason](subsystems/session.md)
 
-Source: [`rsh/Engine/core/session/src/types.ts:286`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:285`](../Engine/core/session/src/types.ts)
 
 <a id="turnstart--log-only"></a>
 
@@ -1203,7 +1148,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:286`](../Engine/core/session/src/
 'turn/start': { turn: number }
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:277`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:276`](../Engine/core/session/src/types.ts)
 
 ### `user/*`
 
@@ -1222,7 +1167,7 @@ Source: [`rsh/Engine/core/session/src/types.ts:277`](../Engine/core/session/src/
 'user/message': UserMessage
 ```
 
-Source: [`rsh/Engine/core/session/src/types.ts:298`](../Engine/core/session/src/types.ts)
+Source: [`rsh/Engine/core/session/src/types.ts:297`](../Engine/core/session/src/types.ts)
 
 ### `web/*`
 

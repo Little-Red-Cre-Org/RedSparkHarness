@@ -21,15 +21,6 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Engine/core/native-agent/tsconfig.host.json"
-    },
-    {
-      "path": "../../sandbox/native-sandbox-policy"
-    },
-    {
       "path": "../../sandbox/sandbox"
     },
     {
@@ -39,10 +30,7 @@
       "path": "../../shell/shell"
     },
     {
-      "path": "../../../../Compatibility/DSH/bridge/compat-user-approval"
-    },
-    {
-      "path": "../../../../Engine/core/approval-definition"
+      "path": "../user-approval"
     },
     {
       "path": "../../../../Core/runtime-diagnostics/invariants"
@@ -55,9 +43,6 @@
     },
     {
       "path": "../commands"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

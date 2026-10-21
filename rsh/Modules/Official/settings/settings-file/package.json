@@ -11,20 +11,6 @@
     "directory": "rsh/Modules/Official/settings/settings-file"
   },
   "type": "module",
-  "dsh": {
-    "native": {
-      "apiVersion": 1,
-      "entry": "./native",
-      "targets": [
-        "host"
-      ],
-      "requires": [],
-      "optional": [],
-      "provides": [
-        "settings"
-      ]
-    }
-  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -32,17 +18,11 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
-    "lib/native.js",
-    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -50,17 +30,7 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-atomic-write": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-native-runtime": {
-      "optional": true
-    }
+    "@deepseek-ai/dsh-settings": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/dsh-util-values": "workspace:^",
@@ -72,8 +42,6 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-atomic-write": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^"
+    "@deepseek-ai/dsh-settings": "workspace:^"
   }
 }

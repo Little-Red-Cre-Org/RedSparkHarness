@@ -4,10 +4,11 @@
  * @module @deepseek-ai/dsh-agent-instructions/state
  */
 
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Message } from '@deepseek-ai/dsh-llm/native'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session/native'
-import type { FileSystemOperations as FileSystem, FsVersion } from '@deepseek-ai/dsh-fs/native'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { Message } from '@deepseek-ai/dsh-llm'
+import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
+import type { FileSystem, FsVersion } from '@deepseek-ai/dsh-fs'
 import type { ResolvedConfig } from './config.ts'
 import { instructionContentSha1, trimmedInstructionDigest } from './digest.ts'
 import {
@@ -44,7 +45,7 @@ export interface AgentInstructionSource {
   changes: AgentInstructionChange[]
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     'agent-instructions': AgentInstructionSource
   }
@@ -133,7 +134,7 @@ function sameInstructionChange(a: AgentInstructionChange, b: AgentInstructionCha
 }
 
 function visibleInstructionChanges(
-  agent: { readonly session: Session },
+  agent: Agent,
   authorityMessages: readonly UserMessage[],
 ): Map<string, AgentInstructionChange> {
   const visible = new Map<string, AgentInstructionChange>()
@@ -244,7 +245,7 @@ function relativeScope(projectRoot: string, dir: string): string {
  * @returns rendered context plus deferred cache updates, or undefined when unchanged/unavailable.
  */
 export async function reconcileInstructionContext(
-  agent: { readonly session: Session },
+  agent: Agent,
   resolved: ResolvedConfig,
   versionCache: InstructionVersionCache,
   fileSystem: FileSystem,

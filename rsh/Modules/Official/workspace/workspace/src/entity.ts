@@ -9,10 +9,10 @@
  */
 
 import { stat } from 'node:fs/promises'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { KvTable } from '@deepseek-ai/dsh-storage-domain/native'
+import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
+import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
 import type { WorkspaceRecord } from './spec.ts'
-import type { Workspace, WorkspaceId } from './workspace-types.ts'
+import type { Workspace, WorkspaceId } from './types.ts'
 import { realpathNormalize } from './paths.ts'
 
 /** An insertSessionBefore request named a session or anchor not on the account (storage failures stay plain errors). */
@@ -32,13 +32,6 @@ export class WorkspaceMoveInvalidError extends Error {
  * index backing the `sessionIds` projection, and attach-time header reads.
  */
 export interface WorkspaceEntityHost {
-  /**
-   * Admit an entity operation before its first filesystem or persistence await.
-   * @param operation - accepted entity work using the same table authority.
-   * @returns operation completion; rejects after registry admission closes.
-   */
-  run<T>(operation: () => Promise<T>): Promise<T>
-
   /**
    * Resolve the open `workspaces` table.
    * @returns the table; throws while the registry has not started yet.
@@ -109,19 +102,11 @@ export class WorkspaceEntity implements Workspace {
     return this.record.sessionIds.filter(id => this.host.sessionPath(id) === this.record.path)
   }
 
-  setTitle(title: string): Promise<void> {
-    return this.host.run(() => this.setTitleAccepted(title))
-  }
-
-  private async setTitleAccepted(title: string): Promise<void> {
+  async setTitle(title: string): Promise<void> {
     await this.mutate(record => ({ ...record, title }))
   }
 
-  attachSession(sessionId: SessionId): Promise<void> {
-    return this.host.run(() => this.attachSessionAccepted(sessionId))
-  }
-
-  private async attachSessionAccepted(sessionId: SessionId): Promise<void> {
+  async attachSession(sessionId: SessionId): Promise<void> {
     // Validation is skipped when the settled snapshot already accounts the
     // id: the cwd fact was checked when it first attached and both inputs
     // (stored header cwd, workspace path) are immutable. Membership itself is
@@ -163,11 +148,7 @@ export class WorkspaceEntity implements Workspace {
       : { ...record, sessionIds: [sessionId, ...record.sessionIds] })
   }
 
-  insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void> {
-    return this.host.run(() => this.insertSessionBeforeAccepted(sessionId, beforeSessionId))
-  }
-
-  private async insertSessionBeforeAccepted(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void> {
+  async insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void> {
     await this.mutate((record) => {
       if (!record.sessionIds.includes(sessionId)) {
         throw new WorkspaceMoveInvalidError(
@@ -190,21 +171,13 @@ export class WorkspaceEntity implements Workspace {
     })
   }
 
-  detachSession(sessionId: SessionId): Promise<void> {
-    return this.host.run(() => this.detachSessionAccepted(sessionId))
-  }
-
-  private async detachSessionAccepted(sessionId: SessionId): Promise<void> {
+  async detachSession(sessionId: SessionId): Promise<void> {
     await this.mutate(record => record.sessionIds.includes(sessionId)
       ? { ...record, sessionIds: record.sessionIds.filter(id => id !== sessionId) }
       : record)
   }
 
-  status(): Promise<'ok' | 'missing-dir'> {
-    return this.host.run(() => this.statusAccepted())
-  }
-
-  private async statusAccepted(): Promise<'ok' | 'missing-dir'> {
+  async status(): Promise<'ok' | 'missing-dir'> {
     try {
       return (await stat(this.record.path)).isDirectory() ? 'ok' : 'missing-dir'
     } catch {

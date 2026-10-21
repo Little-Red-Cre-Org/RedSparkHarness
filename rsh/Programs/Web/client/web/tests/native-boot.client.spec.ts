@@ -3,6 +3,7 @@ import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, t
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { describe, expect, it } from 'vitest'
 import { bootNativeClient } from '../src/native-boot.ts'
+import type {} from '../src/native-services.d.ts'
 
 function modulesOf(entries: Record<string, unknown>): ClientModuleSystem {
   const ids = Object.keys(entries)
@@ -26,16 +27,13 @@ function modulesOf(entries: Record<string, unknown>): ClientModuleSystem {
 describe('native browser composition', () => {
   it('mounts through a native renderer service and awaits unmount on stop', async () => {
     const events: string[] = []
-    const application = { render: () => null }
     const renderer: NativePlugin = {
-      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientApplication', 'clientRenderer'],
+      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientRenderer'],
       resolve: () => (context) => {
         events.push('activate')
-        context.provide('clientApplication', application)
         context.provide('clientRenderer', {
-          mount: (container: HTMLElement, selected: typeof application, signal: AbortSignal) => {
+          mount: (container: HTMLElement, signal: AbortSignal) => {
             expect(container.id).toBe('app')
-            expect(selected).toBe(application)
             expect(signal.aborted).toBe(false)
             events.push('mount')
             return () => { events.push('unmount') }
@@ -52,30 +50,6 @@ describe('native browser composition', () => {
     expect(events).toEqual(['activate', 'mount'])
     await host.stop()
     expect(events).toEqual(['activate', 'mount', 'unmount', 'dispose'])
-  })
-
-  it('stops a mounted renderer when the progress callback fails after startup', async () => {
-    const events: string[] = []
-    const failure = new Error('progress callback failed')
-    const renderer: NativePlugin = {
-      apiVersion: 1, name: 'renderer', targets: ['client'], requires: [], provides: ['clientApplication', 'clientRenderer'],
-      resolve: () => (context) => {
-        context.provide('clientApplication', { render: () => null })
-        context.provide('clientRenderer', {
-          mount: () => {
-            events.push('mount')
-            return () => { events.push('unmount') }
-          },
-        })
-        context.own(() => { events.push('dispose') })
-      },
-    }
-    await expect(bootNativeClient({
-      modules: modulesOf({ renderer: { plugin: renderer } }),
-      selections: [{ id: 'renderer', config: {} }], container: document.createElement('div'),
-      onEntryState: (_id, state) => { if (state === 'active') throw failure },
-    })).rejects.toBe(failure)
-    expect(events).toEqual(['mount', 'unmount', 'dispose'])
   })
 
   it('rejects missing graph rows and missing native plugin exports', async () => {
@@ -97,8 +71,8 @@ describe('native browser composition', () => {
   it('rejects a composition without a renderer before activating any plugin', async () => {
     let activated = false
     const plugin: NativePlugin = {
-      apiVersion: 1, name: 'unrelated', targets: ['client'], requires: [], provides: ['clientApplication'],
-      resolve: () => (context) => { context.provide('clientApplication', { render: () => null }); activated = true },
+      apiVersion: 1, name: 'unrelated', targets: ['client'], requires: [], provides: [],
+      resolve: () => () => { activated = true },
     }
     await expect(bootNativeClient({
       modules: modulesOf({ unrelated: { plugin } }),

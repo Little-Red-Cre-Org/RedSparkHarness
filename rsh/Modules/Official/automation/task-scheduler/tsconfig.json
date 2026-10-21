@@ -8,8 +8,7 @@
     "src"
   ],
   "references": [
-    { "path": "../../../../Engine/goal/goal-round-driver" },
-    { "path": "../../../../Engine/goal/goal/tsconfig.host.json" },
+    { "path": "../../../../Engine/goal/goal" },
     {
       "path": "../../../../Core/vendor/cosmokit"
     },
@@ -26,7 +25,7 @@
       "path": "../../../../Engine/core/agent"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+      "path": "../../../../Engine/preset/agent-presets"
     },
     {
       "path": "../../interaction/permission-presets"
@@ -35,13 +34,13 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
+      "path": "../../../../Engine/session/session-persistence"
     },
     {
       "path": "../../../../Engine/session/session-title"
     },
     {
-      "path": "../../workspace/workspace/tsconfig.host.json"
+      "path": "../../workspace/workspace"
     },
     {
       "path": "../../../../Engine/core/tools"

@@ -25,10 +25,6 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 ./native 入口消费 native-subagent。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。backgroundMode 默认 one-shot：run_in_background 要求 jobs 与 jobControls，在真实就绪后返回，job_output/job_kill 观察或取消 Agent 所有的任务。Provider 的 backgroundJobs、选定 jobs 与 jobControls.jobs 必须标识同一注册表；不一致时加载失败。backgroundMode:continuable 默认在首次消息持久接受后返回；run_in_background:false 等待普通一次性结果。可持续模式要求 subagentControls 绑定同一选定 Provider 与其 continuationTools 注册表。NativeTools 校验参数并记录真实结果。
-
-包根入口仍是 Cordis 插件入口，仅在调用 `apply` 时加载兼容实现。Cordis 对等依赖（peer dependency）对于包管理器安装保持可选；原生组合应选择 `./native`，Cordis 组合则需安装兼容入口使用的对等依赖。
-
 每个委派目标挂载一个实例，且每个实例的 `toolName` 必须不同。工具与其提供方同时存在、同时消失，因此同级加载顺序与提供方重新加载都不会让工具悬空。
 
 ### 最小配置
@@ -86,8 +82,6 @@ kind: "package-reference"
 
 一个实例就是一个提供方加一个工具名称。插件镜像提供方生命周期：具名提供方出现时注册工具，提供方离开时释放工具，因此同级加载顺序与 HMR 替换不会让工具悬空。直接 Agent setup 显式传入尚未发布的 Session，并在发布前等待安装完成。由设置控制的常驻 preset 从生命周期事件接收每个匹配 Agent，从其 Session 选择策略，并通过其 Context 安装。提供方无法执行的数值型 `maxDepth` 或已配置 LLM 选择会在挂载时失败，而不是在首次委派时失败。每个工具作用域内最多一个实例可以拥有模型选择，因为 `list_subagent_models` 使用全局名称。
 
-`./native` 会沿 external-child 工具现有的 PTC 父调用链查找最近的 `responsesGeneration`，作为进程内状态传给 `subagents.resolve`，不写入持久化 `delegationContext`；代际复用、覆盖与关闭规则见 [native-subagent](../native-subagent/README.zh.md#known-limitations-and-deferred-work)。
-
 ### 前台结算
 
 前台调用会等待 `run.result`，把每个非完成终止原因映射为错误标题，追加提供方诊断与任何保留下来的部分 assistant 文本，并在返回前始终等待 `run.dispose()`；当结果收集与 dispose（资源释放）都 reject 时，出错结果会保留两项失败。
@@ -104,9 +98,7 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 公开 Cordis 兼容入口与延迟加载 |
-| [`src/compat.ts`](src/compat.ts) | 工具注册、生命周期镜像、模式解析、结果结算 |
-| [`src/config.ts`](src/config.ts) | 公开配置类型与 schema |
+| [`src/index.ts`](src/index.ts) | 工具注册、生命周期镜像、模式解析、结果结算 |
 | [`src/model-selection.ts`](src/model-selection.ts) | 请求／配置合并与实时 LLM 路由预检 |
 | [`src/model-selection-settings.ts`](src/model-selection-settings.ts) | 为新 Session 读取的宿主所有 opt-in 设置 |
 | [`src/model-selection-state.ts`](src/model-selection-state.ts) | 记录并继承已读取决定的 Session 事件 |

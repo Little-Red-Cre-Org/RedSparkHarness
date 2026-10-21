@@ -24,8 +24,6 @@
 | [feedback.md](feedback.zh.md) | 绑定生命周期的逐消息反馈记录、乐观版本、伴随记录持久化与 Host Remote 约定 |
 | [session-title.md](session-title.zh.md) | 持久标题快照、被引用的来源消息 seq 与异步提供方约定 |
 | [session-reference.md](session-reference.zh.md) | 结构化跨会话引用：`SessionReferenceInput`/`Candidate`、prepared 消息上下文、稳定错误分类 |
-| [tmux-context.md](tmux-context.zh.md) | Native Headless 消费的 tmux 上下文准备请求与持久服务 |
-| [request-context.md](request-context.zh.md) | Native 精确 owner 模型请求 Provider、捕获的工具可见性与 Program 所有的持久接受 |
 | [system-prompt.md](system-prompt.zh.md) | 逐次组装的上下文、工具提供方结果、提示词段落与协作式组装 |
 | [tools.md](tools.zh.md) | `ToolDefinition` 完整字段、schema DSL、`ToolExecution`/`ToolResult`、工具展示 UI 类型，以及受保护的执行流水线 |
 | [user-questions.md](user-questions.zh.md) | UI 支持的人工问答 seam：`AskUserQuestionRequest`、answer/options 词汇、提供方 API、错误分类体系 |
@@ -51,9 +49,8 @@
 | [plan.md](plan.zh.md) | 计划模式：仅记日志的 `plan/mode` 状态、待定选择的冲刷、`PlanModeConfig`、`exit_plan_mode` 审阅流程 |
 | [invariants.md](invariants.zh.md) | 运行时不变式注册表：选择配置 `Config`、`InvariantInstaller`/`InvariantFailure`、空配套插件约定 |
 | [plugin-host.md](plugin-host.zh.md) | RSH 插件角色注册表：描述符、旧式 Cordis adapter 和 Fiber 所有的释放 |
-| [http-routes.md](http-routes.zh.md) | 框架无关的 Node HTTP route 与 listener 约定、共享 exact/prefix 与 upgrade registry、接纳和排空语义 |
-| [web-server.md](web-server.zh.md) | Cordis HTTP listener、绑定／压缩配置、回退席位与 index 挂接点 |
-| [webhook.md](webhook.zh.md) | 已认证的提供方交付、Cordis fire-and-forget 规则，以及 Native 对应的持久 root 接纳 |
+| [web-server.md](web-server.zh.md) | HTTP 载体：`WebRouteKind`/`WebRoute`、匹配顺序、可认领的回退席位、index 渲染挂接点 |
+| [webhook.md](webhook.zh.md) | 通过身份验证的提供方交付、任意程序化规则，以及发起 Workspace 会话创建后不等待结果 |
 | [storage.md](storage.zh.md) | 存储子系统：后端约定（`StorageBackend`）、`StorageForms`、`DomainSpec`/`Domain`、`domain/changed` |
 | [workspace.md](workspace.zh.md) | 工作区注册表：`Workspace`/`WorkspaceId`、注册与解析、与会话 `cwd` 的关系 |
 | [web-client.md](web-client.zh.md) | 浏览器架构：启动、Remote 通信、配对的 Client model、UI 适配器、Conversation 组装、slot 与重连语义 |

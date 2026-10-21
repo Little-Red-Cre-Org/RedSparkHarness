@@ -43,8 +43,6 @@ The service stores nothing by itself; mount a provider such as the shipped file-
 
 `ctx.settings` appears once the provider is live. The provider README owns the full configuration surface; the generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) lists every accepted field.
 
-Native Hosts use the Cordis-free `./native` definition from [dsh-settings-definition](../../../../Core/settings/settings-definition/README.md): a Provider loads the document before Consumers register namespace resolvers. Each owner reads frozen values, writes only its own user section, and observes valid committed changes. Native watcher invocations run asynchronously in commit order per callback; synchronous throws and asynchronous rejections are logged without failing a write. A watcher disposer skips queued invocations, while Host teardown waits for started callbacks to settle. A registration is exposed to a native configuration surface only when its owner supplies `presentation` metadata; the native descriptor strips schema-declared secret values and all schema defaults, and rejects presentation schemas whose secret fields cannot be reached through `object`, `dict` or `array`. Schema fields marked `credential-ref` provide the references whose values belong in Credentials. The file Provider emits `settings/document-updated` when a registered raw section changes, even if the resolved value remains equal. The Cordis compatibility face uses declaration-only [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.md) for `Context.settings` and registration options.
-
 ### Registering a namespace
 
 A plugin registers its own namespace with a schemastery schema, optionally supplying the composition entry as the `base` layer so the resolved value starts from what the deployment already configured:
@@ -71,7 +69,7 @@ Every write rejects non-JSON-compatible data (a `Date`, `Map`, `BigInt`, non-fin
 
 ### Configuration surfaces
 
-`describe()` returns one descriptor per registered namespace: the serialized schema, the resolved value, the detached `base` and `user` layers (a field's presence in `user` marks it user-overridden), the effect timing, and the namespace's revision. Pass `redactSecrets: true` on every wire surface: it strips `role('secret')` fields from every value layer and enumerates them as `{ path, set }` slots; native schema serialization omits all `meta.default` values. Path-based `mutate(ns, ops, expectedRevision)` lets a wire editor change visible fields without replacing hidden values, and rejects a stale revision. Native path edits may descend through existing numeric array indices, but cannot create index gaps or remove array entries; edits at or above secret fields are refused. `documentPath` and `prepareDocument()` expose the provider's user-editable file to a native editor when one exists.
+`describe()` returns one descriptor per registered namespace: the serialized schema, the resolved value, the detached `base` and `user` layers (a field's presence in `user` marks it user-overridden), the effect timing, and the namespace's revision. Pass `redactSecrets: true` on every wire surface: it strips `role('secret')` fields from every layer and enumerates them as `{ path, set }` slots so a page can render write-only inputs without ever receiving a secret. `documentPath` and `prepareDocument()` expose the provider's user-editable file to a native editor when one exists.
 
 ### Events and failures
 
@@ -99,13 +97,10 @@ This section explains the design decisions behind the service and points at the 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis Provider: namespace validation, registration, resolution, write queue, describe/redaction, and events |
-| [`src/native.ts`](src/native.ts) | Native Provider: namespace registration, revisioned writes, reload, and owner scopes |
+| [`src/index.ts`](src/index.ts) | Service Definition: namespace validation, registration, resolution, write queue, describe/redaction, events, `installSection` |
 | [`src/redact.ts`](src/redact.ts) | `redactSecrets` walker: strip `role('secret')` fields and enumerate their slots |
-| [`src/types.ts`](src/types.ts) | Re-exports the shared Client-safe Settings types |
+| [`src/types.ts`](src/types.ts) | Client-safe type surface: event declarations, `SettingsNamespace`, `SettingsUpdateSource` |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `settings/updated` fires only for a registered namespace, only on a resolved-value change, with the authoritative value |
-
-The shared service declarations are in [dsh-settings-definition](../../../../Core/settings/settings-definition/README.md); Cordis Context and event augmentation are in [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.md).
 
 ### Resolution and write paths
 
@@ -117,7 +112,7 @@ Each write snapshots its input at call time (detaching and validating JSON-shape
 
 ### Client-safe types
 
-The `./types` subpath export and package root re-export the shared namespace and wire-value types. Cordis event declarations are owned by the compatibility definition package. A consumer outside the Host compilation face reads the exact signature the Host emits instead of restating it.
+The `./types` subpath export holds the event declarations together with the `SettingsNamespace` and `SettingsUpdateSource` types their signatures name, and the package root re-exports those types. A consumer outside the Host compilation face reads the exact signature the Host emits instead of restating it.
 
 </details>
 
@@ -152,7 +147,7 @@ No direct invalidation; a consumer that folds a settings value into the request 
 These limits define when the service is a poor fit or needs special care. They are current package constraints, not a task backlog.
 
 - **Single user layer** — resolution knows schema defaults, one composition `base`, and one user document; it does not record which layer supplied each resolved value.
-- **`redactSecrets` only proves supported schema paths** — the walker follows `object`/`dict`/`array` containers, so a `role('secret')` field reachable only through a union, intersection, or transform is returned verbatim with no `secrets` entry. Native presentation registration rejects schemas with a secret hidden behind those unsupported nodes, and native descriptors omit every serialized `meta.default`. The legacy descriptor still serializes schema defaults and does not reject unsupported secret paths, so those schemas must not be exposed through that surface. Sanitizing the full legacy wire envelope and error text remains deferred.
+- **`redactSecrets` is not a proven wire boundary** — the walker follows `object`/`dict`/`array` containers, so a `role('secret')` field reachable only through a union, intersection, or transform is returned verbatim with an empty `secrets` list, and the serialized schema carries a secret field's default to every client. Neither case is rejected; a schema whose secrets are not reachable through the walked containers must not be registered on a wire-exposed namespace. A fail-closed `describeForWire()` — one that refuses a schema it cannot prove safe and sanitizes the serialized envelope and error text — is the deferred answer.
 - **Cross-process concurrency is provider-defined** — the service serializes writes per namespace in-process only; concurrent processes converge by provider behavior (the file provider read-modify-writes under a writer lock, so namespaces survive concurrent writers and same-namespace conflicts resolve last-write-wins).
 
 <a id="dev-note"></a>

@@ -27,10 +27,6 @@ kind: "package-reference"
 
 浏览器通过 HTTP POST 执行 Remote 一元调用；API Gateway 自己拥有 `/api/remote.mux` WebSocket 及其逻辑流。由 shell 持有的组合通过 `connection.rpc.open` 提供等价的 Remote 流，不打开 WebSocket。Host half 始终提供与载体无关的 RPC 注册表和精确 `GET`/`HEAD`/`POST` 路由注册表。存在 Web 载体时，它还持有唯一 `/api` route、Fetch bridge、浏览器认证与 Host/Origin 校验；由 shell 持有的载体则直接分派共享 Fetch handler。每条精确路由会在 bridge 读取任何字节前声明缓冲或流式请求体处理方式。Typert Gateway 认领生成的 Remote endpoint，功能包注册 Session 日志下载、原始文件上传等非 JSON 响应，未认领的请求返回 404。Loopback hostname 判定只供浏览器侧当前页面状态使用，留在包内。浏览器原始请求体传输由 [`dsh-client-file-upload`](../file-upload/README.zh.md) 提供。
 
-`./native` 浏览器入口在原生 `clientConnection` 服务下安装与 Cordis Client 适配器相同的 Connection 实现。它接受空配置，选择页面提供的 RPC 载体或 Web 传输，并发布可观察的 generation 与恢复状态。原生组合仍需要 Host API 路由和 generation source 才能接收实时 Session 事件。原生 Host 释放时会中止连接循环并等待 generation source 结束；此适配器不安装 Host `/api` 路由或浏览器认证。
-
-`./native-host` 入口为已认证的 Host Consumer 提供一个有上限的请求所有者。Consumer 提供请求上限，在获取资源前接收回调，组合载体与安装生命周期的取消信号，并在关闭时等待已接收的回调结束。容量不足与停止接收是显式错误；Consumer 自己分类 RPC 错误，并保留独立资源清理失败。Web 与 Desktop 载体可以发布同一个 `hostConnection` 服务，而不持有 Session 或 Agent 状态。
-
 -----
 
 <a id="browser-authentication-and-request-trust"></a>
@@ -53,8 +49,6 @@ API Gateway Client 把内部 `$events` 逻辑流注册为唯一 generation sourc
 
 可通过 Host Connection 行的 `config.recovery` 覆盖重试上限、增长因子或握手告警与取消时间；[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-client-connection)列出接受的字段。Host 校验这些值，并将其注入所提供的每个页面。Client 在提供 Connection 前校验启动数据，并在 Gateway 启动循环时采用这些默认值；显式传给 `start()` 的时序覆盖优先。增长因子必须是至少为一的有限数。若就绪、失败、取消或硬期限先于告警发生，该告警会被取消。修改 Host 恢复配置后需重新加载页面。
 
-
-RPC Provider 可选提供经过身份验证的 Fetch 响应，用于功能自身拥有的流式端点。选定载体解析 Host 地址和令牌；功能 Consumer 拥有响应解码、取消与终止结算。此操作不替换既有 WebSocket 连接代次，也不引入重连循环。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -85,5 +79,3 @@ RPC Provider 可选提供经过身份验证的 Fetch 响应，用于功能自身
 </details>
 
 **运行时不变式：** 不发布伴生入口。浏览器会话验证会在请求授权工作时异步读取凭据记录，而记录的 commit-event 生命周期由 credentials 伴生入口负责；流与重连的时序及 rpcId 往返约束由行为规范直接验证，路由注册与 dispose（资源释放）的对称性由 webserver 伴生入口审计。
-
-原生入口导出共享浏览器 RPC 工厂与 Connection 类型，供不依赖 Cordis 的 Client Consumer 使用。

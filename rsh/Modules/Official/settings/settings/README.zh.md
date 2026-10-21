@@ -43,8 +43,6 @@ kind: "package-reference"
 
 提供方上线后 `ctx.settings` 即出现。完整配置面由提供方 README 负责；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)列出每个受支持字段。
 
-原生 Host 使用 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md) 中不依赖 Cordis 的 `./native` 定义：Provider 先加载文档，Consumer 再注册 namespace 解析器。每个 owner 读取冻结值、只写自己的用户分节，并观察有效的已提交变更。原生 watcher 的调用按回调分别异步串行执行；同步抛错与异步拒绝都会记入日志，不会使写入失败。释放 watcher 会跳过尚未开始的调用，Host 卸载会等待已开始的回调结束。只有 owner 显式传入 `presentation` 元数据的注册项才会向原生配置界面公开；原生 descriptor 会剥离 schema 声明的机密值并省略所有 schema 默认值，且拒绝无法通过 `object`、`dict` 或 `array` 路径到达机密字段的 presentation schema。标记为 `credential-ref` 的 schema 字段只提供应由 Credentials 管理的引用。文件 Provider 会在已注册原始分节变化时发出 `settings/document-updated`，即使解析值保持相等。Cordis 兼容面使用声明专用的 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)，为 `Context.settings` 与注册选项提供类型声明。
-
 ### 注册 namespace
 
 插件用 schemastery schema 注册自己的 namespace，并可选地把组合配置作为 `base` 层传入，让解析值从部署已配置的内容起步：
@@ -71,7 +69,7 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 
 ### 配置界面
 
-`describe()` 为每个已注册 namespace 返回一条 descriptor：序列化 schema、解析值、分离的 `base` 与 `user` 层（字段出现在 `user` 中即标记为用户覆盖）、生效时机与 namespace 的 revision。每个协议接口都必须传入 `redactSecrets: true`：它从每个值层剥离 `role('secret')` 字段，并枚举 `{ path, set }` slot；原生 schema 序列化会省略所有 `meta.default` 值。基于路径的 `mutate(ns, ops, expectedRevision)` 让协议编辑器修改可见字段而不整体替换隐藏值，并拒绝过期 revision。原生路径修改可沿现有数字数组索引下行，但不能创建索引空洞或删除数组元素；对机密字段本身及其祖先路径的修改都会被拒绝。`documentPath` 与 `prepareDocument()` 在提供方拥有用户可编辑文件时把它暴露给原生编辑器。
+`describe()` 为每个已注册 namespace 返回一条 descriptor：序列化 schema、解析值、分离的 `base` 与 `user` 层（字段出现在 `user` 中即标记为用户覆盖）、生效时机与 namespace 的 revision。每个协议接口都必须传入 `redactSecrets: true`：它从每一层剥离 `role('secret')` 字段，并把它们枚举为 `{ path, set }` slot，让页面可以渲染只写输入而不接触任何机密。`documentPath` 与 `prepareDocument()` 在提供方拥有用户可编辑文件时把它暴露给原生编辑器。
 
 ### 事件与失败
 
@@ -99,13 +97,10 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis Provider：namespace 校验、注册、解析、写队列、describe/脱敏与事件 |
-| [`src/native.ts`](src/native.ts) | Native Provider：namespace 注册、revision 写入、重载与 owner scope |
+| [`src/index.ts`](src/index.ts) | Service Definition：namespace 校验、注册、解析、写队列、describe/脱敏、事件、`installSection` |
 | [`src/redact.ts`](src/redact.ts) | `redactSecrets` 遍历器：剥离 `role('secret')` 字段并枚举其 slot |
-| [`src/types.ts`](src/types.ts) | 重导出共享的 Client 安全 Settings 类型 |
+| [`src/types.ts`](src/types.ts) | 客户端安全类型面：事件声明、`SettingsNamespace`、`SettingsUpdateSource` |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：`settings/updated` 只对已注册 namespace、只在解析值变化时、且携带权威值触发 |
-
-共享服务声明位于 [dsh-settings-definition](../../../../Core/settings/settings-definition/README.zh.md)；Cordis Context 与事件 augmentation 位于 [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md)。
 
 ### 解析与写入路径
 
@@ -117,7 +112,7 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 
 ### 客户端安全类型
 
-`./types` 子路径出口与包根都重导出共享 namespace 和协议值类型。Cordis 事件声明由兼容定义包拥有。因此 Host 编译面以外的消费方读取 Host 发射的同一份签名，不必重新声明。
+`./types` 子路径出口持有事件声明及其签名点名的 `SettingsNamespace`、`SettingsUpdateSource` 类型，包根继续 re-export 这些类型。于是 Host 编译面之外的消费方读到的正是 Host 发射的那一份签名，而不必再写一遍。
 
 </details>
 
@@ -152,7 +147,7 @@ TypeScript 会按小写字母、数字与连字符文法检查字面量 namespac
 这些限制说明本服务何时不合适或需要特别注意。它们是当前包约束，不是任务积压。
 
 - **单一用户层**——解析只认识 schema 默认值、一个组合 `base` 与一个用户文档；它不记录每个解析值由哪一层提供。
-- **`redactSecrets` 只证明受支持的 schema 路径**——遍历器只跟随 `object`/`dict`/`array` 容器，因此只能经由 union、intersection 或 transform 抵达的 `role('secret')` 字段会被原样返回，且没有 `secrets` 项。原生 presentation 注册会拒绝机密藏在这些不支持节点后的 schema，原生 descriptor 会省略所有序列化的 `meta.default`。旧版 descriptor 仍会序列化 schema 默认值，也不会拒绝不支持的机密路径，因此不能通过该界面公开此类 schema。完整净化旧版协议封装与错误文本仍属后续工作。
+- **`redactSecrets` 并非一条可被证明的协议边界**——遍历器只跟随 `object`/`dict`/`array` 容器，因此只能经由 union、intersection 或 transform 抵达的 `role('secret')` 字段会被原样返回，且 `secrets` 列表为空；序列化 schema 还会把 secret 字段的默认值带给每个客户端。两种情况都不会被拒绝；机密无法经由被遍历的容器抵达的 schema，绝不可注册到暴露于协议的 namespace 上。fail-closed 的 `describeForWire()`——拒绝自己无法证明安全的 schema，并对序列化封装与错误文本做净化——是暂缓的答案。
 - **跨进程并发由提供方定义**——服务仅在进程内按 namespace 串行写入；跨进程并发按提供方行为收敛（文件提供方在写锁下读-改-写，因此并发写入者不会丢掉彼此的 namespace，同 namespace 冲突按后写胜出解决）。
 
 <a id="dev-note"></a>

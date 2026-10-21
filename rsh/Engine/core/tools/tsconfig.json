@@ -12,10 +12,7 @@
       "path": "../session"
     },
     {
-      "path": "../code-runtime-definition"
-    },
-    {
-      "path": "../approval-definition"
+      "path": "../../../Modules/Official/code-runtime/code-runtime"
     },
     {
       "path": "../../../Core/vendor/cosmokit"
@@ -36,10 +33,10 @@
       "path": "../scope"
     },
     {
-      "path": "../../../Core/runtime-diagnostics/invariants"
+      "path": "../../../Modules/Official/interaction/user-approval"
     },
     {
-      "path": "../native-tools/tsconfig.host.json"
+      "path": "../../../Core/runtime-diagnostics/invariants"
     }
   ]
 }

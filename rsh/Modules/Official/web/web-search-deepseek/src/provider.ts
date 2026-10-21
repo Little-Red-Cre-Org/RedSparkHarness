@@ -6,15 +6,15 @@
  * @module @deepseek-ai/dsh-web-search-deepseek/provider
  */
 
-import { WebError } from '@deepseek-ai/dsh-web/native'
+import { WebError } from '@deepseek-ai/dsh-web'
 import type {
   WebSearchProvider,
   WebSearchRequest,
   WebSearchResult,
   WebSearchSource,
-} from '@deepseek-ai/dsh-web/native'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-session/types'
+} from '@deepseek-ai/dsh-web'
+import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
+import type {} from '@deepseek-ai/dsh-session'
 import type {
   AnthropicError,
   AnthropicResponse,
@@ -103,11 +103,10 @@ export interface DeepSeekSearchProviderOptions {
   /** Maximum `web_search` server-tool uses per request. */
   maxUses: number
   /**
-   * Record the exact secret-free request immediately before dispatch. The
-   * provider awaits a returned promise; a throw or rejection prevents dispatch
-   * so model-visible auxiliary input cannot escape logging.
+   * Record the exact secret-free request immediately before dispatch. A throw
+   * prevents dispatch so model-visible auxiliary input cannot escape logging.
    */
-  recordRequest?: (request: DeepSeekSearchLlmRequest) => void | Promise<void>
+  recordRequest?: (request: DeepSeekSearchLlmRequest) => void
 }
 
 /**
@@ -215,7 +214,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
       }],
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: options.maxUses }],
     }
-    await options.recordRequest?.({
+    options.recordRequest?.({
       endpoint,
       apiVersion: options.apiVersion,
       body,

@@ -148,11 +148,11 @@ const coveragePartitionMode = coveragePartitionRaw === '1'
 // Keep the narrow exception in forks while the rest of the inventory avoids per-file processes.
 const processBoundTests = [
   'rsh/Engine/session/session-persistence-jsonl/tests/jsonl.spec.ts',
-  'rsh/Compatibility/DSH/subagent/subagent-acp/tests/subagent-acp.spec.ts',
+  'rsh/Engine/subagent/subagent-acp/tests/subagent-acp.spec.ts',
   'rsh/Core/subprocess/subprocess-local/tests/process-exit.spec.ts',
   'rsh/Core/subprocess/subprocess-local/tests/spawn.spec.ts',
   'rsh/Engine/context/time-context/tests/time-context.spec.ts',
-  'rsh/Modules/Official/llm/llm-pi-ai/tests/adapter.spec.ts',
+  'rsh/Engine/llm/llm-pi-ai/tests/adapter.spec.ts',
   'rsh/Compatibility/DSH/boot/app-boot/tests/app-boot.spec.ts',
   'rsh/Engine/workflow/workflow-worker-thread/tests/session.spec.ts',
 ]
@@ -211,11 +211,6 @@ export default defineConfig({
       exclude: [
         ...PACKAGE_MANIFEST_GLOBS.flatMap(pattern => ['types.ts', 'bin.ts', 'worker.ts']
           .map(file => pattern.replace('/package.json', `/src/${file}`))),
-        // The native Ink Program executes in real dsh PTY children; unit-process
-        // V8 cannot observe it. Its terminal scene and lifecycle regression own
-        // behavior; compatibility terminal tests retain shared row coverage.
-        'rsh/Programs/TUI/native-tui/src/{native,presentation,locale,index}.ts',
-        'rsh/Programs/TUI/terminal-ui/src/{copy,index}.ts',
         // Dynamic Host/Client composition is covered by its focused lifecycle
         // tests and assembled application checks rather than per-file coverage.
         'rsh/Modules/Official/extensions/*/src/**/*.{ts,tsx}',
@@ -253,7 +248,7 @@ export default defineConfig({
         'rsh/Programs/Web/client/ui-chat/src/client/contract/snapshot.ts',
         'rsh/Programs/Web/client/ui-chat/src/client/historical-images.ts',
         'rsh/Programs/Web/client/ui-primitives/src/DisclosureRow.tsx',
-        'rsh/Programs/Web/client/ui-tool/src/index.ts',
+        'rsh/Programs/Web/client/ui-tool/src/*',
         'rsh/Programs/Web/client/ui-slots/src/*',
         'rsh/Programs/Web/client/ui-layout/src/*',
         'rsh/Programs/Web/client/web/src/*',

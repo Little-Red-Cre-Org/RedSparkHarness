@@ -27,10 +27,7 @@
       "path": "../ui-slots"
     },
     {
-      "path": "../../../../Core/util/http-routes/tsconfig.client.json"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
+      "path": "../../host/webserver"
     },
     {
       "path": "../../../../Core/vendor/cordis"
@@ -40,12 +37,6 @@
     },
     {
       "path": "../ui-settings"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

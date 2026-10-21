@@ -21,7 +21,7 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../../Core/settings/settings-definition"
+      "path": "../../../Modules/Official/settings/settings"
     }
   ]
 }

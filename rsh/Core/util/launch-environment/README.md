@@ -28,8 +28,6 @@ Resolve user-facing values through the snapshot instead of `process.env` wheneve
 
 Native Hosts and Clients import `./native` for the snapshot types, constructor, and SSH detection without loading Cordis. The root entry additionally supplies `launchEnvironmentOf(ctx)` for Cordis consumers. A native Host passes its launch snapshot directly to providers.
 
-`./layers` exposes `loadLayeredEnv(binName, cwd, warn, homeDirectory)` for Node launchers. It validates both discovered files before applying either, preserves inherited > project > home precedence and source attribution, and rejects bootstrap-only variables except home-owned proxy settings. Callers with an owned home path pass it explicitly; other callers use the selected process home. Native `dsh` loads these layers before importing plugins and owns one snapshot Provider in each root scope; Client-only profiles do not receive this Host Provider.
-
 ### Resolving a value
 
 ```ts
@@ -93,7 +91,7 @@ Read these pages when you need the launcher that builds the snapshot or the cons
 
 - [Boot package](../../../Compatibility/DSH/boot/app-boot/README.md) — the launcher that fills `ctx.launchEnvironment` before any config entry mounts.
 - [Credentials store](../../../Modules/Official/credentials/credentials-local/README.md) — resolves stored credentials against the snapshot's layers.
-- [DeepSeek provider](../../../Modules/Official/llm/llm-deepseek/README.md) — reads provider configuration through the launch environment.
+- [DeepSeek provider](../../../Engine/llm/llm-deepseek/README.md) — reads provider configuration through the launch environment.
 
 -----
 

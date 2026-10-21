@@ -25,23 +25,13 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-场景清单接受显式 `native-tui` 配置；真实终端适配器驱动公开 `dsh` 入口，读取同一 Session 作为重放输入与持久输出。
-
-manifest 的 `profile` 是公开 `dsh` profile 的准确名称；兼容场景使用 `compat`。
-
-语料库的 `snapshots/web/` 目录归属浏览器 `web` 与原生 Web `native-web` 场景；每份清单仍保留公开 profile 的准确名称。
-
-本包把 `dsh` profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
-
-`profile: desktop` 标识既有 Electron 私有 Host 生命周期；其 owner 使用实际 Desktop 后端控制器与 Session 往返，不新增应用入口。
+本包把随附 profile 场景变成无密钥快照套件：写一张场景表和一个 fixture 目录，调用一次匹配的适配器，工具包就负责启动或组合 profile、驱动场景、比较规范化输出并守护已提交的 fixture。
 
 ### 编写快照套件
 
-封闭的 profile manifest 接受 `legacy-headless`、`legacy-sdk` 与 `legacy-acp`，用于以自定义 profile 名称保留 Cordis profile template 的场景。原生场景使用对应的公开 `headless`、`sdk` 或 `acp` profile 名称；显式 `native-*` 别名也有效。
-
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
 
-消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外。legacy profile 将 `profile` 设为自定义名称，并将 `fromDefaultProfile` 设为复制的随附 template：
+消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外：
 
 ```ts
 import { dirname, join } from 'node:path'
@@ -71,8 +61,7 @@ defineAcpSnapshotSuite({
   agent: { // absolute paths, resolved from the suite's own location
     binScript: fileURLToPath(new URL('../../../Programs/CLI/src/bin.ts', import.meta.url)),
     configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    profile: 'legacy-acp',
-    fromDefaultProfile: 'acp',
+    profile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
@@ -81,7 +70,7 @@ defineAcpSnapshotSuite({
 })
 ```
 
-每个已记录 Session 目录携带封闭的 `snapshot.yml` manifest，以及规范 parent 与连续 child 角色。parent 文件名是 `session[.vN].jsonl`；child 是 `session.<ordinal>[.vN].jsonl`；v0 省略 `.v0`，正版本使用小写 `.vN`，且每个文件名与其 header 一致。一个角色可以保留旧 generation，但 harness 会选择数值最高的一项。拥有 fixture 的 manifest 可以声明 `sessionFormat.version` 与一个或多个封闭 `coverage` 名称，把该历史 generation 保留为显式迁移 fixture；省略此字段时跟随当前 writer。manifest 还会指名场景、选用的 profile、组合／header 类别、录制来源，以及已完成 Session 无法重建的 replay、平台、权限、环境、workspace 或输入事实。存储保护检查每个选定 parent 与 child 角色的工具结果和可移植路径。提示词／schema 擦除、消息身份及提示词先于请求的顺序检查适用于当前 generation；保留的前代维持其历史表示。适配器注册预期输出、Session 日志与可选 `workspace.expected/` 比较；保护会拒绝遗留目录、缺失角色、非规范名称、绝对路径、格式错误的 manifest 与平台专用分隔符。
+每个已记录 Session 目录携带封闭的 `snapshot.yml` manifest，以及规范 parent 与连续 child 角色。parent 文件名是 `session[.vN].jsonl`；child 是 `session.<ordinal>[.vN].jsonl`；v0 省略 `.v0`，正版本使用小写 `.vN`，且每个文件名与其 header 一致。一个角色可以保留旧 generation，但 harness 会选择数值最高的一项。拥有 fixture 的 manifest 可以声明 `sessionFormat.version` 与一个或多个封闭 `coverage` 名称，把该历史 generation 保留为显式迁移 fixture；省略此字段时跟随当前 writer。manifest 还会指名场景、随附 profile、组合／header 类别、录制来源，以及已完成 Session 无法重建的 replay、平台、权限、环境、workspace 或输入事实。存储保护检查每个选定 parent 与 child 角色的工具结果和可移植路径。提示词／schema 擦除、消息身份及提示词先于请求的顺序检查适用于当前 generation；保留的前代维持其历史表示。适配器注册预期输出、Session 日志与可选 `workspace.expected/` 比较；保护会拒绝遗留目录、缺失角色、非规范名称、绝对路径、格式错误的 manifest 与平台专用分隔符。
 
 `normalizeSessionSnapshot` 在规范化路径并擦除系统提示文本与工具 schema 后，会保留完整 Session header 与事件 payload，但从已提交 fixture 中省略顶层 `seq`/`time` envelope；它还会规范化嵌入式 stream clock 与历史 packed-row 的 `seq0`/`time0` envelope 与 catalog child 创建时钟。事件顺序与来源事件引用保持不变。Replay 只在内存中合成顶层 envelope，而运行时持久化仍写入完整日志。多 Session 比较会先通过严格的构建期静态 Session 格式目录校验预期日志与收集日志，再进行身份脱敏与规范化；来源文件名不能改变格式校验。保留的历史 replay 输入不是原生当前格式 writer 输出的比较基准：结构迁移保留请求含义，但可以产生不同的事件布局。归一化保留意外的 request-header 字段（包括 `system`），使回归保持可见。无版本的协议适配器单元测试 fixture 不属于已发布 Session 格式语料。[当前写入器格式](../../../Docs/session-format-status.zh.md)的 fixture 每个事件占一行；保留的 v0/v1 fixture 可以使用规范 packed row。[临时仓库迁移器](../../../Scripts/migrate-packed-session-fixtures.ts)（`pnpm run migrate:packed-session-fixtures`）会改写更旧的历史布局，由其[移除提案](../../../../.agents/notes/proposed/process/2026-07-26-remove-packed-session-fixture-migrator.zh.md)负责删除该迁移器。
 
@@ -102,8 +91,6 @@ spill 场景通过真实本地提供方保存到私有临时根目录。fixture 
 需要非 Windows 主机的场景声明 `posixOnly`，在 Windows 上跳过运行测试，但 fixture 保护仍在所有平台覆盖其已提交文件；组合需要可用 `pwsh` 的场景声明 `pwshOnly`。当临时目录授权自身待测时，`workspaceParent` 将生成子级 cwd 移出平台临时区域；场景签入的 `workspace/` 会先复制到该子级，随后 `prepareWorkspace` 在 agent 启动前针对生成 cwd 运行。默认生成的 workspace 在会话 fixture 中存储为 `{{cwd}}`，使平台临时根目录与随机 basename 不影响录制。headless manifest 在测试 Session workspace 授权本身时使用 `workspace.parent: outside-temp`。适配器在父目录可写且位于系统临时授权之外时，于平台临时根目录旁分配目录，否则使用 home，并拒绝已被自动临时写授权覆盖的生成 cwd。
 
 ACP harness 将生成 workspace 的原生路径、解析后路径及 JSON 转义写法作为比较别名。这包括运行时上下文文本中经 JSON 引号包裹的 Windows 路径；无关路径与消息内容仍作为比较证据。录制的 Bash 组合在每个回放主机上显式启用 Bash 后端与工具，并禁用对应的 PowerShell 后端与工具。
-
-规范比较先解码有效内嵌 JSON 对象或数组中以 cwd 为根的 `path` 值，再转换分隔符，并仅重新编码这些值。真实的重复分隔符、其他 JSON 文本及原生模式写法保持不变。已提交的 Session 代际保持不变；[该决策](../../../../.agents/notes/implemented/testing/2026-10-04-embedded-json-path-normalization.zh.md)拥有这项比较规则。
 
 ### 可能出什么问题
 
@@ -143,7 +130,7 @@ ACP harness 将生成 workspace 的原生路径、解析后路径及 JSON 转义
 
 ### 数据流
 
-场景在启动器下运行 agent，通过 harness 向它喂入输入脚本，并捕获 stdout 与持久化日志。规范化器把捕获内容规范化——id 转为首次出现序列，将 `subagent/external-start` 和 `subagent/external-operation` 记录中的 UUID `parentEpoch` 和 `rootEpoch` 转为 `{{epoch:n}}`，生成 cwd 转为 `{{cwd}}`、`system/message` 文本转为 `{{system}}`、header 工具 schema 转为 `{{tools}}`——使已录制与本次运行可以结构化比较。身份映射器只从这两种生命周期记录的准确字段分配 epoch token，并保留重复值关系。会话日志规范化器仅将 Engine 写入的 `subagent/external-start.data.startedAt`、六种 `subagent/external-operation` 变体根部的 `data.at` 以及 `subagent/external-end.data.finishedAt` 时钟归零；嵌套的同名时钟字段不会归零。随后工厂把规范化 stdout 与重新持久化日志同已提交 fixture 比较，或在录制/刷新模式下回写它们；其保护在任何比较结果被采信之前就拒绝畸形或漂移的 fixture。
+场景在启动器下运行 agent，通过 harness 向它喂入输入脚本，并捕获 stdout 与持久化日志。规范化器把捕获内容规范化——id 转为首次出现序列、生成 cwd 转为 `{{cwd}}`、`system/message` 文本转为 `{{system}}`、header 工具 schema 转为 `{{tools}}`——使已录制与本次运行可以结构化比较。随后工厂把规范化 stdout 与重新持久化日志同已提交 fixture 比较，或在录制/刷新模式下回写它们；其保护在任何比较结果被采信之前就拒绝畸形或漂移的 fixture。
 
 </details>
 

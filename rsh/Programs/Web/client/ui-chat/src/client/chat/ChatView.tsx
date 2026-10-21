@@ -6,9 +6,7 @@ import type {
   ConversationTimelineSnapshot, RenderMessageImages,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SessionSeq } from '@deepseek-ai/dsh-session/types'
-import {
-  Button, ChatTranscript, ChatTurnActivity, IconChevronDownOutline14, Modal,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconChevronDownOutline14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatViewSlotProps, OpenFileOptions } from '../contract/slots.ts'
 import type { ChatSnapshot } from '../contract/snapshot.ts'
 import { PendingSteeringBubble, PendingSubmissionBubble } from './MessageItem.tsx'
@@ -191,14 +189,14 @@ function TurnStatus({ startTime, t }: {
   // has clearly been running for a while.
   const showClock = elapsedMs >= 15_000
   return (
-    <ChatTurnActivity>
+    <div className={css.turnStatus} role="status" aria-live="polite">
       {t('chat.deepDiving')}
       {showClock && (
         <span className={css.turnStatusClock} aria-hidden>
           {formatRunDuration(elapsedMs, t)}
         </span>
       )}
-    </ChatTurnActivity>
+    </div>
   )
 }
 
@@ -769,7 +767,7 @@ export function ChatView({
           onNavigate={navigateToTurn}
           t={t}
         />
-        <ChatTranscript ref={columnRef} data-chat-flow="">
+        <div ref={columnRef} className={css.column} data-chat-flow="">
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
             <div className={css.openError}>
@@ -824,7 +822,7 @@ export function ChatView({
               t={t}
             />
           ))}
-        </ChatTranscript>
+        </div>
         {!atBottom && (
           <div className={css.toBottomSlot}>
             <button

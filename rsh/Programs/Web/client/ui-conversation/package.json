@@ -22,19 +22,8 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./native-types": {
-      "types": "./lib/types/native-types.d.ts"
-    },
     "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./tool-records": {
-      "types": "./lib/types/tool-records.d.ts",
-      "default": "./lib/tool-records.js"
-    },
-    "./conversation-copy": {
-      "types": "./lib/types/conversation-copy.d.ts",
-      "default": "./lib/conversation-copy.js"
-    }
+    "./package.json": "./package.json"
   },
   "dsh": {
     "client": {
@@ -57,10 +46,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
@@ -70,6 +56,7 @@
     "@deepseek-ai/dsh-api-remotes": "workspace:^",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
     "@deepseek-ai/dsh-api-workspace-controller": "workspace:^",
+    "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-client-locale": "workspace:^",
     "@deepseek-ai/dsh-client-file-upload": "workspace:^",
@@ -81,9 +68,10 @@
     "@deepseek-ai/dsh-client-ui-session": "workspace:^",
     "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-workspace": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-permission-presets": "workspace:^",
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
@@ -110,13 +98,6 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "lib/tool-records.js",
-    "lib/conversation-copy.js",
     "lib/types/**/*.d.ts"
-  ],
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
-  }
+  ]
 }

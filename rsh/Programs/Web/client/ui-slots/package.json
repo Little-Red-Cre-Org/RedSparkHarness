@@ -18,25 +18,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "license": "MIT",
   "devDependencies": {
+    "@deepseek-ai/dsh-client-store": "workspace:^",
+    "@types/react": "~18.3.1",
     "react": "^18.2.0"
   },
   "files": [
     "lib/index.js",
-    "lib/native.js",
     "lib/types/**/*.d.ts"
-  ],
-  "dependencies": {
-    "@types/react": "~18.3.1",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
-  }
+  ]
 }

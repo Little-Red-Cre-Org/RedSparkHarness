@@ -9,8 +9,7 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
-import { UserQuestionError } from './question-error.ts'
-export { UserQuestionError } from './question-error.ts'
+import { HarnessError } from '@deepseek-ai/dsh-llm'
 import { scopeTarget } from '@deepseek-ai/dsh-scope'
 
 declare module '@deepseek-ai/cordis' {
@@ -30,6 +29,14 @@ export type {
 
 /** Request for a human answer. */
 export interface AskUserQuestionRequest extends AskUserQuestionRequestEvent {}
+
+/** Stable error taxonomy for user-questions failures. */
+export class UserQuestionError extends HarnessError {
+  constructor(message: string, code: string, options?: ErrorOptions) {
+    super(message, code, options)
+    this.name = 'UserQuestionError'
+  }
+}
 
 function abortedQuestion(cause?: unknown): UserQuestionError {
   return new UserQuestionError(

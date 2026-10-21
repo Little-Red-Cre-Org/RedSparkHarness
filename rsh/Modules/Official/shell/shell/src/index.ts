@@ -6,8 +6,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
-import type { ShellOperations } from './native.ts'
+import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from './types.ts'
 
 /**
@@ -19,7 +18,7 @@ import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } fr
  * registering it twice, and a settings document carried between platforms
  * keeps resolving on both.
  */
-export { SHELL_SETTINGS_NAMESPACE } from './native.ts'
+export const SHELL_SETTINGS_NAMESPACE = 'shell'
 
 export { DSH_ENV_PREFIX } from './types.ts'
 export type {
@@ -53,9 +52,8 @@ declare module '@deepseek-ai/cordis' {
  * - {@link run} rejects only for infrastructure failures. Nonzero exits,
  *   timeout kills, and abort kills resolve with a {@link ShellRunResult}.
  * - {@link start} returns immediately; no timeout applies to background
- *   processes. `done` awaits managed-range cleanup after cancellation or
- *   provider failure; cleanup observation failure rejects. Spawn failures
- *   settle as `killed` with the error on stderr.
+ *   processes. `done` settles at process close and never rejects; spawn
+ *   failures settle as `killed` with the error on stderr.
  * - {@link ShellProcess.readOutput} is incremental: consecutive reads never
  *   repeat output. Lossy reads report truncation and available spill files.
  * - A still-running background process is stopped and awaited when its
@@ -63,7 +61,7 @@ declare module '@deepseek-ai/cordis' {
  *   boundary is `ctx.subprocess` disposal, so a background process survives
  *   an executor-only reload.
  */
-export abstract class ShellExecutor extends Service implements ShellOperations {
+export abstract class ShellExecutor extends Service {
   constructor(ctx: Context) {
     super(ctx, 'shell')
   }

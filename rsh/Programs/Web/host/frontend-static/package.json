@@ -27,8 +27,7 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
+    "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
@@ -40,8 +39,6 @@
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-credentials-local": "workspace:^",
     "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   }
 }

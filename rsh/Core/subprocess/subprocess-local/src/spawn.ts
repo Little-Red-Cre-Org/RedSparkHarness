@@ -15,7 +15,7 @@ import { closeSync, mkdtempSync, openSync, rmdirSync, unlinkSync, writeSync } fr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleepMs } from 'node:timers/promises'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
+import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import type {
   CollectedOutput,
@@ -24,7 +24,7 @@ import type {
   SubprocessOutcome,
   SubprocessOutputMode,
   SubprocessSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess/native'
+} from '@deepseek-ai/dsh-subprocess'
 import type { BoundProcessOwner, ManagedProcessLaunch } from './managed-owner.ts'
 import { waitWithAbort } from './managed-owner.ts'
 import { linuxProcessGroupHasLiveMembers } from './process-inspector.ts'
@@ -53,20 +53,6 @@ export function childEnv(extra?: Readonly<NodeJS.ProcessEnv>): NodeJS.ProcessEnv
     entries.push([key, value])
   }
   return Object.fromEntries(entries)
-}
-
-/**
- * Materialize the selected scrub-overlay or complete-replacement child environment.
- * @param spec - environment entries and the child environment policy.
- * @returns the concrete child environment with undefined entries removed.
- */
-export function subprocessEnvironment(
-  spec: Pick<SubprocessSpawnSpec, 'env' | 'envMode'>,
-): Record<string, string> {
-  const environment = spec.envMode === 'replace' ? spec.env ?? {} : childEnv(spec.env)
-  return Object.fromEntries(
-    Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined),
-  )
 }
 
 /** Injectable process, spill, and platform operations. */
@@ -492,7 +478,7 @@ export function bindManagedProcess(
   const collectStream = (mode: SubprocessOutputMode, stream: Readable | null, label: string): OutputCollector | undefined => {
     if (!isCollect(mode) || stream === null) return undefined
     const collector = new OutputCollector(mode.maxBytes, mode.spill?.maxBytes, label, spillDir)
-    stream.on('data', (chunk: Buffer) => { collector.push(chunk); mode.onData?.(chunk) })
+    stream.on('data', (chunk: Buffer) => { collector.push(chunk) })
     return collector
   }
   const stdoutCollector = collectStream(outMode, stdout, 'stdout')
@@ -663,7 +649,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
   const [program, ...args] = spec.argv
   const child = (internals.spawn ?? spawn)(program as string, args, {
     cwd: spec.cwd,
-    env: subprocessEnvironment(spec),
+    env: childEnv(spec.env),
     stdio: [
       spec.stdio.stdin === 'ignore' ? 'ignore' : 'pipe',
       spec.stdio.stdout === 'inherit' ? 'inherit' : 'pipe',

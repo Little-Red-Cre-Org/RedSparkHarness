@@ -8,7 +8,7 @@ These tests boot the real web composition in-process and drive it with a real Ch
 
 State-sensitive cases use Workspace, admission, attachment, and model-stream barriers to separate visible intermediate states from completed operations. Details close waits for frame transitions; archive verification assigns an explicit title to the seeded Session and follows that identity across reload. See the [CI fixture synchronization decision](../../../../../.agents/notes/implemented/testing/2026-09-08-ci-completion-observations.md).
 
-Native-page tests cover Host-injection failure, module loading progress, startup cancellation, pagehide cleanup, and the built `native.html` entry. Desktop Host unit tests exercise profile validation, installed-package resolution, single-graph bundling, Cordis rejection, boot-data injection, and native asset routing. The production browser smoke still serves a synthetic Host-routed renderer bundle, so it verifies the Cordis-free boot page, browser handoff and lifecycle rather than the Desktop Host process itself.
+Native-page tests cover Host-injection failure, startup cancellation, pagehide cleanup, and the built `native.html` entry. Desktop Host unit tests exercise profile validation, installed-package resolution, single-graph bundling, Cordis rejection, boot-data injection, and native asset routing. The production browser smoke still serves a synthetic Host-routed renderer bundle, so it verifies browser boot and lifecycle rather than the Desktop Host process itself.
 
 ## These are Host-face tests
 
@@ -20,6 +20,6 @@ Importing a Client package — a value or a type — pulls its whole TypeScript 
 
 When a scenario needs a Client-owned constant or pure function, mirror it here instead, next to the commented-out import that names the source module. A drift then surfaces as a missed selector or a stale mirrored value — a loud failure, never a silent pass. `scaffold.ts` follows this rule for the welcome-notice namespace, acknowledgement field, version, and asserted Chinese copy.
 
-One kind of Client import stands. `assembled-boot.ts` drives the compatibility shell itself, so it imports `AppWebEntry` from `@deepseek-ai/dsh-web-compatibility` and the boot-manifest type from `@deepseek-ai/dsh-client-modules/client`: booting the real shell is what that harness is for, and both packages are already in the Host graph. The chat scenarios mirror `conversationContextKey` in `support.ts` instead of importing its Client owner.
+One kind of Client import stands. `assembled-boot.ts` drives the shell itself, so it imports `AppWebEntry` from `@deepseek-ai/dsh-client-web` and the boot-manifest type from `@deepseek-ai/dsh-client-modules/client`: booting the real shell is what that harness is for, and both packages are already in the Host graph. The chat scenarios mirror `conversationContextKey` in `support.ts` instead of importing its Client owner.
 
 Nothing mechanically enforces this rule; keep it in review.

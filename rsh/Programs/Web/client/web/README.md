@@ -1,5 +1,5 @@
 ---
-description: "Cordis-free Native browser boot API and framework-free progress page for Hosts composing selected Client plugins."
+description: "Web boot kernel for the web GUI: two-stage boot of the client plugin tree, the framework-free boot page, and the shared module table, for users and maintainers composing or debugging the browser application."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-client-web` provides the Cordis-free browser API for importing selected Native Client rows, installing them in a `NativeHost`, and mounting the required renderer. Its framework-free boot page reports progress and failures before the renderer mounts. The package root and `./native` export the same Native API; `./native-wire` exposes only the Host-injected wire declarations. The package contains no Cordis loader or compatibility module table. The model never sees this package.
+`dsh-client-web` boots the web GUI: it loads the client module system from the Host-provided boot graph, then activates every client plugin before the application mounts, so the full UI appears only when every plugin is up. A framework-free boot page reports per-entry status, so a failing bundle or plugin stays visible instead of a blank screen. It also defines the shared module table (`PLATFORM_MODULES`) that every dynamic bundle resolves its externals against. The model never sees this package.
 
 ## Table of Contents
 
@@ -25,23 +25,23 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Use `bootNativeClient` when a Host has selected Client rows and supplied their browser module graph. The call imports each selected module, validates its Native plugin export, resolves the composition, and mounts the required `clientRenderer`. The returned host owns the composition lifetime: call and await `stop()` on navigation or shutdown, or call `replace()` with the full successor selection and module graph during reload.
+Use it when you assemble the browser application: `rsh/Programs/Web/application`'s Vite entry runs `new AppWebEntry(container).run()` against the mount point, and the boot page carries the user through activation. Ordinary browser callers pass no options. A pre-injected page transport is the default ahead of the `seams` override: when `globalThis.__DSH_TRANSPORT__` carries `loadBundle`, the module stage adopts it as the bundle transport and skips the immediate-tier HTTP prefetch, while explicit `seams` still win (for example jsdom tests, where external `<script>` execution cannot reach the page context).
 
-The optional `AbortSignal` prevents activation after a pending import settles and stops an active composition when aborted. `./boot-page` exposes the shared framework-free loading page; `./base.css` exposes the browser base styles. `@deepseek-ai/dsh-web-compatibility` owns `AppWebEntry`, Cordis Loader startup, and the shared module table. The default Web `index.html` uses the Native API, while the compatibility package builds its legacy page and worker preview separately.
+The separate `@deepseek-ai/dsh-client-web/native` entry accepts explicitly selected native Client rows, imports their `plugin` exports through the browser module graph, resolves their services with `NativeHost`, and mounts a required `clientRenderer` service. Its published JavaScript includes the native runtime and its declarations have no external package imports, so an isolated consumer can install and typecheck it without Cordis. Its optional `AbortSignal` prevents activation after a pending import settles and stops an active composition when aborted; callers can also stop the returned host to await unmount and plugin cleanup. The current application entry still uses `AppWebEntry`; a Host-supplied native selection and native renderer remain necessary before this path can replace that production boot.
 
 The shell base styles apply automatic CJK/Latin spacing to ordinary content in supporting browsers. Semantic code and terminal, diff, read, and search output containers retain literal source spacing and column alignment; browsers without `text-autospace` support ignore both declarations.
 
 ### What boot looks like
 
-The Host provides a module manifest, an import operation, and selected installation rows. `bootNativeClient` imports the selected rows, validates their Native plugin exports, resolves the complete installation, and starts one `NativeHost` with a renderer mount plugin. `replace()` imports and resolves a successor before replacing the live installation; a failed import or resolution leaves the current UI mounted.
+Boot runs in two stages: the module stage adopts the parser-loaded bootstrap batch, builds the module system from the Host-provided boot graph, and prefetches the `immediately` tier through the shared application-batch URL, which executes once. The plugin stage then activates every graph entry and waits for all of them before handing the marked boot DOM to the UI renderer, which hydrates it and switches to the complete UI.
 
 ### The boot page
 
-The boot page uses plain DOM and local CSS, so bundle and plugin-activation failures remain visible: it shows one spinner node whose CSS arc grows as entries activate, and reports per-entry status. The spinner and its animation phase persist until the full UI replaces the boot page. A failed renderer handoff restores the boot page to the mount point before reporting the error. A plugin that fails import or activation is reported by name with the reason (missing service, import error, or state) instead of a blank page.
+The boot page uses plain DOM and local CSS, so bundle and plugin-activation failures remain visible: it shows one spinner node whose CSS arc grows as entries activate, and reports per-entry status. The spinner and its animation phase persist until the full UI replaces the boot page. A plugin that fails import or activation is reported by name with the reason (missing service, import error, or state) instead of a blank page.
 
 ### The shared module table
 
-The Cordis module table belongs to [`dsh-web-compatibility`](../../../../Compatibility/DSH/web/frontend/README.md), not this Native package. Native browser bundles use Host-authored module manifests and explicit Native plugin exports.
+`PLATFORM_MODULES` (in `src/platform.ts`) names the shell-seeded shared modules — React, Cordis, and static UI libraries — and together with `PRELOADED_CLIENT_EXTERNALS` (the parser-preloaded runtime row) defines the implicit external baseline every dynamic bundle resolves against. `dsh.client.external` adds only exact non-baseline requests; see [shared modules and the module graph](../AGENTS.md#shared-modules-and-the-module-graph).
 
 ### Configuration
 
@@ -59,11 +59,11 @@ This section explains how the boot kernel is built; observable behavior is cover
 
 ### Design concept
 
-The package owns the Native browser composition API and its progress page. The Host owns module graph construction, selection, and asset delivery; `bootNativeClient` imports only selected rows and gives the renderer the mount point after installation succeeds.
+The kernel owns exactly three things: the module system, the Cordis Loader, and the boot page. The Host owns the graph, batch preload, and loader facade, so `AppWebEntry` never knows the bootstrap package id or parses the wire format. The dynamic UI renderer receives the mount point only after every client entry activates.
 
 ### Two-stage boot
 
-`bootNativeClient()` imports each selected module through the Host-supplied graph, validates its `plugin` export, resolves the complete Native installation, and starts a mount plugin that requires `clientApplication` and `clientRenderer`. The returned host serializes replacements and owns unmount and provider cleanup. The compatibility Loader and its boot protocol live in the separate compatibility package.
+`run()` calls the Host-installed `window.__ModuleLoader__.create({ boot, staticModules, ...seams })`; the facade returns the constructed module system and parsed manifest after adopting the parser-loaded bootstrap batch. The module stage prefetches the `immediately` tier through the one shared application-batch URL. The plugin stage mounts the Loader, assigns `loader.internal = modules`, creates every graph entry uniformly, awaits quiescence, then audits activation: any entry that failed import, stayed pending on a missing service, or landed in another non-active state throws one aggregated error naming every failing entry.
 
 ### Boot page mechanics
 
@@ -73,11 +73,14 @@ The boot page is plain DOM with local CSS whose fallback fonts and colors match 
 
 | File | Role |
 |---|---|
-| [`src/native-boot.ts`](src/native-boot.ts) | Native Client row installation, progress reports, and renderer mount with owned cleanup |
-| [`src/index.ts`](src/index.ts) | Package root re-exports the Native browser API |
-| [`src/boot-page.ts`](src/boot-page.ts) | Shared Cordis-free progress page used by Native and compatibility shells |
-| [`src/native-wire.ts`](src/native-wire.ts) | DOM-free declarations for the Host-injected browser payload, also re-exported from `./native` |
-| [`src/base.css`](src/base.css) | Browser base styles, emitted as `lib/base.css` and exported as `./base.css` |
+| [`src/index.ts`](src/index.ts) | Library entry: `AppWebEntry`, `getStaticModules`, platform tables |
+| [`src/boot.ts`](src/boot.ts) | `AppWebEntry`: module stage, boot page, immediate-tier prefetch, then `bootClient` + `mountClient` |
+| [`src/boot-client.ts`](src/boot-client.ts) | `bootClient` / `assertEntriesActive`: Loader mount, one entry per manifest row, activation audit |
+| [`src/native-boot.ts`](src/native-boot.ts) | Native Client row installation and renderer mount with owned cleanup |
+| [`src/mount.ts`](src/mount.ts) | `mountClient`: renderer handoff through a `uiRenderer` dependency fiber |
+| [`src/boot-page.ts`](src/boot-page.ts) | Framework-free boot page: spinner, per-entry status, failure rendering |
+| [`src/platform.ts`](src/platform.ts) | `PLATFORM_MODULES` / `PRELOADED_CLIENT_EXTERNALS`: the implicit external baseline |
+| [`src/seed.ts`](src/seed.ts) | Static module table handed to the loader at boot |
 
 </details>
 
@@ -86,11 +89,12 @@ The boot page is plain DOM with local CSS whose fallback fonts and colors match 
 <a id="further-exploration"></a>
 ## Further Exploration
 
-Read these when the Native composition contract is not enough: the Native runtime, renderer, and explicitly separate compatibility shell.
+Read these when the boot contract is not enough: the module system it boots, the renderer that mounts the app, and the client authoring rules behind the baseline.
 
-- [Native runtime](../../../../Core/native/system/README.md) — Native plugin resolution and lifecycle.
+- [Client module system](../modules/README.md) — the lazy module table and boot graph this kernel consumes.
 - [UI renderer](../ui-renderer/README.md) — receives the mount point and binds slot data to React.
-- [Compatibility browser owner](../../../../Compatibility/DSH/web/frontend/README.md) — legacy Cordis startup and worker preview.
+- [Client modules subsystem](../../../../Docs/subsystems/client-modules.md) — the web plugin table, boot graph wire, and bundle route.
+- [Client authoring rules](../AGENTS.md#shared-modules-and-the-module-graph) — the shared-module baseline and `dsh.client.external` semantics.
 - [Client group map](../README.md) — the browser half this package belongs to.
 
 -----
@@ -123,4 +127,4 @@ None.
 
 </details>
 
-**Runtime invariant:** The Native API package has no Cordis dependency or Loader entry. The Host-provided graph and selected Native plugin rows determine the composition; `NativeHost` owns installation and renderer cleanup. No runtime invariant companion is published because this API exposes no independently mutable package-owned registry state.
+**Runtime invariant:** No companion is published. The Vite entry shell provides boot glue and module-table seeding, emits no Cordis events, and holds no cross-plugin mutable state; the boot chain (loading page → settled → one-flip UI) is verified by the web smoke e2e against the real carrier.

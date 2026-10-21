@@ -25,7 +25,6 @@ export type Mode =
   | 'ci-primary'
   | 'ci-linux-primary'
   | 'ci-static'
-  | 'ci-package-publication'
   | 'ci-lint-contracts-ready'
   | 'ci-coverage'
   | 'ci-bench'
@@ -137,7 +136,6 @@ function parseMode(raw: string | undefined): Mode {
     case 'ci-primary':
     case 'ci-linux-primary':
     case 'ci-static':
-    case 'ci-package-publication':
     case 'ci-lint-contracts-ready':
     case 'ci-coverage':
     case 'ci-bench':
@@ -155,7 +153,7 @@ function parseMode(raw: string | undefined): Mode {
       return raw
     default:
       throw new Error(
-        `run-gates: expected mode ci-primary | ci-linux-primary | ci-static | ci-package-publication | ci-lint-contracts-ready | ci-coverage | ci-bench | ci-snapshot | ci-artifacts | ci-consumers | ci-windows-blocking | ci-windows-complete | ci-windows-observational | node-compat | check-all | hygiene | doc-sync | doc-quick, got ${JSON.stringify(raw)}.`,
+        `run-gates: expected mode ci-primary | ci-linux-primary | ci-static | ci-lint-contracts-ready | ci-coverage | ci-bench | ci-snapshot | ci-artifacts | ci-consumers | ci-windows-blocking | ci-windows-complete | ci-windows-observational | node-compat | check-all | hygiene | doc-sync | doc-quick, got ${JSON.stringify(raw)}.`,
       )
   }
 }
@@ -239,8 +237,6 @@ export function gatesForMode(selected: Mode): Gate[] {
       return [...ciPrimaryGates(), webSnapshotGate(['built-package-invariants'])]
     case 'ci-static':
       return ciStaticGates({ ownsBuild: false })
-    case 'ci-package-publication':
-      return packagePublicationGates()
     case 'ci-lint-contracts-ready':
       return [
         lintGate(),
@@ -317,15 +313,6 @@ function ciSharedStaticGates(): Gate[] {
     pnpmScript('no-bare-dispatcher', 'verify-no-bare-dispatcher', { label: 'proxy-aware dispatchers' }),
     pnpmScript('approval-policy', 'test:approval-policy', { label: 'Weighted approval policy' }),
     pnpmScript('issue-management', 'test:issue-management', { label: 'Issue management policy' }),
-  ]
-}
-
-function packagePublicationGates(): Gate[] {
-  return [
-    pnpmScript('constraints', 'constraints'),
-    pnpmScript('native-dependencies', 'verify-native-dependencies'),
-    pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
-    pnpmScript('package-invariants', 'verify-package-invariants', { label: 'package invariants' }),
   ]
 }
 
@@ -777,13 +764,7 @@ function docSyncLeafGates(options: {
       label: 'documentation standard tests',
       quick: true,
     }),
-    pnpmExec('docs-site-projection', [
-      'vitest',
-      'run',
-      'rsh/Scripts/project-doc-site.spec.ts',
-      'rsh/Scripts/verify-doc-site-fragments.spec.ts',
-      'rsh/Scripts/verify-doc-site-render.spec.ts',
-    ], {
+    pnpmExec('docs-site-projection', ['vitest', 'run', 'rsh/Scripts/project-doc-site.spec.ts', 'rsh/Scripts/verify-doc-site-fragments.spec.ts'], {
       label: 'documentation site checks',
     }),
     pnpmScript('package-readme-limitations', 'verify-package-readme-limitations', { label: 'package README limitations', quick: true }),
@@ -807,13 +788,12 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'vitest.e2e.config.ts',
     'rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts',
     'rsh/Programs/CLI/tests/built-bin.e2e.ts',
-    'rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts',
     'rsh/Programs/Web/host/directory-picker-native/tests/built-worker.e2e.ts',
     'rsh/Programs/SDK/packages/server/tests/built-scope-carrier.e2e.ts',
     'rsh/Modules/Official/fs/tool-present/tests/built-errors.e2e.ts',
     'rsh/Core/subprocess/subprocess-local/tests/spawn-runner-built.e2e.ts',
-    'rsh/Compatibility/DSH/bridge/subagent-codex/tests/loader-composition.e2e.ts',
-    'rsh/Modules/Official/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
+    'rsh/Engine/subagent/subagent-codex/tests/loader-composition.e2e.ts',
+    'rsh/Engine/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
     'rsh/Programs/Web/api/remotes/tests/built-lib.e2e.ts',
     'rsh/Modules/Community/experimental/agent-team/tests/built-lib.e2e.ts',
     // Built execution consumers: the only automated proof that package-name

@@ -1,13 +1,11 @@
 /** Deterministic provider-independent image normalization. */
 
-import type { Sharp } from 'sharp'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import { requestImageDimensions } from '@deepseek-ai/dsh-attachment/request-projection'
-import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import sharp, { type Sharp } from 'sharp'
+import { AttachmentError, requestImageDimensions } from '@deepseek-ai/dsh-attachment'
+import type { ImageMediaType } from '@deepseek-ai/dsh-attachment'
 import { encodeFirstWithinLimit, encodingLadder, isExhaustedEncoding } from './encoding.ts'
 import { detectImage, encodedAlphaIsCompatible } from './image.ts'
 import type { DetectedImage } from './image.ts'
-import { openSupportedImage } from './signature.ts'
 
 /** Deployment-resolved policy for the persisted normalized attachment. */
 export interface NormalizationPolicy {
@@ -73,7 +71,7 @@ async function verifyNormalizedImage(
 
 /** Build one fixed-size, oriented, metadata-free sRGB pipeline from submitted bytes. */
 function preparedPipeline(data: Uint8Array, width: number, height: number): Sharp {
-  return openSupportedImage(data)
+  return sharp(data, { failOn: 'error', limitInputPixels: false })
     .rotate()
     .toColourspace('srgb')
     .resize({ width, height, fit: 'inside', withoutEnlargement: true })

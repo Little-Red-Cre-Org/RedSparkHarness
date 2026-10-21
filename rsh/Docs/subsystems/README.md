@@ -24,8 +24,6 @@ One page per subsystem of the DeepSeek Harness: what it is, the data structures 
 | [feedback.md](feedback.md) | lifecycle-bound per-message feedback records, optimistic versions, sidecar persistence, and the Host Remote contract |
 | [session-title.md](session-title.md) | durable title snapshots, cited source-message seqs, and the asynchronous provider contract |
 | [session-reference.md](session-reference.md) | structured cross-session references: `SessionReferenceInput`/`Candidate`, prepared message contexts, the stable error taxonomy |
-| [tmux-context.md](tmux-context.md) | Native tmux-context preparation request and durable service consumed by Native Headless |
-| [request-context.md](request-context.md) | Native exact-owner model-request providers, captured tool visibility, and Program-owned durable acceptance |
 | [system-prompt.md](system-prompt.md) | per-assembly context, tool-provider results, prompt sections, and cooperative assembly |
 | [tools.md](tools.md) | `ToolDefinition` full fields, the schema DSL, `ToolExecution`/`ToolResult`, tool-presentation UI types, and the guarded execution pipeline |
 | [user-questions.md](user-questions.md) | the UI-backed human question/answer seam: `AskUserQuestionRequest`, answer/options vocabulary, provider API, error taxonomy |
@@ -51,9 +49,8 @@ One page per subsystem of the DeepSeek Harness: what it is, the data structures 
 | [plan.md](plan.md) | plan mode: the log-only `plan/mode` state, pending-selection flush, `PlanModeConfig`, the `exit_plan_mode` review arc |
 | [invariants.md](invariants.md) | the runtime-invariant registry: selection `Config`, `InvariantInstaller`/`InvariantFailure`, the empty-companion contract |
 | [plugin-host.md](plugin-host.md) | the RSH plugin-role registry: descriptors, legacy Cordis adapters, and Fiber-owned release |
-| [http-routes.md](http-routes.md) | framework-neutral Node HTTP route and listener contracts, shared exact/prefix and upgrade registry, admission and drain behavior |
-| [web-server.md](web-server.md) | Cordis HTTP listener, bind/compression config, fallback seat, and index taps |
-| [webhook.md](webhook.md) | authenticated provider deliveries, Cordis fire-and-forget rules, and Native correlated durable root admission |
+| [web-server.md](web-server.md) | the HTTP carrier: `WebRouteKind`/`WebRoute`, match order, the claimable fallback seat, index taps |
+| [webhook.md](webhook.md) | authenticated provider deliveries, arbitrary programmatic rules, and fire-and-forget Workspace Session creation |
 | [storage.md](storage.md) | the storage subsystem: the backend contract (`StorageBackend`), `StorageForms`, `DomainSpec`/`Domain`, `domain/changed` |
 | [workspace.md](workspace.md) | the workspace registry: `Workspace`/`WorkspaceId`, registration and resolution, the session `cwd` relationship |
 | [web-client.md](web-client.md) | the browser architecture: boot, Remote communication, paired Client models, UI adapters, Conversation assembly, Slots, and reconnect semantics |

@@ -56,8 +56,7 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-chunked-list": "workspace:^",
     "@deepseek-ai/dsh-util-values": "workspace:^",
-    "zod": "^4.4.3",
-    "@deepseek-ai/dsh-subagent-protocol": "workspace:^"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -78,7 +77,7 @@
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-approval-definition": "workspace:^",
+    "@deepseek-ai/dsh-user-approval": "workspace:^",
     "@deepseek-ai/dsh-util-time": "workspace:^"
   },
   "peerDependenciesMeta": {
@@ -106,7 +105,7 @@
     "@deepseek-ai/dsh-jobs": {
       "optional": true
     },
-    "@deepseek-ai/dsh-approval-definition": {
+    "@deepseek-ai/dsh-user-approval": {
       "optional": true
     }
   },
@@ -116,7 +115,6 @@
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-user-approval": "workspace:^",
     "@deepseek-ai/dsh-jobs": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
@@ -134,6 +132,7 @@
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
+    "@deepseek-ai/dsh-user-approval": "workspace:^",
     "@deepseek-ai/dsh-util-time": "workspace:^"
   }
 }

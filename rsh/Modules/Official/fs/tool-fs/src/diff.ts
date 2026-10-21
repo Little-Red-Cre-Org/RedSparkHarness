@@ -5,7 +5,7 @@
  */
 
 import { structuredPatch } from 'diff'
-import type { FileDiff } from '@deepseek-ai/dsh-native-tools/presentation'
+import type { FileDiff } from '@deepseek-ai/dsh-tools'
 
 /** Context lines shown on each side of an applied hunk. */
 export const DIFF_CONTEXT = 3

@@ -24,7 +24,7 @@
       "path": "../session"
     },
     {
-      "path": "../../session/session-persistence/tsconfig.host.json"
+      "path": "../../session/session-persistence"
     },
     {
       "path": "../system-prompt"
@@ -39,13 +39,13 @@
       "path": "../scope"
     },
     {
+      "path": "../../../Modules/Official/settings/settings"
+    },
+    {
       "path": "../../../Core/runtime-diagnostics/invariants"
     },
     {
       "path": "../../session/session-projection"
-    },
-    {
-      "path": "../native-agent/tsconfig.host.json"
     }
   ]
 }

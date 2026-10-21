@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsdown'
 
-/** Build the Cordis and native installers over one shared retry core, plus the independent invariant companion. */
+/** Build the package root and invariant companion as independent bundles. */
 export default defineConfig([
   {
-    entry: ['lib/types/{index,native}.js'],
+    entry: ['lib/types/index.js'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',
@@ -11,7 +11,6 @@ export default defineConfig([
     fixedExtension: false,
     dts: false,
     clean: false,
-    outputOptions: { chunkFileNames: 'shared-[hash].js' },
   },
   {
     entry: ['lib/types/invariant.js'],

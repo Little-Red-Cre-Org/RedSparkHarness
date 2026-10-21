@@ -1,5 +1,5 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -138,15 +138,7 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
       expect.objectContaining({ name: 'ReexportedBox', aliases: ['ReexportedBox', 'Box'] }),
       expect.objectContaining({ name: 'ReexportedZodType', aliases: ['ReexportedZodType', 'ZodType'] }),
     ]))
-    const zodPackagePath = realpathSync(resolve(import.meta.dirname, '../node_modules/zod/package.json'))
-    const zodPackage = JSON.parse(readFileSync(zodPackagePath, 'utf8')) as { version: string }
-    const zodDeclaration = realpathSync(join(dirname(zodPackagePath), 'v4/classic/schemas.d.cts'))
-    const reexportedZod = clientPackage?.exports.find(exported => exported.name === 'ReexportedZodType')
-    expect(reexportedZod?.symbol).toBe(
-      `<external>:${normalizedPath(relative(fixtureRoot, zodDeclaration))}#ZodType`,
-    )
     const host = model.faces.find(face => face.face === 'host')
-    expect(host?.packages[0]?.services.map(service => service.key)).not.toContain('ignoredInline')
     expect(host?.graph.nodes).toContainEqual(expect.objectContaining({
       kind: 'conditional',
     }))
@@ -200,20 +192,7 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
       location: { file: 'packages/host/src/index.ts' },
       text: "'demo/ready'(agent: Agent<{ ready: true }>, payload: Box<Payload>): void",
     })
-    const snapshotZodSymbol = `<external>:zod@${zodPackage.version}/v4/classic/schemas.d.cts#ZodType`
-    const snapshotModel = {
-      ...model,
-      faces: model.faces.map(face => face.face === 'client' ? {
-        ...face,
-        packages: face.packages.map(pkg => pkg.name === '@fixture/client' ? {
-          ...pkg,
-          exports: pkg.exports.map(exported => exported.name === 'ReexportedZodType'
-            ? { ...exported, symbol: snapshotZodSymbol }
-            : exported),
-        } : pkg),
-      } : face),
-    }
-    expect(snapshotModel).toMatchSnapshot()
+    expect(model).toMatchSnapshot()
   })
 
   it('merges bounded package programs into the same face model', () => {
@@ -240,35 +219,6 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
     const model = new WorkspaceAnalyzer({ root, packages: ['@fixture/explicit-service'] }).analyze()
     const service = model.faces[0]?.packages[0]?.services[0]
     expect(service).toMatchObject({ key: 'detached', export: { name: 'DetachedService' } })
-  })
-
-  it('includes inherited public methods without overrides or Typert binding metadata', () => {
-    const root = copyFixture('inherited-service-')
-    addExplicitServicePackage(root, 'service detached')
-    const sourcePath = join(root, 'packages/explicit-service/src/index.ts')
-    const source = readFileSync(sourcePath, 'utf8')
-      .replace("import { Service } from '@deepseek-ai/cordis'\n", '')
-      .replace('/**\n * Service implementation discovered independently of its protocol package.', [
-        'class ServiceBase {',
-        '  readonly typertRemote: unknown = undefined',
-        '  /** Report base health. */',
-        '  health(): boolean { return true }',
-        '  /** Report base readiness. */',
-        '  ready(): boolean { return false }',
-        '}',
-        '/**',
-        ' * Service implementation discovered independently of its protocol package.',
-      ].join('\n'))
-      .replace('export class DetachedService extends Service {', 'export class DetachedService extends ServiceBase {')
-    writeFileSync(sourcePath, source)
-
-    const model = new WorkspaceAnalyzer({ root, packages: ['@fixture/explicit-service'] }).analyze()
-    const face = model.faces[0]
-    const service = face?.packages[0]?.services[0]
-    const members = new Map(face?.graph.declarations.flatMap(declaration => declaration.members)
-      .map(member => [member.id, member.name]))
-
-    expect(service?.members.map(id => members.get(id))).toEqual(['ready', 'health'])
   })
 
   it('prefers an explicitly keyed implementation over its protocol Context merge', () => {
@@ -1154,56 +1104,15 @@ describe('WorkspaceAnalyzer', { timeout: 60_000 }, () => {
   it('confines explicit face projects to their selected Typert face', () => {
     const root = copyFixture('typert-split-project-')
     configureDualRuntimeClient(root, true)
-    const packageRoot = join(root, 'packages/client')
-    writeFileSync(join(packageRoot, 'src/host-leaf.ts'), 'export interface HostLeafMarker { readonly hostLeaf: true }\n')
-    writeFileSync(join(packageRoot, 'src/client-leaf.ts'), 'export interface ClientLeafMarker { readonly clientLeaf: true }\n')
-    for (const face of ['host', 'client'] as const) {
-      const configPath = join(packageRoot, `tsconfig.${face}.json`)
-      const config = JSON.parse(readFileSync(configPath, 'utf8')) as {
-        references: { path: string }[]
-      }
-      config.references.push({ path: `./tsconfig.${face}-leaf.json` })
-      writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
-      writeFileSync(join(packageRoot, `tsconfig.${face}-leaf.json`), `${JSON.stringify({
-        extends: '../../tsconfig.base.json',
-        compilerOptions: { rootDir: 'src', outDir: `lib/${face}-types`, declaration: true },
-        files: [`src/${face}-leaf.ts`],
-      }, null, 2)}\n`)
-    }
 
     const markers = new WorkspaceAnalyzer({ root }).indexSourceDeclarations()
       .filter(declaration => declaration.package === '@fixture/client'
-        && declaration.name.endsWith('Marker'))
+        && declaration.name.endsWith('OnlyMarker'))
       .map(declaration => ({ face: declaration.face, name: declaration.name }))
-    expect(markers).toHaveLength(4)
-    expect(markers).toEqual(expect.arrayContaining([
+    expect(markers).toEqual([
       { face: 'client', name: 'ClientOnlyMarker' },
-      { face: 'client', name: 'ClientLeafMarker' },
       { face: 'host', name: 'HostOnlyMarker' },
-      { face: 'host', name: 'HostLeafMarker' },
-    ]))
-  })
-
-  it('uses only exported Client roots from a partial Client project', () => {
-    const root = copyFixture('typert-partial-client-')
-    const packageRoot = join(root, 'packages/client')
-    const manifestPath = join(packageRoot, 'package.json')
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { exports: Record<string, unknown> }
-    manifest.exports['./types'] = { types: './lib/types/types.d.ts', default: './lib/types.js' }
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
-    writeFileSync(join(packageRoot, 'src/types.ts'), '/** @typert object */\nexport interface ClientTypes { readonly client: true }\n')
-    writeFileSync(join(packageRoot, 'tsconfig.client.json'), JSON.stringify({
-      extends: './tsconfig.json', files: ['src/types.ts'], include: [],
-    }))
-    writeFileSync(join(root, 'tsconfig.client.json'), JSON.stringify({
-      extends: './tsconfig.base.json', files: [],
-      references: [{ path: './packages/client/tsconfig.client.json' }],
-    }))
-
-    const analyzer = new WorkspaceAnalyzer({ root, faces: ['client'], checkDiagnostics: false })
-    expect(analyzer.discoverPackages().map(item => item.package)).toContain('@fixture/client')
-    const client = analyzer.analyze().faces[0]
-    expect(client?.packages[0]?.exports.map(entry => entry.subpath)).toEqual(['./types'])
+    ])
   })
 
   it('accepts package export forms while skipping artifact-only rows and unexported packages', { timeout: 180_000 }, () => {

@@ -10,14 +10,95 @@
  * sessions-derived empty-Hero fact is active. Visible dialog chrome belongs
  * to the step, so a mounted-but-deciding step paints nothing here.
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
-import { ConnectionIndicator, SettingsPanel } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  ConnectionIndicator,
+  IconAgentPresetOutline16, IconCloseOutline16, IconDataOutline16,
+  IconPersonalizationOutline16, IconSettingsOutline16,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SettingsRootComponentProps } from './shell-contract.ts'
+import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
 import css from './SettingsRoot.module.css'
 
 const RECOVERY_CONFIRMATION_MS = 2_000
+
+/** Nav glyph by section id; unknown ids fall back to the settings gear. */
+function navIcon(id: string) {
+  if (id === 'models') return <IconDataOutline16 className={css.navIcon} size={16} />
+  if (id === 'agent-presets') return <IconAgentPresetOutline16 className={css.navIcon} size={16} />
+  if (id === 'plugins') return <IconPersonalizationOutline16 className={css.navIcon} size={16} />
+  return <IconSettingsOutline16 className={css.navIcon} size={16} />
+}
+
+type PanelProps = {
+  rows: readonly SettingsSectionRow[]
+  renderSlot: SettingsRootComponentProps['renderSlot']
+  activeId: string | undefined
+  onSelect: (id: string) => void
+  onClose: () => void
+}
+
+/**
+ * The modal layer: full-viewport mask + centered panel. Close paths: the
+ * header button, a mask click, and document-level Escape (mounted only while
+ * open, so the listener lifetime is the panel's).
+ */
+function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelProps) {
+  // Entries can unmount underneath the requested id, so the render-time
+  // projection falls back to the first row when the id is gone.
+  const active = rows.find(r => r.id === activeId)?.id ?? rows[0]?.id
+  const titleId = useId()
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [onClose])
+
+  // Entering the dialog focuses the close button; the root restores its trigger on close.
+  const closeButton = useRef<HTMLButtonElement | null>(null)
+  useEffect(() => { closeButton.current?.focus() }, [])
+
+  return (
+    <div className={css.overlay} role="presentation">
+      <div className={css.mask} aria-hidden="true" onClick={onClose} />
+      <div className={css.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <nav className={css.nav}>
+          <div className={css.navTitle} id={titleId}>{renderSlot('settings.header', {})}</div>
+          <div className={css.navList}>
+            {rows.map(row => (
+              <button
+                key={row.id}
+                type="button"
+                className={clsx(css.navCell, row.id === active && css.active)}
+                aria-current={row.id === active ? 'true' : undefined}
+                onClick={() => { onSelect(row.id) }}
+              >
+                {navIcon(row.id)}
+                <span className={css.navLabel}>{row.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+        <div className={css.content}>
+          <div className={css.header}>
+            <div className={css.actions}>{renderSlot('settings.action', {})}</div>
+            <button ref={closeButton} type="button" className={css.close} onClick={onClose}>
+              <IconCloseOutline16 size={14} />
+              <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
+            </button>
+          </div>
+          <div className={css.options}>
+            {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /**
  * Render the settings trigger and panel.
@@ -95,7 +176,6 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
   } else if (showRecovery) {
     connectionIndicator = 'recovered'
   }
-  const activeSectionId = rows.find(row => row.id === activeId)?.id ?? rows[0]?.id
 
   return (
     <>
@@ -124,16 +204,12 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
       </div>
       {open && (
         <SettingsPanel
-          title={renderSlot('settings.header', {})}
-          closeLabel={renderSlot('settings.close', {})}
           rows={rows}
-          activeId={activeSectionId}
+          renderSlot={renderSlot}
+          activeId={activeId}
           onSelect={setActiveId}
           onClose={close}
-          actions={renderSlot('settings.action', {})}
-        >
-          {activeSectionId !== undefined && renderSlot('settings.section', { close }, { only: activeSectionId })}
-        </SettingsPanel>
+        />
       )}
       {/* Dialog chrome and `#root` inert ownership live inside each step's
           visible branch. A step still deciding (private facts loading)

@@ -158,36 +158,6 @@ function replaceCwd(value: string, ctx: NormalizeContext, replacement: string): 
   return out
 }
 
-/** Normalize serialized cwd-rooted path values without changing other JSON text. */
-function canonicalizeEmbeddedJsonPaths(value: string, ctx: NormalizeContext): string {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(value)
-  } catch {
-    // Invalid embedded JSON retains the existing plain-text separator handling.
-    return value
-  }
-  if (parsed === null || typeof parsed !== 'object') return value
-
-  let pathValueOffset = -1
-  return value.replace(/"(?:\\.|[^"\\])*"/g, (token: string, offset: number) => {
-    const decoded = JSON.parse(token) as string
-    if (offset === pathValueOffset) {
-      pathValueOffset = -1
-      const path = replaceCwd(decoded, ctx, CWD)
-      if (path.startsWith(CWD + '/') || path.startsWith(CWD + '\\')) {
-        return JSON.stringify(path.replaceAll('\\', '/'))
-      }
-    }
-    // A complete string token followed by a colon is a key in validated JSON.
-    if (decoded === 'path') {
-      const separator = /^\s*:\s*/.exec(value.slice(offset + token.length))
-      if (separator !== null) pathValueOffset = offset + token.length + separator[0].length
-    }
-    return token
-  })
-}
-
 /** Replace cwd, session ids, and any stray UUID with stable tokens in a string. */
 function scrubString(
   value: string,
@@ -207,7 +177,6 @@ function scrubString(
   if (cwdPathMode === 'canonical') {
     // Restrict separator conversion to paths rooted at the cwd token. A global
     // backslash rewrite would corrupt regexes, commands, and model-authored text.
-    out = canonicalizeEmbeddedJsonPaths(out, ctx)
     out = out.replace(CWD_ROOTED_PATH_RE, path => path.replaceAll('\\', '/'))
     out = canonicalizeEmbeddedPaths(out)
   }
@@ -356,13 +325,11 @@ export function normalizeStdout(
 /**
  * Normalize a session JSONL log into a stable expected output: the header line's
  * volatile fields (`createdAt`, `id`, `cwd`) are zeroed/scrubbed; event,
- * historical packed-row, embedded Assistant-stream, goal lifecycle,
- * external-subagent, and catalog child-creation clocks are zeroed; and all
- * volatile strings are scrubbed. External-subagent clocks are limited to the
- * owned fields on their exact event types; nested same-named clock fields are
- * not zeroed.
- * Projected inputs remain projected. Packed `data.dt` gaps are normalized even
- * when the projected row omits its `time0` anchor.
+ * historical packed-row, embedded Assistant-stream, goal lifecycle, and
+ * catalog child-creation clocks are zeroed; and all volatile strings are
+ * scrubbed. Projected inputs remain
+ * projected. Packed `data.dt` gaps are normalized even when the projected row
+ * omits its `time0` anchor.
  * Output is JSONL in the same shape as the input — one compact record per
  * line.
  *
@@ -408,23 +375,6 @@ export function normalizeSessionLog(
     if (record.type === 'hook/result' && record.data !== null && typeof record.data === 'object') {
       const data = record.data as Record<string, unknown>
       if ('durationMs' in data) data.durationMs = 0
-    }
-    if (record.data !== null && typeof record.data === 'object' && !Array.isArray(record.data)) {
-      const data = record.data as Record<string, unknown>
-      if (record.type === 'subagent/external-start' && typeof data.startedAt === 'number') data.startedAt = 0
-      if (record.type === 'subagent/external-end' && typeof data.finishedAt === 'number') data.finishedAt = 0
-      if (record.type === 'subagent/external-operation' && typeof data.at === 'number') {
-        switch (data.kind) {
-          case 'model-request':
-          case 'model-response':
-          case 'model-failure':
-          case 'tool-call':
-          case 'tool-result':
-          case 'tool-settlement':
-            data.at = 0
-            break
-        }
-      }
     }
     normalizeFeedbackClocks(record)
     if (record.type === 'goal/change' && record.data !== null && typeof record.data === 'object') {

@@ -1,29 +1,47 @@
 /** Native tool-approval policy, answerer dispatch, and durable audit vocabulary. */
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {
-  NativeApprovalAnswerer,
-  NativeApprovalAnswererResult,
-  NativeApprovalAnswererRequest,
-  NativeApprovalRequest,
-  NativeApprovalServiceDefinition,
-} from '@deepseek-ai/dsh-approval-definition'
 import * as approvalTypes from './types.ts'
 
 export {
   NativeApprovalRequestId,
+  type NativeApprovalDecision,
+  type NativeApprovalOutcome,
+  type NativeApprovalPolicy,
 } from './types.ts'
-export type {
-  NativeApprovalAnswerer,
-  NativeApprovalAnswererResult,
-  NativeApprovalAnswererRequest,
-  NativeApprovalDecision,
-  NativeApprovalOutcome,
-  NativeApprovalPolicy,
-  NativeApprovalRequest,
-  NativeApprovalServiceDefinition,
-  NativeApprovalSessionGrant,
-} from './types.ts'
+
+declare module '@deepseek-ai/dsh-native-runtime' {
+  interface NativeServices { approval: NativeApprovalService }
+}
+
+/** One exact operation that requires an approval decision. */
+export interface NativeApprovalRequest {
+  /** Fresh id the Session owner has already written to `native-approval/asked`. */
+  readonly id: approvalTypes.NativeApprovalRequestId
+  /** Registered Agent that owns the requested operation. */
+  readonly agent: NativeAgent
+  /** Model-visible tool name the application is about to execute. */
+  readonly toolName: string
+  /** Model tool-call identifier, when the application has one. */
+  readonly callId?: ToolCallId
+  /** User-facing reason supplied by the tool contribution or application. */
+  readonly reason?: string
+  /** Cancels the unanswered request and prevents a late answer from applying. */
+  readonly signal?: AbortSignal
+}
+
+/** The immutable request passed to one native answerer. */
+export interface NativeApprovalAnswererRequest extends NativeApprovalRequest {
+  /** Effective policy selected before answerer dispatch. */
+  readonly policy: approvalTypes.NativeApprovalPolicy
+  /** Aborted by the caller or Provider disposal; answerers must stop owned work. */
+  readonly signal: AbortSignal
+}
+
+/** One answerer may claim a request with an outcome or return undefined to delegate. */
+export type NativeApprovalAnswerer = (request: NativeApprovalAnswererRequest) =>
+  approvalTypes.NativeApprovalOutcome | undefined | Promise<approvalTypes.NativeApprovalOutcome | undefined>
 
 /** Optional native-provider configuration. */
 export interface Config {
@@ -48,7 +66,7 @@ function resolveConfig(input: unknown): Required<Config> {
  * Applies one deployment policy, dispatches answerers in registration order,
  * and cancels unsettled requests before its Provider releases the Agent authority.
  */
-export class NativeApprovalService implements NativeApprovalServiceDefinition {
+export class NativeApprovalService {
   private readonly answerers = new Set<NativeApprovalAnswerer>()
   private readonly controller = new AbortController()
   private readonly active = new Set<Promise<approvalTypes.NativeApprovalDecision>>()
@@ -99,7 +117,7 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
     const answererRequest: NativeApprovalAnswererRequest = {
       ...request,
       signal: controller.signal,
-      policy: request.sessionPolicy ?? this.policy,
+      policy: this.policy,
     }
     const task = this.decide(answererRequest)
     this.active.add(task)
@@ -129,7 +147,6 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
   private async decide(request: NativeApprovalAnswererRequest): Promise<approvalTypes.NativeApprovalDecision> {
     if (this.isAborted(request.signal)) return this.decision(request, 'cancelled')
     if (request.policy === 'never') return this.decision(request, 'rejected')
-    if (request.sessionGrant?.previouslyGranted === true) return this.decision(request, 'allowed-once')
     for (const answerer of [...this.answerers]) {
       const outcome = await this.answer(answerer, request)
       if (outcome !== undefined) return this.decision(request, outcome)
@@ -139,11 +156,11 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
 
   private answer(
     answerer: NativeApprovalAnswerer, request: NativeApprovalAnswererRequest,
-  ): Promise<NativeApprovalAnswererResult | undefined> {
+  ): Promise<approvalTypes.NativeApprovalOutcome | undefined> {
     if (this.isAborted(request.signal)) return Promise.resolve('cancelled')
     return new Promise((resolve) => {
       let settled = false
-      const complete = (outcome: NativeApprovalAnswererResult | undefined): void => {
+      const complete = (outcome: approvalTypes.NativeApprovalOutcome | undefined): void => {
         if (settled) return
         settled = true
         request.signal.removeEventListener('abort', onAbort)
@@ -151,7 +168,7 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
       }
       const onAbort = (): void => { complete('cancelled') }
       request.signal.addEventListener('abort', onAbort, { once: true })
-      let work: Promise<NativeApprovalAnswererResult | undefined>
+      let work: Promise<approvalTypes.NativeApprovalOutcome | undefined>
       try {
         work = Promise.resolve(answerer(request))
       } catch {
@@ -168,11 +185,9 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
   }
 
   private decision(
-    request: NativeApprovalAnswererRequest, answer: NativeApprovalAnswererResult,
+    request: NativeApprovalAnswererRequest, outcome: approvalTypes.NativeApprovalOutcome,
   ): approvalTypes.NativeApprovalDecision {
-    if (typeof answer === 'string') return { id: request.id, policy: request.policy, outcome: answer }
-    if (request.sessionGrant === undefined) throw new Error('native-approval: answer has no reusable Session scope')
-    return { id: request.id, policy: request.policy, outcome: answer.outcome, sessionGrant: request.sessionGrant.grant }
+    return { id: request.id, policy: request.policy, outcome }
   }
 
   private isAborted(signal: AbortSignal): boolean {

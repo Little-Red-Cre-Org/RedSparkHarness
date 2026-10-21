@@ -9,16 +9,10 @@
   ],
   "references": [
     {
-      "path": "../../../../Core/util/home-paths"
-    },
-    {
-      "path": "../../../../Core/subprocess/subprocess"
-    },
-    {
-      "path": "../../../../Core/subprocess/subprocess-local"
-    },
-    {
       "path": "../../../../Core/vendor/cosmokit"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
     },
     {
       "path": "../../../../Engine/llm/llm"
@@ -27,13 +21,7 @@
       "path": "../../../../Engine/core/session"
     },
     {
-      "path": "../../../../Engine/subagent/sdk-protocol"
-    },
-    {
-      "path": "../../../../Engine/subagent/sdk-runtime"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+      "path": "../protocol"
     }
   ]
 }

@@ -36,11 +36,10 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`automation/`](Modules/Official/automation/README.zh.md) | 持久化计划与独立的 Agent 定时执行 |
 | [`feedback/`](Modules/Official/feedback/README.zh.md) | 人类反馈的采集与命令 |
 | [`identity/`](Core/identity/README.zh.md) | 共享匿名身份 |
-| [`llm/`](Engine/llm/README.zh.md) | LLM（大语言模型）能力：Engine 服务与[官方提供方包](Modules/Official/llm/README.zh.md) |
+| [`llm/`](Engine/llm/README.zh.md) | LLM（大语言模型）能力系列：抽象服务 + 提供方适配器 |
 | [`e2b/`](Modules/Official/e2b/README.zh.md) | E2B 远程运行时提供方 |
-| [`subprocess/`](Core/subprocess/README.zh.md) | 子进程 API 与进程树提供方 |
-| [`core/settings/`](Core/settings/README.zh.md) | Core Settings 定义 |
-| [`shell/`](Modules/Official/shell/README.zh.md) | Bash 执行器、本地实现与工具 |
+| [`subprocess/`](Core/subprocess/README.zh.md) | 子进程能力系列：Service Definition + 本地进程树提供方 |
+| [`shell/`](Modules/Official/shell/README.zh.md) | Bash 能力系列：执行器 seam、本地实现、面向模型的工具 |
 | [`terminal/`](Modules/Official/terminal/README.zh.md) | 持久 PTY 能力系列：限定所有者范围的会话、本地实现、面向模型的工具 |
 | [`code-runtime/`](Modules/Official/code-runtime/README.zh.md) | 代码执行能力系列：Service Definition + worker 线程提供方 + PTC mode Consumer |
 | [`sandbox/`](Modules/Official/sandbox/README.zh.md) | 进程限制 seam；bwrap、Landlock、Seatbelt 后端 |
@@ -74,7 +73,6 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`sdk/`](Programs/SDK/packages/README.zh.md) | 进程外 SDK：JSON-RPC 协议与 TypeScript 客户端／服务器 |
 | [`acp/`](Programs/ACP/packages/README.zh.md) | 仅面向自动化的 ACP（Agent Client Protocol）服务器 |
 | [`cli/`](Programs/CLI/README.zh.md) | 仅通过 profile 启动的命令行应用入口 |
-| [`tui/`](Programs/TUI/README.zh.md) | 原生终端应用与共享展示 |
 | [`interaction/`](Modules/Official/interaction/README.zh.md) | 人机协作平面：批准／交互 seam、权限预设、命令、询问用户的工具 |
 | [`boot/`](Compatibility/DSH/boot/README.zh.md) | 共享的 app bin 启动粘合层 |
 | [`bridge/`](Compatibility/DSH/bridge/README.zh.md) | 由原生运行时 profile 选择的显式 Cordis 贡献 |

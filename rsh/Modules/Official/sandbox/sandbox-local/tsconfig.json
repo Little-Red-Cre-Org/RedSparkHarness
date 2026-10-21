@@ -31,9 +31,6 @@
     },
     {
       "path": "../../../../Engine/core/session"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

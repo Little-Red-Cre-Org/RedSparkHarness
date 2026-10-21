@@ -18,10 +18,7 @@
       "path": "../../../../Core/vendor/loader"
     },
     {
-      "path": "../../../../Core/util/http-routes/tsconfig.host.json"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/http-routes-cordis"
+      "path": "../webserver"
     },
     {
       "path": "../../../../Core/util/launch-environment"

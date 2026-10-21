@@ -47,15 +47,11 @@ session.append('user/message', { role: 'user', content: [{ type: 'text', text: '
 session.deriveMessages()         // the derived model history
 ```
 
-Surface events (`system/message`, `user/message`, `assistant/message`, `tool/result`) require `surfaceOp` in both typed events and append input. A replacement uses exactly `{ op: 'replace', startSeq, endSeq }`, with inclusive `SessionSeq` endpoints in current surface order. An Assistant message embeds its exact compact provider stream and forbids `sourceEventSeqs`. Known log-only events never produce messages and forbid both metadata fields; `appendBatch` accepts `ignorable: true` only when older readers can safely skip that event.
+Surface events (`system/message`, `user/message`, `assistant/message`, `tool/result`) require `surfaceOp` in both typed events and append input. A replacement uses exactly `{ op: 'replace', startSeq, endSeq }`, with inclusive `SessionSeq` endpoints in current surface order. An Assistant message embeds its exact compact provider stream and forbids `sourceEventSeqs`. Known log-only events forbid both metadata fields and never produce a message.
 
 Append, seed/restore, and event adoption/snapshot reject any `header.system` and exactly empty optional request-header fields (`tools: []`, `adapterDefaults: {}`) instead of normalizing input. Tool-result `data.error` is allowed only when `message.content[0].isError === true`; failure identity remains optional. Rejected appends do not change the log, derived state, or event feed. Adoption validates event-local metadata but not referenced history or replacement membership.
 
 `system/message` holds the rendered system prompt: the first one is surface node 0, the prepared call capability governs admission, with a non-empty rendering consolidated at the first system node on an incapable route or appended after cached history inside a continuing `in-history` series; empty system nodes project to no message, so clearing the prompt requires logged empty replacements of all active system nodes, not just the latest; the surface fold rejects a replacement covering node 0 while it is a `system/message` unless the replacing event is itself a `system/message` over exactly that node, while later system nodes carry no protection and a compaction range may shadow them ([decision](../../../../.agents/notes/implemented/architecture/2026-09-02-system-prompt-as-surface-node.md)).
-
-`session.onBeforeAppend(guard)` registers an independently removable synchronous veto over validated immutable events. Guards must not append recursively and are not called for restored events. Rejection leaves the log and next sequence unchanged. `session.hasAcceptedEvent(event)` checks exact accepted-event identity at its sequence without reading or folding history.
-
-`session.appendBatch(inputs)` validates every payload, guard, surface transition and store publication callback before accepting any fact. Guards observe the pre-batch log; publication observers see the complete immutable batch in sequence order. A failed acceptance leaves all facts unaccepted. Persistence still uses the selected writer's flush; batch admission is not an atomic filesystem transaction.
 
 ### Read the log
 
@@ -67,7 +63,7 @@ Session log positions use two numeric types. `SessionSeq` identifies an existing
 
 `ctx.sessions.fork(source, boundary?, childSessionId?)` selects source events through an inclusive `boundary` seq (default: the current last event), requires the prefix to end outside an open turn, and creates a live child session with lineage metadata. A tool-time delegation that must branch mid-turn clips to a completed prefix instead.
 
-The logical `SessionHeader.isSeeded` field reports whether fork history exists without exposing a positional integer. `Session.inheritedEventCount` retains the exact checked `SessionLogOffset`; `ownEvents()` returns events at and after that cut, and `isOwnSeq(seq)` accepts only an existing child-owned position. A low-level seeded constructor must supply an explicit `seed` and `inheritedEventCount` because the constructor seed can contain child-owned setup events after the inherited prefix. `Session.create` optionally reports each constructor-appended seed marker to its sole persistence owner; the callback does not create another event or writer.
+The logical `SessionHeader.isSeeded` field reports whether fork history exists without exposing a positional integer. `Session.inheritedEventCount` retains the exact checked `SessionLogOffset`; `ownEvents()` returns events at and after that cut, and `isOwnSeq(seq)` accepts only an existing child-owned position. A low-level seeded constructor must supply an explicit `seed` and `inheritedEventCount` because the constructor seed can contain child-owned setup events after the inherited prefix.
 
 ### Flush durable state
 
@@ -87,7 +83,7 @@ This section explains how the package realizes the behavior above; the observabl
 
 The package is built on event sourcing: a `Session` is an append-only log of typed `SessionEvent`s, and everything else — model history, transcripts, telemetry, titles, persistence — derives from that stream. The surface is a derived projection: an incremental manager validates append candidates, advances the ordered view from committed events, and tracks a `replaceGeneration` that bumps on every committed rewrite. Model-visible means logged: anything that reaches a model request must be reconstructable from the log. Each model attempt that reaches settlement commits one event: `assistant/message` carries the assembled model-visible message plus its compact timed stream, while `assistant/attempt` retains a failed, retried, cancelled, or stream-error attempt without adding model history. A hard process loss before settlement leaves no durable attempt stream.
 
-The `./native` entry exports the Session object, event types, validation, and projections without loading the Cordis `SessionStore`. The package root retains the `ctx.sessions` service, scoped event publication, and existing exports; both entries use the same Session class. Public Session declarations reuse types from `dsh-llm`, which is a required peer. `dsh-scope` is an optional peer used by the Cordis entry; native Session imports do not load it.
+The `./native` entry exports the Session object, event types, validation, and projections without loading the Cordis `SessionStore`. The package root retains the `ctx.sessions` service, scoped event publication, and existing exports; both entries use the same Session class.
 
 ### Request headers
 
@@ -202,5 +198,3 @@ These limits define when the session store needs special care. They are current 
 None.
 
 </details>
-
-`./event-validation` exposes the current Session event parser to browsers using the same seed-envelope and message validators. Unknown types require `ignorable: true`; this entry imports neither Node nor Cordis.

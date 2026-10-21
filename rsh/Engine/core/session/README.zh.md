@@ -47,15 +47,11 @@ session.append('user/message', { role: 'user', content: [{ type: 'text', text: '
 session.deriveMessages()         // the derived model history
 ```
 
-表层事件（`system/message`、`user/message`、`assistant/message`、`tool/result`）在类型化事件与追加输入中都必须带有 `surfaceOp`。替换操作仅接受 `{ op: 'replace', startSeq, endSeq }`，端点为包含边界的 `SessionSeq`，按当前 surface 顺序解释。assistant 消息会嵌入精确、紧凑的提供方流，并禁止 `sourceEventSeqs`。已知仅日志事件从不产生消息，并且禁止这两个元数据字段；只有旧读取器可以安全跳过该事件时，`appendBatch` 才接受 `ignorable: true`。
+表层事件（`system/message`、`user/message`、`assistant/message`、`tool/result`）在类型化事件与追加输入中都必须带有 `surfaceOp`。替换操作仅接受 `{ op: 'replace', startSeq, endSeq }`，端点为包含边界的 `SessionSeq`，按当前 surface 顺序解释。assistant 消息会嵌入精确、紧凑的提供方流，并禁止 `sourceEventSeqs`。已知仅日志事件禁止这两个元数据字段，且从不产生消息。
 
 追加、seed/restore 与事件 adoption/snapshot 会拒绝任何 `header.system` 及恰好为空的可选请求头字段（`tools: []`、`adapterDefaults: {}`），而不规范化输入。工具结果的 `data.error` 仅在 `message.content[0].isError === true` 时允许存在；失败标识仍是可选的。被拒绝的追加不会改变日志、派生状态或事件流。Adoption 校验事件局部元数据，但不校验所引用的历史或替换端点是否属于 surface。
 
 `system/message` 承载渲染后的系统提示词：第一条是 surface 第 0 号节点，准入依据已准备调用的能力，不具备能力的路由将非空渲染文本归并到首个系统节点，延续中的 `in-history` 序列则在缓存历史之后追加；空系统节点不投影为消息，因此清除提示词必须为所有生效的系统节点记录空内容替换，而非仅替换最新节点；当第 0 号节点是 `system/message` 时，surface 折叠拒绝覆盖它的替换，除非替换事件本身是恰好覆盖该节点的 `system/message`，而后续系统节点不受保护，压缩范围可以遮蔽它们（[决策](../../../../.agents/notes/implemented/architecture/2026-09-02-system-prompt-as-surface-node.zh.md)）。
-
-`session.onBeforeAppend(guard)` 对已验证且不可变的事件注册可独立移除的同步否决检查。守卫不得递归追加，也不会处理恢复的事件。拒绝保持日志和下一序号不变。`session.hasAcceptedEvent(event)` 检查该序号处的确切已接纳事件身份，不读取或折叠历史。
-
-`session.appendBatch(inputs)` 在接纳任何事实前校验全部载荷、守卫、surface 转换及存储发布回调。守卫观察批次前的日志；发布观察者按序号接收完整的不可变批次。接纳失败时全部事实都不被接纳。持久化仍使用选定 writer 的 flush；批量接纳不是原子文件系统事务。
 
 ### 读取日志
 
@@ -67,7 +63,7 @@ session.deriveMessages()         // the derived model history
 
 `ctx.sessions.fork(source, boundary?, childSessionId?)` 选取截至 `boundary` 事件序号（含该事件）的源事件（默认：当前最后一个事件），要求所选前缀结束时没有开放轮次，再创建带谱系元数据的实时子会话。必须在轮次中途分支的工具时委派会裁剪到已完成前缀。
 
-逻辑 `SessionHeader.isSeeded` 字段报告是否存在 fork 历史，而不公开位置整数。`Session.inheritedEventCount` 保留经过校验的精确 `SessionLogOffset`；`ownEvents()` 返回从该切点开始的事件，`isOwnSeq(seq)` 只接受已存在且由子会话拥有的位置。底层带 seed 构造必须显式提供 `seed` 与 `inheritedEventCount`，因为构造 seed 可以在继承前缀之后包含子会话自有的设置事件。 `Session.create` 可将构造时追加的每个 seed marker 交给其唯一持久化所有者；回调不会创建另一个事件或 writer。
+逻辑 `SessionHeader.isSeeded` 字段报告是否存在 fork 历史，而不公开位置整数。`Session.inheritedEventCount` 保留经过校验的精确 `SessionLogOffset`；`ownEvents()` 返回从该切点开始的事件，`isOwnSeq(seq)` 只接受已存在且由子会话拥有的位置。底层带 seed 构造必须显式提供 `seed` 与 `inheritedEventCount`，因为构造 seed 可以在继承前缀之后包含子会话自有的设置事件。
 
 ### 刷新持久状态
 
@@ -87,7 +83,7 @@ session.deriveMessages()         // the derived model history
 
 该包建立在事件溯源之上：`Session` 是类型化 `SessionEvent` 的仅追加日志，其他一切——模型历史、transcript（文本记录）、遥测、标题、持久化——都从这条流派生。surface 是派生投影：一个增量管理器校验追加候选、根据已提交事件推进有序视图，并跟踪每次已提交重写都会递增的 `replaceGeneration`。模型可见即已记录：任何到达模型请求的内容都必须能从日志重建。每个完成结算的模型尝试都会提交一个事件：`assistant/message` 携带组装后的模型可见 message 及其紧凑带时间 stream，`assistant/attempt` 则保留失败、重试、取消或 stream error attempt，且不添加模型历史。如果进程在 settlement 前硬中断，则不会留下持久 attempt stream。
 
-`./native` 入口导出 Session 对象、事件类型、校验与投影，不加载 Cordis `SessionStore`。包根入口保留 `ctx.sessions` 服务、带作用域的事件发布及现有导出；两个入口使用同一个 Session 类。公开 Session 声明复用 `dsh-llm` 类型，因此它是必需 peer。`dsh-scope` 是 Cordis 入口使用的可选 peer；原生 Session 导入不加载它。
+`./native` 入口导出 Session 对象、事件类型、校验与投影，不加载 Cordis `SessionStore`。包根入口保留 `ctx.sessions` 服务、带作用域的事件发布及现有导出；两个入口使用同一个 Session 类。
 
 ### 请求头
 
@@ -202,5 +198,3 @@ session.deriveMessages()         // the derived model history
 无。
 
 </details>
-
-`./event-validation` 为浏览器提供当前 Session 事件解析器，复用 seed 信封与消息验证。未知类型只有显式标记 `ignorable: true` 才能通过；不引入 Node 或 Cordis 依赖。

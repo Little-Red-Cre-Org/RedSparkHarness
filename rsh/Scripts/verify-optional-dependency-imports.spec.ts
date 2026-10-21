@@ -15,7 +15,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { TypeScriptProject } from './ts-project.ts'
 import { collectOptionalImportViolations } from './verify-optional-dependency-imports.ts'
 
-const FIXTURE = {
+const FIXTURE: Record<string, string> = {
   'tsconfig.host.json': JSON.stringify({
     compilerOptions: {
       target: 'es2022',
@@ -23,7 +23,6 @@ const FIXTURE = {
       moduleResolution: 'bundler',
       noEmit: true,
       skipLibCheck: true,
-      jsx: 'preserve',
       types: [],
       paths: {
         '@f/opt': ['./rsh/f/opt/src/index.ts'],
@@ -31,7 +30,7 @@ const FIXTURE = {
         '@deepseek-ai/cordis': ['./rsh/f/cordis/src/index.ts'],
       },
     },
-    include: ['rsh/**/*.ts', 'rsh/**/*.tsx'],
+    include: ['rsh/**/*.ts'],
   }),
 
   'rsh/f/opt/package.json': JSON.stringify({ name: '@f/opt', version: '0.0.1' }),
@@ -54,9 +53,8 @@ const FIXTURE = {
     peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
   }),
   'rsh/f/native-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-  'rsh/f/native-consumer/src/native.ts': "import './style.css'\nexport { native } from './native-dependency.ts'\n",
+  'rsh/f/native-consumer/src/native.ts': "export { native } from './native-dependency.ts'\n",
   'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@deepseek-ai/cordis'\nexport const native = context\n",
-  'rsh/f/native-consumer/src/style.css': '.native { color: red; }\n',
 
   'rsh/f/native-types-consumer/package.json': JSON.stringify({
     name: '@f/native-types-consumer',
@@ -76,7 +74,7 @@ const FIXTURE = {
     peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
   }),
   'rsh/f/unsafe-native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-  'rsh/f/unsafe-native-types-consumer/src/types.tsx': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
+  'rsh/f/unsafe-native-types-consumer/src/types.ts': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
 
   'rsh/f/cli/package.json': JSON.stringify({
     name: '@deepseek-ai/dsh',
@@ -183,63 +181,6 @@ afterAll(() => {
 })
 
 describe('optional dependency loads', () => {
-  it.each([false, true])('checks an allowlisted compatibility peer from the native entry (leaked: %s)', (leaked) => {
-    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-compatibility-peer-'))
-    try {
-      const files = {
-        'tsconfig.host.json': FIXTURE['tsconfig.host.json'],
-        'tsconfig.client.json': FIXTURE['tsconfig.host.json'],
-        'rsh/f/opt/package.json': FIXTURE['rsh/f/opt/package.json'],
-        'rsh/f/opt/src/index.ts': FIXTURE['rsh/f/opt/src/index.ts'],
-        'rsh/f/mixed/package.json': JSON.stringify({
-          name: '@f/mixed', version: '0.0.1',
-          exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-          dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
-          peerDependencies: { '@f/opt': '*' },
-          peerDependenciesMeta: { '@f/opt': { optional: true } },
-        }),
-        'rsh/f/mixed/src/index.ts': "export { runtimeValue } from '@f/opt'\n",
-        'rsh/f/mixed/src/native.ts': leaked ? "export { runtimeValue } from '@f/opt'\n" : 'export const native = 1\n',
-      }
-      for (const [path, content] of Object.entries(files)) {
-        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
-        writeFileSync(join(caseRoot, path), content)
-      }
-      const peers = new Map([['rsh/f/mixed', ['@f/opt']]])
-      expect(collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'host'), new Map(), peers)).toEqual([])
-      const actual = collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'client'), new Map(), peers)
-      expect(actual.map(violation => violation.split(' loads ')[0])).toEqual(leaked ? ['rsh/f/mixed/src/native.ts:1'] : [])
-    } finally {
-      rmSync(caseRoot, { recursive: true, force: true })
-    }
-  })
-
-  it('allows an explicitly compatibility-only package to load its optional peer', () => {
-    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-compatibility-only-peer-'))
-    try {
-      const files = {
-        'tsconfig.host.json': FIXTURE['tsconfig.host.json'],
-        'tsconfig.client.json': FIXTURE['tsconfig.host.json'],
-        'rsh/f/compatibility/package.json': JSON.stringify({
-          name: '@f/compatibility', version: '0.0.1',
-          peerDependencies: { '@deepseek-ai/cordis': '*' },
-          peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
-        }),
-        'rsh/f/compatibility/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-        'rsh/f/cordis/package.json': FIXTURE['rsh/f/cordis/package.json'],
-        'rsh/f/cordis/src/index.ts': FIXTURE['rsh/f/cordis/src/index.ts'],
-      }
-      for (const [path, content] of Object.entries(files)) {
-        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
-        writeFileSync(join(caseRoot, path), content)
-      }
-      const peers = new Map([['rsh/f/compatibility', ['@deepseek-ai/cordis']]])
-      expect(collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'host'), new Map(), peers)).toEqual([])
-    } finally {
-      rmSync(caseRoot, { recursive: true, force: true })
-    }
-  })
-
   it('reports every form the compiler keeps, and nothing else', () => {
     expect(violations.map(violation => violation.split(' loads ')[0])).toEqual([
       'rsh/f/cli-static-violation/src/startup.ts:1',
@@ -250,7 +191,7 @@ describe('optional dependency loads', () => {
       'rsh/f/native-consumer/src/native-dependency.ts:1',
       'rsh/f/native-types-consumer/src/index.ts:1',
       'rsh/f/unsafe-native-types-consumer/src/index.ts:1',
-      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1',
+      'rsh/f/unsafe-native-types-consumer/src/types.ts:1',
     ])
   })
 
@@ -264,25 +205,10 @@ describe('optional dependency loads', () => {
 
   it('checks Cordis-free type exports while allowing legacy-only Cordis imports', () => {
     expect(safeExportViolations).toContain(
-      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1 loads @deepseek-ai/cordis at module scope,'
+      'rsh/f/unsafe-native-types-consumer/src/types.ts:1 loads @deepseek-ai/cordis at module scope,'
       + ' declared optional in peerDependenciesMeta; import it as a type, or restructure so module scope does not need it',
     )
     expect(safeExportViolations.some(violation => violation.startsWith('rsh/f/native-types-consumer/src/index.ts:1'))).toBe(false)
-  })
-
-  it('requires a local stylesheet imported by a Cordis-free source entry to exist', () => {
-    const caseRoot = mkdtempSync(join(tmpdir(), 'optional-import-missing-style-'))
-    try {
-      for (const [path, content] of Object.entries(FIXTURE)) {
-        if (path === 'rsh/f/native-consumer/src/style.css') continue
-        mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
-        writeFileSync(join(caseRoot, path), content)
-      }
-      expect(() => collectOptionalImportViolations(new TypeScriptProject(caseRoot)))
-        .toThrow('safe source import cannot be resolved:')
-    } finally {
-      rmSync(caseRoot, { recursive: true, force: true })
-    }
   })
 
   it('checks optional loads from a binary startup closure but leaves dynamic compatibility branches on demand', () => {

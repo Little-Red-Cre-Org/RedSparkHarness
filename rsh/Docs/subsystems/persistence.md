@@ -169,10 +169,9 @@ interface SessionHeader {
    */
   readonly origin?: 'subagent'
   /**
-   * Logical delegation depth: absent (zero) for a top-level session; one more
-   * than its logical parent agent for a subagent Session. The logical parent
-   * may have no local Session, so this can exceed the physical parent's depth
-   * by more than one. Persisted so recursion budgets survive restart and resume.
+   * Delegation depth: absent (zero) for a top-level session, parent depth + 1
+   * for a subagent child. Persisted so a recursion budget survives restart and
+   * resume — a runtime-only depth would reset a resumed child to top-level.
    */
   readonly delegationDepth?: number
   /**
@@ -322,52 +321,6 @@ interface SessionPersistenceSnapshot {
 ```
 
 The optional `eventCount`/`sizeBytes` fields remain cheap backend observations for consumers that explicitly need them. Session listing does not use either field to open cold logs: it reads headers plus identity-checked projection-cache hints only, so a cache or Session-format upgrade never turns startup into a body scan.
-
-## Recoverable deletion
-
-The optional `deletions` capability moves inactive Session artifacts into a retained namespace and restores their original bytes only when the live identity is absent. Providers without this capability leave it absent. Cancellation applies before namespace-move admission; an accepted move completes without rollback.
-
-```ts type-equiv
-/** Identity of one retained physical deletion, distinct from its Session identity. */
-type SessionDeletionId = Branded<'SessionDeletionId'>
-```
-
-```ts type-equiv
-/** Receipt for a removed Session whose original bytes remain recoverable. */
-interface SessionDeletionReceipt { readonly id: SessionDeletionId; readonly sessionId: SessionId }
-```
-
-```ts type-equiv
-/** Explicit capability; absence means this Provider does not support physical recoverable deletion. */
-interface NativeSessionDeletionOperations {
-  /** Move an inactive stored Session out of its live namespace without rewriting generations.
-   * @param id - exact stored Session identity.
-   * @param options - cancellation before namespace-move admission; an accepted move completes
-   * without rollback or caller cancellation.
-   * @returns retained deletion identity after the namespace move completes.
-   */
-  delete(id: SessionId, options?: { readonly signal?: AbortSignal
-    readonly expectedRevision?: SessionPersistenceRevision }): Promise<SessionDeletionReceipt>
-  /** Restore original bytes only when the live identity is still absent.
-   * @param id - retained deletion identity.
-   * @param options - cancellation before namespace-move admission; an accepted move completes
-   * without rollback or caller cancellation.
-   * @returns restored Session identity; conflicting live identities reject.
-   */
-  restore(id: SessionDeletionId, options?: { readonly signal?: AbortSignal; readonly expectedCwd?: string }): Promise<SessionId>
-  /** Read the retained immutable header without restoring or migrating a generation.
-   * @param id - retained deletion identity.
-   * @param options - cancellation during disk validation.
-   * @returns validated original header for route admission.
-   */
-  inspect(id: SessionDeletionId, options?: { readonly signal?: AbortSignal }): Promise<SessionHeader>
-  /** Enumerate completed retained deletions without opening or activating a Session.
-   * @param options - cancellation during receipt scanning.
-   * @returns validated receipts; incomplete preparations are not advertised.
-   */
-  list(options?: { readonly signal?: AbortSignal }): Promise<readonly SessionDeletionReceipt[]>
-}
-```
 
 ## The backend
 

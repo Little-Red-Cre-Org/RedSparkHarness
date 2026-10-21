@@ -9,9 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`ctx.subprocess` 可解析可执行文件、启动受管进程和终端会话、有界收集输出，并终止其拥有的进程范围。请求指定 argv、cwd、stdio、环境、宽限期与取消信号；调用方负责时限、拆卸策略和模型渲染。环境默认采用已清理的父环境叠加显式条目，也可选择完整替换。
-
-`./native` 提供不依赖 Cordis 的 `SubprocessOperations` 与 `ChildConnectionDefinition` 契约、释放器和环境辅助函数。`childConnection.connect()` 始终连接 stdin/stdout/stderr 管道，并返回退出事实及受管范围所有权。包根入口仍是 Cordis 服务。
+`ctx.subprocess` 可解析可执行文件、启动显式指定的子进程或真实终端会话、流式读取或有界收集输出，并终止完整的受管进程范围。每个组合配置一个 subprocess 实现，并根据命令运行位置选择本地或远程执行。每次请求都指定 argv、工作目录、stdio、环境覆盖、终止宽限期与取消信号，不会添加 shell 解释或隐藏的执行默认值。子进程环境会先移除环境中的凭据与 `DSH_*` 值，再应用显式覆盖；时限、拆卸策略与面向模型的渲染由调用方负责，收集的输出在进程退出后仍可读取。
 
 ## 目录
 
@@ -28,8 +26,6 @@ kind: "package-reference"
 ## 使用本包
 
 在需要运行子进程的组合中挂载一个 subprocess 提供方，并从拥有该命令的能力调用 `ctx.subprocess`。常用路径是显式的：解析可执行文件、用完全明确的请求 spawn、读取你要的输出，并在工作完成时终止受管范围。
-
-不发布运行时不变式伴随包，因为本包只定义进程契约；提供方专属的校验与生命周期检查由各提供方负责。
 
 ### 挂载服务
 
@@ -74,11 +70,11 @@ const output = handle.collected.stdout?.readFrom(0)
 
 ### 每个子进程起步时的环境
 
-普通 subprocess 请求使用 scrub-overlay 模式：形似凭据的名称与环境中的 `DSH_*` 事实都会被清除，再应用显式条目；显式的 `undefined` 墓碑值可移除一个普通环境项。Child connection 也可选择 `envMode: 'replace'`，此时子进程只接收提供的环境条目，不继承或清理 ambient 环境。
+子进程永远不会隐式继承 harness 的环境秘密：形似凭据的名称与环境中的 `DSH_*` 事实都会被清除，调用方显式的 `env` 在该清除之后合并。有意转发的凭据或当前的 `DSH_*` 部署事实仍会到达子进程；显式的 `undefined` 墓碑值则移除一个普通的环境项。
 
 ### 可能出错的地方
 
-无法解析可执行文件时，服务会明确报出稳定的错误。从未启动成功的 spawn 会让 `done` reject；从未运行过的进程没有任何缓冲输出。提供方无法证明所选范围为空时，`waitForExit()` 也会 reject；提供方 fallback 可能无法拥有逃离其进程组或已观察会话的后代。独立协议客户端可直接使用 `ChildConnectionDefinition`，无需构造 NativeHost；命令解析和环境策略仍由 Programs 拥有。
+无法解析可执行文件时，服务会明确报出稳定的错误。从未启动成功的 spawn 会让 `done` reject；从未运行过的进程没有任何缓冲输出。提供方无法证明所选范围为空时，`waitForExit()` 也会 reject；提供方 fallback 可能无法拥有逃离其进程组或已观察会话的后代。当传输拥有自己的 spawn（SDK 客户端、MCP）时，请绕开本服务并直接导入 `scrubbedParentEnv`，让环境策略保持单一来源。
 
 -----
 
@@ -98,11 +94,9 @@ const output = handle.collected.stdout?.readFrom(0)
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis 服务入口：抽象 `SubprocessRuntime`、`ctx.subprocess` 注册和共享的 `scrubbedParentEnv` 清除 |
-| [`src/native.ts`](src/native.ts) | 无框架依赖的 `SubprocessOperations` 与 `ChildConnectionDefinition` 服务契约 |
-| [`src/connection.ts`](src/connection.ts) | 子进程连接的 EOF、提供方终止及受管范围释放 |
-| [`src/types.ts`](src/types.ts) | 词汇：spawn/connection spec、环境模式、stdio 句柄、读取器、结果、`DSH_*` 命名空间 |
-| — | 进程观测和 OS 信号由 Provider 拥有；连接消费方拥有协议关闭与宽限期数值。 |
+| [`src/index.ts`](src/index.ts) | 插件入口：抽象 `SubprocessRuntime`、`ctx.subprocess` 注册、共享的 `scrubbedParentEnv` 清除 |
+| [`src/types.ts`](src/types.ts) | 词汇：spawn spec、stdio 模式、句柄、读取器、结果、`DSH_*` 命名空间 |
+| — | 不发布运行时不变式伴生入口；这个无状态 Service Definition 负责 spawn spec 与句柄类型，观察则由 Service Providers 负责。 |
 
 ### 数据模型与流程
 
@@ -130,9 +124,6 @@ spawn 会立即返回活动句柄，而不公开目标身份。`done` 独立报�
 -----
 
 <a id="model-experience"></a>
-
-收集输出流接受可信 `onData` 观察回调，不消耗或替换保留的输出。回调不得抛出异常。
-
 ## 模型体验
 
 通过消费方 seam（例如 bash 执行器家族）间接影响，它们负责进程输出与生命周期的全部面向模型渲染。
@@ -148,8 +139,8 @@ spawn 会立即返回活动句柄，而不公开目标身份。`done` 独立报�
 
 这些限制说明该 seam 何时不合适，或何时把工作留给消费方。它们是当前包约束，不是对比或任务积压。
 
-- **协议关闭仍由消费方拥有**——SDK client 使用共享 ChildConnection Definition 和生命周期 helper，但无需构造 NativeHost；每个协议消费方仍拥有自己的 shutdown 交互和 EOF/最终等待宽限期。
-- **提供方仍拥有终止机制**——共享 disposer 会关闭 stdin、等待，然后启动所选 Provider 的终止流程并等待受管范围释放；不同 OS 的信号升级仍由 Provider 内部完成。
+- **由 SDK 管理的 spawn 仍在服务之外**——拥有内部 spawn 的传输（SDK 客户端、MCP）无法把该调用路由到本服务；它仍可导入 `scrubbedParentEnv`，使环境策略保持单一来源。
+- **拆卸阶梯归消费方所有**——该 seam 只提供信号动词与受管范围等待，不提供现成的完全停稳序列；每个进程外消费方自行编码其子进程的配合方式（ACP 后端以 stdin EOF 打头的阶梯是仓库内模板）。
 - **可观察性取决于提供方**——native 提供方可以通过 systemd scope 或 Windows Job 拥有逃逸后代，fallback 提供方则只暴露较弱的进程组、进程树或会话可见性。该 seam 不新增持续的进程表监视器。
 
 <a id="dev-note"></a>

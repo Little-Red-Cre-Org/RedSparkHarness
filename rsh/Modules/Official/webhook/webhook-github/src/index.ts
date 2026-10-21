@@ -2,8 +2,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 import z from '@deepseek-ai/schemastery'
 import { createGitHubWebhookHandler } from './handler.ts'
 
@@ -47,7 +46,7 @@ function assertConfig(config: Config): void {
 /** Register one signed GitHub endpoint on the injected WebServer. */
 export function apply(ctx: Context, config: Config): void {
   assertConfig(config)
-  const route: HttpRoute = {
+  const route = {
     kind: 'exact' as const,
     path: config.path,
     handler: createGitHubWebhookHandler(ctx, {

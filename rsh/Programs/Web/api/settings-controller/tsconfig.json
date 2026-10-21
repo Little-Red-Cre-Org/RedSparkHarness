@@ -15,7 +15,7 @@
       "path": "../../../../Core/vendor/schemastery"
     },
     {
-      "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
+      "path": "../../../../Engine/preset/agent-presets"
     },
     {
       "path": "../../../../Modules/Official/credentials/authorization"
@@ -37,12 +37,6 @@
     },
     {
       "path": "../../../../Core/typert/protocol"
-    },
-    {
-      "path": "../../../../Core/settings/settings-definition"
-    },
-    {
-      "path": "../../../../Compatibility/DSH/bridge/compat-settings-definition"
     }
   ]
 }

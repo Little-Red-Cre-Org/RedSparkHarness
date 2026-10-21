@@ -18,7 +18,7 @@
       "path": "../../../../Core/vendor/schemastery"
     },
     {
-      "path": "../../../../Compatibility/DSH/bridge/compat-code-runtime"
+      "path": "../../../Official/code-runtime/code-runtime"
     },
     {
       "path": "../../../../Core/util/timeout"

@@ -3,168 +3,20 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { SessionId } from '@deepseek-ai/dsh-session'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
-import { EVENT_API, queryServiceApi, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
-import { hostInspectProviders } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
-import { CordisCatalogProjector, type CordisCatalogPolicy, type ServiceEntry } from '../src/cordis-catalog.ts'
+import { EVENT_API, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
 import { FaceModelEmitter } from '../src/emitter.ts'
-import type { FaceModel, SourceDeclarationModel } from '../src/model.ts'
 
 const workspaceRoot = resolve(import.meta.dirname, '../../../../..')
 const temporaryRoots: string[] = []
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isStringArray(value: unknown): value is readonly string[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'string')
-}
-
-function isServiceInspectResult(value: unknown): value is {
-  service: { methods: readonly { signature: string; description: string; throws?: readonly string[] }[] }
-  referencedTypes: readonly { name: string; declaration: string }[]
-} {
-  if (!isRecord(value) || !isRecord(value.service) || !Array.isArray(value.service.methods)
-    || !Array.isArray(value.referencedTypes)) return false
-  const methodsValid = value.service.methods.every(method => isRecord(method)
-    && typeof method.signature === 'string' && typeof method.description === 'string'
-    && (method.throws === undefined || isStringArray(method.throws)))
-  const typesValid = value.referencedTypes.every(type => isRecord(type)
-    && typeof type.name === 'string' && typeof type.declaration === 'string')
-  return methodsValid && typesValid
-}
 
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
 
 describe('model-driven dsh-tools generation', () => {
-  it('excludes the worker ServerResponse marker by package identity', () => {
-    const face: FaceModel = { face: 'host', packages: [], graph: { declarations: [], nodes: [] } }
-    const workerMarker: SourceDeclarationModel = {
-      face: 'host',
-      package: '@deepseek-ai/dsh-experimental-webworker-runtime',
-      name: 'ServerResponse',
-      kind: 'class',
-      location: { file: 'rsh/worker/src/http.ts', line: 1, column: 1 },
-      text: 'export class ServerResponse {}',
-    }
-    const otherOwner: SourceDeclarationModel = {
-      ...workerMarker,
-      package: '@deepseek-ai/dsh-http-routes',
-      kind: 'interface',
-      text: 'export interface ServerResponse { statusCode: number }',
-    }
-    const policy: CordisCatalogPolicy = {
-      linkedTypePages: {},
-      foundationTypeNames: new Set(),
-      typeLinkExemptions: {},
-      inheritedEvents: [],
-      inheritedServices: [],
-    }
-    const service: ServiceEntry = {
-      key: 'fixture',
-      type: 'FixtureService',
-      abstract: false,
-      doc: 'Fixture service.',
-      methods: [{ signature: 'respond(response: ServerResponse): void', jsDoc: '/** Respond. */' }],
-      source: 'rsh/fixture.ts:1',
-    }
-    const render = (
-      declarations: readonly SourceDeclarationModel[],
-      runtimeTypeExclusions: ReadonlySet<string> = new Set(),
-    ): string => new CordisCatalogProjector(face, declarations, { ...policy, runtimeTypeExclusions })
-      .renderRuntimeApi({ services: [service], events: [] })
-
-    expect(render([workerMarker])).toContain(workerMarker.text)
-    expect(render([workerMarker], new Set([`${workerMarker.package}#${workerMarker.name}`])))
-      .not.toContain(workerMarker.text)
-    const otherOwnerCatalog = render([workerMarker, otherOwner], new Set([`${workerMarker.package}#${workerMarker.name}`]))
-    expect(otherOwnerCatalog).toContain(otherOwner.text)
-    expect(otherOwnerCatalog).not.toContain(workerMarker.text)
-
-    const result = queryServiceApi('webServer') as {
-      referencedTypes: readonly { name: string; declaration: string }[]
-    }
-    const types = new Set(result.referencedTypes.map(type => type.name))
-    expect(types).toContain('HttpRoute')
-    expect(types).not.toContain('ServerResponse')
-    expect(result.referencedTypes.find(type => type.name === 'HttpRoute')?.declaration)
-      .toContain('request: IncomingMessage, response: ServerResponse')
-  })
-
-  it('keeps same-package projection declarations in the generated Service type closure', () => {
-    const sourceDeclarations = new WorkspaceAnalyzer({
-      root: workspaceRoot,
-      faces: ['host'],
-      packages: ['@deepseek-ai/dsh-session-projection'],
-      checkDiagnostics: false,
-    }).indexSourceDeclarations()
-    expect(sourceDeclarations.map(declaration => declaration.name)).toEqual(expect.arrayContaining([
-      'ProjectionDefinition',
-      'SessionProjectionMap',
-      'SessionProjectionStateMap',
-    ]))
-
-    const result = queryServiceApi('sessionProjections') as {
-      service: { methods: readonly { signature: string }[] }
-      referencedTypes: readonly { name: string; declaration: string }[]
-    }
-    const register = result.service.methods.find(method => method.signature.startsWith('register<'))
-    expect(register?.signature).toContain('ProjectionDefinition')
-    const declarations = new Map(result.referencedTypes.map(type => [type.name, type.declaration]))
-    expect([...declarations.keys()]).toEqual(expect.arrayContaining([
-      'ProjectionDefinition',
-      'SessionProjectionMap',
-      'SessionProjectionStateMap',
-    ]))
-    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('stateVersion: number'))
-    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('init('))
-    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('apply('))
-    expect(declarations.get('ProjectionDefinition')).toEqual(expect.stringContaining('wire?'))
-    expect(declarations.get('SessionProjectionMap')).toContain('export interface SessionProjectionMap')
-    expect(declarations.get('SessionProjectionStateMap')).toContain('export interface SessionProjectionStateMap')
-  }, 60_000)
-
-  it('returns the specialized approval Service and its public types through Host Inspect', async () => {
-    const ctx = new Context()
-    try {
-      await mountAgentLoopTestDependencies(ctx)
-      const agents = await mountAgentLoopTestHarness(ctx)
-      const agent = await agents.create(SessionId('approval-catalog'))
-      const provider = hostInspectProviders(ctx).find(candidate => candidate.manifest.id === 'Service')
-      if (provider === undefined) throw new Error('Host Inspect has no Service provider')
-      const result: unknown = await provider.query('listService', { service: 'approval' }, {
-        signal: new AbortController().signal, agent,
-      })
-      if (!isServiceInspectResult(result)) throw new Error('Host Inspect returned an invalid Service result')
-
-      const methods = result.service.methods
-      expect(methods.map(method => method.signature)).toEqual(expect.arrayContaining([
-        'setPolicy(agent: Agent, policy: ApprovalPolicy): void',
-        'request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>',
-      ]))
-      const request = methods.find(method => method.signature === 'request(request: ApprovalRequest<Agent>): Promise<ApprovalOutcome>')
-      expect(request?.description).toContain('open Session turn')
-      expect(request?.description).toContain('approval/asked')
-      expect(request?.description).toContain('approval/decided')
-      expect(request?.description).toContain('reject before appending')
-      expect(request?.description).toContain('failure before either audit append commits rejects the request')
-      expect(request?.throws).toEqual(expect.arrayContaining([
-        'When the Session has no open turn or either audit append fails before commit.',
-      ]))
-      const approvalRequest = result.referencedTypes.find(type => type.name === 'ApprovalRequest')
-      const agentType = result.referencedTypes.find(type => type.name === 'Agent')
-      expect(approvalRequest?.declaration).toContain('export interface ApprovalRequest<AgentOwner>')
-      expect(agentType?.declaration).toContain('export interface Agent')
-    } finally { await ctx.fiber.dispose() }
-  })
-
   it('round-trips the complete service and event structure through the runtime registry', { timeout: 30_000 }, async () => {
     const workspace = new WorkspaceAnalyzer({
       root: workspaceRoot,

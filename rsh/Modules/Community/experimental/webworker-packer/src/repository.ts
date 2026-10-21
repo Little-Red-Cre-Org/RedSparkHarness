@@ -106,18 +106,14 @@ export function indexWorkspacePackages(repoRoot: string): Map<string, string> {
  * same-tree-same-bytes guarantee.
  * @param repoRoot - Absolute repository root.
  * @param profile - Profile name to compose.
- * @param fromDefaultProfile - Optional shipped legacy template for a new profile.
  * @returns The composed YAML.
  */
-export function composeProfile(repoRoot: string, profile: string, fromDefaultProfile?: string): string {
+export function composeProfile(repoRoot: string, profile: string): string {
   const home = mkdtempSync(join(tmpdir(), 'dsh-pack-home-'))
   try {
-    const args = ['--import', 'tsx/esm', join(repoRoot, CLI_ENTRY), '--profile', profile]
-    if (fromDefaultProfile !== undefined) args.push('--from-default-profile', fromDefaultProfile)
-    args.push('--dump-default-config')
     return execFileSync(
       process.execPath,
-      args,
+      ['--import', 'tsx/esm', join(repoRoot, CLI_ENTRY), '--profile', profile, '--dump-default-config'],
       { cwd: repoRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, [DSH_HOME_ENV]: home } },
     )
   } finally {

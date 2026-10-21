@@ -4,232 +4,11 @@
 
 subagent seam 让一个 agent（智能体）将工作委派给子 agent。与 [bash](shell.zh.md) 一样，它是**一项可选能力**，不属于 agent loop（智能体循环），因此其类型定义在此而非 [core.md](core.zh.md) 中。它不同于其他能力 seam，因为**同一上下文中可共存多个提供方实现**，并按名称注册（`ctx.subagents`），而 bash 只允许一个执行器。该注册表遵循 [LLM（大语言模型）适配器注册表](llm-streaming.zh.md)，而非单服务的 bash 执行器。
 
-Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Engine Service Provider 有两个同级包：`dsh-subagent-spawn-in-process` 和 `dsh-subagent-fork-in-process`；Cordis ACP 进程外提供方是独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-acp)。Claude Code 产品适配器是一个 [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.zh.md)，提供受限的 Native driver 并保留 Cordis compatibility 入口。旧版 DSH SDK 提供方保留为独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-dsh-sdk)，以免 Engine 依赖 Program 客户端。面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
+Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Service Provider 是六个兄弟包：`dsh-subagent-spawn-in-process`、`dsh-subagent-fork-in-process`、`dsh-subagent-acp`、`dsh-subagent-codex`、`dsh-subagent-claude-code`、`dsh-subagent-dsh-sdk`；面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
 
-Official Native Codex 模块 [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.zh.md) 的一次性产品路径使用 Engine 捕获的 Responses transport；所选代际缺少该传输或无法执行父级 `maxTokens` 上限时，会在 child 启动前拒绝。显式组合该路由时，SIWC Provider 可提供捕获能力；已交付的 Native profiles 仍未启用 Codex 外部驱动。显式安装的旧版 Cordis 路径仍是 [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)。
-
-源码：[`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts)、[`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts)、[`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)和 [`rsh/Engine/subagent/native-subagent/src/external-driver.ts`](../../Engine/subagent/native-subagent/src/external-driver.ts)
+源码：[`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts)、[`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts)和 [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)
 
 `subagentCatalog` projection 通过 Session 观察和客户端快照暴露按父会话事件排序的 `SubagentCatalogEntry[]`。每个条目包含子级 id、创建时间、模式和依模式确定的标签；fork 继承的目录事实不在其中。[subagent 包](../../Engine/subagent/subagent/README.zh.md) 定义目录创建和持久化语义。
-
-原生一次性组合使用 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 作为可替换服务定义与选定派生提供者，以 [tool-subagent 的原生入口](../../Engine/subagent/tool-subagent/README.zh.md) 为消费者。NativeSubagentOperations 解析精确活跃父配置，并通过 sessionExecution 委派；Program 保留 Agent 执行与唯一 Session 写入器。共享 [subagent-protocol](../../Engine/subagent/subagent-protocol/README.zh.md) 拥有描述符载荷、输出归并与委派权限文本。原生 Agent 所有的后台执行使用 NativeJobs 与既有 job_output/job_kill 消费者；可持续子任务复用 Program 可持续权威，通过[原生控制工具](../../Engine/subagent/tool-subagent-control/README.zh.md)实现相邻消息、打断与基于描述符的冷恢复。Program 还向独立的[原生 list_agents 工具](../../Engine/subagent/native-tool-subagent-list-agents/README.zh.md)提供选定的持久目录。完成结果投影仍为兼容能力。
-
-## 原生外部驱动
-
-Native Host 可为一次性子任务选择一个外部产品驱动。适配器接收一个分离 DTO，其中绑定精确活跃父 Session 与调用根 Session 的 id 和 owner epoch；Program 与 Native Provider 保留 Agent、Session 和 writer 权威。驱动通过 `start()` 报告就绪，通过 `result` 报告终止输出，通过 `dispose()` 确认完整子任务进程范围已经静止。使用 Responses 的驱动可消费 Engine 所有的 `request.model` 能力：准入发生在 `subagent/external-start` 刷新后，最多预留 `maxSteps` 次实际出站尝试（包括重试），并在转发或交付前记录完整模型请求和结果。捕获工具目录只会从已记录的响应投影出一次性 grant；Engine 会在执行捕获的 Native 接受前持久化每次调用和完整工具结果，再持久化返回的 settlement 后才将其交还产品。settlement 刷新后，捕获的 Headless 附件服务会读取已接受图片引用对应的已验证字节，capture dispose 会排空这些读取。整批 settlement 完成前会阻止后续推理，或在 `concludesTurn` 后结束推理。Official Codex gateway 使用 Engine 从确切预备 Provider 代际捕获的 Responses transport；缺少 Provider transport 或无法执行父级 `maxTokens` 上限时，会在 child 启动前拒绝。嵌套调用继承进程内代际能力：路由匹配时复用预备 handle，provider/model 明确变化时只为 child 预备一个新 handle，且不改变 parent。`llm-pi-ai` 的 SIWC Provider 会在预备代际公开 `nativeResponses`。单独选择的 Claude Code driver 是不透明的兼容路径：它不消费 `request.model` 或 Native tool grant，SDK 自行处理内部模型请求和产品工具，父 Session 仅记录子任务生命周期与最终文本。它的受限 Native 入口会在启动前拒绝不支持的父级字段；详见 [Claude Code 包契约](../../Modules/Official/subagent/subagent-claude-code/README.zh.md)。没有选择外部 driver 的 Native composition 会使用其选定的进程派生路径。外部驱动的后台运行仍不受支持。确定性的 TypeScript 与 Python SDK 场景已验证全部六种 `subagent/external-operation` variant 的投影，以及 Native Session 的进程冷恢复；端到端 Native Codex 产品执行仍未验证。详见 [native 包契约](../../Engine/subagent/native-subagent/README.zh.md)、[所有权决策](../../../.agents/notes/implemented/architecture/2026-10-08-native-external-subagent-driver.zh.md)和[操作 broker 决策](../../../.agents/notes/implemented/architecture/2026-10-10-native-external-operation-broker.zh.md)。
-
-### SDK 事件投影
-
-[SDK Runtime 包](../../Engine/subagent/sdk-runtime/README.zh.md) 会从 [native-subagent](../../Engine/subagent/native-subagent/README.zh.md) 重导出 canonical `NativeExternalOperationEvent` union；六种 payload variant 由该包拥有。SDK Runtime 将 `NativeExternalOperationSessionEvent` 定义为 required-on-read `SessionEvent<'subagent/external-operation'>` envelope，TypeScript [Client](../../Programs/SDK/packages/client/README.zh.md) 则重导出这两个类型。
-
-```ts type-equiv
-/** One durable Native external-operation fact projected without field changes. */
-type NativeExternalOperationSessionEvent = SessionEvent<'subagent/external-operation'>
-```
-
-```ts type-equiv
-/** Detached input to one external child. It has no Agent, Session, Cordis Context, or writer. */
-interface NativeExternalSubagentRequest {
-  /** Identity minted by Native and persisted with this child's parent-owned lineage. */
-  readonly id: NativeExternalSubagentId
-  /** Exact live Native parent and invocation root selected during admission. */
-  readonly parentSessionId: SessionId
-  readonly rootSessionId: SessionId
-  /** Private per-owner epochs distinguish replacements that reuse a Session id. */
-  readonly parentEpoch: string
-  readonly rootEpoch: string
-  /** Current persisted delegation depth and configured child ceiling. */
-  readonly parentDepth: number
-  readonly maxDepth: number
-  /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
-  readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
-  /** Capabilities resolved from the exact initiating parent Session. */
-  readonly authority: NativeSessionDelegationAuthority
-  /** Task label and exact Program-selected workspace. */
-  readonly label: string
-  readonly cwd: string
-  /** Detached authored task only; parent conversation history is not transferred. */
-  readonly prompt: readonly ContentBlock[]
-  /** Engine-resolved route and explicit deployment overrides, never selected by the remote child. */
-  readonly route: {
-    readonly provider: string
-    readonly model: string
-    readonly reasoningEffort?: ReasoningEffortId
-    readonly overrides: NativeExternalSubagentRouteOverrides
-  }
-  /** Engine-owned per-operation model admission and transcript writer callbacks. */
-  readonly model: NativeExternalSubagentModelOperations
-  /** Borrowed transport for a Responses product; the Engine alone closes it after product disposal and request drains. */
-  readonly responses?: NativeResponsesTransport
-  /** Already-resolved child restrictions from the Native deployment. */
-  readonly persona?: string
-  readonly toolFilter?: NativeToolRestriction
-  readonly outputSchema?: ObjectJsonSchema
-  /** Parent approval for the builtin writer, when the exact parent grant and sandbox allow it. */
-  readonly approval?: NativeExternalSubagentApprovalRelay
-}
-```
-
-```ts type-equiv
-/** Terminal data returned by the external product after its real child has settled. */
-interface NativeExternalSubagentOutcome {
-  /** Final child output reported by the selected product. */
-  readonly output: readonly ContentBlock[]
-  /** Schema-valid product value when the request carries an output schema. */
-  readonly structured?: unknown
-  /** Product terminal reason after child execution settles. */
-  readonly stopReason: NativeSubagentStopReason
-}
-```
-
-```ts type-equiv
-/** Product-owned run returned only after its actual readiness handshake. */
-interface NativeExternalSubagentRun {
-  /** Product-owned session/thread identity established by that handshake. */
-  readonly remoteId: string
-  /** Settle with the product terminal result or cancellation after the owned range stops. */
-  readonly result: Promise<NativeExternalSubagentOutcome>
-  /** Cancel if needed and resolve only after the complete owned process range is quiescent. */
-  dispose(): Promise<void>
-}
-```
-
-```ts type-equiv
-/** Trusted product adapter mounted as a Native Module for one selected provider name. */
-interface NativeExternalSubagentDriver {
-  /** Exact name configured by the selected Native Subagent Provider. */
-  readonly name: string
-  /** Responses drivers receive a transport from the exact prepared Provider generation or fail before child startup. */
-  readonly modelProtocol?: 'responses'
-  /** Supported explicit route overrides; an unsupported field is rejected before launch. */
-  readonly routeFields: readonly NativeExternalSubagentRouteField[]
-  /** Optional request features that this product actually enforces. */
-  readonly capabilities: {
-    /** Whether the product applies the resolved persona. */
-    readonly persona: boolean
-    /** Whether the product applies the resolved tool filter. */
-    readonly toolFilter: boolean
-    /** Whether the product validates and returns the requested structured output. */
-    readonly outputSchema: boolean
-    /** Whether the product transports one-shot approval requests to the exact parent. */
-    readonly approvalRelay?: boolean
-  }
-  /** Start the selected product child and return only after a genuine readiness handshake.
-   * @param request - detached, resolved child input.
-   * @param signal - Native cancellation for this child.
-   * @returns the product-owned child after its readiness handshake.
-   */
-  start(request: NativeExternalSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentRun>
-}
-```
-
-### ACP policy 元数据
-
-`@deepseek-ai/dsh-acp-protocol` 在 `com.deepseek.ai/dsh-native-subagent` 下定义版本 1 的 `_meta` 值。Client initialize metadata 声明是否支持权限中继；server metadata 报告 `maxSteps`、`maxTokens` 和支持的权限模式。Session policy 必须包含正安全整数 `maxSteps`、可选的正安全整数 `maxTokens`，以及 `permissionMode: 'deny' | 'parent-relay'`。Reader 会拒绝未知扩展字段和不支持的版本。本库只校验并编码 ACP metadata；消费它的 Program 会将已接受的 policy 转换为 Engine 持久化的 `execution/policy` 事件，并负责传输与强制执行。
-
-```ts type-equiv
-/** Permission behavior requested for a child Session over ACP. */
-type NativeAcpSubagentPermissionMode = 'deny' | 'parent-relay'
-```
-
-```ts type-equiv
-/** Session ceilings and permission mode accepted through ACP metadata. */
-interface NativeAcpSubagentPolicy {
-  readonly version: typeof NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION
-  readonly maxSteps: number
-  readonly maxTokens?: number
-  readonly permissionMode: NativeAcpSubagentPermissionMode
-}
-```
-
-```ts type-equiv
-/** Capabilities a Native ACP client advertises during initialize. */
-interface NativeAcpSubagentClientCapabilities {
-  /** Whether the client can relay permission requests to its owning Session. */
-  readonly permissionRelay: boolean
-}
-```
-
-```ts type-equiv
-/** Capabilities a Native ACP server advertises during initialize. */
-interface NativeAcpSubagentServerCapabilities {
-  /** Whether permission requests carry exact Native Session, approval, tool and call identities. */
-  readonly permissionRequestIdentity: true
-  /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
-  readonly maxSteps: true
-  /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
-  readonly maxTokens: true
-  /** Permission modes implemented by this server. */
-  readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
-}
-```
-
-## Native ACP 子进程运行时
-
-Official [ACP child 适配器](../../Modules/Official/subagent/acp-child/README.zh.md)使用 Native 外部子 agent driver API。该包声明 `NativeAcpChildRuntime*` Service Definition，CLI 则提供固定子进程 launcher。此 ACP 路由是不透明的：它不使用 `request.model` 或 `responses`，也不发布六类 `subagent/external-operation` broker 事实。该包 README 说明路由协商、权限中继、文件 policy 与进程清理。
-
-```ts type-equiv
-/** Exact selected child route and policy passed to the fixed CLI launcher. */
-interface NativeAcpChildRuntimeRequest {
-  /** Exact live parent Session whose authority bounds the child. */
-  readonly parentSessionId: SessionId
-  /** Workspace selected by the parent Session. */
-  readonly cwd: string
-  /** Selected child provider route. */
-  readonly provider: string
-  /** Selected child model id. */
-  readonly model: string
-  /** Selected child reasoning effort, when one is configured. */
-  readonly reasoningEffort?: ReasoningEffortId
-  /** Non-secret provider configuration needed to reproduce the selected route. */
-  readonly providerProfile: Readonly<Record<string, unknown>>
-  /** Only the selected route credential, under its configured environment name. */
-  readonly environment: Readonly<Record<string, string>>
-  /** Fixed child-profile instruction; the parent conversation prompt is never copied here. */
-  readonly systemPrompt: string
-  /** Accepted maximum model steps per child turn. */
-  readonly maxSteps: number
-  /** Optional accepted output-token ceiling per model request. */
-  readonly maxTokens?: number
-  /** Permission mode negotiated with the child Native ACP server. */
-  readonly permissionMode: 'deny' | 'parent-relay'
-  /** Native builtin tools admitted by the exact parent authority. */
-  readonly builtinTools: readonly ('read_file' | 'write_file')[]
-  /** Complete allowed-tool list for the fixed child profile. */
-  readonly allowedTools: readonly string[]
-  /** Exact workspace root for Native file writes, only when parent write authority permits them. */
-  readonly workspaceWriteRoot?: string
-  /** Exact parent execution policy; launchers may enforce a stricter policy. */
-  readonly parentPolicy: SandboxExecutionPolicy
-}
-```
-
-```ts type-equiv
-/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
-interface NativeAcpChildRuntime {
-  /** Whole-range-owned child and ACP stdio streams. */
-  readonly child: ChildConnectionHandle
-  /** File-effect enforcement reported by the selected sandbox backend. */
-  readonly enforcement: SandboxEnforcement
-  /** Close stdin and settle the complete managed process range. */
-  shutdown(): Promise<void>
-  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
-  dispose(): Promise<void>
-}
-```
-
-```ts type-equiv
-/** CLI-owned launcher for the fixed, same-version Native ACP profile. */
-interface NativeAcpChildRuntimeLauncher {
-  /**
-   * Start one exact ACP profile under a policy derived from the parent Session.
-   * @param request - selected route, limits, tools, credential and owner policy.
-   * @param signal - cancellation for startup and process lifetime.
-   * @returns a managed process; its private home is removed only after caller teardown.
-   */
-  launch(request: NativeAcpChildRuntimeRequest, signal: AbortSignal): Promise<NativeAcpChildRuntime>
-}
-```
 
 ## 两类能力，两种发现方式
 
@@ -426,7 +205,7 @@ interface ContinuableStart {
 /**
  * Durable attribution for the runtime's own account of a continuable child
  * settling. Deliberately a different kind from
- * `AgentMessageSource`: an Agent message is content the sender chose,
+ * {@link AgentMessageSource}: an Agent message is content the sender chose,
  * while this message is the manager stating what became of the child, and a
  * transcript that merged them would credit the child with words it never wrote.
  */
@@ -482,8 +261,6 @@ interface ContinuableCreateSpec {
 ```
 
 描述符（[descriptor.ts](../../Engine/subagent/subagent/src/descriptor.ts) 中的 `SubagentDescriptorData`）是每个由会话支撑的 subagent 所使用、按模式判别的持久化身份。两种模式都携带提供方名称。`one-shot` 描述符可以携带调用方拥有的可选显示 `label`；`continuable` 描述符要求以委派 `description` 作为持久化创建标签，并另外对已解析的子 agent `agentOptions.provider`／`model`／`reasoningEffort` 与可选的 `persona`／`toolFilter` 建立快照，用于冷恢复。它绝不会对可合并扩展的 `AgentOptions` 对象建立快照，因此无关的扩展值不会破坏继续执行，后续新增组合配置输入则是一次有意的版本更改。描述符省略 `subagentDepth`（冷恢复以持久化 header 中的 `delegationDepth` 作为单调下界）和 `outputSchema`（单次运行或 Activation 的结果约定，而非持久化身份）。
-
-V4 为继承型 Native child 新增可选的 `delegationContext`，保存逻辑父级路由、工作区与深度、已解析的递归上限、持久的 `maxSteps`／`maxTokens` 上限，以及直接工具、内建工具和程序工具授权。Native 冷恢复要求当前继承上下文，并将当前授权与上限和持久值取交集；子级路由仍以描述符为准。共享 Cordis Provider 不恢复这些继承授权，因此会对该上下文返回 `NOT_RESUMABLE`。读取方明确接受不含此字段的 V3 描述符。
 
 本地一次性提供方会在子 agent 的初始轮次内、首次请求前追加描述符。继续执行管理器会在任何提供方提供的谱系之后、初始提示词获准之前追加描述符；`Session.inheritedEventCount` 仍是 fork 谱系边界：恢复时的描述符权威读取子 agent 自身的后缀，而供列表使用的身份投影以 last-wins 折叠 `subagent/descriptor`，子 agent 自己的描述符会覆盖 fork seed 中祖先的描述符。seeded cold list 会跳过 cache hint，直到权威 observation 提供该精确 cut。该事件只进入日志：不含 `surfaceOp`，绝不进入模型历史，并由仅追加日志跨压缩保留。格式错误的当前版本描述符属于损坏；本运行时无法对不受支持的版本进行分类。
 
@@ -547,16 +324,14 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)。Provider 可通过对 `@deepseek-ai/dsh-subagent-protocol` 中的 `SubagentStopReasonMap` 做声明合并来添加变体；消费方应对已知 case 分支处理，并将未知的终态原因视为失败：
+`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)——后端可以添加变体，因此消费方应对已知 case 分支处理，将未知的终态原因视为失败：
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
- * consumers branch on the known cases and fall through `default`. Providers
- * extend this map through declaration merging on
- * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
- * turn-end vocabulary so the tool layer can map a non-`completed` result to an
- * `isError` tool result.
+ * consumers branch on the known cases and fall through `default`. The known
+ * cases mirror the harness turn-end vocabulary so the tool layer can map a
+ * non-`completed` result to an `isError` tool result.
  */
 interface SubagentStopReasonMap {
   /** The child finished its turn normally. */

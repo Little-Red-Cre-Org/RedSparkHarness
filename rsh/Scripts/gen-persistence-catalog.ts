@@ -58,8 +58,6 @@ const LINK_MAP: Record<string, string> = {
   TeamMessageId: 'subsystems/agent-team.md',
   TeamMessageSnapshot: 'subsystems/agent-team.md',
   TeamTaskSnapshot: 'subsystems/agent-team.md',
-  NativeExternalSubagentFinishedEvent: 'subsystems/subagent.md',
-  NativeExternalSubagentStartedEvent: 'subsystems/subagent.md',
 }
 
 /** One log event, extracted from a `SessionEventMap` declaration. */

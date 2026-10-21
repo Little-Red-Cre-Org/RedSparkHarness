@@ -11,16 +11,16 @@ Source: [`rsh/Modules/Official/interaction/permission-presets/src/index.ts`](../
 A preset is a table key mapping to one sandbox/approval bundle plus optional client presentation; the default table ships `workspace-write` (`workspace-write` + `ask`) and `danger-full-access` (`danger-full-access` + `never`).
 
 ```ts type-equiv
-/** One sandbox/approval bundle and optional client presentation. */
+/** One preset's sandbox/approval bundle and optional client presentation. */
 interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
   sandbox: SandboxMode
   /** The `approval/policy` value the preset writes through. */
-  approval: NativeApprovalPolicy
+  approval: ApprovalPolicy
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string | null
-  /** One user-facing sentence on what the value means; omitted when not configured. */
-  description?: string | null
+  name?: string
+  /** One user-facing sentence on what the preset means; omitted when not configured. */
+  description?: string
 }
 ```
 
@@ -63,38 +63,9 @@ interface PresetOption {
 
 ## Switching and the `permission/preset` event
 
-`set(session, name)` resolves the preset (unknown names throw), appends a log-only `permission/preset` event unless `name` is already the effective preset, then writes each knob through its own setter — `setSandboxMode` from [dsh-sandbox-policy](../../Modules/Official/sandbox/sandbox-policy) and `setApprovalPolicy` from [dsh-approval-definition/legacy](../../Engine/core/approval-definition/README.md#implementation) — only when that knob's effective value changes. The selection event precedes the knob events in the same turn, and re-selecting the effective preset appends nothing.
+`set(session, name)` resolves the preset (unknown names throw), appends a log-only `permission/preset` event unless `name` is already the effective preset, then writes each knob through its own setter — `setSandboxMode` from [dsh-sandbox-policy](../../Modules/Official/sandbox/sandbox-policy) and `setApprovalPolicy` from [dsh-user-approval](../../Modules/Official/interaction/user-approval) — only when that knob's effective value changes. The selection event precedes the knob events in the same turn, and re-selecting the effective preset appends nothing.
 
 `permission/preset` is durable, log-only user intent: it stays out of the model transcript (the knob events own the model-visible consequences through their consumers), and it exists so `current()` can preserve WHICH preset the user chose when two presets share a bundle. The `permissions` projection folds that selection with both knob events and retains the `session/end-seed` boundary used to distinguish a restored empty seed from a fresh session; replay needs no catch-up state or raw-log rescan. The complete event declaration is in the [persistence log event catalog](../persistence-catalog.md); the method signatures are in the generated [service catalog](#ctxpermissionpresets--permissionpresetservice).
-
-## Native host writes
-
-The Native host entry exposes policy reads and writes through `permissionPresets`. `controls()` reads the current matching preset or derived `custom` value and the available choices for the exact writable root owner; `resolve()` returns one configured immutable bundle; `apply()` records changed durable facts through that owner's Program-owned writer and awaits the flush. The operation records policy; the sandbox and approval Providers enforce it. The Native entry does not install the Cordis settings, command, or client projection.
-
-```ts type-equiv
-/** The same two durable policy knobs bundled by the Cordis permission service. */
-type NativePermissionPresetSpec = Readonly<Omit<PresetSpec, 'name' | 'description'> & {
-  name?: string | undefined
-  description?: string | undefined
-}>
-```
-
-```ts type-equiv
-/** Program-owned validation and durable application of a configured preset. */
-interface NativePermissionPresetOperations {
-  /** @param owner - exact writable root Session. @param signal - read cancellation. @returns effective policy and configured choices. */
-  controls(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativePermissionPresetControls>
-  /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
-  resolve(name: string): Readonly<NativePermissionPresetSpec>
-  /**
-   * @param owner - exact writable root Session.
-   * @param name - configured preset.
-   * @param signal - effective maintenance cancellation.
-   * @returns a promise fulfilled after the policy events are durable.
-   */
-  apply(owner: NativeActiveSessionOwner, name: string, signal: AbortSignal): Promise<void>
-}
-```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

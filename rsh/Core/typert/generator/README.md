@@ -63,7 +63,7 @@ This section explains how the generator reaches a compiler-independent model and
 
 ### Design concept
 
-The generator is built on one separation: extraction and emission are decoupled through the compiler-independent model. `WorkspaceAnalyzer` reads TypeScript programs seeded from the face aggregate tsconfigs and produces `FaceModel` and `TypeGraph` data; `FaceModelEmitter` consumes only that model and never receives compiler nodes. The model retains declaration identity, generic parameters and applications, explicit inheritance, conditional and mapped types, import attributes, abstract modifiers, and source JSDoc, and excludes constructors, static members, and non-public members. Service extraction includes inherited public members, keeps declared overrides and omits Typert binding metadata.
+The generator is built on one separation: extraction and emission are decoupled through the compiler-independent model. `WorkspaceAnalyzer` reads TypeScript programs seeded from the face aggregate tsconfigs and produces `FaceModel` and `TypeGraph` data; `FaceModelEmitter` consumes only that model and never receives compiler nodes. The model retains declaration identity, generic parameters and applications, explicit inheritance, conditional and mapped types, import attributes, abstract modifiers, and source JSDoc, and excludes constructors, static members, and non-public members.
 
 ### Source map
 
@@ -79,7 +79,7 @@ The generator is built on one separation: extraction and emission are decoupled 
 
 ### Analysis and faces
 
-Host and Client are independent TypeScript programs. Direct project references establish compiler-face membership, while `dsh.client` package subpaths establish runtime-face contribution; a package-specific `tsconfig.client.json` without `dsh.client` contributes only exports whose source files are in that Client project. `package.json#exports` marks every cross-package public boundary, and imports or re-exports are the only cross-face edges. A relative import that resolves inside the referencing package is followed through that module's re-exports until a package specifier appears, so package-local forwarding modules keep their original declaration references; a relative import that resolves into another package fails. `check` mode fails on syntax or semantic diagnostics, missing public annotations, private cross-package references, and reachable declaration merges the model cannot retain losslessly; `write` mode inserts checker-derived annotations and returns a clean check-mode model. Types owned by NPM dependencies remain `external` references instead of being expanded.
+Host and Client are independent TypeScript programs. Direct project references establish compiler-face membership, while `dsh.client` package subpaths establish runtime-face contribution; `package.json#exports` marks every cross-package public boundary, and imports or re-exports are the only cross-face edges. A relative import that resolves inside the referencing package is followed through that module's re-exports until a package specifier appears, so package-local forwarding modules keep their original declaration references; a relative import that resolves into another package fails. `check` mode fails on syntax or semantic diagnostics, missing public annotations, private cross-package references, and reachable declaration merges the model cannot retain losslessly; `write` mode inserts checker-derived annotations and returns a clean check-mode model. Types owned by NPM dependencies remain `external` references instead of being expanded.
 
 ### Emission and publication contract
 
@@ -103,8 +103,6 @@ Read these pages when the package-level contract is not enough; they move from t
 - [Typert registry](../registry/README.md) — the runtime store the emitted artifacts feed.
 - [API Gateway reference](../../../Docs/api-gateway.md) — how generated Remote descriptors are invoked end to end.
 - [Compiler-independent model Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-27-compiler-independent-typert-model.md) — the model design, alternatives, and consequences.
-
-A service member explicitly marked `@inheritdoc` uses documentation from its declared `extends` or `implements` interface while retaining its authored signature. The catalog still rejects missing parameter or return documentation in that owning declaration. Compatibility Services and native Definitions share observable obligations without duplicating method documentation.
 
 -----
 

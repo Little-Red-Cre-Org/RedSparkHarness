@@ -8,6 +8,7 @@
 import { Context, FiberState, Service } from '@deepseek-ai/cordis'
 import { randomUUID } from 'node:crypto'
 import z from '@deepseek-ai/schemastery'
+import { z as zod } from 'zod'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { emitAgentEvent } from '@deepseek-ai/dsh-agent'
 import type {
@@ -19,20 +20,20 @@ import type {
   CreateAgentOptions,
   ResumeAgentOptions,
   SessionStartSource,
+  TurnBoundaryProjection,
 } from '@deepseek-ai/dsh-agent'
-import { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
-export { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
 import { errorChain, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import { interruptedTurnClosers, SessionLogOffset, SessionPreparation } from '@deepseek-ai/dsh-session'
+import type {} from '@deepseek-ai/dsh-settings'
+import { interruptedTurnClosers, SessionLogOffset, SessionPreparation, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { Session, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-session-projection'
+import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionHandle, SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import { ReactLoopAgent } from './agent.ts'
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts'
-import { retainSettingsOwner } from './settings-owner.ts'
 
 /** Fiber states that cannot own or serve a new lifecycle. */
 const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
@@ -41,18 +42,56 @@ const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
   FiberState.FAILED,
 ])
 
-/** Return the active Loader tree's readiness task when this composition has a Loader. */
-function loaderReadiness(ctx: Context): Promise<void> | undefined {
-  const loader = ctx.get('loader') as { await(): Promise<unknown> } | undefined
-  if (loader === undefined) return undefined
-  return Promise.resolve().then(() => loader.await()).then(() => undefined)
-}
+const turnBoundaryProjectionSchema: zod.ZodType<TurnBoundaryProjection> = zod.object({
+  openTurnStartSeq: zod.number().int().nonnegative().transform(SessionSeq).nullable(),
+  lastStepStartSeq: zod.number().int().nonnegative().transform(SessionSeq).nullable(),
+  lastStepBoundary: zod.object({
+    kind: zod.union([zod.literal('start'), zod.literal('end')]),
+    seq: zod.number().int().nonnegative().transform(SessionSeq),
+  }).nullable(),
+  lastTurn: zod.number().int().nonnegative(),
+})
 
-function refuseExecutionPolicy(events: readonly { readonly type: string }[], operation: 'create' | 'resume'): void {
-  if (events.some(({ type }) => type === 'execution/policy')) {
-    throw new Error(`cannot ${operation} a Session with execution/policy through the Cordis AgentLoop`)
-  }
-}
+/** Host projection of agent turn and step boundaries. */
+export const turnBoundaryProjectionDefinition = {
+  key: 'turnBoundary',
+  stateVersion: 2,
+  stateSchema: turnBoundaryProjectionSchema,
+  init: () => ({
+    openTurnStartSeq: null,
+    lastStepStartSeq: null,
+    lastStepBoundary: null,
+    lastTurn: 0,
+  }),
+  apply: (state, event) => {
+    switch (event.type) {
+      case 'turn/start':
+        return {
+          ...state,
+          openTurnStartSeq: event.seq,
+          lastTurn: event.data.turn,
+        }
+      case 'turn/end':
+        return {
+          ...state,
+          openTurnStartSeq: null,
+        }
+      case 'step/start':
+        return {
+          ...state,
+          lastStepStartSeq: event.seq,
+          lastStepBoundary: { kind: 'start', seq: event.seq },
+        }
+      case 'step/end':
+        return {
+          ...state,
+          lastStepBoundary: { kind: 'end', seq: event.seq },
+        }
+      default:
+        return state
+    }
+  },
+} satisfies ProjectionDefinition<'turnBoundary', TurnBoundaryProjection>
 
 /** Factory-level ownership: live agent teardowns plus config startup work. */
 class FactoryOwnership {
@@ -286,7 +325,7 @@ export interface Config {
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
     id: string
-    /** Stable identity; Loader-managed startup waits for persistence selection, then resumes history or creates fresh. */
+    /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
     sessionId?: SessionId
     /** Optional workspace for a fresh session. */
     cwd?: string
@@ -338,8 +377,6 @@ export class AgentLoop extends Service implements AgentFactory {
   /** Validated configuration owned by the agent-loop service. */
   readonly config: ResolvedConfig
   private readonly ownership: FactoryOwnership
-  private readonly settingsEntry: AgentLoopSettings
-  private settingsSource: () => AgentLoopSettings
   /** Plain holder prevents Cordis from re-tracing the factory's dependency context through a caller shadow. */
   private readonly runtime: { ctx: Context }
 
@@ -349,16 +386,7 @@ export class AgentLoop extends Service implements AgentFactory {
     const entry: AgentLoopSettings = {
       maxParallelToolCalls: resolveMaxParallelToolCalls(config.maxParallelToolCalls),
     }
-    this.settingsEntry = entry
-    this.settingsSource = () => entry
-    retainSettingsOwner(this, ctx, {
-      entry: { ...entry },
-      bindSource: (source?: () => AgentLoopSettings) => {
-        this.settingsSource = source ?? (() => this.settingsEntry)
-      },
-      validate: (value: AgentLoopSettings) => resolveMaxParallelToolCalls(value.maxParallelToolCalls),
-    })
-    const readMaxParallelToolCalls = () => this.settingsSource().maxParallelToolCalls
+    let source: () => AgentLoopSettings = () => entry
     this.config = {
       ...config,
       agents: applyLauncherIdentities(config.agents, ctx.get(CONFIGURED_AGENT_IDENTITIES_KEY)),
@@ -366,9 +394,22 @@ export class AgentLoop extends Service implements AgentFactory {
       // this at the start of each group, so a committed change caps the next
       // group without disturbing the one in flight.
       get maxParallelToolCalls() {
-        return readMaxParallelToolCalls()
+        return source().maxParallelToolCalls
       },
     }
+    ctx.inject(['settings'], (settingsCtx) => {
+      settingsCtx.settings.installSection(ctx, AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, entry, {
+        // The schema admits any integer above zero; `resolveMaxParallelToolCalls`
+        // owns the whole rule, so refusing here keeps the running scheduler on
+        // its last good cap instead of failing at the next tool group.
+        validate: value => void resolveMaxParallelToolCalls(value.maxParallelToolCalls),
+        setSource: (current) => {
+          source = current
+        },
+        // Nothing is derived from the cap: the getter above is the only reader.
+        onChange: () => {},
+      })
+    })
     validateConfiguredAgents(this.config.agents)
     // Register only after every config validation above has passed, so a
     // rejected constructor leaves no projection unit behind.
@@ -381,24 +422,11 @@ export class AgentLoop extends Service implements AgentFactory {
     ctx.systemPrompt.variable('model', context => context.agent?.options.model)
     ctx.systemPrompt.variable('cwd', context => context.agent?.session.header.cwd)
 
-    const configuredPersistenceReadiness = this.config.agents.some(agent =>
-      agent.resumeSessionId === undefined || agent.resumeSessionId === '',
-    )
-      && ctx.get('sessionPersistence') === undefined
-      ? loaderReadiness(ctx)
-      : undefined
     for (const { id, sessionId, cwd, resumeSessionId, ...options } of this.config.agents) {
       const meta = cwd === undefined ? {} : { cwd }
       if (resumeSessionId === undefined || resumeSessionId === '') {
         const configuredId = sessionId ?? brandString<SessionId>(`${id}-session-${randomUUID()}`)
         const persistence = sessionId === undefined ? undefined : ctx.get('sessionPersistence')
-        if (persistence === undefined && configuredPersistenceReadiness !== undefined) {
-          const startup = this.startConfiguredAfterPersistenceReady(
-            id, configuredId, options, meta, sessionId !== undefined, configuredPersistenceReadiness,
-          )
-          this.ownership.trackStartup(startup)
-          continue
-        }
         if (persistence === undefined) {
           const startup = this.create(configuredId, options, meta).then(() => undefined, (error: unknown) => {
             this.reportConfiguredStartupFailure(id, 'restore', configuredId, error)
@@ -445,29 +473,6 @@ export class AgentLoop extends Service implements AgentFactory {
       } catch (listenerError: unknown) {
         this.ctx.logger.warn(`agent "${configId}": config-start-failed listener threw: ${errorChain(listenerError)}`)
       }
-    }
-  }
-
-  /** Start a fresh declarative Agent after its Loader tree settles persistence selection. */
-  private async startConfiguredAfterPersistenceReady(
-    configId: string,
-    sessionId: SessionId,
-    agentOptions: AgentOptions,
-    meta: Pick<SessionHeader, 'cwd'>,
-    reuseMaterializedSession: boolean,
-    readiness: Promise<void>,
-  ): Promise<void> {
-    try {
-      await this.ownership.waitWhileActive(readiness)
-      if (!this.ownership.isActive()) return
-      const persistence = this.ctx.get('sessionPersistence')
-      if (persistence === undefined || !reuseMaterializedSession) {
-        await this.create(sessionId, agentOptions, meta)
-      } else {
-        await this.restoreOrCreateConfigured(this.ctx, persistence, sessionId, agentOptions, meta)
-      }
-    } catch (error: unknown) {
-      this.reportConfiguredStartupFailure(configId, 'restore', sessionId, error)
     }
   }
 
@@ -758,7 +763,6 @@ export class AgentLoop extends Service implements AgentFactory {
    * @returns the published handle.
    */
   async createAgent(ownerCtx: Context, options: CreateAgentOptions): Promise<AgentHandle> {
-    refuseExecutionPolicy(options.seed ?? [], 'create')
     const preparation = SessionPreparation.create(this.runtime.ctx.sessions.prepare(options.sessionId, {
       ...options.seed === undefined ? {} : { seed: options.seed },
       ...options.meta === undefined ? {} : { meta: options.meta },
@@ -885,7 +889,6 @@ export class AgentLoop extends Service implements AgentFactory {
           const coldRead = await handle.read(0, undefined, { signal: fused })
           fused.throwIfAborted()
           const persisted = coldRead.events
-          refuseExecutionPolicy(persisted, 'resume')
           const closers = interruptedTurnClosers(persisted)
           if (closers.length > 0) await handle.append(closers)
           preparation = SessionPreparation.create(this.runtime.ctx.sessions.prepare(id, {

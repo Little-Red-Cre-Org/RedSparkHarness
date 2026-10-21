@@ -7,12 +7,9 @@ import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:
 import ts from 'typescript'
 import { WorkspaceTypertGenerator } from '../Core/typert/generator/src/workspace.ts'
 import { writeModuleGraph } from './gen-module-graph.ts'
-import { nativeSafeSourceSubpaths } from './native-package-policy.ts'
 import {
   hasClientDeclaration,
-  OPTIONAL_NATIVE_HOST_PEERS,
   PACKAGE_DEPENDENCY_POLICY,
-  SHARED_CLIENT_RUNTIME_PEERS,
   type PackageDependencyPolicy,
 } from './package-dependency-policy.ts'
 import {
@@ -39,10 +36,7 @@ export interface PackageDependencyManifest {
   optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   peerDependenciesMeta?: Record<string, unknown>
-  dsh?: {
-    client?: { inject?: string[] }
-    native?: { entry?: string; targets?: string[]; requires?: string[]; optional?: string[]; provides?: string[] }
-  }
+  dsh?: { client?: { inject?: string[] } }
 }
 
 /** One workspace package and its source location. */
@@ -62,16 +56,10 @@ export interface PackageDependencyFacts {
   readonly workspaceNames: ReadonlySet<string>
   readonly allSourceUses: ReadonlyMap<string, readonly string[]>
   readonly hostRuntimeSourceUses: ReadonlyMap<string, readonly string[]>
-  /** Runtime package uses from the selected Client source files. */
-  readonly clientRuntimeSourceUses: ReadonlyMap<string, readonly string[]>
   readonly hostRuntimeExportUses: readonly HostRuntimeExportUse[]
   readonly peerRequiredHostDependencies: ReadonlySet<string>
-  /** Native service provider peers required by this package's declared Host entry. */
-  readonly nativeServicePeerDependencies?: ReadonlySet<string>
   readonly configurationOnlyDevDependencies: ReadonlySet<string>
   readonly clientRuntimeDependencies: ReadonlySet<string>
-  readonly publishedTypeSourceUses: ReadonlyMap<string, readonly string[]>
-  readonly publishedTypePeerDependencies: ReadonlySet<string>
   readonly clientInject: ReadonlySet<string>
 }
 
@@ -182,7 +170,6 @@ export function discoverPackageDependencyScope(
 
   const selected: Array<WorkspacePackageManifest & { role: PackageDependencyRole }> = []
   for (const pkg of packages) {
-    if (policy.applicationDistributionDirectories.has(normalizePath(pkg.dir))) continue
     const clientDirectory = pkg.manifestPath.startsWith('rsh/Programs/Web/client/')
     const clientHost = (hasClientDeclaration(pkg.manifest.dsh) || include.has(pkg.name)) && !exclude.has(pkg.name)
     const clientOnly = clientDirectory && !clientHost
@@ -338,13 +325,8 @@ function hostSourceEntries(root: string, pkg: WorkspacePackageManifest): string[
   const entries = new Set([entry])
   const exports = pkg.manifest.exports
   if (exports === null || typeof exports !== 'object') return [...entries]
-  const native = pkg.manifest.dsh?.native
-  const clientOnlyNativeEntry = native?.entry !== undefined
-    && native.targets?.includes('client') === true
-    && !native.targets.includes('host')
   for (const [subpath, declaration] of Object.entries(exports as Record<string, unknown>)) {
     if (subpath === '.' || subpath === './package.json' || /^\.\/(?:client|src)(?:\/|$)/.test(subpath)) continue
-    if (clientOnlyNativeEntry && subpath === native.entry) continue
     const types = declaration !== null && typeof declaration === 'object' && 'types' in declaration
       ? declaration.types
       : undefined
@@ -369,53 +351,6 @@ function hostSourceEntries(root: string, pkg: WorkspacePackageManifest): string[
     }
   }
   return [...entries].sort()
-}
-
-/** Resolve one declared Native Client export to its authored source entry. */
-function nativeClientSourceEntries(root: string, pkg: WorkspacePackageManifest): string[] {
-  const native = pkg.manifest.dsh?.native
-  if (native?.entry === undefined || native.targets?.includes('client') !== true) return []
-  const exports = pkg.manifest.exports
-  if (exports === null || typeof exports !== 'object') return []
-  const declaration = (exports as Record<string, unknown>)[native.entry]
-  if (declaration === undefined) {
-    throw new Error(`${pkg.manifestPath}: Native Client entry ${native.entry} has no package export`)
-  }
-  const entries = nodeExportTargets(declaration).flatMap((target) => {
-    if (!target.startsWith('./lib/')) {
-      throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} cannot map ${target} to source`)
-    }
-    const source = target.replace(/^\.\/lib\//, './src/').replace(/\.js$/, '.ts').replace(/\.mjs$/, '.mts')
-    const resolved = resolveLocal(resolve(root, pkg.manifestPath), source)
-    if (resolved === undefined) {
-      throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} has no source entry for ${target}`)
-    }
-    return [resolved]
-  })
-  if (entries.length === 0) {
-    throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} has no runtime target`)
-  }
-  return [...new Set(entries)].sort()
-}
-
-/** Read authored runtime uses from the selected Native Client entry closure. */
-function readNativeClientRuntimeUses(root: string, pkg: WorkspacePackageManifest): Map<string, string[]> {
-  const packageUses = new Map<string, string[]>()
-  const seen = new Set<string>()
-  const visit = (path: string): void => {
-    const normalized = normalize(path)
-    if (seen.has(normalized)) return
-    seen.add(normalized)
-    const source = readFileSync(normalized, 'utf8')
-    const displayPath = normalizePath(relative(root, normalized))
-    for (const name of collectRuntimeSourcePackageUses(displayPath, source)) addUse(packageUses, name, displayPath)
-    for (const specifier of collectRuntimeLocalSourceSpecifiers(normalized, source)) {
-      const target = resolveLocal(normalized, specifier)
-      if (target !== undefined) visit(target)
-    }
-  }
-  for (const entry of nativeClientSourceEntries(root, pkg)) visit(entry)
-  return packageUses
 }
 
 function readHostRuntimeUses(root: string, pkg: WorkspacePackageManifest, generatedHostSource?: string): {
@@ -461,35 +396,19 @@ function readHostRuntimeUses(root: string, pkg: WorkspacePackageManifest, genera
   }
 }
 
-function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishedTypes: ReadonlySet<string>): {
-  uses: Map<string, string[]>
-  typeUses: Map<string, string[]>
-  runtimeUses: Map<string, string[]>
-} {
+function readAllSourceUses(root: string, pkg: WorkspacePackageManifest): Map<string, string[]> {
   const uses = new Map<string, string[]>()
-  const typeUses = new Map<string, string[]>()
-  const runtimeUses = new Map<string, string[]>()
   for (const sourcePath of globSync('src/**/*.{ts,tsx,mts,cts}', { cwd: resolve(root, pkg.dir) }).sort()) {
     const source = readFileSync(resolve(root, pkg.dir, sourcePath), 'utf8')
     const displayPath = `${pkg.dir}/${normalizePath(sourcePath)}`
-    const runtimePackageNames = collectRuntimeSourcePackageUses(sourcePath, source)
-    const typePackageNames = collectTypeSourcePackageUses(sourcePath, source)
-    for (const name of runtimePackageNames) addUse(runtimeUses, name, displayPath)
-    let runtimeNames: Set<string> | undefined
+    let runtimeUses: Set<string> | undefined
     for (const specifier of collectSourcePackageUses(sourcePath, source)) {
       const name = packageNameOf(specifier)
       if (name === undefined) continue
       const typesName = `@types/${name.replace(/^@/, '').replace('/', '__')}`
-      if (typePackageNames.has(name)) {
-        if (publishedTypes.has(name)) addUse(typeUses, name, displayPath)
-        if (publishedTypes.has(typesName)) {
-          addUse(typeUses, typesName, displayPath)
-          addUse(uses, typesName, displayPath)
-        }
-      }
       if (declaredSections(pkg.manifest, name).length === 0 && declaredSections(pkg.manifest, typesName).length > 0) {
-        runtimeNames ??= runtimePackageNames
-        if (!runtimeNames.has(name)) {
+        runtimeUses ??= collectRuntimeSourcePackageUses(sourcePath, source)
+        if (!runtimeUses.has(name)) {
           addUse(uses, typesName, displayPath)
           continue
         }
@@ -497,39 +416,6 @@ function readAllSourceUses(root: string, pkg: WorkspacePackageManifest, publishe
       addUse(uses, name, displayPath)
     }
   }
-  return { uses, typeUses, runtimeUses }
-}
-
-/** Type providers retained by import/export type syntax and declaration augmentations. */
-function collectTypeSourcePackageUses(path: string, source: string): Set<string> {
-  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
-  const uses = new Set<string>()
-  const add = (specifier: ts.Expression | undefined): void => {
-    if (specifier === undefined || !ts.isStringLiteralLike(specifier)) return
-    const name = packageNameOf(specifier.text)
-    if (name !== undefined) uses.add(name)
-  }
-  const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node)) {
-      const clause = node.importClause
-      if (clause?.phaseModifier === ts.SyntaxKind.TypeKeyword
-        || clause?.namedBindings !== undefined && ts.isNamedImports(clause.namedBindings)
-          && clause.namedBindings.elements.some(element => element.isTypeOnly)) add(node.moduleSpecifier)
-    } else if (ts.isExportDeclaration(node)) {
-      const clause = node.exportClause
-      if (node.isTypeOnly || clause !== undefined && ts.isNamedExports(clause)
-        && clause.elements.some(element => element.isTypeOnly)) add(node.moduleSpecifier)
-    } else if (ts.isImportEqualsDeclaration(node) && node.isTypeOnly
-      && ts.isExternalModuleReference(node.moduleReference)) {
-      add(node.moduleReference.expression)
-    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
-      add(node.argument.literal)
-    } else if (ts.isModuleDeclaration(node) && ts.isStringLiteral(node.name)) {
-      add(node.name)
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(sourceFile)
   return uses
 }
 
@@ -552,25 +438,6 @@ export function readPackageDependencyFacts(
   generatedHostSource?: string,
 ): PackageDependencyFacts {
   const inject = pkg.manifest.dsh?.client?.inject ?? []
-  const publishedTypes = new Set([
-    ...(policy.publishedTypeDependencies?.[pkg.manifest.name ?? ''] ?? []),
-    ...(policy.publishedTypePeerDependencies?.[pkg.manifest.name ?? ''] ?? []),
-  ])
-  const source = readAllSourceUses(root, pkg, publishedTypes)
-  const clientRuntimeSourceUses = new Map<string, string[]>()
-  for (const [name, paths] of source.runtimeUses) {
-    const clientPaths = role === 'client-only'
-      ? paths
-      : role === 'client-host'
-        ? paths.filter(path => path.startsWith(`${pkg.dir}/src/client/`))
-        : []
-    if (clientPaths.length > 0) clientRuntimeSourceUses.set(name, clientPaths)
-  }
-  if (role !== 'configured-host') {
-    for (const [name, paths] of readNativeClientRuntimeUses(root, pkg)) {
-      for (const path of paths) addUse(clientRuntimeSourceUses, name, path)
-    }
-  }
   const hostRuntime = role === 'client-only'
     ? { packageUses: new Map<string, string[]>(), exportUses: [] }
     : readHostRuntimeUses(root, pkg, generatedHostSource)
@@ -580,20 +447,12 @@ export function readPackageDependencyFacts(
     cordisPeerRequired: !policy.cordisFreePackageDirectories.has(normalizePath(pkg.dir)),
     manifest: pkg.manifest,
     workspaceNames,
-    allSourceUses: source.uses,
-    publishedTypeSourceUses: source.typeUses,
-    publishedTypePeerDependencies: new Set(
-      policy.publishedTypePeerDependencies?.[pkg.manifest.name ?? ''] ?? [],
-    ),
+    allSourceUses: readAllSourceUses(root, pkg),
     hostRuntimeSourceUses: hostRuntime.packageUses,
-    clientRuntimeSourceUses,
     hostRuntimeExportUses: hostRuntime.exportUses,
     peerRequiredHostDependencies: new Set(hostRuntime.exportUses
       .filter(use => policy.peerRequiredHostExports[use.specifier]?.includes(use.exportName) === true)
       .map(use => use.packageName)),
-    nativeServicePeerDependencies: new Set(Object.values(
-      policy.nativeServicePeerDependencies?.[pkg.manifest.name ?? ''] ?? {},
-    )),
     configurationOnlyDevDependencies: new Set(
       policy.configurationOnlyDevDependencies[pkg.manifest.name ?? ''] ?? [],
     ),
@@ -602,10 +461,11 @@ export function readPackageDependencyFacts(
   }
 }
 
-/** Validate production Client runtime dependencies and shared peer identities. */
+/** Validate third-party dependencies retained by published Client library entries. */
 export function collectClientRuntimeDependencyPolicyViolations(
   facts: readonly PackageDependencyFacts[],
-  policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies' | 'sharedClientRuntimePeers'>,
+  workspaceNames: ReadonlySet<string>,
+  policy: Pick<PackageDependencyPolicy, 'clientRuntimeDependencies'>,
 ): string[] {
   const violations: string[] = []
   const selectedByName = new Map(facts.map(fact => [fact.manifest.name, fact]))
@@ -622,140 +482,11 @@ export function collectClientRuntimeDependencyPolicyViolations(
       violations.push(`clientRuntimeDependencies lists ${packageName} dependency ${dependency} more than once`)
     }
     for (const dependency of dependencies) {
-      if (packageNameOf(dependency) !== dependency) {
-        violations.push(`clientRuntimeDependencies ${packageName} entry ${dependency} must name a package`)
+      if (packageNameOf(dependency) !== dependency || workspaceNames.has(dependency)) {
+        violations.push(`clientRuntimeDependencies ${packageName} entry ${dependency} must name a third-party package`)
       }
       if (!fact.allSourceUses.has(dependency)) {
         violations.push(`clientRuntimeDependencies lists unused ${packageName} dependency ${dependency}`)
-      }
-    }
-  }
-  for (const [packageName, peers] of Object.entries(policy.sharedClientRuntimePeers)) {
-    const fact = selectedByName.get(packageName)
-    if (fact === undefined) {
-      violations.push(`sharedClientRuntimePeers names unmanaged package ${packageName}`)
-      continue
-    }
-    if (fact.role === 'configured-host') {
-      violations.push(`sharedClientRuntimePeers package ${packageName} is not Client-faced`)
-    }
-    for (const peer of duplicates(peers)) {
-      violations.push(`sharedClientRuntimePeers lists ${packageName} peer ${peer} more than once`)
-    }
-    for (const peer of peers) {
-      if (packageNameOf(peer) !== peer) {
-        violations.push(`sharedClientRuntimePeers ${packageName} entry ${peer} must name a package`)
-      }
-      if (!fact.clientRuntimeSourceUses.has(peer)) {
-        violations.push(`sharedClientRuntimePeers lists unused ${packageName} peer ${peer}`)
-      }
-      if (!Object.hasOwn(fact.manifest.peerDependencies ?? {}, peer)) {
-        violations.push(`sharedClientRuntimePeers requires ${packageName} to declare ${peer} as a peer`)
-      }
-    }
-  }
-  return violations.sort()
-}
-
-/** Reject stale or unavailable published declaration dependencies.
- * @param facts - source-derived package observations.
- * @param policy - reviewed declaration dependency relationships.
- * @returns stable errors for unmanaged owners, unavailable dependencies and absent type imports.
- */
-export function collectPublishedTypeDependencyPolicyViolations(
-  facts: readonly PackageDependencyFacts[],
-  policy: Pick<PackageDependencyPolicy, 'publishedTypeDependencies' | 'publishedTypePeerDependencies'>,
-): string[] {
-  const violations: string[] = []
-  const byName = new Map(facts.map(fact => [fact.manifest.name, fact]))
-  for (const [name, dependencies] of Object.entries(policy.publishedTypeDependencies ?? {})) {
-    const fact = byName.get(name)
-    if (fact === undefined) {
-      violations.push(`publishedTypeDependencies names unmanaged package ${name}`)
-      continue
-    }
-    for (const dependency of duplicates(dependencies)) {
-      violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} more than once`)
-    }
-    for (const dependency of dependencies) {
-      if (!fact.workspaceNames.has(dependency) && !dependency.startsWith('@types/')) {
-        const installedExternal = fact.manifest.dependencies?.[dependency]
-        if (installedExternal === undefined || installedExternal.startsWith('workspace:')) {
-          violations.push(
-            `publishedTypeDependencies requires external package ${dependency} as a production dependency`,
-          )
-        }
-      }
-      if (!fact.publishedTypeSourceUses.has(dependency)) {
-        violations.push(`publishedTypeDependencies lists ${name} dependency ${dependency} without a source type import`)
-      }
-    }
-  }
-  for (const [name, dependencies] of Object.entries(policy.publishedTypePeerDependencies ?? {})) {
-    const fact = byName.get(name)
-    if (fact === undefined) {
-      violations.push(`publishedTypePeerDependencies names unmanaged package ${name}`)
-      continue
-    }
-    for (const dependency of duplicates(dependencies)) {
-      violations.push(`publishedTypePeerDependencies lists ${name} dependency ${dependency} more than once`)
-    }
-    for (const dependency of dependencies) {
-      if (!fact.workspaceNames.has(dependency)) {
-        violations.push(`publishedTypePeerDependencies names unknown workspace package ${dependency}`)
-      }
-      if (!fact.publishedTypeSourceUses.has(dependency)) {
-        violations.push(`publishedTypePeerDependencies lists ${name} dependency ${dependency} without a source type import`)
-      }
-      if (fact.manifest.peerDependencies?.[dependency] !== WORKSPACE_RANGE) {
-        violations.push(`publishedTypePeerDependencies requires ${name} to declare ${dependency} as a required peer at ${WORKSPACE_RANGE}`)
-      }
-      if (fact.manifest.devDependencies?.[dependency] !== WORKSPACE_RANGE) {
-        violations.push(`publishedTypePeerDependencies requires ${name} to retain ${dependency} in devDependencies at ${WORKSPACE_RANGE}`)
-      }
-      if (fact.manifest.peerDependenciesMeta?.[dependency] !== undefined) {
-        violations.push(`publishedTypePeerDependencies requires ${name} peer ${dependency} to be non-optional`)
-      }
-    }
-  }
-  return violations.sort()
-}
-
-/** Ensure explicitly required Native service peers match the consumer and provider metadata. */
-export function collectNativeServicePeerDependencyPolicyViolations(
-  packages: readonly WorkspacePackageManifest[],
-  policy: Pick<PackageDependencyPolicy, 'nativeServicePeerDependencies'>,
-): string[] {
-  const violations: string[] = []
-  const byName = new Map(packages.map(pkg => [pkg.name, pkg]))
-  for (const [consumerName, services] of Object.entries(policy.nativeServicePeerDependencies ?? {})) {
-    const consumer = byName.get(consumerName)
-    if (consumer === undefined) {
-      violations.push(`nativeServicePeerDependencies names unmanaged consumer ${consumerName}`)
-      continue
-    }
-    const consumerNative = consumer.manifest.dsh?.native
-    const consumerExports = consumer.manifest.exports
-    if (consumerNative === undefined || !consumerNative.requires?.length
-      || consumerExports === null || typeof consumerExports !== 'object' || Array.isArray(consumerExports)
-      || !Object.hasOwn(consumerExports, './native')) {
-      violations.push(`nativeServicePeerDependencies consumer ${consumerName} must expose a Native entry with required services`)
-      continue
-    }
-    for (const [service, providerName] of Object.entries(services)) {
-      if (!consumerNative.requires.includes(service) || consumerNative.optional?.includes(service) === true) {
-        violations.push(`nativeServicePeerDependencies ${consumerName} service ${service} must be required by dsh.native`)
-      }
-      const provider = byName.get(providerName)
-      if (provider === undefined) {
-        violations.push(`nativeServicePeerDependencies ${consumerName} service ${service} names unmanaged provider ${providerName}`)
-        continue
-      }
-      const providerExports = provider.manifest.exports
-      if (!provider.manifest.dsh?.native?.provides?.includes(service)
-        || providerExports === null || typeof providerExports !== 'object' || Array.isArray(providerExports)
-        || !Object.hasOwn(providerExports, './native')) {
-        violations.push(`nativeServicePeerDependencies ${providerName} must expose Native service ${service}`)
       }
     }
   }
@@ -847,9 +578,7 @@ export function readPackageDependencyState(
     policyViolations: [
       ...discovered.violations,
       ...collectHostDependencyExportPolicyViolations(facts, workspaceNames, policy),
-      ...collectClientRuntimeDependencyPolicyViolations(facts, policy),
-      ...collectPublishedTypeDependencyPolicyViolations(facts, policy),
-      ...collectNativeServicePeerDependencyPolicyViolations(packages.release, policy),
+      ...collectClientRuntimeDependencyPolicyViolations(facts, workspaceNames, policy),
       ...Object.keys(policy.configurationOnlyDevDependencies)
         .filter(name => !selectedNames.has(name))
         .map(name => `configurationOnlyDevDependencies names unmanaged package ${name}`),
@@ -878,12 +607,7 @@ export function expectedPackageDependencies(
     expected.set(CORDIS, { section: 'peer-dev', origins: new Set(['shared Cordis runtime']) })
   }
   for (const [name, paths] of facts.allSourceUses) {
-    const section = facts.publishedTypePeerDependencies.has(name)
-      || facts.nativeServicePeerDependencies?.has(name) === true
-      || optionalNativeHostPeer(facts.manifest, name)
-      ? 'peer-dev'
-      : facts.clientRuntimeDependencies.has(name) || facts.publishedTypeSourceUses.has(name)
-        ? 'dependencies' : 'devDependencies'
+    const section = facts.clientRuntimeDependencies.has(name) ? 'dependencies' : 'devDependencies'
     for (const path of paths) add(name, section, path)
   }
   if (facts.role !== 'configured-host') {
@@ -905,24 +629,11 @@ export function expectedPackageDependencies(
   for (const name of Object.keys(facts.manifest.peerDependencies ?? {})) {
     if (name !== CORDIS) add(name, 'devDependencies', 'existing non-Cordis peer')
   }
-  for (const name of facts.nativeServicePeerDependencies ?? []) {
-    if (facts.workspaceNames.has(name)) add(name, 'peer-dev', 'required Native service provider')
-  }
-  for (const name of SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? ''] ?? []) {
-    if (facts.allSourceUses.has(name)) add(name, 'peer-dev', 'shared browser runtime instance')
-  }
   for (const [name, paths] of facts.hostRuntimeSourceUses) {
-    const sharedPeer = SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? '']?.includes(name) === true
-    const optionalPeer = OPTIONAL_NATIVE_HOST_PEERS[facts.manifest.name ?? '']?.includes(name) === true
-    const expectedSection = sharedPeer || optionalPeer
-      || (facts.workspaceNames.has(name) && facts.peerRequiredHostDependencies.has(name))
+    const expectedSection = facts.workspaceNames.has(name) && facts.peerRequiredHostDependencies.has(name)
       ? 'peer-dev'
       : 'dependencies'
     for (const path of paths) add(name, expectedSection, path)
-  }
-  for (const [name, paths] of facts.clientRuntimeSourceUses) {
-    if (SHARED_CLIENT_RUNTIME_PEERS[facts.manifest.name ?? '']?.includes(name) !== true) continue
-    for (const path of paths) add(name, 'peer-dev', `shared Client runtime peer in ${path}`)
   }
   return new Map([...expected].map(([name, rule]) => [name, {
     section: rule.section,
@@ -992,24 +703,10 @@ function describeSections(sections: readonly DependencySection[]): string {
 }
 
 /** A mixed package may leave Cordis uninstalled when its separate native export is selected. */
-function optionalNativeCordisPeer(facts: PackageDependencyFacts): boolean {
-  const manifest = facts.manifest
+function optionalNativeCordisPeer(manifest: PackageDependencyManifest): boolean {
   const exports = manifest.exports
   const metadata = manifest.peerDependenciesMeta?.[CORDIS]
   return exports !== null && typeof exports === 'object' && !Array.isArray(exports)
-    && (Object.hasOwn(exports, './native') || (nativeSafeSourceSubpaths.get(normalizePath(dirname(facts.manifestPath))) ?? [])
-      .some(entry => Object.hasOwn(exports, entry)))
-    && metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
-    && Object.keys(metadata).length === 1
-    && (metadata as { optional?: unknown }).optional === true
-}
-
-/** Whether an exact legacy Host peer is optional for a separate native entry. */
-function optionalNativeHostPeer(manifest: PackageDependencyManifest, name: string): boolean {
-  const exports = manifest.exports
-  const metadata = manifest.peerDependenciesMeta?.[name]
-  return OPTIONAL_NATIVE_HOST_PEERS[manifest.name ?? '']?.includes(name) === true
-    && exports !== null && typeof exports === 'object' && !Array.isArray(exports)
     && Object.hasOwn(exports, './native')
     && metadata !== null && typeof metadata === 'object' && !Array.isArray(metadata)
     && Object.keys(metadata).length === 1
@@ -1030,16 +727,12 @@ export function collectPackageDependencyViolations(state: PackageDependencyState
         if (actual.length === 2
           && actual.includes('peerDependencies')
           && actual.includes('devDependencies')
-          && section(facts.manifest, 'peerDependencies')[name] === section(facts.manifest, 'devDependencies')[name]
-          && (!facts.workspaceNames.has(name)
-            || section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE)
+          && section(facts.manifest, 'peerDependencies')[name] === WORKSPACE_RANGE
+          && section(facts.manifest, 'devDependencies')[name] === WORKSPACE_RANGE
           && (facts.manifest.peerDependenciesMeta?.[name] === undefined
-            || (name === CORDIS && optionalNativeCordisPeer(facts))
-            || optionalNativeHostPeer(facts.manifest, name))) continue
+            || (name === CORDIS && optionalNativeCordisPeer(facts.manifest)))) continue
         violations.push(
-          `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies`
-          + (facts.workspaceNames.has(name) ? ` at ${WORKSPACE_RANGE}` : '')
-          + `; found ${describeSections(actual)}`,
+          `${facts.manifestPath}: ${name} must be matching peerDependencies + devDependencies at ${WORKSPACE_RANGE}; found ${describeSections(actual)}`,
         )
         continue
       }
@@ -1127,10 +820,9 @@ export function repairPackageDependencyManifest(facts: PackageDependencyFacts): 
       for (const sectionName of ['dependencies', 'optionalDependencies'] as const) {
         deleteDependency(facts.manifest, sectionName, name)
       }
-      mutableSection(facts.manifest, 'peerDependencies')[name] = range
-      mutableSection(facts.manifest, 'devDependencies')[name] = range
-      if (!(name === CORDIS && optionalNativeCordisPeer(facts))
-        && !optionalNativeHostPeer(facts.manifest, name)) deletePeerMeta(facts.manifest, name)
+      mutableSection(facts.manifest, 'peerDependencies')[name] = WORKSPACE_RANGE
+      mutableSection(facts.manifest, 'devDependencies')[name] = WORKSPACE_RANGE
+      if (name !== CORDIS || !optionalNativeCordisPeer(facts.manifest)) deletePeerMeta(facts.manifest, name)
       continue
     }
     for (const sectionName of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const) {

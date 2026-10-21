@@ -1,6 +1,7 @@
 import { defineConfig } from 'tsdown'
 
-const nodeOutput = {
+const entry = (path: string) => ({
+  entry: [path],
   outDir: 'lib',
   format: ['esm'] as const,
   platform: 'node' as const,
@@ -8,17 +9,11 @@ const nodeOutput = {
   fixedExtension: false,
   dts: false,
   clean: false,
-}
+})
 
-/** Build literal Loader entries with the lazy Cordis chunk publishable. */
+/** Build self-contained Loader entries so the package needs no private chunks. */
 export default defineConfig([
-  { ...nodeOutput, entry: ['lib/types/native.js'] },
-  {
-    ...nodeOutput,
-    entry: ['lib/types/index.js'],
-    outputOptions: { chunkFileNames: 'shared-[hash].js' },
-  },
-  { ...nodeOutput, entry: ['lib/types/model-selection-settings.js'] },
-  { ...nodeOutput, entry: ['lib/types/compat-settings.js'] },
-  { ...nodeOutput, entry: ['lib/types/invariant.js'] },
+  entry('lib/types/index.js'),
+  entry('lib/types/model-selection-settings.js'),
+  entry('lib/types/invariant.js'),
 ])

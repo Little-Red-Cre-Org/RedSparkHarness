@@ -27,8 +27,6 @@ Use `dsh-tool-fs-search` to give models `glob` file discovery and `grep` content
 
 Mount the tools after a `ctx.subprocess` backend; no host `rg` install is needed, and no filesystem provider is required. The model then gets modification-time-ordered file discovery and line-oriented content search, each bounded and timeout-guarded.
 
-The package root is the Cordis compatibility entry; native compositions should import `./native` so optional Cordis peer dependencies stay out of the install. `dsh-output-retention` and `dsh-timeout` are runtime dependencies, and `dsh-errors` is a required peer dependency so search failures share the host's `HarnessError` class identity.
-
 ### Minimal composition
 
 A subprocess backend, then the tools; the spill backend is optional and makes capped results fully recoverable.
@@ -217,8 +215,6 @@ These limits define when the search tools are a poor fit or need special operati
 - **The packaged binary is fixed at dependency version** — Node deployments use the version selected by `@vscode/ripgrep`; Python single-file runtimes copy that target-native version into the required `-rg` sidecar. An unsupported platform or a corrupted installation fails with `SEARCH_FAILED`, while the Python runtime package rejects a missing sidecar before launch. Remote or virtual filesystems need a co-located workspace or another search consumer.
 - **The schemas expose one bounded page** — offset pagination, case-mode switches, alternate output modes, and provider-backed discovery remain outside this package; capped complete output requires a spill backend.
 - **Sampling, when enabled, groups by first path segment beneath the search root only** — an over-cap `glob` page balances across those top-level entries, so a result concentrated deeper is still shown unevenly below that level; recursive balancing is deferred.
-
-The `./native` entry registers the same `glob` and `grep` schemas, parsing, sampling, formatted results and bounded search metadata through selected `tools` and `subprocess` Providers. It accepts the same configuration fields, requires the sampling switch explicitly, and enforces `timeoutMs` through a combined cancellation signal while awaiting process drain. Native `promptSections` and `spillStore` are optional: with `spill-local` installed, capped direct calls save the complete formatted result after result policies accept the original canonical value and text; absent or failed storage keeps the existing unsaved-result footer. Nested calls and policy-replaced results are not spilled. Explicit native templates install the local spill Provider; compatibility defaults are unchanged. Search-card types are shared with the native Tool presentation Definition. No invariant companion is published because subprocess and Tool registration owners enforce execution and disposal.
 
 <a id="dev-note"></a>
 ### Dev Note

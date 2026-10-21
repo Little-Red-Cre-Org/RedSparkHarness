@@ -11,20 +11,6 @@
     "directory": "rsh/Modules/Official/web/web-fetch-http"
   },
   "type": "module",
-  "dsh": {
-    "native": {
-      "apiVersion": 1,
-      "entry": "./native",
-      "targets": [
-        "host"
-      ],
-      "requires": [
-        "web"
-      ],
-      "optional": [],
-      "provides": []
-    }
-  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -32,17 +18,11 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
-    "lib/native.js",
-    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -50,25 +30,17 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-timeout": "workspace:^",
     "@deepseek-ai/dsh-web": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@deepseek-ai/dsh-http-proxy": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^",
     "ipaddr.js": "^2.5.0",
-    "undici": "^8.11.2"
+    "undici": "^8.10.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-timeout": "workspace:^",
     "@deepseek-ai/dsh-web": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
+    "@deepseek-ai/dsh-http-proxy": "workspace:^"
   }
 }

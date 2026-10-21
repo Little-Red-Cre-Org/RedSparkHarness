@@ -27,10 +27,6 @@ The package carries browser-to-Host Remote calls, exact Fetch responses, and con
 
 The browser uses HTTP POST for Remote unary calls. API Gateway owns the `/api/remote.mux` WebSocket and its logical streams; shell-owned compositions provide equivalent Remote streams through `connection.rpc.open` without opening a WebSocket. The Host half always provides the carrier-neutral RPC and exact `GET`/`HEAD`/`POST` route registries. When a Web carrier is present it also owns the sole `/api` route, Fetch bridge, browser authentication, and Host/Origin checks; a shell-owned carrier dispatches the shared Fetch handler directly. Each exact route declares buffered or streaming request-body handling before the bridge reads any bytes. Typert Gateway claims generated Remote endpoints, feature packages register non-JSON responses such as Session-log downloads and raw file uploads, and unclaimed requests return 404. Loopback hostname classification remains package-internal to the browser-facing Client state. Browser raw-body transfer is provided by [`dsh-client-file-upload`](../file-upload/README.md).
 
-The `./native` browser entry installs the same Connection implementation as the Cordis Client adapter under the native `clientConnection` service. It accepts an empty configuration, selects the page's supplied RPC carrier or the Web transport, and publishes observable generation and recovery state. A native composition still needs a Host API route and a generation source before it can receive live Session events. Native Host disposal aborts the connection loop and waits for its generation source to settle; the adapter does not mount the Host `/api` route or browser authentication.
-
-The `./native-host` entry exposes one bounded request owner for authenticated Host Consumers. A Consumer supplies its request limit, admits a callback before acquiring resources, combines carrier and installation cancellation, and awaits accepted callbacks at shutdown. Capacity and closed-admission failures are explicit; the Consumer classifies its own RPC errors and retains independent cleanup failures. The Web and Desktop carriers can publish the same `hostConnection` service without owning Session or Agent state.
-
 -----
 
 <a id="browser-authentication-and-request-trust"></a>
@@ -53,8 +49,6 @@ An ended `$events` stream, a Remote stream error, a non-ready opening item, or a
 
 Set the Host Connection row's `config.recovery` to override retry caps, the growth factor, or handshake warning and cancellation times; the [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-client-connection) lists accepted fields. The Host validates these values and injects them into each served page. The Client validates the bootstrap data before providing Connection and uses those defaults when Gateway starts its loop; explicit `start()` timing overrides take precedence. The growth factor must be finite and at least one. Readiness, failure, cancellation, or a hard deadline that occurs before the warning cancels that warning. Reload the page after changing Host recovery configuration.
 
-
-The RPC Provider optionally supplies authenticated Fetch responses for feature-owned streaming endpoints. The selected carrier resolves the Host address and token; feature Consumers own response decoding, cancellation and terminal settlement. This operation does not replace the existing WebSocket generation or introduce a reconnect loop.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -85,5 +79,3 @@ None.
 </details>
 
 **Runtime invariant:** No companion is published. Browser-session verification reads the credential record asynchronously at the request that authorizes work, while the credentials companion owns record commit-event lifetime. Stream/reconnect sequencing and rpcId round-trip discipline are exercised directly by behavior specs, and route register/dispose symmetry is audited by the webserver companion.
-
-The native entry exports the shared browser RPC factory and Connection types for Cordis-free Client Consumers.

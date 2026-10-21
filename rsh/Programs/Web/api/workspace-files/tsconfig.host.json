@@ -8,8 +8,6 @@
   "files": [
     "src/index.ts",
     "src/types.ts",
-    "src/remote-types.ts",
-    "src/native-helpers.ts",
     "src/changes.ts"
   ],
   "references": [
@@ -29,7 +27,7 @@
       "path": "../../../../Modules/Official/sandbox/sandbox-policy"
     },
     {
-      "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
+      "path": "../../../../Engine/session/session-persistence"
     },
     {
       "path": "../../../../Core/typert/protocol"

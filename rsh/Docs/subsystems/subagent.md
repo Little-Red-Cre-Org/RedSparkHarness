@@ -4,232 +4,11 @@ English | [中文](subagent.zh.md)
 
 The subagent seam lets an agent delegate work to a child agent. Like [bash](shell.md), it is **one optional capability**, not part of the agent loop, so its types live here rather than in [core.md](core.md). It differs from the other capability seams because **multiple provider implementations coexist** in one context, registered by name (`ctx.subagents`), while bash allows only one executor. Its registry follows the [LLM adapter registry](llm-streaming.md), not the single-service bash executor.
 
-Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process` and `dsh-subagent-fork-in-process`); the Cordis ACP subprocess provider is a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-acp). The Claude Code product adapter is an [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.md) with a bounded Native driver and a retained Cordis compatibility entry. The legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-dsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
+Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Service Providers are sibling packages (`dsh-subagent-spawn-in-process`, `dsh-subagent-fork-in-process`, `dsh-subagent-acp`, `dsh-subagent-codex`, `dsh-subagent-claude-code`, `dsh-subagent-dsh-sdk`); the model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
 
-The Official Native Codex module [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) uses the Engine-captured Responses transport for its one-shot product path and rejects before child startup when the selected generation lacks that transport or cannot enforce the parent `maxTokens` ceiling. The SIWC Provider can supply the capture capability when this route is explicitly composed; shipped Native profiles still omit the Codex external driver. The explicitly installed legacy Cordis route remains [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md).
-
-Sources: [`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts), [`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts), [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts), and [`rsh/Engine/subagent/native-subagent/src/external-driver.ts`](../../Engine/subagent/native-subagent/src/external-driver.ts)
+Sources: [`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts), [`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts), and [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)
 
 The `subagentCatalog` projection exposes `SubagentCatalogEntry[]` in parent event order through Session observations and client snapshots. Each entry contains the child id, creation time, mode, and mode-dependent label; fork-inherited catalog facts are excluded. [The subagent package](../../Engine/subagent/subagent/README.md) owns catalog creation and persistence semantics.
-
-The native one-shot composition uses [native-subagent](../../Engine/subagent/native-subagent/README.md) as its replaceable Definition and selected spawn Provider, with [tool-subagent’s native entry](../../Engine/subagent/tool-subagent/README.md) as Consumer. NativeSubagentOperations resolves exact active parent configuration and delegates through sessionExecution; the Program retains Agent execution and the sole Session writer. The shared [subagent-protocol](../../Engine/subagent/subagent-protocol/README.md) owns descriptor payloads, output folding and delegation permission text. Native Agent-owned background execution uses NativeJobs and the existing job_output/job_kill Consumers; continuable children reuse the Program continuation authority with [native control tools](../../Engine/subagent/tool-subagent-control/README.md) for adjacent messaging, interruption and descriptor-based cold resume. The Program also supplies the selected durable catalog to the separate [native list_agents tool](../../Engine/subagent/native-tool-subagent-list-agents/README.md). Finished-result projection remains a compatibility capability.
-
-## Native external driver
-
-A Native Host may select one external product driver for one-shot children. The adapter receives a detached DTO bound to the exact active parent and invocation-root Session ids and owner epochs; the Program and Native Provider keep Agent, Session and writer authority. The driver reports readiness from `start()` and terminal output through `result`, while `dispose()` confirms full child-range quiescence. Responses-backed drivers may consume the Engine-owned `request.model` capability: admission follows the flushed `subagent/external-start`, reserves no more than `maxSteps` actual outbound attempts including retries, and records complete model requests and outcomes before forwarding or delivery. The captured tool catalog issues one-use grants only from the logged response projection; the Engine durably records each call and complete tool result before captured Native acceptance, then records the returned settlement before exposing it to the product. Accepted image references are read through the captured Headless attachment service after settlement persistence, and capture disposal drains those reads. Later inference is blocked until the batch settles or `concludesTurn` ends the turn. The Official Codex gateway consumes an Engine-captured Responses transport from the exact prepared Provider generation; missing provider transport and unsupported parent `maxTokens` ceilings reject before child startup. Nested calls inherit a process-local generation capability: a matching route reuses its prepared handle, and an explicit provider/model change prepares one child handle without changing its parent. The `llm-pi-ai` SIWC Provider exposes `nativeResponses` on its prepared generation. The separately selected Claude Code driver is an opaque Compatibility route: it does not consume `request.model` or Native tool grants, its SDK owns internal model requests and product tools, and the parent Session records child lifecycle plus final text only. Its bounded Native entry rejects unsupported parent fields before startup; see the [Claude Code package contract](../../Modules/Official/subagent/subagent-claude-code/README.md). A Native composition without an external driver uses its selected spawn route. External-driver background runs remain unsupported. The deterministic TypeScript and Python SDK scenario verifies projection of all six `subagent/external-operation` variants and process-cold restoration of the Native Session; end-to-end Native Codex product execution remains unverified. See the [native package contract](../../Engine/subagent/native-subagent/README.md), [ownership decision](../../../.agents/notes/implemented/architecture/2026-10-08-native-external-subagent-driver.md), and [operation broker decision](../../../.agents/notes/implemented/architecture/2026-10-10-native-external-operation-broker.md).
-
-### SDK event projection
-
-The [SDK Runtime package](../../Engine/subagent/sdk-runtime/README.md) re-exports the canonical `NativeExternalOperationEvent` union from [native-subagent](../../Engine/subagent/native-subagent/README.md), which owns the six payload variants. It defines `NativeExternalOperationSessionEvent` as the required-on-read `SessionEvent<'subagent/external-operation'>` envelope, and the TypeScript [Client](../../Programs/SDK/packages/client/README.md) re-exports both types.
-
-```ts type-equiv
-/** One durable Native external-operation fact projected without field changes. */
-type NativeExternalOperationSessionEvent = SessionEvent<'subagent/external-operation'>
-```
-
-```ts type-equiv
-/** Detached input to one external child. It has no Agent, Session, Cordis Context, or writer. */
-interface NativeExternalSubagentRequest {
-  /** Identity minted by Native and persisted with this child's parent-owned lineage. */
-  readonly id: NativeExternalSubagentId
-  /** Exact live Native parent and invocation root selected during admission. */
-  readonly parentSessionId: SessionId
-  readonly rootSessionId: SessionId
-  /** Private per-owner epochs distinguish replacements that reuse a Session id. */
-  readonly parentEpoch: string
-  readonly rootEpoch: string
-  /** Current persisted delegation depth and configured child ceiling. */
-  readonly parentDepth: number
-  readonly maxDepth: number
-  /** Parent-derived execution ceilings; the adapter may reduce but never raise them. */
-  readonly limits: { readonly maxSteps: number; readonly maxTokens?: number }
-  /** Capabilities resolved from the exact initiating parent Session. */
-  readonly authority: NativeSessionDelegationAuthority
-  /** Task label and exact Program-selected workspace. */
-  readonly label: string
-  readonly cwd: string
-  /** Detached authored task only; parent conversation history is not transferred. */
-  readonly prompt: readonly ContentBlock[]
-  /** Engine-resolved route and explicit deployment overrides, never selected by the remote child. */
-  readonly route: {
-    readonly provider: string
-    readonly model: string
-    readonly reasoningEffort?: ReasoningEffortId
-    readonly overrides: NativeExternalSubagentRouteOverrides
-  }
-  /** Engine-owned per-operation model admission and transcript writer callbacks. */
-  readonly model: NativeExternalSubagentModelOperations
-  /** Borrowed transport for a Responses product; the Engine alone closes it after product disposal and request drains. */
-  readonly responses?: NativeResponsesTransport
-  /** Already-resolved child restrictions from the Native deployment. */
-  readonly persona?: string
-  readonly toolFilter?: NativeToolRestriction
-  readonly outputSchema?: ObjectJsonSchema
-  /** Parent approval for the builtin writer, when the exact parent grant and sandbox allow it. */
-  readonly approval?: NativeExternalSubagentApprovalRelay
-}
-```
-
-```ts type-equiv
-/** Terminal data returned by the external product after its real child has settled. */
-interface NativeExternalSubagentOutcome {
-  /** Final child output reported by the selected product. */
-  readonly output: readonly ContentBlock[]
-  /** Schema-valid product value when the request carries an output schema. */
-  readonly structured?: unknown
-  /** Product terminal reason after child execution settles. */
-  readonly stopReason: NativeSubagentStopReason
-}
-```
-
-```ts type-equiv
-/** Product-owned run returned only after its actual readiness handshake. */
-interface NativeExternalSubagentRun {
-  /** Product-owned session/thread identity established by that handshake. */
-  readonly remoteId: string
-  /** Settle with the product terminal result or cancellation after the owned range stops. */
-  readonly result: Promise<NativeExternalSubagentOutcome>
-  /** Cancel if needed and resolve only after the complete owned process range is quiescent. */
-  dispose(): Promise<void>
-}
-```
-
-```ts type-equiv
-/** Trusted product adapter mounted as a Native Module for one selected provider name. */
-interface NativeExternalSubagentDriver {
-  /** Exact name configured by the selected Native Subagent Provider. */
-  readonly name: string
-  /** Responses drivers receive a transport from the exact prepared Provider generation or fail before child startup. */
-  readonly modelProtocol?: 'responses'
-  /** Supported explicit route overrides; an unsupported field is rejected before launch. */
-  readonly routeFields: readonly NativeExternalSubagentRouteField[]
-  /** Optional request features that this product actually enforces. */
-  readonly capabilities: {
-    /** Whether the product applies the resolved persona. */
-    readonly persona: boolean
-    /** Whether the product applies the resolved tool filter. */
-    readonly toolFilter: boolean
-    /** Whether the product validates and returns the requested structured output. */
-    readonly outputSchema: boolean
-    /** Whether the product transports one-shot approval requests to the exact parent. */
-    readonly approvalRelay?: boolean
-  }
-  /** Start the selected product child and return only after a genuine readiness handshake.
-   * @param request - detached, resolved child input.
-   * @param signal - Native cancellation for this child.
-   * @returns the product-owned child after its readiness handshake.
-   */
-  start(request: NativeExternalSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentRun>
-}
-```
-
-### ACP policy metadata
-
-`@deepseek-ai/dsh-acp-protocol` defines version-1 `_meta` values under `com.deepseek.ai/dsh-native-subagent`. Client initialize metadata declares permission-relay support; server metadata reports `maxSteps`, `maxTokens`, and supported permission modes. A session policy requires a positive safe-integer `maxSteps`, an optional positive safe-integer `maxTokens`, and `permissionMode: 'deny' | 'parent-relay'`. Readers reject unknown extension fields and unsupported versions. The library validates and encodes ACP metadata; the consuming Program converts accepted policy into the Engine's durable `execution/policy` event and owns transport and enforcement.
-
-```ts type-equiv
-/** Permission behavior requested for a child Session over ACP. */
-type NativeAcpSubagentPermissionMode = 'deny' | 'parent-relay'
-```
-
-```ts type-equiv
-/** Session ceilings and permission mode accepted through ACP metadata. */
-interface NativeAcpSubagentPolicy {
-  readonly version: typeof NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION
-  readonly maxSteps: number
-  readonly maxTokens?: number
-  readonly permissionMode: NativeAcpSubagentPermissionMode
-}
-```
-
-```ts type-equiv
-/** Capabilities a Native ACP client advertises during initialize. */
-interface NativeAcpSubagentClientCapabilities {
-  /** Whether the client can relay permission requests to its owning Session. */
-  readonly permissionRelay: boolean
-}
-```
-
-```ts type-equiv
-/** Capabilities a Native ACP server advertises during initialize. */
-interface NativeAcpSubagentServerCapabilities {
-  /** Whether permission requests carry exact Native Session, approval, tool and call identities. */
-  readonly permissionRequestIdentity: true
-  /** Whether the server enforces maxSteps on each accepted turn and retains it across Session restore and fork. */
-  readonly maxSteps: true
-  /** Whether the server validates output-token ceilings against the selected route and refuses unsupported limits. */
-  readonly maxTokens: true
-  /** Permission modes implemented by this server. */
-  readonly permissionModes: readonly NativeAcpSubagentPermissionMode[]
-}
-```
-
-## Native ACP child runtime
-
-The Official [ACP child adapter](../../Modules/Official/subagent/acp-child/README.md) consumes the Native external-subagent driver API. Its package declares the `NativeAcpChildRuntime*` Service Definition, and the CLI provides the fixed child launcher. This ACP route is opaque: it does not consume `request.model` or `responses`, or publish the six `subagent/external-operation` broker facts. The package README owns its route negotiation, permission relay, file policy, and process cleanup.
-
-```ts type-equiv
-/** Exact selected child route and policy passed to the fixed CLI launcher. */
-interface NativeAcpChildRuntimeRequest {
-  /** Exact live parent Session whose authority bounds the child. */
-  readonly parentSessionId: SessionId
-  /** Workspace selected by the parent Session. */
-  readonly cwd: string
-  /** Selected child provider route. */
-  readonly provider: string
-  /** Selected child model id. */
-  readonly model: string
-  /** Selected child reasoning effort, when one is configured. */
-  readonly reasoningEffort?: ReasoningEffortId
-  /** Non-secret provider configuration needed to reproduce the selected route. */
-  readonly providerProfile: Readonly<Record<string, unknown>>
-  /** Only the selected route credential, under its configured environment name. */
-  readonly environment: Readonly<Record<string, string>>
-  /** Fixed child-profile instruction; the parent conversation prompt is never copied here. */
-  readonly systemPrompt: string
-  /** Accepted maximum model steps per child turn. */
-  readonly maxSteps: number
-  /** Optional accepted output-token ceiling per model request. */
-  readonly maxTokens?: number
-  /** Permission mode negotiated with the child Native ACP server. */
-  readonly permissionMode: 'deny' | 'parent-relay'
-  /** Native builtin tools admitted by the exact parent authority. */
-  readonly builtinTools: readonly ('read_file' | 'write_file')[]
-  /** Complete allowed-tool list for the fixed child profile. */
-  readonly allowedTools: readonly string[]
-  /** Exact workspace root for Native file writes, only when parent write authority permits them. */
-  readonly workspaceWriteRoot?: string
-  /** Exact parent execution policy; launchers may enforce a stricter policy. */
-  readonly parentPolicy: SandboxExecutionPolicy
-}
-```
-
-```ts type-equiv
-/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
-interface NativeAcpChildRuntime {
-  /** Whole-range-owned child and ACP stdio streams. */
-  readonly child: ChildConnectionHandle
-  /** File-effect enforcement reported by the selected sandbox backend. */
-  readonly enforcement: SandboxEnforcement
-  /** Close stdin and settle the complete managed process range. */
-  shutdown(): Promise<void>
-  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
-  dispose(): Promise<void>
-}
-```
-
-```ts type-equiv
-/** CLI-owned launcher for the fixed, same-version Native ACP profile. */
-interface NativeAcpChildRuntimeLauncher {
-  /**
-   * Start one exact ACP profile under a policy derived from the parent Session.
-   * @param request - selected route, limits, tools, credential and owner policy.
-   * @param signal - cancellation for startup and process lifetime.
-   * @returns a managed process; its private home is removed only after caller teardown.
-   */
-  launch(request: NativeAcpChildRuntimeRequest, signal: AbortSignal): Promise<NativeAcpChildRuntime>
-}
-```
 
 ## Two kinds of capability, discovered two ways
 
@@ -426,7 +205,7 @@ When a resident Activation settles, the manager delivers one notice to the child
 /**
  * Durable attribution for the runtime's own account of a continuable child
  * settling. Deliberately a different kind from
- * `AgentMessageSource`: an Agent message is content the sender chose,
+ * {@link AgentMessageSource}: an Agent message is content the sender chose,
  * while this message is the manager stating what became of the child, and a
  * transcript that merged them would credit the child with words it never wrote.
  */
@@ -482,8 +261,6 @@ interface ContinuableCreateSpec {
 ```
 
 The descriptor (`SubagentDescriptorData` in [descriptor.ts](../../Engine/subagent/subagent/src/descriptor.ts)) is a mode-discriminated durable identity for every session-backed subagent. Both modes carry the provider name. A `one-shot` descriptor optionally carries a caller-owned display `label`; a `continuable` descriptor requires the delegation `description` as its durable creation label and additionally snapshots resolved child `agentOptions.provider`/`model`/`reasoningEffort` and optional `persona`/`toolFilter` for cold resume. It never snapshots the merge-extensible `AgentOptions` object, so an unrelated extension value cannot break continuation and a later composition input is a deliberate version change. It omits `subagentDepth` (cold resume trusts the persisted header's `delegationDepth` as the monotone floor) and `outputSchema` (one run or Activation's result contract, not durable identity).
-
-V4 adds an optional `delegationContext` for inherited Native children. It stores the logical parent route, workspace and depth, the resolved recursion ceiling, persistent `maxSteps`/`maxTokens` ceilings, and direct, builtin and program tool grants. Native cold resume requires the current inherited context and intersects its grants and ceilings with the stored values; the descriptor's child route remains authoritative. The shared Cordis Provider returns `NOT_RESUMABLE` for this context because it does not restore the inherited grants. The reader explicitly accepts V3 descriptors without this field.
 
 A local one-shot provider appends the descriptor inside the child's initial turn before its first request. The continuation manager appends the descriptor after any provider-supplied lineage and before the initial prompt is admitted; `Session.inheritedEventCount` remains the fork-lineage boundary: resume-time descriptor authority reads the child's own suffix, while the list-serving identity projection folds `subagent/descriptor` last-wins so the child's own descriptor overrides a fork-seeded ancestor's. A seeded cold list skips a cache hint until an authoritative observation supplies that exact cut. The event is log-only: no `surfaceOp`, never in model history, and retained across compaction by the append-only log. Malformed current-version descriptors are corrupt; unsupported versions cannot be classified by this runtime.
 
@@ -545,16 +322,14 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern). Providers add variants by declaration-merging `SubagentStopReasonMap` on `@deepseek-ai/dsh-subagent-protocol`; consumers branch on known cases and treat an unknown terminal reason as a failure:
+`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern) — a backend may add variants, so consumers branch on the known cases and treat an unknown terminal reason as a failure:
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
- * consumers branch on the known cases and fall through `default`. Providers
- * extend this map through declaration merging on
- * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
- * turn-end vocabulary so the tool layer can map a non-`completed` result to an
- * `isError` tool result.
+ * consumers branch on the known cases and fall through `default`. The known
+ * cases mirror the harness turn-end vocabulary so the tool layer can map a
+ * non-`completed` result to an `isError` tool result.
  */
 interface SubagentStopReasonMap {
   /** The child finished its turn normally. */

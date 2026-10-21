@@ -1,9 +1,6 @@
-export type {
-  ConvViewProps, MessageImageLoader, MessageImageSource, MessageImagesOwnerProps, RenderMessageImages,
-} from './native-types.ts'
 /** Target-neutral Conversation slot declarations and composed component props. */
 import type { ReactNode, RefObject } from 'react'
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { FileUploadReceiptId } from '@deepseek-ai/dsh-client-file-upload/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
@@ -74,6 +71,44 @@ export interface ComposerAttachmentsOwnerProps {
   /** Display-ready limits for the drop invitation. */
   dropLimits?: { readonly count: number; readonly size: string } | undefined
 }
+
+/**
+ * One image inside a message record: a durable admitted reference, or the
+ * local preview of a submission echo whose admission is still in flight.
+ */
+export type MessageImageSource =
+  | { readonly attachment: ImageAttachmentRef }
+  | {
+    readonly preview: {
+      /** Browser-owned preview URL (lifecycle stays with the submitter). */
+      readonly url: string
+      readonly name?: string
+      /** Intrinsic pixel width, when the intake probe has resolved it. */
+      readonly width?: number
+      /** Intrinsic pixel height, when the intake probe has resolved it. */
+      readonly height?: number
+    }
+  }
+
+/** Durable image loader with an optional synchronous cache read. */
+export type MessageImageLoader = ((attachment: ImageAttachmentRef) => Promise<string>) & {
+  peek?: (attachment: ImageAttachmentRef) => string | undefined
+}
+
+/** Message image group handed to the optional attachment presentation plugin. */
+export interface MessageImagesOwnerProps {
+  /** Durable references or submission-echo previews in source order. */
+  images: readonly MessageImageSource[]
+  /** Session-authorized image URL loader for the durable arm. */
+  loadImage: MessageImageLoader
+  /** Horizontal placement inside the owning record. */
+  align: 'start' | 'end'
+  /** Force every image into the compact message-attachment tile size. */
+  compact?: boolean
+}
+
+/** Slot-backed renderer used by Conversation targets without importing an attachment implementation. */
+export type RenderMessageImages = (owner: Omit<MessageImagesOwnerProps, 'loadImage'>) => ReactNode
 
 /** Selector hook over the current Session's assembled Conversation. */
 export type UseConversation = SnapshotSelectorHook<ConversationSnapshot>
@@ -220,6 +255,9 @@ export interface ConvViewOwnerProps {
   /** Acknowledge the current one-shot focus request. */
   completeViewRequest: () => void
 }
+
+/** Base props of one target-owned Conversation View entry. */
+export type ConvViewProps = PropsRuntime<'conversation.view'>
 
 /** Business callbacks injected into the resident Conversation shell. */
 export interface ConversationInjected {

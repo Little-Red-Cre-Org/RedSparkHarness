@@ -14,12 +14,11 @@ import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-test
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
-import * as tool from '../src/compat.ts'
+import * as tool from '../src/index.ts'
 import * as ToolInvariant from '../src/invariant.ts'
 import SubagentModelSelectionConfig, {
   SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE,
 } from '../src/model-selection-settings.ts'
-import SubagentModelSelectionSettingsAdapter from '@deepseek-ai/dsh-compat-settings-adapters/tool-subagent'
 import {
   subagentModelSelectionPolicy,
   subagentModelSelectionProjectionDefinition,
@@ -63,7 +62,6 @@ async function boot(withPreset = true): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(MemorySettings)
   await ctx.plugin(SubagentModelSelectionConfig)
-  await ctx.plugin(SubagentModelSelectionSettingsAdapter)
   await mountAgentLoopTestDependencies(ctx)
   await ctx.plugin(AgentLoop, { agents: [] })
   await ctx.plugin(SubagentRuntime)
@@ -110,7 +108,6 @@ describe('SubagentModelSelectionConfig', () => {
     const ctx = new Context()
     await ctx.plugin(MemorySettings)
     await ctx.plugin(SubagentModelSelectionConfig)
-    await ctx.plugin(SubagentModelSelectionSettingsAdapter)
 
     expect(ctx.subagentModelSelection.current()).toEqual({ enabled: false, allowedModels: [] })
     await ctx.settings.update(SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE, {
@@ -125,7 +122,6 @@ describe('SubagentModelSelectionConfig', () => {
     const ctx = new Context()
     await ctx.plugin(MemorySettings)
     await ctx.plugin(SubagentModelSelectionConfig)
-    await ctx.plugin(SubagentModelSelectionSettingsAdapter)
     await ctx.plugin(SessionProjectionRegistry)
     ctx.sessionProjections.register(subagentModelSelectionProjectionDefinition)
 

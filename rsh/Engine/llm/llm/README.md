@@ -29,8 +29,6 @@ Any composition that calls a model provider — an agent loop, a session-title g
 
 `dsh-errors` is a required peer of this package so the re-exported `HarnessError` constructor has one identity across consumers.
 
-The published content declarations reference Attachment types, so `dsh-attachment` is an installed dependency even though authored Llm imports use it only as a type. The dependency policy retains this exact reviewed declaration relationship and rejects it when its source type import disappears.
-
 ### When to choose it
 
 Choose this package whenever a plugin or composition needs to call a model: it is the only supported path into provider adapters, and it keeps one vocabulary across the loop, the session log, and every consumer. Do not reach for it when you need provider-specific wire behavior (that belongs in an adapter such as `dsh-llm-deepseek` or `dsh-llm-pi-ai`) or retry execution (that belongs in `dsh-llm-retry`).
@@ -87,7 +85,7 @@ This section explains the design behind the service; the observable behavior is 
 
 The service is built on one separation: **the logical contract is provider-neutral, adapters own the wire.** It defines the canonical message, content-block, and stream-chunk vocabulary once, and every provider adapter translates only its own wire format into that vocabulary. The registry is the topology owner — adapter routes, configurable-provider entries, and discovery offers all register here and are disposed with their fiber — while a request stays a pure function of the session log: loop-built requests arrive deep-frozen, so listeners and adapters read them and never rewrite them.
 
-The `./native` entry exports provider-neutral messages, streams, call-config helpers, and assembly without loading the Cordis `LlmRuntime` service. The package root retains that service and the same value exports. The root service uses the optional `dsh-typert-protocol` peer, also present as a development dependency; `./native` does not load that runtime.
+The `./native` entry exports provider-neutral messages, streams, call-config helpers, and assembly without loading the Cordis `LlmRuntime` service. The package root retains that service and the same value exports.
 
 ### Source map
 
@@ -132,8 +130,8 @@ File detection reads current content, including nested tool results, on every re
 Read these pages when the package-level contract is not enough. They move from the shared types to the concrete adapters, the retry executor, and the measurement service.
 
 - [LLM streaming subsystem](../../../Docs/subsystems/llm-streaming.md) — the message and block types, compact Assistant stream records, the `StreamChunk` protocol, and the adapter contract.
-- [llm-deepseek adapter](../../../Modules/Official/llm/llm-deepseek/README.md) — the direct DeepSeek chat-completions implementation.
-- [llm-pi-ai adapter](../../../Modules/Official/llm/llm-pi-ai/README.md) — the pi-ai-backed multi-provider implementation.
+- [llm-deepseek adapter](../llm-deepseek/README.md) — the direct DeepSeek chat-completions implementation.
+- [llm-pi-ai adapter](../llm-pi-ai/README.md) — the pi-ai-backed multi-provider implementation.
 - [llm-retry](../llm-retry/README.md) — the retry executor that re-runs failed model requests.
 - [Token meter](../token-meter/README.md) — replay-aware request and context pressure measurement.
 - [Twin LLM adapters](../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.md) — why the DeepSeek route ships two structurally different adapters.
@@ -162,8 +160,6 @@ These limits define where this service stops and other packages or future work b
 - **Producer-gated variants stay out until produced** — `prefill`, per-tool `strict`, block `cache` hints, and the `agent` message-source variant have no producer ([Agent Note](../../../../.agents/notes/archived/simplification/2026-07-04-prune-producerless-vocabulary-variants.md)).
 - **`BlockAssembler` handles core block kinds only** — a plugin-added block type whose stream is never closed by `block-end` makes `blocks()` throw.
 - **`GenerateOptions.sessionId` is a locally-declared brand** — importing dsh-session's `SessionId` would create a dependency cycle.
-
-`resolveCallConfigWithModel` resolves explicit request controls against the captured Provider metadata. Prepared dispatch uses this result for both the durable request header and the actual model call; advisory directory defaults cannot replace explicit controls.
 
 <a id="dev-note"></a>
 ### Dev Note

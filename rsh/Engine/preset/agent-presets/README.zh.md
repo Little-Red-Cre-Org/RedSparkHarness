@@ -25,20 +25,6 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 `./native` Provider 注册由 profile 安装的常驻组装。配置显式 `default` 标识，并使用真实 NativeScope 注册每个组装。解析返回该次安装的 generation；Agent 租约共享其取消信号。移除常驻组装时，先关闭接纳并取消其 Agent，再等待租约释放，同时报告已记录的清理失败。Program 负责 Session 选择事件和 Agent 创建。原生 CLI 加载 `agent.native.json`；此 Provider 本身不读取旧版 `agent.cordis.yml`，也不编辑用户设置。`./selection` 为两个运行时从完整 Session 历史重建 preset 选择。
-
-原生入口不会加载兼容入口使用的可选 Loader、Include、原子写入、主目录路径、scope 或 Typert 对等依赖。
-
-### 原生 preset 目录
-
-原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<dshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
-
-```json
-{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
-```
-
-缺少 `agent.native.json` 的目录显示为 `needs-migration`；文件无效或启用的插件包无法由 profile 解析时显示为 `invalid`。Registry 的 `catalog()` 会重新扫描 Host 持有的根目录，并返回默认值以及不含目录路径或安装项的目录显示信息、信任级别和状态摘要。`read()` 返回目录元数据与原始组装文件文本；profile 独有的常驻组装没有文件内容。`copy()` 会将已就绪目录及其资源复制到第一个用户根目录，保留描述、替换显示名、移除排序位置，并收紧复制后文件权限。`delete()` 与 `directory()` 只解析用户目录；随包交付的目录保持只读。CLI 会将根目录路径仅提供给 Host Registry。
-
 在需要让每个 agent 会话从 preset 文件获得自己的工具、提示词段落与 skill 的组装中挂载本包。每个会话都会命名一个 preset——显式指定或通过配置的默认值——并据此组装；没有本包时，会话只能回退到宿主组装挂载的内容。
 
 随附 Web 的 `standard`、`ptc` 与 `cordis` preset 包含[显式文件交付](../../../Programs/Web/client/ui-deliverables/README.zh.md#explicit-deliveries)。`minimal` preset 保留固定的双工具训练配置。

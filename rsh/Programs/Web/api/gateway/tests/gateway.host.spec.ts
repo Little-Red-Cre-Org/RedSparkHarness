@@ -1,4 +1,3 @@
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, expect, it } from 'vitest'
@@ -6,7 +5,7 @@ import { Context, Service, symbols } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import { apply as applyConnection, inject as connectionInject } from '@deepseek-ai/dsh-client-connection'
 import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection'
-import type { HttpWebServer as WebServer, WebRoute } from '@deepseek-ai/dsh-http-routes-cordis'
+import type { WebServer, WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import {
   bindTypertRemote,
   Remote,
@@ -38,9 +37,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertContextMap {
     gatewayFixture: TypertContext<string>
   }
-}
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'session/agent-busy': { readonly reason: string }
   }
@@ -153,7 +150,7 @@ function fakeHttpServer(routes: WebRoute[]): Pick<WebServer, 'register' | 'tapIn
         throw new Error(`duplicate route ${route.path}`)
       }
       routes.push(route)
-      return async () => { routes.splice(routes.indexOf(route), 1) }
+      return () => { routes.splice(routes.indexOf(route), 1) }
     },
     tapIndex: () => () => {},
     port: 0,

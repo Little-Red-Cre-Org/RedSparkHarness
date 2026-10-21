@@ -29,8 +29,6 @@ kind: "package-reference"
 
 `dsh-errors` 是本包的必需 peer，使重新导出的 `HarnessError` 构造函数在各消费者之间保持同一身份。
 
-发布的内容声明引用 Attachment 类型，因此即使 Llm 的手写源码只将其作为类型使用，`dsh-attachment` 仍是安装依赖。依赖策略保留这一条经过审查的声明关系，并在其源码类型引用消失时拒绝该登记。
-
 ### 何时选择
 
 当插件或组合需要调用模型时选择本包：它是进入提供方适配器的唯一受支持路径，并在 loop、会话日志与每个消费方之间保持同一套词汇。当需要提供方特定的协议行为（那属于 `dsh-llm-deepseek` 或 `dsh-llm-pi-ai` 之类的适配器）或重试执行（那属于 `dsh-llm-retry`）时，不要选择它。
@@ -87,7 +85,7 @@ for await (const chunk of ctx.llm.stream({
 
 本服务基于一项职责分离原则：**逻辑约定是提供方无关的，适配器拥有协议。** 它一次性地定义规范消息、内容块与流式分片词汇，每个提供方适配器只把自己的协议格式翻译为该词汇。注册表是拓扑的拥有者——适配器路由、可配置提供方条目与发现 offer 都在这里注册，并随其 fiber 一起 dispose（资源释放）——而请求始终是会话日志的纯函数：loop 构建的请求以深度冻结状态到达，因此监听器与适配器只能读取，绝不能改写。
 
-`./native` 入口导出提供方无关的消息、流、调用配置辅助函数和组装器，不加载 Cordis `LlmRuntime` 服务。包根入口保留该服务及相同的值导出。根服务使用可选 `dsh-typert-protocol` peer，该包同时列为开发依赖；`./native` 不加载此运行时。
+`./native` 入口导出提供方无关的消息、流、调用配置辅助函数和组装器，不加载 Cordis `LlmRuntime` 服务。包根入口保留该服务及相同的值导出。
 
 ### 源码地图
 
@@ -132,8 +130,8 @@ for await (const chunk of ctx.llm.stream({
 当包级约定不够用时阅读以下页面。它们从共享类型逐步进入具体适配器、重试执行器与计量服务。
 
 - [LLM（大语言模型）流式子系统](../../../Docs/subsystems/llm-streaming.zh.md)——消息与块类型、紧凑的 Assistant 流记录、`StreamChunk` 协议与适配器约定。
-- [llm-deepseek 适配器](../../../Modules/Official/llm/llm-deepseek/README.zh.md)——DeepSeek chat-completions 直连实现。
-- [llm-pi-ai 适配器](../../../Modules/Official/llm/llm-pi-ai/README.zh.md)——基于 pi-ai 的多提供方实现。
+- [llm-deepseek 适配器](../llm-deepseek/README.zh.md)——DeepSeek chat-completions 直连实现。
+- [llm-pi-ai 适配器](../llm-pi-ai/README.zh.md)——基于 pi-ai 的多提供方实现。
 - [llm-retry](../llm-retry/README.zh.md)——重跑失败模型请求的重试执行器。
 - [Token 计量](../token-meter/README.zh.md)——具备回放感知的请求与上下文压力测量。
 - [孪生 LLM 适配器](../../../../.agents/notes/implemented/architecture/2026-06-13-twin-llm-adapters.zh.md)——为什么 DeepSeek 路由交付两个结构不同的适配器。
@@ -162,8 +160,6 @@ for await (const chunk of ctx.llm.stream({
 - **只有出现实际产生方后，相应变体才会加入**——`prefill`、逐工具 `strict`、内容块 `cache` 提示和 `agent` 消息来源变体都没有产生方（见 [Agent Note](../../../../.agents/notes/archived/simplification/2026-07-04-prune-producerless-vocabulary-variants.md)）。
 - **`BlockAssembler` 只处理核心块类型**——插件添加块类型的流若从未由 `block-end` 关闭，`blocks()` 会抛出异常。
 - **`GenerateOptions.sessionId` 是本地声明的品牌类型**——导入 dsh-session 的 `SessionId` 会产生依赖循环。
-
-`resolveCallConfigWithModel` 根据已捕获的 Provider 元数据解析显式请求参数。预备派发将同一结果用于持久请求头和实际模型调用；目录中的建议默认值不能替代显式参数。
 
 <a id="dev-note"></a>
 ### 开发备注
