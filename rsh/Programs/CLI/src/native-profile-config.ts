@@ -146,8 +146,7 @@ export function applyNativeProfilePatches(profile: NativeProfileConfig, values: 
  * Detect the explicit native profile marker before importing the Cordis boot path.
  * @param name - profile name under the Harness home.
  * @param home - Harness home; the launcher uses the environment-resolved default.
- * @returns the selected profile runtime; a missing manifest retains legacy initialization, while an existing manifest needs
- * an explicit marker or a legacy bundle list.
+ * @returns native only for a valid explicit marker; missing profiles retain legacy initialization.
  */
 export function profileRuntime(name: string, home: string = resolveDshHome()): 'native' | 'legacy' {
   return resolveDshProfileExecution(name, home).runtime

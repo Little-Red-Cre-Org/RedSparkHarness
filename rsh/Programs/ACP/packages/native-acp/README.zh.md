@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-选择 `dsh --profile native-acp`，即可通过标准 ACP JSON-RPC 标准输入输出创建、发送提示、取消、关闭、列出和恢复持久化的 Session。已提交的助手文本、推理和图片，以及带文本或图片结果的注册工具生命周期事实，会转换为有序的 `session/update` 通知；当 Session 具备路由容量和 token meter 时才报告 provider usage。Session 列表使用稳定的 keyset 分页。兼容的 `acp` profile 仍是默认 ACP 组合。
+选择 `dsh --profile native-acp`，即可通过标准 ACP JSON-RPC 标准输入输出创建、发送提示、取消、关闭、列出和恢复持久化的 Session。已提交的助手文本、推理和注册工具生命周期事实转换为有序的 `session/update` 通知。兼容的 `acp` profile 仍是默认 ACP 组合。
 
 ## 目录
 
@@ -22,9 +22,7 @@ kind: "package-reference"
 
 ## 配置
 
-Profile 设置 `provider`、`model`、`systemPrompt` 和每个已接纳 turn 的正整数 `maxSteps`。`sessionListPageSize` 是每次 `session/list` 返回条目的正安全整数上限（默认 `100`）；分页使用兼容承载层的 newest-first 顺序，以 `createdAt` 和 UTF-8 Session id 作为游标键。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，Engine 通过 root 维护操作持久化空 Session。此操作要求宿主组合安装原生 `activeSessions` Provider；缺少该服务时，安装规划会在激活前拒绝此 profile。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
-
-版本化的 `session/new` metadata 可设置每轮 `maxSteps`、可选 `maxTokens` 与 permission mode。Program 会校验它，并通过 Session writer 提交一条必需的 Engine `execution/policy` 事件；不会另存一条 ACP policy 记录。ACP 在发布 Session 前检查配置路由能否执行输出 token 上限，Headless 则在每次分发前检查精确选定并已准备的 generation，因此后续 model selection 不能扩大该上限。恢复 `parent-relay` 策略时，必须由精确的实时 Session owner 重新签发 approval capability；缺少该 owner 时会在模型工作前拒绝执行。
+Profile 设置 `provider`、`model`、`systemPrompt` 和正整数 `maxSteps`。每个 Session 通过 `session/new` 选择一个已存在的绝对工作目录，同时仅接受一个按顺序排列的文本／图片提示。重叠的提示显式失败。创建返回之前，Engine 通过 root 维护操作持久化空 Session。此操作要求宿主组合安装原生 `activeSessions` Provider；缺少该服务时，安装规划会在激活前拒绝此 profile。恢复检查存储的工作目录与谱系，并在接受后续提示之前重放已提交的展示事件。关闭释放活动执行器并保留存储日志。输入结束和 Host 取消会取消并等待已接收的工作结束；ACP 没有标准的关闭进程请求。
 
 Program 将 `rootExecution` 作为原生 application service 提供。它依据精确附着的 root Agent 和 Session 身份找到所属的 per-Session Engine executor，再通过该 root 的 branded route 分派；maintenance 和 fork 的新目标 ID 无须等于 ACP wire Session ID。route 准入会拒绝 foreign、delegated、released 和 closing root owner。清理期间，`capture` 与 `cancel` 会继续按精确身份解析正在关闭的 owner，使取消能在 Engine detach 之前完成。必需的 `releaseIdle` 操作会委托给所属 Engine；Engine 仅接受已准入动态 Workspace route 上精确且已结算的 owner，ACP 的 per-Session base route 不满足该条件。此 profile 未配置动态 Workspace 准入，因此不提供可选的 `createWorkspaceRoute` 能力。该设计保留每条 route 不可变的 cwd 与执行作用域，并把 root permission 请求投递到所属 ACP wire Session。route 活动时，已安装的 Provider 可以使用 root 操作；关闭 Session 或连接会释放其 executor 和 root。ACP wire 方法提供提示取消与 Session 关闭；settle、maintenance、fork、预设选择和按 route 授权的存储操作仍是内部 service。仅当所选持久化 Provider 支持可恢复删除时才提供该能力。动态 `selectWorkspace` 仍受 Engine 已注册 Workspace 和显式 route 准入配置约束；此 ACP profile 不启用该准入，继续通过标准 ACP `session/new` 与 `session/resume` 选择 cwd。
 
@@ -36,21 +34,15 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 图片提示需要所选附件 Provider 与模型目录。初始化仅在两者均安装时声明图片准入；每次图片提示在同一次根执行准入中检查 Session 下一步选择的模型并准备附件，拒绝未声明图片输入的模型。附件 Provider 校验已配置的位图格式、base64、字节与像素限额，标准化整批图片，并在用户消息准入之前按输入顺序返回持久引用。非法图片不会进入 Session 收件箱。取消与传输结束的清理也覆盖图片准备。
 
-预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消会结算本地 approval 决定与 Session 审计，不等待忽略取消的对端；对应 wire 请求仍由连接持有，直到对端答复或 EOF 关闭连接。迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
-
-在 `initialize` 时，server 会声明 `capabilities.permissionRequestIdentity: true`。只有客户端声明 `permissionRelay: true` 且组合安装了 approval Provider 时，server 才会公布 `parent-relay`；否则只公布 `deny`，并拒绝要求不可用 parent relay 的 `session/new` 或 `session/resume` 请求。
-
-每个 `session/request_permission` 请求都会在 `_meta['com.deepseek.ai/dsh-native-subagent'].permissionRequest` 携带版本 `1` 的 metadata，字段包括 `sessionId`、`requestId`、`toolName` 和 `toolCallId`。`requestId` 是持久写入 asked/decided event 的 Native 审批 ID。metadata 的 `sessionId` 标识实际交互的 Native Session；外层 ACP `params.sessionId` 标识路由接收 Session，Provider 创建的 root 可能使两者不同。两个身份需分别使用；metadata 只用于关联请求，执行仍由存活 owner、取消检查和对端选择的 `allow-once` 控制。字段校验与读取方式见 [Native ACP metadata protocol](../../../../Modules/Official/subagent/acp-protocol/README.zh.md)。
+预设审批 Provider 将精确所属根工具调用送到标准 `session/request_permission`，先发送其已提交的工具更新。只有 `allow-once` 允许执行；拒绝、未知选项与取消均不授权。执行器记录每个 asked/decided 对。每个 Session 在关闭和恢复前后仅允许一条未结算的权限传输请求；正整数 `maxPendingPermissions` 限定整个连接的总量（默认 `32`）。容量用尽时后续请求得到 unavailable 决策。取消发送协作式传输取消，并完成 Session 审计结算，不等待忽略取消的对端。旧传输请求由连接持有，直到对端答复或 EOF 关闭连接；迟到答复不能授权执行。连接退出先拒绝并排空这些请求，再释放 Provider。
 
 <a id="dev-note"></a>
 
 安装原生工具后，`session/new` 和 `session/resume` 接受标准 stdio 与 Streamable HTTP MCP 声明。每个 Session 独立拥有传输连接和工具作用域；同级 Session 可复用服务名称，互不暴露工具。ACP 控制端授权绝对命令路径、参数、环境与 Session 工作目录，或带请求头的 HTTP(S) URL。完整列表先通过校验，初次连接和工具发现成功后才发布 Session。启动失败仅释放该待发布组合；关闭 Session 或 EOF 会停止工具准入，并协作排空执行器与连接。MCP 撤销随取消开始。关闭失败会保留已关闭的 Session 记录，拒绝恢复、提示和配置修改；仅清理成功才移除该记录。`mcpToolCallTimeoutMs` 为定时器范围内的正整数，默认 `60000`。MCP 诊断写入 stderr，保留协议 stdout。MCP 资源和提示词不对外提供；不支持的传输类型会被拒绝。
 
-安装 `commands` Provider 后，`session/new` 与 `session/resume` 会使用标准 `available_commands_update` 广告其中的命令。仅包含一条完整已注册斜杠命令（例如 `/compact`）的 `session/prompt` 会在确切 Session root owner 上通过同一 Provider 分派；普通提示文本不变。命令输出使用标准 `session/update` 消息，提示取消会通过其所有信号排空命令。
-
 ## 开发备注
 
-[原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权；[展示与列表决策记录](../../../../../.agents/notes/implemented/feature/2026-10-14-native-acp-presentation-and-listing.zh.md)记录输出、usage 和游标语义。本包不发布运行时不变量伴生入口，因为 ACP Session 表将每个协议 Session 与其执行器及 MCP 资源配对，而执行器拥有 Agent 执行和持久 Session 状态；ACP 记录保存传输与资源生命周期及临时控制，不是第二份 Session 投影。
+[原生 ACP 决策记录](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-acp-session-carrier.zh.md)说明了协议与执行的所有权。本包不发布运行时不变量伴生入口，因为 ACP Session 表将每个协议 Session 与其执行器及 MCP 资源配对，而执行器拥有 Agent 执行和持久 Session 状态；ACP 记录保存传输与资源生命周期及临时控制，不是第二份 Session 投影。
 
 <a id="model-experience"></a>
 
@@ -60,7 +52,7 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 #### 模型看到什么
 
-通过 `session/prompt` 接收的文本、资源链接引用和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。随 CLI 提供的 ACP 组合也会安装 `dsh-agent-instructions`，通过选定的文件系统 Provider 准备工作区指引，并将其作为用户消息写入该 Session。资源链接使用兼容承载层的方括号文本，名称与 URI 按 JSON 加引号；相邻文本合并，不抓取资源，并保留文本／图片顺序。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
+通过 `session/prompt` 接收的文本、资源链接引用和标准化图片引用进入持久化 Session 收件箱，并通过[原生 Session 执行器](../../../../Engine/core/native-headless/README.zh.md#model-experience)送达模型。资源链接使用兼容承载层的方括号文本，名称与 URI 按 JSON 加引号；相邻文本合并，不抓取资源，并保留文本／图片顺序。持久化模型选择通过所选 Provider 影响后续请求装配；协议配置通知不添加模型输入。
 
 #### Token 影响
 
@@ -74,5 +66,4 @@ Program 将 `rootExecution` 作为原生 application service 提供。它依据�
 
 ## 已知限制与延后工作
 
-- 音频与嵌入资源输入、ACP question 请求（向人请求补充输入）以及 shutdown 请求仍不支持。不支持的提示内容显式失败；初始化声明不支持音频和嵌入上下文。助手与工具结果中的图片会作为 ACP inline image block 展示。
-- 此包提供 ACP server carrier，不提供用于启动外部 ACP subagent 的通用 provider。TypeScript 与 Python SDK 对必需 Engine `execution/policy` 事件的投影不由此 carrier 提供。
+- 音频／嵌入式输入、提问请求和附件展示不属于此承载批次；不支持的提示内容显式失败。初始化声明不支持音频、嵌入上下文。需要这些能力的现有 ACP 客户端在原生对等能力实现之前使用兼容 profile。

@@ -90,10 +90,6 @@ interface Resident {
   readonly handle: NativeSessionContinuation
 }
 
-type NativeContinuationRead =
-  | { readonly kind: 'child'; readonly observation: NativeContinuationObservation }
-  | Extract<NativeContinuationInspection, { readonly kind: 'diagnostic' }>
-
 /** One Program-owned residency map; modules contribute composition and never own a second writer or inbox. */
 export class NativeContinuationRuntime {
   private readonly resident = new Map<SessionId, Resident>()
@@ -136,7 +132,6 @@ export class NativeContinuationRuntime {
         const visited = new Set<SessionId>([session.id])
         let parent = session.id
         let parentDepth = session.header.delegationDepth ?? 0
-        let candidateParentDepth = parentDepth
         let observation: NativeContinuationObservation | undefined
         for (const id of path) {
           signal.throwIfAborted()
@@ -147,18 +142,16 @@ export class NativeContinuationRuntime {
             return { kind: 'diagnostic', id: path.at(-1) ?? id, reason: inspected.reason }
           }
           observation = inspected.observation
-          candidateParentDepth = parentDepth
           if (observation.header.parentSession !== parent
             || observation.header.cwd !== session.header.cwd
-            || (observation.header.origin === 'subagent'
-              && (observation.header.delegationDepth ?? 0) <= parentDepth)) {
+            || (observation.header.origin === 'subagent' && observation.header.delegationDepth !== parentDepth + 1)) {
             throw new Error('native-continuation: catalog inspection path is not authorized')
           }
           parent = id
           parentDepth = observation.header.delegationDepth ?? 0
         }
         if (observation === undefined || observation.header.origin !== 'subagent') throw new Error('native-continuation: inspection requires a subagent endpoint')
-        return { kind: 'child', observation, parentDepth: candidateParentDepth }
+        return { kind: 'child', observation }
       },
       observe: (id, signal) => { this.assertParent(agent); return this.observe(id, session.id, signal, this.program.configuration(agent)) },
       deliver: async (id, message, target, wake, signal) => {
@@ -207,7 +200,7 @@ export class NativeContinuationRuntime {
       if (candidate === undefined) break
       if (seen.has(candidate.header.id)) throw new Error('native-continuation: catalog lineage contains a cycle')
       seen.add(candidate.header.id)
-      if (candidate.header.origin === 'subagent' && (candidate.header.delegationDepth ?? 0) <= candidate.parentDepth) continue
+      if (candidate.header.origin === 'subagent' && candidate.header.delegationDepth !== candidate.parentDepth + 1) continue
       if (candidate.header.origin === 'subagent') {
         const live = this.program.agents.get(NativeAgentId(candidate.header.id))
         result.push({ path: candidate.path, status: live === undefined ? 'ready'
@@ -248,12 +241,12 @@ export class NativeContinuationRuntime {
 
   private async inspect(
     id: SessionId, signal: AbortSignal, defaults: Readonly<NativeSessionConfiguration>,
-  ): Promise<NativeContinuationRead> {
+  ): Promise<NativeContinuationInspection> {
     const selected = await this.program.observe?.(id, signal)
     if (selected !== undefined) return { kind: 'child', observation: selected }
     let live = this.resident.get(id)
     if (live?.owner.isClosing) { await live.owner.close(); live = undefined }
-    const diagnostic = (error: unknown): Extract<NativeContinuationInspection, { readonly kind: 'diagnostic' }> => {
+    const diagnostic = (error: unknown): NativeContinuationInspection => {
       signal.throwIfAborted()
       if (error instanceof SessionFormatUnsupportedError) return { kind: 'diagnostic', id, reason: 'unsupported' }
       if (error instanceof SessionPersistenceCorruptionError) return { kind: 'diagnostic', id, reason: 'corrupt' }
@@ -287,14 +280,6 @@ export class NativeContinuationRuntime {
     return live.activation.retainChild()
   }
 
-  /** Retain one exact resident Session writer for an owned background task. */
-  retainBackground(agent: NativeAgent): (() => void) | undefined {
-    const id = SessionId(agent.id)
-    const live = this.resident.get(id)
-    if (live === undefined || live.handle.agent !== agent) return undefined
-    return live.activation.retainBackground()
-  }
-
   /** Close creation and delivery admission and drain resident writers and Agents. @returns the memoized shutdown transaction. */
   dispose(): Promise<void> {
     if (this.closing !== undefined) return this.closing
@@ -325,7 +310,6 @@ export class NativeContinuationRuntime {
     const cancellation = new AbortController()
     const startup = Promise.withResolvers<NativeSessionContinuation>()
     const releaseResidentParent = this.retainChild(parent)
-    const releaseBackgroundParent = this.retainBackground(parent)
     const releaseParent = this.program.agents.onDispose(parent, async () => {
       cancellation.abort(new Error('native-continuation: parent is closing'))
       await startup.promise.then(() => undefined, () => undefined)
@@ -341,13 +325,8 @@ export class NativeContinuationRuntime {
     void this.materialize(parent, session, request, startupSignal).then(startup.resolve, startup.reject)
     void startup.promise.then((handle) => {
       cleanup()
-      const releaseForeground = (): void => { releaseResidentParent?.() }
-      void handle.waitForeground().then(releaseForeground, releaseForeground)
-      void handle.done.then(() => { releaseForeground(); releaseBackgroundParent?.() }, () => {
-        releaseForeground()
-        releaseBackgroundParent?.()
-      })
-    }, () => { cleanup(); releaseResidentParent?.(); releaseBackgroundParent?.() })
+      void handle.done.then(() => { releaseResidentParent?.() }, () => { releaseResidentParent?.() })
+    }, () => { cleanup(); releaseResidentParent?.() })
     return startup.promise
   }
 
@@ -361,23 +340,8 @@ export class NativeContinuationRuntime {
     if (request.config.cwd !== session.header.cwd || request.config.cwd !== this.program.configuration(parent).cwd) {
       throw new Error('native-continuation: child workspace differs from the selected parent')
     }
-    const inherited = request.delegationContext
-    const depth = (inherited?.depth ?? session.header.delegationDepth ?? 0) + 1
+    const depth = (session.header.delegationDepth ?? 0) + 1
     if (!Number.isSafeInteger(depth) || depth > request.maxDepth) throw new Error('native-continuation: child depth exceeds maxDepth')
-    if (inherited !== undefined && (inherited.cwd !== session.header.cwd || request.maxDepth > inherited.maxDepth
-      || request.config.maxSteps > inherited.maxSteps
-      || inherited.maxTokens !== undefined
-        && (request.config.maxTokens === undefined || request.config.maxTokens > inherited.maxTokens))) {
-      throw new Error('native-continuation: child route or budgets exceed inherited authority')
-    }
-    const delegationContext = inherited === undefined ? undefined : Object.freeze({
-      ...inherited, depth, maxDepth: request.maxDepth, cwd: request.config.cwd,
-      provider: request.config.provider, model: request.config.model,
-      ...request.config.reasoningEffort === undefined ? {} : { reasoningEffort: request.config.reasoningEffort },
-    })
-    const childRequest: NativeContinuationRequest = {
-      ...request, ...(delegationContext === undefined ? {} : { delegationContext }),
-    }
     const resources = new ResourceOwner()
     try {
       const registration = await this.program.acquire(request.id, new NativeScope(parent.scope), parent)
@@ -392,9 +356,7 @@ export class NativeContinuationRuntime {
         }, signal)
       resources.own(() => owner.close())
       if (owner.session.header.parentSession !== session.id || owner.session.header.origin !== 'subagent'
-        || owner.session.header.cwd !== request.config.cwd
-        || (inherited !== undefined ? owner.session.header.delegationDepth !== depth
-          : (owner.session.header.delegationDepth ?? depth) > request.maxDepth)) {
+        || owner.session.header.cwd !== request.config.cwd || (owner.session.header.delegationDepth ?? depth) > request.maxDepth) {
         throw new Error('native-continuation: child cannot resume under the selected parent')
       }
       const stored = await owner.read(signal)
@@ -409,7 +371,7 @@ export class NativeContinuationRuntime {
       let published = false
       const activation = new NativeContinuationActivation(owner, registration.execution, {
         closing: () => this.program.closing?.(owner) ?? Promise.resolve(),
-        run: (owned, initial, turnSignal) => this.program.run(childRequest, owned, registration.execution.agent,
+        run: (owned, initial, turnSignal) => this.program.run(request, owned, registration.execution.agent,
           initial, () => { published = true; ready.resolve() }, turnSignal),
         release: () => resources.dispose(),
         settled: async (result, failure) => {
@@ -417,7 +379,7 @@ export class NativeContinuationRuntime {
           if (published && request.onSettled !== undefined) {
             let observation: NativeContinuationObservation
             try {
-              observation = await this.observe(request.id, session.id, new AbortController().signal, childRequest.config)
+              observation = await this.observe(request.id, session.id, new AbortController().signal, request.config)
             } catch (error: unknown) {
               await request.onSettled(result, failure ?? error, undefined)
               throw error
@@ -430,13 +392,13 @@ export class NativeContinuationRuntime {
       resources.own(() => { releaseParent() })
       const handle: NativeSessionContinuation = { id: request.id, agent: registration.execution.agent,
         get isClosing() { return activation.isClosing },
-        ready: ready.promise, waitForeground: () => activation.waitForeground(), done: activation.done,
+        ready: ready.promise, done: activation.done,
         enqueue: (message, target, admissionSignal) => activation.enqueue(message, target, admissionSignal),
         // Interruption is request-only; execution and cleanup failures remain visible through done and dispose.
         interrupt: (reason) => { void activation.interrupt(reason) }, retainChild: () => activation.retainChild(),
         dispose: () => activation.close(),
       }
-      const live: Resident = { request: childRequest, parent, owner, activation, handle }
+      const live: Resident = { request, parent, owner, activation, handle }
       this.resident.set(request.id, live)
       void handle.done.then(() => { if (this.resident.get(request.id) === live) this.resident.delete(request.id) },
         () => { if (this.resident.get(request.id) === live) this.resident.delete(request.id) })

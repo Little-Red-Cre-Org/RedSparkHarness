@@ -1,0 +1,8 @@
+body { width: 330px; padding: 20px; margin: 0; font: 13px/1.6 system-ui,sans-serif; background: #17141a; color: #efe8ee; }
+header b { font-size: 20px; } header p { margin: 2px 0 12px; color: #d7becb; } #status { color: #ffb4c6; }
+.privacy,.hint { color: #c9c0c8; } .privacy { border-left: 2px solid #b45870; padding-left: 10px; }
+.actions { display: flex; gap: 8px; } button { cursor: pointer; border: 1px solid #855267; border-radius: 8px; padding: 7px 13px; color: #fff1f6; background: #573046; }
+button:disabled { opacity: .45; cursor: default; } button:focus-visible { outline: 2px solid #ffb4c6; outline-offset: 2px; }
+.quiet { background: transparent; } #error { color: #ffb6b6; } ul { padding: 0; list-style: none; }
+li { border-top: 1px solid #45333f; padding: 10px 0; } li b,li small { display: block; overflow-wrap: anywhere; }
+li small { color: #bfb0bb; margin: 4px 0 8px; }

@@ -10,7 +10,7 @@ The provider-neutral `dsh-llm` service and provider-specific adapters shared an 
 
 ## Decision
 
-Keep `dsh-llm`, `dsh-native-model-selection`, `dsh-llm-retry`, and `dsh-token-meter` in the Engine LLM group. Place `dsh-llm-deepseek`, `dsh-llm-pi-ai`, `dsh-deepseek-llm-api-extensions`, `dsh-plugin-package-inventory-deepseek`, and `dsh-session-log-deepseek` in `Modules/Official/llm`. Package names, existing Cordis exports, and shipped default composition remain unchanged. The provider adapters and three request-contribution packages expose separate Cordis and Native faces; Native consumers use the explicit Native entries. The Session package continues to own its event-map root, persistence APIs, and format catalog; provider contributions extend the event map without taking those responsibilities. See the [Native DeepSeek request-contribution decision](2026-10-13-native-deepseek-request-contributions.md) for Native provenance and scope ownership.
+Keep `dsh-llm`, `dsh-native-model-selection`, `dsh-llm-retry`, and `dsh-token-meter` in the Engine LLM group. Place `dsh-llm-deepseek`, `dsh-llm-pi-ai`, `dsh-deepseek-llm-api-extensions`, `dsh-plugin-package-inventory-deepseek`, and `dsh-session-log-deepseek` in `Modules/Official/llm`. Package names, public exports, and runtime composition remain unchanged. The two provider adapters already expose Cordis and Native faces; the three request-contribution packages remain Cordis-only, and this ownership move does not change their face support. The Session package continues to own its event-map root, persistence APIs, and format catalog; provider contributions extend the event map without taking those responsibilities.
 
 ## Alternatives considered
 
@@ -22,4 +22,4 @@ Keep `dsh-llm`, `dsh-native-model-selection`, `dsh-llm-retry`, and `dsh-token-me
 
 ## Consequences
 
-New official provider adapters and their provider-specific request contributions belong under `rsh/Modules/Official/llm`. Provider-neutral routing, model selection, retries, token measurement, and Session storage remain in their Engine groups. The three request-contribution packages expose Native Host entries; shipped profiles continue to assemble their Cordis entries. Workspace references, generated package maps, and documentation must describe the physical locations while consumers continue using the existing package names.
+New official provider adapters and their provider-specific request contributions belong under `rsh/Modules/Official/llm`. Provider-neutral routing, model selection, retries, token measurement, and Session storage remain in their Engine groups. The Cordis-only contributions still need a separate Native-support disposition under the P4 capability plan. Workspace references, generated package maps, and documentation must describe the physical locations while consumers continue using the existing package names.

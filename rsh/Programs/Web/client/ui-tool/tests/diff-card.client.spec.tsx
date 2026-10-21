@@ -229,14 +229,14 @@ describe('FileMutationRow diff card', () => {
     expect(view.getByText('复制')).toBeTruthy()
   })
 
-  it('the summary is a path link that opens the tool path through the host', () => {
+  it.each([{ diffs: DIFFS }])('the path link carries recorded fragments to the file opener', ({ diffs }) => {
     const openFile = vi.fn()
     const view = render(<FileMutationRow {...{ ...rowProps(settled()), openFile }} />)
     // The path link rides the collapsed summary, so it opens without expanding.
     fireEvent.click(view.getByRole('button', { name: 'notes/demo.txt' }))
     // The row passes the tool's own path; the injected openFile resolves it
     // against the session cwd (apply.ts), so the row must not resolve twice.
-    expect(openFile).toHaveBeenCalledWith('notes/demo.txt')
+    expect(openFile).toHaveBeenCalledWith('notes/demo.txt', { diffs })
   })
 
   it('registers under write too, rendering a create as an added-only diff', () => {

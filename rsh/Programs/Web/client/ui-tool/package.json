@@ -22,10 +22,6 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json",
     "./tool-renderer": {
@@ -88,7 +84,6 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "lib/native.js",
     "lib/tool-renderer.js",
     "lib/**/*.css",
     "lib/types/**/*.d.ts"

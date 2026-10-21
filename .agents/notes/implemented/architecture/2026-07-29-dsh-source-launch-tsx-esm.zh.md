@@ -18,8 +18,6 @@ Status: implemented
 
 `rsh/Scripts/tspath-loader.ts` 与 `rsh/Programs/CLI/src/tsconfig-paths-loader.ts` 已删除。随之消失的还有该 loader「仅为已声明运行时依赖映射 workspace import」的运行时规则——tsx 无条件应用 `paths` 映射。声明完整性现在仅由静态门禁保障：配置的裸插件走 `verify-cordis-config`，manifest（元数据清单）走 workspace constraints。（该运行时规则确实发现过真实缺陷：`dsh-plan-mode` 与 `dsh-tool-jobs` 导入 `@deepseek-ai/dsh-llm` 却只声明在 devDependencies；后已修复。）
 
-配置中使用的兼容 Settings 适配器子路径及其导入的 Engine `/compat-settings` 入口，通过 [tsconfig.base.json](../../../../tsconfig.base.json) 生成区域之外的精确源码别名解析。包根别名不能覆盖这些子路径；只映射适配器会让 Engine 导入继续依赖构建产物的导出。别名生成器仍仅负责包根和 native 入口。
-
 node-compat CI 矩阵（Node 22.19 与 26）新增 `dsh-source-launch-smoke`（`rsh/Programs/CLI/tests/source-launch.compat.spec.ts`）：以精确的生产运行时启动向量做 keyless 管道 stdio 启动，断言进程会因 TTY 拒绝而以非零状态退出。未来 Node 对模块钩子或 TypeScript 处理的任何改动都会让该门禁变红，而不是破坏开发者的 `pnpm dsh`。
 
 ## 备选方案

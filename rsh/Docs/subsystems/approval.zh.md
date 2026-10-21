@@ -60,8 +60,6 @@ interface ApprovalRequest<AgentOwner> {
 
 原生 Provider 不拥有 Session 或 Cordis 事件。其消费应用记录 `native-approval/asked` 和 `native-approval/decided` 审计对，然后渲染工具 outcome。原生 headless 将该路径应用于固定 `write_file` 工具，并转交给声明审批 reason 的贡献工具。不同的事件名称使原生请求 id 和策略数据与 user-approval 审计 payload 分离。
 
-普通根请求的工具所有者可以提供完整的已解析 cwd 与目标身份。NativeTools 绑定分离、冻结且已验证的 JSON 参数；headless 将工具名、这些身份及规范参数生成指纹，对象键排序而数组顺序保留。记住的决定在既有 `native-approval/decided` 事件中携带 `NativeApprovalSessionGrant`。唯一写入者读取该持久前缀，只复用原 Session 身份与完全相同的指纹。冷恢复可以复用；fork 或复制前缀保留原身份，不能继承其权限。`never`、执行策略拒绝、精确所有者审批和委派拒绝均优先于复用。决定追加与 flush 必须在执行前成功。沙箱升级及没有完整所有者上下文的请求仍只允许一次。
-
 源码：[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../../Modules/Official/interaction/native-approval/src/index.ts)
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->

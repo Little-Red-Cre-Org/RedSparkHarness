@@ -18,7 +18,7 @@ Status: implemented
 
 **焦点进入 iframe 时关闭菜单。**[Menu.tsx](../../../../rsh/Programs/Web/client/ui-primitives/src/Menu.tsx) 增加 window `blur` 监听，以 `document.activeElement instanceof HTMLIFrameElement` 为门：焦点移动是跨源 iframe 内 pointerdown 留下的唯一信号，这道门也让应用或标签页切换不会误关列表。
 
-**代码预览把复制条与滚动源码分开，并去掉卡片填充。**共享 CodeBlock 用稳定的 `data-code-block-content` 节点包裹渲染后的源码；该节点默认使用 `display: contents`，因此既有消费者保持原布局。[WorkspaceCodePreview.module.css](../../../../rsh/Programs/Web/client/ui-primitives/src/WorkspaceCodePreview.module.css) 将该节点实体化为复制条下方占满剩余高度的内部滚动区；代码渲染器通过 callback ref 报告该节点，使文档 owner 在 Slot 替换后仍能用当前节点恢复位置、分页和跳转代码行。共享 CodeBlock 的填充通过 `--dsl-code-block-background` 设置（默认值不变，会话保持灰色卡片），预览将它设为 `transparent`，代码因此直接使用分栏背景。
+**代码预览把复制条与滚动源码分开，并去掉卡片填充。**共享 CodeBlock 用稳定的 `data-code-block-content` 节点包裹渲染后的源码；该节点默认使用 `display: contents`，因此既有消费者保持原布局。[CodeBody.module.css](../../../../rsh/Programs/Web/client/ui-sidebar-documentpreview/src/client/code/CodeBody.module.css) 将该节点实体化为复制条下方占满剩余高度的内部滚动区；代码渲染器通过 callback ref 报告该节点，使文档 owner 在 Slot 替换后仍能用当前节点恢复位置、分页和跳转代码行。共享 CodeBlock 的填充通过 `--dsl-code-block-background` 设置（默认值不变，会话保持灰色卡片），预览将它设为 `transparent`，代码因此直接使用分栏背景。
 
 ## Alternatives considered
 

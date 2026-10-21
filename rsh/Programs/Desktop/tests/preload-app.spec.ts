@@ -48,8 +48,8 @@ it('provides startup controls and a removable state subscription to shell docume
   const listener = vi.fn()
   const dispose = api.backend.subscribe(listener)
   const handler = electron.ipcRenderer.on.mock.calls[0]?.[1] as (event: unknown, state: unknown) => void
-  handler({}, { phase: 'error', errorType: 'Error' })
-  expect(listener).toHaveBeenCalledWith({ phase: 'error', errorType: 'Error' })
+  handler({}, { phase: 'error', message: 'startup failed' })
+  expect(listener).toHaveBeenCalledWith({ phase: 'error', message: 'startup failed' })
   dispose()
   expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.backendState, handler)
   expect(api).not.toHaveProperty('plugins')

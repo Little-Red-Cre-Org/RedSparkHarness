@@ -6,8 +6,7 @@ import z from 'zod'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeExternalSubagentApprovalOutcome, NativeExternalSubagentApprovalRequest,
-  NativeSubagentOperations, NativeSubagentRequest, NativeSubagentRun } from '@deepseek-ai/dsh-native-subagent/native'
+import type { NativeSubagentOperations, NativeSubagentRequest, NativeSubagentRun } from '@deepseek-ai/dsh-native-subagent/native'
 import type { NativeWorkflowProvider, NativeWorkflowStartRequest, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
 import { WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
 import { WorkflowError } from '@deepseek-ai/dsh-workflow/errors'
@@ -33,13 +32,6 @@ export type NativeWorkflowWorkerConfig = z.output<typeof Configuration>
  * @returns validated explicit deployment values.
  */
 export function resolveNativeWorkflowWorkerConfig(input: unknown): NativeWorkflowWorkerConfig { return Configuration.parse(input) }
-
-function responsesGeneration(call: NativeToolExecution): NativeToolExecution['responsesGeneration'] {
-  for (let current: NativeToolExecution | undefined = call; current !== undefined; current = current.parent) {
-    if (current.responsesGeneration !== undefined) return current.responsesGeneration
-  }
-  return undefined
-}
 
 /** Worker owner with Provider-scoped cancellation and exact parent initiator restoration for child RPC. */
 export class NativeWorkflowWorkerProvider implements NativeWorkflowProvider {
@@ -88,28 +80,12 @@ export class NativeWorkflowWorkerProvider implements NativeWorkflowProvider {
           ...child.agentOptions?.model === undefined ? {} : { model: child.agentOptions.model },
           ...child.outputSchema === undefined ? {} : { outputSchema: child.outputSchema },
         }
-        const generation = responsesGeneration(child.parent)
-        const authority = child.parent.approvalAuthority
-        const approvalRequester = authority === undefined ? undefined : async (
-          approval: NativeExternalSubagentApprovalRequest,
-        ): Promise<NativeExternalSubagentApprovalOutcome> => authority.request({
-          agent: child.parent.agent, session: child.parent.session, callId: child.parent.callId,
-          toolName: approval.toolName,
-          reason: [
-            `External child ${approval.operationId} request ${approval.requestId} (child call ${approval.callId}).`,
-            approval.reason,
-          ].filter((part): part is string => part !== undefined).join(' '),
-          signal: AbortSignal.any([child.parent.signal, approval.signal]),
-        })
         const request: NativeSubagentRequest = this.subagents.resolve({
           agent: child.parent.agent,
           session: child.parent.session,
           label: `workflow:${meta.name}`,
           prompt: child.prompt,
           options,
-          ...child.parent.delegationContext === undefined ? {} : { delegationContext: child.parent.delegationContext },
-          ...generation === undefined ? {} : { responsesGeneration: generation },
-          ...approvalRequester === undefined ? {} : { approvalRequester },
         })
         const run: NativeSubagentRun = await this.subagents.start(request, child.signal)
         return {

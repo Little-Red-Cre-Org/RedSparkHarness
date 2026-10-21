@@ -84,7 +84,7 @@ it('records confined native file tools and a denied out-of-workspace write throu
 
   const model = join(modules, 'native-fs-sandbox-model')
   mkdirSync(model)
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'native-fs-sandbox-model', version: '0.0.0', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'native-fs-sandbox-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))
@@ -119,7 +119,7 @@ export const plugin = { apiVersion: 1, name: 'native-fs-sandbox-model', targets:
 
   const answerer = join(modules, 'native-fs-sandbox-approval')
   mkdirSync(answerer)
-  writeFileSync(join(answerer, 'package.json'), JSON.stringify({ name: 'native-fs-sandbox-approval', version: '0.0.0', type: 'module',
+  writeFileSync(join(answerer, 'package.json'), JSON.stringify({ name: 'native-fs-sandbox-approval', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['approval'], optional: [], provides: [] } },
   }))

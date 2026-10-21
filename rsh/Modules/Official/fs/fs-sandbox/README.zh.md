@@ -67,7 +67,7 @@ kind: "package-reference"
 
 ### 设计理念
 
-围栏在可信代码中检查模型控制路径的策略。它在本地后端变更调用方目标前，重新验证包含关系和解析目标身份。不可信代码的内核级隔离仍由 `ctx.shell` 负责。
+围栏是在可信代码中检查模型控制路径的策略，而非内核边界。操作属于 seam 自身（open、rename），只有目标路径不可信，因此「规范化后检查包含关系」就是该接口的完整答案。不可信代码的内核级隔离仍由 `ctx.shell` 负责。
 
 ### 源码地图
 
@@ -80,7 +80,7 @@ kind: "package-reference"
 
 ### 变更如何被围栏
 
-每次变更先解析按调用策略（`danger-full-access` 原样返回调用方目标；`read-only` 抛出 `FS_SANDBOX_DENIED`）。在 `workspace-write` 下，共享检查重新解析展示路径，并要求目标位于某个 `writableRoots` 根目录之下。不同的 `targetKey` 会以 `FS_STALE_VERSION` 拒绝；调用方必须在重试前重新解析并授权新目标。身份未变时返回原 FsTarget 进行变更。Native 与 Cordis 入口保留同一包含关系检查，不能将已批准的操作重定向到另一个工作区内目标。
+每次变更先解析按调用策略（`danger-full-access` 原样返回调用方目标；`read-only` 抛出 `FS_SANDBOX_DENIED`），`workspace-write` 则立即重新规范化目标，并要求它位于由唯一的 `writableRoots` 函数派生的某个可写根之下——与 Seatbelt profile 授权的集合相同，因此 fs 围栏与 bash runner 不会漂移。被变更的正是这个新目标，因此工具解析后被替换的符号链接祖先也会被发现。
 
 ### 威胁模型
 

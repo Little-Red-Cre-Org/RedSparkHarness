@@ -32,7 +32,7 @@ This extends the [provider-routed adapter decision](../architecture/2026-07-14-p
 
 ## Consequences
 
-Upgrade-dependent errors remain visible and repairable without weakening validation of new provider edits. Configuration errors remain distinct from remote model existence: a catalog-external id with an explicit protocol is accepted, and its endpoint decides whether that id exists. Scalar or document errors still fail early. Models settings does not explain namespace registration failures; those errors require inspecting the configuration and startup diagnostics. At Host startup, account credential updates delivered during the initial availability reads are reconciled before model services are published, and settings are re-read immediately before installing their non-replaying watch. The default DeepSeek availability snapshot controls automatic profile insertion; first-available selection checks the current account profile URL through the credential owner, which enforces its configured inference origin. No settings API, storage format, or session event is added; configurable-provider entries gain one optional diagnostic field.
+Upgrade-dependent errors remain visible and repairable without weakening validation of new provider edits. Configuration errors remain distinct from remote model existence: a catalog-external id with an explicit protocol is accepted, and its endpoint decides whether that id exists. Scalar or document errors still fail early. Models settings does not explain namespace registration failures; those errors require inspecting the configuration and startup diagnostics. No settings API, storage format, or session event is added; configurable-provider entries gain one optional diagnostic field.
 
 ## Testing
 

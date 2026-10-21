@@ -94,3 +94,5 @@ PENDING → LOADING → ACTIVE → UNLOADING → DISPOSED
 有一项顺序注意事项：disposer 会按注册顺序的逆序启动，但多个**异步** disposer 会并发运行。如果拆除步骤必须按顺序执行，请把它们放在同一个 disposer 中，并在其中依次等待每步完成。
 
 下一章：[服务](03-services.zh.md)：插件如何共享功能。
+
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

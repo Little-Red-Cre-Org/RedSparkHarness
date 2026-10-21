@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本包供设置提供方与消费方共用 Settings 服务、namespace、descriptor、编辑及 Native 文档更新事件类型。`/types` 导出协议安全视图；`/native` 定义 Native 服务，并在不导入 Cordis 的情况下扩展 `NativeServices` 与 `NativeEvents`。本包只定义接口；提供方负责存储、解析值与发出事件。
+本包供设置提供方与消费方共用 Settings 服务、namespace、descriptor 和编辑类型。`/types` 导出保存协议安全视图；`/native` 定义 Native 服务，并在不导入 Cordis 的情况下扩展 `NativeServices`。本包只定义接口；提供方负责存储与解析值。
 
 ## 目录
 
@@ -42,7 +42,7 @@ import type { NativeSettingsService } from '@deepseek-ai/dsh-settings-definition
 <details>
 <summary>声明所有权——点击展开</summary>
 
-根导出定义与框架无关的 Settings 服务和注册 scope。`/types` 定义 namespace 标识及配置界面使用的 JSON 安全值。`/native` 定义 Native 存储、服务、descriptor、编辑和 scope 类型，通过模块 augmentation 添加 `NativeServices.settings`，并声明携带 namespace revision 的 `settings/document-updated`。
+根导出定义与框架无关的 Settings 服务和注册 scope。`/types` 定义 namespace 标识及配置界面使用的 JSON 安全值。`/native` 定义 Native 存储、服务、descriptor、编辑和 scope 类型，并通过模块 augmentation 添加 `NativeServices.settings`。
 
 | 文件 | 职责 |
 |---|---|

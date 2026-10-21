@@ -1,0 +1,53 @@
+{
+  "name": "@deepseek-ai/dsh-browser-read-only",
+  "version": "0.1.5-rc.2",
+  "description": "Authorized local browser page reads for Native Harness profiles",
+  "type": "module",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Modules/Official/web/browser-read-only" },
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/native.js",
+    "lib/native-messaging.js",
+    "lib/shared-*.js",
+    "extension/**",
+    "scripts/register-chrome.ps1",
+    "lib/types/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-native-tools": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "tools"
+      ],
+      "optional": [],
+      "provides": [
+        "browserReadOnly"
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ import type { ContentBlock, MessageId, MessageSource } from '@deepseek-ai/dsh-ll
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionObservation, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
+import type { SessionObservation, SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
 import {
   childSessionMeta,
   captureDelegatedPolicyOverrides,
@@ -429,12 +429,6 @@ export class SubagentContinuationManager {
         'NOT_RESUMABLE',
       )
     }
-    if (descriptor.delegationContext !== undefined) {
-      throw new SubagentError(
-        `subagent "${childId}" requires inherited Native authority that this Provider cannot restore`,
-        'NOT_RESUMABLE',
-      )
-    }
     let activation: Activation
     try {
       activation = await this.activations.materialize({
@@ -541,8 +535,8 @@ export class SubagentContinuationManager {
   }
 
   /** Resolve the Session query service used for cold child observations. */
-  private requireSessionQuery(): Pick<SessionQueryOperations, 'observeSession'> {
-    const query = this.ctx.get('sessionQuery') as Pick<SessionQueryOperations, 'observeSession'> | undefined
+  private requireSessionQuery(): SessionQueryEngine {
+    const query = this.ctx.get('sessionQuery')
     if (query === undefined) {
       throw new SubagentError(
         'continuable subagents require session query (load @deepseek-ai/dsh-session-query)',

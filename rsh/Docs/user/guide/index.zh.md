@@ -24,6 +24,8 @@ Agent（智能体）可以读取和编辑工作区文件、运行命令、委派
 
 ## 继续使用
 
+- [引用本地文件与核对费用](./file-references.zh.md)
+- [读取已授权的 Chrome 页面](./browser-read-only.zh.md)
 - [配置模型](./providers.zh.md)
 - [使用 Python SDK](./python-sdk.zh.md)
 - [使用其他 CLI 模式](../../../Programs/CLI/README.zh.md)

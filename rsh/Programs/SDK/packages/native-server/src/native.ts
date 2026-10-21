@@ -5,20 +5,16 @@ import type { Readable, Writable } from 'node:stream'
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
 import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeRootExecutionOperations, NativeRootRouteId, NativeActiveSessionOwner,
-  NativeStagedFileBlock, NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeRootExecutionOperations, NativeRootRouteId, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
 import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
 import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
 import { SessionId, SessionSeq, type SessionEvent, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
 import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { NativeApprovalOutcome, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
 import type {} from '@deepseek-ai/dsh-approval-definition'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
-import type { NativeSdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
 import type {} from '@deepseek-ai/dsh-session-persistence/native'
 import type {} from '@deepseek-ai/dsh-native-agent/native'
 import type {} from '@deepseek-ai/dsh-native-model-execution/native'
@@ -137,12 +133,6 @@ export class NativeSdkApplication implements NativeApplication {
       maintenance: (request, operation, signal) => this.rootOperations().maintenance(request, operation, signal),
       fork: (request, signal) => this.rootOperations().fork(request, signal),
       selectPreset: (request, signal) => this.rootOperations().selectPreset(request, signal),
-      stagedFiles: {
-        stageStream: (request, signal) => this.rootOperations().stagedFiles.stageStream(request, signal),
-        stageEncoded: (request, signal) => this.rootOperations().stagedFiles.stageEncoded(request, signal),
-        prepare: request => this.rootOperations().stagedFiles.prepare(request),
-        enqueue: request => this.rootOperations().stagedFiles.enqueue(request),
-      },
     } satisfies Omit<NativeRootExecutionOperations, 'deletions'>
     this.rootExecution = rootExecution
   }
@@ -167,7 +157,6 @@ export class NativeSdkApplication implements NativeApplication {
     transport.onRequest(async (method, params) => {
       switch (method) {
         case 'initialize': return this.track(this.initialize(params, signal))
-        case 'session/upload-file': return this.track(this.uploadFile(params, signal))
         case 'session/prompt': return this.prompt(params, transport, signal)
         case 'session/cancel': return this.cancel(params)
         case 'session/steer': return this.track(this.steer(params, signal))
@@ -354,8 +343,7 @@ export class NativeSdkApplication implements NativeApplication {
         ...maxTokens === undefined ? {} : { maxTokens },
         ...allowedTools === undefined ? {} : { allowedTools },
         ...workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: resolve(workspaceWriteRoot) },
-      }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions'),
-        attachments: this.context.require('attachments') })
+      }, this.context.scope, { execution: this.context.require('sessionExecution'), active: this.context.require('activeSessions') })
       const deletions = this.executor.rootExecution.deletions
       if (deletions !== undefined) Object.defineProperty(this.rootExecution, 'deletions', { enumerable: true, value: deletions })
       Object.freeze(this.rootExecution)
@@ -419,7 +407,6 @@ export class NativeSdkApplication implements NativeApplication {
     if (this.rootInitializationFailure !== undefined) throw this.rootInitializationFailure.cause
     signal.throwIfAborted()
     return new Promise((resolveExecutor, rejectExecutor) => {
-      const rejectReason: (reason: unknown) => void = rejectExecutor
       const remove = (): void => {
         signal.removeEventListener('abort', abort)
         this.rootExecutionWaiters.delete(waiter)
@@ -433,7 +420,8 @@ export class NativeSdkApplication implements NativeApplication {
       const fail = (cause: unknown): void => {
         remove()
         // AbortSignal.reason permits arbitrary values; rootExecution.ready() preserves that identity.
-        rejectReason(cause)
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors
+        rejectExecutor(cause)
       }
       const abort = (): void => {
         fail(signal.reason)
@@ -474,74 +462,20 @@ export class NativeSdkApplication implements NativeApplication {
     return { cancelled: true }
   }
 
-  private async uploadFile(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<NativeStagedFileReceipt> {
-    this.assertOpen()
-    const executor = this.executor
-    if (executor === undefined) throw new Error('native SDK: initialize first')
-    const sessionId = nonempty(raw.sessionId, 'sessionId')
-    if (typeof raw.data !== 'string') throw new TypeError('native SDK: data must be canonical base64')
-    if (raw.name !== undefined && typeof raw.name !== 'string') throw new TypeError('native SDK: name must be a string')
-    const signal = AbortSignal.any([lifetime, this.abort.signal])
-    await executor.rootExecution.ready(signal)
-    const id = SessionId(sessionId)
-    const stored = await this.context.require('sessionPersistence').stat(id, { signal })
-    if (stored === undefined) {
-      await executor.rootExecution.maintenance({ route: SDK_ROOT_ROUTE, id, resume: false },
-        () => Promise.resolve(undefined), signal)
-    }
-    return executor.rootExecution.stagedFiles.stageEncoded({ route: SDK_ROOT_ROUTE, id, data: raw.data,
-      ...(raw.name === undefined ? {} : { name: raw.name }) }, signal)
-  }
-
-  private promptParts(raw: Record<string, unknown>): NativeSdkPromptContentBlock[] {
+  private promptParts(raw: Record<string, unknown>): AttachmentAdmissionPart[] {
     if (!Array.isArray(raw.contentBlocks) || raw.contentBlocks.length === 0) {
       throw new TypeError('native SDK: contentBlocks must be a nonempty array')
     }
     const attachments = this.context.require('attachments')
-    return raw.contentBlocks.map((block: unknown): NativeSdkPromptContentBlock => {
+    return raw.contentBlocks.map((block: unknown): AttachmentAdmissionPart => {
       const fields = record(block, 'content block')
       if (fields.type === 'text' && typeof fields.text === 'string') return { type: 'text', text: fields.text }
       if (fields.type === 'image' && typeof fields.data === 'string') {
         const mediaType = attachments.imageLimits.mediaTypes.find(type => type === fields.mimeType)
-        if (mediaType !== undefined) return { type: 'image', data: fields.data, mimeType: mediaType }
+        if (mediaType !== undefined) return { type: 'image', data: fields.data, mediaType }
       }
-      if (fields.type === 'file' && typeof fields.receiptId === 'string' && fields.receiptId.length > 0) {
-        return { type: 'file', receiptId: brandString<NativeStagedFileReceiptId>(fields.receiptId) }
-      }
-      throw new TypeError('native SDK: content blocks must be text, encoded raster images, or staged file receipts')
+      throw new TypeError('native SDK: content blocks must be text or encoded raster images')
     })
-  }
-
-  private async messageBuilder(parts: readonly NativeSdkPromptContentBlock[], signal: AbortSignal): Promise<{
-    receiptIds: NativeStagedFileReceiptId[]
-    createMessage: (files: readonly NativeStagedFileBlock[]) => UserMessage
-  }> {
-    const attachments = this.context.require('attachments')
-    const inlineParts: AttachmentAdmissionPart[] = []
-    const receiptIds: NativeStagedFileReceiptId[] = []
-    const order: { kind: 'inline' | 'file'; index: number }[] = []
-    for (const part of parts) {
-      if (part.type === 'file') {
-        order.push({ kind: 'file', index: receiptIds.length })
-        receiptIds.push(part.receiptId)
-      } else {
-        order.push({ kind: 'inline', index: inlineParts.length })
-        inlineParts.push(part.type === 'text'
-          ? part
-          : { type: 'image', data: part.data, mediaType: part.mimeType })
-      }
-    }
-    const inlineContent = inlineParts.length === 0 ? [] : await attachments.admitPromptContent(inlineParts)
-    signal.throwIfAborted()
-    return {
-      receiptIds,
-      createMessage: files => createUserMessage({
-        content: order.map(slot => slot.kind === 'file'
-          ? files[slot.index] as NativeStagedFileBlock
-          : inlineContent[slot.index] as (typeof inlineContent)[number]),
-        source: { kind: 'user' },
-      }),
-    }
   }
 
   private async steer(raw: Record<string, unknown>, lifetime: AbortSignal): Promise<{ messageId: string }> {
@@ -558,15 +492,14 @@ export class NativeSdkApplication implements NativeApplication {
     }
     const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
     signal.throwIfAborted()
-    const builder = await this.messageBuilder(this.promptParts(raw), signal)
+    const content = await this.context.require('attachments').admitPromptContent(this.promptParts(raw))
+    signal.throwIfAborted()
     this.assertOpen()
     if (this.activeTurns.get(sessionId) !== admission || active.owner(owner.agent, owner.session) !== owner) {
       throw new Error('native SDK: steering owner settled during attachment admission')
     }
-    const messageId = builder.receiptIds.length === 0
-      ? await owner.enqueue(builder.createMessage([]), 'next-step', true, signal)
-      : await executor.rootExecution.stagedFiles.enqueue({ owner, receiptIds: builder.receiptIds,
-        target: 'next-step', wake: true, signal, createMessage: builder.createMessage })
+    const message = createUserMessage({ content, source: { kind: 'user' } })
+    const messageId = await owner.enqueue(message, 'next-step', true, signal)
     return { messageId: String(messageId) }
   }
 
@@ -577,9 +510,7 @@ export class NativeSdkApplication implements NativeApplication {
     if (executor === undefined) throw new Error('native SDK: initialize first')
     const sessionId = nonempty(raw.sessionId, 'sessionId')
     const parts = this.promptParts(raw)
-    const commands: NativeCommandOperations | undefined = this.context.optional('commands')
-    const commandLine = parts.length === 1 && parts[0]?.type === 'text' ? parts[0].text : undefined
-    const command = commandLine === undefined ? undefined : commands?.parse(commandLine)
+    const attachments = this.context.require('attachments')
     const previous = this.sessions.get(sessionId)
     const accepted = Promise.withResolvers<string>()
     const admission: NativeSdkTurnAdmission = { received: false, controller: new AbortController(), settled: Promise.resolve() }
@@ -589,59 +520,23 @@ export class NativeSdkApplication implements NativeApplication {
         this.activeTurns.set(sessionId, admission)
         const signal = AbortSignal.any([lifetime, this.abort.signal, admission.controller.signal])
         signal.throwIfAborted()
+        const content = await attachments.admitPromptContent(parts)
+        signal.throwIfAborted()
+        const message = createUserMessage({ content, source: { kind: 'user' } })
         const id = SessionId(sessionId)
         const resume = await this.context.require('sessionPersistence').stat(id, { signal }) !== undefined
-        const available = command === undefined ? undefined : commands?.list(this.context.scope)
-          .some(descriptor => descriptor.name === command.name)
-        if (command !== undefined && available === true && commands !== undefined) {
-          await executor.executeSessionOperation({ id, resume }, async (owner, effective) => {
-            if (executor.rootExecution.capture(owner).id !== SDK_ROOT_ROUTE) throw new Error('native SDK: command requires this application root owner')
-            this.acceptedRootSessions.add(sessionId)
-            const release = owner.onEvent((event) => {
-              this.notifySessionEvent(transport, sessionId, event)
-              if (!admission.received && event.type === 'command/run' && event.data.name === command.name) {
-                admission.received = true
-                accepted.resolve(String(event.data.commandId))
-                transport.notify('session.status', { sessionId, status: 'running' })
-              }
-            })
-            try {
-              if (!commands.list(owner.agent.scope).some(descriptor => descriptor.name === command.name)) {
-                throw new Error(`native SDK: command /${command.name} is unavailable to this root owner`)
-              }
-              const result = await commands.dispatch({ agent: owner.agent, session: owner.session,
-                line: commandLine as string, attachments: [], signal: effective })
-              if (result === undefined) throw new Error(`native SDK: command /${command.name} is no longer available`)
-              return result
-            } finally { release() }
-          }, signal)
-        } else {
-          let message: UserMessage | undefined
-          await executor.executeRootTurn({ id, resume,
-            prepareMessage: async (_model, owner, effective) => {
-              const builder = await this.messageBuilder(parts, effective)
-              if (builder.receiptIds.length === 0) {
-                message = builder.createMessage([])
-                return message
-              }
-              const fileAdmission = executor.rootExecution.stagedFiles.prepare({ owner,
-                receiptIds: builder.receiptIds, signal: effective, createMessage: builder.createMessage })
-              message = fileAdmission.message
-              return fileAdmission
-            },
-            onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
-              this.notifySessionEvent(transport, sessionId, event)
-              const messageId = message?.id
-              if (!admission.received && messageId !== undefined && event.type === 'agent/inbox/spliced'
-              && event.data.inserted.some(input => input.id === messageId)) {
-                admission.received = true
-                this.acceptedRootSessions.add(sessionId)
-                accepted.resolve(String(messageId))
-                transport.notify('session.status', { sessionId, status: 'running' })
-              }
-            } }, signal)
-        }
-        if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable input receipt')
+        await executor.executeRootTurn({ id, resume, message,
+          onChunk: (chunk): void => { transport.notify('session.chunk', { sessionId, chunk }) }, onEvent: (event) => {
+            this.notifySessionEvent(transport, sessionId, event)
+            if (!admission.received && event.type === 'agent/inbox/spliced'
+            && event.data.inserted.some(input => input.id === message.id)) {
+              admission.received = true
+              this.acceptedRootSessions.add(sessionId)
+              accepted.resolve(String(message.id))
+              transport.notify('session.status', { sessionId, status: 'running' })
+            }
+          } }, signal)
+        if (!admission.received) throw new Error('native SDK: Session prompt ended without a durable inbox receipt')
       } catch (error: unknown) {
         if (error instanceof AggregateError) admission.failure = error
         if (admission.received) process.stderr.write(`native SDK: Session ${sessionId} failed: ${String(error)}\n`)
@@ -662,8 +557,8 @@ export class NativeSdkApplication implements NativeApplication {
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
-  optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
-    'agentPresets', 'workspaceRegistry', 'commands', 'requestContexts'],
+  optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentInstructions', 'modelSelection',
+    'agentPresets', 'workspaceRegistry'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)

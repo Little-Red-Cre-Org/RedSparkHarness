@@ -204,23 +204,6 @@ export function projectFilesToText(
   })
 }
 
-/**
- * Return every durable file reference still present in the current message view.
- * @param messages - current messages in model order.
- * @returns file references in message order, including nested tool results.
- */
-export function fileAttachmentsIn(messages: readonly Message[]): FileAttachmentRef[] {
-  const refs: FileAttachmentRef[] = []
-  const visit = (blocks: readonly ContentBlock[]): void => {
-    for (const block of blocks) {
-      if (block.type === 'file') refs.push(block.attachment)
-      else if (block.type === 'tool-result') visit(block.content)
-    }
-  }
-  for (const message of messages) visit(message.content)
-  return refs
-}
-
 /** Base64 length of raw image bytes, including padding. */
 function base64Length(bytes: number): number {
   return Math.ceil(bytes / 3) * 4

@@ -78,9 +78,6 @@ export const DEFAULT_MAX_TOKENS = 32_768
  */
 export const DEFAULT_INPUT: readonly PiAiModality[] = ['text']
 
-const CODEX_SUBSCRIPTION_ROUTE = 'openai-codex'
-const CODEX_RESPONSES_BASE_URL = 'https://api.openai.com/v1'
-
 export type {
   PiAiCompatProfile,
   PiAiModality,
@@ -384,74 +381,17 @@ function rejectRemovedFields(provider: string, source: PiAiProviderProfile): voi
   }
 }
 
-/** Reject a Fetch-invalid header and attach its configuration path and rule. */
-function assertValidHeaders(
-  providerIndex: number,
-  headers: Readonly<Record<string, string>> | undefined,
-): void {
-  for (const [headerIndex, [name, value]] of Object.entries(headers ?? {}).entries()) {
+/** Reject a profile header that Fetch cannot put on a provider request. */
+function assertValidHeaders(provider: string, headers: Readonly<Record<string, string>> | undefined): void {
+  for (const [name, value] of Object.entries(headers ?? {})) {
     try {
       new Headers([[name, value]])
     } catch {
-      throw Object.assign(new Error(
-        `llm-pi-ai: provider #${providerIndex} header #${headerIndex} is not valid for Fetch;`
-          + ' use a valid HTTP field name and a single-line value representable as bytes',
-      ), {
-        issues: [{ path: ['providers', providerIndex, 'headers', headerIndex], rule: 'valid-fetch-header' }],
-      })
+      throw new Error(
+        `llm-pi-ai: provider "${provider}" header "${name}" is not valid for Fetch;`
+        + ' use a valid HTTP field name and a single-line value representable as bytes',
+      )
     }
-  }
-}
-
-const CODEX_PROFILE_FIELDS = new Set([
-  'displayName', 'api', 'baseURL', 'headers', 'transport', 'timeoutMs', 'streamIdleTimeoutMs',
-  'maxRequestImageBytes', 'requestImagePixelBudget', 'requestImageMaxBytes', 'retryPolicy',
-  'defaultContextWindow', 'defaultMaxTokens', 'defaultInput', 'models', 'modelOverrides', 'compat',
-])
-
-/** Keep the SIWC route on its account OAuth and the documented public HTTP/SSE contract. */
-function assertCodexSubscriptionProfile(provider: string, source: PiAiProviderProfile): void {
-  if (provider !== CODEX_SUBSCRIPTION_ROUTE) return
-  for (const [field, value] of Object.entries(source)) {
-    if (value === undefined) continue
-    // An absent object schema arrives as {}; that is not a configured budget.
-    if (field === 'thinkingBudgets' && Object.keys(value as object).length === 0) continue
-    if (!CODEX_PROFILE_FIELDS.has(field)) {
-      throw new Error(`llm-pi-ai: openai-codex does not accept "${field}"`)
-    }
-  }
-  if ((source.models?.length ?? 0) > 0 || Object.keys(source.modelOverrides ?? {}).length > 0) {
-    throw new Error('llm-pi-ai: openai-codex models and modelOverrides come from the signed-in account catalog')
-  }
-  if (source.defaultContextWindow !== undefined && source.defaultContextWindow !== DEFAULT_CONTEXT_WINDOW) {
-    throw new Error('llm-pi-ai: openai-codex does not accept a configured context limit')
-  }
-  if (source.defaultMaxTokens !== undefined && source.defaultMaxTokens !== DEFAULT_MAX_TOKENS) {
-    throw new Error('llm-pi-ai: openai-codex does not accept a configured output-token limit')
-  }
-  if (source.defaultInput !== undefined
-    && (source.defaultInput.length !== 1 || source.defaultInput[0] !== 'text')) {
-    throw new Error('llm-pi-ai: openai-codex publishes text-only input until the account catalog declares modalities')
-  }
-  if (source.api !== undefined && source.api !== 'openai-responses') {
-    throw new Error('llm-pi-ai: openai-codex uses the public OpenAI Responses protocol')
-  }
-  if (source.baseURL !== undefined && source.baseURL !== CODEX_RESPONSES_BASE_URL) {
-    throw new Error(`llm-pi-ai: openai-codex uses ${CODEX_RESPONSES_BASE_URL}`)
-  }
-  if (Object.keys(source.headers ?? {}).some(name => name.toLowerCase() === 'authorization')) {
-    throw new Error('llm-pi-ai: openai-codex Authorization is owned by its Sign in with ChatGPT account')
-  }
-  if (source.transport !== undefined && source.transport !== 'sse') {
-    throw new Error('llm-pi-ai: openai-codex supports the public HTTP/SSE Responses transport only')
-  }
-  const compat = source.compat
-  const hasCompatControls = Object.entries(compat ?? {}).some(([name]) =>
-    name !== 'chatTemplateKwargs' && name !== 'chatTemplateArgs')
-    || Object.keys(compat?.chatTemplateKwargs ?? {}).length > 0
-    || Object.keys(compat?.chatTemplateArgs ?? {}).length > 0
-  if (hasCompatControls) {
-    throw new Error('llm-pi-ai: openai-codex does not expose reasoning or Responses compatibility controls')
   }
 }
 
@@ -472,9 +412,8 @@ export function resolveProfiles(
   }
   const entries = Object.entries(providers ?? {})
   const resolved = new Map<string, ResolvedPiAiProviderProfile>()
-  for (const [providerIndex, [provider, source]] of entries.entries()) {
+  for (const [provider, source] of entries) {
     rejectRemovedFields(provider, source)
-    assertCodexSubscriptionProfile(provider, source)
     if (provider.length === 0) throw new Error('llm-pi-ai: provider names must be non-empty')
     if (source.baseURL !== undefined && source.baseURL.length === 0) {
       throw new Error(`llm-pi-ai: provider "${provider}" has an empty baseURL`)
@@ -482,7 +421,7 @@ export function resolveProfiles(
     if (source.displayName !== undefined && source.displayName.length === 0) {
       throw new Error(`llm-pi-ai: provider "${provider}" has an empty displayName`)
     }
-    assertValidHeaders(providerIndex, source.headers)
+    assertValidHeaders(provider, source.headers)
     const streamIdleTimeoutMs = source.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS
     if (!Number.isFinite(streamIdleTimeoutMs)
       || streamIdleTimeoutMs <= 0

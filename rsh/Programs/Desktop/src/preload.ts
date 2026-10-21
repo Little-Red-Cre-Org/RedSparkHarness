@@ -4,13 +4,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DESKTOP_IPC, type DshDesktopApi, type DesktopUpdateState } from './ipc.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
 import { installTitleBar } from './title-bar.ts'
-import type { NativeDesktopListOutcome, NativeDesktopMutationOutcome } from './native-module-management.ts'
 
 installTitleBar()
-
-function invokeNative<Result>(channel: string, payload: unknown): Promise<Result> {
-  return ipcRenderer.invoke(channel, payload) as Promise<Result>
-}
 
 const api: DshDesktopApi = {
   protocolVersion: 1,
@@ -22,14 +17,6 @@ const api: DshDesktopApi = {
     toggle: (name, enabled) => ipcRenderer.invoke(DESKTOP_IPC.pluginsToggle, name, enabled) as Promise<void>,
     disableAll: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsDisableAll) as Promise<void>,
     update: (name, version) => ipcRenderer.invoke(DESKTOP_IPC.pluginsUpdate, name, version) as Promise<void>,
-    native: {
-      list: () => invokeNative<NativeDesktopListOutcome>(DESKTOP_IPC.pluginsList, { runtime: 'native' }),
-      install: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsAdd, { runtime: 'native', request }),
-      remove: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsRemove, { runtime: 'native', request }),
-      update: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsUpdate, { runtime: 'native', request }),
-      toggle: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsToggle, { runtime: 'native', request }),
-      disableAll: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsDisableAll, { runtime: 'native', request }),
-    },
   },
   backend: {
     status: () => ipcRenderer.invoke(DESKTOP_IPC.backendStatus) as ReturnType<DshDesktopApi['backend']['status']>,

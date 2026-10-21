@@ -15,12 +15,7 @@ export interface NativeContinuationObservation {
 
 /** One catalog candidate read; independent writer cleanup failures still reject the operation. */
 export type NativeContinuationInspection =
-  | {
-    readonly kind: 'child'
-    readonly observation: NativeContinuationObservation
-    /** Delegation depth of the endpoint's exact direct parent in the inspected lineage. */
-    readonly parentDepth: number
-  }
+  | { readonly kind: 'child'; readonly observation: NativeContinuationObservation }
   | { readonly kind: 'diagnostic'; readonly id: SessionId; readonly reason: 'corrupt' | 'unsupported' | 'unavailable' }
 
 /** Read-only catalog position; listing grants no message delivery or interruption permission. */
@@ -50,11 +45,6 @@ export interface NativeSessionContinuation {
   readonly isClosing: boolean
   /** Resolves after first turn setup and descriptor publication, independently of model completion. */
   readonly ready: Promise<void>
-  /**
-   * Wait for the first foreground turn and foreground descendants to settle; background work may remain.
-   * @returns completion when this child's foreground work settles.
-   */
-  waitForeground(): Promise<void>
   /** Resolves after writer and Agent release and any settlement notification admission. */
   readonly done: Promise<void>
   /**

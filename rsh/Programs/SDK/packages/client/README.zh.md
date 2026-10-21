@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`DeepSeekHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 启动 Harness runtime 并驱动 Agent 轮次。`DeepSeekHarness` 可打开 Session、发送文本或图像提示词、推送通知流，并在 Agent 空闲后返回最后提交的 root 响应；`HarnessClient` 提供底层协议请求与订阅。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可通过 `dshBin` 指定。客户端跨多次运行持有子进程，并在 `close()` 或 `await using` 时回收；调用方可选择 profile 和启动设置。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-Native SDK 组合提供生产使用的进程内子代理工具。新建的标准 `sdk` profile 会选择此组合；已有 profile 则继续由其 manifest 中的 `package.json` 决定 runtime。Session 树订阅收到已接受的子事件及真实 `subagent.finished` 结果，覆盖一次性任务的完成、取消、失败和可持续驻留阶段结束；仅打断某一轮不会结束仍驻留的子任务，运行结果仍只投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。SDK wire 目录发现仍不支持；profile 的模型可见 `list_agents` 工具是独立能力。
+native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收到已接受的子事件及真实 `subagent.finished` 结果，覆盖一次性任务的完成、取消、失败和可持续驻留阶段结束；仅打断某一轮不会结束仍驻留的子任务，运行结果仍只投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。SDK wire 目录发现仍不支持；profile 的模型可见 `list_agents` 工具是独立能力。
 
 当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `DeepSeekHarness`，运行提示词，然后关闭它，使子进程总能被回收。
 
@@ -37,7 +37,7 @@ import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
 
 await using harness = new DeepSeekHarness({
   profile: 'sdk',
-  patches: ['./sdk.patch.json'],
+  patches: ['./automation.cordis.yml'],
   provider: 'deepseek-official',
   model: 'deepseek-v4-flash',
   reasoningEffort: ReasoningEffortId('max'),
@@ -47,17 +47,15 @@ const result = await harness.run('say hi')
 console.log(result.finalResponse)
 ```
 
-新建的 `sdk` profile 使用 Native JSON overlay，例如 `{"formatVersion":1,"installations":[{"id":"app","config":{"systemPrompt":"遵循项目说明。"}}]}`。CLI 按既有 profile 的 `package.json` 选择 Native 或 Cordis，不会重写已有 profile。要显式创建 Cordis profile，可使用自定义名称，例如 `dsh --profile legacy-sdk --from-default-profile sdk`；Cordis 源码启动需要先构建 CLI，因为 SDK 不再提供源码专用的 Cordis overlay。
-
 子进程在首次使用时惰性启动，并在多次 `run()` 调用之间持续归实例所有；请调用 `close()`（或使用 `await using`），子进程才总能被回收。`start()` 会记忆化有界的 `initialize` 握手，其中包含工作区 cwd、提供方／模型路由、可选且由适配器持有的 `reasoningEffort`，以及可选的正整数 `maxTokens` 输出上限。Native SDK 还接受可选的 `maxSteps`；握手必须返回不大于请求值的正有效上限。兼容 Cordis runtime 会明确拒绝这个 Native 专属字段。服务器会在接受提示词前校验该确切路由；省略推理强度时保留模型自身的默认值。`initializeTimeoutMs` 默认 30 秒，为冷启动时完整 profile 就绪握手留出时间；诊断会写明所选 profile 并附带保留的 stderr 尾部。`run(input, { sessionId?, onNotification? })` 接受文本或 `SdkPromptContentBlock[]`；内联栅格图像块携带规范 base64 与 `mimeType`，并在运行时内变成持久附件。该调用拥有一个活动区间：它将提示词排入队列，等待其消息 id 出现在持久入队回执中，然后持续收集到整个 agent 下一次进入 `idle`。它返回 `RunResult { sessionId, finalResponse, events, notifications }`，其中 `finalResponse` 是该区间内根会话最后提交的助手文本——并非因果上归属于该提示词的响应，因为 steering（中途引导）、注入的上下文和其他排队工作都可能在 idle 前参与其中。`session(id?)` 打开具名或全新的会话句柄。握手失败且清理成功时，实例会换入全新客户端，使后续调用用新进程重试，直到终结性的 `close()`；如果初始化和清理均失败，`start()` 会返回保留两个原因的有序 `AggregateError`，并继续保留失败的客户端，避免在原进程退出尚未得到证明时启动另一个进程。`maxTokens` 限制每个根 agent 请求的输出量，并由进程内后代继承；压缩（compaction）插件单独持有摘要上限。
 
 ### Native Host 子进程传输
 
 `HarnessClientOptions.onApprovalRequest` 通过 `(request, signal) => outcome` 处理 Native approval 问题。返回值可为 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；省略回调时会以 `unavailable` 关闭处理。关闭 client 或取消 parent 请求会中止 signal。回调迟到的结果会被忽略，runtime 会对该请求回复 `cancelled`。
 
-`@deepseek-ai/dsh-sdk-client/native` 为 Native Module 提供 `createNativeDeepSeekHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeDeepSeekHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
+`@deepseek-ai/dsh-sdk-client/native` 为 Native Module 提供 `createNativeDeepSeekHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeDeepSeekHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。
 
-可选的 `dsh-sdk-child` Module 会快照所选提供方配置与父 Session 实际启用的 Native Headless 内建文件权限。只有确切的父级 `write_file` 权限、`approvalRequired`、workspace-write 根，以及绑定当前 parent owner 与 turn 的 `dsh-sdk` driver callback 同时存在时，child 才获得 `write_file`；缺少该 authority 时不能新增 writer。只有这一真实 relay 组合会在私有 child profile 中安装 `ask` 策略的 Native Approval。请求、取消与单次决策都会返回既有 parent approval authority，并由它作为唯一的持久 approval 事件写入者。child 使用共享 sandbox policy 与 process-sandbox backend；backend 仍允许其临时目录语义，Windows enforcement 在适用时为 partial（部分）。launcher 会把 child 已解析的 cwd 与精确私有 home 传给 `ProcessSandbox.confineChildProcess`，因此 workspace-write profile 替换 `/tmp` 时仍能访问提供方 overlay，也不会暴露同级临时路径。除非现有策略授权覆盖该目录，否则所选 cwd 保持只读。该 profile 为 opt-in，不改变标准 `native-sdk`。
+可选的 `dsh-sdk-child` Module 会快照所选提供方配置与父 Session 实际启用的 Native Headless 内建文件权限。只有确切的父级 `write_file` 权限、`approvalRequired`、workspace-write 根，以及绑定当前 parent owner 与 turn 的 `dsh-sdk` driver callback 同时存在时，child 才获得 `write_file`；缺少该 authority 时不能新增 writer。只有这一真实 relay 组合会在私有 child profile 中安装 `ask` 策略的 Native Approval。请求、取消与单次决策都会返回既有 parent approval authority，并由它作为唯一的持久 approval 事件写入者。child 使用共享 sandbox policy 与 process-sandbox backend；backend 仍允许其临时目录语义，Windows enforcement 在适用时为 partial（部分）。profile 是 opt-in，不改变标准 `native-sdk`。
 
 ### 用 HarnessClient 做低层控制
 
@@ -85,13 +83,14 @@ console.log(result.finalResponse)
 |---|---|
 | [`src/api.ts`](src/api.ts) | Program facade：标准 launcher 与向后兼容的 `DeepSeekHarness` 导出 |
 | [`src/client.ts`](src/client.ts) | Program facade：同版本 `dsh` 解析与本地进程适配器 |
-| [`src/native.ts`](src/native.ts) | Native Host SDK facade；固定 child launcher 由 CLI 持有 |
+| [`src/native-launcher.ts`](src/native-launcher.ts) | 固定 Native child launcher：提供方 overlay、父 sandbox policy 与私有 home 清理 |
+| [`src/native.ts`](src/native.ts) | Native Host 固定 child launcher 导出 |
 | Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.zh.md) | 唯一的 `HarnessClient`、`DeepSeekHarness` 与 provider-neutral SDK 协议 runtime 实现 |
 | — | 本包不发布 runtime invariant companion，因为它是在调用方进程中运行的 SDK client library，而非 runtime plugin；公开 SDK API 覆盖其 launcher 与 connection 生命周期。 |
 
 ### 自有活动流程
 
-一次运行会订阅会话树、把提示词排入队列，等待提示词的消息 id 出现在持久的 `agent/inbox/spliced` 回执中，然后持续收集通知，直到整个 agent 报告 `idle`。`finalResponse` 从收集到的事件中最后一条 `assistant/message` 派生。根 Session 的 `subagent/external-operation` 事件会在 `RunResult.events` 与匹配的 `session.event` 通知中保留 canonical discriminant 和 payload 字段。传输丢失、超时与协议违例会使本次运行被拒绝；模型结果仍可在事件流中观察，但不会归属于某一输入。
+一次运行会订阅会话树、把提示词排入队列，等待提示词的消息 id 出现在持久的 `agent/inbox/spliced` 回执中，然后持续收集通知，直到整个 agent 报告 `idle`。`finalResponse` 从收集到的事件中最后一条 `assistant/message` 派生。传输丢失、超时与协议违例会使本次运行被拒绝；模型结果仍可在事件流中观察，但不会归属于某一输入。
 
 ### 错误与关闭
 
@@ -110,18 +109,15 @@ console.log(result.finalResponse)
 - [JSON-RPC 服务插件](../server/README.zh.md)——服务本客户端的运行时插件。
 - [Python SDK](../../python/README.zh.md) — 共享同一运行时对端与协议的设计孪生。
 - [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
-- [Native SDK 服务端](../native-server/README.zh.md) — 新建标准 `sdk` profile 使用的运行时插件。
-- [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — legacy profile 使用的 Cordis 应用。
+- [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — 本客户端启动的 `dsh --profile sdk` 运行时应用。
 
 -----
 
 <a id="model-experience"></a>
 
-Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
+显式选择 `profile: "native-sdk"` 后，`HarnessSession.cancel()` 与 `HarnessClient.cancel(sessionId)` 等待已接收轮次取消；无活动轮次时返回 false。`onNotification` 在持久化助手事件之前接收实时 `session.chunk` 通知。兼容 profile 拒绝此原生专属取消方法。
 
-Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
-
-Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessSession.uploadFile(bytes, name?)` 保存原始文件字节并返回进程内回执。将 `{ type: "file", receiptId }` 放进 `run()` 或 `steer()` 即可按原位置持久化该文件；只有 Native 接受回执块，runtime 重启后需重新上传字节再使用。
+显式选择 `profile: "native-sdk"` 后，`run` 还接受与文本混合的编码栅格图片块（`{ type: "image", data, mimeType }`）；原生附件 Provider 负责校验与持久化存储。
 
 `HarnessSession.steer(input)` 与 `HarnessClient.steer(sessionId, contentBlocks)` 为活动 native-sdk 根任务持久化下一步输入。返回消息 ID 时不等待模型答案，也不取消当前派发。turn 中断后若 root 已暂停，steer 会唤醒它；显式重新启用之前，Goal 工作仍保持关闭。空闲或未知 Session 及兼容 profile 拒绝该请求。
 

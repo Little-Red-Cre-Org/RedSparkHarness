@@ -13,8 +13,7 @@ import type { InitializeResult } from '@deepseek-ai/dsh-sdk-protocol'
 import type { NativeSdkChildApprovalRelay, NativeSdkChildRuntime } from './native.ts'
 import { createNativeHarnessClient, createProcessHarnessClient, HarnessClient, isRecord, SdkProtocolError } from './client.ts'
 import type { RuntimeProcessOptions } from './types.ts'
-import type { ContentBlock, DeepSeekHarnessOptions, HarnessNotification, NativeDeepSeekHarnessOptions,
-  NativeSdkPromptContentBlock, RunResult, SdkPromptContentBlock, SessionUploadFileResult } from './types.ts'
+import type { ContentBlock, DeepSeekHarnessOptions, HarnessNotification, NativeDeepSeekHarnessOptions, RunResult, SdkPromptContentBlock } from './types.ts'
 
 /**
  * Reusable SDK for running DeepSeek Harness agent turns in a runtime
@@ -234,24 +233,12 @@ export class HarnessSession {
 
   /**
    * Queue input for this admitted native SDK root's next step and wake a parked root without cancelling dispatch.
-   * @param input - Native text, encoded-image, or staged-file content, using the same admission as run.
+   * @param input - text or encoded-image content, using the same admission as run.
    * @returns the durable message id; idle Sessions and unsupported profiles reject.
    */
-  async steer(input: string | NativeSdkPromptContentBlock[]): Promise<string> {
+  async steer(input: string | SdkPromptContentBlock[]): Promise<string> {
     await this.harness.start()
-    const blocks = typeof input === 'string' ? [{ type: 'text' as const, text: input }] : input
-    return this.harness.client.steer(this.id, blocks)
-  }
-
-  /**
-   * Store file bytes and return a receipt for a later Native SDK prompt or steer.
-   * @param bytes - file contents stored in the runtime's existing attachment store.
-   * @param name - optional display filename; never interpreted as a path.
-   * @returns the receipt scoped to this Session and Native application.
-   */
-  async uploadFile(bytes: Uint8Array, name?: string): Promise<SessionUploadFileResult> {
-    await this.harness.start()
-    return this.harness.client.uploadFile(this.id, bytes, name)
+    return this.harness.client.steer(this.id, normalizeInput(input))
   }
 
   /**

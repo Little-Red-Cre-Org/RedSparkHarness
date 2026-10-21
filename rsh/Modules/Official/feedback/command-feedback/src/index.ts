@@ -2,8 +2,9 @@
  * Session feedback: the `feedback/record` event, its command-independent
  * producer, the `sessionFeedback` Host Remote a product surface records
  * through, and the human-facing `/feedback` command. Recording appends one
- * authoritative log-only event and does not start model work. Native recording
- * acknowledges only after flush and read confirm the durable event.
+ * authoritative log-only event and does not start model work. The append is
+ * eager but unflushed, so acknowledgement reports that the entry is logged,
+ * not that it reached disk.
  * @module @deepseek-ai/dsh-command-feedback
  */
 
@@ -14,13 +15,27 @@ import type { Session } from '@deepseek-ai/dsh-session'
 import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type {
+  FeedbackCategory,
   FeedbackRecord,
   SessionFeedbackRecordRequest,
   SessionFeedbackRecordResult,
 } from './types.ts'
 
 export type * from './types.ts'
-export { FEEDBACK_CATEGORIES } from './types.ts'
+
+/**
+ * Every feedback category in the order product surfaces present them; each
+ * surface owns its localized labels.
+ */
+export const FEEDBACK_CATEGORIES = [
+  'task-result',
+  'instruction-following',
+  'product-interaction',
+  'service-stability',
+  'resource-cost',
+  'security-privacy-permission',
+  'other',
+] as const satisfies readonly FeedbackCategory[]
 
 export const name = 'command-feedback'
 export const inject = ['commands']

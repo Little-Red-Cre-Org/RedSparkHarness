@@ -19,16 +19,8 @@
       "default": "./lib/index.js"
     },
     "./types": {
-      "types": "./lib/types/remote-types.d.ts",
-      "default": "./lib/types/remote-types.js"
-    },
-    "./native-types": {
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
-    },
-    "./native-helpers": {
-      "types": "./lib/types/native-helpers.d.ts",
-      "default": "./lib/types/native-helpers.js"
     },
     "./client": {
       "types": "./lib/types/client/index.d.ts",
@@ -67,11 +59,6 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

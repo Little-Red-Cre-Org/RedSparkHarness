@@ -34,11 +34,6 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
   },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
   }

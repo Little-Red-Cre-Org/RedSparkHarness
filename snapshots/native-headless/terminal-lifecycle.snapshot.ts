@@ -66,7 +66,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
   const model = join(modules, 'native-terminal-fixture-model')
   mkdirSync(model)
   writeFileSync(join(model, 'package.json'), JSON.stringify({
-    name: 'native-terminal-fixture-model', version: '0.0.0', type: 'module',
+    name: 'native-terminal-fixture-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
   }))

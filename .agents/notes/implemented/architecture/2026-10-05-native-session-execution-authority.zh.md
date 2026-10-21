@@ -20,7 +20,7 @@ Workspace 错误声明使用 canonical 所有者 `@deepseek-ai/dsh-typert-protoc
 
 ## 影响
 
-模型可见 inbox 认领及选定输入使用既有 Session 事件，在 dispatch 前持久记录。构造回调将 seed marker 交给同一个 writer。流观察者接收既有模型 dispatch；观察者失败会保留已记录的部分尝试。这些操作均不添加模型循环、权限权威或辅助 writer。Headless 将已持久化的审批 ID 传给 `NativeSessionOwnerApproval.authorize()`，并使用同一 ID 记录结果；ACP 权限 metadata 标识实际交互 Session，外层 ACP 请求仍使用路由 Session ID。
+模型可见 inbox 认领及选定输入使用既有 Session 事件，在 dispatch 前持久记录。构造回调将 seed marker 交给同一个 writer。流观察者接收既有模型 dispatch；观察者失败会保留已记录的部分尝试。这些操作均不添加模型循环、权限权威或辅助 writer。
 
 关闭先取消准入、排空已接纳操作，并尝试关闭每个 execution 和保留的 epoch。Agent 身份和 preset 资源释放之后聚合独立失败。锁获取与变更在释放同时失败时保留原始错误，并报告两个原因。原生与兼容持久化消费者使用同一删除操作，Client 声明入口只包含回执身份与操作类型。
 

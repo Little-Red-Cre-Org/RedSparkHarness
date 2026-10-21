@@ -412,7 +412,6 @@ export interface GenerateOptions {
   /** Tool schemas (adapters map to the provider's `tools` field). */
   tools?: ToolSchema[]
   temperature?: number
-  /** Requested output-token limit; the selected route may expose whether it can enforce it exactly. */
   maxTokens?: number
   /**
    * Stop sequences: generation halts as soon as the model produces any one of

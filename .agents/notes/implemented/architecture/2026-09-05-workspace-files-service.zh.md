@@ -12,7 +12,7 @@ Web 客户端需要从一个未必在 Host 机器上的浏览器查看会话工�
 
 ## Decision
 
-`rsh/Programs/Web/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。旧版 Cordis Session Controller 不包含工作区文件代码。Native Web Session Controller 为右栏提供独立的 `session/files/*` RPC，复用不引用 Cordis 的 `./native-types` 响应和 `./native-helpers` 切页器，并将每个操作限制在 Session 的 `cwd`，或在 `cwd` 缺失时限制在所选 Workspace／配置根目录内。读取或 stat 前，Host 会将已打开文件的身份与受限路径重新解析后的身份核对；Linux 列表从已打开目录描述符枚举，跟随队列按编码 SSE 字节过滤并限额。
+`rsh/Programs/Web/api/workspace-files`（`@deepseek-ai/dsh-api-workspace-files`）同时拥有 Host 服务 `ctx.workspaceFiles`、`workspaceFiles` Remote 命名空间，以及将 `stat` 与 `changes` 转成[资源模型](2026-09-05-client-resource-model.zh.md)实时元数据的 Client `file` 提供者；包组织方式由[双面包组织](2026-09-07-workspace-files-dual-face-package.zh.md)规定。文件方法从工作区根解析相对路径，但继承 Session 文件系统后端的读取权限；`list` 与 `changes` 仍限于工作区。[工作区文件读取权限](2026-09-09-workspace-file-read-authority.zh.md)拥有这一分层及其安全后果。结果以文件在文件系统执行环境中的绝对路径命名文件，内容则受页、字节窗口或整文件上限约束。字节窗口依托 `dsh-fs` 新增的 seam `FileSystem.readByteRange`，由每个提供者实现。Session Controller 不再携带任何工作区文件代码。
 
 ### 包拓扑
 
@@ -136,16 +136,16 @@ Client 导出向 `ctx.resources` 注册一个 `ResourceProvider<'file'>`，存�
 - 每个文件系统提供者现在都提供开窗的原始读取。`fs-e2b` 为此付出传输被跳过前缀的代价，因为其 SDK 不能 seek；`fs-local` 能 seek。
 - 线路上的路径是规范的：`absolutePath` 与变更帧以符号链接已解析的拼法命名文件。跟随者绑定到成功的 `stat.absolutePath`，因此同一文件的另一种拼法——经符号链接到达的工作区根——也使用该规范变更键。
 - 变更帧只报告 agent 自己的操作。用户编辑器、shell 或子进程改动的文件不产生帧；agent 仅仅读取一个被别处改动的文件却会产生帧，因为读取观察到了新版本。
-- 文件类型检查先于后端读取，`list` 也先报种类再报根外位置。页的 `version` 可能落后内容一次写入；`api/workspace-files` 中停滞的 `changes` 消费者会因该代队列无界而增加 Host 内存，Native Session 文件跟随队列则在入队前过滤、限制编码字节并在超限时结束。
+- 文件类型检查先于后端读取，`list` 也先报种类再报根外位置。页的 `version` 可能落后内容一次写入，停滞的 `changes` 消费者会让 Host 内存增长，因为一代流的队列无界；每一条都是包 README 记录在册的已知取舍。
 - `file` 资源推送变更而非内容，因此预览不靠载荷就得知文件已更新并读取它想要的页；失败的打开继续跟随地址，因此 agent 创建该文件时 tab 无需用户动作即恢复正常。
 - `readBytes` 尚无随包交付的消费方；Document Preview 对整文件格式使用 `readAll`。
 
 ## Testing
 
-`rsh/Programs/Web/api/workspace-files/tests` 中的 Host spec 覆盖 live 与 cold subagent Session 的 header-only scope 解析、部署 fallback、缺失身份与 lookup 释放；分页读取（整文件、嵌套路径、空文件、多字节 UTF-8、行窗口边界、缺省与拒绝的 limit、保留回车）；字节窗口（缺省、中段与尾窗、越界与空文件、base64 往返、版本、上限、坏范围以及无大小时的 `eof`）；`stat`；工作区外读取及后端拒绝；`list` 的包含、截断、符号链接与 `not-directory`；以及由 `fs/observed` 驱动并按根过滤的 `changes`。Native Session 的 `workspace-files.host.spec.ts` 覆盖包含检查与打开之间的文件和父目录符号链接替换、符号链接 `cwd`，以及先过滤工作区外观察再验证跟随队列溢出。Client spec 覆盖提供者帧、变更流、不支持地址及注册与释放。`fs/fs`、`fs-local` 与 `fs-e2b` spec 钉住 `readByteRange`；`dsh-util-workspace-path` spec 钉住文件地址语法。connection fixture 为 web e2e 套件提供 `stat`、分页 `read`、`list` 与一帧可选启用的 `changes`。
+`rsh/Programs/Web/api/workspace-files/tests` 中的 Host spec 覆盖 live 与 cold subagent Session 的 header-only scope 解析、部署 fallback、缺失身份与 lookup 释放；分页读取（整文件、嵌套路径、空文件、多字节 UTF-8、行窗口边界、缺省与拒绝的 limit、保留回车）；字节窗口（缺省、中段与尾窗、越界与空文件、base64 往返、版本、上限、坏范围以及无大小时的 `eof`）；`stat`；工作区外读取及后端拒绝；`list` 的包含、截断、符号链接与 `not-directory`；以及由 `fs/observed` 驱动并按根过滤的 `changes`。Client spec 覆盖提供者帧、变更流、不支持地址及注册与释放。`fs/fs`、`fs-local` 与 `fs-e2b` spec 钉住 `readByteRange`；`dsh-util-workspace-path` spec 钉住文件地址语法。connection fixture 为 web e2e 套件提供 `stat`、分页 `read`、`list` 与一帧可选启用的 `changes`。
 
 ## Deferred
 
-- 给 `api/workspace-files` 的 `changes` 一代流队列加上限。
+- 给 `changes` 一代流的队列加上限。
 - `readBytes` 随包交付的消费方（图片与二进制预览）以及任何写入、搜索或媒体路由；本服务只读。
 - 文件地址中 `session` 之外的作用域；语法留有余地，提供者只服务一个。

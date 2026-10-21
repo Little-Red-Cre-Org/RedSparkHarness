@@ -1,0 +1,8 @@
+version: 1
+scenario: browser-read-only
+profile: native-headless
+composition: native-browser-read-only
+recording: authored
+header:
+  class: native-browser-read-only
+  pin: true

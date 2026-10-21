@@ -18,9 +18,6 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../core/native-session-execution/tsconfig.host.json"
-    },
-    {
       "path": "../../core/session"
     },
     {

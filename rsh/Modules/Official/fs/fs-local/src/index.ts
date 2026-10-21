@@ -42,10 +42,6 @@ export class LocalFileSystem extends FileSystem {
     return this.backend.processPathFromHostPath(hostPath)
   }
 
-  override hostPathFor(absolutePath: string): string | undefined {
-    return this.backend.hostPathFor(absolutePath)
-  }
-
   override fileUrl(target: FsTarget): string {
     return this.backend.fileUrl(target)
   }

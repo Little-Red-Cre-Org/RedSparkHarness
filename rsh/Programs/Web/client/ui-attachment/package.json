@@ -22,10 +22,6 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -48,6 +44,7 @@
   "license": "MIT",
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
+    "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "@deepseek-ai/dsh-client-ui-chat": "workspace:^",
     "@deepseek-ai/dsh-client-ui-conversation": "workspace:^",
@@ -56,29 +53,17 @@
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-client-ui-tool": "workspace:^"
+    "react-dom": "^18.2.0",
+    "@deepseek-ai/dsh-attachment": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
+    "clsx": "^2.0.0"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "lib/native.js",
-    "lib/**/*.css",
     "lib/types/**/*.d.ts"
   ],
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
-  },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@types/react": "~18.3.1",
-    "clsx": "^2.0.0",
-    "react-dom": "^18.2.0"
+    "@deepseek-ai/cordis": "workspace:^"
   }
 }

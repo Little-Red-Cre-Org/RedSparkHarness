@@ -6,6 +6,10 @@ The web access seam — a [capability seam](../../../.agents/notes/implemented/a
 
 Source: [`rsh/Modules/Official/web/web/src/types.ts`](../../Modules/Official/web/web/src/types.ts)
 
+## Authorized browser documents
+
+The separate [Native browser package](../../Modules/Official/web/browser-read-only/README.md) provides `browserReadOnly`. Its `BrowserGrantId` is an opaque, browser-issued UUID; a valid identifier alone conveys no permission. `BrowserGrant` contains that `id`, an HTTP(S) `url` without embedded credentials, and a `title`. `BrowserPage` carries `url`, `title`, bounded `text`, and boolean `truncated`. Reads require a current document grant and existing conversation approval. The package reference owns configuration, transport lifetime and platform limits; the [user guide](../user/guide/browser-read-only.md) owns installation.
+
 ## Why one capability has two operations
 
 Search and fetch share no request schema and no business logic, but they are deliberately one `ctx.web` middle layer: one provider-selection policy owner, one abort/error vocabulary, and one product-facing "how this harness reaches the web" configuration API. The cost is the parallel `searchX`/`fetchX` method pairs on the service; that parallelism is intentional, not a missed extraction. Providers register **capabilities** (a `WebSearchProvider` or `WebFetchProvider`), not tools; the model-facing names, schemas, prompt guidance, and presentation all live in the single `dsh-tool-web` consumer.

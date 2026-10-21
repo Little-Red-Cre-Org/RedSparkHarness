@@ -24,8 +24,6 @@ kind: "package-reference"
 
 将 `dsh-message-feedback` 与 `sessions`、`sessionPersistence` 一起挂载。它不需要 storage-domain 服务。Web 组合提供浏览器消费方，并将备注上限设为 8192 字节。
 
-Native profile 选择本包的 `./native` 入口，并提供 `activeSessions` 与 `sessionPersistence`；该入口提供 `messageFeedback`，配置和请求/结果类型保持一致。
-
 ### 配置
 
 | 字段 | 默认值 | 含义 |
@@ -53,21 +51,17 @@ Native profile 选择本包的 `./native` 入口，并提供 `activeSessions` �
 
 `feedback/message-put` 保存所属 Session id 及完整条目，包括版本和时间戳。`feedback/message-delete` 保存所属 Session 和消息 id。当前状态从这些事件推导，忽略属于其他 Session 的事件。持久化 payload 在使用前经过校验。不存在第二个反馈存储或缓存。
 
-DSH/Cordis 活跃会话通过 `Session.append` 追加，并等待 `sessions.flush`，然后通过持久化读句柄核实捕获的日志末端与 Session header，才会报告成功。冷会话修改在读取、校验、比较、追加、flush 和关闭期间持有持久化写句柄。冷读取使用读句柄。两条路径都不会构造 Session 或追加生命周期事件。
-
-Native 活跃会话操作使用精确的 Program owner。实质修改完成追加和 flush 后，通过 `readCommittedEvents()` 读取截至该修改的权威日志前缀，并等待 `feedback/committed` 观察方完成。owner 自然分离时会排空已选定该 owner 的事务；尚未选定 owner 的排队操作不占用其分离屏障。
+活跃会话通过 `Session.append` 追加，并等待 `sessions.flush`，然后通过持久化读句柄核实捕获的日志末端与 Session header，才会报告成功。冷会话修改在读取、校验、比较、追加、flush 和关闭期间持有持久化写句柄。冷读取使用读句柄。两条路径都不会构造 Session 或追加生命周期事件。
 
 每个 Session 的队列在同一服务实例内串行化操作；持久化写句柄排除其他冷写入方。销毁时停止接收操作并排空已接收操作，然后释放服务。持久化故障会 reject，而非变成业务失败。flush 失败不会回滚已接受的事件；调用方可以读取并使用其版本重试。成功的无变化修改也会 flush 当前前缀。
 
-冷会话的实质修改在 flush 后发出 `feedback/committed` 通知，其中携带借用的只读权威日志前缀；观察方在转移所有权前必须对其进行深拷贝。观察方在写入所有权释放前完成，不得等待同一 Session 的其他反馈操作，也不能使已提交的修改失败。DSH/Cordis 活跃会话消费方观察 `session/event`。
+冷会话的实质修改在 flush 后发出 `feedback/committed` 通知，其中携带借用的只读权威日志前缀；观察方在转移所有权前必须对其进行深拷贝。观察方在写入所有权释放前完成，不得等待同一 Session 的其他反馈操作，也不能使已提交的修改失败。活跃会话消费方观察 `session/event`。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Remote 服务、payload 校验、事件投影与持久化所有权 |
-| [`src/native.ts`](src/native.ts) | Native Provider、精确 owner 事务与分离排空 |
-| [`src/shared.ts`](src/shared.ts) | 共享 payload 校验与当前反馈推导 |
 | [`src/types.ts`](src/types.ts) | 请求、结果和 Session 事件声明；仅类型 |
 
 不发布运行时不变式伴生入口：服务直接从校验后的权威事件推导反馈，不持有可独立修改的投影。

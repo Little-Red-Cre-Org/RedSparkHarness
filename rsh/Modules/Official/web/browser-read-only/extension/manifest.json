@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "RedSpark Harness Read Only",
+  "version": "0.1.0",
+  "description": "Read only pages you explicitly authorize in RedSpark Harness.",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuV7qV55HZUHtDis3OliXpduS/wq6MAD8GBspbGukW84lbrXTRH8s91M0EjvW8G3JVHzzpLgh8123XEB85L91mkjx3e2zKKEZAwf1PbgrnB4axIGl9nk+OkYr1BuTHVHgEnL3IVtpMbshf2+D+e5mglMJ9eAnnwisSsIxRPLo2NchwI6EqRfjh369sPfmoaMOtmBIo65bhyythTBZsbMocUSbqi5ep4YX5k8P58CRR9ljuyVWvJIWGEd/ySXxj5lzpfou7YBFC7ObibQlkEXYBKL1jUQOhmn/QK2R4iwcwE60HTzdx6P2yASCPygbAynr6jtuluvfSyD0qM0+2CJ5LQIDAQAB",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "RedSpark Harness"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Authorize a browser page"
+    }
+  }
+}

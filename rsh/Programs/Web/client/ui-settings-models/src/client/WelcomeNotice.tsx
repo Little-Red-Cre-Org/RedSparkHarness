@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { OnboardingModal, WelcomeNoticeView } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WelcomeNoticeState, WelcomeNoticeStore } from './welcome-store.ts'
 import type { en } from './locales.ts'
+import { OnboardingModal } from './OnboardingModal.tsx'
+import css from './WelcomeNotice.module.css'
 
 /** Registration-side dependencies of {@link WelcomeNotice}. */
 export interface WelcomeNoticeInjected {
@@ -52,13 +54,24 @@ export function WelcomeNotice(props: WelcomeNoticeProps): ReactNode {
   const acknowledge = async (): Promise<void> => {
     if (await controller.acknowledge()) finish()
   }
-  return <OnboardingModal title={t('welcomeTitle')} focusTitle>
-    <WelcomeNoticeView
-      body={t('welcomeBody')}
-      continueLabel={t('welcomeContinue')}
-      {...state.error === null ? {} : { error: t('welcomeError') }}
-      saving={state.status === 'saving'}
-      onContinue={() => { void acknowledge() }}
-    />
-  </OnboardingModal>
+  const paragraphs = t('welcomeBody').split('\n\n')
+
+  return (
+    <OnboardingModal title={t('welcomeTitle')} focusTitle>
+      <div className={css.copy}>
+        {paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+      </div>
+      {state.error === null ? null : <p className={css.error} role="alert">{t('welcomeError')}</p>}
+      <div className={css.actions}>
+        <Button
+          variant="primary"
+          className={css.primary}
+          disabled={state.status === 'saving'}
+          onClick={() => { void acknowledge() }}
+        >
+          {t('welcomeContinue')}
+        </Button>
+      </div>
+    </OnboardingModal>
+  )
 }

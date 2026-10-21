@@ -56,17 +56,16 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { credentialKeyScope } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type { AdapterRegistrationHandle, DirectoryRegistrationHandle } from '@deepseek-ai/dsh-llm'
+import type { AdapterRegistrationHandle, DirectoryRegistrationHandle, LlmConfigurableProvider } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-compat-settings-definition'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from './adapter.ts'
-import { authContextFrom, credentialStoreFrom, siwcRegistrationStoreFrom } from './auth.ts'
-import { configurableProviderEntries } from './configurable-providers.ts'
+import { authContextFrom, credentialStoreFrom } from './auth.ts'
+import { catalogProviderIds } from './catalog.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { discoverModels } from './discovery.ts'
@@ -110,6 +109,37 @@ function registrationFacts(profiles: ReadonlyMap<string, ResolvedPiAiProviderPro
       retryPolicy: profile.retryPolicy,
     }))
     .sort((left, right) => left.provider.localeCompare(right.provider))
+}
+
+/**
+ * The configurable-provider directory: every installed catalog route, plus
+ * every route the current profiles declare. A hand-declared route has no
+ * catalog entry, so without this union it would have no settings address and
+ * configuration surfaces could neither show nor edit it.
+ * @param profiles - the currently resolved provider profiles.
+ * @returns the directory entries in catalog order, declared routes last.
+ */
+function directoryEntries(
+  profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>,
+): LlmConfigurableProvider[] {
+  const catalog = new Set(catalogProviderIds())
+  const entries = new Map<string, LlmConfigurableProvider>()
+  const declare = (provider: string, displayName: string, error?: string): void => {
+    entries.set(provider, {
+      provider,
+      displayName,
+      settingsNs: NS,
+      settingsPath: ['providers', provider],
+      // Membership of the installed catalog, not of the settings document:
+      // narrowing a shipped provider's models stores a profile too, and that
+      // route is still one pi-ai knows.
+      declared: !catalog.has(provider),
+      ...error === undefined ? {} : { error },
+    })
+  }
+  for (const provider of catalog) declare(provider, provider)
+  for (const [provider, profile] of profiles) declare(provider, profile.displayName, profile.catalogError)
+  return [...entries.values()]
 }
 
 /** Register one generic pi-ai adapter for all configured provider routes. */
@@ -164,11 +194,7 @@ export function apply(ctx: Context, config: Config): void {
   // One store and one ambient context for the whole plugin instance: both read
   // through `ctx` per call, so they stay correct across the collection rebuilds
   // a configuration change causes, and a sign-in survives one.
-  const auth = {
-    credentials: credentialStoreFrom(ctx),
-    authContext: authContextFrom(ctx),
-    siwcRegistration: siwcRegistrationStoreFrom(ctx),
-  }
+  const auth = { credentials: credentialStoreFrom(ctx), authContext: authContextFrom(ctx) }
   const adapter = new PiAiAdapter({
     profiles,
     resolveApiKey,
@@ -186,10 +212,6 @@ export function apply(ctx: Context, config: Config): void {
       )
     },
   })
-  ctx.effect(() => () => adapter.dispose(), 'llm-pi-ai: dispose adapter')
-  ctx.on('credentials/record-updated', (key) => {
-    if (credentialKeyScope(key) === 'llm-pi-ai') adapter.invalidate()
-  })
   // Independent of the route set: signing in is what makes a route worth
   // adding, so the flows are offered before any profile names their provider.
   // Scoped to the authorization seam rather than injected outright, because a
@@ -203,7 +225,7 @@ export function apply(ctx: Context, config: Config): void {
   let directory: DirectoryRegistrationHandle | undefined
   let directoryFacts: unknown
   const ensureDirectory = (): void => {
-    const entries = configurableProviderEntries(profiles())
+    const entries = directoryEntries(profiles())
     if (deepEqualJson(entries, directoryFacts)) return
     // Atomic replace, never dispose-then-register: a route another adapter
     // family already declares (a profile keyed `deepseek-official`) would
@@ -228,9 +250,6 @@ export function apply(ctx: Context, config: Config): void {
     return {
       headers: profile.headers,
       resolveApiKey: () => resolveApiKey(provider, profile),
-      ...provider === 'openai-codex'
-        ? { resolveCodexAuth: (signal?: AbortSignal) => adapter.getProviderAuth(provider, signal) }
-        : {},
     }
   }
   // Interrogating an endpoint is a configuration-time action over a draft, so
