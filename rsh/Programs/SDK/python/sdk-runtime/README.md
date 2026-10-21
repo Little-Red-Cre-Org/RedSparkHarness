@@ -12,11 +12,9 @@ Production executables are named `deepseek-harness-sdk-runtime-<platform>-<arch>
 
 Repository builds also materialize a dev-only `runtime/node/` carrier. It runs `node runtime/node/node_modules/@deepseek-ai/dsh/lib/bin.js` on system Node 22.19 or newer. It is never selected automatically and is excluded from wheels and sdists.
 
-Both carriers execute the same `dsh` grammar and shipped profiles, including the standalone `sdk-minimal` tree and the full `web` profile with its frontend assets. The private `dsh-python-runtime-closure` manifest defines the packaged dependency closure and directly declares each bare plugin installed by the shipped `native-sdk` profile; there is no Python-specific Node application or checked-in default `cordis.yml`.
+Both carriers execute the same `dsh` grammar and shipped profiles, including the standalone `sdk-minimal` tree and the full `web` profile with its frontend assets. The private `dsh-python-runtime-closure` manifest defines the packaged dependency closure; there is no Python-specific Node application or checked-in default `cordis.yml`.
 
 The closure explicitly carries shared peer providers used by those profiles, including `dsh-plugin-host` for filesystem adapters and `dsh-errors` for the model error constructor.
-
-The executable builder keeps `dsh-tools` as one runtime module instance. It removes nested staged copies only when their package files and declared dependency and peer resolutions match the runtime-root copy; a conflicting copy fails packaging.
 
 ## Python module API
 
@@ -41,4 +39,4 @@ Production deployment permits unused workspace patches for packages outside the 
 
 From the repository root, `pnpm exec tsx rsh/Scripts/build-exe-for-python-sdk.ts` verifies the closure, builds packages, deploys a symlink-free tree, packages the selected target, and syncs the executable and sidecars into this module. `rsh/Scripts/build-python-release.py` stages release-shaped wheels at the root repository version and pins `deepseek-harness-sdk` to the exact runtime version.
 
-The installed-wheel smoke creates a clean virtual environment outside the checkout, proves distribution and executable provenance, then exercises default and customized SDK profiles, external plugins, MCP, native tools, canonical Native SDK Sessions for external operations, Inbox moves, staged files, Skills loading and cold recovery, direct JSON-RPC, committed snapshots, and the real provider on trusted runs. See the [Python contributor workflow](../development.md) and [installed-wheel testing decision](../../../../../.agents/notes/implemented/testing/2026-08-23-installed-python-wheel-black-box-ci.md).
+The installed-wheel smoke creates a clean virtual environment outside the checkout, proves distribution and executable provenance, then exercises default and customized SDK profiles, external plugins, MCP, native tools, direct JSON-RPC, committed snapshots, and the real provider on trusted runs. See the [Python contributor workflow](../development.md) and [installed-wheel testing decision](../../../../../.agents/notes/implemented/testing/2026-08-23-installed-python-wheel-black-box-ci.md).

@@ -69,7 +69,7 @@ interface PresetOption {
 
 ## Native host writes
 
-The Native host entry exposes policy reads and writes through `permissionPresets`. `controls()` reads the current matching preset or derived `custom` value and the available choices for the exact writable root owner; `resolve()` returns one configured immutable bundle; `apply()` records changed durable facts through that owner's Program-owned writer and awaits the flush. The operation records policy; the sandbox and approval Providers enforce it. The Native entry does not install the Cordis settings, command, or client projection.
+The Native host entry exposes the same policy values through `permissionPresets`. `resolve()` returns one configured immutable bundle; `apply()` accepts only the exact writable root owner, records changed durable facts through its Program-owned writer, and awaits the flush. The operation records policy; the sandbox and approval Providers enforce it. The Native entry does not install the Cordis settings, command, or client projection.
 
 ```ts type-equiv
 /** The same two durable policy knobs bundled by the Cordis permission service. */
@@ -82,8 +82,6 @@ type NativePermissionPresetSpec = Readonly<Omit<PresetSpec, 'name' | 'descriptio
 ```ts type-equiv
 /** Program-owned validation and durable application of a configured preset. */
 interface NativePermissionPresetOperations {
-  /** @param owner - exact writable root Session. @param signal - read cancellation. @returns effective policy and configured choices. */
-  controls(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativePermissionPresetControls>
   /** @param name - exact configured preset id. @returns detached immutable policy bundle. */
   resolve(name: string): Readonly<NativePermissionPresetSpec>
   /**

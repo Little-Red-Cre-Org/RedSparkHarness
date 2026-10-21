@@ -1,6 +1,6 @@
 version: 1
 scenario: text-turn
-profile: sdk
+profile: native-sdk
 composition: native-sdk-text-turn
 recording: authored
 header:

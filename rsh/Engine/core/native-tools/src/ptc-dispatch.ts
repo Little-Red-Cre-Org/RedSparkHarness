@@ -1,7 +1,7 @@
 /** Native nested calls sharing scoped admission and the application's Session writer. */
 import { createUserMessage, HarnessError, ToolCallId, type UserMessage } from '@deepseek-ai/dsh-llm/native'
 import { deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { NativeToolExecution, NativeToolExecutionSnapshot, NativeToolRegistry, NativeToolResult } from './index.ts'
+import type { NativeToolExecution, NativeToolRegistry, NativeToolResult } from './index.ts'
 import { createOrderedDispatchLane, type OrderedDispatch } from './ordered-dispatch.ts'
 
 /** One program's nested execution, cancellation and durable settlement. */
@@ -32,12 +32,10 @@ function failed(error: unknown): NativeToolResult {
  * @param tools - selected scoped registry.
  * @param parent - outer invocation with the application-owned append and approval authority.
  * @param maxParallel - positive safe integer body limit selected by configuration.
- * @param snapshot - optional exact program registration catalog captured for an external operation.
  * @returns a run owner that must be closed after the program finishes, including failures.
  */
 export function createNativePtcDispatch(
   tools: NativeToolRegistry, parent: NativeToolExecution, maxParallel: number,
-  snapshot: NativeToolExecutionSnapshot | undefined = parent.programSnapshot,
 ): NativePtcDispatch {
   if (!Number.isSafeInteger(maxParallel) || maxParallel < 1) throw new Error('native PTC: maxParallel must be a positive safe integer')
   const controller = new AbortController()
@@ -68,21 +66,18 @@ export function createNativePtcDispatch(
         agent: parent.agent, session: parent.session, callId: id, name, arguments: argumentsValue,
         signal, parent, appendEvent: parent.appendEvent,
         ...parent.approvalAuthority === undefined ? {} : { approvalAuthority: parent.approvalAuthority },
-        ...parent.delegationContext === undefined ? {} : { delegationContext: parent.delegationContext },
       }
       const completion = Promise.withResolvers<NativeToolResult>()
       let result: NativeToolResult | undefined
-      let settlementCall = call
       const entry: OrderedDispatch = {
         flight: Promise.resolve(), settled: false,
-        classify: () => snapshot?.executionMode(call) ?? tools.executionMode(call),
+        classify: () => tools.executionMode(call),
         abandon() { completion.reject(new Error(`native PTC call ${id} was abandoned`, { cause: signal.reason })) },
         async start() {
           try { await parent.appendEvent('tool/ptc-dispatch-start', attribution) }
           catch (error: unknown) { failPersistence(error); result = failed(error); this.settled = true; return }
           try {
-            const prepared = snapshot === undefined ? await tools.prepare(call) : await snapshot.prepare(call)
-            settlementCall = prepared.call
+            const prepared = await tools.prepare(call)
             this.flight = (async () => {
               try { result = await prepared.execute() }
               catch (error: unknown) { result = failed(error) }
@@ -97,16 +92,15 @@ export function createNativePtcDispatch(
             contexts.push(createUserMessage({ content: structuredClone([...result.content]), source: { kind: 'plugin', plugin: 'tools-ptc' } }))
           }
           contexts.push(...tools.settlementContexts({
-            agent: settlementCall.agent, session: settlementCall.session, callId: id, name,
-            arguments: settlementCall.arguments, result,
+            agent: call.agent, session: call.session, callId: id, name, arguments: argumentsValue, result,
           }))
           contexts.push(...structuredClone(result.additionalContexts ?? []))
           if (!result.isError && result.concludesTurn === true) concludesTurn = true
           completion.resolve(result)
           try {
-            const log = await tools.projectPtcDispatchLog(settlementCall, result)
+            const log = await tools.projectPtcDispatchLog(call, result)
             await parent.appendEvent('tool/ptc-dispatch', { ...attribution, isError: log.isError, content: [...log.content] })
-            tools.acceptResult(settlementCall, result)
+            tools.acceptResult(call, result)
           } catch (error: unknown) { failPersistence(error); completion.reject(error) }
         },
       }

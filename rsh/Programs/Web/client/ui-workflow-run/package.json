@@ -23,11 +23,7 @@
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./native": {
-      "types": "./lib/types/native.d.ts",
-      "default": "./lib/native.js"
-    }
+    "./package.json": "./package.json"
   },
   "dsh": {
     "client": {
@@ -49,15 +45,11 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "lib/native.js",
-    "lib/**/*.css",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "react": "^18.2.0",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
@@ -76,10 +68,5 @@
     "@types/react": "~18.3.1",
     "@deepseek-ai/cordis": "workspace:^",
     "react": "^18.2.0"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
   }
 }

@@ -14,20 +14,14 @@ Host 通过经过身份验证的 Session RPC 提供所选模型目录与已安�
 
 Client 使用所属纯投影从持久化历史折叠模型意图与预设事实。每次修改提交所呈现的修订号。既有执行器独占 Session 维护，既有根执行权威处理预设 epoch 切换。保留的 writer 在异步目录解析前同步占用选定 Agent 的空闲维护准入；冷态操作复用既有准入。并发轮次排在该准入之后。页面保持忙碌直至结算，即使发生过期修订号失败，也刷新持久化事实。
 
-Native composer 使用 `ui-primitives` 中零 Cordis 的 `ModelPicker` 呈现模型与推理选项。Picker 读取 Host 目录和折叠后的 Session 意图，打开时通过既有模型控件操作刷新目录，并通过既有 `selectModel` 操作提交选择。首次模型控件请求在目录可用前失败时，即使尚未选择 Session，Picker 仍可打开，并会显示请求错误和重试操作。Agent 预设仍使用独立选择器。
-
 ## 考虑过的替代方案
 
 **Client 模型目录或预设 registry。** 这会复制 Provider 发现与已安装组合权威。
 
 **只在页面状态中改变选择。** 恢复后意图丢失，并绕过持久化解析与空白根锁。
 
-**分开的模型与推理选择器。** 它们无法共享 Cordis composer 呈现，并且需要用两个控件表达同一个模型决策。
-
 ## 后果
 
 显式 native-web 模板安装模型选择，但不安装常驻预设组合；自定义 profile 可提供这些组合，空 registry 显示为空，不虚构选项。旧默认装配保持不变。
-
-Cordis 与 Native composer 通过 `ui-primitives` 共享模型与推理呈现；各自的 adapter 继续管理目录状态和选择操作。
 
 既有真实 HTTP 用例覆盖目录选择、过期修订号拒绝、推理强度验证与锁定预设拒绝。既有 built Chromium 场景记录实际控件、请求解析与冷恢复。不引入第二个 Agent、Session writer 或执行 registry。

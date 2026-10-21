@@ -1,11 +1,9 @@
 /** Native JSONL Session storage uses the released generation and single-writer backend. */
 import { isAbsolute, resolve } from 'node:path'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { JsonlSessionBackend, type Config, type JsonlCompression } from './backend.ts'
+import { JsonlSessionBackend, type Config } from './backend.ts'
 
 export { JsonlSessionBackend }
-export type { JsonlCompression }
-export { inspectSessionRootCompression } from './native-inspection.ts'
 
 import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
 

@@ -12,7 +12,7 @@ Session 需要在冷恢复后保留模型选择。目录元数据与实际请求
 
 模型目录定义属于 NativeModelExecution。Pi 与 Direct Provider 基于实际配置路由，发布共享的适配器实现。目录提供候选选项，不拥有全局默认值，也不决定路由可用性。
 
-NativeModelSelection 仅通过 Program 准确的活跃 root owner 保存完整意图。选择串行比较 revision，并在确认前 flush 事件。没有持久化选择时，捕获复用 Session 最近的请求路由；仅当历史中没有路由时才使用 Program 的 Provider/模型默认值，旧 header 的解析后参数不会变成显式选择控件。Headless 为每个已接纳 root step 捕获意图，模型执行器再一起捕获元数据与派发。Program 在派发前持久化 prepared 参数及路由变更提示。委派执行保留显式配置。
+NativeModelSelection 仅通过 Program 准确的活跃 root owner 保存完整意图。选择串行比较 revision，并在确认前 flush 事件。Headless 为每个已接纳 root step 捕获意图，模型执行器再一起捕获元数据与派发。Program 在派发前持久化 prepared 参数及路由变更提示。委派执行保留显式配置。
 
 浏览器安全的选择叶子拥有事件声明与投影。兼容 Session API 重导出同一类型。不引入第二个 writer、模型配置存储或协议载体。
 

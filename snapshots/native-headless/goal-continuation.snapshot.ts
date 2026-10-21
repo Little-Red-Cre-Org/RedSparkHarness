@@ -125,7 +125,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     installations.push({ id: 'model', plugin: 'native-goal-model', scope: 'root', config: { audit, mode: 'block' } })
     writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations }, null, 2))
     mkdirSync(modules, { recursive: true })
-    writeFileSync(join(modules, 'package.json'), JSON.stringify({ name: 'native-goal-model', version: '0.0.0', type: 'module',
+    writeFileSync(join(modules, 'package.json'), JSON.stringify({ name: 'native-goal-model', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } },
     }))

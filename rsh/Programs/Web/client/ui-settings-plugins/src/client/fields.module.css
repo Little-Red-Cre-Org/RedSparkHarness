@@ -75,14 +75,14 @@
 
 .inputInvalid {
   composes: input;
-  border-color: var(--dsw-alias-state-error-primary);
+  border-color: var(--dsw-alias-label-error);
 }
 
 .invalid {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-label-error);
 }
 
 .hint {

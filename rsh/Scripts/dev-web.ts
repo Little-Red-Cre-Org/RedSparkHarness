@@ -14,7 +14,7 @@
  * artifact, so an edit appears to do nothing.
  *
  * MUST NOT run concurrently with `pnpm run build`: both write the same
- * `lib/`, `rsh/Programs/Web/application/dist/`, and compatibility `dist/` trees.
+ * `lib/` and `rsh/Programs/Web/application/dist/` trees.
  *
  * Usage: `pnpm exec tsx rsh/Scripts/dev-web.ts [--poll[=ms]]`. Requires one prior
  * `pnpm run build`: every stage is incremental over the previous stage's output
@@ -47,11 +47,8 @@ const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 /** Client-face type emit feeding every tsdown lib entry in the watch set. */
 const CLIENT_TYPE_PROGRAM = 'tsconfig.client.json'
 
-/** Cordis-free Native application workspace. */
+/** Compile-shell workspace whose dist `dsh web` serves. */
 const SHELL_PACKAGE = '@deepseek-ai/dsh-web-frontend'
-
-/** Explicit Cordis compatibility shell workspace. */
-const COMPATIBILITY_PACKAGE = '@deepseek-ai/dsh-web-compatibility'
 
 /**
  * Test infrastructure builds through the client preset but never enters the
@@ -274,15 +271,14 @@ if (isMain) {
   // working directory — `resolve.dedupe` resolves react from that root, so
   // running vite from anywhere but rsh/Programs/Web/application silently switches which react copy
   // the bundle gets.
-  spawnStage('Native Vite build --watch', 'pnpm', ['--filter', SHELL_PACKAGE, 'run', 'watch'], false)
-  spawnStage('compatibility Vite build --watch', 'pnpm', ['--filter', COMPATIBILITY_PACKAGE, 'run', 'watch'], false)
+  spawnStage('vite build --watch', 'pnpm', ['--filter', SHELL_PACKAGE, 'run', 'watch'], false)
 
   console.log(
     `dev-web: watching ${String(pluginDirs.length)} dsh.client plugin packages`
     + `, ${String(libraryDirs.length)} statically linked library packages`
     + ` and ${String(nativeProfileDirs.length)} native-profile Client packages`
     + (pollInterval !== undefined ? ` (polling ${String(pollInterval)}ms)` : '')
-    + `, plus tsc -b ${CLIENT_TYPE_PROGRAM}, the ${SHELL_PACKAGE} dist build and the ${COMPATIBILITY_PACKAGE} dist build:\n  `
+    + `, plus tsc -b ${CLIENT_TYPE_PROGRAM} and the ${SHELL_PACKAGE} dist build:\n  `
     + [...pluginDirs, ...libraryDirs, ...nativeProfileDirs].join('\n  '),
   )
 }

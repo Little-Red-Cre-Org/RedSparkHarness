@@ -41,7 +41,7 @@ import {
 import { captureStableAria, compareOrRefreshGolden, webSnapshotMode } from './scaffold.ts'
 import { newEnglishPage, REPO_ROOT, saveFailureShot } from './support.ts'
 
-const DIST_ROOT = fileURLToPath(new URL('../../../../Compatibility/DSH/web/frontend/dist', import.meta.url))
+const DIST_ROOT = fileURLToPath(new URL('../dist', import.meta.url))
 
 /** Where the client looks for the image: the runtime's own name, beside the page. */
 const IMAGE_FILE = join(DIST_ROOT, 'preview', IMAGE_FILE_NAME)
@@ -52,7 +52,7 @@ const SOURCE_CHOOSER_EXPECTED = fileURLToPath(new URL('./snapshots/preview-boot/
 const SNAPSHOT_MODE = webSnapshotMode()
 
 /** Profile the preview deployment composes; `build:preview` packs the same one. */
-const PROFILE = 'preview-web'
+const PROFILE = 'web'
 
 /** Stable labels authored by the deterministic VFS example fixture. */
 const SHOWCASE_TITLE = 'WebWorker Preview Showcase'
@@ -110,7 +110,7 @@ interface PreviewAssets {
 function requirePreviewPages(): void {
   for (const page of PAGES) {
     if (existsSync(join(DIST_ROOT, page))) continue
-    throw new Error(`preview boot needs rsh/Compatibility/DSH/web/frontend/dist/${page} — run \`pnpm run build\` from the repository root`)
+    throw new Error(`preview boot needs rsh/Programs/Web/application/dist/${page} — run \`pnpm run build\` from the repository root`)
   }
 }
 
@@ -140,7 +140,7 @@ function requireVfsAssets(): PreviewAssets {
   }
   if (!existsSync(IMAGE_FILE)) {
     const packed = packVfsImage({
-      config: composeProfile(REPO_ROOT, PROFILE, 'web'),
+      config: composeProfile(REPO_ROOT, PROFILE),
       profile: PROFILE,
       workspaces: indexWorkspacePackages(REPO_ROOT),
       resolveFrom: REPO_ROOT,
@@ -319,12 +319,6 @@ async function bootPreview(origin: string, browser: Browser): Promise<void> {
     await configureLater.click()
     await page.locator('[data-composer-input][data-placeholder="Describe what you want to build, / commands, @ files or sessions"]')
       .waitFor({ timeout: 30_000 })
-    const clientPackages = await page.evaluate(() => {
-      const graph = Reflect.get(window, '__DSH_BOOT__') as { entries?: Array<{ id: string }> } | undefined
-      return graph?.entries?.map(entry => entry.id) ?? null
-    })
-    if (clientPackages === null) throw new Error('preview client graph is absent after boot')
-    expect(clientPackages).not.toContain('@deepseek-ai/dsh-task-scheduler')
 
     const exercised = await page.evaluate(async ({ seededSessionId, seededSessionTitle }) => {
       type Result<T> = { result: { ok: true; value: T } | { ok: false; error: { code: string; message: string } } }

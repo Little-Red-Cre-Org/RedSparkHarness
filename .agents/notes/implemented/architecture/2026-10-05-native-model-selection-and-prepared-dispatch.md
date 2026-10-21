@@ -12,7 +12,7 @@ A Session needs to preserve its selected model across cold restoration. Catalog 
 
 The model-directory Definition belongs to NativeModelExecution. Pi and Direct Providers publish its shared adapter implementation over their actual configured routes. Catalogs advertise options but do not own a global default or decide routability.
 
-NativeModelSelection stores complete intent only through the Program’s exact active root owner. Selection serializes revision comparison and flushes the event before acknowledging it. Without a durable selection, capture reuses the Session’s latest request route and uses Program provider/model defaults only when no route is recorded; the prior header’s resolved controls do not become explicit selection controls. Headless captures intent for each admitted root step, then the model executor captures metadata and dispatch together. The Program persists prepared controls and any route-change notice before dispatch. Delegated execution retains its explicit configuration.
+NativeModelSelection stores complete intent only through the Program’s exact active root owner. Selection serializes revision comparison and flushes the event before acknowledging it. Headless captures intent for each admitted root step, then the model executor captures metadata and dispatch together. The Program persists prepared controls and any route-change notice before dispatch. Delegated execution retains its explicit configuration.
 
 The browser-safe selection leaf owns the event declaration and projection. The compatibility Session API re-exports the same type. No second writer, model configuration store or protocol carrier is introduced.
 

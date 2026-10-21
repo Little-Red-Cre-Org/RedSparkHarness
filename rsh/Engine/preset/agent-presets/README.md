@@ -25,19 +25,9 @@ Use `dsh-agent-presets` to give each session the tools, prompt sections, and ski
 <a id="use-this-package"></a>
 ## Use this package
 
-The native `./native` Provider registers profile-installed standing compositions. Configure its explicit `default` identifier and register each composition with its actual NativeScope. Resolution returns that installation generation; Agent leases share its cancellation signal. Removing a standing composition closes admission, cancels its Agents and waits for their leases to release, reporting recorded cleanup failures. The Program owns Session choice events and Agent creation. The native CLI loads `agent.native.json`; this Provider itself does not read legacy `agent.cordis.yml` or edit user settings. `./selection` reconstructs preset choice from complete Session history for both runtimes.
+The native `./native` Provider registers profile-installed standing compositions. Configure its explicit `default` identifier and register each composition with its actual NativeScope. Resolution returns that installation generation; Agent leases share its cancellation signal. Removing a standing composition closes admission, cancels its Agents and waits for their leases to release, reporting recorded cleanup failures. The Program owns Session choice events and Agent creation. This entry does not load `agent.cordis.yml`, discover preset roots or edit user settings; those operations remain in the compatibility entry. `./selection` reconstructs preset choice from complete Session history for both runtimes.
 
 The native entries do not load the optional Loader, Include, atomic-write, home-path, scope or Typert peers used by the compatibility entry.
-
-### Native preset folders
-
-The native CLI scans the shipped preset root before `<dshHome>/.agent-presets`; the first root wins a duplicate id. Each preset folder can hold shared `preset.yml` display metadata and an `agent.native.json` composition. The native file contains version 1 and rows with `id`, `plugin`, optional `config` and optional `disabled`; the CLI assigns each row to the preset's child scope and does not read `agent.cordis.yml`.
-
-```json
-{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
-```
-
-A folder without `agent.native.json` appears as `needs-migration`; an invalid file or an enabled plugin package the profile cannot resolve appears as `invalid`. The Registry `catalog()` rescans its Host-owned roots and returns the default and folder display, trust and status summaries without directory paths or installation rows. `read()` returns folder metadata and the raw composition text; profile-only compositions have no file content. `copy()` copies a ready folder and its assets into the first user root, retains its description, replaces its display name, drops its sort order, and tightens copied permissions. `delete()` and `directory()` resolve only user folders; shipped folders remain read-only. The CLI supplies root paths privately to the Host Registry.
 
 Mount this package in a composition that should give each agent session its own tools, prompt sections, and skills from a preset file. Every session names a preset — explicitly or through the configured default — and is composed from it; without the package, sessions fall back to whatever the host composition mounts.
 

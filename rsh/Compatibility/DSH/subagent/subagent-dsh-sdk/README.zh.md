@@ -125,7 +125,7 @@ kind: "package-reference"
 
 - [Subagent 子系统](../../../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
 - [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
-- [ACP subagent 后端](../subagent-acp/README.zh.md)——经 Agent Client Protocol 的兄弟进程外提供方。
+- [ACP subagent 后端](../../../../Engine/subagent/subagent-acp/README.zh.md)——经 Agent Client Protocol 的兄弟进程外提供方。
 - [TypeScript SDK 客户端](../../../../Programs/SDK/packages/client/README.zh.md)——本后端用以驱动子进程的 stdio JSON-RPC 客户端。
 - [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-dsh-sdk)——每个受支持配置字段及其源声明。
 

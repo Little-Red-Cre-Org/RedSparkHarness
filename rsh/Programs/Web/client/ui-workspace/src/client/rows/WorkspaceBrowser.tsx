@@ -12,8 +12,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  Button, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
-  ProjectRowItem, SearchResultItem, SessionNodeItem, WorkspaceSectionEmpty, WorkspaceSectionHeader,
+  Button, IconCloseFill14, IconPersonalizationOutline16,
+  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionListState, SessionSearchResultItem,
@@ -25,6 +25,7 @@ import type { SessionNode, SessionOrderBy } from '../tree.ts'
 import {
   deriveFlat, deriveGroups, deriveSearchResults, owningGroupKey, UNGROUPED_KEY,
 } from '../tree.ts'
+import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
 import { FLAT_SESSION_ORDER_KEY } from '../stores.ts'
 import { WorkspacePickFlow } from '../WorkspacePicker.tsx'
 import css from './WorkspaceBrowser.module.css'
@@ -234,7 +235,7 @@ function workspaceGroupHalf(e: { clientY: number; currentTarget: HTMLElement }):
 type SessionTreeProps = Pick<
   WorkspaceBrowserProps,
   'useSessions' | 'useSessionPendingInteraction' | 'startSession' | 'open' | 'forkSession'
-  | 'insertWorkspaceBefore' | 'insertSessionBefore' | 't' | 'usePanelInfo'
+  | 'insertWorkspaceBefore' | 'insertSessionBefore' | 't' | 'usePanelInfo' | 'openIde'
 > & {
   /** Host account home for POSIX hover-path abbreviation. */
   home?: string | undefined
@@ -275,12 +276,13 @@ type SessionTreeProps = Pick<
 function SessionTree({
   useSessions, useSessionPendingInteraction, startSession, open, forkSession, workspaces, archivedSessionIds,
   workspaceReady, usePanelInfo,
-  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
+  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, openIde,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
   revealSessionId, onSessionRevealed,
 }: SessionTreeProps) {
+  const [ideError, setIdeError] = useState<string | null>(null)
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
@@ -450,6 +452,7 @@ function SessionTree({
 
   return (
     <div className={clsx(css.treeBody, css.wide)}>
+      {ideError !== null && <div role="alert">{ideError}</div>}
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
       <div
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
@@ -457,7 +460,7 @@ function SessionTree({
         aria-label={t('section.sessions')}
       >
         {groups.length === 0 && (
-          <WorkspaceSectionEmpty label={t('empty.none')} />
+          <div className={css.empty}>{t('empty.none')}</div>
         )}
         {groups.map((group) => {
           const workspaceId = group.workspaceId
@@ -538,6 +541,13 @@ function SessionTree({
                 actions={group.workspaceId === undefined
                   ? undefined
                   : {
+                    openIde: openIde === undefined ? undefined : () => {
+                      if (group.workspaceId === undefined) return
+                      setIdeError(null)
+                      void openIde(group.workspaceId).catch((error: unknown) => {
+                        setIdeError(error instanceof Error ? error.message : String(error))
+                      })
+                    },
                     rename: () => {
                     /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                       if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
@@ -700,7 +710,7 @@ function FlatList({
     <div className={clsx(css.treeBody, css.wide)}>
       <div className={clsx(css.list, css.flatList)} role="tree" aria-label={t('section.sessions')}>
         {rows.length === 0 && (
-          <WorkspaceSectionEmpty label={t('empty.none')} />
+          <div className={css.empty}>{t('empty.none')}</div>
         )}
         {rows.map((node) => {
           const active = drag !== null
@@ -817,7 +827,7 @@ function SearchResults({
           </div>
         )}
         {!pending && results.items.length === 0 && (
-          <WorkspaceSectionEmpty label={t('search.noMatches')} />
+          <div className={css.empty}>{t('search.noMatches')}</div>
         )}
         {results.hasMore && (
           <div className={css.searchStatus}>
@@ -849,6 +859,7 @@ export function WorkspaceBrowser({
   renameSession,
   forkSession,
   renameWorkspace,
+  openIde,
   deleteWorkspace,
   insertWorkspaceBefore,
   archiveSession,
@@ -1116,70 +1127,134 @@ export function WorkspaceBrowser({
 
   return (
     <div className={clsx(css.root, !wide && css.rail)}>
-      <WorkspaceSectionHeader
-        wide={wide}
-        label={groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
-        searchExpanded={searchExpanded}
-        query={query}
-        maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
-        searchLabel={t('search')}
-        searchAriaLabel={t('search.sessions.aria')}
-        placeholder={t('search.placeholder')}
-        clearLabel={t('search.clear')}
-        searchRootRef={searchRoot}
-        inputRef={searchInput}
-        onSearchActivate={() => {
-          setWsPickerOpen(false)
-          setSearchExpanded(true)
-          searchInput.current?.focus()
-        }}
-        onSearchExpand={() => {
-          setWsPickerOpen(false)
-          setSearchExpanded(true)
-        }}
-        onQueryChange={(value) => { setQuery(sanitizeSearchQuery(value)) }}
-        onSearchClear={() => { setSearchExpanded(false) }}
-        onRailSearch={() => {
-          setSearchExpanded(true)
-          setSearchOnExpand(true)
-          expandSidebar()
-        }}
-        actions={<>
-          {wide && <ViewOptionsMenu
-            groupBy={groupBy}
-            orderBy={orderBy}
-            onGroupPick={(mode) => { actions.setGroupBy(mode) }}
-            onOrderPick={(mode) => { actions.setOrderBy(mode) }}
-            t={t}
-          />}
-          {directoryFlowAvailable && <Tooltip label={t('workspace.add')} side="bottom" delayMs={500}>
-            <button
-              ref={wsPlusRef}
-              type="button"
-              className={css.iconButton}
-              aria-label={t('workspace.add')}
-              onClick={() => { setWsPickerOpen(v => !v) }}
-            ><IconProjectAddOutline16 size={wide ? 16 : 18} /></button>
-          </Tooltip>}
-        </>}
-      />
-      {/* Add flow + its error dialog (same package — direct composition). */}
-      <WorkspacePickFlow
-        t={t}
-        open={wsPickerOpen}
-        anchorRef={wsPlusRef}
-        useWorkspaces={useWorkspaces}
-        createWorkspace={createWorkspace}
-        useDirectoryFlow={useDirectoryFlow}
-        renderDirectoryFlow={owner => renderSlot('sidebar.workspaces.directoryFlow', owner)}
-        addOnly
-        side="right"
-        onPick={(workspaceId) => {
-          setWsPickerOpen(false)
-          startSession(workspaceId)
-        }}
-        onClose={() => { setWsPickerOpen(false) }}
-      />
+      <div className={css.sectionHeader}>
+        {wide && (
+          <span className={clsx(css.sectionLabel, css.wide, searchExpanded && css.sectionLabelHidden)}>
+            {groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
+          </span>
+        )}
+        {wide && (
+          <div className={clsx(css.searchSlot, searchExpanded && css.searchSlotExpanded)}>
+            <div
+              ref={searchRoot}
+              className={clsx(css.search, searchExpanded && css.searchExpanded)}
+              onClick={() => {
+                setWsPickerOpen(false)
+                setSearchExpanded(true)
+                searchInput.current?.focus()
+              }}
+            >
+              <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
+                <button
+                  type="button"
+                  className={css.searchButton}
+                  aria-label={t('search.sessions.aria')}
+                  aria-expanded={searchExpanded}
+                  onClick={() => {
+                    setWsPickerOpen(false)
+                    setSearchExpanded(true)
+                  }}
+                >
+                  <IconSearchOutline16 size={searchExpanded ? 11 : 14} />
+                </button>
+              </Tooltip>
+              <input
+                ref={searchInput}
+                className={css.searchInput}
+                type="text"
+                placeholder={t('search.placeholder')}
+                maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
+                value={query}
+                tabIndex={searchExpanded ? 0 : -1}
+                onChange={(e) => { setQuery(sanitizeSearchQuery(e.target.value)) }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Escape') return
+                  setQuery('')
+                  setSearchExpanded(false)
+                }}
+              />
+              {searchExpanded && (
+                <button
+                  type="button"
+                  className={css.clearButton}
+                  aria-label={t('search.clear')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setQuery('')
+                    setSearchExpanded(false)
+                  }}
+                >
+                  <IconCloseFill14 />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        <div className={clsx(css.headerActions, wide && searchExpanded && css.headerActionsHidden)}>
+          {wide && (
+            <ViewOptionsMenu
+              groupBy={groupBy}
+              orderBy={orderBy}
+              onGroupPick={(mode) => { actions.setGroupBy(mode) }}
+              onOrderPick={(mode) => { actions.setOrderBy(mode) }}
+              t={t}
+            />
+          )}
+          {/* Adding is the button's one action, so a composition with no
+              picking affordance has nothing to offer here: the region hides the
+              button rather than leaving a dead one in the header. */}
+          {directoryFlowAvailable && (
+            <Tooltip label={t('workspace.add')} side="bottom" delayMs={500}>
+              <button
+                ref={wsPlusRef}
+                type="button"
+                className={css.iconButton}
+                aria-label={t('workspace.add')}
+                onClick={() => {
+                  setWsPickerOpen(v => !v)
+                }}
+              >
+                <IconProjectAddOutline16 size={wide ? 16 : 18} />
+              </button>
+            </Tooltip>
+          )}
+        </div>
+        {/* Add flow + its error dialog (same package — direct composition). */}
+        <WorkspacePickFlow
+          t={t}
+          open={wsPickerOpen}
+          anchorRef={wsPlusRef}
+          useWorkspaces={useWorkspaces}
+          createWorkspace={createWorkspace}
+          useDirectoryFlow={useDirectoryFlow}
+          renderDirectoryFlow={owner => renderSlot('sidebar.workspaces.directoryFlow', owner)}
+          addOnly
+          side="right"
+          onPick={(workspaceId) => {
+            setWsPickerOpen(false)
+            startSession(workspaceId)
+          }}
+          onClose={() => { setWsPickerOpen(false) }}
+        />
+      </div>
+
+      {/* The collapsed rail keeps search as its own 36px control. */}
+      {!wide && <div className={css.search}>
+        <Tooltip label={t('search')}>
+          <button
+            type="button"
+            className={css.searchButton}
+            aria-label={t('search.sessions.aria')}
+            onClick={() => {
+              setSearchExpanded(true)
+              setSearchOnExpand(true)
+              expandSidebar()
+            }}
+          >
+            <IconSearchOutline16 size={18} />
+          </button>
+        </Tooltip>
+      </div>}
 
       {/* Always-mounted seat keeps the region's flex slot while the list
           itself is wide-only. */}
@@ -1243,6 +1318,7 @@ export function WorkspaceBrowser({
                 onSessionRevealed={acknowledgeSessionReveal}
                 home={home}
                 t={t}
+                openIde={openIde}
                 onRenameRequest={(workspaceId, currentTitle) => {
                   setRenameTarget({ workspaceId, currentTitle })
                   setRenameDraft(currentTitle)

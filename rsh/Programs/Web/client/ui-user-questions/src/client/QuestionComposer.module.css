@@ -444,13 +444,11 @@
 
   .footer {
     align-items: flex-end;
-    flex-wrap: wrap;
     padding: 0 10px;
   }
 
   .footerActions {
     flex-shrink: 0;
-    margin-left: auto;
   }
 }
 

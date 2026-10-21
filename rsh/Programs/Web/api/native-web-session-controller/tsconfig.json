@@ -9,9 +9,6 @@
   ],
   "references": [
     {
-      "path": "../workspace-files/tsconfig.host.json"
-    },
-    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
@@ -19,9 +16,6 @@
     },
     {
       "path": "../../../../Engine/llm/llm"
-    },
-    {
-      "path": "../../../../Modules/Official/llm/llm-pi-ai"
     },
     {
       "path": "../../client/connection/tsconfig.host.json"
@@ -39,9 +33,6 @@
       "path": "../../../../Engine/session/session-persistence/tsconfig.host.json"
     },
     {
-      "path": "../../../../Engine/session/session-title/tsconfig.json"
-    },
-    {
       "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
     },
     {
@@ -54,19 +45,10 @@
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
-      "path": "../../../../Modules/Official/plan/plan-mode"
-    },
-    {
-      "path": "../../../../Modules/Official/interaction/permission-presets"
-    },
-    {
       "path": "../../../../Modules/Official/settings/settings"
     },
     {
       "path": "../../../../Modules/Official/credentials/credentials"
-    },
-    {
-      "path": "../../../../Modules/Official/credentials/authorization"
     },
     {
       "path": "../../../../Modules/Official/interaction/native-approval"
@@ -93,6 +75,9 @@
       "path": "../../../../Core/storage/storage-domain"
     },
     {
+      "path": "../../../../Modules/Official/interaction/permission-presets"
+    },
+    {
       "path": "../../../../Modules/Official/sandbox/native-sandbox-policy"
     },
     {
@@ -103,21 +88,6 @@
     },
     {
       "path": "../../../../Modules/Official/webhook/webhook-github"
-    },
-    {
-      "path": "../../../../Modules/Official/interaction/commands/tsconfig.json"
-    },
-    {
-      "path": "../../../../Core/util/native-command"
-    },
-    {
-      "path": "../../host/directory-picker-native"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/command-feedback"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/message-feedback"
     }
   ]
 }

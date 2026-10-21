@@ -29,27 +29,29 @@ it('exposes task notifications and pet updates to the application document', asy
   const notification = { id: 'task-1', title: 'Task finished', body: 'Done' }
   await api.notifyTask(notification)
   expect(electron.ipcRenderer.invoke).toHaveBeenCalledWith(DESKTOP_IPC.taskNotification, notification)
-  expect(Object.keys(api)).toEqual(['protocolVersion', 'notifyTask', 'pet'])
+  expect(Object.keys(api)).toEqual(['protocolVersion', 'notifyTask', 'ide', 'pet'])
 })
 
 it('provides startup controls and a removable state subscription to shell documents', async () => {
   vi.stubGlobal('location', new URL('dsh-app://shell/startup.html'))
   await import('../src/preload-app.ts')
   const api = electron.contextBridge.exposeInMainWorld.mock.calls[0]?.[1] as DshDesktopStartupApi
+  await api.claimIntro()
+  await api.finishIntro()
   await api.locale()
   await api.backend.status()
   await api.disablePlugins()
   await api.resetConfiguration()
   await api.restart()
   expect(electron.ipcRenderer.invoke.mock.calls).toEqual([
-    [DESKTOP_IPC.localeGet], [DESKTOP_IPC.backendStatus],
+    [DESKTOP_IPC.introClaim], [DESKTOP_IPC.introFinish], [DESKTOP_IPC.localeGet], [DESKTOP_IPC.backendStatus],
     [DESKTOP_IPC.pluginsDisableAll], [DESKTOP_IPC.configurationReset], [DESKTOP_IPC.applicationRestart],
   ])
   const listener = vi.fn()
   const dispose = api.backend.subscribe(listener)
   const handler = electron.ipcRenderer.on.mock.calls[0]?.[1] as (event: unknown, state: unknown) => void
-  handler({}, { phase: 'error', errorType: 'Error' })
-  expect(listener).toHaveBeenCalledWith({ phase: 'error', errorType: 'Error' })
+  handler({}, { phase: 'error', message: 'startup failed' })
+  expect(listener).toHaveBeenCalledWith({ phase: 'error', message: 'startup failed' })
   dispose()
   expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.backendState, handler)
   expect(api).not.toHaveProperty('plugins')

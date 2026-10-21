@@ -12,11 +12,7 @@ Status: implemented
 
 原生 Client 应用消费既有 Session RPC Consumer，只提供对话交互与呈现。它创建或选择持久化 Session，并通过唯一 Host turn executor 提交用户文本。选定 renderer 拥有 React root；应用拥有视图控制器和未完成调用。
 
-恢复转录时，控制器先读取 mode 与 permission 控件，再读取最终持久化历史。控件查询可能冷打开 Session 并追加 `session/end-seed`；随后读取历史可让首个实时事件与已显示转录保持连续。
-
 取消将视图切为停止中，不宣称就绪。发送操作在 Host writer 清理及持久化历史刷新期间保持未完成。应用释放会中止自有调用并等待其结算；移除 React 不提前释放执行所有权。
-
-运行中的 Composer 通过已有 queue 与 steer Client 方法提交带标识的下一轮和下一步消息。待处理行只来自 Host 确认的快照；读取代次、持久 throughSeq 游标与会话选择 epoch 阻止晚到响应恢复已移除请求或覆盖另一会话。待处理修改有独立的展示 busy 标记，不会结算当前轮次。文字提交失败时保留 requestId，同一文字和目标的显式重试会复用该标识，并在重试前核对是否已接受或已认领。移除和提升操作会刷新权威快照，包括过期修改结果。Composer 会立即清空首次发送的草稿，并通过草稿代次避免迟到的轮次结算清除之后输入的文字。
 
 ## 转录与装配
 

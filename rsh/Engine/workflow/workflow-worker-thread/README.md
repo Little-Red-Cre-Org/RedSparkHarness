@@ -64,8 +64,6 @@ Native profiles install `@deepseek-ai/dsh-workflow-worker-thread/native` as the 
 
 For the Native Provider, this deadline bounds script settlement and worker termination; `dispose()` then continues waiting for every accepted NativeSubagent child to release its Session writer and owned resources. Cleanup failure rejects disposal and keeps the run tracked. The Cordis Provider retains its grace-bounded policy for slow external child backends.
 
-The worker passes each Native `agent()` call's effective delegation context, nearest process-local Responses generation, and exact parent-call approval relay to the Native subagent resolver; its child still uses the session-backed spawn path.
-
 ### What a run gives you
 
 When a run starts, the script body executes in the worker with top-level `await` and the hooks `agent()`, `parallel()`, `pipeline()`, `phase()`, and `log()`; `meta` and `args` arrive as plain JSON data, never evaluated code. Every `agent()` call starts a host-side subagent under the configured provider, with the run's parent as the parent of every child. The run settles with the script's final JSON value; an ordinary child failure resolves `agent()` to `null` so the script can handle it.

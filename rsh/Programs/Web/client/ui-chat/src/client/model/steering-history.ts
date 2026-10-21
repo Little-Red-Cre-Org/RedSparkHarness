@@ -44,15 +44,6 @@ export class SteeringHistory {
    * @returns true only for a user-origin message previously claimed from `next-step`.
    */
   apply(event: SessionEvent): boolean {
-    if (event.type === 'agent/inbox/moved') {
-      const index = this.inbox['next-turn'].findIndex(message => message.id === event.data.messageId)
-      if (index < 0) throw new Error(`invalid persisted inbox move at session seq ${event.seq}`)
-      const [message] = this.inbox['next-turn'].splice(index, 1)
-      if (message === undefined) throw new Error(`moved inbox message disappeared at session seq ${event.seq}`)
-      this.inbox['next-step'].push(message)
-      this.claimedNextStep.delete(message.id)
-      return false
-    }
     if (event.type === 'agent/inbox/spliced') {
       this.applySplice(event.data)
       return false

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The harness is assembled from npm packages under `rsh/`, grouped by capability family: sessions and the agent loop, model-facing tools, shell and filesystem execution, web access, subagents, and the rest. Use this page as the top-level map: find the owning group, then open its README for the package list. Every package is scoped `@deepseek-ai/dsh-*` and lives in exactly one group; each group README is the authoritative package map for its family.
+`rsh/` groups `@deepseek-ai/dsh-*` npm packages by capability. Each package belongs to one group. Find the group below, then open its README for the authoritative package list.
 
 ## Table of Contents
 
@@ -76,6 +76,7 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`cli/`](Programs/CLI/README.md) | Profile-only command-line application launcher |
 | [`tui/`](Programs/TUI/README.md) | Native terminal and presentation |
 | [`interaction/`](Modules/Official/interaction/README.md) | Human-collaboration plane: approval/interaction seams, permission preset, commands, ask-user tool |
+| [`ide/`](Modules/Official/ide/README.md) | Native Code OSS workbench and extension-host integration |
 | [`boot/`](Compatibility/DSH/boot/README.md) | Shared app-bin boot glue |
 | [`bridge/`](Compatibility/DSH/bridge/README.md) | Explicit Cordis contributions selected by native runtime profiles |
 | [`host/`](Programs/Web/host/README.md) | Web-GUI host half: API gateway + HTTP route server |

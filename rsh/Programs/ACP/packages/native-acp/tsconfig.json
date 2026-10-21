@@ -55,15 +55,6 @@
     },
     {
       "path": "../../../../Engine/core/approval-definition"
-    },
-    {
-      "path": "../../../../Engine/llm/token-meter"
-    },
-    {
-      "path": "../../../../Modules/Official/subagent/acp-protocol"
-    },
-    {
-      "path": "../../../../Modules/Official/interaction/commands/tsconfig.json"
     }
   ]
 }

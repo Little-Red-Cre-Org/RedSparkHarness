@@ -62,7 +62,7 @@ owner 载荷为 `ToolCallOwnerProps`：`callId`、`toolName`、冻结的 `block`
 ### 卡片
 
 
-每张卡片都直接在调用树中查看；选中调用后不会再显示第二个全高视图。行 renderer 为 terminal、read、diff、search 和 web 卡片各复用同一个纯 card model，image 卡片的图库经由工具自有 `tool.call.images` slot 渲染。这些 model 校验原始调用参数、结果内容、失败状态、持久 metadata、Code Dispatch 的 `parentCallId` 与会话路径信息。不受支持或格式错误的输入使用压平的工具结果文本。文件路径摘要经属主的 `openFile` 打开文件，chat 视图把它路由到右侧 Sidebar 的文本预览；`inspect` 打开轨迹视图。terminal、diff、read、search 与 web 卡片的上限与 fallback 规则仍由 [ui-primitives README](../ui-primitives/README.zh.md) 负责；image 卡片的 fallback 规则由本包内的 card model 自行承载。
+每张卡片都直接在调用树中查看；选中调用后不会再显示第二个全高视图。行 renderer 为 terminal、read、diff、search 和 web 卡片各复用同一个纯 card model，image 卡片的图库经由工具自有 `tool.call.images` slot 渲染。这些 model 校验原始调用参数、结果内容、失败状态、持久 metadata、Code Dispatch 的 `parentCallId` 与会话路径信息。不受支持或格式错误的输入使用压平的工具结果文本。文件路径摘要经属主的 `openFile` 导航；write/edit 行附带已记录的修改片段，供 IDE 只读比较，浏览器会话则打开右侧 Sidebar 的文件预览；`inspect` 打开轨迹视图。terminal、diff、read、search 与 web 卡片的上限与 fallback 规则仍由 [ui-primitives README](../ui-primitives/README.zh.md) 负责；image 卡片的 fallback 规则由本包内的 card model 自行承载。
 
 terminal model 使用浏览器安全入口 `@deepseek-ai/dsh-spill-policy/notice` 的 `hasSpillNotice`，而非独立的 UI 匹配规则。[spill-policy README](../../../../Modules/Official/spill/spill-policy/README.zh.md#shared-notice-ownership) 负责提示文本的格式化与识别。该检查保守地选择通用输出；匹配的文本无法证明其来源，回放也不改变已记录的结果字节。
 </details>
@@ -105,7 +105,7 @@ terminal model 使用浏览器安全入口 `@deepseek-ai/dsh-spill-policy/notice
 <a id="dev-note"></a>
 ### 开发备注
 
-`./native` 提供仅依赖 props 的 `NativeToolCard`，共用调用／结果类型、英文／中文类型化文案以及既有文件、终端、搜索、差异和通用模型。它读取已记录的结果元数据并递归呈现 PTC 子调用，不注册 Tool 或 Session 服务。未提供 `openFile` 和 `inspect` 时不呈现对应操作。其 ESM 和样式产物独立于兼容 `./client` 的模块表入口。
+`./tool-renderer` 提供无 Cordis 的 `NativeToolCard`，共用原始调用／结果类型、英文／中文类型化文案以及既有文件、终端、搜索、差异和通用模型。它读取已记录的结果元数据，不注册 Tool 或 Session 服务。未提供 `openFile` 和 `inspect` 时不呈现对应操作。其 ESM 和样式产物独立于兼容 `./client` 的模块表入口。
 
 <details>
 <summary>维护者的工作上下文——点击展开</summary>

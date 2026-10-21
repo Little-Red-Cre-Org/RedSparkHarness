@@ -33,13 +33,12 @@ kind: "package-library"
 
 ### SDK 方法
 
-兼容 profile 提供原有请求方法与通知。native-sdk profile 还提供文件上传、按 Session 取消、下一步引导、已结束轮次分叉与实时模型分块。
+兼容 profile 提供原有三个请求方法与四个通知。native-sdk profile 还提供按 Session 取消、下一步引导、已结束轮次分叉与实时模型分块。
 
 | 方向 | 方法 | 载荷类型 |
 |---|---|---|
 | client→server | `initialize` | `InitializeParams` → `InitializeResult` |
 | client→server | `session/prompt` | `SessionPromptParams` → `SessionPromptResult`（持久入队回执） |
-| 客户端→服务端 | `session/upload-file` | `SessionUploadFileParams` → `SessionUploadFileResult`（仅 native-sdk；进程内回执） |
 | 客户端→服务端 | `session/cancel` | `SessionCancelParams` → `SessionCancelResult`（仅 native-sdk） |
 | 客户端→服务端 | `session/steer` | `SessionSteerParams` → `SessionSteerResult`（仅 native-sdk） |
 | client→server | `session/fork` | `SessionForkParams` → `SessionForkResult` (native-sdk only) |
@@ -58,7 +57,7 @@ kind: "package-library"
 
 ### 载荷语义
 
-`SessionPromptResult.messageId` 标识已排队的用户消息；它不标识后续的助手消息、轮次结束或提示词结果。`LegacySdkPromptContentBlock` 保留 Cordis profile 原有的持久内容与编码图像输入。更严格的 `NativeSdkPromptContentBlock` 只接受文本、编码图像及 `{ type: "file", receiptId }`；不接受调用者提供的持久附件引用。`session/upload-file` 通过 Native 附件 Provider 保存规范 base64 字节，并返回绑定到该 Program、路由、Session ID 与运行时进程的回执。回执本身不持久；被接收的文件块及其字节会与 Session 一同持久化。Cordis 保留旧提示词行为并拒绝 Native 回执提示词，也不提供 `session/upload-file`。`InitializeParams.reasoningEffort` 是所选提供方／模型路由可选的非空适配器自有标识符；省略时保留该模型的默认值。`InitializeParams.maxTokens` 是可选的正安全整数，用于限制 SDK 创建的 agent 及其进程内后代的每次对话模型输出；省略时应用所选适配器的确切模型默认值。Native SDK client 还可请求正安全整数 `maxSteps`；Native server 返回不大于请求值或 profile 上限的每轮有效 step 限制，并用它运行现有 Native Headless loop。请求此字段的 client 会拒绝缺失或更大的协商值。Native SDK 专属字段 `workspaceWriteRoot` 必须是绝对路径，用于进一步限制 builtin `write_file`；`cwd` 仍是读取和常规 workspace 边界。兼容 Cordis server 会明确拒绝 `maxSteps`、`allowedTools` 和 `workspaceWriteRoot`，不会静默忽略。服务器会在初始化期间解析确切路由，并在握手成功前拒绝 `session/prompt`，因此缺少适配器、模型不可用或推理强度不受支持时，不会回退到构造期默认值。`SubagentFinishedNotification.lastAssistantMessage` 携带子 agent 最后一条非空 assistant 消息；若不存在这类消息，则携带其累积的 assistant 文本；子 agent 两种输出均未产生时，该字段缺省。`serverInfo.name` 的协议值固定为 `deepseek-harness-sdk-runtime`。通知载荷依赖 `SessionEvent`（`dsh-session`）、`ContentBlock`（`dsh-llm`）与 `SubagentStopReason`（`dsh-subagent-protocol`），因此这些 Session 类型与结束原因词汇都是协议格式约定的一部分。
+`SessionPromptResult.messageId` 标识已排队的用户消息；它不标识后续的助手消息、轮次结束或提示词结果。`SdkPromptContentBlock` 接受普通持久内容以及 `SdkEncodedImageBlock { type: "image", data, mimeType }`；服务器在入队前把编码图像转换为持久引用。`InitializeParams.reasoningEffort` 是所选提供方／模型路由可选的非空适配器自有标识符；省略时保留该模型的默认值。`InitializeParams.maxTokens` 是可选的正安全整数，用于限制 SDK 创建的 agent 及其进程内后代的每次对话模型输出；省略时应用所选适配器的确切模型默认值。Native SDK client 还可请求正安全整数 `maxSteps`；Native server 返回不大于请求值或 profile 上限的每轮有效 step 限制，并用它运行现有 Native Headless loop。请求此字段的 client 会拒绝缺失或更大的协商值。Native SDK 专属字段 `workspaceWriteRoot` 必须是绝对路径，用于进一步限制 builtin `write_file`；`cwd` 仍是读取和常规 workspace 边界。兼容 Cordis server 会明确拒绝 `maxSteps`、`allowedTools` 和 `workspaceWriteRoot`，不会静默忽略。服务器会在初始化期间解析确切路由，并在握手成功前拒绝 `session/prompt`，因此缺少适配器、模型不可用或推理强度不受支持时，不会回退到构造期默认值。`SubagentFinishedNotification.lastAssistantMessage` 携带子 agent 最后一条非空 assistant 消息；若不存在这类消息，则携带其累积的 assistant 文本；子 agent 两种输出均未产生时，该字段缺省。`serverInfo.name` 的协议值固定为 `deepseek-harness-sdk-runtime`。通知载荷依赖 `SessionEvent`（`dsh-session`）、`ContentBlock`（`dsh-llm`）与 `SubagentStopReason`（`dsh-subagent-protocol`），因此这些 Session 类型与结束原因词汇都是协议格式约定的一部分。
 
 -----
 

@@ -6,8 +6,6 @@
  * @module @deepseek-ai/dsh-code-runtime-definition/types
  */
 
-import type { Session } from '@deepseek-ai/dsh-session/native'
-
 /**
  * One host-side function exposed to the program as an async callable. The
  * runtime bridges calls to it (possibly across a serialization boundary), so
@@ -90,10 +88,8 @@ export interface CodeRunRequest {
   signal?: AbortSignal
 }
 
-/** Native-only request; Session stays host-side so Providers can resolve its policy. */
+/** Native-only run request with a stop notification for caller-owned bindings. */
 export interface NativeCodeRunRequest extends CodeRunRequest {
-  /** Exact live Session for this run; Providers use it for scoped execution policy and never serialize it to a worker. */
-  session: Session
   /**
    * Notify the caller once a started native execution stops, before waiting
    * for caller-owned binding calls. Use the notification to begin cancelling

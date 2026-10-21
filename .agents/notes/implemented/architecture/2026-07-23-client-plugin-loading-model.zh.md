@@ -4,15 +4,15 @@ Status: implemented
 
 [English](2026-07-23-client-plugin-loading-model.md) | 中文
 
-> 范围：Cordis 兼容浏览器插件装载机件——代码如何到达、Cordis 如何治理代码，以及热重载如何搭乘这套模型。[Native Web 包决策](2026-10-17-native-web-default-and-compatibility-browser-owner.zh.md)负责 Native 应用默认入口与兼容包；[client 外壳分层 Note](2026-08-15-client-shells-and-dynamic-packages.zh.md)拥有包分类、构建 face、共享模块请求与 npm 依赖声明，[Web 客户端架构笔记](2026-07-19-gui-web-client-architecture.zh.md)则拥有 slot 与数据对象层。
+> 范围：浏览器侧插件装载机件——代码如何到达、Cordis 如何治理代码，以及热重载如何搭乘这套模型。本 Note 拥有装载链；[client 外壳分层 Note](2026-08-15-client-shells-and-dynamic-packages.zh.md)拥有包分类、构建 face、共享模块请求与 npm 依赖声明，[Web 客户端架构笔记](2026-07-19-gui-web-client-architecture.zh.md)则拥有 slot 与数据对象层。
 
 ## Problem
 
 host 侧，cordis 插件装载站在 Node 的模块机制之上——require cache 与内部 ESM loader 拥有模块身份与字节。vendored `@cordisjs/plugin-loader` 在这层基座之上实现插件治理与热重载，二者在唯一一道边界相接：`Loader.internal`。
 
-兼容浏览器客户端跑同一套 cordis 插件机制，因此底下需要同样的基座——而浏览器没有 Node 模块系统。
+浏览器客户端跑同一套 cordis 插件机制，因此底下需要同样的基座——而浏览器没有 Node 模块系统。
 
-常规前端工程在构建期消化全部依赖：单一 bundle，external 由打包器解决，运行时无物可管。在此之上再做运行时模块管理，正是这里的特殊需求。兼容 client 因此拆成两层：上层是经同一份 vendored Loader 的 cordis 插件装载，下层是模块粒度的依赖管理——`dsh-client-modules`。
+常规前端工程在构建期消化全部依赖：单一 bundle，external 由打包器解决，运行时无物可管。在此之上再做运行时模块管理，正是这里的特殊需求。client 因此拆成两层：上层是经同一份 vendored Loader 的 cordis 插件装载，下层是模块粒度的依赖管理——`dsh-client-modules`。
 
 下层供给四项能力：external（平台清单）、远程到达（同源外部 classic script 加惰性工厂登记）、不可变的版本化交付、热更新（invalidate/prefetch）。
 
@@ -28,11 +28,11 @@ host 侧，cordis 插件装载站在 Node 的模块机制之上——require cac
 
 [Client 外壳分层 Note](2026-08-15-client-shells-and-dynamic-packages.zh.md)定义当前的静态、动态包集合及其 import 规则。装载机件把每个 `dsh.client` 包视为一个 host graph row，且每个包只有一个普通 `lib/client.js` factory bundle。包声明携带 Cordis `inject` 边、同步模块表 `external` 请求，以及可选的 `immediately` 预取标记；负责组合的 app 只拥有挂载名册。
 
-兼容 Web 内核保持不依赖框架，也不 import 任何动态包实体。Modules 本身是动态图 row，但 host parser 会在兼容 Vite 主模块前送达其 factory。内核调用 `create()` 时，由 HTML 安装的 `__ModuleLoader__` facade 使用该 factory 构造模块系统。其他每个动态图 row 都归属一个 application combo 脚本；React、Cordis 与静态 UI 库的身份由兼容壳 seed 提供。
+Web 内核保持不依赖框架，也不 import 任何动态包实体。Modules 本身是动态图 row，但 host parser 会在 Vite 主模块前送达其 factory。内核调用 `create()` 时，由 HTML 安装的 `__ModuleLoader__` facade 使用该 factory 构造模块系统。其他每个动态图 row 都归属一个 application combo 脚本；React、Cordis 与静态 UI 库的身份由外壳 seed 提供。
 
 ### 一套模块系统，一个插件治理器
 
-模块表独立于 Cordis。其浏览器 `./native` 出口导出模块加载器与图解析器，不携带 Cordis 模块扩展；现有 `./client` 出口继续拥有该类型扩展与 Cordis 插件适配器。独立的 `dsh-client-web/native` 组合会导入明确选中的图行，经 `NativeHost` 安装其原生插件导出，并挂载带归属清理的必需渲染器服务。两个原生出口均发布自包含的 JavaScript 与声明，Cordis peer 为可选；打包消费者测试会在不安装 Cordis 的环境中导入并检查其类型。这样，Cordis 兼容壳仍可使用已发布的图传输，而默认 Web 应用使用 [Native Web 包决策](2026-10-17-native-web-default-and-compatibility-browser-owner.zh.md)所述的 Native 浏览器路径。
+模块表独立于 Cordis。其浏览器 `./native` 出口导出模块加载器与图解析器，不携带 Cordis 模块扩展；现有 `./client` 出口继续拥有该类型扩展与 Cordis 插件适配器。独立的 `dsh-client-web/native` 组合会导入明确选中的图行，经 `NativeHost` 安装其原生插件导出，并挂载带归属清理的必需渲染器服务。两个原生出口均发布自包含的 JavaScript 与声明，Cordis peer 为可选；打包消费者测试会在不安装 Cordis 的环境中导入并检查其类型。这样，已发布的图传输在原生 Client 组合替换上层插件治理器期间仍可使用。生产应用选用这条路径之前，仍需 Host 下发原生选择列表并提供原生渲染器。
 
 浏览器复刻 host 侧的分工。`dsh-client-modules`（`ClientModuleSystem`）坐上 host 侧由 Node 内部 ESM loader 占据的模块系统席位；同一份 vendored `@cordisjs/plugin-loader` 在两侧都坐治理席。二者的分界线一句话说尽：**模块系统拥有模块身份与字节——代码怎么到达、怎么登记、怎么变成导出内容；Loader 拥有插件生命周期——插件何时挂载、等待什么、如何拆除。**
 

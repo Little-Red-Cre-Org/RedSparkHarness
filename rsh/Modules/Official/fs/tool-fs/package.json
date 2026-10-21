@@ -99,6 +99,9 @@
     "@deepseek-ai/dsh-plugin-host": {
       "optional": true
     },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-sandbox-policy": {
       "optional": true
     },

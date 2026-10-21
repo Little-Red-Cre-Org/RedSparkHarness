@@ -30,9 +30,6 @@
       "path": "../../core/agent"
     },
     {
-      "path": "../../session/session-projection"
-    },
-    {
       "path": "../../../Core/runtime-diagnostics/invariants"
     },
     {

@@ -18,9 +18,6 @@
       "path": "../../../../Engine/llm/llm"
     },
     {
-      "path": "../../../../Modules/Official/credentials/authorization"
-    },
-    {
       "path": "../connection/tsconfig.client.json"
     },
     {
@@ -28,18 +25,6 @@
     },
     {
       "path": "../../../../Engine/preset/agent-presets/tsconfig.client.json"
-    },
-    {
-      "path": "../../api/workspace-files/tsconfig.client.json"
-    },
-    {
-      "path": "../../../../Engine/workspace/workspace-definition"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/command-feedback"
-    },
-    {
-      "path": "../../../../Modules/Official/feedback/message-feedback"
     }
   ]
 }

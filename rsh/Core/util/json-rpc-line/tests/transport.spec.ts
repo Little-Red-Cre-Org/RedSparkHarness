@@ -43,13 +43,9 @@ describe('JsonRpcLineTransport', () => {
 
   it('reports JSON-RPC request errors from the remote peer with their wire code', async () => {
     const { a, b } = transportPair()
-    const observerErrors: Error[] = []
     a.onRequest(async () => {
       throw new Error('handler boom')
     })
-    a.onRequestResultWritten(() => {
-      throw new Error('failed handler must not produce a result')
-    }, (error) => { observerErrors.push(error) })
     a.start()
     b.start()
 
@@ -59,7 +55,6 @@ describe('JsonRpcLineTransport', () => {
     )
     expect(failure).toBeInstanceOf(JsonRpcResponseError)
     expect(failure).toMatchObject({ message: 'handler boom', code: -32603, data: undefined })
-    expect(observerErrors).toEqual([])
 
     a.close()
     b.close()
@@ -219,66 +214,6 @@ describe('JsonRpcLineTransport', () => {
     ])
     transport.close()
   })
-
-  it.each(['written', 'write-error', 'sync-write-error', 'observer-error', 'closed', 'replaced'] as const)(
-    'notifies incoming request result observers only after a successful write (%s)',
-    async (outcome) => {
-      const input = new PassThrough()
-      let completeWrite: ((error?: Error | null) => void) | undefined
-      const writeStarted = Promise.withResolvers<undefined>()
-      const frames: string[] = []
-      const output = {
-        write(chunk: string, callback?: (error?: Error | null) => void) {
-          frames.push(chunk)
-          completeWrite = callback ?? (() => {})
-          writeStarted.resolve(undefined)
-          if (outcome === 'sync-write-error' && frames.length === 1) throw new Error('write threw')
-          return true
-        },
-      }
-      const transport = new JsonRpcLineTransport(input, output as never)
-      const observed: unknown[] = []
-      const observerErrors: Error[] = []
-      transport.onRequest(async () => ({ ok: true }))
-      transport.onRequestResultWritten((method, params, result) => {
-        observed.push({ method, params, result })
-        if (outcome === 'observer-error') throw new Error('observer failed')
-      }, (error) => {
-        observerErrors.push(error)
-        if (outcome === 'sync-write-error') transport.close()
-      })
-      transport.start()
-
-      input.write('{"jsonrpc":"2.0","id":"request-1","method":"run","params":{"value":1}}\n')
-      await writeStarted.promise
-      expect(observed).toEqual([])
-      if (outcome === 'closed') transport.close()
-      if (outcome === 'replaced') {
-        transport.onRequestResultWritten(() => { observed.push('replacement') }, (error) => { observerErrors.push(error) })
-      }
-
-      if (outcome !== 'sync-write-error') {
-        completeWrite?.(outcome === 'write-error' ? new Error('write failed') : undefined)
-      }
-      await Promise.resolve()
-      expect(JSON.parse(frames[0] as string)).toEqual({
-        jsonrpc: '2.0',
-        id: 'request-1',
-        result: { ok: true },
-      })
-      if (outcome === 'sync-write-error') expect(frames).toHaveLength(1)
-      expect(observed).toEqual(outcome === 'written' || outcome === 'observer-error'
-        ? [{ method: 'run', params: { value: 1 }, result: { ok: true } }]
-        : [])
-      expect(observerErrors.map(error => error.message)).toEqual(
-        outcome === 'observer-error' ? ['observer failed']
-          : outcome === 'write-error' ? ['write failed']
-            : outcome === 'sync-write-error' ? ['write threw']
-              : [],
-      )
-      transport.close()
-    },
-  )
 
   it('reports an output callback failure from flush', async () => {
     const output = {

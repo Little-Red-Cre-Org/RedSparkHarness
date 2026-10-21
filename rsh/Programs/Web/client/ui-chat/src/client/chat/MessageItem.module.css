@@ -1,3 +1,50 @@
+/* User bubble: right-aligned column (bubble + IconActions). Figma
+   User_Bubble/message_container 659:38813 — r22 fill, actions gap 6 below. */
+
+.userRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.userStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  /* The figma 525px cap held as a share of the width axis (525/748 ≈ 0.702):
+     resolves to the original 525px on the default column and widens with a
+     dragged or adaptive column. The 748px fallback covers mounts outside the
+     conversation column, where the axis variable is absent. */
+  max-width: min(calc(var(--dsh-chat-content-width, 748px) * 0.702), 82%);
+}
+.bubble {
+  /* Figma's 525px cap held as a share of the width axis (525/748 ≈ 0.702) so
+     the bubble widens with a user-dragged or adaptive column; percentage
+     keeps narrow windows sane. */
+  max-width: 100%;
+  background: var(--dsw-specific-bubble);
+  border-radius: 22px;
+  /* 42px single-line bubble at the default size: 22 line + 10 vertical
+     padding each side; the Settings font-size preference moves size and line
+     height together through the body-published axis. */
+  padding: 10px 16px;
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: calc(22px + var(--dsh-content-font-delta, 0px));
+  color: var(--dsw-alias-label-primary);
+  /* The projected user text is inline runs; the bubble owns wrapping so a
+     decorated single-line message stays one line. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.referenceSummary {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(18px + var(--dsh-content-font-delta-secondary, 0px));
+}
 .contextRow {
   padding: 2px 0;
 }

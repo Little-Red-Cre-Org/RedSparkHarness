@@ -1,7 +1,6 @@
 /** Native workspace instructions prepared against the single durable Session authority. */
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionReferenceOperations } from '@deepseek-ai/dsh-session-reference/native'
 import type { NativeToolExecution, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
 import type {} from '@deepseek-ai/dsh-fs/native'
 import type {} from '@deepseek-ai/dsh-native-tools/native'
@@ -24,11 +23,7 @@ export class NativeAgentInstructions {
   private readonly touches = new WeakMap<Session, string[]>()
   private readonly nestedTouches = new WeakMap<NativeToolExecution, string[]>()
   /** @param composer - shared instruction discovery and durable reconciliation. @param lifetime - installation cancellation. */
-  constructor(
-    private readonly composer: InstructionComposer,
-    private readonly lifetime: AbortSignal,
-    private readonly references: NativeSessionReferenceOperations | undefined,
-  ) {}
+  constructor(private readonly composer: InstructionComposer, private readonly lifetime: AbortSignal) {}
 
   /**
    * Restore discovery hints from accepted calls and their successful durable results.
@@ -111,32 +106,29 @@ export class NativeAgentInstructions {
    * @param session - exact writer-owned Session whose visible messages define prior instruction state.
    * @param inputs - admitted user messages, before they are appended.
    * @param signal - request cancellation.
-   * @returns durable contexts in order: workspace instructions, then references in admitted-message order.
+   * @returns context that the caller must append before deriving model history, or undefined when unchanged.
    */
-  async prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]> {
+  async prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<UserMessage | undefined> {
     const effective = AbortSignal.any([signal, this.lifetime])
-    const referenceContexts = await this.references?.prepare(session, inputs, effective) ?? []
-    effective.throwIfAborted()
     const paths = this.touches.get(session) ?? []
     const message = await this.composer.compose(session, effective, inputs, [], paths)
     effective.throwIfAborted()
     this.touches.delete(session)
-    return [...message === undefined ? [] : [message], ...referenceContexts]
+    return message
   }
 }
 
 /** Native instruction Provider sharing discovery, byte budgeting and rendering with Cordis. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-agent-instructions', targets: ['host'],
-  requires: ['fs'], optional: ['tools', 'sessionReference'], provides: ['agentInstructions'],
+  requires: ['fs'], optional: ['tools'], provides: ['agentInstructions'],
   resolve(input) {
     const config = resolveConfig(Config(input as Config))
     return (context) => {
-      const references = context.optional('sessionReference')
-      const provider = new NativeAgentInstructions(new InstructionComposer(config, context.require('fs')), context.signal, references)
+      const instructions = new NativeAgentInstructions(new InstructionComposer(config, context.require('fs')), context.signal)
       const tools = context.optional('tools')
-      if (tools !== undefined) context.own(tools.onResult((call, result) => { provider.acceptResult(call, result) }, context.scope))
-      context.provide('agentInstructions', provider)
+      if (tools !== undefined) context.own(tools.onResult((call, result) => { instructions.acceptResult(call, result) }, context.scope))
+      context.provide('agentInstructions', instructions)
     }
   },
 }

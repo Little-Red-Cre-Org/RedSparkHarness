@@ -55,7 +55,6 @@ const runSchema = z.object({
 /** Dedicated SQLite authority for plans and transactional occurrence claims. */
 export class TaskStore {
   private readonly db: DatabaseSync
-  private readonly changeListeners = new Set<() => void>()
   constructor(path: string) {
     if (!isAbsolute(path)) throw new Error('scheduler database path must be absolute')
     mkdirSync(dirname(path), { recursive: true })
@@ -85,16 +84,7 @@ export class TaskStore {
     })
   }
   /** Close this connection after its execution owner has drained all work. */
-  close(): void { this.changeListeners.clear(); this.db.close() }
-  /**
-   * Observe committed task and run transactions.
-   * @param listener - callback invoked after a transaction commits.
-   * @returns removal operation.
-   */
-  onChange(listener: () => void): () => void {
-    this.changeListeners.add(listener)
-    return () => { this.changeListeners.delete(listener) }
-  }
+  close(): void { this.db.close() }
   /** Persist the latest execution checkpoint without changing claim ownership.
    * @param id - Running receipt identity.
    * @param detail - Latest execution checkpoint.
@@ -170,11 +160,8 @@ export class TaskStore {
   }
   private transaction<T>(fn: () => T): T {
     this.db.exec('BEGIN IMMEDIATE')
-    let value: T
-    try { value = fn(); this.db.exec('COMMIT') }
+    try { const value = fn(); this.db.exec('COMMIT'); return value }
     catch (error) { this.db.exec('ROLLBACK'); throw error }
-    for (const listener of this.changeListeners) listener()
-    return value
   }
   /**
    * Read and validate persisted plans, including deleted tombstones.

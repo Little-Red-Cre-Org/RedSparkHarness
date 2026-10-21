@@ -12,11 +12,7 @@ The native Web boot and Session RPC packages had no conversation consumer, so us
 
 The native Client application consumes the existing Session RPC Consumer and supplies only conversation interaction and presentation. It creates or selects a persisted Session and submits human text through the sole Host turn executor. The selected renderer owns the React root; the application owns its view controller and outstanding calls.
 
-Restoration reads mode and permission controls before its final durable history snapshot. A control lookup can cold-open the Session and append `session/end-seed`; reading history afterward keeps the first live event contiguous with the displayed transcript.
-
 Cancellation changes the view to stopping without declaring readiness. The send operation remains pending through Host writer cleanup and durable history refresh. Application release aborts owned calls and awaits their settlement; removing React does not release execution ownership early.
-
-The running composer submits identified next-turn and next-step messages through the existing queue and steer Client methods. Only acknowledged Host snapshots populate pending rows; read generations, durable throughSeq cursors, and selection epochs prevent late responses from restoring removed requests or overwriting another Session. Pending mutations have an independent presentation busy flag and never settle the active turn. A failed text submission retains its request identity for an explicit retry of the same text and placement; a previously accepted or claimed identity is reconciled before retry. Removal and promotion refresh the authoritative snapshot, including stale mutation outcomes. The composer clears an initial send immediately and uses a draft generation so its late settlement cannot erase subsequently typed text.
 
 ## Transcript and composition
 

@@ -6,12 +6,27 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:">
     <title id="page-title"></title>
     <link rel="stylesheet" href="startup.css">
+    <link rel="stylesheet" href="startup-intro.css">
   </head>
   <body>
+    <section id="startup-intro" hidden>
+      <div class="intro-world" aria-hidden="true"></div>
+      <div class="intro-art">
+        <img id="intro-character" src="startup-art/chifei.png" alt="">
+        <img class="intro-half" src="startup-art/chifei-half.png" alt="" aria-hidden="true">
+        <img class="intro-closed" src="startup-art/chifei-closed.png" alt="" aria-hidden="true">
+      </div>
+      <div class="intro-corner" aria-hidden="true"></div>
+      <div id="intro-wordmark" class="intro-wordmark" role="img"></div>
+      <div class="intro-quote"><span id="intro-quote-first"></span><span id="intro-quote-second"></span></div>
+      <span class="intro-spark intro-spark-one" aria-hidden="true">✦</span>
+      <span class="intro-spark intro-spark-two" aria-hidden="true">✧</span>
+      <button id="intro-skip" type="button"><span></span><i aria-hidden="true">›</i></button>
+    </section>
     <main aria-busy="true">
       <img src="redspark.svg" width="72" height="72" alt="RedSpark Harness">
       <div id="spinner" aria-hidden="true"></div>
-      <h1 id="title" role="status" aria-live="polite"></h1>
+      <h1 id="title" tabindex="-1" role="status" aria-live="polite"></h1>
       <p id="description"></p>
       <p id="reset-advice" hidden></p>
       <p id="reinstall-advice" hidden></p>

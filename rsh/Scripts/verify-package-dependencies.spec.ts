@@ -50,7 +50,6 @@ function pkg(
 function policy(fields: Partial<PackageDependencyPolicy> = {}): PackageDependencyPolicy {
   return {
     cordisFreePackageDirectories: new Set(),
-    applicationDistributionDirectories: new Map(),
     clientFaceInclude: [],
     clientFaceExclude: [],
     hostPackages: [],
@@ -205,11 +204,9 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-api-workspace-controller',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.hostPackages).toEqual([
-      '@deepseek-ai/dsh-codex-app-server',
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-permission-presets',
       '@deepseek-ai/dsh-session',
-      '@deepseek-ai/dsh-session-telemetry-otel',
       '@deepseek-ai/dsh-webhook',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.configurationOnlyDevDependencies).toEqual({
@@ -233,94 +230,39 @@ describe('package dependency scope', () => {
       ],
       '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
-      '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod', '@deepseek-ai/dsh-command-feedback'],
-      '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
-      '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
-      '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-      '@deepseek-ai/dsh-client-native-application': [
-        '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment',
-        '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory',
-      ],
-      '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-      '@deepseek-ai/dsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
-      '@deepseek-ai/dsh-client-ui-sidebar': [
-        '@deepseek-ai/dsh-client-store',
-        '@deepseek-ai/dsh-client-ui-primitives',
-        '@deepseek-ai/dsh-client-ui-slots',
-      ],
+      '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
       '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
+      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom'],
       '@deepseek-ai/dsh-client-ui-tool': ['react'],
-      '@deepseek-ai/dsh-client-ui-attachment': ['react'],
-      '@deepseek-ai/dsh-client-ui-goal': ['react'],
-      '@deepseek-ai/dsh-client-ui-approval': ['react'],
-      '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
-      '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
       '@deepseek-ai/dsh-client-native-application': [
         'react',
         '@deepseek-ai/dsh-session',
         '@deepseek-ai/dsh-native-model-selection',
+        '@deepseek-ai/dsh-agent-presets',
         '@deepseek-ai/dsh-client-native-session',
         '@deepseek-ai/dsh-client-ui-tool',
-        '@deepseek-ai/dsh-client-ui-approval',
-        '@deepseek-ai/dsh-client-ui-user-questions',
         '@deepseek-ai/dsh-tool-todo',
       ],
       '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
-      '@deepseek-ai/dsh-codex-app-server': [
-        '@deepseek-ai/dsh-llm',
-        '@deepseek-ai/dsh-native-model-execution',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-native-subagent',
-        '@deepseek-ai/dsh-native-tools',
-      ],
-      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
+      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime'],
       '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
       '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
-      '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-session', '@types/react'],
-      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
-      '@deepseek-ai/dsh-client-ui-session': [
-        '@deepseek-ai/dsh-client-native-session',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-session',
-      ],
-      '@deepseek-ai/dsh-client-ui-layout': [
-        '@deepseek-ai/dsh-brand',
-        '@deepseek-ai/dsh-client-store',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-native-runtime',
-      ],
-      '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
-      '@deepseek-ai/dsh-client-ui-sidebar': [
-        '@deepseek-ai/dsh-client-ui-layout',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-workspace-definition',
-      ],
+      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots'],
       '@deepseek-ai/dsh-client-native-session': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-client-connection',
         '@deepseek-ai/dsh-native-model-selection',
         '@deepseek-ai/dsh-agent-presets',
         '@deepseek-ai/dsh-brand',
-        '@deepseek-ai/dsh-commands',
-        '@deepseek-ai/dsh-authorization',
-        '@deepseek-ai/dsh-api-workspace-files',
-        '@deepseek-ai/dsh-command-feedback',
-        '@deepseek-ai/dsh-message-feedback',
       ],
-      '@deepseek-ai/dsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
       '@deepseek-ai/dsh-client-native-application': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-client-native-session',
-        '@deepseek-ai/dsh-native-tools',
       ],
       '@deepseek-ai/dsh-client-ui-conversation': [
         '@deepseek-ai/dsh-llm',
@@ -331,12 +273,6 @@ describe('package dependency scope', () => {
         '@deepseek-ai/dsh-client-ui-conversation',
         '@deepseek-ai/dsh-client-ui-slots',
       ],
-      '@deepseek-ai/dsh-client-ui-trajectory': [
-        '@deepseek-ai/dsh-client-ui-conversation',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-session',
-        '@types/react',
-      ],
       '@deepseek-ai/dsh-task-scheduler': [
         '@deepseek-ai/dsh-native-agent',
         '@deepseek-ai/dsh-native-runtime',
@@ -345,18 +281,6 @@ describe('package dependency scope', () => {
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-      '@deepseek-ai/dsh-client-ui-user-questions': ['@deepseek-ai/dsh-user-questions'],
-      '@deepseek-ai/dsh-session-telemetry-otel': [
-        '@deepseek-ai/dsh-launch-environment', '@deepseek-ai/dsh-native-runtime',
-      ],
-      '@deepseek-ai/dsh-session-log-export': [
-        '@deepseek-ai/dsh-attachment',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-session',
-        '@deepseek-ai/dsh-session-persistence',
-        '@deepseek-ai/dsh-session-query',
-      ],
       '@deepseek-ai/dsh-permission-presets': [
         '@deepseek-ai/dsh-native-runtime',
         '@deepseek-ai/dsh-native-session-execution',
@@ -375,15 +299,6 @@ describe('package dependency scope', () => {
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.nativeServicePeerDependencies).toEqual({
-      '@deepseek-ai/dsh-command-feedback': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
-      },
-      '@deepseek-ai/dsh-message-feedback': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
-      },
-      '@deepseek-ai/dsh-session-log-export': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
-      },
       '@deepseek-ai/dsh-permission-presets': {
         agents: '@deepseek-ai/dsh-native-agent',
         sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
@@ -412,15 +327,6 @@ describe('package dependency scope', () => {
       'boundContextSummary', 'errorChain',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-llm/native']).toEqual(['boundContextSummary'])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).toEqual([
-      'JsonRpcLineTransport',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).not.toContain(
-      'JsonRpcResponseError',
-    )
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-subprocess/native']).toEqual([
-      'disposeChildConnection',
-    ])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/schemastery']).toEqual(['default'])
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-session/types']).toBeUndefined()
     expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
@@ -433,32 +339,11 @@ describe('package dependency scope', () => {
     expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-title/normalize']).toEqual([
       'normalizeSessionTitle',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session/types']).toEqual([
-      'SESSION_FORMAT_VERSION',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-llm']).toEqual([
-      'APP_IDENTITY', 'createUserMessage',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-llm/native']).toEqual([
-      'APP_IDENTITY', 'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-anonymous-user-id']).toEqual([
-      'getOrCreateAnonymousUserId',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session']).toEqual(['Session', 'SessionId'])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-telemetry']).toEqual([
-      'SessionTelemetryBackend', 'SessionTelemetryCoordinator',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-telemetry/records']).toEqual([
-      'isFeedbackEvent', 'ledgerRecord',
-    ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-native-subagent/native']).toEqual([
-      'serializeNativeExternalJson',
-    ])
     for (const specifier of [
       '@deepseek-ai/dsh-agent-presets/selection',
       '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
       '@deepseek-ai/dsh-native-model-selection/types',
+      '@deepseek-ai/dsh-session/types',
       '@deepseek-ai/dsh-session/event-validation',
       '@deepseek-ai/dsh-session/surface',
       '@deepseek-ai/dsh-tool-todo/client-native',
@@ -907,32 +792,6 @@ describe('face-aware source classification', () => {
     )).toEqual(['peerRequiredHostExports lists unused @f/browser export browser'])
   })
 
-  it('classifies only the declared Native Client face as Client and retains mixed declaration imports', () => {
-    const observed = sourceFacts({
-      'src/index.ts': "import { hostValue } from '@f/host'; void hostValue",
-      'src/native.ts': "export { plugin } from './native-ui.ts'",
-      'src/native-ui.ts': [
-        "import { clientValue, type ClientShape } from '@f/client-feature'",
-        'void clientValue',
-        'export type { ClientShape }',
-      ].join('\n'),
-    }, {
-      exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-      dsh: { native: { entry: './native', targets: ['client'] } },
-    }, 'client-host', policy({
-      publishedTypeDependencies: { '@f/probe': ['@f/client-feature'] },
-    }))
-
-    expect(observed.hostRuntimeSourceUses.has('@f/client-feature')).toBe(false)
-    expect(observed.hostRuntimeSourceUses.has('@f/host')).toBe(true)
-    expect(observed.clientRuntimeSourceUses.has('@f/client-feature')).toBe(true)
-    expect(observed.publishedTypeSourceUses.has('@f/client-feature')).toBe(true)
-    expect(collectHostDependencyExportPolicyViolations(
-      [observed], new Set([...observed.workspaceNames, '@f/host', '@f/client-feature']),
-      policy({ duplicateSafePackages: [], safeHostDependencyExports: {}, peerRequiredHostExports: {} }),
-    )).toEqual(["rsh/g/probe/src/index.ts:1:10: @f/host#hostValue is not classified as safe or peer-required — import { hostValue } from '@f/host'; void hostValue"])
-  })
-
   it('identifies exact runtime exports without treating type imports as values', () => {
     const source = [
       "import defaultValue, { value as local, type Kind } from '@f/root'",
@@ -1006,81 +865,10 @@ describe('dependency sections', () => {
     expect(runtimeOnly.publishedTypeSourceUses.size).toBe(0)
     expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
       missing: [dependency], '@f/probe': ['unknown'],
-    } }))).toContain('publishedTypeDependencies requires external package unknown as a production dependency')
+    } }))).toContain('publishedTypeDependencies names unknown workspace package unknown')
     expect(collectPublishedTypeDependencyPolicyViolations([published], policy({ publishedTypeDependencies: {
       missing: [dependency],
     } }))).toContain('publishedTypeDependencies names unmanaged package missing')
-
-    const externalDependency = '@opentelemetry/otlp-exporter-base'
-    const externalPolicy = policy({ publishedTypeDependencies: { '@f/probe': [externalDependency] } })
-    const externalSource = sourceFacts({
-      'src/index.ts': `export type { OTLPExporterNodeConfigBase } from '${externalDependency}'`,
-    }, {
-      dependencies: { [externalDependency]: '^0.220.0' },
-      devDependencies: { [CORDIS]: 'workspace:^' },
-      peerDependencies: { [CORDIS]: 'workspace:^' },
-    }, 'configured-host', externalPolicy)
-    expect(externalSource.publishedTypeSourceUses.has(externalDependency)).toBe(true)
-    expect(expectedPackageDependencies(externalSource).get(externalDependency)?.section).toBe('dependencies')
-    expect(collectPublishedTypeDependencyPolicyViolations([externalSource], externalPolicy)).toEqual([])
-    const unreferencedExternal = { ...externalSource, publishedTypeSourceUses: new Map() }
-    expect(collectPublishedTypeDependencyPolicyViolations([unreferencedExternal], externalPolicy)).toContain(
-      `publishedTypeDependencies lists @f/probe dependency ${externalDependency} without a source type import`,
-    )
-    const workspaceExternal = {
-      ...externalSource,
-      manifest: {
-        ...externalSource.manifest,
-        dependencies: { [externalDependency]: 'workspace:*' },
-      },
-    }
-    expect(collectPublishedTypeDependencyPolicyViolations([workspaceExternal], externalPolicy)).toContain(
-      `publishedTypeDependencies requires external package ${externalDependency} as a production dependency`,
-    )
-  })
-
-  it.each([
-    {
-      state: 'present',
-      sections: {
-        dependencies: { '@types/react': '~18.3.1' },
-        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0' },
-        peerDependencies: { [CORDIS]: 'workspace:^' },
-      },
-    },
-    {
-      state: 'devOnly',
-      sections: {
-        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0', '@types/react': '~18.3.1' },
-        peerDependencies: { [CORDIS]: 'workspace:^' },
-      },
-    },
-    {
-      state: 'missing',
-      sections: {
-        devDependencies: { [CORDIS]: 'workspace:^', react: '^18.2.0' },
-        peerDependencies: { [CORDIS]: 'workspace:^' },
-      },
-    },
-  ])('requires a published DefinitelyTyped provider declaration ($state)', ({ state, sections }) => {
-    const dependency = '@types/react'
-    const typePolicy = policy({ publishedTypeDependencies: { '@f/probe': [dependency] } })
-    const subject = sourceFacts({ 'src/index.ts': "import type { ReactNode } from 'react'" }, sections,
-      'client-host', typePolicy)
-    const stateFacts = { facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames }
-
-    expect(subject.allSourceUses.has(dependency)).toBe(true)
-    expect(subject.publishedTypeSourceUses.has(dependency)).toBe(true)
-    expect(expectedPackageDependencies(subject).get(dependency)?.section).toBe('dependencies')
-    expect(collectPublishedTypeDependencyPolicyViolations([subject], typePolicy)).toEqual([])
-    const violations = collectPackageDependencyViolations(stateFacts)
-    if (state === 'present') {
-      expect(violations).toEqual([])
-      return
-    }
-    expect(violations).toContain(
-      `rsh/g/probe/package.json: ${dependency} (rsh/g/probe/src/index.ts) must be dependencies-only; found ${state === 'devOnly' ? 'devDependencies' : 'no dependency section'}`,
-    )
   })
 
   it('requires published type peers to have a source use and a required peer declaration', () => {
@@ -1581,11 +1369,6 @@ describe('dependency sections', () => {
           '@deepseek-ai/dsh-session-projection',
           '@deepseek-ai/dsh-user-approval',
         ],
-      },
-      {
-        name: '@deepseek-ai/dsh-tool-session-query',
-        manifestPath: 'rsh/Engine/session-query/tool-session-query/package.json',
-        peers: ['@deepseek-ai/dsh-tools'],
       },
     ]
     for (const profile of profiles) {

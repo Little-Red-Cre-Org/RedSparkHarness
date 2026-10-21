@@ -36,7 +36,6 @@
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
@@ -51,14 +50,12 @@
     "@deepseek-ai/schemastery": "workspace:^",
     "@earendil-works/pi-ai": "^1.0.0",
     "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "jose": "6.2.3"
+    "@deepseek-ai/dsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-attachment": "workspace:^",
     "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
@@ -84,15 +81,11 @@
       "optional": [
         "attachments",
         "fs",
-        "settings",
-        "authorization",
-        "deepseekAccount"
+        "settings"
       ],
       "provides": [
         "model",
-        "modelDirectory",
-        "modelSettings",
-        "accounts"
+        "modelDirectory"
       ]
     }
   },
@@ -101,9 +94,6 @@
       "optional": true
     },
     "@deepseek-ai/dsh-authorization": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-deepseek-account": {
       "optional": true
     },
     "@deepseek-ai/dsh-compat-settings-definition": {

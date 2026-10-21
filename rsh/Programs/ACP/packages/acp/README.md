@@ -52,7 +52,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 ### Start a server
 
-`pnpm dsh --profile acp` starts the shipped stdio server. The `acp` profile mounts session persistence, so clients can list, resume, and close persistent sessions. [`@deepseek-ai/dsh-subagent-acp`](../../../../Compatibility/DSH/subagent/subagent-acp/README.md) starts the same profile for out-of-process delegation.
+`pnpm dsh --profile acp` starts the shipped stdio server. The `acp` profile mounts session persistence, so clients can list, resume, and close persistent sessions. [`@deepseek-ai/dsh-subagent-acp`](../../../../Engine/subagent/subagent-acp/README.md) starts the same profile for out-of-process delegation.
 
 <a id="protocol-contract"></a><a id="standard-acp-v1-surface"></a>
 ### Protocol contract
@@ -121,7 +121,7 @@ Each session module owns its Agent handle, MCP mounts, future and turn-pinned mo
 
 Read these pages when the package-level contract is not enough. They move from the matching client to the design records behind the automation contract.
 
-- [dsh-subagent-acp](../../../../Compatibility/DSH/subagent/subagent-acp/README.md) — the out-of-process ACP client that spawns and drives this server.
+- [dsh-subagent-acp](../../../../Engine/subagent/subagent-acp/README.md) — the out-of-process ACP client that spawns and drives this server.
 - [ACP as an automation-only protocol](../../../../../.agents/notes/implemented/simplification/2026-07-23-acp-automation-only-protocol.md) — the design record for the automation contract and its wire boundaries.
 - [Multiplex concurrent ACP sessions over one connection](../../../../../.agents/notes/archived/feature/2026-06-14-acp-multi-session.md) — per-session isolation, ownership, and teardown decisions.
 - [Extension cookbook](../../../../Docs/cookbook/extension-cookbook.md) — this package as the automation-only worked example for extension authors.

@@ -197,7 +197,6 @@ These limits define when the loop needs special care. They are current package c
 - **Classification is unary** — calls whose safety depends on comparing siblings or resources must remain exclusive ([rationale](../../../../.agents/notes/implemented/feature/2026-07-10-parallel-tool-call-execution.md)).
 - **Config labels are fresh by default** — omitting `sessionId` creates a fresh `${id}-session-<uuid>` on every startup; exact resume-or-create behavior requires an explicit stable `sessionId`, while `resumeSessionId` requires existing persisted history.
 - **Config agents have no per-agent persona field or setup hook** — they use the deployment persona; scoped persona and tool composition are available only through the programmatic `ctx.agents.create()` / `resume()` factory options.
-- **The compatibility AgentLoop refuses policy-bearing create and resume input** — `createAgent(seed)` rejects a seed containing `execution/policy` before Session preparation or persistence creation; `resumeWith(persisted)` rejects after reading stored events and before crash repair or Agent publication. Read-only `ctx.sessions.prepare()` remains available, and policy-free creates and resumes are unchanged.
 - **No built-in turn budget** — tool calls or steering continue the current turn; a policy that bounds runaway turns must cancel from an existing lifecycle extension point such as `agent/turn-stopping`.
 
 <a id="dev-note"></a>

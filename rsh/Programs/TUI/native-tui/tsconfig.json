@@ -51,9 +51,6 @@
       "path": "../../../Modules/Official/interaction/commands"
     },
     {
-      "path": "../../../Modules/Official/skill/skill"
-    },
-    {
       "path": "../../../Core/util/brand"
     }
   ]
