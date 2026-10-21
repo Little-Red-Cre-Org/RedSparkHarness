@@ -176,7 +176,7 @@ describe('package modes', () => {
       preloadedExternals: [bootstrap.name + '/client'],
       parserPreloadIds: [],
     }))).toEqual([
-      'rsh/Compatibility/DSH/web/frontend/src/platform.ts: parser-preloaded external '
+      'rsh/Programs/Web/client/web/src/platform.ts: parser-preloaded external '
       + '"@deepseek-ai/dsh-client-bootstrap/client" has no matching PARSER_PRELOAD_IDS row in '
       + 'rsh/Programs/Web/client/modules/src/index.ts',
     ])

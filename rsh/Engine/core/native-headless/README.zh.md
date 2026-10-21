@@ -27,19 +27,9 @@ kind: "package-reference"
 
 可选的 `agentInstructions` Provider 在每个获准模型请求之前准备工作区指令。应用在分发前将返回的上下文记录为 `user/message`；持久化来源事实控制恢复协调，已接纳的文件系统结果控制嵌套目录发现。
 
-可选的 `requestContexts` 服务为精确活动 Session owner 准备模型可见消息。每个步骤先准备 agent 指令、时间/tmux 上下文与请求上下文，再执行同步准入检查；获准贡献通过同一 writer 追加为 `user/message`，位于 request header 和 context 之前。Headless 在提交 Provider 或启动模型前只持久化一次该步骤。Provider 可见性使用该 turn 的模型目录和 PTC 绑定实际捕获的工具注册。若 Provider 可见但没有精确活动 owner，执行会在 inbox 输入被消费前失败；拒绝或取消的准备不会消费输入，也不会提交上下文。
-
-可选的 `tmuxContext` Provider 会在每轮第一个步骤准备 agent 的 tmux 位置。准备后，应用会先检查取消状态，再通过唯一 Session writer 追加任何返回消息，然后构造模型请求。已提交的 tmux 消息会从已加载 Session 前缀中播种 Provider，并在每个已提交事件后更新，因此冷恢复后也会抑制未变化的位置。
-
-`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用通过同一个 Agent execution owner 接纳一个根输入。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入与 `run_code` 提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。process-sandbox Provider 按该 Session 策略在 `read-only` 或 `workspace-write` 下约束代码，并拒绝 `danger-full-access`；策略限制 Session 时，builtin 和 PTC Consumer 会拒绝非 process Provider。Root 和 captured-external `read_file` 可以通过选定附件 Provider 读取当前 Session 中精确的不可变文件引用；`cwd` 外的其他路径和所有外部写入仍以 `FS_SANDBOX_DENIED` 失败。
-
-每条 `execution/policy` 记录在读取时都必需；无法强制执行该记录的 consumer 不能运行此 Session。Headless 将其中的 `maxSteps` 作为每个已接纳 turn 的上限，并将可选 `maxTokens` 作为硬输出 token 上限。每次分发前都会检查最终选定且已准备的 generation，因此 model-selection 控件和 Provider 默认值都不能扩大该上限。`session-owner` 审批记录表示执行要求，本身不构成授权证明：恢复时，Program 必须为精确的实时 Agent 与 Session 签发新的进程内 capability，否则会在模型工作前拒绝执行。
-
-可选的 allowedTools 列表会过滤每个请求中的内置工具和注册工具 schema，并拒绝不在该列表中的调用。提示词 section 收到的名称来自同一份已发送 schema 快照；既有 Session writer 会持久化组装后的系统提示词，并在恢复和分叉时校验。
+`./native` 入口要求 `cwd` 是已存在目录的绝对路径，`provider`、`model` 与 `systemPrompt` 是非空字符串，`maxSteps` 可选且为正整数（默认 `4`）。未知字段会使 profile 激活失败。应用接受提示词或 `--resume <session-id> [prompt]`；每次调用通过同一个 Agent execution owner 接纳一个根输入。续接时若工作目录或系统提示词已改变，应用会拒绝执行，避免悄悄发送来自另一 profile 的历史。固定工具 schema 提供 `read_file` 与 `write_file`；安装 `codeRuntime` 时会增加 `run_code`，它接受 `{ "program": string }` 并把 runtime 的有界 JSON 结果记录为工具 outcome。程序失败会变为名称为 `NativeCodeRuntimeError`、错误码为 `CODE_RUNTIME_*` 的工具结果。可选 `tools` 和 `promptSections` 服务会添加可撤销 schema 和系统文本；可选 `sandboxPolicy` 会向固定写入提供当前 Session 策略；可选 `approval` 会在 `write_file` 或受保护贡献执行前应用其策略。写入经过文件观察策略，越过 `cwd` 的路径以 `FS_SANDBOX_DENIED` 失败。
 
 应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；未中止的非授权结果会变为 `APPROVAL_*` 工具结果错误。取消在决定审计刷新后保留借用 signal 的原始原因；审计或清理失败仍作为错误传播。每个 Session 使用一个由其标识派生的子作用域原生 Agent。Turn 在该 Agent 的显式 initiator boundary 内运行，Program 在已接纳工作排空后释放身份。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
-
-普通根审批可以通过既有审批服务记住精确操作范围。Headless 通过唯一续接写入者读取已接受的授权，匹配原 Session、工具、冻结参数、解析目标与 cwd，并在进入工具前 flush 每个决定。固定 `write_file` 在审批前解析一次，执行时使用同一目标。同一 Session 的冷恢复可以复用授权，fork 或复制历史不能复用。拒绝与精确所有者策略保持优先，委派执行和沙箱升级不能创建记住的授权。
 
 每次 dispatch 前，既有 Session writer 将已准备模型代际声明的容量记录在 `request/context` 中。路由或容量变化会替换已记录上下文；缺少容量会清除旧值。不增加独立目录查询或 Session 格式代际。
 
@@ -47,31 +37,19 @@ kind: "package-reference"
 
 应用使用 `dsh-session-persistence/native` 的 `NativeSessionPersistenceOperations`；JSONL 是一个可替换 Provider。每轮只拥有其选定 Session 句柄，并等待其持久化和关闭。应用不关闭或实例化持久化服务。改变 Provider 类型所有权不会改变模型输入或已记录事件。
 
-writer 刷新后会通知已接纳事件观察者；若某个观察者抛出异常，系统会报告异常，但不会使持久化失败，也不会阻止后续观察者接收事件。
-
-已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。每个工具结果记录后（包括固定工具与失败结果），应用会向注册表的结算策略请求上下文，并把它们追加在工具自身的消息之前。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。PTC 子调用开始后，即使取消已开始，Headless 仍会持久化其 `tool/ptc-dispatch` 结算；PTC 启动、新工作及其他事件写入仍要求 signal 处于活动状态。
+已注册工具使用注册表的模型传输选择和精确 Agent 作用域。工具拥有的事件通过同一 Session writer 追加；并发追加回调串行持久化。应用先接受包含呈现元数据的最终结果，再通知结果观察者，然后在下一次模型请求前追加带来源的额外消息。每个工具结果记录后（包括固定工具与失败结果），应用会向注册表的结算策略请求上下文，并把它们追加在工具自身的消息之前。成功的工具结束标记只在当前批次所有调用结算后结束回合。取消会阻止已移除贡献的迟到成功结果被接受。
 
 已校验的 `builtinTools` 布尔值默认为 `true`。设为 `false` 会移除固定文件 schema 和内置 `{program}` 代码工具，并且仅调度注册表贡献。可选 PTC profile 显式选择该值，使注册表拥有的 `run_code` 成为唯一传输工具。Prompt 段在呈现文本进入持久化 system message 前接收精确的请求 Agent scope。
-
-委派子级分别保留直接调用、内置工具和程序工具名称授权。Headless 仅在某个内置工具名称仍属于子级内置授权且子级解析后的 `builtinTools` 已启用时，才公开并派发它；仅属于注册表的同名贡献仍走注册表路径。捕获的外部工具使用分离的 schema 与程序快照。broker 持久接受工具结果及 settlement 后，Headless 通过捕获的附件 Provider 读取结果引用的图片字节；dispose 会等待已接纳的工具主体和图片读取完成。
-
-只读模式下，普通模型请求仍可使用符合条件的注册表工具，并受注册表及其执行策略约束。委派的直接工具名称仍仅限 `read_file`，程序绑定继续使用独立授权。
 
 一次性执行清理会在活动 owner 观察者拒绝后仍尝试关闭 writer，同时保留执行与清理失败。Agent 接纳在发布生命周期通知前拥有借用的 preset lease，通知失败或取消会释放 lease。驻留子级将选定 preset 持久化到创建 header，并在模块准备前校验恢复事实。
 
 `sessionExecution` 通过同一个执行器路由子任务 turn 和 continuation。`activeSessions` 发布精确的当前 Agent、Session 和 writer；消费者保留该所有者以维持常驻根，或在空闲维护中追加事实而不启动模型 turn。模型和指令准备等异步操作完成后，Program 执行 admission 提交检查，随后同步移除确切的已选 inbox 输入并追加 step 与模型可见输入事件；仅取消失效输入，其他待处理消息仍留在队列中。恢复和 fork 保留历史 preset 选择；移除 preset 会取消并排空其精确租约。仅当 `AbortError.cause` 与已中止信号的确切 reason 相同时，才将其识别为预期取消；执行及清理失败仍为错误。
 
-Active owner 编辑待处理消息时，会将其全部 content 替换为文本块，同时保留 id、source 和位置。它通过一条持久化 `agent/inbox/moved` 事件 promotion queued 消息。若异步指令或上下文准备后发现 eligible 快照已变化，Headless 会让这些输入继续待处理，并在同步 claim 检查前重新执行依赖输入的准备。
+Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，穿过普通 Session 父节点，并在检查 subagent 末端前核验每条直接父子关系及 subagent 委派深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
 
-Program 从选定的持久化集合列出 continuation 候选。它将路径限定在发起 Session 的工作区，保留每条物理父子关系，并要求遍历中的委派深度递增。每次检查都会返回直接物理父节点的深度；subagent consumer 在打开或发送给子任务前核验持久化的逻辑深度。中间节点无法读取时，该候选会返回诊断，不会隐藏健康的兄弟路径。现有 Agent 注册表提供驻留状态，不加载已关闭的子任务。
-
-`rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork、暂存文件回执及可选可恢复删除。暂存上传使用选定的附件 Provider；Host 只为确切附着的 root owner 将其解析成持久化 FileBlock。模型请求使用 `projectFilesToText` 将已记录的文件块投影成文件句柄，并通过附件 Provider 路径和所选文件系统转换成执行环境路径；初始与重建请求复用同一投影。确切活动 root owner 还提供由 Program 绑定的 turn 中断操作，详见[Session 执行所有权](../native-session-execution/README.zh.md#execution-ownership)。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程会验证既有 Workspace 目录与同一文件系统。`trusted: true` 会绕过 `allowedRoots`，但仍禁止受保护的系统目录。所选 sandbox policy 会按各 Session 的 `cwd` 解析 workspace root，因此 Workspace 路由的写入仍限制在各自目录内。Workspace 记录和全局归档 id 使用共享 v2 存储域。撤销路由时会退休没有活动 Session owner 的空闲 Agent，并保留其持久日志；活跃工作和待处理准入仍会阻止撤销。路由退休期间，调用方不能解析或重新选择该路由；退休失败时会保留该路由，并允许再次选择。删除日志时不会取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
+`rootExecution` 提供带品牌的不可变路由、维护、执行、[确切根取消](../native-session-execution/README.zh.md#execution-ownership)、结算、已关闭 turn 的 fork 及可选可恢复删除。确切活动 root owner 还提供由 Program 绑定的 turn 中断操作，详见[Session 执行所有权](../native-session-execution/README.zh.md#execution-ownership)。动态 `workspaceRoutes` 必须显式配置正数 `maxRoutes` 和非空绝对路径 `allowedRoots`；选择过程按同一文件系统和沙箱策略验证既有 Workspace 目录。Workspace 记录和全局归档 id 使用共享 v2 存储域。删除拒绝忙碌 writer 和不匹配的路由，不会为删除日志取消任务。应用释放会尝试关闭每个 execution 和保留的 epoch，等待全部结束，再于身份和 preset 清理后聚合失败。
 
 选择 `modelSelection` 后，root step 在构造 header 前捕获持久意图。执行器一起解析实际 Provider 默认值与派发；这些参数同时用于持久化 header 和模型请求。路由变更添加已持久化的模型变更提示；委派调用保留显式配置。
-
-显式传给 `createNativeHeadlessApplication` 的 authority 可为 root 路由提供实时 `defaultModelSelection` 回调。选择了 `modelSelection` 后，持久化的 `model/selection` 事件优先；否则最近的 Session request header 提供 Provider/模型路由，仅当历史中没有路由时才使用该回调。旧 header 的解析后请求参数不会变成显式 model-selection 控件；其他参数遵循当前请求与 prepared Provider 默认值。委派调用继续使用显式配置。详见[模型选择](../../llm/native-model-selection/README.zh.md)中的优先级。
-
-Headless 为 external Responses capture 绑定当前已准入的模型步骤。请求的 provider 和 model 相同则复用该已预备的 Provider 代际；路由变更则只使用选定的 provider、model、reasoning effort 和父级 `maxTokens` 上限预备一次。嵌套捕获会收到外层外部操作选定的确切代际，不会读取之后活动的模型步骤。
 
 根调用的 `prepareMessage` 优先于 `message`。准备过程在既有执行所有者内运行，位于有效下一模型选择之后、inbox 准入之前。它返回带身份的输入，不暴露 Session 写入者；拒绝或取消不会准入用户输入。
 
@@ -143,4 +121,4 @@ Headless 为 external Responses capture 绑定当前已准入的模型步骤。�
 - 原生模型 Provider 与更广泛的能力适配器位于其他包。
 - 此组合导入 Cordis-free 的 Session 与持久化 `./native` 入口，且不创建 Cordis Context。相关包为 Cordis 兼容入口保留适配器，并将 Cordis 设为可选 peer dependency。
 
-其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务；需要 Workspace 路由的 Program 也会传入其 Workspace 注册表。若调用方的 Context 将 `attachments` 声明为必需服务，就显式传入该服务；否则工厂从 Context 读取可选服务。
+其他原生 Program 可以复用 resolveNativeHeadlessConfig 与 createNativeHeadlessApplication，而不提供另一个应用启动器。要求 Session 所有权的 Program 显式传入选定的执行与活跃所有权服务。

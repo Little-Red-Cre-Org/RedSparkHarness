@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(fileURLToPath(new URL('../src/client/rows/WorkspaceBrowser.module.css', import.meta.url)), 'utf8')
-const sectionCss = readFileSync(fileURLToPath(new URL('../../ui-primitives/src/workspace-rows/WorkspaceSection.module.css', import.meta.url)), 'utf8')
-const rowsCss = readFileSync(fileURLToPath(new URL('../../ui-primitives/src/workspace-rows/Rows.module.css', import.meta.url)), 'utf8')
+const rowsCss = readFileSync(fileURLToPath(new URL('../src/client/rows/Rows.module.css', import.meta.url)), 'utf8')
 
 /**
  * Declarations of one selector rule, keyed by property with whitespace collapsed.
@@ -32,7 +31,6 @@ function declarationsFrom(source: string, selector: string): Map<string, string>
 }
 
 const declarations = (selector: string): Map<string, string> | undefined => declarationsFrom(css, selector)
-const sectionDeclarations = (selector: string): Map<string, string> | undefined => declarationsFrom(sectionCss, selector)
 const rowDeclarations = (selector: string): Map<string, string> | undefined => declarationsFrom(rowsCss, selector)
 
 describe('WorkspaceBrowser.module.css list', () => {
@@ -101,7 +99,7 @@ describe('WorkspaceBrowser.module.css list', () => {
   it('keeps the compact fade, overflow control, search field, and row heights', () => {
     expect(declarations('.fade')?.get('height')).toBe('24px')
     expect(declarations('.sessionOverflowButton')?.get('height')).toBe('28px')
-    expect(sectionDeclarations('.searchExpanded')?.get('height')).toBe('30px')
+    expect(declarations('.searchExpanded')?.get('height')).toBe('30px')
     expect(rowDeclarations('.projectRow')?.get('height')).toBe('34px')
     expect(rowDeclarations('.sessionRow')?.get('height')).toBe('32px')
     expect(rowDeclarations('.flatSessionRowWithoutStatus .title')?.get('margin-left')).toBe('0')
@@ -111,8 +109,8 @@ describe('WorkspaceBrowser.module.css list', () => {
   })
 
   it('pins both rail controls to the shared left anchor during the column slide', () => {
-    expect(sectionDeclarations('.rail .sectionHeader')?.get('justify-content')).toBe('flex-start')
+    expect(declarations('.rail .sectionHeader')?.get('justify-content')).toBe('flex-start')
     expect(declarations('.rail .iconButton')?.get('width')).toBe('36px')
-    expect(sectionDeclarations('.railSearch')?.get('width')).toBe('36px')
+    expect(declarations('.rail .search')?.get('width')).toBe('36px')
   })
 })

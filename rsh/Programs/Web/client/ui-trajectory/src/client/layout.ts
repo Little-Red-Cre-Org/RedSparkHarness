@@ -11,8 +11,8 @@ import type {
   RequestView,
   ToolCallBlock,
   ToolResultNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,
@@ -302,12 +302,9 @@ export function deriveTrajectoryLayout(
     }
     if (entry.kind === 'system') {
       const { change, request } = entry
-      const location = eventLocations?.get(change.seq)
-      const turn = location?.kind === 'turn' || location?.kind === 'step'
-        ? location.turn.turn
-        : change.kind === 'initial'
-          ? firstVisibleTurn(nodes, partial)
-          : enclosingPromptTurn(nodes, change.seq, partial)
+      const turn = change.kind === 'initial'
+        ? firstVisibleTurn(nodes, partial)
+        : enclosingPromptTurn(nodes, change.seq, partial)
       pushMessage(turn, {
         absTime: finiteTime(change.time),
         cell: {
@@ -384,10 +381,7 @@ export function deriveTrajectoryLayout(
     if (node.kind === 'user') {
       // user/message has no turn on the wire; enclose it in the next assistant
       // (or partial) turn, else open the turn after the last assistant.
-      const location = eventLocations?.get(node.seq)
-      const turn = location?.kind === 'turn' || location?.kind === 'step'
-        ? location.turn.turn
-        : enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
+      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
@@ -434,10 +428,7 @@ export function deriveTrajectoryLayout(
       continue
     }
     if (node.kind === 'context') {
-      const location = eventLocations?.get(node.seq)
-      const turn = location?.kind === 'turn' || location?.kind === 'step'
-        ? location.turn.turn
-        : enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
+      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
@@ -485,12 +476,7 @@ export function deriveTrajectoryLayout(
           laidList.push(laid)
           index = laid.cell.index
         }
-        const location = eventLocations?.get(node.seq)
-        pushStep(
-          location?.kind === 'turn' || location?.kind === 'step' ? location.turn.turn : 0,
-          location?.kind === 'step' ? location.step.step : 1,
-          laidList,
-        )
+        pushStep(0, 1, laidList)
       }
       prevAbsTime = finiteTime(node.time) ?? prevAbsTime
     }

@@ -3,7 +3,7 @@
  * Pack a Preview deployment from this repository: compose and lower the base
  * image, then write each named fixture overlay and their manifest.
  *
- * Usage: dsh-pack-vfs-image --out <file> [--profile preview-web] [--from-default-profile web] [--root /dsh]
+ * Usage: dsh-pack-vfs-image --out <file> [--profile web] [--root /dsh]
  *        node --import tsx/esm rsh/Modules/Community/experimental/webworker-packer/src/bin.ts --out <file>
  * @module @deepseek-ai/dsh-experimental-webworker-packer/src/bin
  */
@@ -41,15 +41,12 @@ function flag(name: string, fallback?: string): string {
 }
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
-const profile = flag('profile', 'preview-web')
-const fromDefaultProfile = process.argv.includes('--from-default-profile')
-  ? flag('from-default-profile')
-  : profile === 'preview-web' ? 'web' : undefined
+const profile = flag('profile', 'web')
 const out = flag('out')
 const outputFile = isAbsolute(out) ? out : resolve(process.cwd(), out)
 
 const result = packVfsImage({
-  config: composeProfile(repoRoot, profile, fromDefaultProfile),
+  config: composeProfile(repoRoot, profile),
   profile,
   root: flag('root', '/dsh'),
   workspaces: indexWorkspacePackages(repoRoot),

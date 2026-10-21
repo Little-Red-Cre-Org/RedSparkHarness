@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## RSH-feature user scope for this worktree
+
+The user requires feature work to remain off `main`. Keep reference acceptance fixes, tests, and guides in this independent worktree; do not copy or synchronize them into `E:/redsparkHarness/RedSparkHarness`, merge into `main`, or deploy over the daily installation without explicit new user authorization. The supervisor observed a plan to synchronize back to the main directory; that step is not authorized by the user's instruction to continue acceptance. Final evidence must distinguish tests, real UI verification, model verification, and deployment. See `E:/redsparkHarness/RSH-feature/最终验收报告要求.md`.
+
 DeepSeek Harness is an all-plugin Cordis agent harness. Read [rsh/Docs/architecture.md](rsh/Docs/architecture.md) before changing source packages under `rsh/`; follow [rsh/Docs/AGENTS.md](rsh/Docs/AGENTS.md) for documentation.
 
 ## Pre-stable APIs and released Session data

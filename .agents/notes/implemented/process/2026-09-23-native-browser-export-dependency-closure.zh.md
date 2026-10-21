@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-混合 Client 包只有发布独立 `./native` 出口时，才能将 Cordis peer 标为可选。`verify-package-dependencies` 检查精确的 `{ "optional": true }` 元数据，并继续要求 Cordis peer 与开发依赖使用一致范围；没有原生出口的包不能选择这种处理。`dsh-client-modules` 根入口与 `./client` 入口仍使用 Cordis，调用方未安装 Cordis 时导入它们会失败。
+混合 Client 包只有发布独立 `./native` 出口时，才能将 Cordis peer 标为可选。`verify-package-dependencies` 检查精确的 `{ "optional": true }` 元数据，并继续要求 Cordis peer 与开发依赖使用一致范围；没有原生出口的包不能选择这种处理。现有根入口与 `./client` 入口仍使用 Cordis，调用方未安装 Cordis 时导入它们会失败。
 
 `verify-optional-dependency-imports` 沿原生源码入口及其静态值导入检查，在可达源码中拒绝 Cordis，同时允许独立旧入口加载 Cordis。测试夹具证明原生入口间接导入 Cordis 会被拒绝。下述安装消费者测试另行验证构建产物路径。
 
@@ -26,4 +26,4 @@ Status: implemented
 
 ## Consequences
 
-两个原生浏览器入口现在无需 Cordis 即可安装、导入和完成类型检查。默认 Web 应用和 `dsh-client-web` 根 API 使用 Native 路径；保留的 `AppWebEntry` 壳归属独立发布的 `dsh-web-compatibility` 包。[Native Web 包决策](../architecture/2026-10-17-native-web-default-and-compatibility-browser-owner.zh.md)负责应用入口与分发拆分。未来任何原生入口若在运行时请求其他包，都需要声明自身的安装闭包，并提供隔离消费者证据；单有 `./native` 出口不能证明这些条件。
+两个原生浏览器入口现在无需 Cordis 即可安装、导入和完成类型检查。这不代表生产 Web 应用已经原生化：当前应用入口仍激活 Cordis Loader，Host 下发原生选择列表和原生渲染器也尚未完成。未来任何原生入口若在运行时请求其他包，都需要声明自身的安装闭包，并提供隔离消费者证据；单有 `./native` 出口不能证明这些条件。

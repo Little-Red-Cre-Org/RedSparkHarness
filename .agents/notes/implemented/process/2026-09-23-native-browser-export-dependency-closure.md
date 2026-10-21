@@ -10,7 +10,7 @@ The [published dependency policy](2026-08-26-published-dependency-faces.md) requ
 
 ## Decision
 
-A mixed Client package may mark its Cordis peer optional only when it publishes a separate `./native` export. `verify-package-dependencies` checks the exact `{ "optional": true }` metadata and continues to require matching Cordis peer and development ranges; a package without the native export cannot opt out. The `dsh-client-modules` root and `./client` entries continue to use Cordis and fail if a caller imports them without it.
+A mixed Client package may mark its Cordis peer optional only when it publishes a separate `./native` export. `verify-package-dependencies` checks the exact `{ "optional": true }` metadata and continues to require matching Cordis peer and development ranges; a package without the native export cannot opt out. The existing root and `./client` entries continue to use Cordis and fail if a caller imports them without it.
 
 `verify-optional-dependency-imports` follows the native source entry and its static value imports, rejecting Cordis in that reachable source while allowing the separate legacy entry to load it. Its fixture proves that a transitive native import is rejected. The packed-consumer check below verifies the emitted installation path independently.
 
@@ -26,4 +26,4 @@ The `dsh-client-modules/native` bundle contains the browser module table and gra
 
 ## Consequences
 
-The two native browser entrypoints can be installed, imported, and typechecked without Cordis. The default Web application and root `dsh-client-web` API use the Native path; the retained `AppWebEntry` shell belongs to the separately published `dsh-web-compatibility` package. The [Native Web package decision](../architecture/2026-10-17-native-web-default-and-compatibility-browser-owner.md) owns the application and distribution split. Any later native export that requests another package at runtime needs its own declared install closure and isolated-consumer evidence; the presence of `./native` alone proves neither.
+The two native browser entrypoints can be installed, imported, and typechecked without Cordis. This does not make the production Web application native: its current entry still activates the Cordis Loader, and Host-provided native selection plus a native renderer are outstanding. Any later native export that requests another package at runtime needs its own declared install closure and isolated-consumer evidence; the presence of `./native` alone proves neither.

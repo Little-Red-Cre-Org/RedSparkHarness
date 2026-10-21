@@ -1,14 +1,5 @@
 [
   {
-    "sessionUpdate": "available_commands_update",
-    "availableCommands": [
-      {
-        "name": "compact",
-        "description": "Compact older conversation history"
-      }
-    ]
-  },
-  {
     "sessionUpdate": "config_option_update",
     "configOptions": [
       {
@@ -112,10 +103,5 @@
       "type": "text",
       "text": "native ACP snapshot reply"
     }
-  },
-  {
-    "sessionUpdate": "usage_update",
-    "used": 1547,
-    "size": 262144
   }
 ]

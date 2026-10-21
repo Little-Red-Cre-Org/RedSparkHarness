@@ -135,6 +135,8 @@ describe.skipIf(MODE === 'record')('web e2e: file and session references through
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
+    // Seeded metadata uses portable paths so ARIA does not escape Windows separators.
+    scaffold.workspaceCwd = scaffold.workspaceCwd.replaceAll('\\', '/')
     const targetCreatedAt = Date.now() - 60_000
     await seedSession(scaffold, sourceSessionFixture(), SOURCE_SESSION_ID, undefined, { createdAt: targetCreatedAt - 1 })
     await seedSession(scaffold, targetSessionFixture(), TARGET_SESSION_ID, undefined, { createdAt: targetCreatedAt })

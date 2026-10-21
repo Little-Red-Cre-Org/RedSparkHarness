@@ -1,8 +1,0 @@
-version: 1
-scenario: staged-files
-profile: native-sdk
-composition: native-sdk-staged-files
-recording: authored
-header:
-  class: native-sdk-staged-files
-  pin: true

@@ -4,12 +4,10 @@ export {
 } from '@deepseek-ai/dsh-approval-definition'
 export type {
   NativeApprovalAnswerer,
-  NativeApprovalAnswererResult,
   NativeApprovalAnswererRequest,
   NativeApprovalDecision,
   NativeApprovalOutcome,
   NativeApprovalPolicy,
   NativeApprovalRequest,
   NativeApprovalServiceDefinition,
-  NativeApprovalSessionGrant,
 } from '@deepseek-ai/dsh-approval-definition'

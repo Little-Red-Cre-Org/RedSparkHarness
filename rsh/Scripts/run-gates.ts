@@ -324,7 +324,6 @@ function packagePublicationGates(): Gate[] {
   return [
     pnpmScript('constraints', 'constraints'),
     pnpmScript('native-dependencies', 'verify-native-dependencies'),
-    pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
     pnpmScript('package-invariants', 'verify-package-invariants', { label: 'package invariants' }),
   ]
 }
@@ -807,13 +806,12 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'vitest.e2e.config.ts',
     'rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts',
     'rsh/Programs/CLI/tests/built-bin.e2e.ts',
-    'rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts',
     'rsh/Programs/Web/host/directory-picker-native/tests/built-worker.e2e.ts',
     'rsh/Programs/SDK/packages/server/tests/built-scope-carrier.e2e.ts',
     'rsh/Modules/Official/fs/tool-present/tests/built-errors.e2e.ts',
     'rsh/Core/subprocess/subprocess-local/tests/spawn-runner-built.e2e.ts',
-    'rsh/Compatibility/DSH/bridge/subagent-codex/tests/loader-composition.e2e.ts',
-    'rsh/Modules/Official/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
+    'rsh/Engine/subagent/subagent-codex/tests/loader-composition.e2e.ts',
+    'rsh/Engine/subagent/subagent-claude-code/tests/loader-composition.e2e.ts',
     'rsh/Programs/Web/api/remotes/tests/built-lib.e2e.ts',
     'rsh/Modules/Community/experimental/agent-team/tests/built-lib.e2e.ts',
     // Built execution consumers: the only automated proof that package-name

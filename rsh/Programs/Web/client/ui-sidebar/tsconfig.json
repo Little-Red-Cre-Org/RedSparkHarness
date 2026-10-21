@@ -30,19 +30,10 @@
       "path": "../ui-session"
     },
     {
-      "path": "../native-session"
-    },
-    {
       "path": "../ui-layout"
     },
     {
       "path": "../locale"
-    },
-    {
-      "path": "../ui-theme"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

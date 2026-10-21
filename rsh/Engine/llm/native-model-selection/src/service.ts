@@ -95,9 +95,7 @@ export class NativeModelSelectionService implements NativeModelSelectionOperatio
     return this.run(owner, signal, async (effective) => {
       const events = await owner.readEvents()
       this.assertOwner(owner, effective)
-      const lastUsed = stateOf(events).lastUsed
-      const selected = events.findLast(event => event.type === 'model/selection')?.data
-        ?? (lastUsed === null ? selectionOf(defaults) : { provider: lastUsed.provider, model: lastUsed.model })
+      const selected = events.findLast(event => event.type === 'model/selection')?.data ?? selectionOf(defaults)
       const info = await this.directory.resolve(selected.provider, selected.model, effective)
       this.assertOwner(owner, effective)
       const config = deepFreeze(structuredClone(resolveConfig(selected, defaults, info)))

@@ -1,6 +1,6 @@
 version: 1
 scenario: model-switch-notice
-profile: legacy-headless
+profile: headless
 composition: model-switch-notice
 recording: live
 header:

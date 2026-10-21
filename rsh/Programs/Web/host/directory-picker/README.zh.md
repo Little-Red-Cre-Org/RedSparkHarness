@@ -27,8 +27,6 @@ web GUI 让操作者通过 OS 选择器或应用内浏览器选择工作区目�
 
 挂载且只挂载一个目录选择后端，然后让工作区流程驱动它：seam 本身只是服务约定，因此没有后端的组合就无从选择目录。
 
-包根出口定义 Cordis 服务，加载时需要宿主提供 Cordis。Cordis peer 为可选，因为独立的 `./types` 出口没有运行时依赖。
-
 ### 选择后端
 
 当操作者坐在宿主屏幕前时，[原生后端](../directory-picker-native/README.zh.md)是正确选择：`directoryPicker/pick` 打开一个 OS 选择器，返回所选绝对路径，取消时返回 `null`。[浏览后端](../directory-picker-browse/README.zh.md)处处可用——它在浏览器中列举一个目录层级并创建子目录，因此无法触达 OS 对话框的远程客户端依然能选择工作区。当宿主处境在两次启动之间变化时，组合[自适应选择器](../directory-picker-auto/README.zh.md)，它在启动时判定一次处境并挂载匹配的后端。

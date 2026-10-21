@@ -4,9 +4,24 @@
  * plugin reload cannot reuse a module-global handle.
  */
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
-import type { QuestionDraftProgress } from '../question-presentation.ts'
 
-export type { QuestionDraftAnswer, QuestionDraftProgress } from '../question-presentation.ts'
+/** One in-progress answer, including an explicit skip. */
+export interface QuestionDraftAnswer {
+  /** Offered labels currently selected. */
+  selected: string[]
+  /** Human-authored alternative or additional answer. */
+  custom: string
+  /** Whether the user explicitly skipped this question. */
+  skipped: boolean
+}
+
+/** Navigation and answer drafts for one pending request. */
+export interface QuestionDraftProgress {
+  /** Current question index. */
+  index: number
+  /** One draft per question, in request order. */
+  drafts: QuestionDraftAnswer[]
+}
 
 interface QuestionDraftState {
   requestKey?: string

@@ -11,20 +11,17 @@ import { shippedNativeProfileComposition } from '../../../CLI/src/native-profile
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 
 /** Create an isolated supported native composition and a deterministic model.
- * @param cancellation - whether the fixture model blocks its first request for cancellation and cleanup.
+ * @param cancellation - whether the fixture model waits for cancellation and explicit cleanup release.
  * @param script - committed assistant responses for replay; omitted only by the cancellation fixture.
  * @param cleanupFailure - inject a controller teardown rejection after its real drain.
  * @param modelControls - publish a real adapter directory and install the shipped model-selection Provider.
  * @param humanInteractions - install existing question, tool and approval Providers.
  * @param presetMode - select the legacy fixture registry or shipped scope-owned compositions.
  * @param taskScheduler - install the shipped persistent task-scheduler Provider and Consumer.
- * @param archifySkill - install Native Skills, shell environment, and Archify for slash-routing coverage.
- * @param manualSkillConsumer - install ToolSkill's durable manual-invocation Consumer with Archify.
  * @returns fixture paths and actual CLI launch and cleanup operations.
  */
 export function terminalFixture(cancellation: boolean, script?: readonly ReplayEntry[], cleanupFailure = false,
-  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false,
-  archifySkill = false, manualSkillConsumer = true) {
+  modelControls = false, humanInteractions = false, presetMode?: 'legacy' | 'shipped', taskScheduler = false) {
   const home = mkdtempSync(join(tmpdir(), 'rsh-native-tui-'))
   const workspace = join(home, 'work')
   const storage = join(home, 'sessions')
@@ -35,7 +32,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   const model = join(profile, 'node_modules/fixture-tui-model')
   const modelProvides = ['model', ...modelControls ? ['modelDirectory'] : [], ...presetMode === 'legacy' ? ['agentPresets'] : []]
   mkdirSync(model, { recursive: true })
-  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', version: '1.0.0', type: 'module',
+  writeFileSync(join(model, 'package.json'), JSON.stringify({ name: 'fixture-tui-model', type: 'module',
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: modelProvides } } }))
   writeFileSync(join(model, 'native.mjs'), `import { writeFile, access } from 'node:fs/promises';
@@ -47,7 +44,6 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     const close = controller.close;
     controller.close = async function () { await close.call(this); throw new Error('fixture executor cleanup failed'); };` : ''}
     const home = ${JSON.stringify(home)};
-    let cancelFirstRequest = ${String(cancellation)};
     let pauseFirstRequest = ${String(presetMode === 'shipped')};
     const script = ${JSON.stringify(script ?? [])};
     export const plugin = { apiVersion: 1, name: 'fixture-tui-model', targets: ['host'], requires: [], provides: ${JSON.stringify(modelProvides)},
@@ -60,8 +56,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
           await writeFile(home + '/goal-request-aborted', 'aborted');
           throw request.signal.reason;
         }
-        if (cancelFirstRequest) {
-          cancelFirstRequest = false;
+        if (${String(cancellation)}) {
           await writeFile(home + '/started', 'started');
           await new Promise(resolve => { if (request.signal.aborted) resolve(); else request.signal.addEventListener('abort', resolve, { once: true }); });
           await writeFile(home + '/aborted', 'aborted');
@@ -78,13 +73,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
         const index = request.messages.filter(message => message.role === 'assistant').length;
         const entry = script[index];
         if (entry?.kind !== 'chunks') throw new Error('terminal replay exhausted');
-        for (const chunk of entry.chunks) {
-          if (${String(cancellation)} && index === 0 && chunk.type === 'finish') {
-            await writeFile(home + '/continuation-finish-started', 'started');
-            for (;;) { try { await access(home + '/release-continuation-finish'); break; } catch (error) { if (error.code !== 'ENOENT') throw error; await wait(10); } }
-          }
-          yield chunk;
-        }
+        for (const chunk of entry.chunks) yield chunk;
       }, ...(${String(modelControls)} ? { providerInfo: id => ({ id, name: 'Fixture Provider' }),
       listModels: async provider => ['fixture', 'fixture-alt'].map(id => ({ provider, id, name: id })),
       resolveModel: async (provider, id) => ({ provider, id, name: id, inputModalities: ['text'], context: { contextWindow: 4096 },
@@ -98,7 +87,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   if (presetMode === 'shipped') {
     const collision = join(profile, 'node_modules/fixture-tui-help-command')
     mkdirSync(collision, { recursive: true })
-    writeFileSync(join(collision, 'package.json'), JSON.stringify({ name: 'fixture-tui-help-command', version: '1.0.0', type: 'module',
+    writeFileSync(join(collision, 'package.json'), JSON.stringify({ name: 'fixture-tui-help-command', type: 'module',
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['commands'], optional: [], provides: [] } } }))
     writeFileSync(join(collision, 'native.mjs'), `import { writeFile } from 'node:fs/promises';
@@ -121,13 +110,6 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })
   if (presetMode === 'shipped') installations.push({ id: 'help-command-fixture', plugin: 'fixture-tui-help-command', scope: 'root' })
-  if (archifySkill) installations.push(
-    { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
-    { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
-    { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-    ...(manualSkillConsumer ? [{ id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' }] : []),
-    { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
-  )
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-tui-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations }))
@@ -139,9 +121,8 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
       const env = Object.fromEntries(Object.entries(process.env).filter(
         (entry): entry is [string, string] => entry[1] !== undefined && !/KEY|SECRET|TOKEN|PASSWORD/i.test(entry[0]),
       ))
-      // Ink suppresses interactive frames in CI, while this child is an actual PTY session.
       const child = spawn(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-tui', ...args], {
-        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, CI: 'false', DSH_HOME: home, FORCE_COLOR: '0' },
+        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, DSH_HOME: home, FORCE_COLOR: '0' },
       })
       child.onData((data) => { output += data })
       let resolveCompletion!: (event: { exitCode: number }) => void
@@ -166,7 +147,6 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
     },
     async cleanup() {
       writeFileSync(join(home, 'release'), 'release')
-      writeFileSync(join(home, 'release-continuation-finish'), 'release')
       for (const run of processes) {
         if (!run.exited) run.child.kill()
         await run.completion

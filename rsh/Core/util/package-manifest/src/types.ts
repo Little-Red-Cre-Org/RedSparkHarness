@@ -76,8 +76,8 @@ export interface DshProfileManifest {
   bundles?: string[]
   /** User patch lifecycle; omitted means `live` for custom profiles. */
   patchReload?: ProfilePatchReload
-  /** Explicit profile execution mode; native profiles use JSON composition, and legacy profiles retain Cordis bundles. */
-  runtime?: 'native' | 'legacy'
+  /** Explicit native execution; omission preserves the Cordis bundle interpretation. */
+  runtime?: 'native'
   /** Native JSON composition filename when runtime is native. */
   config?: 'rsh.profile.json'
 }

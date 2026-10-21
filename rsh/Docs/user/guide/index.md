@@ -24,6 +24,7 @@ The agent can read and edit workspace files, run commands, delegate work, and ma
 
 ## Continue
 
+- [Reference local files and conversations](./file-references.md) — local selection, preview, and model-cost guidance.
 - [Configure models](./providers.md)
 - [Use the Python SDK](./python-sdk.md)
 - [Use other CLI modes](../../../Programs/CLI/README.md)

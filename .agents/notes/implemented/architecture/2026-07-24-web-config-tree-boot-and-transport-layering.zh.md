@@ -20,6 +20,8 @@ Status: implemented
 
 **传输职责各有明确 owner。** `dsh-client-connection` 持有 `/api` 路由、请求与响应 envelope、浏览器认证、Host/Origin 检查、精确 Fetch 路由注册以及共享 Typert interceptor 席位。`dsh-api-gateway` 持有类型化 Remote 分发和多路复用 WebSocket。Core 的 `dsh-http-routes` 持有 Node 路由约定与共享 exact/prefix/upgrade table；其异步 route disposer 会停止后续接纳并等待已接纳 handler。Compatibility 的 `dsh-http-routes-cordis` 持有 `ctx.webServer`、`webserver/index-inject` Cordis 声明及旧 Web 名称。`dsh-host-webserver` 仍是 Program 所有的浏览器传输：`WebServer` provide `ctx.webServer` 并用异步 disposer 排空处理器，`renderIndex` 先渲染结构化 Client index 行，再应用原始 `tapIndex` 转换；`port` 读取绑定端口。它拥有 socket、gzip 与回退行为，激活即 listen，单请求失败时答 400 并记日志，且不认识 harness 概念。Native Web Assets 使用同一张 Core 路由表，同时在自己的 listener 中保留 `/api`、已挂载 channel 与 Client 页面守卫。显式选择的 Native GitHub ingress 使用该 listener 和既有 `rootExecution` owner，并等待精确 user message 的持久 inbox 接纳；边界记录在 [HTTP routes 与 Native GitHub ingress note](2026-10-07-http-route-definitions-and-native-github-ingress.zh.md)。Web Worker 隧道传递 identity 字节。modules node 半（`ClientModuleRegistry`，provide `ctx.clientModules`）持有单包增量扫描、bundle 路由、启动注入行与 `onRebuilt`/`onGraphChanged` 通知。HMR（热模块替换）node 半通过 `fs.watchFile` membership 与 `/plugins/events` SSE 路由持有开发期重载。
 
+Node HTTP bridge 在写入每段响应体前检查响应是否已经销毁。处理器可能在浏览器断开后才完成；此时不能写入已关闭的响应并等待第二次 `close` 事件，否则路由释放会一直等待。
+
 **包出口纪律。** modules 包只暴露 `.`（node 半）与 `./client`（完整浏览器半：`ClientModuleSystem`、`parseBootManifest`、收编插件面）——不设专用子路径；wire 类型经根出口 re-export 给 host 侧消费方。收编握手：内核在 cordis 之前把建好的实例写入 `window.__DSH_MODULES__`；`./client` 的 apply 读取该槽位（缺少时显式抛错）并 provide `ctx.modules`。
 
 ## 后果

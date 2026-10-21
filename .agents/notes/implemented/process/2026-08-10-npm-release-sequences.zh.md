@@ -90,9 +90,9 @@ registry 的两个行为决定了「怎么尝试一次发布」。写入之间�
 
 ### optional 依赖绝不在模块作用域被加载
 
-`optionalDependencies` 里的依赖，或带 `peerDependenciesMeta.<name>.optional` 的 peer，在安装出来的树里可以不存在——这份「可以不存在」正是 optional 的全部承诺。而静态 import 在引入方模块加载时就求值，于是一个缺失的包不再表现为「这个能力不可用」，而是变成所有能走到该模块的代码的加载失败。普通工作区测试无法暴露这种失败，因为每个包都已存在。因此，[原生浏览器入口测试](2026-09-23-native-browser-export-dependency-closure.zh.md)会构造缺少 Cordis 的安装消费者并导入指定子路径。下述源码门禁拒绝模块作用域的 optional 导入；Cordis 或按包明确标记为仅兼容入口使用的 peer 可以例外，但仍须保持在每个 Cordis-free 导出的源码闭包之外，旧入口才能加载兼容 peer 而不让 Native 入口依赖它。
+`optionalDependencies` 里的依赖，或带 `peerDependenciesMeta.<name>.optional` 的 peer，在安装出来的树里可以不存在——这份「可以不存在」正是 optional 的全部承诺。而静态 import 在引入方模块加载时就求值，于是一个缺失的包不再表现为「这个能力不可用」，而是变成所有能走到该模块的代码的加载失败。普通工作区测试无法暴露这种失败，因为每个包都已存在。因此，[原生浏览器入口测试](2026-09-23-native-browser-export-dependency-closure.zh.md)会构造缺少 Cordis 的安装消费者并导入指定子路径。下述源码门禁拒绝模块作用域的 optional 导入，但允许拥有独立原生入口的包在仅旧入口可达的源码中导入 Cordis。
 
-[`verify-optional-dependency-imports`](../../../../rsh/Scripts/verify-optional-dependency-imports.ts) 堵掉这个洞。它从每个包自己的 manifest 读取「这个包允许谁缺失」，再扫描会发布出去的文件——`rsh/*/*/src/` 与 `rsh/Programs/*/src/`——且两个编译门面各扫一遍。Cordis-free 入口按声明路径的 stem 匹配对应编译门面实际加载的 `.ts` 或 `.tsx` 源文件。对于 Cordis peer 可选且公开 `./native` 的包，它沿着原生源码入口的静态值导入检查 Cordis，允许独立的旧入口继续依赖 Cordis。`vendor/` 不在范围内，那是[受 vendoring 政策管辖](../../../../rsh/Core/vendor/README.md)的固定上游源码。值与类型的判定对着绑定好的 Program 做，而不是看 import 写法，因为 `verbatimModuleSyntax` 是关的：编译器本来就会消除绑定解析为类型的 import，所以 `import type {}`、`import {}`、内联 `type` 说明符、以及解析为类型的具名绑定都不产生产物、一律放行，而裸 import、值绑定、星号 re-export 在相关入口中会被保留并报错。只有 type 相位会消除 import：`import defer` 仍然解析并链接它的模块，只推迟求值，所以门禁把它算作一次加载。
+[`verify-optional-dependency-imports`](../../../../rsh/Scripts/verify-optional-dependency-imports.ts) 堵掉这个洞。它从每个包自己的 manifest 读取「这个包允许谁缺失」，再扫描会发布出去的文件——`rsh/*/*/src/` 与 `rsh/Programs/*/src/`——且两个编译门面各扫一遍。对于 Cordis peer 可选且公开 `./native` 的包，它沿着原生源码入口的静态值导入检查 Cordis，允许独立的旧入口继续依赖 Cordis。`vendor/` 不在范围内，那是[受 vendoring 政策管辖](../../../../rsh/Core/vendor/README.md)的固定上游源码。值与类型的判定对着绑定好的 Program 做，而不是看 import 写法，因为 `verbatimModuleSyntax` 是关的：编译器本来就会消除绑定解析为类型的 import，所以 `import type {}`、`import {}`、内联 `type` 说明符、以及解析为类型的具名绑定都不产生产物、一律放行，而裸 import、值绑定、星号 re-export 在相关入口中会被保留并报错。只有 type 相位会消除 import：`import defer` 仍然解析并链接它的模块，只推迟求值，所以门禁把它算作一次加载。
 
 报错会点名这个包、点名是哪条声明把它标成 optional 的，并按顺序给出出路——把它作为类型引入（声明合并需要的仅此而已），或者调整写法让模块作用域不再需要这个包。动态 `import()` 只是把失败推迟到首次使用，它属于那种确实需要这个包、并且自己处理缺失的调用方；会想到它，往往说明这个依赖并不 optional，所以门禁不把它作为解法给出。
 
@@ -104,10 +104,10 @@ registry 的两个行为决定了「怎么尝试一次发布」。写入之间�
 |---|---|
 | `ReleaseFamily` | 一族的身份：成员发现、版本基线、tag 前缀、打包 payload 规则、已安装入口 |
 | `ReleaseMember` | 一个可发布包：目录、包名、版本、manifest |
-| `publishOrder` | 先对 `dependencies` 与 `optionalDependencies` 做硬拓扑排序，再稳定加入不成环的 peer 排序偏好；省略的只是发布先后关系，manifest 中 peer 声明及其 optionality 元数据保持不变，并点名每条省略项；安装依赖成环时报错 |
+| `publishOrder` | 按 npm 会安装的依赖段加 peer 声明做拓扑序，同层按包名排；安装依赖成环是报错而不是随意定序，任何排不进去的 peer 边被丢弃并点名 |
 | `pack` | 把整族打进一个目录并记录上传顺序 |
 | `verify` | 族的版本基线、完整打印出来的发布顺序；发布时还要求本次运行来自该族的 tag、且成员可发布 |
-| `verify-packed-install` | 把一个或多个 pack 目录的 tarball 装进用户主目录下的一次性 consumer（不放在临时目录：Linux bwrap 会用 tmpfs 遮住它，且它属于 sandbox 可写根），并驱动已安装的可执行入口；传入 `--packed-e2e` 时（`release.yml` 的 dsh 演练与 `release-publish.yml` 的 pack job（发布之前）都会在准备 bwrap 后传入），还会在删除 consumer 之前，针对该已安装入口与 consumer 运行 packed Jobs、Skills、scheduled-reminder、compat-bridge、Workflow 与 code-runtime e2e（Skills 与 scheduled-reminder e2e 使用 consumer 中已安装的 `@deepseek-ai/dsh-sdk-client`；scheduled-reminder e2e 会把已安装的 task-scheduler 与 schedule 插件加入 profile，通过 `schedule_create` 创建提醒，关闭 SDK Host，并检查新的 Host 会把该提醒派发进恢复后的 Session；compat-bridge e2e 把 profile 中的文件系统安装项换成已安装的显式 Cordis 桥接包，经桥写入文件，再恢复原生安装项并在同一 Session 中读回）；`redspark-ci.yml` 中并行的 `SPH packed` job 也会构建 official profile，打包 dsh、vendor 与 Landlock entry，并在 ubuntu-24.04 和 windows-2025 上以 `--packed-e2e` 运行它 |
+| `verify-packed-install` | 把一个或多个 pack 目录的 tarball 装进一次性 consumer，并驱动已安装的可执行入口 |
 | `publish` | 上面那三态 |
 | `process` / `tarball` | 启动命令、读取打包 tarball 的唯一正家，其中的入口守卫让每个脚本都可被 import |
 
@@ -121,9 +121,9 @@ dsh 族套用仓库的发布 payload 策略（拒绝源码与声明映射）。v
 
 dsh 的验证会一并安装 vendored 族的 pack 产物。harness 的包把 vendored 框架声明成 peer，而那些包属于另一条序列，无凭据的 job 无法从私有 registry 取到——所以 dsh 的 `pack` job 为验证而打包 vendored 族，发布的仍只有 dsh 那一份。发布工作流（`release-publish.yml`）重新打包当前树，只发布 dsh 族。
 
-验证按真实用户的安装方式解析可选依赖：npm 从 public registry 安装当前平台的 `node-addon-system-<platform>` 与 sharp 的 `@img/*` 包，其版本由已打包的 entry 与 `sharp` 锁定。`node-addon-system` 家族由 `.github/workflows/node-addon-system-release.yml` 独立发布。验证会安装这些可选依赖，因为普通 registry 安装会带上匹配的平台包；省略它们会覆盖另一种安装结果。Landlock entry 仍是 `dsh-sandbox-local` 的普通依赖，因此通过 `--from` 提供它的 tarball。验证按目录内容读取 tarball，而不是读取 pack 顺序，因为目录可能包含仅为满足跨序列依赖而打包的 tarball，发布顺序无法描述这些包。
+验证还会打一份 Landlock entry 的 tarball——`dsh-sandbox-local` 把它声明为普通 `dependencies`——同时略去可选依赖。那些可选项背后的平台包需要 musl 工具链且每个架构各构建一次，单台 runner 产不出来；而装不到它们的消费方也必须能起，这正是「可选」在这里的含义。因此验证按目录内容读取 tarball，而不是读发布顺序：一个目录可能只装着为满足跨序列依赖而打出来的包，任何发布顺序都不描述它。
 
-已安装消费方探针会捕获 npm 的 HTTP 诊断信息，并在安装失败时输出。即使 npm 将 peer manifest 获取失败报告为版本未定义的 `ERESOLVE`，日志中仍能看到 registry 响应码和缓存状态。探针通过 `execaSync` 解析 Windows 的 `npm.cmd` 入口，并关闭环境扩展，使 npm 只收到为 consumer 准备的环境变量。
+已安装消费方探针会捕获 npm 的 HTTP 诊断信息，并在安装失败时输出。即使 npm 将 peer manifest 获取失败报告为版本未定义的 `ERESOLVE`，日志中仍能看到 registry 响应码和缓存状态。
 
 ### 本次带出的仓库改动
 

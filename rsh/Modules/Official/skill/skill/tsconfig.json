@@ -9,9 +9,6 @@
   ],
   "references": [
     {
-      "path": "../../../../Engine/context/request-context-definition"
-    },
-    {
       "path": "../../../../Core/vendor/cosmokit"
     },
     {
@@ -22,9 +19,6 @@
     },
     {
       "path": "../../../../Engine/core/scope"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
       "path": "../../../../Engine/llm/llm"

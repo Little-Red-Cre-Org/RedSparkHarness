@@ -9,10 +9,31 @@
   ],
   "references": [
     {
+      "path": "../store"
+    },
+    {
+      "path": "../../../../Core/vendor/cordis"
+    },
+    {
+      "path": "../../../../Core/vendor/loader"
+    },
+    {
+      "path": "../modules"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-dockkit"
+    },
+    {
+      "path": "../ui-renderer"
     }
   ],
   "exclude": [

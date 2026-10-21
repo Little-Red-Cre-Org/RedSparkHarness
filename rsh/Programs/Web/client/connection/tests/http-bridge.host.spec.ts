@@ -47,8 +47,9 @@ describe('HTTP bridge abort', () => {
 
     const response = Object.assign(new EventEmitter(), {
       writableEnded: false,
+      destroyed: false,
       writeHead() { return this },
-      write() { return true },
+      write() { return !this.destroyed },
       end() { this.writableEnded = true; return this },
     }) as unknown as ServerResponse
 
@@ -70,6 +71,7 @@ describe('HTTP bridge abort', () => {
       },
     }, Number.MAX_SAFE_INTEGER)
     await started
+    Object.assign(response, { destroyed: true })
     response.emit('close')
     await pending
     expect(carrierSignal?.aborted).toBe(true)

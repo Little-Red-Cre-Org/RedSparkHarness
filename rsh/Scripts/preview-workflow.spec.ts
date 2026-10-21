@@ -30,8 +30,8 @@ describe('PR preview workflow', () => {
     const commands = preview.steps.map(step => step.run)
     expect(commands).toContain('pnpm install --frozen-lockfile')
     expect(commands).toContain('pnpm run build')
-    expect(commands).toContain('pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview')
-    expect(commands.indexOf('pnpm run build')).toBeLessThan(commands.indexOf('pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview'))
+    expect(commands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend run build:preview')
+    expect(commands.indexOf('pnpm run build')).toBeLessThan(commands.indexOf('pnpm --filter @deepseek-ai/dsh-web-frontend run build:preview'))
     expect(preview.steps.filter(step => step.uses?.startsWith('actions/cache'))).toHaveLength(1)
     expect(preview.steps.find(step => step.uses === 'actions/cache/restore@v4')?.with).toMatchObject({
       key: "${{ runner.os }}-node-${{ env.PRIMARY_NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}",
@@ -45,10 +45,10 @@ describe('PR preview workflow', () => {
     })
     expect(workflow.env.CF_PROJECT).toBe('dsh-build-preview')
     const shape = preview.steps.find(step => step.name === 'Shape the upload')!
-    expect(shape.run).toContain("find rsh/Compatibility/DSH/web/frontend/dist -name '*.map' -delete")
-    expect(shape.run).toContain('cp rsh/Compatibility/DSH/web/frontend/dist/preview.html rsh/Compatibility/DSH/web/frontend/dist/index.html')
+    expect(shape.run).toContain("find rsh/Programs/Web/application/dist -name '*.map' -delete")
+    expect(shape.run).toContain('cp rsh/Programs/Web/application/dist/preview.html rsh/Programs/Web/application/dist/index.html')
     const deploy = preview.steps.find(step => step.name === 'Upload to Cloudflare Pages')!
-    expect(deploy.run).toContain('npx --yes wrangler@4 pages deploy rsh/Compatibility/DSH/web/frontend/dist')
+    expect(deploy.run).toContain('npx --yes wrangler@4 pages deploy rsh/Programs/Web/application/dist')
     expect(deploy.run).toContain('--branch "pr-${{ github.event.pull_request.number }}"')
     const verify = preview.steps.find(step => step.name === 'Verify the protected deployment serves the image')!
     expect(verify.run).toContain('/preview/vfs-image.tar.gz')

@@ -22,7 +22,6 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
 import type { TerminalPresetState } from './presets.ts'
 import type {} from '@deepseek-ai/dsh-commands/native'
-import type {} from '@deepseek-ai/dsh-skill/native'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -41,8 +40,6 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
     selection?: NativeModelSelectionOperations, directory?: NativeModelDirectory) {
     const registry = context.optional('agentPresets')
     const commands = context.optional('commands')
-    const skillInvocations = context.optional('skillInvocations')
-    const requestContexts = context.optional('requestContexts')
     const route = config.rootRouteId ?? brandString<NativeRootRouteId>('root')
     const history = (id: SessionId, signal: AbortSignal) => readNativeSessionHistory(id, {
       active: context.require('activeSessions'), persistence: context.require('sessionPersistence'),
@@ -69,11 +66,6 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
           Promise.resolve(commands.list(owner.agent.scope)), signal),
         dispatch: (id, line, signal) => executor.executeSessionOperation({ id, resume: true, route }, (owner, ownerSignal) =>
           commands.dispatch({ agent: owner.agent, session: owner.session, line, attachments: [], signal: ownerSignal }), signal),
-      },
-      skillInvocations: skillInvocations === undefined || requestContexts === undefined ? undefined : {
-        canInvoke: (name, id, signal) => executor.executeSessionOperation({ id, resume: true, route }, (owner, operationSignal) =>
-          skillInvocations.canInvoke(name, { scope: owner.agent.scope, cwd: owner.session.header.cwd,
-            signal: operationSignal, requestContexts }), signal),
       },
       sessions: async signal => (await context.require('sessionPersistence').list({ signal }))
         .filter(row => row.header.cwd === config.cwd).map(row => row.header.id),
@@ -130,7 +122,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'commands', 'skillInvocations', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'agentPresets', 'commands', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeTuiConfig(input)

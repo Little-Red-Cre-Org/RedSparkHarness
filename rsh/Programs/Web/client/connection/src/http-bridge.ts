@@ -90,6 +90,9 @@ export async function bridge(
     return
   }
   for await (const chunk of response.body) {
+    // A disconnected client may have closed while the handler was resolving.
+    // Its close event has already fired, so waiting for drain would never finish.
+    if (res.destroyed) break
     // Backpressure: a false return means the socket buffer is full — wait for drain
     // instead of buffering unboundedly (slow or suspended consumers). 'close' also
     // resolves so a mid-wait disconnect can't park this loop forever; the close

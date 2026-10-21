@@ -13,72 +13,8 @@ export const DESKTOP_PACKAGES_DIR = 'desktop-packages'
 /** Private package installed beside dsh to boot the Desktop Host process. */
 export const DESKTOP_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host'
 
-/** Compatibility-only Host installed into profiles that select legacy Cordis bundles. */
-export const DESKTOP_COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
-
-/**
- * Cordis runtime packages the Native assembly ships on purpose.
- *
- * The Cordis *kernel* is a service container, not the legacy Desktop assembly: a Native row can
- * host a Cordis plugin through it (see `@deepseek-ai/dsh-cordis-bridge`) so one plugin ecosystem
- * serves both runtimes. The loader and bundle packages below stay excluded, because they compose
- * applications rather than host one plugin.
- */
-export const CORDIS_RUNTIME_PACKAGES = [
-  '@deepseek-ai/cordis',
-] as const
-
-/** Optional package edges owned only by the legacy Cordis Desktop assembly. */
-export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
-  '@deepseek-ai/cordis-plugin-hmr',
-  '@deepseek-ai/cordis-plugin-include',
-  '@deepseek-ai/cordis-plugin-loader',
-  '@deepseek-ai/cordis-plugin-timer',
-  '@deepseek-ai/dsh-acp-app',
-  '@deepseek-ai/dsh-agent',
-  '@deepseek-ai/dsh-agent-default-model',
-  '@deepseek-ai/dsh-agent-tool-presentation',
-  '@deepseek-ai/dsh-app-boot',
-  '@deepseek-ai/dsh-base',
-  '@deepseek-ai/dsh-client-ui-agent-preset',
-  '@deepseek-ai/dsh-client-ui-cordis',
-  '@deepseek-ai/dsh-cmdline',
-  '@deepseek-ai/dsh-cordis-client-runner',
-  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
-  '@deepseek-ai/dsh-headless',
-  '@deepseek-ai/dsh-hooks-claude-code',
-  '@deepseek-ai/dsh-hooks-codex',
-  '@deepseek-ai/dsh-invariants',
-  '@deepseek-ai/dsh-jobs-local',
-  '@deepseek-ai/dsh-rsh',
-  '@deepseek-ai/dsh-sdk-app',
-  '@deepseek-ai/dsh-sdk-minimal',
-  '@deepseek-ai/dsh-time-context',
-  '@deepseek-ai/dsh-tmux-context',
-  '@deepseek-ai/dsh-tool-bash-persistent',
-  '@deepseek-ai/dsh-tool-cordis',
-  '@deepseek-ai/dsh-tool-jobs',
-  '@deepseek-ai/dsh-tool-present',
-  '@deepseek-ai/dsh-tool-pwsh-persistent',
-  '@deepseek-ai/dsh-tool-skill',
-  '@deepseek-ai/dsh-tool-str-replace-editor',
-  '@deepseek-ai/dsh-web-app',
-  '@deepseek-ai/dsh-webhook',
-  '@deepseek-ai/dsh-webhook-github',
-  '@deepseek-ai/dsh-user-question-broker',
-] as const
-
-/** Desktop resource assembly selected when preparing one release. */
-export type DesktopPackageAssembly = 'native' | 'compatibility'
-
 /** Package-relative Desktop Host files required before a profile can boot. */
 export const DESKTOP_HOST_RUNTIME_FILES = [
-  'lib/index.js',
-  'lib/native-host.js',
-] as const
-
-/** Compatibility package files required only by a legacy Desktop profile. */
-export const DESKTOP_COMPATIBILITY_HOST_RUNTIME_FILES = [
   'lib/index.js',
   'config/desktop.cordis.patch.yml',
 ] as const
@@ -94,10 +30,8 @@ export interface DesktopCorePackageRecord {
 
 /** Complete union of the first-party package closures rooted at dsh and its private Desktop Host. */
 export interface DesktopCorePackageSet {
-  readonly schemaVersion: 2
-  readonly assembly: DesktopPackageAssembly
+  readonly schemaVersion: 1
   readonly packages: readonly DesktopCorePackageRecord[]
-  readonly ignoredOptionalDependencies: readonly string[]
 }
 
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|[a-z0-9][a-z0-9._~-]*)$/u
@@ -121,12 +55,10 @@ export function parseDesktopCorePackageSet(
   value: unknown,
   expectedReleaseVersion?: string,
 ): DesktopCorePackageSet {
-  if (!isRecord(value) || value.schemaVersion !== 2
-    || (value.assembly !== 'native' && value.assembly !== 'compatibility') || !Array.isArray(value.packages)
-    || !Array.isArray(value.ignoredOptionalDependencies)) {
+  if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) {
     throw new Error('desktop package set: invalid descriptor')
   }
-  const parsePackages = (entries: unknown[]): DesktopCorePackageRecord[] => entries.map((entry): DesktopCorePackageRecord => {
+  const packages = value.packages.map((entry): DesktopCorePackageRecord => {
     if (!isRecord(entry) || typeof entry.name !== 'string' || !PACKAGE_NAME_PATTERN.test(entry.name)
       || typeof entry.version !== 'string' || !VERSION_PATTERN.test(entry.version)
       || typeof entry.file !== 'string' || !FILE_PATTERN.test(entry.file)
@@ -142,7 +74,6 @@ export function parseDesktopCorePackageSet(
       integrity: entry.integrity,
     }
   })
-  const packages = parsePackages(value.packages)
   const names = new Set(packages.map(entry => entry.name))
   const files = new Set(packages.map(entry => entry.file))
   if (names.size !== packages.length || files.size !== packages.length) {
@@ -152,32 +83,14 @@ export function parseDesktopCorePackageSet(
   if (JSON.stringify(sorted) !== JSON.stringify(packages)) {
     throw new Error('desktop package set: packages must be sorted by name')
   }
-  const ignoredOptionalDependencies = value.ignoredOptionalDependencies
-  const compatibilityNames = new Set<string>(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES)
-  const packageNames = new Set(packages.map(entry => entry.name))
-  const expectedIgnored = value.assembly === 'native'
-    ? [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort()
-    : DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES.filter(name => !packageNames.has(name))
-      .sort()
-  if (ignoredOptionalDependencies.some(name => typeof name !== 'string' || !compatibilityNames.has(name))
-    || new Set(ignoredOptionalDependencies).size !== ignoredOptionalDependencies.length
-    || JSON.stringify(ignoredOptionalDependencies) !== JSON.stringify(expectedIgnored)) {
-    throw new Error('desktop package set: ignored optional dependencies do not match the Desktop compatibility policy')
-  }
-  if (value.assembly === 'native' && [...packageNames].some(name => compatibilityNames.has(name))) {
-    throw new Error('desktop package set: Native assembly contains a compatibility-only package')
-  }
-  const releasePackages = value.assembly === 'native'
-    ? RELEASE_PACKAGES
-    : [...RELEASE_PACKAGES, DESKTOP_COMPATIBILITY_HOST_PACKAGE] as const
-  for (const name of releasePackages) {
+  for (const name of RELEASE_PACKAGES) {
     const entry = packages.find(candidate => candidate.name === name)
     if (entry === undefined) throw new Error(`desktop package set: missing ${name}`)
     if (expectedReleaseVersion !== undefined && entry.version !== expectedReleaseVersion) {
       throw new Error(`desktop package set: ${name}@${entry.version} does not match Desktop ${expectedReleaseVersion}`)
     }
   }
-  return { schemaVersion: 2, assembly: value.assembly, packages, ignoredOptionalDependencies }
+  return { schemaVersion: 1, packages }
 }
 
 /** Read and structurally validate one profile's core package descriptor. */
@@ -266,9 +179,5 @@ export function verifyDesktopCoreLockfile(
     if (registryResolution.test(lockfile)) {
       throw new Error(`desktop package set: lockfile resolved ${record.name}@${record.version} outside the local package set`)
     }
-  }
-  for (const name of packageSet.ignoredOptionalDependencies) {
-    const resolution = new RegExp(`^  ['"]?${escapeRegExp(name)}@[^\\r\\n'"]+['"]?:`, 'mu')
-    if (resolution.test(lockfile)) throw new Error(`desktop package set: lockfile resolved ignored compatibility optional ${name}`)
   }
 }

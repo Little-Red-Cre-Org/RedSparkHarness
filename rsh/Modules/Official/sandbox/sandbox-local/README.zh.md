@@ -42,7 +42,7 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `runnerCommand` | `[]` | 自定义 runner argv；bwrap 兼容的 child profile 包括 `--chdir` 和只读/可写 bind，完整强制执行由操作方断言，并跳过内置选择与探测 |
+| `runnerCommand` | `[]` | 自定义 runner argv；会追加 bwrap 兼容的 profile 参数，断言完全强制执行，并跳过内置选择与探测 |
 | `runnerFailureSignatures` | `[]` | 识别自定义 runner 自身失败方言的不区分大小写 stderr 子串；与 `runnerCommand` 搭配必需 |
 | `probeTimeoutMs` | `5,000` | 每次竞争 runner 候选功能探测的超时时间 |
 
@@ -80,9 +80,7 @@ Seatbelt profile 默认允许，带 `(deny file-write*)` 与来自共享 `writab
 
 Windows 档为每个工作区保留一个确定性写入 SID 和常驻 ACE，同时为每个活跃的会话/工作区对分配一个随机私有临时目录，以及不同的 SID 和可撤销 ACE——共享工作区的会话共享其预期写权限，却不会继承彼此的临时目录权限。新的提供方总会选择新的临时路径和 SID，因此崩溃残留既无法阻止恢复的会话，也无法向其授权。该档报告 `partial` 强制执行，因为受限令牌必须保留 Everyone，且 NTFS 硬链接会把同一文件对象别名为多个路径。
 
-原生 child 限制会保留策略现有的可写根目录，并增加调用方的 `privateHome`。bwrap 会应用只读与可写 bind，并用 `--chdir` 设置 `cwd`；Landlock 和 Seatbelt 会保留策略授权并增加 child home。自定义 `runnerCommand` 必须支持相同的 bwrap 兼容 child profile，包括 `--chdir` 和精确 bind；其强制执行仍由操作方断言。
-
-在 Windows 上，`read-only` child 会获得针对 `privateHome` 的逐调用授权，以及 runner 自有的私有临时目录；ambient temp 根目录不会获得写授权。`workspace-write` child 需要 session，且其 home 必须位于 `ProcessSandbox.prepareWritableTempRoot()` 返回的 provider 所有的逐 session 临时根目录内。child launcher 只拥有其 home 子目录；此提供方保留并撤销 session 临时授权。配置了自定义 runner、选中其他 backend 或调用无 agent 时，该方法不返回路径。
+原生 `ProcessSandbox` 可以为同一 workspace-write 策略预备 `confine()` 将使用的现有会话临时根。child runtime 可以在该根下放置仅供一个连接使用的 home；它只拥有并删除自己的子目录，此提供方继续持有会话/工作区对共用的根与 ACL。agentless 策略以及不拥有稳定临时根能力的 backend 不会返回路径。
 
 ### 拒绝与 runner 失败方言
 

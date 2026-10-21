@@ -34,9 +34,6 @@
     },
     {
       "path": "../ui-session"
-    },
-    {
-      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

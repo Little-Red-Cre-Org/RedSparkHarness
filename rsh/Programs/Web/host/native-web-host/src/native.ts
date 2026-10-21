@@ -98,7 +98,7 @@ export class NativeWebApplication implements NativeApplication {
   constructor(private readonly host: NativeHttpHost) {}
 
   /**
-   * Print the authenticated browser URL, then drain the listener on Host cancellation.
+   * Print the authenticated browser URL and wait for Host cancellation.
    * @param args - must be empty; profile configuration owns the Web Host.
    * @param signal - NativeHost shutdown signal.
    * @returns zero after cancellation is observed.
@@ -111,7 +111,6 @@ export class NativeWebApplication implements NativeApplication {
       if (signal.aborted) { resolve(); return }
       signal.addEventListener('abort', () => { resolve() }, { once: true })
     })
-    await this.host.close()
     return 0
   }
 }

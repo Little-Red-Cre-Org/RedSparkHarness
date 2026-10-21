@@ -3,7 +3,7 @@
 
 import type { ReactNode, RefObject } from 'react'
 import {
-  ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16,
+  FishLogo, IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { ConversationSlotProps } from '../contract/slots.ts'
@@ -80,15 +80,26 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
     <div className={css.root}>
       <div className={css.stack}>
         {renderSlot('conversation.pet', { placement: 'hero' })}
-        <ChatWelcome
-          eyebrow={t('hero.eyebrow')}
-          title={t('hero.headline')}
-          badge={t('hero.preview')}
-          tagline={t('hero.tagline')}
-          mark={renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
-            fallback: <FishLogo size={34} className={css.fish} />,
-          })}
-        />
+        <p className={css.eyebrow}>{t('hero.eyebrow')}</p>
+        <div className={css.headline}>
+          {/* figma 34:10412: fish 34×25 leading the headline, gap 10. */}
+          <span
+            className={css.fishHitbox}
+          >
+            {renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
+              fallback: <FishLogo size={34} className={css.fish} />,
+            })}
+          </span>
+          <span className={css.titleGroup}>
+            {/* Own element: keeps the headline text addressable apart from the badge. */}
+            <span>{t('hero.headline')}</span>
+            <span className={css.previewBadge}>{t('hero.preview')}</span>
+          </span>
+        </div>
+        <p className={css.tagline}>{t('hero.tagline')}</p>
+        <div className={css.body}>
+          {/* The composer remains mounted outside this component. */}
+        </div>
       </div>
       {children}
     </div>

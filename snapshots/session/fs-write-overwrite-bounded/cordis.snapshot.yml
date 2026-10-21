@@ -30,7 +30,7 @@
       Verify your work by running the code or tests. Keep answers brief and factual.
 
 - id: fs-sandbox
-  name: '@deepseek-ai/dsh-fs-sandbox/runtime'
+  name: '@deepseek-ai/dsh-fs-sandbox'
   config:
     cwd: !!js process.cwd()
     diffBasisMaxBytes: 64

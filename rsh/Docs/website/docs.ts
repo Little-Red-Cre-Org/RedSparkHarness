@@ -131,6 +131,14 @@ const homeAndGuide = pairedPages([
     order: 2,
   },
   {
+    source: 'rsh/Docs/user/guide/file-references.md',
+    route: 'guide/file-references.md',
+    label: { root: '引用文件与对话', en: 'Reference files and conversations' },
+    sidebar: { root: 'zh-guide', en: 'en-guide' },
+    section: { root: '入门', en: 'Guide' },
+    order: 2.5,
+  },
+  {
     source: 'rsh/Docs/user/guide/network-proxy.md',
     route: 'guide/network-proxy.md',
     label: { root: '网络代理', en: 'Network proxy' },
@@ -285,14 +293,6 @@ const cordisPrimerReference = pairedPages([
     sidebar: { root: 'zh-reference', en: 'en-reference' },
     section: { root: '概念', en: 'Concepts' },
     order: 1,
-  },
-  {
-    source: 'rsh/Docs/native-config-migration.md',
-    route: 'reference/native-config-migration.md',
-    label: { root: '原生配置迁移', en: 'Native configuration migration' },
-    sidebar: { root: 'zh-reference', en: 'en-reference' },
-    section: { root: '概念', en: 'Concepts' },
-    order: 6,
   },
 ])
 

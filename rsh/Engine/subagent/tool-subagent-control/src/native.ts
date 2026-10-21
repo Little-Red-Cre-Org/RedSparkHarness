@@ -29,8 +29,7 @@ export const plugin: NativePlugin = {
           const args = call.arguments as { agent_id: string; message: string }
           if (args.agent_id.length === 0 || args.message.length === 0) throw new Error('send_message: agent_id and message must be nonempty')
           return { messageId: await subagents.sendMessage({ agent: call.agent, session: call.session, target: SessionId(args.agent_id),
-            content: [{ type: 'text', text: args.message }],
-            ...call.delegationContext === undefined ? {} : { delegationContext: call.delegationContext } }, call.signal) }
+            content: [{ type: 'text', text: args.message }] }, call.signal) }
         },
       }, {
         schema: { name: 'interrupt_agent', description: 'Request cancellation of a live descendant\'s current turn. Unclaimed input remains parked until another send_message; owned descendants keep running. An absent target is an accepted no-op.',

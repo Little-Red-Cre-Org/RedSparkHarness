@@ -20,7 +20,7 @@ DeepSeek Harness 需要一个复用 Web UI 的 Electron 桌面应用。该应用
 
 Electron 拥有 `.dsh/profiles/desktop` 保留 profile。[内置运行时决策](2026-09-08-desktop-bundled-runtime-and-external-plugins.zh.md)负责核心资源存储、外部插件依赖、共享包链接和 profile 协调。私有 Desktop Host 保持独立于公共 CLI 包，且不会发布到 npm。
 
-一个 Desktop 发布号同时标识 Electron 产物及其精确的 `@deepseek-ai/dsh` 与 Native `@deepseek-ai/dsh-desktop-host` 依赖。兼容装配还会以独立的 `@deepseek-ai/dsh-desktop-host-compatibility` 身份打包 Host，并使用相同发行版本。发行不能在构建或运行时选择不同的核心版本。因此，即使壳代码没有变化，更新 dsh 也必须产生新的 Electron 发布。
+一个 Desktop 发布号同时标识 Electron 产物及其精确的 `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-desktop-host` 依赖。发布不能在构建或运行时选择不同的核心版本。因此，即使壳代码没有变化，更新 dsh 也必须产生新的 Electron 发布。
 
 浏览器 Web UI、dsh 后端、现有 `dsh plugin` CLI、用户 npm 和用户 pnpm 都不能修改该 profile。CLI 保留 `desktop` 名称的所有大小写变体，并拒绝针对它的启动、配置 dump 和插件管理请求。Electron 在项目恢复或 Host 启动前获取进程生命周期单实例锁；后续启动只会聚焦或重建主窗口，不会接触 profile 状态。Electron-only GUI 通过 preload 发送结构化安装、删除和更新请求；Electron 只调用其内置 pnpm。
 
@@ -73,7 +73,7 @@ Desktop 在直接修改 profile 前停止 Host。包操作失败后保留部分�
 
 ## 更新与恢复
 
-Electron 更新只使用一个 `electron-updater` 发布流和签名 `electron-builder` 产物。该版本就是 Desktop 发布版本；不存在独立 dsh manifest、兼容范围或仅更新 dsh 的操作。前台安装会等待正在进行的后台检查，而不会把检查结果复用成安装结果。更新弹窗下载并安装 Electron 产物，然后重启进入新发布。electron-updater 可能在 `quitAndInstall` 已排队退出应用之后，才以异步 `error` 事件报告安装器启动失败；未排队退出的失败则让应用继续运行。因此 Desktop 只有在 `quitAndInstall` 已返回或抛错、已报告更新器错误，并且再经过一轮事件循环仍未发生 `before-quit` 时，才视为交接失败；重启前停止失败也视为交接失败。交接失败时，它通过常规启动路径重新启动已停止的 Host，保留可用版本，并发布该错误，让用户继续工作并可从弹窗或菜单重试。若用户在交接期间请求了普通退出，则执行退出而不重启 Host。`update-coordinator.spec.ts` 覆盖排队退出后的异步错误，以及不退出时的同步和异步错误，二者均随后重试；`main-startup.spec.ts` 覆盖 Host 恢复以及恢复后的 Native 变更。
+Electron 更新只使用一个 `electron-updater` 发布流和签名 `electron-builder` 产物。该版本就是 Desktop 发布版本；不存在独立 dsh manifest、兼容范围或仅更新 dsh 的操作。前台安装会等待正在进行的后台检查，而不会把检查结果复用成安装结果。更新弹窗下载并安装 Electron 产物，然后重启进入新发布。
 
 [立即显示窗口决策](2026-09-09-desktop-immediate-window-and-direct-start.zh.md)负责本地加载页、直接启动 Host 和主窗口恢复。profile 协调遵循[内置运行时决策](2026-09-08-desktop-bundled-runtime-and-external-plugins.zh.md)。
 
@@ -106,7 +106,7 @@ NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录�
 | 表面 | 实现 |
 |---|---|
 | 壳 | `rsh/Programs/Desktop` 负责 Electron 窗口、受限 preload、自定义协议、子进程生命周期、项目事务、插件 GUI、更新协调和 electron-builder 配置。 |
-| 已安装运行时 | Native `@deepseek-ai/dsh-desktop-host` 启动 Native 组合；显式兼容装配使用独立的 `@deepseek-ai/dsh-desktop-host-compatibility` Host 启动 Cordis profile。两者都通过经过验证的分帧字节管道传输 API 与资源响应。 |
+| 已安装运行时 | 私有 `@deepseek-ai/dsh-desktop-host` 从活跃项目启动无端口桌面组合，并通过经过验证的分帧字节管道流式传输 API 与资源响应。 |
 | 包状态 | 内置 Node.js 执行不可变核心资源；内置 pnpm 只修改 Desktop profile 中的外部插件依赖图。 |
 | 资格验证 | macOS 打包要求已配置的公司身份与公证凭据可用，在生成清单前验证每个原生运行时文件，验证完整应用签名，并要求应用和 DMG 都完成公证且通过 Gatekeeper。Windows 打包要求已配置的公开证书、SafeNet 私钥容器、Token Password 与 SignTool，并验证生成的每个签名。更新托管、跨上一版本的已安装产物测试和各平台 GUI 录制仍是发布环境门槛。 |
 
@@ -144,7 +144,7 @@ NSIS 先解压到私有的 `7z-out` 目录，再把文件复制到应用目录�
 - 后端与浏览器应用不能修改桌面包。
 - npm/CLI dsh 与 Electron 绝不从对方的 `node_modules` 解析或安装插件。
 - 在产品 UI 加载前，活跃后端与 Web UI 报告相同 dsh 版本和兼容壳 API。
-- 兼容插件的包操作或 Host 失败后保留部分 profile 修改，并提供恢复控件；不承诺自动回滚 profile。Native 模块变更会恢复自身修改的文件并重启之前的 Host，见 [2026-10-14-native-desktop-module-management](2026-10-14-native-desktop-module-management.zh.md)。
+- 包操作或 Host 失败后保留部分 profile 修改，并提供恢复控件；不承诺自动回滚 profile。
 - 一个 Desktop 版本绑定 Electron 与 dsh；每次 dsh 更新都通过一个 Electron 更新弹窗交付，并产生一次用户可见的重启。
 - 共享 `.dsh` 数据在迁移或修改前拒绝不兼容的读取方。
 - 不打开回环监听端口，沙箱渲染进程不能访问任意文件系统或 Electron API。

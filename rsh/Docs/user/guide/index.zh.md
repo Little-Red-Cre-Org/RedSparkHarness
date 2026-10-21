@@ -24,6 +24,7 @@ Agent（智能体）可以读取和编辑工作区文件、运行命令、委派
 
 ## 继续使用
 
+- [引用本地文件与对话](./file-references.zh.md)——本地选择、预览及模型费用说明。
 - [配置模型](./providers.zh.md)
 - [使用 Python SDK](./python-sdk.zh.md)
 - [使用其他 CLI 模式](../../../Programs/CLI/README.zh.md)

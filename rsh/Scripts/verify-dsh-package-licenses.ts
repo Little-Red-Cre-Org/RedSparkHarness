@@ -1,26 +1,19 @@
 /**
- * Enforce MIT declarations for DSH packages and the exact ACP child research-license publication.
+ * Enforce the MIT license declaration for repository-owned DSH npm packages.
  * @module rsh/Scripts/verify-dsh-package-licenses
  */
 
-import { existsSync, globSync, readFileSync } from 'node:fs'
-import { dirname, resolve, sep } from 'node:path'
+import { globSync, readFileSync } from 'node:fs'
+import { resolve, sep } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 const DSH_PACKAGE_NAME = /^@deepseek-ai\/dsh(?:-|$)/
-const RESEARCH_LICENSE_PACKAGE = {
-  manifestPath: 'rsh/Modules/Official/subagent/acp-child/package.json',
-  name: '@deepseek-ai/dsh-acp-child',
-  license: 'SEE LICENSE IN LICENSE-REDSPARK-RESEARCH.txt',
-  file: 'LICENSE-REDSPARK-RESEARCH.txt',
-}
-const ROOT_RESEARCH_LICENSE = 'LICENSE-REDSPARK-RESEARCH.txt'
 
 /** Result of checking every DSH package reachable through the root workspace list. */
 export interface DshPackageLicenseReport {
   /** Number of DSH package manifests checked. */
   packageCount: number
-  /** Repository-relative diagnostics for package-license policy violations. */
+  /** Repository-relative diagnostics for non-MIT declarations. */
   failures: string[]
 }
 
@@ -65,7 +58,7 @@ function printable(value: unknown): string {
 /**
  * Check every DSH npm package declared by the repository workspace.
  * @param root - absolute repository root containing the workspace package.json.
- * @returns the checked package count and every package-license policy violation.
+ * @returns the checked package count and every non-MIT declaration.
  */
 export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport {
   let packageCount = 0
@@ -73,55 +66,16 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
 
   for (const file of workspaceManifestPaths(root)) {
     const manifest = readManifest(root, file)
-    // The private root manifest describes the repository license, not a published DSH package.
+    // The private root manifest describes the repository's research license,
+    // not a published DSH package. Published workspace packages keep the MIT
+    // declaration enforced below.
     if (file === 'package.json') continue
-    const normalizedFile = file.split(sep).join('/')
     const name = manifest.name
-    const isDshPackage = typeof name === 'string' && DSH_PACKAGE_NAME.test(name)
-    const isResearchLicensePath = normalizedFile === RESEARCH_LICENSE_PACKAGE.manifestPath
+    if (typeof name !== 'string' || !DSH_PACKAGE_NAME.test(name)) continue
 
-    if (isResearchLicensePath) {
-      if (isDshPackage) packageCount++
-      if (name !== RESEARCH_LICENSE_PACKAGE.name) {
-        failures.push(
-          `${normalizedFile}: expected package name ${RESEARCH_LICENSE_PACKAGE.name}; found ${printable(name)}.`,
-        )
-        continue
-      }
-
-      if (manifest.license !== RESEARCH_LICENSE_PACKAGE.license) {
-        failures.push(
-          `${normalizedFile}: ${RESEARCH_LICENSE_PACKAGE.name} must declare "license": `
-          + `${JSON.stringify(RESEARCH_LICENSE_PACKAGE.license)}; found ${printable(manifest.license)}.`,
-        )
-      }
-      if (!isStringArray(manifest.files) || !manifest.files.includes(RESEARCH_LICENSE_PACKAGE.file)) {
-        failures.push(
-          `${normalizedFile}: ${RESEARCH_LICENSE_PACKAGE.name} must include `
-          + `${JSON.stringify(RESEARCH_LICENSE_PACKAGE.file)} in "files".`,
-        )
-      }
-
-      const rootLicensePath = resolve(root, ROOT_RESEARCH_LICENSE)
-      const packageLicensePath = resolve(root, dirname(file), RESEARCH_LICENSE_PACKAGE.file)
-      if (!existsSync(rootLicensePath)) {
-        failures.push(`${normalizedFile}: missing repository license ${ROOT_RESEARCH_LICENSE}.`)
-      }
-      if (!existsSync(packageLicensePath)) {
-        failures.push(`${normalizedFile}: missing package license ${RESEARCH_LICENSE_PACKAGE.file}.`)
-      } else if (existsSync(rootLicensePath)
-        && !readFileSync(packageLicensePath).equals(readFileSync(rootLicensePath))) {
-        failures.push(
-          `${normalizedFile}: package license ${RESEARCH_LICENSE_PACKAGE.file} `
-          + `must match repository ${ROOT_RESEARCH_LICENSE}.`,
-        )
-      }
-      continue
-    }
-
-    if (!isDshPackage) continue
     packageCount++
     if (manifest.license !== 'MIT') {
+      const normalizedFile = file.split(sep).join('/')
       failures.push(
         `${normalizedFile}: ${name} must declare "license": "MIT"; found ${printable(manifest.license)}.`,
       )
@@ -134,12 +88,12 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
 if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   const report = inspectDshPackageLicenses(ROOT)
   if (report.failures.length > 0) {
-    process.stderr.write('verify-dsh-package-licenses: package-license policy violations found:\n')
+    process.stderr.write('verify-dsh-package-licenses: non-MIT DSH package declarations found:\n')
     for (const failure of report.failures) process.stderr.write(`  ${failure}\n`)
     process.exitCode = 1
   } else {
     process.stdout.write(
-      `verify-dsh-package-licenses: ${String(report.packageCount)} DSH package(s) checked; package-license policy satisfied.\n`,
+      `verify-dsh-package-licenses: ${String(report.packageCount)} DSH package(s) checked; all declare MIT.\n`,
     )
   }
 }

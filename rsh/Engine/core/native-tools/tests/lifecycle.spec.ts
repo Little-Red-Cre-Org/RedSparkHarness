@@ -5,8 +5,7 @@ import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agen
 import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { NativeToolRegistry, type NativeToolExecution, type NativeToolContribution, type NativeToolResult,
-  type NativeValueToolContribution } from '../src/index.ts'
+import { NativeToolRegistry, type NativeToolExecution, type NativeToolContribution, type NativeValueToolContribution } from '../src/index.ts'
 import { plugin as toolsPlugin } from '../src/native.ts'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
@@ -27,19 +26,6 @@ function contribution(execute: NativeToolContribution['execute'], name = 'held')
   return { schema: { name, description: 'Lifecycle fixture.', parameters: { type: 'object', properties: {} } }, execute }
 }
 
-it('reports only exact registrations captured by a model request', async () => {
-  const scope = new NativeScope()
-  const agents = new NativeAgentRegistry({ emit() {} })
-  const registry = new NativeToolRegistry(agents, scope)
-  const first = registry.register(contribution(async () => ({ content: [{ type: 'text', text: 'first' }], isError: false })))
-  const second = registry.register(contribution(async () => ({ content: [{ type: 'text', text: 'second' }], isError: false }), 'other'))
-  const snapshot = registry.captureModelSnapshot(['held'], scope)
-  expect(snapshot.includesRegistration(first)).toBe(true)
-  expect(snapshot.includesRegistration(second)).toBe(false)
-  await snapshot.dispose()
-  await first()
-  await second()
-})
 it('captures the output schema and detaches canonical values before rendering', async () => {
   const scope = new NativeScope()
   const agents = new NativeAgentRegistry({ emit() {} })
@@ -87,140 +73,6 @@ it('captures the output schema and detaches canonical values before rendering', 
     await expect(registry.execute(call)).rejects.toThrow('result policy did not delegate')
     await invalid()
   } finally { await post(); await dispose(); await release() }
-})
-
-it('rejects a captured model schema after its exact registration is replaced', async () => {
-  const scope = new NativeScope()
-  const agents = new NativeAgentRegistry({ emit() {} })
-  const registry = new NativeToolRegistry(agents, scope)
-  const { call, release } = execution(agents, scope)
-  const replacementExecute = vi.fn(async (): Promise<NativeToolResult> => ({ content: [], isError: false }))
-  const removeOriginal = registry.register(contribution(async () => ({ content: [], isError: false })))
-  const snapshot = registry.captureModelSnapshot(['held'], scope)
-  expect(snapshot.schemas.map(schema => schema.name)).toEqual(['held'])
-  await removeOriginal()
-  const installReplacement = registry.register(contribution(replacementExecute))
-  try {
-    await expect(snapshot.execute(call)).rejects.toMatchObject({ code: 'TOOL_DENIED' })
-    expect(replacementExecute).not.toHaveBeenCalled()
-  } finally {
-    await snapshot.dispose()
-    await installReplacement()
-    await release()
-  }
-})
-
-it('keeps queued and delegated same-name calls with their scoped Agent and Session', async () => {
-  const scope = new NativeScope()
-  const firstScope = new NativeScope(scope)
-  const secondScope = new NativeScope(scope)
-  const agents = new NativeAgentRegistry({ emit() {} })
-  const registry = new NativeToolRegistry(agents, scope)
-  const firstAgent = { id: NativeAgentId('first-tool-agent'), scope: firstScope }
-  const secondAgent = { id: NativeAgentId('second-tool-agent'), scope: secondScope }
-  const firstSessionId = SessionId('first-tool-session')
-  const secondSessionId = SessionId('second-tool-session')
-  const firstSession = Session.create(firstSessionId, undefined, {
-    version: SESSION_FORMAT_VERSION, id: firstSessionId, createdAt: 0, isSeeded: false,
-  })
-  const secondSession = Session.create(secondSessionId, undefined, {
-    version: SESSION_FORMAT_VERSION, id: secondSessionId, createdAt: 0, isSeeded: false,
-  })
-  const firstParent: NativeToolExecution = {
-    agent: firstAgent, callId: ToolCallId('first-parent'), name: 'same_name', arguments: {}, session: firstSession,
-    signal: new AbortController().signal, appendEvent: async (type, data, ...opts) => firstSession.append(type, data, ...opts),
-  }
-  const secondParent: NativeToolExecution = {
-    agent: secondAgent, callId: ToolCallId('second-parent'), name: 'same_name', arguments: {}, session: secondSession,
-    signal: new AbortController().signal, appendEvent: async (type, data, ...opts) => secondSession.append(type, data, ...opts),
-  }
-  const delegationContext = Object.freeze({ depth: 1, maxDepth: 2, cwd: '/workspace', provider: 'fixture', model: 'fixture',
-    maxSteps: 1, toolNames: Object.freeze(['same_name']), builtinToolNames: Object.freeze([]), programToolNames: Object.freeze([]) })
-  const firstCall: NativeToolExecution = { ...firstParent, callId: ToolCallId('first-queued'), parent: firstParent, delegationContext }
-  const secondCall: NativeToolExecution = { ...secondParent, callId: ToolCallId('second-delegated'), parent: secondParent, delegationContext }
-  const firstRegistration = agents.register(firstAgent)
-  const secondRegistration = agents.register(secondAgent)
-  const firstTool = registry.registerValueTool({
-    schema: { name: 'same_name', description: 'First scoped tool.', parameters: { type: 'object', properties: {} } },
-    output: { schema: { type: 'string' }, render: (_call, value) => {
-      if (typeof value !== 'string') throw new Error('first scoped output must be text')
-      return { content: [{ type: 'text', text: value }], isError: false }
-    } },
-    async execute(call) {
-      expect(agents.requireInitiator()).toBe(firstAgent)
-      expect(call.agent).toBe(firstAgent)
-      expect(call.session).toBe(firstSession)
-      expect(call.parent).toBe(firstParent)
-      expect(call.delegationContext).toBe(delegationContext)
-      return 'first'
-    },
-  }, firstScope)
-  const secondTool = registry.registerValueTool({
-    schema: { name: 'same_name', description: 'Second scoped tool.', parameters: { type: 'object', properties: {} } },
-    output: { schema: { type: 'string' }, render: (_call, value) => {
-      if (typeof value !== 'string') throw new Error('second scoped output must be text')
-      return { content: [{ type: 'text', text: value }], isError: false }
-    } },
-    async execute(call) {
-      expect(agents.requireInitiator()).toBe(secondAgent)
-      expect(call.agent).toBe(secondAgent)
-      expect(call.session).toBe(secondSession)
-      expect(call.parent).toBe(secondParent)
-      expect(call.delegationContext).toBe(delegationContext)
-      return 'second'
-    },
-  }, secondScope)
-  const entered = Promise.withResolvers<undefined>()
-  const release = Promise.withResolvers<undefined>()
-  try {
-    const firstExecution = agents.execution(firstAgent)
-    const occupying = firstExecution.run(async () => {
-      entered.resolve(undefined)
-      await release.promise
-    })
-    await entered.promise
-    const queued = firstExecution.run(async () => registry.execute(firstCall))
-    const delegated = agents.execution(secondAgent).run(async () => registry.execute(secondCall))
-    await expect(delegated).resolves.toMatchObject({ value: 'second', content: [{ type: 'text', text: 'second' }] })
-    release.resolve(undefined)
-    await occupying
-    await expect(queued).resolves.toMatchObject({ value: 'first', content: [{ type: 'text', text: 'first' }] })
-  } finally {
-    release.resolve(undefined)
-    await Promise.allSettled([registry.clear(), firstTool(), secondTool(), firstRegistration(), secondRegistration()])
-  }
-})
-
-it('captures PTC business bindings without promoting them to direct model calls', async () => {
-  const scope = new NativeScope()
-  const agents = new NativeAgentRegistry({ emit() {} })
-  const registry = new NativeToolRegistry(agents, scope, 'ptc')
-  const { call, release } = execution(agents, scope, 'business')
-  const removeRunCode = registry.registerValueTool({
-    schema: { name: 'run_code', description: 'Run code.', parameters: { type: 'object', properties: {} } },
-    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
-    async execute() { return 'done' },
-  })
-  const executeBusiness = vi.fn(async () => 'business-result')
-  const removeBusiness = registry.registerValueTool({
-    schema: { name: 'business', description: 'Business tool.', parameters: { type: 'object', properties: {} } },
-    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
-    execute: executeBusiness,
-  })
-  const snapshot = registry.captureProgramSnapshot(['business'], scope)
-  try {
-    expect(registry.modelSchemas(scope).map(schema => schema.name)).toEqual(['run_code'])
-    expect(snapshot.programSchemas?.map(schema => schema.name)).toEqual(['business'])
-    const admitted = await snapshot.prepare(call)
-    expect(await admitted.execute()).toEqual({ content: [], isError: false, value: 'business-result' })
-    registry.acceptResult(admitted.call, { content: [], isError: false, value: 'business-result' })
-    expect(executeBusiness).toHaveBeenCalledOnce()
-  } finally {
-    await snapshot.dispose()
-    await removeBusiness()
-    await removeRunCode()
-    await release()
-  }
 })
 
 it('drains a replaced contribution before resources acquired after registration are released', async () => {

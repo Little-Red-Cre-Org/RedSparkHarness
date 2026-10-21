@@ -47,8 +47,6 @@ Load the plugin together with the skill registry and at least one provider. The 
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-skill) is the exhaustive source for every accepted field.
 
-Native Host profiles select this package's `./native` entry alongside the Native `dsh-skill`, `dsh-native-tools`, and request-context providers. The Native consumer provides `skillInvocations` for manual Skill routing: it accepts only a user-invocable definition when the caller supplies the same `requestContexts` registry, its install scope contains the selected Agent scope, and its exact request-context registration remains the nearest winner before and after loading. Matching instructions are prepared through the shared request-context service, while catalog publication still checks the exact captured `skill` tool registration.
-
 ### What the model gets
 
 - **A session catalog.** When model-invocable skills exist and the `skill` tool is visible, the agent receives a durable user-role message before its first request, listing each skill's name and a capped description; the message tells the model to load a skill with the tool before acting on it, and never to infer instructions from the summary alone.
@@ -78,8 +76,7 @@ The package is built on two ideas. First, the catalog is a durable projection, d
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Cordis plugin entry: tool registration, catalog and gesture pre-step listeners, rendering and digest |
-| [`src/native.ts`](src/native.ts) | Native Host consumer using captured tool visibility and the request-context writer |
+| [`src/index.ts`](src/index.ts) | Plugin entry: tool registration, catalog and gesture pre-step listeners, rendering and digest |
 | — | No runtime invariant companion is published; this model-facing adapter has no independent lifecycle stream; execution relations are owned by the capability seam it calls. |
 
 ### Catalog lifecycle
