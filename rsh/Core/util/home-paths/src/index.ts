@@ -23,6 +23,13 @@ export const DSH_HOME_DIR_NAME = '.redspark'
 /** Stable user-facing display form for the default RedSpark Harness home. */
 export const DEFAULT_DSH_HOME_DISPLAY = `~/${DSH_HOME_DIR_NAME}`
 
+/**
+ * On-disk directory name of the upstream DeepSeek Harness home this fork must
+ * never treat as its own. Kept as a literal because it names another product's
+ * root, not a constant this package owns.
+ */
+const UPSTREAM_DSH_HOME_DIR_NAME = '.dsh'
+
 /** Environment variable that overrides the default RedSpark Harness home. */
 export const DSH_HOME_ENV = 'DSH_HOME'
 
@@ -94,9 +101,31 @@ export function expandHomePath(path: string): string {
  * @returns the normalized absolute harness home path.
  */
 export function resolveDshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
-  const fromEnv = env[DSH_HOME_ENV]
-  const selected = configured ?? (fromEnv !== undefined && fromEnv.trim().length > 0 ? fromEnv : defaultDshHome())
+  const fromEnv = inheritableDshHome(env[DSH_HOME_ENV])
+  const selected = configured ?? fromEnv ?? defaultDshHome()
   return resolve(expandHomePath(selected))
+}
+
+/**
+ * Reject an inherited `$DSH_HOME` that names an upstream DSH home.
+ *
+ * A process started from a shell inside upstream DeepSeek Harness inherits
+ * `DSH_HOME=~/.dsh`, and a developer may have exported it once for the `dsh`
+ * CLI. Honouring it here would point RedSpark Harness at another product's
+ * sessions, credentials and settings, which is the one thing the renamed
+ * default root exists to prevent. The upstream home is recognisable by its
+ * final path segment, so a value naming `.dsh` is dropped and the RedSpark
+ * default is used instead; an explicit configured path still wins, so a
+ * deliberate migration target stays expressible.
+ * @param value - ambient `$DSH_HOME`, possibly absent or blank.
+ * @returns the accepted value, or undefined when the ambient value is absent,
+ * blank, or points at an upstream DSH home.
+ */
+function inheritableDshHome(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim().length === 0) return undefined
+  const normalized = value.trim().replace(/[\\/]+$/u, '')
+  if (basename(normalized) === UPSTREAM_DSH_HOME_DIR_NAME) return undefined
+  return value
 }
 
 export {

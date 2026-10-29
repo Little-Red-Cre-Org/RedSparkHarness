@@ -1,0 +1,52 @@
+# Opt-in overlay that turns the RSI route on over the shipped headless profile.
+#
+# The base bundle registers the `acp` provider and a disabled `subagent_rsi`
+# tool row. This overlay is what a real deployment adds: it points the provider
+# at the RSI venv, gives the child its own store and engine home, and re-enables
+# the tool so the model can reach it.
+#
+# `cwd` is deliberately omitted so the child inherits the delegating session's
+# workspace: RSI edits files in the workspace that asked for the work, the same
+# contract the in-process providers follow.
+
+- id: headless-startup
+  disabled: true
+
+- id: headless-runner
+  disabled: true
+
+- id: agent-loop
+  config:
+    agents:
+      - id: main
+        provider: mock
+        model: mock-delegate
+        cwd: !!js process.cwd()
+
+- id: session-persistence-jsonl
+  config:
+    root: '.sessions'
+    compression: none
+
+- id: subagent-acp
+  config:
+    providerName: acp
+    command: !!js process.env.RSI_PROBE_PYTHON
+    args: !!js JSON.parse(process.env.RSI_PROBE_ARGS)
+    permission: reject
+    env: !!js "({ DSH_HOME: process.env.RSI_PROBE_ISOLATED_HOME, PYTHONPATH: process.env.RSI_PROBE_PYTHONPATH, OPENHANDS_SUPPRESS_BANNER: '1' })"
+
+- id: tool-subagent-rsi
+  name: '@deepseek-ai/dsh-tool-subagent'
+  # Base ships this row disabled; a patch replaces the row's `config` but not
+  # this row-level switch, so opting in has to say so explicitly.
+  disabled: false
+  config:
+    provider: acp
+    toolName: subagent_rsi
+    backgroundMode: one-shot
+    maxDepth: provider-managed
+
+- insert:
+    - id: mock-llm
+      name: './rsi-delegating-llm.ts'

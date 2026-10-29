@@ -5,6 +5,7 @@
  */
 
 import { basename, dirname } from 'node:path'
+import { DEFAULT_DSH_HOME_DISPLAY, DSH_HOME_ENV } from '@deepseek-ai/dsh-home-paths'
 import type { InstructionFile, LoadedInstructionFile } from './files.ts'
 
 const SYSTEM_REMINDER_OPEN = '<system-reminder>'
@@ -103,7 +104,13 @@ export const USER_GLOBAL_FILE = 'AGENTS.md'
  * @returns `user-global`, `.`, or the containing project-relative directory.
  */
 export function scopeForDisplayPath(displayPath: string): string {
-  if (displayPath === '~/.dsh/AGENTS.md' || displayPath === '$DSH_HOME/AGENTS.md') return USER_GLOBAL_DIRECTORY
+  // The user-global home is rendered symbolically by `dshHomeDisplay`: the
+  // default label follows the on-disk home directory name, and any configured
+  // home renders as `$DSH_HOME`. Both must map back to the single user-global
+  // scope, or a renamed home (e.g. `~/.redspark`) would key the same file under
+  // a directory scope that no baseline scope ever matches.
+  const userGlobalPrefixes = [DEFAULT_DSH_HOME_DISPLAY, `$${DSH_HOME_ENV}`]
+  if (userGlobalPrefixes.some(prefix => displayPath === `${prefix}/${USER_GLOBAL_FILE}`)) return USER_GLOBAL_DIRECTORY
   return dirname(displayPath)
 }
 

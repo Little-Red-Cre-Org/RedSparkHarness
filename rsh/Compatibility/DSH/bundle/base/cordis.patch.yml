@@ -351,6 +351,41 @@
       config:
         providerName: fork
 
+    # RedSpark's own engine speaks ACP over stdio (`rsi acp-stdio`), so it runs
+    # as an out-of-process child rather than in this process. The command and
+    # its isolated home are supplied by the profile; without them this provider
+    # has nothing to launch and the matching tool row stays disabled.
+    #
+    # Three parts of the child environment are not optional for a Python child:
+    #   * PYTHONPATH - `rsi` is a source tree with a non-standard pyproject name
+    #     (`rsi-pyproject.toml`), so it is not pip-installable into the venv and
+    #     resolves only from the project root. Without it, `-m rsi.cli` fails
+    #     with ModuleNotFoundError no matter what `cwd` says, because `-m`
+    #     resolves against sys.path, not the working directory.
+    #   * OPENHANDS_SUPPRESS_BANNER - the SDK prints an ASCII banner on import.
+    #     It goes to stderr, so it cannot corrupt the frame stream, but it is
+    #     noise on every child start.
+    #   * DSH_HOME - isolation, not configuration. RSI never reads it; it is
+    #     set to a private directory so exactly one thing is true and provable:
+    #     this child cannot reach the launching Harness's own profiles,
+    #     credentials, or sessions even if it tried.
+    #
+    # The store and engine home are NOT environment variables: they travel in
+    # `args` as `--store` / `--home`. The engine home is where `config.toml`
+    # names the model provider, and a child without one answers every prompt
+    # with stopReason "refusal" rather than failing loud.
+    - id: subagent-acp
+      name: '@deepseek-ai/dsh-subagent-acp'
+      config:
+        providerName: acp
+        command: !!js process.env.RSH_ACP_COMMAND ?? ''
+        args: !!js JSON.parse(process.env.RSH_ACP_ARGS ?? '[]')
+        permission: reject
+        # `!!js` tags a SCALAR here, not a mapping: the loader interpolates the
+        # expression per entry, so the whole object has to stay one quoted line.
+        # An unquoted one would break YAML at the first `: ` inside the braces.
+        env: !!js "({ DSH_HOME: process.env.RSH_ACP_HOME ?? '', PYTHONPATH: process.env.RSH_ACP_PYTHONPATH ?? '', OPENHANDS_SUPPRESS_BANNER: '1' })"
+
     # Continuable background children are selected per delegation tool. The
     # separately loaded follow-up tool registers the one global `send_message`.
     - id: tool-subagent-control
@@ -378,6 +413,24 @@
         provider: fork
         toolName: subagent_fork
         backgroundMode: one-shot
+
+    # The model-facing half of the RSI route. Disabled here on purpose: the
+    # `acp` provider above starts no process unless a profile supplies a real
+    # command, and a tool row that is always visible would advertise a
+    # delegation that fails on first use. A profile opts in by setting
+    # RSH_ACP_COMMAND and re-enabling this row in its own patch layer.
+    #
+    # `maxDepth: provider-managed` rather than a number: the recursion budget
+    # belongs to the RSI engine's own run, and a numeric cap here would need the
+    # `depthLimit` capability this provider deliberately does not advertise.
+    - id: tool-subagent-rsi
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: acp
+        toolName: subagent_rsi
+        backgroundMode: one-shot
+        maxDepth: provider-managed
 
     - id: workflow-worker-thread
       name: '@deepseek-ai/dsh-workflow-worker-thread'
