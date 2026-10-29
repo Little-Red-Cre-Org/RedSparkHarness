@@ -35,12 +35,18 @@ pnpm run build
 
 ### 2. 数据隔离
 
-| 位置 | 归属 | 实测 |
+| 位置 | 状态 | 实测 |
 |---|---|---|
-| `C:\Users\<user>\.redspark` | RedSpark | 存在，RSH 在用 |
-| `C:\Users\<user>\.dsh` | DeepSeek Harness | 存在，原封未动 |
-| `%APPDATA%\RedSpark Harness` | RedSpark userData | 启动时刻（00:40:46）创建，内含 Electron `Local State` |
-| `%APPDATA%\@deepseek-ai\dsh-desktop` | DSH userData | 628 文件，未被动过 |
+| `C:\Users\<user>\.redspark` | **默认值已改，未验证实际写入** | 目录存在但**为空**；RSH 尚未往里落数据 |
+| `C:\Users\<user>\.dsh` | DSH 的，仍在写 | 24 小时内确认有写入 |
+| `%APPDATA%\RedSpark Harness` | **不是 RSH 在用** | 仅 1 个 490 字节文件，是某次启动失败留下的 |
+| `%APPDATA%\@deepseek-ai\dsh-desktop` | DSH userData | 628 文件 |
+
+> **userData 隔离不成立（已更正）**：`rsh/Programs/Desktop/package.json` 的 `name` 是 `@deepseek-ai/dsh-desktop`，与 DSH 相同，且**没有 `productName` 字段**。`electron-builder.config.mjs:58` 里的 `productName` 是 builder 用来给产物命名的属性（`app-builder-lib/out/appInfo.js:54`），**不写回 asar 内的 package.json**，因此影响不到 `app.getName()`。打包后 userData 会与 DSH 撞车。`scripts/` 下 `productName` 零命中，没有注入步骤。
+>
+> 修法二选一：`main.ts` 早期 `app.setPath('userData', ...)`（代码层、可测、不动包名），或给 Desktop 的 `package.json` 增加 `productName`（字段不是包名，不破 `@deepseek-ai/*` 规矩）。
+>
+> 开发模式下 `dev.ts:63` 显式传了 `--user-data-dir=…\.desktop-build\development\electron-user-data`（45 文件），所以开发时看不出这个问题——**只有打包后才会暴露**。
 
 **继承保护**（都水实现）：进程若从 DSH 会话继承 `DSH_HOME=~/.dsh`，会被拒绝并回落到 `.redspark`。四种情形实测：
 
