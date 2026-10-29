@@ -57,3 +57,6 @@ rsh/Core/native/system/test/bin/
 __pycache__/
 *.pyc
 rsi-pyproject.toml
+
+# RSI engine run artifacts (per-conversation event logs)
+.oh/
