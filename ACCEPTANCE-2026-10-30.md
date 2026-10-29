@@ -252,5 +252,29 @@ D:\RedSparkHarness\rsh\Programs\Desktop\.desktop-build\targets\win-x64\unsigned-
 | `%APPDATA%\RedSpark Harness` 是「某次启动失败留下的」 | 是**都水探针**留下的，不是 RSH 启动证据（仅 2 项，真实启动 17 项） | 都水 |
 | `productName` 可用于隔离 userData | builder 属性，不进 asar；`appInfo.js:54` 与 `:116` 是两个独立 getter | 都水（臣 02:16 的解释有误） |
 | 无安装包 | 已有 233.1 MB exe，02:35:12，进程级验证通过 | 臣 02:14 打包成功 |
+| 「修复前不传参也会落到 DSH 目录，由打包产物证明」 | 打包产物证明的是**修复后不依赖传参**；修复前的落点**没有实测到**（写盘前即退出，delta 0、mtime 未变） | 武库（02:55 复核） |
 
 **仍待办（不阻塞本 PR）**：签名发布版的自动更新缓存目录 `%LOCALAPPDATA%\@deepseek-aidsh-desktop-updater` 由 `name` 推导，与 DSH 同名。unsigned 产物不写 `app-update.yml`，故本次不受影响；正式签名发布前需处理。
+
+---
+
+## 七、隔离的独立复核（武库，02:55:31）
+
+武库不采信上述结论，用 `Get-CimInstance Win32_Process` 逐 PID 重取，并与臣的读数逐项对照：
+
+| 项 | 武库独立取值 | 臣原报 | 对照 |
+|---|---|---|---|
+| PID 38076 `--user-data-dir` | `C:\Users\zzn19\.redspark\desktop\user-data` | 同 | 一致 |
+| PID 54624 `--user-data-dir` | 同 | 同 | 一致 |
+| PID 60000 `--user-data-dir` | 同 | 同 | 一致 |
+| 主进程 54644 | **命令行不带该参数**（由 `app.setPath` 生效后传给子进程） | 臣未查 | 武库补全 |
+| `resources\app.asar` | 17,007,742 B，mtime 02:35:05 | 同 | 一致 |
+| `lib\main.js` 内 `setPath` | **line 13889**（530,991 B，解出 528,983 字符） | 13889 | 一字不差 |
+| `~\.redspark\desktop\user-data` | 44 文件 / 17 顶层项 | 44 / 17 | 一致 |
+| `@deepseek-ai\dsh-desktop` | 628 文件，mtime 2026-10-29 22:01:58 **未变** | 628 | 一致 |
+| 窗口标题（PID 54644） | `RedSpark Harness` | 同 | 一致 |
+| 并存 | RSH 4 进程 + DSH 12 进程 | 同 | 一致 |
+
+**结论：隔离已判定成立**，不再写「打包前不可判定」。
+
+**一处口径按武库的更正收窄**：`git show 17a430b0a8:rsh/Programs/Desktop/src/main.ts` 里**没有任何 `setPath`** — 上游原版就是不设 userData 的。所以「修复前不传参会落到 DSH 目录」只是合理推断，没有实测（当时写盘前即退出）。它不影响结论，因为 `setPath` 现在已把落点钉死。
