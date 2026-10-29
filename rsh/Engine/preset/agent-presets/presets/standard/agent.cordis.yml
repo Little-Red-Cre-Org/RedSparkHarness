@@ -219,6 +219,24 @@
         backgroundMode: one-shot
         maxDepth: provider-managed
 
+    # RSI Harness, reached over ACP as an out-of-process child. The `acp`
+    # provider registers in the HOST plane, because it is a process singleton
+    # like `spawn` and `fork`; what a preset owns is which delegation TOOLS its
+    # agent sees. That split is why this row belongs here and not next to the
+    # provider row in the base bundle.
+    #
+    # Disabled for the same reason as the two rows above: the provider starts no
+    # process until a deployment points it at a real command, so an always-on
+    # tool would advertise a delegation that fails on its first call.
+    - id: tool-subagent-rsi
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: acp
+        toolName: subagent_rsi
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
     - id: workflow-worker-thread
       name: '@deepseek-ai/dsh-workflow-worker-thread'
       config:

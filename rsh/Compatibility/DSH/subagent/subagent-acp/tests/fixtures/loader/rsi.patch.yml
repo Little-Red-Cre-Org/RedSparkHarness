@@ -36,17 +36,17 @@
     permission: reject
     env: !!js "({ DSH_HOME: process.env.RSI_PROBE_ISOLATED_HOME, PYTHONPATH: process.env.RSI_PROBE_PYTHONPATH, OPENHANDS_SUPPRESS_BANNER: '1' })"
 
-- id: tool-subagent-rsi
-  name: '@deepseek-ai/dsh-tool-subagent'
-  # Base ships this row disabled; a patch replaces the row's `config` but not
-  # this row-level switch, so opting in has to say so explicitly.
-  disabled: false
-  config:
-    provider: acp
-    toolName: subagent_rsi
-    backgroundMode: one-shot
-    maxDepth: provider-managed
-
 - insert:
+    # The `headless` profile mounts no agent preset, so it has no preset row to
+    # patch: the delegation tool is inserted here instead. A preset-backed
+    # profile patches the same row id in its own preset composition instead.
+    - id: tool-subagent-rsi
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: acp
+        toolName: subagent_rsi
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
     - id: mock-llm
       name: './rsi-delegating-llm.ts'

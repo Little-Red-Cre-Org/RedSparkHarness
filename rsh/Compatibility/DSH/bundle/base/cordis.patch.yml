@@ -414,23 +414,12 @@
         toolName: subagent_fork
         backgroundMode: one-shot
 
-    # The model-facing half of the RSI route. Disabled here on purpose: the
-    # `acp` provider above starts no process unless a profile supplies a real
-    # command, and a tool row that is always visible would advertise a
-    # delegation that fails on first use. A profile opts in by setting
-    # RSH_ACP_COMMAND and re-enabling this row in its own patch layer.
-    #
-    # `maxDepth: provider-managed` rather than a number: the recursion budget
-    # belongs to the RSI engine's own run, and a numeric cap here would need the
-    # `depthLimit` capability this provider deliberately does not advertise.
-    - id: tool-subagent-rsi
-      name: '@deepseek-ai/dsh-tool-subagent'
-      disabled: true
-      config:
-        provider: acp
-        toolName: subagent_rsi
-        backgroundMode: one-shot
-        maxDepth: provider-managed
+    # The model-facing `subagent_rsi` row intentionally does NOT live here. A
+    # delegation tool belongs to the agent plane: `web-app` disables every
+    # host-plane tool-subagent row and lets each agent preset (re)mount the ones
+    # its agent should see, so a row here would be inert. It is declared in
+    # `agent-presets/presets/standard/agent.cordis.yml` beside the other
+    # optional delegation rows.
 
     - id: workflow-worker-thread
       name: '@deepseek-ai/dsh-workflow-worker-thread'
