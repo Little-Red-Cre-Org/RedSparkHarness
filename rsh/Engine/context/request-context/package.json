@@ -3,7 +3,7 @@
   "description": "Scoped Native provider for durable model-request context",
   "version": "0.1.5-rc.2",
   "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/context/request-context" },
+  "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Engine/context/request-context" },
   "type": "module",
   "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": [], "provides": ["requestContexts"] } },
   "main": "lib/index.js",

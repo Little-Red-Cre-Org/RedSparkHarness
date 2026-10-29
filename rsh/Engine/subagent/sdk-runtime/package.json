@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-sdk-runtime",
-  "description": "Cordis-free DeepSeek Harness SDK protocol runtime and Session API",
+  "description": "Cordis-free RedSpark Harness SDK protocol runtime and Session API",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/subagent/sdk-runtime"
   },
   "type": "module",

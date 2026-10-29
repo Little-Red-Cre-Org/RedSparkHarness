@@ -23,7 +23,7 @@ it('samples one local environment at startup without validating watcher outputs'
     writeClientBuildRecord(root, {
       DSH_CLIENT_BUILD_PROFILE: 'official',
       DSH_CLIENT_COMMIT_HASH: 'fffffff',
-      DSH_CLIENT_TITLE: 'DeepSeek Harness',
+      DSH_CLIENT_TITLE: 'RedSpark Harness',
       DSH_CLIENT_VERSION: '1.2.2',
     })
     await writeFile(join(root, 'rsh/Programs/Web/client/example/lib/client.js'), 'module.exports = { changed: true }\n')

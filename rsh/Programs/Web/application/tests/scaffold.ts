@@ -104,7 +104,7 @@ export const WELCOME_NOTICE_VERSION = '2026-08-13.1'
 export const WELCOME_NOTICE_COPY = {
   zh: {
     title: '内测声明',
-    body: '欢迎来到 RedSpark Harness（SPH），RedSpark 的 Agent 平台。当前开发预览版基于 DeepSeek Harness 与 Cordis 构建，上游文档和来源说明保留在 README 中。\n\n与赤绯一起创造、探索，让想象发生。其他服务商的模型需要配置对应的兼容 API；RedSpark 自有模型尚未发布。',
+    body: '欢迎来到 RedSpark Harness（SPH），RedSpark 的 Agent 平台。当前开发预览版基于 RedSpark Harness 与 Cordis 构建，上游文档和来源说明保留在 README 中。\n\n与赤绯一起创造、探索，让想象发生。其他服务商的模型需要配置对应的兼容 API；RedSpark 自有模型尚未发布。',
     continueLabel: '继续',
   },
 } as const

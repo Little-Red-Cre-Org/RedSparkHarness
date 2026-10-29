@@ -1,5 +1,5 @@
 /**
- * Shared filesystem path helpers for DeepSeek Harness user data.
+ * Shared filesystem path helpers for RedSpark Harness user data.
  *
  * @module @deepseek-ai/dsh-home-paths
  */
@@ -8,13 +8,22 @@ import { opendir, realpath } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 
-/** Directory name for the default DeepSeek Harness home under the OS home. */
-export const DSH_HOME_DIR_NAME = '.dsh'
+/**
+ * Directory name for the default RedSpark Harness home under the OS home.
+ *
+ * Deliberately not `.dsh`: a RedSpark install keeps its sessions, settings,
+ * caches and profiles entirely apart from a RedSpark Harness install on the
+ * same machine, so the two can be run side by side without either reading
+ * the other's state. Upstream identifiers inside the code (`DSH_HOME`,
+ * `@deepseek-ai/*`, the `dsh` CLI) stay as they are so this fork can keep
+ * tracking upstream; only the on-disk root moves.
+ */
+export const DSH_HOME_DIR_NAME = '.redspark'
 
-/** Stable user-facing display form for the default DeepSeek Harness home. */
+/** Stable user-facing display form for the default RedSpark Harness home. */
 export const DEFAULT_DSH_HOME_DISPLAY = `~/${DSH_HOME_DIR_NAME}`
 
-/** Environment variable that overrides the default DeepSeek Harness home. */
+/** Environment variable that overrides the default RedSpark Harness home. */
 export const DSH_HOME_ENV = 'DSH_HOME'
 
 /**
@@ -55,7 +64,7 @@ export async function canonicalizeWatchPath(path: string): Promise<string> {
 }
 
 /**
- * Resolve the default DeepSeek Harness home using Node's platform path rules.
+ * Resolve the default RedSpark Harness home using Node's platform path rules.
  * @returns the absolute default harness home path.
  */
 export function defaultDshHome(): string {
@@ -74,7 +83,7 @@ export function expandHomePath(path: string): string {
 }
 
 /**
- * Resolve the single-root DeepSeek Harness home.
+ * Resolve the single-root RedSpark Harness home.
  *
  * Precedence, highest first: an explicit configured path, `$DSH_HOME`, then
  * `~/.dsh`. The harness keeps all user data under one root. An empty or
@@ -96,7 +105,7 @@ export {
 export type { DshProfileExecution } from './profile-runtime.ts'
 
 /**
- * Join path segments onto the resolved DeepSeek Harness home.
+ * Join path segments onto the resolved RedSpark Harness home.
  * @param segments - path segments appended to the Harness home; an empty list returns the home itself.
  * @returns the normalized absolute joined path.
  */

@@ -3,7 +3,7 @@
   "description": "Model-facing controls for native Agent-owned background jobs",
   "version": "0.1.5-rc.2",
   "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/jobs/native-tool-jobs" },
+  "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Engine/jobs/native-tool-jobs" },
   "type": "module",
   "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["jobs", "tools"], "optional": [], "provides": ["jobControls"] } },
   "main": "lib/index.js",

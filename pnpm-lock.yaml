@@ -138,6 +138,9 @@ importers:
       oxlint-tsgolint:
         specifier: 7.0.2001
         version: 7.0.2001
+      pnpm:
+        specifier: 11.28.5
+        version: 11.28.5
       publint:
         specifier: ^0.3.21
         version: 0.3.21

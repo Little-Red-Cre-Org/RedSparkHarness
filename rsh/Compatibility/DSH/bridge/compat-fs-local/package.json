@@ -1,11 +1,11 @@
 {
   "name": "@deepseek-ai/dsh-compat-fs-local",
-  "description": "Explicit Cordis filesystem Provider for native DeepSeek Harness profiles",
+  "description": "Explicit Cordis filesystem Provider for native RedSpark Harness profiles",
   "version": "0.1.5-rc.2",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Compatibility/DSH/bridge/compat-fs-local"
   },
   "type": "module",

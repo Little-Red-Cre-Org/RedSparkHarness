@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The SDK family lets another process drive a complete DeepSeek Harness runtime over newline-delimited JSON-RPC. Its Engine-owned protocol and runtime packages define the shared wire and Session client behavior; the TypeScript Program facade selects the same-version `dsh` launcher, while the server accepts SDK requests over stdio. The TypeScript client and [Python SDK](../python/README.md) use the same protocol, and these packages do not create developer projects or define another application.
+The SDK family lets another process drive a complete RedSpark Harness runtime over newline-delimited JSON-RPC. Its Engine-owned protocol and runtime packages define the shared wire and Session client behavior; the TypeScript Program facade selects the same-version `dsh` launcher, while the server accepts SDK requests over stdio. The TypeScript client and [Python SDK](../python/README.md) use the same protocol, and these packages do not create developer projects or define another application.
 
 ## Table of Contents
 

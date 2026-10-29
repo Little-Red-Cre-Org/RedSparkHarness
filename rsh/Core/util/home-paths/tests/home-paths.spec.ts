@@ -20,15 +20,15 @@ afterEach(() => {
 
 describe('dsh path helpers', () => {
   it('owns the shared default DSH home directory name', () => {
-    expect(DSH_HOME_DIR_NAME).toBe('.dsh')
-    expect(DEFAULT_DSH_HOME_DISPLAY).toBe('~/.dsh')
-    expect(defaultDshHome()).toBe(join(homedir(), '.dsh'))
+    expect(DSH_HOME_DIR_NAME).toBe('.redspark')
+    expect(DEFAULT_DSH_HOME_DISPLAY).toBe('~/.redspark')
+    expect(defaultDshHome()).toBe(join(homedir(), '.redspark'))
   })
 
   it('expands tilde paths without changing non-tilde paths', () => {
     expect(expandHomePath('~')).toBe(homedir())
-    expect(expandHomePath('~/.dsh')).toBe(join(homedir(), '.dsh'))
-    expect(expandHomePath('~\\.dsh')).toBe(join(homedir(), '.dsh'))
+    expect(expandHomePath('~/.redspark')).toBe(join(homedir(), '.redspark'))
+    expect(expandHomePath('~\\.redspark')).toBe(join(homedir(), '.redspark'))
     expect(expandHomePath('/tmp/.dsh')).toBe('/tmp/.dsh')
     expect(expandHomePath('~other/.dsh')).toBe('~other/.dsh')
   })
@@ -53,14 +53,14 @@ describe('dsh path helpers', () => {
   })
 
   it('labels a resolved home by whether it is the default root', () => {
-    expect(dshHomeDisplay(resolve(defaultDshHome()))).toBe('~/.dsh')
+    expect(dshHomeDisplay(resolve(defaultDshHome()))).toBe('~/.redspark')
     expect(dshHomeDisplay('/some/other/root')).toBe('$DSH_HOME')
   })
 
   it.each([
-    [undefined, join(homedir(), '.dsh')],
-    ['', join(homedir(), '.dsh')],
-    ['   ', join(homedir(), '.dsh')],
+    [undefined, join(homedir(), '.redspark')],
+    ['', join(homedir(), '.redspark')],
+    ['   ', join(homedir(), '.redspark')],
     ['~/env-dsh', join(homedir(), 'env-dsh')],
     ['./relative-dsh', resolve('./relative-dsh')],
   ] as const)('resolves cache paths with DSH_HOME=%j', (home, expectedHome) => {

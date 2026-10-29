@@ -107,7 +107,7 @@ describe('WelcomeNotice', () => {
   it('uses the exact owner copy in both GUI locales', () => {
     expect(WELCOME_NOTICE_COPY.en).toEqual({
       title: 'Internal Testing Notice',
-      body: 'Welcome to RedSpark Harness (SPH), the agent platform by RedSpark. This developer preview is built on DeepSeek Harness and Cordis. Upstream documentation and attribution are retained in the README.\n\nCreate, explore, and build together with Kitsune. Models from other providers require their own compatible API configuration.',
+      body: 'Welcome to RedSpark Harness (SPH), the agent platform by RedSpark. This developer preview is built on RedSpark Harness and Cordis. Upstream documentation and attribution are retained in the README.\n\nCreate, explore, and build together with Kitsune. Models from other providers require their own compatible API configuration.',
       continueLabel: 'Continue',
     })
     expect(en.welcomeBody).toBe(WELCOME_NOTICE_COPY.en.body)
