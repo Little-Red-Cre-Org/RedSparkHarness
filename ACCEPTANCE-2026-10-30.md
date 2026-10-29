@@ -1,8 +1,8 @@
 # RedSpark Harness 换底座 · 验收清单
 
-**验收时间**：2026-10-30 01:21 整理
-**代码树**：`D:\RedSparkHarness` · HEAD `fb001eb6c2` · 工作区干净（0 脏文件）
-**PR**：<https://github.com/Little-Red-Cre-Org/RedSparkHarness/pull/308> · OPEN · MERGEABLE · 3 个提交
+**验收时间**：2026-10-30 01:21 整理 · **02:48 逐条复核更正**
+**代码树**：`D:\RedSparkHarness` · HEAD `cf84602962` · 工作区干净（0 脏文件）
+**PR**：<https://github.com/Little-Red-Cre-Org/RedSparkHarness/pull/308> · OPEN · 7 个提交
 
 ---
 
@@ -37,16 +37,47 @@ pnpm run build
 
 | 位置 | 状态 | 实测 |
 |---|---|---|
-| `C:\Users\<user>\.redspark` | **默认值已改，未验证实际写入** | 目录存在但**为空**；RSH 尚未往里落数据 |
-| `C:\Users\<user>\.dsh` | DSH 的，仍在写 | 24 小时内确认有写入 |
-| `%APPDATA%\RedSpark Harness` | **不是 RSH 在用** | 仅 1 个 490 字节文件，是某次启动失败留下的 |
-| `%APPDATA%\@deepseek-ai\dsh-desktop` | DSH userData | 628 文件 |
+| `C:\Users\<user>\.redspark` | **在用，RSH 真往里写** | 61 文件（含 `profiles/desktop/*`、`storages/session_projcache/*`、`settings.yaml`、`.credentials.yaml`） |
+| `C:\Users\<user>\.redspark\desktop\user-data` | **打包版 Electron 用这里** | 44 文件 / 17 顶层项，`Local Storage`、`Network`、`Preferences`、`Local State` 齐全 |
+| `C:\Users\<user>\.dsh` | DSH 的，未被 RSH 读写 | RSH 继承 `DSH_HOME=~/.dsh` 时被拒绝并回落 |
+| `%APPDATA%\RedSpark Harness` | **旧残留，不是 RSH 在用** | 1 文件（`Local State` 490B，00:40:46）＋ 空 `logs`；**是都水探针副产物** |
+| `%APPDATA%\@deepseek-ai\dsh-desktop` | DSH userData | 628 文件，RSH 未写 |
 
-> **userData 隔离不成立（已更正）**：`rsh/Programs/Desktop/package.json` 的 `name` 是 `@deepseek-ai/dsh-desktop`，与 DSH 相同，且**没有 `productName` 字段**。`electron-builder.config.mjs:58` 里的 `productName` 是 builder 用来给产物命名的属性（`app-builder-lib/out/appInfo.js:54`），**不写回 asar 内的 package.json**，因此影响不到 `app.getName()`。打包后 userData 会与 DSH 撞车。`scripts/` 下 `productName` 零命中，没有注入步骤。
+> **userData 隔离已修复（02:20 提交 `cf84602962`）**：原判定「打包后 userData 会与 DSH 撞车」成立且已被实证推翻修复。修法取代码层：
 >
-> 修法二选一：`main.ts` 早期 `app.setPath('userData', ...)`（代码层、可测、不动包名），或给 Desktop 的 `package.json` 增加 `productName`（字段不是包名，不破 `@deepseek-ai/*` 规矩）。
+> ```
+> rsh/Programs/Desktop/src/main.ts:781 | app.setPath('userData', desktopUserDataPath())
+> rsh/Programs/Desktop/src/paths.ts:36 | export function desktopUserDataPath(dshHome: string = resolveDshHome()): string {
+> rsh/Programs/Desktop/src/paths.ts:37 |   return join(dshHome, 'desktop', 'user-data')
+> ```
 >
-> 开发模式下 `dev.ts:63` 显式传了 `--user-data-dir=…\.desktop-build\development\electron-user-data`（45 文件），所以开发时看不出这个问题——**只有打包后才会暴露**。
+> 调用点在 `main.ts:783` 的 `claimDesktopSingleInstance(...)` **之前**，即最早 `app` 路径访问之前——Electron 一旦读过 userData 就拒绝再改，位置必须是这里。
+>
+> **打包产物内已确认该行存在**：从 `win-unpacked\resources\app.asar` 抽出 `lib/main.js`，`:13889` 为 `app.setPath("userData", desktopUserDataPath());`。这不是"源码改了但产物没重打"。
+
+**为什么 `productName` 那条路走不通（都水的判定成立，臣在 02:16 的机制解释有误，此处更正）**：
+
+| 判据 | 实测原文 |
+|---|---|
+| 产物内 manifest 无 `productName` | 从 app.asar 抽出 `package.json`：`"name": "@deepseek-ai/dsh-desktop"`，**无 `productName` 字段** |
+| builder 的 `productName` 不进 asar | `app-builder-lib@26.15.3/out/appInfo.js:54` | `this.productName = info.config.productName \|\| info.metadata.productName \|\| info.metadata.name;` —— 这是 builder 自己的属性 |
+| builder 的 `name` 取自 metadata | `appInfo.js:116` | `return this.info.metadata.name;` —— 与 `productName` 是两个独立 getter |
+| 无 `extraMetadata` 注入 | `git grep extraMetadata` 在 desktop 下零命中；`electron-builder.config.mjs` 全文无此键 |
+
+**但都水"那 2 项目录是探针副产物"这条，臣复现属实**：该目录只有 `logs`（0 文件）+ `Local State` 两项，而真实启动的 `.redspark\desktop\user-data` 有 **17 项**。所以 00:40:46 那个目录不是 RSH 启动的证据——**臣先前把它当作启动实证，引错了**。
+
+**都水"自动更新缓存会撞"这条，臣核实为真但影响面小**：
+
+```
+electron-updater AppAdapter.js:6-11   getAppCacheDir() → process.env["LOCALAPPDATA"]
+electron-updater ElectronAppAdapter.js:16-17  get name() { return this.app.getName(); }
+electron-updater AppUpdater.js:550    const cacheDir = path.join(this.app.baseCachePath, dirName || this.app.name)
+app-builder-lib appInfo.js:126-127    get updaterCacheDirName() { return this.sanitizedName.toLowerCase() + "-updater" }
+```
+
+`updaterCacheDirName` 确实由 `name`（`@deepseek-ai/dsh-desktop`）推导，与显示名无关。磁盘实测 `%LOCALAPPDATA%\@deepseek-aidsh-desktop-updater` 存在，含 `installer.exe`（317,151,681 B，10-29 11:34），**是 DSH 自己的更新缓存**。
+
+**但这处不影响本次验收**：本次是 unsigned 打包，`electron-builder.config.mjs:53` 为 `const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(...)`，产物 `resources\` 下**没有 `app-update.yml`**（实测 `Test-Path` = False），所以更新器不会启用。**签名发布版才需要处理这处**，单列。
 
 **继承保护**（都水实现）：进程若从 DSH 会话继承 `DSH_HOME=~/.dsh`，会被拒绝并回落到 `.redspark`。四种情形实测：
 
@@ -158,9 +189,30 @@ verify-application-entrypoints  → 11 passed (11)
 
 **建议验收口径**：按模块单独跑（受影响模块全绿），而非「全量绿」。后者在这台机器上改动前后都过不了。
 
-### 4. 安装包未出
+### 4. 安装包
 
-只验到「源码能构建、开发模式能启动」，没有 NSIS 安装包或签名产物。
+**已出，且真跑起来了。**
+
+```
+路径   rsh\Programs\Desktop\.desktop-build\targets\win-x64\unsigned-artifacts\win-unpacked\
+exe    RedSpark Harness.exe
+字节   244,440,576（233.1 MB）
+mtime  2026-10-30 02:35:12
+版本   0.1.5-rc.2（exe VersionInfo: ProductName = RedSpark Harness）
+```
+
+进程级实证（`Win32_Process` 命令行原文）：
+
+```
+PID 54644  "…\win-unpacked\RedSpark Harness.exe"
+PID 38076  "…\RedSpark Harness.exe" --type=gpu-process --user-data-dir="C:\Users\zzn19\.redspark\desktop\user-data"
+PID 54624  "…\RedSpark Harness.exe" --type=utility … --user-data-dir="C:\Users\zzn19\.redspark\desktop\user-data"
+PID 60000  "…\RedSpark Harness.exe" --type=renderer --user-data-dir="C:\Users\zzn19\.redspark\desktop\user-data" … --app-path="…\win-unpacked\resources\app.asar"
+```
+
+**这是决定性证据**：三个子进程的 `--user-data-dir` 全部指向 `.redspark`，不是 `@deepseek-ai\dsh-desktop`。
+
+**两者此刻并存**：`DeepSeek Harness` 13 进程 + `RedSpark Harness` 4 进程同时存活 —— 单实例锁不互踢，隔离在运行态成立。
 
 ---
 
@@ -179,8 +231,26 @@ verify-application-entrypoints  → 11 passed (11)
 
 ## 五、一句话结论
 
-**换底座这件事成了**：底座换了、品牌换了、隔离真做了、构建能过、应用能开、RSI 引擎能跑。
+**换底座这件事成了**：底座换了、品牌换了、数据隔离实测成立、构建 exit 0、打包版 exe 真跑起来（PID 54644 存活）、RSI 引擎能跑。
 
 **没成的是「桌面端点开 RSI」**——那是 Native 路径的能力边界，不是本轮的疏漏，需单独立项。真实模型一轮缺 key，同样单列。
 
-**建议验收动作**：双击 `D:\RedSparkHarness\rsh\Programs\Desktop\.desktop-build\development\` 下的 Electron（或按 BUILD 说明起），看界面是不是 RedSpark；然后决定 Native driver 这条路要不要开。
+**建议验收动作**：直接双击
+
+```
+D:\RedSparkHarness\rsh\Programs\Desktop\.desktop-build\targets\win-x64\unsigned-artifacts\win-unpacked\RedSpark Harness.exe
+```
+
+它此刻已在运行（PID 54644）。看到标题栏「RedSpark Harness」、绯红主题、侧边栏文本字标，即隔离与品牌双双成立。
+
+---
+
+## 六、本次复核中被推翻的三条（留档，勿删）
+
+| 先前写的 | 实测 | 谁推翻 |
+|---|---|---|
+| `%APPDATA%\RedSpark Harness` 是「某次启动失败留下的」 | 是**都水探针**留下的，不是 RSH 启动证据（仅 2 项，真实启动 17 项） | 都水 |
+| `productName` 可用于隔离 userData | builder 属性，不进 asar；`appInfo.js:54` 与 `:116` 是两个独立 getter | 都水（臣 02:16 的解释有误） |
+| 无安装包 | 已有 233.1 MB exe，02:35:12，进程级验证通过 | 臣 02:14 打包成功 |
+
+**仍待办（不阻塞本 PR）**：签名发布版的自动更新缓存目录 `%LOCALAPPDATA%\@deepseek-aidsh-desktop-updater` 由 `name` 推导，与 DSH 同名。unsigned 产物不写 `app-update.yml`，故本次不受影响；正式签名发布前需处理。
