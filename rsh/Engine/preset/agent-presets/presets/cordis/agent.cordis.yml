@@ -27,7 +27,7 @@
 
       Writing a package does not install it. The profile must already resolve the package name before an installation row can load it.
 
-      A preset is one directory under ${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/ with preset.yml and agent.native.json. agent.native.json uses formatVersion 1. Each installation has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope. Shared services stay in rsh.profile.json.
+      A preset is one directory under ~/.redspark/.agent-presets/<id>/ with preset.yml and agent.native.json. agent.native.json uses formatVersion 1. Each installation has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope. Shared services stay in rsh.profile.json.
 
       Do not edit or delete shipped presets. Copy one into a new directory under .agent-presets and edit the copy.
 
