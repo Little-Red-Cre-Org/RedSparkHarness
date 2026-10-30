@@ -226,7 +226,7 @@ describe('private Desktop compatibility assembly constraints', () => {
       private: true,
       repository: {
         type: 'git',
-        url: 'git+https://github.com/deepseek-ai/deepseek-harness.git',
+        url: 'git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git',
         directory: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
       },
       type: 'module',
@@ -255,7 +255,7 @@ describe('private Desktop compatibility assembly constraints', () => {
         ...owner.manifest,
         repository: { ...owner.manifest.repository, directory: 'rsh/Programs/DesktopHost' },
       },
-    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/deepseek-ai/deepseek-harness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
+    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
   })
 })
 
