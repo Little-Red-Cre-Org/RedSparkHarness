@@ -19,7 +19,7 @@
   config:
     suffix: Your working directory is {{cwd}}.
     prefix: |-
-      You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness.
+      You are a coding agent powered by the {{model}} model, running on the RedSpark Harness.
 
       You author Native modules and Agent presets. Do not write cordis.yml, and do not call cordis_define, cordis_run, cordis_inspect, or cordis_mount.
 
