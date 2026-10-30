@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-shell",
-  "description": "Abstract bash executor seam (ctx.shell) for the DeepSeek Harness",
+  "description": "Abstract bash executor seam (ctx.shell) for the RedSpark Harness",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/shell/shell"
   },
   "type": "module",

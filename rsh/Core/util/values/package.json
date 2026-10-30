@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-util-values",
-  "description": "Duplicate-install-safe value primitives for the DeepSeek Harness",
+  "description": "Duplicate-install-safe value primitives for the RedSpark Harness",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Core/util/values"
   },
   "type": "module",

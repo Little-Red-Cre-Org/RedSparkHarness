@@ -276,7 +276,7 @@ describe('HarnessSdkJsonRpcServer', () => {
       contentBlocks: [{ type: 'file', receiptId: 'receipt-1' as NativeStagedFileReceiptId }],
     })).rejects.toThrow('SDK file receipts require the native-sdk profile')
     await expect(server.handleRequest('session/upload-file', { sessionId: 'legacy-receipt', data: '' }))
-      .rejects.toThrow('unknown DeepSeek Harness SDK runtime method: session/upload-file')
+      .rejects.toThrow('unknown RedSpark Harness SDK runtime method: session/upload-file')
     expect(create).not.toHaveBeenCalled()
     expect(followup).not.toHaveBeenCalled()
     await server.shutdown()
@@ -1142,7 +1142,7 @@ describe('HarnessSdkJsonRpcServer', () => {
 
       await expect(server.handleRequest('does/not/exist', {}))
         .rejects
-        .toThrow('unknown DeepSeek Harness SDK runtime method: does/not/exist')
+        .toThrow('unknown RedSpark Harness SDK runtime method: does/not/exist')
 
       await server.shutdown()
     } finally {

@@ -1,5 +1,5 @@
 ---
-description: "将明确的架构与图表交付需求自动且有上限地路由到固定版本 Archify Skill（技能）的能力，供配置或排查 DeepSeek Harness 的用户与维护者阅读。"
+description: "将明确的架构与图表交付需求自动且有上限地路由到固定版本 Archify Skill（技能）的能力，供配置或排查 RedSpark Harness 的用户与维护者阅读。"
 kind: "package-reference"
 ---
 

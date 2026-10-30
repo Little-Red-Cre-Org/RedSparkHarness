@@ -108,7 +108,7 @@ const homeAndGuide = pairedPages([
   {
     source: 'rsh/Docs/user/index.md',
     route: 'index.md',
-    label: { root: 'DeepSeek Harness', en: 'DeepSeek Harness' },
+    label: { root: 'RedSpark Harness', en: 'RedSpark Harness' },
     sidebar: { root: null, en: null },
     section: { root: '首页', en: 'Home' },
     order: 0,

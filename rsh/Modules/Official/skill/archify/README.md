@@ -1,5 +1,5 @@
 ---
-description: "Automatic, bounded routing of explicit architecture and diagram delivery requests to the pinned Archify Skill for users and maintainers configuring or debugging DeepSeek Harness."
+description: "Automatic, bounded routing of explicit architecture and diagram delivery requests to the pinned Archify Skill for users and maintainers configuring or debugging RedSpark Harness."
 kind: "package-reference"
 ---
 

@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-host-directory-picker-native",
-  "description": "Native-OS-chooser backend of the directory-picker seam for the DeepSeek Harness web GUI host",
+  "description": "Native-OS-chooser backend of the directory-picker seam for the RedSpark Harness web GUI host",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Programs/Web/host/directory-picker-native"
   },
   "type": "module",

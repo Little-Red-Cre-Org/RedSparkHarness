@@ -1,5 +1,5 @@
 ---
-description: "The TypeScript SDK client for callers that spawn a DeepSeek Harness runtime subprocess and drive agent turns over stdio JSON-RPC: the DeepSeekHarness run API and the lower-level HarnessClient."
+description: "The TypeScript SDK client for callers that spawn a RedSpark Harness runtime subprocess and drive agent turns over stdio JSON-RPC: the DeepSeekHarness run API and the lower-level HarnessClient."
 kind: "package-library"
 ---
 

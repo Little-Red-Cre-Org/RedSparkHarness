@@ -48,3 +48,15 @@ worktrees/
 .agents/worktrees/
 .typert-*/
 rsh/Core/native/system/test/bin/
+
+# ── RSI engine (RedSpark's self-improvement runtime) ──────────────────────
+# Local virtualenv and generation store for the RSI engine; both are
+# machine-local state, not source.
+.venv-rsi/
+.rsi/
+__pycache__/
+*.pyc
+rsi-pyproject.toml
+
+# RSI engine run artifacts (per-conversation event logs)
+.oh/

@@ -19,6 +19,25 @@ export interface DesktopPaths {
 }
 
 /**
+ * The directory Electron keeps its own state in: cookies, Local Storage,
+ * caches, GPU and crash records.
+ *
+ * It is set explicitly rather than inherited from the packaged manifest. The
+ * Electron default is `app.getName()`, and the packaged manifest carries the
+ * upstream package name with no `productName`, so the default would resolve to
+ * the upstream product's directory and two installations would share one
+ * profile. electron-builder's `productName` does not reach `app.getName()`: it
+ * names the produced artifact and is never written back into the asar.
+ * Electron refuses to override a `userData` that has already been read, so the
+ * caller must apply this before the first `app` path access.
+ * @param dshHome - Harness home shared with npm-installed dsh.
+ * @returns absolute user-data directory under the Harness home.
+ */
+export function desktopUserDataPath(dshHome: string = resolveDshHome()): string {
+  return join(dshHome, 'desktop', 'user-data')
+}
+
+/**
  * Resolve every Electron-owned path without changing the shared data roots.
  * @param dshHome - Harness home shared with npm-installed dsh.
  * @returns immutable desktop path set.

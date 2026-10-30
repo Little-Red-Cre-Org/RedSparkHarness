@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The acp group provides compatibility and native carriers: servers that let programs and automation run persistent DeepSeek Harness agents over the standard Agent Client Protocol. A client can create, list, resume, and close sessions; attach standard MCP servers; select model options; send text and image prompts; receive semantic updates; answer permission prompts; and cancel work without a human in the loop. The matching process client is a separate Compatibility package. This page maps the group; the package README owns the per-package contract.
+The acp group provides compatibility and native carriers: servers that let programs and automation run persistent RedSpark Harness agents over the standard Agent Client Protocol. A client can create, list, resume, and close sessions; attach standard MCP servers; select model options; send text and image prompts; receive semantic updates; answer permission prompts; and cancel work without a human in the loop. The matching process client is a separate Compatibility package. This page maps the group; the package README owns the per-package contract.
 
 ## Table of Contents
 

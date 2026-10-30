@@ -156,7 +156,10 @@
       inject: [webStartup]
       config:
         host: !!js ctx.webStartup.host ?? '127.0.0.1'
-        port: !!js ctx.webStartup.port ?? 3080
+        # 3180, not upstream's 3080: a RedSpark install runs side by side with a
+        # DeepSeek Harness install on the same machine, and two default ports
+        # would make whichever starts second fail to bind. --port still wins.
+        port: !!js ctx.webStartup.port ?? 3180
         compression: gzip
         compressionLevel: 1
         compressionThresholdBytes: 1024

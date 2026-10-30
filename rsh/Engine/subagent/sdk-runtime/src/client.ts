@@ -1,5 +1,5 @@
 /**
- * Low-level JSON-RPC client for a DeepSeek Harness SDK runtime subprocess.
+ * Low-level JSON-RPC client for a RedSpark Harness SDK runtime subprocess.
  * {@link HarnessClient} owns the child process: it spawns the runtime, speaks
  * the `@deepseek-ai/dsh-sdk-protocol` wire over the child's stdio, fans
  * server notifications out to subscriptions, and tears the child down through
@@ -188,7 +188,7 @@ class NotificationSubscriptionImpl implements NotificationSubscription {
 }
 
 /**
- * JSON-RPC client for the DeepSeek Harness SDK runtime over subprocess stdio.
+ * JSON-RPC client for the RedSpark Harness SDK runtime over subprocess stdio.
  *
  * The subprocess starts lazily on {@link start} and is owned by this instance
  * until {@link close}, which requests protocol `shutdown`, gives protocol
@@ -238,7 +238,7 @@ export class HarnessClient {
    * the process is live; rejects reuse after {@link close}.
    */
   start(): void {
-    if (this.closeTask !== undefined) throw new TransportClosedError('DeepSeek Harness runtime client is closed')
+    if (this.closeTask !== undefined) throw new TransportClosedError('RedSpark Harness runtime client is closed')
     if (this.child !== undefined) return
     let processProvider: LocalChildConnectionProvider | undefined
     let connection: ChildConnectionDefinition
@@ -297,22 +297,22 @@ export class HarnessClient {
       return child.waitForExit().then(() => {
         // The managed range is empty, so stdout has delivered any trailing
         // frames before closing the transport and failing remaining waiters.
-        this.abortApprovalRequests(this.closedError('DeepSeek Harness runtime exited'))
+        this.abortApprovalRequests(this.closedError('RedSpark Harness runtime exited'))
         this.transport?.close()
-        this.failSubscriptions(this.closedError('DeepSeek Harness runtime exited'))
+        this.failSubscriptions(this.closedError('RedSpark Harness runtime exited'))
       }, (error: unknown) => {
         this.rangeError = error instanceof Error ? error : new Error(String(error))
-        this.abortApprovalRequests(this.closedError('DeepSeek Harness process range could not be confirmed'))
+        this.abortApprovalRequests(this.closedError('RedSpark Harness process range could not be confirmed'))
         this.transport?.close()
-        this.failSubscriptions(this.closedError('DeepSeek Harness process range could not be confirmed'))
+        this.failSubscriptions(this.closedError('RedSpark Harness process range could not be confirmed'))
       })
     }, (error: unknown) => {
       this.spawnError = error instanceof Error ? error : new Error(String(error))
       settled.exited = true
       maybeSettle()
-      this.abortApprovalRequests(this.closedError('DeepSeek Harness runtime failed to start'))
+      this.abortApprovalRequests(this.closedError('RedSpark Harness runtime failed to start'))
       this.transport?.close()
-      this.failSubscriptions(this.closedError('DeepSeek Harness runtime failed to start'))
+      this.failSubscriptions(this.closedError('RedSpark Harness runtime failed to start'))
     })
     const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
     transport.onNotification((method, params) => {
@@ -463,11 +463,11 @@ export class HarnessClient {
     // writing into a destroyed pipe and hanging until the timeout.
     if (this.exitCode !== undefined || this.spawnError !== undefined || this.rangeError !== undefined) {
       await this.settleStreams()
-      throw this.closedError('DeepSeek Harness runtime is not running')
+      throw this.closedError('RedSpark Harness runtime is not running')
     }
     const transport = this.transport
     /* v8 ignore next -- start() either sets the transport or throws */
-    if (transport === undefined) throw new TransportClosedError('DeepSeek Harness runtime is not running')
+    if (transport === undefined) throw new TransportClosedError('RedSpark Harness runtime is not running')
     const timeout = timeoutMs ?? this.runtime.requestTimeoutMs
     try {
       if (timeout === undefined) return await transport.request(method, params ?? {})
@@ -504,7 +504,7 @@ export class HarnessClient {
     const state: SubscriptionState = { queue: [], waiters: [], filter, failure: undefined }
     const subscription = new NotificationSubscriptionImpl(state, () => { this.subscriptions.delete(id) })
     if (this.closeTask !== undefined || this.exitCode !== undefined || this.spawnError !== undefined || this.rangeError !== undefined) {
-      subscription.fail(this.closedError('DeepSeek Harness runtime closed'))
+      subscription.fail(this.closedError('RedSpark Harness runtime closed'))
       return subscription
     }
     this.subscriptions.set(id, subscription)
@@ -588,7 +588,7 @@ export class HarnessClient {
     }
     if (connectionReleased) {
       this.transport?.close()
-      this.failSubscriptions(this.closedError('DeepSeek Harness runtime closed'))
+      this.failSubscriptions(this.closedError('RedSpark Harness runtime closed'))
       const provider = this.processProvider
       if (provider !== undefined) {
         try {

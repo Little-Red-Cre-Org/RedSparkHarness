@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-tool-web",
-  "description": "Model-facing web tools (web_search, web_fetch) over the DeepSeek Harness web capability seam (ctx.web)",
+  "description": "Model-facing web tools (web_search, web_fetch) over the RedSpark Harness web capability seam (ctx.web)",
   "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/web/tool-web"
   },
   "type": "module",

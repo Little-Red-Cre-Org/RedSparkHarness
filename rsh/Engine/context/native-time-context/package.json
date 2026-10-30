@@ -3,7 +3,7 @@
   "description": "Native durable time-context provider for model requests",
   "version": "0.1.5-rc.2",
   "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Engine/context/native-time-context" },
+  "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Engine/context/native-time-context" },
   "type": "module",
   "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": [], "provides": ["timeContext"] } },
   "main": "lib/index.js",

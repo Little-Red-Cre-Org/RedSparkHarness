@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-runtime-diagnostics 组为 DeepSeek Harness 组合提供运行时自检与插件所有权支持：`invariants` 在组合运行期间运行包自有检查，验证持久化事件与数据关系；`compat-plugin-host` 记录 RSH 角色元数据，同时将旧式插件生命周期交给 Cordis。违规会以归因到拥有该关系的包的错误呈现；全局开关与包名过滤器控制运行哪些 invariant 检查。
+runtime-diagnostics 组为 RedSpark Harness 组合提供运行时自检与插件所有权支持：`invariants` 在组合运行期间运行包自有检查，验证持久化事件与数据关系；`compat-plugin-host` 记录 RSH 角色元数据，同时将旧式插件生命周期交给 Cordis。违规会以归因到拥有该关系的包的错误呈现；全局开关与包名过滤器控制运行哪些 invariant 检查。
 
 ## 目录
 
