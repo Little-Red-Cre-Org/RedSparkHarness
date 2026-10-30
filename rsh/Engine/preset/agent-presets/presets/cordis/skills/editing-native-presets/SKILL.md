@@ -9,7 +9,7 @@ A preset is one directory. `preset.yml` holds the display name and description. 
 
 ## Off-limits
 
-Do not edit or delete a shipped preset. Copy it into `~/.redspark/.agent-presets/<id>/` and edit the copy. An upgrade overwrites the shipped directory.
+Do not edit or delete a shipped preset. Copy it into the Harness home's `.agent-presets/<id>/` directory — take the real path from the roster rather than assuming the home's name. An upgrade overwrites the shipped directory.
 
 ## File
 
