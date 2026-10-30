@@ -339,6 +339,31 @@ function nearestSelectedProvider(
     .find(item => item !== undefined)
 }
 
+function nativeEntry(plugin: string, anchors: readonly ReturnType<typeof createRequire>[]): NativeEntryManifest | undefined {
+  for (const anchor of anchors) {
+    let manifestPath: string
+    try {
+      manifestPath = anchor.resolve(`${plugin}/package.json`)
+    } catch {
+      continue
+    }
+    const manifest = jsonFile(manifestPath) as { dsh?: { native?: unknown }; exports?: Record<string, unknown> }
+    if (manifest.dsh?.native === undefined) continue
+    return parseNativeEntryManifest(manifest.dsh.native, new Set(Object.keys(manifest.exports ?? {})))
+  }
+  return undefined
+}
+
+function servicesProvided(profile: NativeProfileConfig, scopes: ReadonlySet<string>,
+  anchors: readonly ReturnType<typeof createRequire>[]): Set<string> {
+  const provided = new Set<string>()
+  for (const row of profile.installations) {
+    if (row.disabled === true || !scopes.has(row.scope)) continue
+    for (const service of nativeEntry(row.plugin, anchors)?.provides ?? []) provided.add(service)
+  }
+  return provided
+}
+
 function disabledNativeProvider(installations: NativeProfileConfig['installations'], ancestry: readonly string[], service: string,
   anchors: readonly ReturnType<typeof createRequire>[]): NativeProfileConfig['installations'][number] | undefined {
   for (const scope of ancestry) {
@@ -406,9 +431,10 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
     const id = (row.config as Record<string, unknown>).id
     return typeof id === 'string' ? [id] : []
   }))
+  const provided = servicesProvided(profile, new Set(scopeAncestry(profile, presetsInstallation.scope)), anchors)
   const folders = scanNativePresetFolders(roots).map((folder) => {
     if (folder.status !== 'ready' || registeredPresetIds.has(folder.id)) return folder
-    const missing = folder.installations?.find(row => row.disabled !== true && !anchors.some((anchor) => {
+    const missingPackage = folder.installations?.find(row => row.disabled !== true && !anchors.some((anchor) => {
       try {
         anchor.resolve(`${row.plugin}/package.json`)
         return true
@@ -416,9 +442,20 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
         return false
       }
     }))
-    return missing === undefined ? folder : {
-      ...folder, status: 'invalid' as const, problem: `plugin ${missing.plugin} is not installed`,
+    if (missingPackage !== undefined) {
+      return { ...folder, status: 'invalid' as const, problem: `plugin ${missingPackage.plugin} is not installed` }
     }
+    const available = new Set(provided)
+    for (const row of folder.installations ?? []) {
+      if (row.disabled === true) continue
+      const entry = nativeEntry(row.plugin, anchors)
+      const missing = entry?.requires.find(service => !available.has(service))
+      if (missing !== undefined) {
+        return { ...folder, status: 'invalid' as const, problem: `plugin ${row.plugin} requires missing ${missing}` }
+      }
+      for (const service of entry?.provides ?? []) available.add(service)
+    }
+    return folder
   })
   const summaries: NativePresetFolderSummary[] = folders.map(({ id, name, description, trust, status, problem }) => ({
     id, name, trust, status,
