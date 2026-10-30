@@ -522,7 +522,7 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     ...extraOverlayPatches,
     // The roster's shipped presets are the plugin's own, bundled inside
     // `dsh-agent-presets` and prepended by it. Pin only the machine-local
-    // root away: a developer's own `~/.dsh/.agent-presets` must not be able
+    // root away: a developer's own `~/.redspark/.agent-presets` must not be able
     // to change a golden.
     {
       id: 'agent-presets',
