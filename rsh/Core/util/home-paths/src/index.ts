@@ -117,6 +117,12 @@ export function resolveDshHome(configured?: string, env: Record<string, string |
  * final path segment, so a value naming `.dsh` is dropped and the RedSpark
  * default is used instead; an explicit configured path still wins, so a
  * deliberate migration target stays expressible.
+ *
+ * The inherited home is the one beside the user's own directory, so the
+ * segment alone is not enough: a test isolates itself by pointing `DSH_HOME`
+ * at `<tempdir>/.dsh`, and dropping that would make every test share the real
+ * home — which is how the CI runner accumulated profiles it never asked for.
+ * Drop the value only when its parent is the user's home directory.
  * @param value - ambient `$DSH_HOME`, possibly absent or blank.
  * @returns the accepted value, or undefined when the ambient value is absent,
  * blank, or points at an upstream DSH home.
@@ -124,8 +130,8 @@ export function resolveDshHome(configured?: string, env: Record<string, string |
 function inheritableDshHome(value: string | undefined): string | undefined {
   if (value === undefined || value.trim().length === 0) return undefined
   const normalized = value.trim().replace(/[\\/]+$/u, '')
-  if (basename(normalized) === UPSTREAM_DSH_HOME_DIR_NAME) return undefined
-  return value
+  if (basename(normalized) !== UPSTREAM_DSH_HOME_DIR_NAME) return value
+  return resolve(normalized) === resolve(homedir(), UPSTREAM_DSH_HOME_DIR_NAME) ? undefined : value
 }
 
 export {
