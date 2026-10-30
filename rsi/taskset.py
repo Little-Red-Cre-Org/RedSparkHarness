@@ -22,7 +22,7 @@ Two things live here and they are deliberately separate:
 * TaskSetAdapter -- the BenchmarkAdapter implementation exposing the set to
   harness2.core. The protocol decides the shape; nothing here invents a second one.
 
-Why this exists: the gate had two golden tasks, enough to answer "does this
+Why this exists: the gate had two smoke tasks, enough to answer "does this
 candidate still work" and nowhere near enough to answer "is this candidate
 better". A benchmark needs tasks whose answers are unambiguous, whose domains
 differ, and which re-run cheaply and identically.

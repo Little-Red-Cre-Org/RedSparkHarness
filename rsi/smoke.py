@@ -47,8 +47,8 @@ SCRIPT_REL = "scripts/summarize.py"
 
 
 @dataclass(frozen=True)
-class GoldenResult:
-    """What one run of a golden task produced."""
+class SmokeResult:
+    """What one run of a smoke task produced."""
 
     ok: bool
     stdout: str = ""
@@ -97,7 +97,7 @@ def kill_group(proc: subprocess.Popen) -> None:
 
 
 @dataclass
-class GoldenTask:
+class SmokeTask:
     """One runnable check: a CSV input and the total a correct harness must print."""
 
     task_id: str
@@ -105,15 +105,15 @@ class GoldenTask:
     expected: str
     timeout: float = 30.0
 
-    def run(self, surface: SurfaceSpec, tree: Tree) -> GoldenResult:
+    def run(self, surface: SurfaceSpec, tree: Tree) -> SmokeResult:
         """Execute `tree` against this task in a throwaway directory."""
         import time
 
         start = time.time()
         if SCRIPT_REL not in tree:
-            return GoldenResult(ok=False, error=f"harness has no {SCRIPT_REL}")
+            return SmokeResult(ok=False, error=f"harness has no {SCRIPT_REL}")
 
-        with tempfile.TemporaryDirectory(prefix="rsi-golden-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="rsi-smoke-") as tmp:
             root = Path(tmp)
             harness_dir = root / "harness"
             harness_dir.mkdir()
@@ -140,7 +140,7 @@ class GoldenTask:
                     **popen_kw,
                 )
             except OSError as exc:
-                return GoldenResult(ok=False, error=f"could not start: {exc}")
+                return SmokeResult(ok=False, error=f"could not start: {exc}")
 
             try:
                 out, err = proc.communicate(timeout=self.timeout)
@@ -150,7 +150,7 @@ class GoldenTask:
                     out, err = proc.communicate(timeout=5)
                 except subprocess.TimeoutExpired:
                     out, err = "", ""
-                return GoldenResult(
+                return SmokeResult(
                     ok=False,
                     stdout=out or "",
                     stderr=err or "",
@@ -161,7 +161,7 @@ class GoldenTask:
                 )
 
             elapsed = time.time() - start
-            return GoldenResult(
+            return SmokeResult(
                 ok=proc.returncode == 0,
                 stdout=out or "",
                 stderr=err or "",
@@ -170,11 +170,11 @@ class GoldenTask:
                 error="" if proc.returncode == 0 else f"exit {proc.returncode}",
             )
 
-    def matches(self, result: GoldenResult) -> bool:
+    def matches(self, result: SmokeResult) -> bool:
         """Whether a run produced the expected answer."""
         return result.ok and result.stdout.strip() == self.expected.strip()
 
-    def looks_like_answer(self, result: GoldenResult) -> bool:
+    def looks_like_answer(self, result: SmokeResult) -> bool:
         """Whether a run at least produced a total, correct or not.
 
         Used by L3 when the live harness is itself wrong about a task: a candidate that
@@ -189,24 +189,24 @@ class GoldenTask:
         return bool(re.search(r"Total:\s*-?\d+(?:\.\d+)?", result.stdout))
 
 
-def default_tasks() -> list[GoldenTask]:
+def default_tasks() -> list[SmokeTask]:
     """Two small ledgers with credits, so a sign-blind or filter-happy script is caught.
 
     Both totals are affected by the sign of the negative rows, which is exactly the mistake
     the demo harness makes; neither can be passed by hard-coding one number.
     """
     return [
-        GoldenTask(
-            task_id="golden-signed-a",
+        SmokeTask(
+            task_id="smoke-signed-a",
             csv_body="amount\n100.25\n-20.10\n5.00\n",
             expected="Total: 85.15",
         ),
-        GoldenTask(
-            task_id="golden-signed-b",
+        SmokeTask(
+            task_id="smoke-signed-b",
             csv_body="amount\n35.50\n-10.25\n-5.00\n",
             expected="Total: 20.25",
         ),
     ]
 
 
-__all__ = ["GoldenResult", "GoldenTask", "default_tasks", "kill_group", "SCRIPT_REL"]
+__all__ = ["SmokeResult", "SmokeTask", "default_tasks", "kill_group", "SCRIPT_REL"]

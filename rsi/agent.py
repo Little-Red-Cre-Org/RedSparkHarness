@@ -15,7 +15,7 @@
 """A minimal agent loop, driving any OpenAI-compatible chat endpoint.
 
 This is the missing producer. Until now the system could store, gate and swap a
-harness, but nothing wrote one: the demo proposer was scripted and the golden tasks
+harness, but nothing wrote one: the demo proposer was scripted and the smoke tasks
 ran a Python script. Here is an actual model, given tools, working a task.
 
 It is deliberately small and deliberately not clever:

@@ -25,7 +25,7 @@ from pathlib import Path
 
 from harness2.substrate.opencode import OPENCODE_SURFACE
 
-from rsi.golden import default_tasks
+from rsi.smoke import default_tasks
 from rsi.gate import gate
 from rsi.server import Application, EventLog, LiveHarness, serve
 from rsi.store import StoreError, open_store

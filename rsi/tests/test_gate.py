@@ -29,7 +29,7 @@ from rsi.gate import (
     gate,
     gate_and_promote,
 )
-from rsi.golden import GoldenTask, default_tasks
+from rsi.smoke import SmokeTask, default_tasks
 from rsi.store import open_store
 
 SURF = OPENCODE_SURFACE
@@ -143,7 +143,7 @@ class GateTests(unittest.TestCase):
     def test_l2_accepts_a_working_harness(self):
         v = check_smoke(SURF, tree(), default_tasks())
         self.assertTrue(v.ok, v.reason)
-        self.assertEqual(len(v.golden), 2)
+        self.assertEqual(len(v.smoke), 2)
 
     def test_l2_rejects_a_harness_that_crashes(self):
         v = check_smoke(SURF, tree(script="raise SystemExit(3)\n"), default_tasks())
@@ -152,7 +152,7 @@ class GateTests(unittest.TestCase):
         self.assertIn("exit 3", v.reason)
 
     def test_l2_rejects_a_harness_that_hangs(self):
-        task = GoldenTask("slow", "amount\n1\n", "Total: 1.00", timeout=0.6)
+        task = SmokeTask("slow", "amount\n1\n", "Total: 1.00", timeout=0.6)
         v = check_smoke(SURF, tree(script="while True: pass\n"), [task])
         self.assertFalse(v.ok)
         self.assertIn("timed out", v.reason)
@@ -202,7 +202,7 @@ class GateTests(unittest.TestCase):
         v = gate(SURF, tree(), tree(script="def broken(:\n"))
         self.assertFalse(v.ok)
         self.assertEqual(v.level, "L1")
-        self.assertEqual(v.golden, {})
+        self.assertEqual(v.smoke, {})
 
     def test_gate_reports_the_first_failing_level(self):
         cand = tree(script="def broken(:\n")

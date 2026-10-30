@@ -14,7 +14,7 @@
 
 """Two palettes and the one style sheet built from them.
 
-The colours are the design tokens DeepSeek Harness uses in its own web client
+The colours are the design tokens this product uses in its own web client
 (packages/client/ui-theme, design-platform.css), copied by value so the desktop
 window and the product it belongs to read as one thing. A token that changes
 there should change here; the names are kept close to theirs to make that

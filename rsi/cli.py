@@ -198,9 +198,9 @@ def cmd_adopt(args) -> int:
     print()
     if verdict.ok:
         print("  L1 static   ok" + (f"   {verdict.census}" if verdict.census else ""))
-        if verdict.golden:
+        if verdict.smoke:
             print("  L2 smoke    ok")
-            for k, v in verdict.golden.items():
+            for k, v in verdict.smoke.items():
                 print(f"                {k}: {v}")
         if verdict.baseline:
             print("  L3 parity   ok (no regression against live)")
@@ -218,9 +218,9 @@ def cmd_adopt(args) -> int:
     print(f"  {verdict.level} FAILED")
     print()
     print(verdict.explain())
-    if verdict.golden:
+    if verdict.smoke:
         print()
-        for k, v in verdict.golden.items():
+        for k, v in verdict.smoke.items():
             print(f"  {k}: {v}")
     if verdict.baseline:
         print()
@@ -257,8 +257,8 @@ def cmd_gate(args) -> int:
         print(f"  added    {d.get('added', [])}")
         print(f"  modified {d.get('modified', [])}")
         print(f"  removed  {d.get('removed', [])}")
-    if verdict.golden:
-        for k, v in verdict.golden.items():
+    if verdict.smoke:
+        for k, v in verdict.smoke.items():
             print(f"  candidate {k}: {v}")
     if verdict.baseline:
         for k, v in verdict.baseline.items():

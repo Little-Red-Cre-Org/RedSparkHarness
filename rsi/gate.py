@@ -22,7 +22,7 @@ that validates from reaching production there, because there is no production th
 Four levels, cheapest first, and the first failure stops the run:
 
     L1  static    paths, always-on cap, skill shape, script references, py_compile
-    L2  smoke     run the candidate on a golden task; it must exit 0 and produce output
+    L2  smoke     run the candidate on a smoke task; it must exit 0 and produce output
     L3  parity    the candidate's answer must be no worse than the live harness's answer
     L4  budget    the diff must stay inside configured limits
 
@@ -42,7 +42,7 @@ from typing import Sequence
 from harness2.core import tree as harness_tree
 from harness2.core.tree import SurfaceSpec, Tree
 
-from .golden import GoldenResult, GoldenTask, default_tasks
+from .smoke import SmokeResult, SmokeTask, default_tasks
 
 LEVELS = ("L1", "L2", "L3", "L4")
 
@@ -78,7 +78,7 @@ class GateResult:
     reason: str = ""
     delta: dict = field(default_factory=dict)
     census: dict = field(default_factory=dict)
-    golden: dict[str, str] = field(default_factory=dict)
+    smoke: dict[str, str] = field(default_factory=dict)
     baseline: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -92,7 +92,7 @@ class GateResult:
             "reason": self.reason,
             "delta": self.delta,
             "census": self.census,
-            "golden": self.golden,
+            "smoke": self.smoke,
             "baseline": self.baseline,
         }
 
@@ -103,7 +103,7 @@ class GateResult:
                 + len(self.delta.get("removed", []))
                 + len(self.delta.get("modified", []))
             )
-            return f"accepted: {changed} file(s) changed, golden tasks passed"
+            return f"accepted: {changed} file(s) changed, smoke tasks passed"
         return f"rejected at {self.level}: {self.reason}"
 
 
@@ -177,9 +177,9 @@ def check_budget(surface: SurfaceSpec, live: Tree, candidate: Tree, limits: Limi
 
 
 def check_smoke(
-    surface: SurfaceSpec, candidate: Tree, tasks: Sequence[GoldenTask]
+    surface: SurfaceSpec, candidate: Tree, tasks: Sequence[SmokeTask]
 ) -> GateResult:
-    """L2: every golden task must run to completion with output."""
+    """L2: every smoke task must run to completion with output."""
     ran: dict[str, str] = {}
     for task in tasks:
         result = task.run(surface, candidate)
@@ -187,25 +187,25 @@ def check_smoke(
         if not result.ok:
             return _reject(
                 "L2",
-                f"golden task {task.task_id} failed: {result.summary}",
-                golden=ran,
+                f"smoke task {task.task_id} failed: {result.summary}",
+                smoke=ran,
             )
         if not result.stdout.strip():
             return _reject(
                 "L2",
-                f"golden task {task.task_id} produced no output",
-                golden=ran,
+                f"smoke task {task.task_id} produced no output",
+                smoke=ran,
             )
-    return GateResult(ok=True, level="L2", golden=ran)
+    return GateResult(ok=True, level="L2", smoke=ran)
 
 
 def check_parity(
     surface: SurfaceSpec,
     live: Tree,
     candidate: Tree,
-    tasks: Sequence[GoldenTask],
+    tasks: Sequence[SmokeTask],
 ) -> GateResult:
-    """L3: the candidate must not be worse than the live harness on the golden tasks.
+    """L3: the candidate must not be worse than the live harness on the smoke tasks.
 
     Two kinds of failure are distinguished, and conflating them is how this level would
     quietly wave bad candidates through:
@@ -221,7 +221,7 @@ def check_parity(
     A task neither harness answers *correctly* is therefore not a pass by default; only a
     candidate that at least produces parseable output for it is.
     """
-    evidence_golden: dict[str, str] = {}
+    evidence_smoke: dict[str, str] = {}
     evidence_live: dict[str, str] = {}
     regressions: list[str] = []
 
@@ -231,7 +231,7 @@ def check_parity(
         live_ok = task.matches(live_result)
         cand_ok = task.matches(cand_result)
         evidence_live[task.task_id] = f"{'ok' if live_ok else 'fail'}: {live_result.summary}"
-        evidence_golden[task.task_id] = f"{'ok' if cand_ok else 'fail'}: {cand_result.summary}"
+        evidence_smoke[task.task_id] = f"{'ok' if cand_ok else 'fail'}: {cand_result.summary}"
 
         if live_ok and not cand_ok:
             regressions.append(
@@ -247,8 +247,8 @@ def check_parity(
             )
 
     if regressions:
-        return _reject("L3", " | ".join(regressions), golden=evidence_golden, baseline=evidence_live)
-    return GateResult(ok=True, level="L3", golden=evidence_golden, baseline=evidence_live)
+        return _reject("L3", " | ".join(regressions), smoke=evidence_smoke, baseline=evidence_live)
+    return GateResult(ok=True, level="L3", smoke=evidence_smoke, baseline=evidence_live)
 
 
 def gate(
@@ -256,7 +256,7 @@ def gate(
     live: Tree,
     candidate: Tree,
     *,
-    tasks: Sequence[GoldenTask] | None = None,
+    tasks: Sequence[SmokeTask] | None = None,
     limits: Limits | None = None,
     allow_subagents: bool = True,
     levels: Sequence[str] = LEVELS,
@@ -303,7 +303,7 @@ def gate(
             level="L3",
             delta=delta,
             census=census,
-            golden=parity.golden,
+            smoke=parity.smoke,
             baseline=parity.baseline,
         )
 
@@ -319,7 +319,7 @@ def gate_and_promote(
     store,
     candidate: Tree,
     *,
-    tasks: Sequence[GoldenTask] | None = None,
+    tasks: Sequence[SmokeTask] | None = None,
     limits: Limits | None = None,
     levels: Sequence[str] = LEVELS,
     ref: str = "stable",
