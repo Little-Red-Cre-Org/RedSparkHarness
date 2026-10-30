@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-code-runtime-process-sandbox",
   "description": "Process-confined native TypeScript code execution",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

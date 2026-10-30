@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-code-runtime-worker-thread",
   "description": "Worker-thread implementation of the RedSpark Harness code-execution seam",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

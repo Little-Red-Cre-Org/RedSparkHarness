@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-errors",
   "description": "Shared coded errors and diagnostic cause rendering",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

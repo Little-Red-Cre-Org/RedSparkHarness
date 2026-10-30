@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-rsh",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "description": "RedSpark Ink terminal UI bundle",
   "publishConfig": {
     "access": "public"

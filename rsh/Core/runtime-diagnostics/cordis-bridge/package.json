@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-cordis-bridge",
   "description": "Host Cordis plugins inside a Native activation",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-agent-preset-standing",
   "description": "Native profile contribution for one standing Agent preset scope",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

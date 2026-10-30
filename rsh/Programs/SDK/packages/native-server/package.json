@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-native-sdk-server",
   "description": "Cordis-free SDK JSON-RPC application over native Session execution",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

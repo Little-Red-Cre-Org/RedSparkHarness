@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-native-tool-subagent-list-agents",
   "description": "Read-only native continuable subagent directory",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

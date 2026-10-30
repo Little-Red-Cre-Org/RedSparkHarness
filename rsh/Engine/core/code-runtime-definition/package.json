@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-code-runtime-definition",
   "description": "Framework-free code execution vocabulary and consumer operations",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

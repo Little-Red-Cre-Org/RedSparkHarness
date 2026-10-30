@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-pet",
   "description": "Extensible state-aware desktop-pet registry, Conversation presentation, and personalization settings",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-task-scheduler",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "description": "Persistent scheduled Agent tasks with independent execution sessions",
   "type": "module",
   "dsh": {

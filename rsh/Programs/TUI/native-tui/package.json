@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-native-tui",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "description": "Native interactive Ink terminal application",
   "publishConfig": {
     "access": "public"

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-native-jobs",
   "description": "Native Agent-owned background job registry",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Engine/core/native-jobs" },
   "type": "module",

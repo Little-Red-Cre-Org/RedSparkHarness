@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-compat-settings-definition",
   "description": "Cordis Settings service and event augmentation for the DSH compatibility face",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

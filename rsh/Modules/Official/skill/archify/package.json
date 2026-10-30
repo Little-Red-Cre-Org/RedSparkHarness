@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-archify",
   "description": "Automatic low-overhead Archify diagram routing for RedSpark Harness",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "dsh": {
     "native": {
       "apiVersion": 1,

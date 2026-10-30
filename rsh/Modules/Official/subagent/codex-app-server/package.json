@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-codex-app-server",
   "description": "Official Codex app-server product Provider for Native external subagents",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

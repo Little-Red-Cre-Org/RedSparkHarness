@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-workspace-definition",
   "description": "Framework-independent Workspace identity and consumer operations",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

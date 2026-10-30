@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-sdk-runtime",
   "description": "Cordis-free RedSpark Harness SDK protocol runtime and Session API",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

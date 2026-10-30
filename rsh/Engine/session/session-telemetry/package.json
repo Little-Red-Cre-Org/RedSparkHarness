@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-session-telemetry",
   "description": "SessionTelemetryBackend seam for the RedSpark Harness: session-event capture, projection, redaction, and handoff to a reporting backend",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

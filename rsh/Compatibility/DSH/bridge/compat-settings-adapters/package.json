@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-compat-settings-adapters",
   "description": "Owner-scoped Cordis adapters for optional Engine Settings sources",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-native-session-execution",
   "description": "Native active Session execution routing with cancellation and drain",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },

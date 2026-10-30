@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-desktop-host-compatibility",
   "description": "Explicit Cordis Desktop Host assembly for profiles that select legacy bundles",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "private": true,
   "repository": {
     "type": "git",

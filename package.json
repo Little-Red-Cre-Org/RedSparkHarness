@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-root",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-native-persona",
   "description": "Native plugin hosting the shipped persona row",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
