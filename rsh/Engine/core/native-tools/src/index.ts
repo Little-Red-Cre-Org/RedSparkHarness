@@ -421,7 +421,8 @@ export class NativeToolRegistry {
    */
   presentAs(mode: NativeToolMode, scope: NativeScope): () => void {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
-    if (mode !== 'native' && mode !== 'ptc' && mode !== 'both') {
+    const modes: readonly string[] = ['native', 'ptc', 'both']
+    if (!modes.includes(mode)) {
       throw new Error('native-tools: presentation mode must be native, ptc or both')
     }
     if (scope === this.scope) throw new Error('native-tools: presentation overrides require a descendant scope')
