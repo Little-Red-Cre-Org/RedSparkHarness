@@ -4,10 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { assertServiceable, Config as PiAiConfig, resolveProfiles } from '@deepseek-ai/dsh-llm-pi-ai/src/config.ts'
 import { NativeSettings, type NativeSettingsDescriptor as ServiceNativeSettingsDescriptor,
   type NativeSettingsPathOp, type NativeSettingsSection } from '@deepseek-ai/dsh-settings/native'
-import { credentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAuthorizationProvider, type AuthorizationPromptId } from '@deepseek-ai/dsh-authorization/native'
-import type { NativeAccountBalance, NativeAccountSummary, NativeAccountUsage, NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor, NativeSettingsDescription } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeAgentPresetList, NativeSettingsEvent, NativeSessionClient, NativeSettingsDescriptor, NativeSettingsDescription } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
@@ -40,12 +37,6 @@ const themeSnapshot: ReturnType<NativeThemeService['getSnapshot']> = {
 }
 const useLocale: SnapshotSelectorHook<NativeLocaleSnapshot> = selector => selector(localeSnapshot)
 const useTheme: SnapshotSelectorHook<ReturnType<NativeThemeService['getSnapshot']>> = selector => selector(themeSnapshot)
-const emptyAccountActions = {
-  accountsList: async () => [],
-  accountsUsage: async () => ({ status: 'unsupported' as const }),
-  accountsBalance: async () => ({ status: 'unsupported' as const }),
-  accountsSignOut: async () => undefined,
-}
 const emptyModelActions = {
   modelsListProviders: async () => [],
   modelsListConfigurableProviders: async () => [],
@@ -60,7 +51,6 @@ function renderSettingsPage(props: {
   actions: NativeSettingsActions
   t: (key: keyof typeof en) => string
   section?: string
-  onAuthorized?: () => void
   useLocale?: SnapshotSelectorHook<NativeLocaleSnapshot>
   useTheme?: SnapshotSelectorHook<ReturnType<NativeThemeService['getSnapshot']>>
   setLocale?: NativeLocaleService['setLocale']
@@ -68,7 +58,7 @@ function renderSettingsPage(props: {
   setFontSize?: NativeThemeService['setFontSize']
   onDocumentAvailabilityChange?: (available: boolean) => void
 }) {
-  return render(<SettingsPage {...props} actions={{ ...emptyAccountActions, ...emptyModelActions, ...props.actions }}
+  return render(<SettingsPage {...props} actions={{ ...emptyModelActions, ...props.actions }}
     section={props.section ?? 'general'} useLocale={props.useLocale ?? useLocale}
     useTheme={props.useTheme ?? useTheme} setLocale={props.setLocale ?? (() => {})}
     setThemePreference={props.setThemePreference ?? (() => {})} setFontSize={props.setFontSize ?? (() => {})} />)
@@ -88,33 +78,12 @@ const pluginSettings = (
   credentialRefs: namespace === 'web-search-deepseek' ? ['DEEPSEEK_API_KEY'] : [], revision,
 })
 
-const chatGptAccount: NativeAccountSummary = {
-  key: 'llm-pi-ai/openai-codex', provider: 'openai-codex', status: 'ready',
-  identity: { email: 'account@example.com', contact: null, name: null, avatarUrl: null }, plan: null,
-}
-const readyUsage: Extract<NativeAccountUsage, { status: 'ready' }> = {
-  status: 'ready', email: null, plan: 'Plus',
-  quotas: [{ name: 'codex', primary: { usedPercent: 35, windowSeconds: 3600, resetsAt: null }, secondary: null }],
-  credits: null,
-}
-
-function accountPageActions(
-  accountsUsage: NativeSettingsActions['accountsUsage'],
-  accountsList = vi.fn(async () => [chatGptAccount]),
-  accountsBalance: NativeSettingsActions['accountsBalance'] = emptyAccountActions.accountsBalance,
-) {
+function pageActions() {
   return {
-    ...emptyAccountActions,
     settingsDescribe: vi.fn(async () => settingsDescription([])),
     settingsMutate: vi.fn(),
     credentialsDescribe: vi.fn(async () => ({})),
     credentialsSet: vi.fn(), credentialsUnset: vi.fn(),
-    authorizationList: vi.fn(async () => []),
-    authorizationBegin: vi.fn(), authorizationFrames: vi.fn(async function* () {}),
-    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
-    accountsList,
-    accountsUsage,
-    accountsBalance,
   } as unknown as NativeSettingsActions
 }
 
@@ -129,20 +98,11 @@ async function expectSettingsOutput(name: string, language: string): Promise<voi
   await expect(JSON.stringify(output, null, 2)).toMatchFileSnapshot(`./expected/settings-page-${name}.${language}.txt`)
 }
 
-it('renders ChatGPT plan and remaining quota', async () => {
-  const actions = accountPageActions(vi.fn(async () => readyUsage))
-  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText('Plan: Plus')).toBeTruthy()
-  expect(screen.getByText('Remaining 65%')).toBeTruthy()
-  expect(screen.getByRole('progressbar').getAttribute('value')).toBe('65')
-})
-
 it('shows the four native Plugins configuration cards', async () => {
   const webSearch = pluginSettings('web-search-deepseek', 1, {
     apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: '', maxUses: 5,
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async () => settingsDescription([webSearch]))
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
@@ -158,7 +118,7 @@ it('describes a settings-file apiKey field without exposing its value', async ()
     ...pluginSettings('web-search-deepseek', 1, { apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5 }),
     secrets: [{ path: ['apiKey'], set: true }],
   }
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async () => settingsDescription([literal]))
   actions.credentialsDescribe = vi.fn(async () => ({ KEY_A: { configured: false, writable: true } }))
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
@@ -180,7 +140,7 @@ it('keeps every plugin descriptor when another namespace changes during the init
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
   let finishInitial!: (description: NativeSettingsDescription) => void
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -211,7 +171,7 @@ it('keeps a staged plugin write fenced to the descriptor revision where editing 
   const updatedElsewhere = pluginSettings('subagent-model-selection', 2, { enabled: false, allowedModels: [{ provider: 'provider', model: 'model-c' }] })
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -246,7 +206,7 @@ it('keeps a staged plugin write fenced to the descriptor revision where editing 
 })
 
 it('supports arrow, Home, and End keyboard navigation across plugin tabs', async () => {
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
   const config = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
   const inventory = screen.getByRole('tab', { name: en.settingsPluginInventoryTab })
@@ -277,7 +237,7 @@ it('saves a no-op web-search mutation and its write-only key through Native Host
     configuredReads.push(configured)
     return { DEEPSEEK_API_KEY: { configured, writable: true } }
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async () => settingsDescription([initial]))
   actions.settingsMutate = settingsMutate
   actions.credentialsDescribe = credentialsDescribe
@@ -318,7 +278,7 @@ it('uses the refreshed credential reference after clearing and retyping the key 
   const credentialsDescribe = vi.fn(async (_refs: readonly string[]) => ({
     KEY_A: { configured: false, writable: true }, KEY_B: { configured: true, writable: true },
   }))
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -371,7 +331,7 @@ it('keeps the web-search key draft when its credential reference changes during 
     KEY_A: { configured: false, writable: true },
     KEY_B: { configured: false, writable: true },
   }))
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -429,7 +389,7 @@ it('keeps the web-search key draft when its reference changes after credential v
     }
     return { KEY_B: { configured: false, writable: true } }
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
@@ -491,7 +451,7 @@ it('announces queued revisions while an earlier refresh reads credentials', asyn
     }
     return { KEY_B: { configured: false, writable: true } }
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
@@ -560,7 +520,7 @@ it('keeps the web-search key draft when its announced revision is still unread a
     }
     return { KEY_B: { configured: false, writable: true } }
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
@@ -605,7 +565,7 @@ it('retries failed credential readback and keeps the draft after a later revisio
     configured = true
     failReadback = credentialWrites === 1 || credentialWrites === 3
   })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => settingsDescription([current]))
   actions.settingsMutate = vi.fn(async (
     _namespace: string, _ops: readonly NativeSettingsPathOp[], expectedRevision: number,
@@ -668,7 +628,7 @@ it('retries failed credential readback and keeps the draft after a later revisio
 })
 
 it('shows a Host gap for an absent plugin namespace without a save action', async () => {
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
   renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
 
@@ -679,7 +639,7 @@ it('shows a Host gap for an absent plugin namespace without a save action', asyn
 
 it('retries a failed plugin settings describe and renders plugin rows', async () => {
   const shell = pluginSettings('shell', 1, { timeoutMs: 2500, maxOutputBytes: 4096 })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
@@ -709,7 +669,7 @@ it('restarts a failed settings subscription when retrying and refreshes on its n
   }
   let subscriptionCount = 0
   let describeCount = 0
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
     return settingsDescription([
@@ -746,7 +706,7 @@ it('restarts a failed settings subscription when retrying and refreshes on its n
 
 it('retries a settings subscription that ends normally', async () => {
   let subscriptionCount = 0
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   actions.settingsEvents = vi.fn(async function* (signal: AbortSignal): AsyncGenerator<NativeSettingsEvent> {
     subscriptionCount += 1
     if (subscriptionCount === 1) return
@@ -766,7 +726,7 @@ it('retries a settings subscription that ends normally', async () => {
 it('does not show a Host gap for a missing namespace after a failed refresh', async () => {
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async (_signal?: AbortSignal) => {
     describeCount += 1
@@ -793,7 +753,7 @@ it('shows refresh pending for a missing namespace and blocks writes past its ann
   let releaseEvent!: () => void
   const event = new Promise<void>((resolve) => { releaseEvent = resolve })
   let finishRefresh!: (description: NativeSettingsDescription) => void
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -837,7 +797,7 @@ it('settles an event refresh that started before a save acknowledgment', async (
   let finishRefresh!: (description: NativeSettingsDescription) => void
   let acknowledgeSave!: () => void
   const saveAcknowledged = new Promise<void>((resolve) => { acknowledgeSave = resolve })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -878,7 +838,7 @@ it('retains the last plugin settings, revision, and credential info when a refre
   })
   let releaseRefresh!: () => void
   const refresh = new Promise<void>((resolve) => { releaseRefresh = resolve })
-  const actions = accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })))
+  const actions = pageActions()
   let describeCount = 0
   actions.settingsDescribe = vi.fn(async () => {
     describeCount += 1
@@ -913,18 +873,6 @@ it('retains the last plugin settings, revision, and credential info when a refre
       { op: 'set', path: ['maxUses'], value: 9 },
     ], 1)
   })
-})
-
-it('renders the ChatGPT identity name before the email', async () => {
-  const account = { ...chatGptAccount, identity: { ...chatGptAccount.identity, name: 'Ada Lovelace' } }
-  renderSettingsPage({
-    actions: accountPageActions(vi.fn(async () => readyUsage), vi.fn(async () => [account])),
-    t: key => en[key], section: 'models',
-  })
-
-  const name = await screen.findByText('Ada Lovelace')
-  const email = screen.getByText('account@example.com')
-  expect(name.nextElementSibling).toBe(email)
 })
 
 it('reads, copies, opens and deletes native Agent presets through Host actions', async () => {
@@ -992,7 +940,7 @@ it('reads, copies, opens and deletes native Agent presets through Host actions',
   })
   const settingsDescribe = vi.fn(async () => settingsDescription([agentPresetSettings]))
   const actions = {
-    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    ...pageActions(),
     settingsDescribe,
     settingsMutate,
     agentPresetsList,
@@ -1113,7 +1061,7 @@ it('distinguishes an absent Agent settings namespace from an unread revision', a
     return Promise.resolve(result)
   })
   const actions = {
-    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    ...pageActions(),
     settingsDescribe,
     settingsMutate,
     settingsEvents,
@@ -1195,7 +1143,7 @@ it('retries a failed Agent preset settings describe', async () => {
     return settingsDescription([presetSettings])
   })
   const actions = {
-    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    ...pageActions(),
     settingsDescribe,
     settingsEvents: (signal: AbortSignal) => emptyModelActions.settingsEvents(signal),
     agentPresetsList: vi.fn(async (_signal?: AbortSignal) => roster),
@@ -1251,7 +1199,7 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
       content: '{"formatVersion":1,"installations":[{"id":"legacy"}]}' }
   })
   const actions = {
-    ...accountPageActions(vi.fn(async () => ({ status: 'unsupported' as const })), vi.fn(async () => [])),
+    ...pageActions(),
     agentPresetsList: vi.fn(async () => roster),
     agentPresetRead,
     agentPresetCopy: vi.fn(async () => {}),
@@ -1271,195 +1219,6 @@ it('keeps the later Agent preset detail when an earlier read finishes last', asy
   })
   expect(screen.getByText('{"formatVersion":1,"installations":[{"id":"legacy"}]}')).toBeTruthy()
   expect(screen.queryByText('{"formatVersion":1,"installations":[{"id":"stale"}]}')).toBeNull()
-})
-
-it('shows that ChatGPT usage appears after the first model call', async () => {
-  const accountsUsage = vi.fn(async () => ({ status: 'failed' as const, reason: 'USAGE_PENDING' as const }))
-  renderSettingsPage({ actions: accountPageActions(accountsUsage), t: key => en[key], section: 'models' })
-
-  const notice = await screen.findByRole('status')
-  expect(notice.textContent).toBe(en.usagePending)
-  expect(screen.queryByText(en.accountUnavailable)).toBeNull()
-})
-
-it('re-reads pending ChatGPT usage after the Settings page remounts', async () => {
-  const accountsUsage = vi.fn()
-    .mockResolvedValueOnce({ status: 'failed' as const, reason: 'USAGE_PENDING' as const })
-    .mockResolvedValueOnce(readyUsage)
-  const actions = accountPageActions(accountsUsage)
-  const firstPage = renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText(en.usagePending)).toBeTruthy()
-  firstPage.unmount()
-  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  expect(await screen.findByRole('progressbar')).toBeTruthy()
-  expect(accountsUsage).toHaveBeenCalledTimes(2)
-})
-
-it('renders a subscription account inside its authorization row', async () => {
-  const entry = {
-    key: chatGptAccount.key, label: 'ChatGPT subscription (Sign in with ChatGPT)',
-    methods: [{ id: 'oauth', label: 'OAuth' }], configured: true, writable: true,
-  }
-  const actions = {
-    ...accountPageActions(vi.fn(async () => readyUsage)),
-    authorizationList: vi.fn(async () => [entry]),
-  } as unknown as NativeSettingsActions
-  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  const subscription = screen.getByRole('region', { name: en.subscriptionModels })
-  const row = await within(subscription).findByRole('group', { name: entry.label })
-  expect(within(row).getByText(en.authorizationConnected)).toBeTruthy()
-  expect(within(row).getByRole('button', { name: en.authorizationReconnect })).toBeTruthy()
-  expect(within(row).getByRole('heading', { name: en.chatGptAccount })).toBeTruthy()
-  expect(screen.queryByRole('heading', { name: 'Accounts' })).toBeNull()
-})
-
-it('keeps ready usage and shows a stale hint after refresh failure', async () => {
-  const accountsUsage = vi.fn()
-    .mockResolvedValueOnce(readyUsage)
-    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
-  const accountsList = vi.fn(async () => [chatGptAccount])
-  const actions = accountPageActions(accountsUsage, accountsList)
-  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText('Remaining 65%')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
-
-  expect(await screen.findByText(en.usageStale)).toBeTruthy()
-  expect(screen.getByText('Plan: Plus')).toBeTruthy()
-  expect(screen.getByText('Remaining 65%')).toBeTruthy()
-  expect(accountsUsage).toHaveBeenCalledTimes(2)
-  expect(accountsList).toHaveBeenCalledTimes(2)
-})
-
-it('clears ready usage when the signed-in account changes', async () => {
-  const accountA = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'a@example.com' } }
-  const accountB = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'b@example.com' } }
-  const accountsUsage = vi.fn()
-    .mockResolvedValueOnce({ ...readyUsage, email: 'a@example.com', plan: 'Account A plan' })
-    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
-  const accountsList = vi.fn()
-    .mockResolvedValueOnce([accountA])
-    .mockResolvedValueOnce([accountB])
-  renderSettingsPage({ actions: accountPageActions(accountsUsage, accountsList), t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText('a@example.com')).toBeTruthy()
-  expect(screen.getByText('Plan: Account A plan')).toBeTruthy()
-  expect(screen.getByText('Remaining 65%')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
-
-  expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
-  expect(screen.getByText('b@example.com')).toBeTruthy()
-  expect(screen.queryByText('a@example.com')).toBeNull()
-  expect(screen.queryByText('Plan: Account A plan')).toBeNull()
-  expect(screen.queryByText('Remaining 65%')).toBeNull()
-})
-
-it('does not reuse ready usage when account identity emails are null', async () => {
-  const account = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: null } }
-  const accountsUsage = vi.fn()
-    .mockResolvedValueOnce({ ...readyUsage, plan: 'Account A plan' })
-    .mockResolvedValueOnce({ status: 'failed', reason: 'offline' })
-  const accountsList = vi.fn(async () => [account])
-  renderSettingsPage({ actions: accountPageActions(accountsUsage, accountsList), t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText('Plan: Account A plan')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
-
-  expect(await screen.findByText(en.accountUnavailable)).toBeTruthy()
-  expect(screen.queryByText('Plan: Account A plan')).toBeNull()
-})
-
-it('renders DeepSeek identity, wallet balance and bonus balance', async () => {
-  const deepSeek: NativeAccountSummary = {
-    key: 'deepseek-account/default', provider: 'deepseek-account', status: 'ready', plan: null,
-    identity: { email: null, contact: 'user@example.com', name: 'DeepSeek User', avatarUrl: null },
-  }
-  const readyBalance: Extract<NativeAccountBalance, { status: 'ready' }> = {
-    status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }, { currency: 'USD', balance: '0.40' }],
-    bonusWallets: [{ currency: 'CNY', balance: '3.00' }],
-  }
-  const accountsUsage = vi.fn(async () => readyUsage)
-  const accountsBalance = vi.fn(async () => readyBalance)
-  renderSettingsPage({
-    actions: accountPageActions(accountsUsage, vi.fn(async () => [deepSeek, chatGptAccount]), accountsBalance),
-    t: key => en[key], section: 'models' })
-
-  expect(await screen.findByRole('heading', { name: en.deepSeekAccount })).toBeTruthy()
-  expect(screen.getByRole('heading', { name: en.chatGptAccount })).toBeTruthy()
-  expect(await screen.findByText('Plan: Plus')).toBeTruthy()
-  expect(screen.getByText('DeepSeek User')).toBeTruthy()
-  expect(screen.getByText('user@example.com')).toBeTruthy()
-  expect(screen.getByText('¥12.30')).toBeTruthy()
-  expect(screen.getByText('$0.40')).toBeTruthy()
-  expect(screen.getByText('¥3.00')).toBeTruthy()
-  expect(accountsBalance).toHaveBeenCalledWith(deepSeek.key, expect.anything())
-  expect(accountsUsage).toHaveBeenCalledWith(chatGptAccount.key, expect.anything())
-})
-
-it.each([
-  { contact: 'user@example.com', notice: en.balanceStale, keepsBalance: true },
-  { contact: null, notice: en.balanceUnavailable, keepsBalance: false },
-])('DeepSeek refresh failure with contact $contact keeps balance: $keepsBalance', async ({ contact, notice, keepsBalance }) => {
-  const deepSeek: NativeAccountSummary = {
-    key: 'deepseek-account/default', provider: 'deepseek-account', status: 'ready', plan: null,
-    identity: { email: null, contact, name: 'DeepSeek User', avatarUrl: null },
-  }
-  const accountsBalance = vi.fn()
-    .mockResolvedValueOnce({ status: 'ready', wallets: [{ currency: 'CNY', balance: '12.30' }], bonusWallets: [] })
-    .mockResolvedValueOnce({ status: 'failed' })
-  renderSettingsPage({
-    actions: accountPageActions(vi.fn(async () => readyUsage), vi.fn(async () => [deepSeek]), accountsBalance),
-    t: key => en[key], section: 'models' })
-
-  expect(await screen.findByText('¥12.30')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.refreshAccount }))
-
-  expect(await screen.findByText(notice)).toBeTruthy()
-  expect(screen.queryByText('¥12.30') !== null).toBe(keepsBalance)
-  expect(accountsBalance).toHaveBeenCalledTimes(2)
-})
-
-it('refreshes model controls after signing out', async () => {
-  const onAuthorized = vi.fn()
-  renderSettingsPage({
-    actions: accountPageActions(vi.fn(async () => readyUsage)), t: key => en[key], section: 'models', onAuthorized })
-
-  fireEvent.click(await screen.findByRole('button', { name: en.signOut }))
-
-  await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
-})
-
-it('keeps the newest account list when older refreshes finish last', async () => {
-  const accountA = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'a@example.com' } }
-  const accountB = { ...chatGptAccount, identity: { ...chatGptAccount.identity, email: 'b@example.com' } }
-  let resolveOlder!: (accounts: readonly NativeAccountSummary[]) => void
-  let resolveNewer!: (accounts: readonly NativeAccountSummary[]) => void
-  const older = new Promise<readonly NativeAccountSummary[]>((resolve) => { resolveOlder = resolve })
-  const newer = new Promise<readonly NativeAccountSummary[]>((resolve) => { resolveNewer = resolve })
-  const accountsList = vi.fn()
-    .mockResolvedValueOnce([chatGptAccount])
-    .mockReturnValueOnce(older)
-    .mockReturnValueOnce(newer)
-  const actions = accountPageActions(vi.fn(async () => readyUsage), accountsList)
-  renderSettingsPage({ actions, t: key => en[key], section: 'models' })
-
-  const refreshButton = await screen.findByRole('button', { name: en.refreshAccount }) as HTMLButtonElement
-  await waitFor(() => { expect(refreshButton.disabled).toBe(false) })
-  fireEvent.click(refreshButton)
-  fireEvent.click(refreshButton)
-  resolveNewer([accountB])
-  expect(await screen.findByText('b@example.com')).toBeTruthy()
-
-  await act(async () => {
-    resolveOlder([accountA])
-    await older
-  })
-
-  expect(screen.getByText('b@example.com')).toBeTruthy()
-  expect(screen.queryByText('a@example.com')).toBeNull()
 })
 
 it('writes changed user fields without replacing a parent that contains a hidden secret', () => {
@@ -1669,138 +1428,6 @@ it.each(locales)('refuses edits above the advertised atomic operation budget ($l
   expect(settingsMutate).not.toHaveBeenCalled()
 })
 
-it('refresh mid-login then resume and finish', async () => {
-  const key = credentialKey('llm-pi-ai', 'openai-codex')
-  const scope = new NativeScope()
-  const events = new RuntimeEvents()
-  let configured = false
-  let answer: string | undefined
-  const credentials = {
-    describeRecord: vi.fn(async () => ({ configured, writable: true })),
-  } as unknown as NativeCredentials
-  const authorization = new NativeAuthorizationProvider(scope, credentials, { events })
-  authorization.registerFlow({
-    key,
-    label: 'OpenAI Codex',
-    methods: [{ id: 'oauth', label: 'OAuth' }],
-    async run(session) {
-      session.notify({ message: 'Open the authorization page', url: 'https://auth.example/device', code: 'ABCD-1234' })
-      answer = await session.prompt({ kind: 'secret', message: 'Authorization code' })
-      configured = true
-      authorization.recordUpdated(key)
-    },
-  })
-  const cancel = vi.fn(async (attemptId: string) => {
-    const attempt = authorization.current(key)
-    if (attempt?.id === attemptId) await attempt.cancel()
-  })
-  const actions = {
-    settingsDescribe: vi.fn(async () => settingsDescription([])),
-    authorizationList: vi.fn(async () => Promise.all(authorization.list().map(async (entry) => {
-      const record = await credentials.describeRecord(key)
-      const attemptId = authorization.current(key)?.id
-      return { key: entry.key, label: entry.label, methods: entry.methods, configured: record.configured,
-        writable: record.writable, ...(attemptId === undefined ? {} : { attemptId }) }
-    }))),
-    authorizationBegin: vi.fn(async () => ({ attemptId: authorization.begin({ key }).id })),
-    authorizationFrames: vi.fn((frameKey: string, attemptId: string, signal: AbortSignal) => {
-      const attempt = authorization.current(key)
-      if (frameKey !== key || attempt?.id !== attemptId) throw new Error('missing authorization attempt')
-      return attempt.frames(signal)
-    }),
-    authorizationAnswer: vi.fn(async (_key: string, attemptId: string, promptId: string, value: string) => {
-      const attempt = authorization.current(key)
-      if (attempt?.id !== attemptId) throw new Error('missing authorization attempt')
-      attempt.answer(promptId as AuthorizationPromptId, value)
-    }),
-    authorizationCancel: vi.fn(async (_key: string, attemptId: string) => cancel(attemptId)),
-  } as unknown as NativeSettingsActions
-  const onAuthorized = vi.fn()
-  const props = { actions, t: (localeKey: keyof typeof en) => en[localeKey], section: 'models', onAuthorized }
-
-  try {
-    const firstPage = renderSettingsPage(props)
-    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
-    expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
-    expect(await screen.findByText('ABCD-1234')).toBeTruthy()
-    await screen.findByLabelText('Authorization code')
-
-    firstPage.unmount()
-    expect(authorization.current(key)).toBeDefined()
-    expect(cancel).not.toHaveBeenCalled()
-
-    renderSettingsPage(props)
-    expect(await screen.findByRole('link', { name: 'https://auth.example/device' })).toBeTruthy()
-    const input = await screen.findByLabelText('Authorization code')
-    fireEvent.change(input, { target: { value: 'secret-answer' } })
-    fireEvent.click(screen.getByRole('button', { name: en.authorizationAnswer }))
-    await waitFor(() => { expect(onAuthorized).toHaveBeenCalledOnce() })
-    expect(screen.queryByText(en.authorizationAuthorized)).toBeNull()
-    await waitFor(() => { expect(authorization.current(key)).toBeUndefined() })
-    expect(screen.queryByRole('link', { name: 'https://auth.example/device' })).toBeNull()
-    expect(answer).toBe('secret-answer')
-    expect(cancel).not.toHaveBeenCalled()
-  } finally { await authorization.dispose() }
-})
-
-it.each([
-  { name: 'settled before subscribe', attemptId: undefined },
-  { name: 'same id resubscribes once, then stops', attemptId: 'a1' },
-])('$name', async ({ attemptId }) => {
-  const key = credentialKey('llm-pi-ai', 'openai-codex')
-  const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
-    configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
-  const authorizationCancel = vi.fn(async () => undefined)
-  let releaseSecond!: () => void
-  const dropSecond = new Promise<void>((resolve) => { releaseSecond = resolve })
-  const authorizationFrames = vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
-    const call = authorizationFrames.mock.calls.length
-    if (attemptId === undefined || call === 1) throw new Error('HTTP 409: unavailable attempt')
-    yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
-    if (call === 2) {
-      await dropSecond
-      throw new Error('HTTP 409: unavailable attempt')
-    }
-    await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
-  })
-  const actions = {
-    settingsDescribe: vi.fn(async () => settingsDescription([])),
-    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
-    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
-    authorizationBegin: vi.fn(async () => ({ attemptId: 'a1' })), authorizationFrames,
-    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel,
-  } as unknown as NativeSettingsActions
-  const onAuthorized = vi.fn(() => { throw new Error('native conversation: operation already pending') })
-  const page = renderSettingsPage({ actions, t: localeKey => en[localeKey], section: 'models', onAuthorized })
-
-  if (attemptId === undefined) {
-    fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
-    expect(await screen.findByText(en.signInIncomplete)).toBeTruthy()
-    expect(screen.queryByRole('button', { name: en.cancelSignIn })).toBeNull()
-  } else {
-    expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: en.cancelSignIn })).toBeTruthy()
-    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
-    expect(authorizationFrames).toHaveBeenCalledTimes(2)
-    releaseSecond()
-    expect(await screen.findByText(en.authorizationDisconnected)).toBeTruthy()
-    expect(authorizationFrames).toHaveBeenCalledTimes(2)
-    await new Promise<void>((resolve) => { setTimeout(() => { resolve() }, 20) })
-    expect(authorizationFrames).toHaveBeenCalledTimes(2)
-    expect(screen.queryByText(en.signInIncomplete)).toBeNull()
-  }
-  expect(authorizationList).toHaveBeenCalledTimes(2)
-  expect(onAuthorized).toHaveBeenCalledOnce()
-  expect(authorizationCancel).not.toHaveBeenCalled()
-  if (attemptId !== undefined) {
-    fireEvent.click(screen.getByRole('button', { name: en.refreshSettings }))
-    expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-    expect(screen.queryByText(en.authorizationDisconnected)).toBeNull()
-    expect(authorizationFrames).toHaveBeenCalledTimes(3)
-  }
-  page.unmount()
-})
-
 it('keeps settings drafts consistent across saves and refreshes', async () => {
   let user: Record<string, unknown> = { label: 'old' }
   let revision = 1
@@ -1867,7 +1494,7 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   const setLocale = vi.fn((_locale: NativeLocaleSnapshot['locale']) => undefined)
   const setThemePreference = vi.fn()
   const setFontSize = vi.fn()
-  const nativeActions = { ...emptyAccountActions, ...emptyModelActions, ...actions }
+  const nativeActions = { ...emptyModelActions, ...actions }
   const page = render(<SettingsPage actions={nativeActions} t={(localeKey: keyof typeof en) => en[localeKey]}
     section="general" useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
     setThemePreference={setThemePreference} setFontSize={setFontSize} />)
@@ -1954,32 +1581,4 @@ it('keeps settings drafts consistent across saves and refreshes', async () => {
   expect(screen.queryByRole('combobox', { name: en.settingsBusyEnter })).toBeNull()
   expect(localStorage.getItem(PENDING_DEFAULT_KEY)).toBe('steering')
   expect(fallbackMutate).not.toHaveBeenCalled()
-})
-it('resumes an in-flight login after leaving and returning to Models', async () => {
-  const key = credentialKey('llm-pi-ai', 'openai-codex')
-  let attemptId: string | undefined
-  const authorizationList = vi.fn(async () => [{ key, label: 'OpenAI Codex', methods: [{ id: 'oauth', label: 'OAuth' }],
-    configured: false, writable: true, ...(attemptId === undefined ? {} : { attemptId }) }])
-  const actions = {
-    settingsDescribe: vi.fn(async () => settingsDescription([])),
-    settingsMutate: vi.fn(), credentialsDescribe: vi.fn(async () => ({})),
-    credentialsSet: vi.fn(), credentialsUnset: vi.fn(), authorizationList,
-    authorizationBegin: vi.fn(async () => { attemptId = 'a1'; return { attemptId } }),
-    authorizationFrames: vi.fn(async function* (_key: string, _attemptId: string, signal: AbortSignal) {
-      yield { type: 'prompt', promptId: 'p1', prompt: { kind: 'text', message: 'Code' } } as const
-      await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }) })
-    }),
-    authorizationAnswer: vi.fn(), authorizationDecline: vi.fn(), authorizationCancel: vi.fn(),
-  } as unknown as NativeSettingsActions
-  const stable = { ...emptyAccountActions, ...emptyModelActions, ...actions }
-  const t = (localeKey: keyof typeof en) => en[localeKey]
-  const pageProps = { actions: stable, t, useLocale, useTheme, setLocale: () => {}, setThemePreference: () => {}, setFontSize: () => {} }
-  const page = render(<SettingsPage {...pageProps} section="models" />)
-  fireEvent.click(await screen.findByRole('button', { name: en.authorizationLoginAdd }))
-  expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-  page.rerender(<SettingsPage {...pageProps} section="general" />)
-  page.rerender(<SettingsPage {...pageProps} section="models" />)
-  expect(await screen.findByRole('textbox', { name: 'Code' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: en.authorizationLoginAdd })).toBeNull()
-  page.unmount()
 })

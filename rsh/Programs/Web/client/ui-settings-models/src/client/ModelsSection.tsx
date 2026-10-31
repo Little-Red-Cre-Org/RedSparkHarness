@@ -24,8 +24,7 @@ import type { ModelsSettingsStore, ProviderRow } from './store.ts'
 import type { ModelsOperations } from './operations.ts'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
 import { ProviderEditor, type ProviderEditorProps } from './ProviderEditor.tsx'
-import { AuthorizationPanel } from './AuthorizationPanel.tsx'
-import { enableAuthorizedProvider, isSubscriptionProvider } from './authorized-provider.ts'
+import { isSubscriptionProvider } from './authorized-provider.ts'
 import type { en } from './locales.ts'
 const styles = ModelsSettingsStyles
 
@@ -43,8 +42,6 @@ export interface ModelsSectionInjected {
   schema: SettingsSchemaOperations
   /** Section copy. */
   t: (key: keyof typeof en) => string
-  /** Host authorization Remote used by the generic account panel. */
-  authorization?: import('@deepseek-ai/dsh-api-remotes/client').ClientRemote['authorization']
 }
 
 /** The child slots this section declares and dispatches (see ./slot-contract.ts). */
@@ -197,7 +194,7 @@ export function providerCopy(template: string, target: ProviderIdentity): string
  * @returns the section, or null while the shell has not injected yet.
  */
 export function ModelsSection(props: ModelsSectionProps): ReactNode {
-  const { controller, useSnapshot, operations, schema, t, authorization, renderSlot } = props
+  const { controller, useSnapshot, operations, schema, t, renderSlot } = props
   if (
     controller === undefined || useSnapshot === undefined || operations === undefined
     || schema === undefined || t === undefined
@@ -208,12 +205,11 @@ export function ModelsSection(props: ModelsSectionProps): ReactNode {
     operations,
     schema,
     t,
-    ...authorization === undefined ? {} : { authorization },
   }} renderSlot={renderSlot} />
 }
 
 function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderSlot: ModelsRenderSlot }): ReactNode {
-  const { controller, operations, schema, t, authorization } = injected
+  const { controller, operations, schema, t } = injected
   const state = injected.useSnapshot(snapshot => snapshot)
   const [editing, setEditing] = useState<EditorTarget | undefined>(undefined)
   const [adding, setAdding] = useState(false)
@@ -563,10 +559,6 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
               )}
         </div>
       </section>
-      {authorization === undefined
-        ? null
-        : <AuthorizationPanel remote={authorization} t={t}
-          onAuthorized={(key, signal) => enableAuthorizedProvider(key, operations, controller, t, signal)} />}
       {renderSlot('settings.models.footer', {})}
       <Modal
         open={deleteTarget !== undefined}

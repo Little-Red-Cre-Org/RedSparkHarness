@@ -158,13 +158,12 @@ function asNamespace(descriptor: NativeSettingsDescriptor): ModelSettingsNamespa
   }
 }
 
-/** Render API provider editors followed by the native Subscription models section. */
-export function ModelsSettingsPage({ actions, t, children, reloadKey = 0 }: {
+/** Render the API provider editors for the Models settings section. */
+export function ModelsSettingsPage({ actions, t, reloadKey = 0 }: {
   actions: ModelsActions
   t: Translate
   /** Changes after an account sign-in or sign-out so the provider list is read again. */
   reloadKey?: number
-  children?: ReactNode
 }): ReactNode {
   const [snapshot, setSnapshot] = useState<ModelsSnapshot>({
     status: 'loading', rows: [], namespaces: new Map(),
@@ -323,13 +322,6 @@ export function ModelsSettingsPage({ actions, t, children, reloadKey = 0 }: {
         <p className={styles['error']}>{`${t('modelDirectoryLoadFailed')}: ${snapshot.error}`}</p>
         <button type="button" className={styles['secondaryButton']} onClick={() => { void refresh() }}>{t('retry')}</button>
       </section>
-      <section className={styles['authorization']} aria-labelledby="native-models-subscription-title">
-        <div>
-          <h3 id="native-models-subscription-title" className={styles['authorizationTitle']}>{t('subscriptionModels')}</h3>
-          <p className={styles['authorizationIntro']}>{t('subscriptionModelsIntro')}</p>
-        </div>
-        {children}
-      </section>
     </div>
   }
 
@@ -463,13 +455,6 @@ export function ModelsSettingsPage({ actions, t, children, reloadKey = 0 }: {
               </button> : null}
             </div>}
       </div>
-    </section>
-    <section className={styles['authorization']} aria-labelledby="native-models-subscription-title">
-      <div>
-        <h3 id="native-models-subscription-title" className={styles['authorizationTitle']}>{t('subscriptionModels')}</h3>
-        <p className={styles['authorizationIntro']}>{t('subscriptionModelsIntro')}</p>
-      </div>
-      {children}
     </section>
     <Modal open={deleteTarget !== undefined} onClose={() => {
       if (!deleting) { setDeleteTarget(undefined); setDeleteFailure(undefined) }
