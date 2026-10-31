@@ -2963,3 +2963,36 @@ it.each(['read-first', 'cleanup-first'] as const)('replaces the filesystem skill
     await rm(state.directory, { recursive: true, force: true })
   }
 })
+
+it('keeps one schema per tool when the profile also registers the builtin run_code', async () => {
+  // A profile may install `dsh-tool-code-runtime`, which registers `run_code`
+  // into the model Registry. The builtin transport offers the same name when
+  // `builtinTools` is on, which is the default. Both reach the request either
+  // way; the caller must see one schema per name rather than a failed turn.
+  const state = await fixture([textResponse('one schema per name')], {})
+  let removeRunCode: (() => Promise<void>) | undefined
+  try {
+    removeRunCode = state.tools.registerValueTool({
+      schema: { name: 'run_code', description: 'REGISTRY-RUN-CODE-MARKER',
+        parameters: { type: 'object', properties: { program: { type: 'string' } }, required: ['program'], additionalProperties: false } },
+      output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: value as string }], isError: false }) },
+      async execute() { return 'profile run_code' },
+    })
+    const invocation = new AbortController()
+    await state.app.run(['go'], invocation.signal)
+    const names = state.adapter.requests.flatMap(request => (request.tools ?? []).map(tool => tool.name))
+    expect(names.length).toBeGreaterThan(0)
+    expect(new Set(names).size).toBe(names.length)
+    // The surviving `run_code` must be the Registry's, not the builtin transport's:
+    // a caller reading the schema should see what the profile actually installed.
+    const runCode = state.adapter.requests
+      .flatMap(request => request.tools ?? [])
+      .filter(tool => tool.name === 'run_code')
+    expect(runCode).toHaveLength(1)
+    expect(runCode[0]?.description).toBe('REGISTRY-RUN-CODE-MARKER')
+  } finally {
+    await removeRunCode?.()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
