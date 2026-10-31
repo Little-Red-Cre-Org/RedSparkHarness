@@ -131,7 +131,7 @@ describe('desktop macOS release signature', () => {
     expect(portablePath(config.nsis.include)).toMatch(/\/scripts\/installer\.nsh$/u)
     expect(config).toMatchObject({
       productName: 'RedSpark Harness',
-      artifactName: 'deepseek-harness-${version}-${os}-${arch}.${ext}',
+      artifactName: 'redspark-harness-${version}-${os}-${arch}.${ext}',
       win: { forceCodeSigning: false, signtoolOptions: { sign: undefined } },
       publish: null,
     })
