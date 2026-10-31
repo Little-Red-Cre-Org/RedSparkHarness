@@ -2975,7 +2975,7 @@ it('keeps one schema per tool when the profile also registers the builtin run_co
     removeRunCode = state.tools.registerValueTool({
       schema: { name: 'run_code', description: 'REGISTRY-RUN-CODE-MARKER',
         parameters: { type: 'object', properties: { program: { type: 'string' } }, required: ['program'], additionalProperties: false } },
-      output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: String(value) }], isError: false }) },
+      output: { schema: { type: 'string' }, render: (_call, value) => ({ content: [{ type: 'text', text: value as string }], isError: false }) },
       async execute() { return 'profile run_code' },
     })
     const invocation = new AbortController()
