@@ -60,3 +60,6 @@ rsi-pyproject.toml
 
 # RSI engine run artifacts (per-conversation event logs)
 .oh/
+
+# Local verification probes; never shipped.
+.probe/
