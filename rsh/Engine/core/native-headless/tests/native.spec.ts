@@ -1,9 +1,9 @@
 /** Native Agent, model, filesystem tool, and released Session storage in one host. */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
 import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
 import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
@@ -92,6 +92,8 @@ async function fixture(
     fileReferences?: boolean
     allowedTools?: readonly string[]
     maxSteps?: number
+    /** Persona template registered as a prompt section; `{{variable}}` references render strictly. */
+    persona?: string
     directory?: string
     workspaceWriteRoot?: string
     codeRuntimeProvider?: NativePlugin
@@ -239,7 +241,7 @@ async function fixture(
         { plugin: toolSkillPlugin, scope, config: undefined },
       ]),
       { plugin: policyPlugin, scope, config: undefined },
-      ...(options.fileReferences || options.toolSubagent ? [{ plugin: promptPlugin, scope, config: undefined }] : []),
+      ...(options.fileReferences || options.toolSubagent || options.persona ? [{ plugin: promptPlugin, scope, config: undefined }] : []),
       ...(options.fileReferences ? [
         { plugin: toolFsPlugin, scope, config: undefined },
         { plugin: fileReferencePlugin, scope, config: undefined },
@@ -249,14 +251,27 @@ async function fixture(
       { plugin: model, scope, config: undefined },
       ...(skillProviderRequest === undefined ? [] : [skillProviderRequest]),
       ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
+      ...(options.persona === undefined ? [] : [{
+        plugin: {
+          name: 'test-persona-section', apiVersion: 1, targets: ['host'] as const, provides: [], requires: ['promptSections' as const],
+          // The persona template is a prompt section, exactly like a shipped preset row: the
+          // variables it references are resolved by the Registry at render time, not here.
+          resolve: () => (context: NativeContext): void => {
+            context.require('promptSections').register({
+              name: 'deployment:persona-prefix', order: 10_000, text: () => options.persona!,
+            })
+          },
+        },
+        scope,
+        config: undefined,
+      }]),
     ]
     host = new NativeHost(resolveInstallation(requests, 'host'))
     await host.start()
     if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined
       || rootExecution === undefined || persistence === undefined) {
       throw new Error('missing native application dependencies')
-    }
-  } catch (error: unknown) {
+    }  } catch (error: unknown) {
     const cleanupFailures: unknown[] = []
     if (host !== undefined && !host.signal.aborted) {
       try { await host.stop() } catch (cleanupError: unknown) { cleanupFailures.push(cleanupError) }
@@ -310,6 +325,13 @@ function shellResult(stdout: string): ShellRunResult {
   }
 }
 
+/** Locate a persisted Session log, whose directory key derives from its project path. */
+async function findSessionLog(root: string, id: string): Promise<string> {
+  const match = (await readdir(root, { withFileTypes: true, recursive: true }))
+    .find(entry => entry.isFile() && entry.name === 'session.v3.jsonl' && entry.parentPath.endsWith(id))
+  if (match === undefined) throw new Error(`missing stored log for ${id}`)
+  return join(match.parentPath, match.name)
+}
 function testShell(run: ShellOperations['run']): ShellOperations {
   return {
     sandboxMode: undefined,
@@ -2994,5 +3016,58 @@ it('keeps one schema per tool when the profile also registers the builtin run_co
     await removeRunCode?.()
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('renders persona template variables into the logged system prompt', async () => {
+  const state = await fixture([textResponse('rendered')], {
+    persona: 'You are a coding agent powered by the {{model}} model.\n\nYour working directory is {{cwd}}.',
+  })
+  try {
+    const invocation = new AbortController()
+    await state.app.run(['go'], invocation.signal)
+    const system = state.adapter.requests[0]?.messages.find(message => message.role === 'system')
+    if (system?.role !== 'system') throw new Error('missing system message')
+    const text = system.content.map(part => part.type === 'text' ? part.text : '').join('')
+    // The template must reach the model already rendered: literal braces would ship the
+    // placeholder itself, and the Cordis registry this replaces always interpolated.
+    expect(text).not.toContain('{{')
+    expect(text).toContain('powered by the fixture model')
+    expect(text).toContain(`Your working directory is ${state.workspace}`)
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('resumes a cold Session whose stored system prompt still carries the template placeholders', async () => {
+  const persona = 'You are a coding agent powered by the {{model}} model.\n\nYour working directory is {{cwd}}.'
+  const first = await fixture([textResponse('first')], { persona })
+  const directory = first.directory
+  let state = first
+  try {
+    await state.host.run(state.scope, { kind: 'persona-first' }, invocation => state.app.run(['go'], invocation.signal))
+    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native'))
+      .JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    let id: string | undefined
+    try { id = (await storage.list())[0]?.header.id } finally { await storage.close() }
+    if (id === undefined) throw new Error('missing Session id')
+
+    // Rewrite the persisted system message back to the raw template, exactly what a Session
+    // created before interpolation shipped on disk. A cold resume must still accept it.
+    const file = await findSessionLog(state.sessions, id)
+    const raw = await readFile(file, 'utf8')
+    const reverted = raw.replace(/You are a coding agent powered by the [^\\\n]*? model\./u,
+      'You are a coding agent powered by the {{model}} model.')
+    expect(reverted).not.toBe(raw)
+    await writeFile(file, reverted)
+
+    await state.host.stop()
+    state = await fixture([textResponse('resumed')], { persona, directory })
+    await expect(state.host.run(state.scope, { kind: 'persona-cold-resume' },
+      invocation => state.app.run(['--resume', id, 'again'], invocation.signal))).resolves.toBe(0)
+  } finally {
+    await state.host.stop()
+    await rm(directory, { recursive: true, force: true })
   }
 })
