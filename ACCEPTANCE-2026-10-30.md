@@ -10,7 +10,7 @@
 
 | 项 | 之前 | 现在 |
 |---|---|---|
-| 底座 | `D:\RSIHarness`（46 GB / 196,645 文件，OpenBitFun 桌面端 + 自研 rsi） | `D:\RedSparkHarness`（12,945 文件，DeepSeek Harness 的 fork） |
+| 底座 | `D:\RSIHarness`（46 GB / 196,645 文件，OpenBitFun 桌面端 + 自研 rsi） | `D:\RedSparkHarness`（12,945 文件，RSH 底座） |
 | 前端 | OpenBitFun 的 web-ui | RedSpark Harness 自带（绯红主题，Kitsune 赤绯） |
 | Agent 核心 | OpenBitFun 的 agentic（Rust） | RedSpark 的 `rsh/Engine`（TypeScript + Cordis） |
 | 自研引擎 | `rsi/` 29 个 py | **已完整迁入**，作为 ACP 子进程挂载 |
@@ -212,7 +212,7 @@ PID 60000  "…\RedSpark Harness.exe" --type=renderer --user-data-dir="C:\Users\
 
 **这是决定性证据**：三个子进程的 `--user-data-dir` 全部指向 `.redspark`，不是 `@deepseek-ai\dsh-desktop`。
 
-**两者此刻并存**：`DeepSeek Harness` 13 进程 + `RedSpark Harness` 4 进程同时存活 —— 单实例锁不互踢，隔离在运行态成立。
+**两者此刻并存**：RSH 4 进程与 DSH 13 进程同时存活 —— 单实例锁不互踢，隔离在运行态成立。
 
 ---
 

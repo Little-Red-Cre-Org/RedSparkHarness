@@ -26,7 +26,7 @@ NotificationFilter: TypeAlias = Callable[[Notification], bool]
 
 @dataclass(slots=True)
 class HarnessConfig:
-    """Configuration for launching the local DeepSeek Harness SDK runtime."""
+    """Configuration for launching the local RedSpark Harness SDK runtime."""
 
     dsh_bin: str | None = None
     profile: str = "sdk"
@@ -52,7 +52,7 @@ class _SessionForkResponse(BaseModel):
 
 
 class HarnessClient:
-    """Synchronous JSON-RPC client for the DeepSeek Harness SDK runtime over stdio."""
+    """Synchronous JSON-RPC client for the RedSpark Harness SDK runtime over stdio."""
 
     def __init__(
         self,
@@ -139,7 +139,7 @@ class HarnessClient:
                 proc.kill()
                 proc.wait()
         self._proc = None
-        self._fail_waiters(self._runtime_closed_error("DeepSeek Harness runtime closed"))
+        self._fail_waiters(self._runtime_closed_error("RedSpark Harness runtime closed"))
         if self._reader_thread and self._reader_thread.is_alive():
             self._reader_thread.join(timeout=0.5)
         if self._stderr_thread and self._stderr_thread.is_alive():
@@ -397,7 +397,7 @@ class HarnessClient:
                         diagnostics = self._runtime_diagnostics()
                         suffix = f"\n{diagnostics}" if diagnostics else ""
                         raise TimeoutError(
-                            f"{method} timed out waiting for DeepSeek Harness runtime{suffix}"
+                            f"{method} timed out waiting for RedSpark Harness runtime{suffix}"
                         )
                     wait_timeout = remaining if wait_timeout is None else min(wait_timeout, remaining)
                 try:
@@ -423,14 +423,14 @@ class HarnessClient:
     def _write_message(self, message: JsonObject) -> None:
         proc = self._proc
         if proc is None or proc.stdin is None:
-            raise TransportClosedError("DeepSeek Harness runtime is not running")
+            raise TransportClosedError("RedSpark Harness runtime is not running")
         try:
             payload = json.dumps(message, separators=(",", ":")) + "\n"
             with self._write_lock:
                 proc.stdin.write(payload)
                 proc.stdin.flush()
         except Exception as exc:
-            raise self._runtime_closed_error("Failed to write to DeepSeek Harness runtime") from exc
+            raise self._runtime_closed_error("Failed to write to RedSpark Harness runtime") from exc
 
     def _start_reader_thread(self) -> None:
         self._reader_thread = threading.Thread(target=self._reader_loop, name="dsh-runtime-reader", daemon=True)
@@ -456,7 +456,7 @@ class HarnessClient:
         except BaseException as exc:
             self._fail_waiters(exc)
         finally:
-            self._fail_waiters(self._runtime_closed_error("DeepSeek Harness runtime stdout closed"))
+            self._fail_waiters(self._runtime_closed_error("RedSpark Harness runtime stdout closed"))
 
     def _stderr_loop(self) -> None:
         proc = self._proc
@@ -552,7 +552,7 @@ class HarnessClient:
                 from deepseek_harness_runtime import resolve_bundled_launch_args
             except ImportError as exc:
                 raise FileNotFoundError(
-                    "Unable to locate the bundled DeepSeek Harness dsh runtime. "
+                    "Unable to locate the bundled RedSpark Harness dsh runtime. "
                     "Install deepseek-harness-runtime-bin."
                 ) from exc
             base = resolve_bundled_launch_args()

@@ -13,7 +13,7 @@ from .models import (InitializeResponse, JsonObject, NativeSdkPromptContentBlock
 
 @dataclass(slots=True)
 class DeepSeekHarnessConfig:
-    """Configuration for launching the local DeepSeek Harness SDK runtime.
+    """Configuration for launching the local RedSpark Harness SDK runtime.
 
     The runtime inherits the caller's environment by default, so existing
     DEEPSEEK_API_KEY and DEEPSEEK_BASE_URL settings keep working. Use ``env`` to
@@ -51,7 +51,7 @@ class RunResult:
 
 
 class DeepSeekHarness:
-    """Reusable synchronous SDK for running DeepSeek Harness agent turns.
+    """Reusable synchronous SDK for running RedSpark Harness agent turns.
 
     The runtime subprocess starts lazily and remains owned by this instance
     across calls to :meth:`run`. Use the instance as a context manager, or call
