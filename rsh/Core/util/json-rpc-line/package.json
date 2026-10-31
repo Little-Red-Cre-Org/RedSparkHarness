@@ -1,11 +1,11 @@
 {
   "name": "@deepseek-ai/dsh-json-rpc-line",
   "description": "Newline-delimited JSON-RPC transport over caller-owned Node streams",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Core/util/json-rpc-line"
   },
   "type": "module",

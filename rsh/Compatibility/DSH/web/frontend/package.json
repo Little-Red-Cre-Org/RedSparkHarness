@@ -1,14 +1,14 @@
 {
   "name": "@deepseek-ai/dsh-web-compatibility",
   "description": "Cordis browser shell API and its separately built legacy and worker-preview pages",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Compatibility/DSH/web/frontend"
   },
   "type": "module",

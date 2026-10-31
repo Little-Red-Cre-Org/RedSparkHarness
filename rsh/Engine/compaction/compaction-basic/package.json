@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-compaction-basic",
-  "description": "Token-meter-driven compaction policy and LLM summarization backend for the DeepSeek Harness",
-  "version": "0.1.5-rc.2",
+  "description": "Token-meter-driven compaction policy and LLM summarization backend for the RedSpark Harness",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/compaction/compaction-basic"
   },
   "type": "module",

@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-session-telemetry",
-  "description": "SessionTelemetryBackend seam for the DeepSeek Harness: session-event capture, projection, redaction, and handoff to a reporting backend",
-  "version": "0.1.5-rc.2",
+  "description": "SessionTelemetryBackend seam for the RedSpark Harness: session-event capture, projection, redaction, and handoff to a reporting backend",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/session/session-telemetry"
   },
   "type": "module",

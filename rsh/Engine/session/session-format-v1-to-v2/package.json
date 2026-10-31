@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-session-format-v1-to-v2",
   "description": "Frozen released-v1 Session codec and assistant-stream migration to v2",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/session/session-format-v1-to-v2"
   },
   "type": "module",

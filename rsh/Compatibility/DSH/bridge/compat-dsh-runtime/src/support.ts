@@ -1,18 +1,29 @@
+/**
+ * The dsh-family release these adapters are built against.
+ *
+ * The entries below move with the workspace version, so it is written once
+ * rather than repeated: a literal per package is one more place to forget when
+ * the family bumps, and the failure it produces (the installed package
+ * rejected as unsupported) reads like a broken install rather than a stale
+ * record.
+ */
+const FAMILY_VERSION = '1.0.0'
+
 /** Exact package releases and adapter declarations supported by this Host composition. */
 export const SUPPORT_RECORD = {
   '@deepseek-ai/cordis': { version: '4.0.2', api: 'cordis-plugin-host' },
   '@deepseek-ai/cordis-plugin-loader': { version: '1.0.3', api: 'cordis-entry-tree' },
-  '@deepseek-ai/dsh-fs-local': { version: '0.1.5-rc.2', apiVersion: 1, role: 'provider', capability: 'filesystem' },
-  '@deepseek-ai/dsh-fs-observation-policy': { version: '0.1.5-rc.2', apiVersion: 1, role: 'policy', capability: 'filesystem' },
-  '@deepseek-ai/dsh-fs-sandbox': { version: '0.1.5-rc.2', apiVersion: 1, role: 'provider', capability: 'filesystem' },
-  '@deepseek-ai/dsh-tool-fs': { version: '0.1.5-rc.2', apiVersion: 1, role: 'consumer', capability: 'filesystem' },
+  '@deepseek-ai/dsh-fs-local': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
+  '@deepseek-ai/dsh-fs-observation-policy': { version: FAMILY_VERSION, apiVersion: 1, role: 'policy', capability: 'filesystem' },
+  '@deepseek-ai/dsh-fs-sandbox': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
+  '@deepseek-ai/dsh-tool-fs': { version: FAMILY_VERSION, apiVersion: 1, role: 'consumer', capability: 'filesystem' },
   // These packages expose Cordis plugins, not dsh.runtime metadata. The role and
   // capability below describe the RSH adapter descriptor passed to plugin-host.
   '@deepseek-ai/dsh-system-prompt': {
-    version: '0.1.5-rc.2', api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'systemPrompt',
+    version: FAMILY_VERSION, api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'systemPrompt',
   },
   '@deepseek-ai/dsh-tools': {
-    version: '0.1.5-rc.2', api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'tools',
+    version: FAMILY_VERSION, api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'tools',
   },
 } as const
 

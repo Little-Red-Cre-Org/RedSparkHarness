@@ -1,11 +1,11 @@
 {
   "name": "@deepseek-ai/dsh-http-routes-cordis",
   "description": "Cordis compatibility augmentation for the shared HTTP route Definition",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Compatibility/DSH/bridge/http-routes-cordis"
   },
   "type": "module",

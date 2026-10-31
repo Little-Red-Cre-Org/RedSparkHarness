@@ -1,5 +1,5 @@
 /**
- * Named wire types for the DeepSeek Harness SDK runtime protocol: the
+ * Named wire types for the RedSpark Harness SDK runtime protocol: the
  * request/result pairs and the server-to-client notification payloads
  * exchanged over the newline-delimited JSON-RPC stdio transport. The server
  * plugin (`@deepseek-ai/dsh-sdk-jsonrpc-server`) and SDK clients share these shapes;

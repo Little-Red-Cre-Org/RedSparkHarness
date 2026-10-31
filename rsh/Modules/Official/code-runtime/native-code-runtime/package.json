@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-native-code-runtime",
   "description": "Native worker-thread runtime for model-written TypeScript programs",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/code-runtime/native-code-runtime"
   },
   "type": "module",

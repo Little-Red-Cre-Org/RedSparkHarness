@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-archify",
-  "description": "Automatic low-overhead Archify diagram routing for DeepSeek Harness",
-  "version": "0.1.5-rc.2",
+  "description": "Automatic low-overhead Archify diagram routing for RedSpark Harness",
+  "version": "1.0.0",
   "dsh": {
     "native": {
       "apiVersion": 1,
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/skill/archify"
   },
   "type": "module",

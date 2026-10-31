@@ -286,7 +286,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
     { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
     { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'standard' },
   ])
-  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }])
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'cordis', parent: 'root' }])
   expect(profile.installations.filter(row => ['commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal', 'tool-todo', 'tool-todo-minimal'].includes(row.id)))
     .toEqual([
       { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: 'root' },
@@ -460,7 +460,7 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
   expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
   expect(ids).toContain('commands')
   expect(ids).toContain('user-questions')
-  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }])
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'cordis', parent: 'root' }])
   expect(profile.installations.filter(row => ['agent-presets', 'preset-standard', 'preset-minimal'].includes(row.id))).toEqual([
     { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'standard' } },
     { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
@@ -475,11 +475,42 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
       suffix: 'Your working directory is {{cwd}}.',
     },
   })
+  expect(profile.installations.find(row => row.id === 'preset-ptc')).toMatchObject({
+    plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
+    config: { id: 'ptc', name: 'PTC 模式' },
+  })
+  expect(profile.installations.find(row => row.id === 'preset-cordis')).toMatchObject({
+    plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
+    config: { id: 'cordis', name: '创造模式' },
+  })
+  expect(profile.installations.find(row => row.id === 'code-tool-ptc')).toEqual({
+    id: 'code-tool-ptc', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'ptc',
+    config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] },
+  })
   if (profileName === 'native-web') {
     expect(profile.installations.find(row => row.id === 'permission-presets')).toEqual({
       id: 'permission-presets', plugin: '@deepseek-ai/dsh-permission-presets', scope: 'root',
     })
   }
+})
+
+it('keeps shipped ptc and creation folders aligned with the native web template', async () => {
+  const profile = shippedNativeProfileComposition('/tmp/rsh-preset-files', 'native-web', 'linux')
+  const root = fileURLToPath(new URL('../../../Engine/preset/agent-presets/presets/', import.meta.url))
+  const readInstallations = async (id: string) => JSON.parse(await readFile(join(root, id, 'agent.native.json'), 'utf8')) as {
+    installations: { id: string; plugin: string; config?: unknown }[]
+  }
+  const row = (id: string) => profile.installations.find(candidate => candidate.id === id)
+  const persona = row('persona-ptc')
+  const code = row('code-tool-ptc')
+  const creation = row('persona-cordis')
+  expect((await readInstallations('ptc')).installations).toEqual([
+    { id: 'persona', plugin: persona?.plugin, config: persona?.config },
+    { id: 'code-tool', plugin: code?.plugin, config: code?.config },
+  ])
+  expect((await readInstallations('cordis')).installations).toEqual([
+    { id: 'persona', plugin: creation?.plugin, config: creation?.config },
+  ])
 })
 
 it('declares every shipped template plugin as a CLI runtime dependency', async () => {

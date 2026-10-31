@@ -51,8 +51,12 @@ const repositoryUrl = 'git+https://github.com/deepseek-harness/deepseek-harness.
  * Source home the published packages point consumers at. It differs from
  * {@link repositoryUrl}, which the Landlock packages keep because npm resolves
  * their trusted publishing against the repository that runs the workflow.
+ *
+ * This is the repository the code lives in, so it is the one a consumer should
+ * be sent to. The manifests and this constant move together; a check that named
+ * anywhere else would reject every package in the workspace.
  */
-const publishedRepositoryUrl = 'git+https://github.com/deepseek-ai/deepseek-harness.git'
+const publishedRepositoryUrl = 'git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git'
 /** Packages that participate in the experimental policy. */
 const experimentalPackageDirectory = /^rsh\/Modules\/Community\/experimental\/[^/]+$/
 /** npm namespace reserved for experimental packages. */
@@ -185,7 +189,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-session-telemetry': ['lib/records.js'],
   '@deepseek-ai/dsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/types-*.js'],
+  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/native-*.js', 'lib/types-*.js'],
   '@deepseek-ai/dsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
   '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],

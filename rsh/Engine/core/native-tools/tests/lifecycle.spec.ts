@@ -223,6 +223,61 @@ it('captures PTC business bindings without promoting them to direct model calls'
   }
 })
 
+it('lets a descendant scope select PTC without changing the Provider catalog', async () => {
+  const scope = new NativeScope()
+  const child = new NativeScope(scope)
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const removeRunCode = registry.registerValueTool({
+    schema: { name: 'run_code', description: 'Run code.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'done' },
+  })
+  const removeBusiness = registry.registerValueTool({
+    schema: { name: 'business', description: 'Business tool.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'business-result' },
+  })
+  const restore = registry.presentAs('ptc', child)
+  const { call, release } = execution(agents, child, 'business')
+  try {
+    expect(registry.modelModeFor(scope)).toBe('both')
+    expect(registry.modelModeFor(child)).toBe('ptc')
+    expect(registry.modelSchemas(scope).map(schema => schema.name)).toEqual(['run_code', 'business'])
+    expect(registry.modelSchemas(child).map(schema => schema.name)).toEqual(['run_code'])
+    expect(registry.sdkSchemas(child).map(schema => schema.name)).toEqual(['run_code', 'business'])
+    await expect(registry.executeModelCall(call)).rejects.toThrow(/unavailable in ptc mode/)
+    expect(() => registry.presentAs('both', child)).toThrow(/duplicate contribution/)
+    expect(() => registry.presentAs('ptc', scope)).toThrow(/descendant scope/)
+  } finally {
+    restore()
+    expect(registry.modelSchemas(child).map(schema => schema.name)).toEqual(['run_code', 'business'])
+    await removeBusiness()
+    await removeRunCode()
+    await release()
+  }
+})
+
+it('hides an inherited tool denied before the ancestor registers it', async () => {
+  const scope = new NativeScope()
+  const child = new NativeScope(scope)
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const restore = registry.restrict({ deny: ['workflow'] }, child)
+  const remove = registry.registerValueTool({
+    schema: { name: 'workflow', description: 'Workflow.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  })
+  try {
+    expect(registry.schemas(scope).map(schema => schema.name)).toEqual(['workflow'])
+    expect(registry.schemas(child).map(schema => schema.name)).toEqual([])
+  } finally {
+    restore()
+    await remove()
+  }
+})
+
 it('drains a replaced contribution before resources acquired after registration are released', async () => {
   const scope = new NativeScope()
   const entered = Promise.withResolvers<undefined>()

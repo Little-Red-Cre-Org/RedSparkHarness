@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-open-in-app",
   "description": "Web Session-header \"Open In...\" split button opening the session workspace directory in a locally installed application",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Programs/Web/client/ui-open-in-app"
   },
   "type": "module",

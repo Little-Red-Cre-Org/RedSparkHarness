@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-rsh",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "description": "RedSpark Ink terminal UI bundle",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Compatibility/DSH/bundle/rsh"
   },
   "type": "module",

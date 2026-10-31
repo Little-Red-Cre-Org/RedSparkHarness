@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-SDK 家族让另一进程通过按换行分帧的 JSON-RPC 驱动完整的 DeepSeek Harness 运行时。Engine 所有的协议与 runtime 包定义共享 wire 和 Session 客户端行为；TypeScript Program facade 选择同版本 `dsh` launcher，服务端则通过 stdio 接受 SDK 请求。TypeScript 客户端与 [Python SDK](../python/README.zh.md) 使用同一种协议，而这些包不会创建开发者项目，也不定义其他应用。
+SDK 家族让另一进程通过按换行分帧的 JSON-RPC 驱动完整的 RedSpark Harness 运行时。Engine 所有的协议与 runtime 包定义共享 wire 和 Session 客户端行为；TypeScript Program facade 选择同版本 `dsh` launcher，服务端则通过 stdio 接受 SDK 请求。TypeScript 客户端与 [Python SDK](../python/README.zh.md) 使用同一种协议，而这些包不会创建开发者项目，也不定义其他应用。
 
 ## 目录
 

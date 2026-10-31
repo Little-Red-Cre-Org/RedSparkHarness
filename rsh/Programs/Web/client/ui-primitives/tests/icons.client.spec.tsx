@@ -79,14 +79,16 @@ describe('FishLogo', () => {
 })
 
 describe('BrandWordmark', () => {
-  it('can render the name artwork with or without its leading mark', () => {
+  it('renders the product name as text with or without its leading mark', () => {
     const view = render(<primitives.BrandWordmark />)
-    const svg = view.container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('182')
-    expect(svg.getAttribute('viewBox')).toBe('0 0 182 24')
+    expect(view.container.textContent).toBe('RedSpark Harness')
+    // The mark is one square svg; the former outlined wordmark had none.
+    const mark = view.container.querySelector('svg')
+    expect(mark?.getAttribute('width')).toBe('24')
+    expect(mark?.getAttribute('viewBox')).toBe('0 0 24 24')
 
     view.rerender(<primitives.BrandWordmark includeMark={false} />)
-    expect(svg.getAttribute('width')).toBe('156')
-    expect(svg.getAttribute('viewBox')).toBe('26 0 156 24')
+    expect(view.container.textContent).toBe('RedSpark Harness')
+    expect(view.container.querySelector('svg')).toBeNull()
   })
 })

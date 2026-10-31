@@ -1,5 +1,6 @@
 /** Experimental-package publication and dependency constraints. */
 
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   checkDshFamilyVersion,
@@ -11,6 +12,11 @@ import {
   expectedDshPackageFiles,
   type WorkspaceManifest,
 } from './check-workspace-constraints.ts'
+
+/** The workspace version the family must agree on, read rather than restated. */
+const FAMILY_VERSION = (JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+) as { version: string }).version
 
 const experimental: WorkspaceManifest = {
   dir: 'rsh/Modules/Community/experimental/prototype',
@@ -222,11 +228,11 @@ describe('private Desktop compatibility assembly constraints', () => {
     dir: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
     manifest: {
       name: '@deepseek-ai/dsh-desktop-host-compatibility',
-      version: '0.1.5-rc.2',
+      version: FAMILY_VERSION,
       private: true,
       repository: {
         type: 'git',
-        url: 'git+https://github.com/deepseek-ai/deepseek-harness.git',
+        url: 'git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git',
         directory: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
       },
       type: 'module',
@@ -255,7 +261,7 @@ describe('private Desktop compatibility assembly constraints', () => {
         ...owner.manifest,
         repository: { ...owner.manifest.repository, directory: 'rsh/Programs/DesktopHost' },
       },
-    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/deepseek-ai/deepseek-harness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
+    }).join('\n')).toContain('@deepseek-ai/dsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
   })
 })
 

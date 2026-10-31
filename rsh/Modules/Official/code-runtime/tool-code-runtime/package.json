@@ -1,9 +1,9 @@
 {
   "name": "@deepseek-ai/dsh-tool-code-runtime",
   "description": "Native run_code tool over the selected code runtime",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/deepseek-ai/deepseek-harness.git", "directory": "rsh/Modules/Official/code-runtime/tool-code-runtime" },
+  "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Modules/Official/code-runtime/tool-code-runtime" },
   "type": "module",
   "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["tools", "codeRuntime", "fs"], "optional": ["sandboxPolicy", "promptSections"], "provides": [] } },
   "main": "lib/index.js",

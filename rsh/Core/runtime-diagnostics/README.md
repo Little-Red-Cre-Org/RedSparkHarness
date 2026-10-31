@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The runtime-diagnostics group provides runtime self-checking and plugin ownership support for DeepSeek Harness compositions: `invariants` runs package-owned checks that verify durable event and data relationships while a composition is live, and `compat-plugin-host` records RSH role metadata while delegating legacy plugin lifecycle to Cordis. A violation surfaces as an error attributed to the package that owns the relationship; a global switch and package-name filters control which invariant checks run.
+The runtime-diagnostics group provides runtime self-checking and plugin ownership support for RedSpark Harness compositions: `invariants` runs package-owned checks that verify durable event and data relationships while a composition is live, and `compat-plugin-host` records RSH role metadata while delegating legacy plugin lifecycle to Cordis. A violation surfaces as an error attributed to the package that owns the relationship; a global switch and package-name filters control which invariant checks run.
 
 ## Table of Contents
 

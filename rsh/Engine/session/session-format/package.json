@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-session-format",
   "description": "Streaming adjacent Session format migration machinery",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/session/session-format"
   },
   "type": "module",

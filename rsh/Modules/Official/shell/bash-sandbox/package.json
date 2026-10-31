@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-bash-sandbox",
-  "description": "Sandbox-consuming implementation of the DeepSeek Harness bash executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts)",
-  "version": "0.1.5-rc.2",
+  "description": "Sandbox-consuming implementation of the RedSpark Harness bash executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts)",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/shell/bash-sandbox"
   },
   "type": "module",

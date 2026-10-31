@@ -115,7 +115,7 @@ describe('web e2e: fresh round trip through the real assembly', () => {
     if (system === undefined) throw new Error('the settled Web request has no system prompt')
     const paragraphs = system.split('\n\n')
     expect(paragraphs.slice(0, 2)).toEqual([
-      'You are an AI agent powered by DeepSeek Harness.',
+      'You are an AI agent powered by RedSpark Harness.',
       'You are a coding agent powered by the deepseek-v4-flash model.',
     ])
     const suffix = paragraphs.slice(-3).join('\n\n')
@@ -203,7 +203,7 @@ describe('web e2e: fresh round trip through the real assembly', () => {
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
     const opaque = body.locator('[data-context-text]')
     await expect.poll(() => opaque.count(), { timeout: 5_000 }).toBe(1)
-    expect(await opaque.textContent()).toContain('You are an AI agent powered by DeepSeek Harness.')
+    expect(await opaque.textContent()).toContain('You are an AI agent powered by RedSpark Harness.')
 
     await disclosure.click()
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')

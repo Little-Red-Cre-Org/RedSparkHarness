@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-native-persona",
   "description": "Native plugin hosting the shipped persona row",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Engine/preset/native-persona"
   },
   "type": "module",
@@ -41,6 +41,7 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/native-*.js",
     "lib/types-*.js",
     "lib/types/**/*.d.ts"
   ],

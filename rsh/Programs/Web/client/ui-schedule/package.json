@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-schedule",
   "description": "Read-only active Schedule catalog in the Web Session header",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -34,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Programs/Web/client/ui-schedule"
   },
   "publishConfig": {

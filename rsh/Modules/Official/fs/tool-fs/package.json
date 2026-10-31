@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-tool-fs",
-  "description": "Model-facing filesystem tools (read, write, edit) over the DeepSeek Harness filesystem seam (ctx.fs)",
-  "version": "0.1.5-rc.2",
+  "description": "Model-facing filesystem tools (read, write, edit) over the RedSpark Harness filesystem seam (ctx.fs)",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/fs/tool-fs"
   },
   "type": "module",

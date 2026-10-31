@@ -1,11 +1,11 @@
 {
   "name": "@deepseek-ai/dsh-native-sdk-server",
   "description": "Cordis-free SDK JSON-RPC application over native Session execution",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Programs/SDK/packages/native-server"
   },
   "type": "module",

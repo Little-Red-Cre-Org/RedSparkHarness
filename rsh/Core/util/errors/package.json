@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-errors",
   "description": "Shared coded errors and diagnostic cause rendering",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Core/util/errors"
   },
   "type": "module",

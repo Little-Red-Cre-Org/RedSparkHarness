@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-bash-local",
-  "description": "Local-subprocess implementation of the DeepSeek Harness bash executor seam",
-  "version": "0.1.5-rc.2",
+  "description": "Local-subprocess implementation of the RedSpark Harness bash executor seam",
+  "version": "1.0.0",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/shell/bash-local"
   },
   "type": "module",

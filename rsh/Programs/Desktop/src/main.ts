@@ -15,7 +15,7 @@ import {
   shell,
   type IpcMainInvokeEvent,
 } from 'electron'
-import { resolveDesktopPaths } from './paths.ts'
+import { desktopUserDataPath, resolveDesktopPaths } from './paths.ts'
 import { setCliPackageRoot } from '@deepseek-ai/dsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
@@ -773,6 +773,12 @@ async function main(): Promise<void> {
   publishUpdate(updateState)
   setTimeout(() => { void checkAndPrompt(false) }, 10_000)
 }
+
+// Before anything reads an `app` path: point Electron's own state directory at
+// this product's home. The packaged manifest carries the upstream package name
+// and no `productName`, so the default would land in the upstream product's
+// directory. See `desktopUserDataPath` for why the builder setting is not enough.
+app.setPath('userData', desktopUserDataPath())
 
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
 

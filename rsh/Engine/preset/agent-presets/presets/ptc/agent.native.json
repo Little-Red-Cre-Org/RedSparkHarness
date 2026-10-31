@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "installations": [
+    {
+      "id": "persona",
+      "plugin": "@deepseek-ai/dsh-native-persona",
+      "config": {
+        "prefix": "You are a coding agent powered by the {{model}} model.",
+        "suffix": "Your working directory is {{cwd}}."
+      }
+    },
+    {
+      "id": "code-tool",
+      "plugin": "@deepseek-ai/dsh-tool-code-runtime",
+      "config": {
+        "sdkPrompt": true,
+        "presentation": "ptc",
+        "denyTools": [
+          "workflow"
+        ]
+      }
+    }
+  ]
+}

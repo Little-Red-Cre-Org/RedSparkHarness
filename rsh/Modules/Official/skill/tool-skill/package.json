@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-tool-skill",
-  "description": "Model-facing skill loading tool for the DeepSeek Harness",
-  "version": "0.1.5-rc.2",
+  "description": "Model-facing skill loading tool for the RedSpark Harness",
+  "version": "1.0.0",
   "dsh": {
     "native": {
       "apiVersion": 1,
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Modules/Official/skill/tool-skill"
   },
   "type": "module",

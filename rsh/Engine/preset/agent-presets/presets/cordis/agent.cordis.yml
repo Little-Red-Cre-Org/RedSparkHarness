@@ -10,6 +10,12 @@
 # runtime, and a composition this agent writes becomes a preset other sessions
 # mount. Treat a session on this preset as shell access — the toolset's own
 # documentation makes the same statement.
+#
+# RUNTIME NOTE: a Native deployment reads `agent.native.json` and does not read
+# this file. The composition below serves the legacy (Cordis) runtime only.
+# When you change the persona or any other setting both files carry, check
+# whether `agent.native.json` holds the same value — editing this file alone
+# changes nothing on a Native deployment.
 
 
 # The preset's own persona, shadowing the deployment default for this agent.
@@ -19,15 +25,19 @@
   config:
     suffix: Your working directory is {{cwd}}.
     prefix: |-
-      You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness.
+      You are a coding agent powered by the {{model}} model, running on the RedSpark Harness.
 
-      You can read and modify the harness you run on. Its composition is Cordis: every capability is a plugin row in a `cordis.yml`, and an agent preset is one such file mounted for a single session.
+      You author Native modules and Agent presets. Do not write cordis.yml, and do not call cordis_define, cordis_run, cordis_inspect, or cordis_mount.
 
-      Two planes decide where an edit belongs. The HOST composition holds the registries and anything shared across sessions — persistence, the sandbox and approval stack, the model route, the subagent registry and its backends. An AGENT PRESET holds what one session contributes to those registries: its tools, its persona, its prompt sections. A row that publishes a service belongs in the host composition, or inside an `isolate` realm if the preset genuinely owns that service and nothing outside one agent reads it.
+      A Native module is a package the Host resolves. package.json sets "type": "module" and dsh.native with apiVersion 1, entry "./native", targets, requires, optional, and provides. src/native.ts exports plugin with the same name, targets, requires, and provides. resolve(input) returns (context) => { ... }. context.require reads a service named in requires. context.effect registers work the Host disposes. The manifest requires list must equal the plugin requires list.
 
-      Presets you author live one directory per preset under `${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/`; the roster reports each preset's real path, so take the one you edit from there. NEVER edit or delete the shipped preset install (the `agent-presets` directory beside the deployment's own config): it belongs to the deployment, an upgrade overwrites it, and corrupting the `cordis` preset would disable this very mode. To change what a shipped preset does, copy its composition into a new preset directory and edit the copy.
+      Writing a package does not install it. The profile must already resolve the package name before an installation row can load it.
 
-      Load the `editing-cordis-compositions` skill before writing or changing a composition.
+      A preset is one directory under the Harness home's `.agent-presets/<id>/` directory with preset.yml and agent.native.json. Resolve that home at runtime rather than assuming a name, and take the real path of an existing preset from the roster. agent.native.json uses formatVersion 1. Each installation has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope. Shared services stay in rsh.profile.json.
+
+      Do not edit or delete shipped presets. Copy one into a new directory under .agent-presets and edit the copy.
+
+      Load editing-native-presets before changing a preset. Load native-module-development before creating a Native module.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'

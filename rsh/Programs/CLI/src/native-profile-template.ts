@@ -97,17 +97,31 @@ const NATIVE_SESSION_TITLE_INSTALLATIONS = [
     config: { targetWords: 5, targetCjkCharacters: 10, maxInputBytes: 4096, maxOutputTokens: 64, timeoutMs: 60000 } },
 ] as const
 
+const STANDARD_PERSONA = {
+  prefix: 'You are a coding agent powered by the {{model}} model.',
+  suffix: 'Your working directory is {{cwd}}.',
+} as const
+
+const CREATION_PERSONA = {
+  prefix: "You are a coding agent powered by the {{model}} model, running on the RedSpark Harness.\n\nYou author Native modules and Agent presets. Do not write cordis.yml, and do not call cordis_define, cordis_run, cordis_inspect, or cordis_mount.\n\nA Native module is a package the Host resolves. package.json sets \"type\": \"module\" and dsh.native with apiVersion 1, entry \"./native\", targets, requires, optional, and provides. src/native.ts exports plugin with the same name, targets, requires, and provides. resolve(input) returns (context) => { ... }. context.require reads a service named in requires. context.effect registers work the Host disposes. The manifest requires list must equal the plugin requires list.\n\nWriting a package does not install it. The profile must already resolve the package name before an installation row can load it.\n\nA preset is one directory under the Harness home's `.agent-presets/<id>/` directory with preset.yml and agent.native.json. Resolve that home at runtime rather than assuming a name, and take the real path of an existing preset from the roster. agent.native.json uses formatVersion 1. Each installation has id, plugin, and optional config and disabled. The Host installs those rows into that preset's scope. Shared services stay in rsh.profile.json. A preset owns only the rows that should apply to sessions that select it.\n\nDo not edit or delete shipped presets. Copy one into a new directory under .agent-presets and edit the copy.\n\nLoad editing-native-presets before changing a preset. Load native-module-development before creating a Native module.",
+  suffix: 'Your working directory is {{cwd}}.',
+} as const
+
 const NATIVE_AGENT_PRESET_INSTALLATIONS = [
   { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
   { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
     config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
   { id: 'preset-minimal', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'minimal',
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
-  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard',
-    config: {
-      prefix: 'You are a coding agent powered by the {{model}} model.',
-      suffix: 'Your working directory is {{cwd}}.',
-    } },
+  { id: 'preset-ptc', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
+    config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
+  { id: 'preset-cordis', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
+    config: { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
+  { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
+  { id: 'persona-ptc', plugin: '@deepseek-ai/dsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
+  { id: 'persona-cordis', plugin: '@deepseek-ai/dsh-native-persona', scope: 'cordis', config: CREATION_PERSONA },
+  { id: 'code-tool-ptc', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'ptc',
+    config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] } },
 ] as const
 
 /**
@@ -245,7 +259,7 @@ export function shippedNativeProfileComposition(
   return {
     formatVersion: 1,
     scopes: profile === 'native-web' || profile === 'native-tui'
-      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }]
+      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }, { id: 'ptc', parent: ROOT }, { id: 'cordis', parent: ROOT }]
       : [{ id: ROOT }],
     installations: [
       {

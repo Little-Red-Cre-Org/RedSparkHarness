@@ -1,5 +1,5 @@
 ---
-description: "The DeepSeek Harness package workspace: how the npm packages under rsh/ are grouped, what each group owns, and the conventions that bind them."
+description: "The RedSpark Harness package workspace: how the npm packages under rsh/ are grouped, what each group owns, and the conventions that bind them."
 kind: "package-group"
 ---
 

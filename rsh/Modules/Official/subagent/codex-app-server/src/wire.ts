@@ -300,7 +300,7 @@ export class CodexAppServerWire {
     object(await this.guarded(this.transport.request('initialize', {
       clientInfo: {
         name: 'deepseek-harness',
-        title: 'DeepSeek Harness',
+        title: 'RedSpark Harness',
         version: '0.0.1',
       },
       capabilities: {

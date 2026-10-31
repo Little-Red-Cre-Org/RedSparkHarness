@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-native-tui",
-  "version": "0.1.5-rc.2",
+  "version": "1.0.0",
   "description": "Native interactive Ink terminal application",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
     "directory": "rsh/Programs/TUI/native-tui"
   },
   "type": "module",
