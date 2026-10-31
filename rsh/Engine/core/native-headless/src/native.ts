@@ -910,9 +910,15 @@ export class NativeHeadlessApplication implements NativeApplication {
         }
         const allowed = (name: string): boolean => (config.allowedTools === undefined || config.allowedTools.includes(name))
         && (request.delegationContext === undefined || request.delegationContext.toolNames.includes(name))
+        // The Registry wins a name it also publishes. A profile that installs a
+        // code-runtime tool registers `run_code` itself, and the builtin
+        // transport offers the same name; publishing both would hand the model
+        // two schemas for one call target. Step aside here, and the merge below
+        // stays a last-resort guard for any remaining overlap.
+        const registryNames = new Set((this.tools?.modelSchemas(agent.scope) ?? []).map(schema => schema.name))
         const builtinSchemas = config.builtinTools
           ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
-            .filter(schema => allowed(schema.name)
+            .filter(schema => allowed(schema.name) && !registryNames.has(schema.name)
             && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
           : []
         const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)
@@ -947,8 +953,12 @@ export class NativeHeadlessApplication implements NativeApplication {
           const readOnlyModelTools = new Set(['read_file', ...modelTools])
           toolNames.splice(0, toolNames.length, ...toolNames.filter(name => readOnlyModelTools.has(name)))
         }
-        const schemas = [...builtinSchemas, ...modelSchemas]
-          .filter(schema => toolNames.includes(schema.name)).map(schema => structuredClone(schema))
+        // One schema per name. `toolNames` above already collapses duplicates,
+        // so the request cannot carry the same call target twice; map by name
+        // here for the same reason, keeping the first occurrence.
+        const schemas = [...new Map([...builtinSchemas, ...modelSchemas]
+          .filter(schema => toolNames.includes(schema.name))
+          .map(schema => [schema.name, structuredClone(schema)] as const)).values()]
         const builtinToolNames = resolvedSandbox?.mode === 'read-only'
           ? builtinTools.filter(name => name === 'read_file') : [...builtinTools]
         const ownerApproval = executionPolicy?.permission.mode === 'require-approval'
