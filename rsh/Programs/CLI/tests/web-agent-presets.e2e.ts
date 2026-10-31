@@ -232,7 +232,7 @@ describe('the shipped Web composition', () => {
   it('supplies the shipped presets, and only those, from the system root', async () => {
     const listed = await ctx.agentPresets.list()
 
-    expect(listed.map(preset => preset.id).sort()).toEqual(['ask', 'cordis', 'minimal', 'ptc', 'standard'])
+    expect(listed.map(preset => preset.id).sort()).toEqual(['ask', 'creation', 'minimal', 'ptc', 'standard'])
     expect(listed.every(preset => preset.trust === 'system')).toBe(true)
     expect(ctx.agentPresets.defaultId).toBe('standard')
   })
@@ -344,8 +344,8 @@ describe('the shipped Web composition', () => {
 
   it('composes the cordis agent with its own toolset', async () => {
     const handle = await ctx.agents.create({
-      sessionId: SessionId('preset-cordis'),
-      setup: agentCtx => ctx.agentPresets.mount(agentCtx, 'cordis').then(() => undefined),
+      sessionId: SessionId('preset-creation'),
+      setup: agentCtx => ctx.agentPresets.mount(agentCtx, 'creation').then(() => undefined),
     })
     try {
       const tools = toolNames(ctx, handle.agent)
@@ -419,7 +419,7 @@ describe('the shipped Web composition', () => {
     // The preset's skill root is derived from its own `baseUrl`, so the skill
     // travels with the directory wherever the preset is installed.
     const skill = join(
-      SHIPPED_PRESET_ROOT, 'cordis', 'skills', 'editing-native-presets', 'SKILL.md',
+      SHIPPED_PRESET_ROOT, 'creation', 'skills', 'editing-native-presets', 'SKILL.md',
     )
 
     expect((await readFile(skill, 'utf8')).startsWith('---\nname: editing-native-presets')).toBe(true)
@@ -980,7 +980,7 @@ describe('a composition that configures its own preset roots', () => {
     ])
 
     const listed = await rootsCtx.agentPresets.list()
-    expect(listed.map(preset => preset.id).sort()).toEqual(['ask', 'cordis', 'minimal', 'ptc', 'standard', 'team-spec'])
+    expect(listed.map(preset => preset.id).sort()).toEqual(['ask', 'creation', 'minimal', 'ptc', 'standard', 'team-spec'])
     expect(listed.every(preset => preset.broken === undefined)).toBe(true)
     // The shipped root comes first: a configured directory claiming a shipped
     // id is shadowed, never the other way around.

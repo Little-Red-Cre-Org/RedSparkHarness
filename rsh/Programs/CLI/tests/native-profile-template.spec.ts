@@ -286,7 +286,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
     { id: 'goal-round-driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
     { id: 'tool-goal', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'standard' },
   ])
-  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'cordis', parent: 'root' }])
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'creation', parent: 'root' }])
   expect(profile.installations.filter(row => ['commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal', 'tool-todo', 'tool-todo-minimal'].includes(row.id)))
     .toEqual([
       { id: 'commands', plugin: '@deepseek-ai/dsh-commands', scope: 'root' },
@@ -460,7 +460,7 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
   expect((plan?.config as { section: string }).section).toMatch(/^You are in plan mode\./)
   expect(ids).toContain('commands')
   expect(ids).toContain('user-questions')
-  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'cordis', parent: 'root' }])
+  expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'creation', parent: 'root' }])
   expect(profile.installations.filter(row => ['agent-presets', 'preset-standard', 'preset-minimal'].includes(row.id))).toEqual([
     { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'standard' } },
     { id: 'preset-standard', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'standard',
@@ -479,9 +479,9 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
     plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
     config: { id: 'ptc', name: 'PTC 模式' },
   })
-  expect(profile.installations.find(row => row.id === 'preset-cordis')).toMatchObject({
-    plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
-    config: { id: 'cordis', name: '创造模式' },
+  expect(profile.installations.find(row => row.id === 'preset-creation')).toMatchObject({
+    plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'creation',
+    config: { id: 'creation', name: '创造模式' },
   })
   expect(profile.installations.find(row => row.id === 'code-tool-ptc')).toEqual({
     id: 'code-tool-ptc', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'ptc',
@@ -503,12 +503,12 @@ it('keeps shipped ptc and creation folders aligned with the native web template'
   const row = (id: string) => profile.installations.find(candidate => candidate.id === id)
   const persona = row('persona-ptc')
   const code = row('code-tool-ptc')
-  const creation = row('persona-cordis')
+  const creation = row('persona-creation')
   expect((await readInstallations('ptc')).installations).toEqual([
     { id: 'persona', plugin: persona?.plugin, config: persona?.config },
     { id: 'code-tool', plugin: code?.plugin, config: code?.config },
   ])
-  expect((await readInstallations('cordis')).installations).toEqual([
+  expect((await readInstallations('creation')).installations).toEqual([
     { id: 'persona', plugin: creation?.plugin, config: creation?.config },
   ])
 })
