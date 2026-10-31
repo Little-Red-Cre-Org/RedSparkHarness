@@ -1,15 +1,15 @@
 /**
- * Exact package releases and adapter declarations supported by this Host
- * composition.
+ * The dsh-family release these adapters are built against.
  *
- * The dsh-family entries move with the workspace version, so they are written
- * once here rather than repeated: a literal per package is one more place to
- * forget when the family bumps, and the failure it produces (the installed
- * package rejected as unsupported) reads like a broken install rather than a
- * stale record.
+ * The entries below move with the workspace version, so it is written once
+ * rather than repeated: a literal per package is one more place to forget when
+ * the family bumps, and the failure it produces (the installed package
+ * rejected as unsupported) reads like a broken install rather than a stale
+ * record.
  */
 const FAMILY_VERSION = '1.0.0'
 
+/** Exact package releases and adapter declarations supported by this Host composition. */
 export const SUPPORT_RECORD = {
   '@deepseek-ai/cordis': { version: '4.0.2', api: 'cordis-plugin-host' },
   '@deepseek-ai/cordis-plugin-loader': { version: '1.0.3', api: 'cordis-entry-tree' },
