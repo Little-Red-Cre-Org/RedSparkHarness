@@ -1,18 +1,82 @@
 {
   "initial": [
     {
-      "name": "bash",
-      "description": "Run commands in a bash shell\n* When invoking this tool, the contents of the \"command\" parameter does NOT need to be XML-escaped.\n* Network access depends on the task environment. Prefer configured mirrors/proxies when they are available.\n* State is persistent across command calls and discussions with the user.\n* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.\n* Please avoid commands that may produce a very large amount of output.\n* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.",
+      "name": "pwsh",
+      "description": "Run commands in a PowerShell shell\n* When invoking this tool, the contents of the \"command\" parameter does NOT need to be XML-escaped.\n* You don't have access to the internet via this tool.\n* State is persistent across command calls and discussions with the user.\n* Use native Windows paths (C:\\...) and $env:NAME variables; this is PowerShell, not bash.\n* Please avoid commands that may produce a very large amount of output.\n* Please run long lived commands in the background, e.g. 'Start-Job' or start a server with Start-Process.",
       "parameters": {
         "type": "object",
         "properties": {
           "command": {
             "type": "string",
-            "description": "The bash command to run. Relative path is preferred in the command."
+            "description": "The PowerShell command to run. Relative path is preferred in the command."
           }
         },
         "required": [
           "command"
+        ]
+      }
+    },
+    {
+      "name": "task_schedule",
+      "description": "Manage this session's persistent Agent tasks: create, list, pause, resume, delete, or history. Only create tasks when the user requests scheduled work or explicitly requests sustained goal work. Goal tasks require completion criteria, cannot recur on a timer, and use the same execution session when explicitly resumed. Goal completion requires the durable goal complete state. Each occurrence opens an independent execution session using the current workspace, model, agent preset, and permission preset. Runs require the application to remain running; plans survive restarts. Overdue recurring intervals coalesce to one occurrence. Pausing scheduled tasks freezes the remaining wait durably; resume waits that remainder and anchors later intervals to the resumed occurrence. An explicit end time never moves; resume is rejected if the next occurrence would reach or exceed it. Pause/delete prevents future starts but does not cancel an active scheduled run. Completed means the Agent turn ended, not that tests passed. Interrupted runs may have side effects and are not automatically replayed. Times must contain an explicit UTC offset. Scheduled runs cannot create other scheduled tasks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "list",
+              "pause",
+              "resume",
+              "delete",
+              "history"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Use goal for explicitly requested sustained work; scheduled for reminders or periodic checks.",
+            "enum": [
+              "goal",
+              "scheduled"
+            ]
+          },
+          "completion_criteria": {
+            "type": "string",
+            "description": "Required for goal tasks: observable acceptance criteria and verification required before completion."
+          },
+          "max_goal_rounds": {
+            "type": "integer",
+            "description": "Goal continuation rounds per attempt, 1–100; defaults to 10."
+          },
+          "at": {
+            "type": "string",
+            "description": "Future RFC 3339 time with UTC offset; first occurrence for a recurring task."
+          },
+          "after_seconds": {
+            "type": "integer",
+            "description": "For relative requests, use exact seconds instead of calculating at: two minutes = 120. Server computes from creation time without rounding. Absolute clock times use Beijing UTC+08:00."
+          },
+          "end_at": {
+            "type": "string",
+            "description": "Optional RFC 3339 admission deadline after at. No new runs start at or after this time; running work continues."
+          },
+          "every_seconds": {
+            "type": "integer",
+            "description": "Optional fixed interval, at least 300 seconds."
+          }
+        },
+        "required": [
+          "action"
         ]
       }
     }
