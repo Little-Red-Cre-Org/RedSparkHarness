@@ -153,7 +153,6 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const sending = snapshot.state === 'sending' || snapshot.state === 'cancelling'
   const hasConversation = snapshot.events.some(event => event.type === 'tool-workflow/run-start'
     || (isAppendSurfaceEvent(event) && deriveEventMessage(event)?.role !== 'system'))
-  const petState = snapshot.human !== undefined ? 'waiting' : sending ? 'thinking' : 'idle'
   const workspace = snapshot.header?.cwd?.split(/[\\/]/).at(-1) ?? t('workspaceUnavailable')
   const selectedTitle = snapshot.sessions.find(session => session.header.id === selected)?.titleProjection
   const conversationTitle = selectedTitle?.status === 'resolved' ? selectedTitle.title
@@ -433,9 +432,6 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
           {composer}
         </section>
         : <>
-          <ChatMascotHero atlasUrl="/brand/kitsune-sprites.png" placement="floating" state={petState}
-            characterLabel={t('petCharacter')} speech={sending ? t('petThinking') : t('petSpeech')}
-            pauseLabel={t('petPause')} enableMotionLabel={t('petEnableMotion')} resumeLabel={t('petResume')} />
           <div role="tabpanel" id="native-conversation-panel" aria-labelledby="native-conversation-tab"
             className={css.scroll} hidden={activeTab !== 'conversation'} ref={scrollRef} onScroll={(event) => {
               const element = event.currentTarget

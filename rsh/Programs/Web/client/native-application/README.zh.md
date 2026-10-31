@@ -40,7 +40,7 @@ Composer 使用共享卡片、工具栏、发送/停止操作、模型与推理�
 
 当所选 Session 的已加载历史包含当前 goal 时，composer 堆栈会显示其目标、持久 phase 和已准入轮次进度，包括已完成的 goal。此条带为只读，也不显示进程本地 activation。
 
-配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。通用设置显示权限、语言、外观、会话字号、对话显示、繁忙发送行为和桌宠开关；Host 提供对应 namespace 时才显示相关设置行，语言和主题会即时生效，并通过 `settingsMutate` 保存已发布的偏好。应用壳启动时，Client 会读取 Host Settings 描述，并在打开 Settings 前应用已发布的语言、`ui-theme` 外观和字号偏好；若读取期间用户打开 Settings 或通过侧边栏更改语言或主题，启动结果会失效并跳过应用；若 namespace 缺失或读取失败，会保留对应服务的当前值。Composer 从 `ui-conversation.busyEnter` 读取繁忙发送行为，并在提交边界将 `queue`/`steer` 映射为 `queued`/`steering`。Host 未提供该 namespace 时，单一本地缓存使用旧设置值 `queue`/`steer`，Settings 读取成功后，通用设置以只读文字显示该值，并说明 Host 不保存此偏好。对话显示偏好会保存，但 NativeTranscript 尚未读取；桌宠开关会保存，但尚未控制 Native 吉祥物展示。通用设置把 JSON 用户覆盖、schema 详情、凭据和刷新操作收在折叠的“开发者选项”中。JSON 编辑保留 revision 检查、分批凭据读取、操作数限制、机密值脱敏和现有数组限制。凭据值只发送到 Host 保存，绝不回读。Host 报告存在本地配置文档时，页眉会显示“打开配置文件”。
+配置必须提供正整数 maxLiveTextChars 和 maxLiveEvents，并可选接受 `locale: "en" | "zh"`；省略时采用浏览器的中文语言偏好，否则使用英文。产品文案来自页面完整的类型化字典对。通用设置显示权限、语言、外观、会话字号、对话显示、繁忙发送行为；Host 提供对应 namespace 时才显示相关设置行，语言和主题会即时生效，并通过 `settingsMutate` 保存已发布的偏好。应用壳启动时，Client 会读取 Host Settings 描述，并在打开 Settings 前应用已发布的语言、`ui-theme` 外观和字号偏好；若读取期间用户打开 Settings 或通过侧边栏更改语言或主题，启动结果会失效并跳过应用；若 namespace 缺失或读取失败，会保留对应服务的当前值。Composer 从 `ui-conversation.busyEnter` 读取繁忙发送行为，并在提交边界将 `queue`/`steer` 映射为 `queued`/`steering`。Host 未提供该 namespace 时，单一本地缓存使用旧设置值 `queue`/`steer`，Settings 读取成功后，通用设置以只读文字显示该值，并说明 Host 不保存此偏好。对话显示偏好会保存，但 NativeTranscript 尚未读取。通用设置把 JSON 用户覆盖、schema 详情、凭据和刷新操作收在折叠的“开发者选项”中。JSON 编辑保留 revision 检查、分批凭据读取、操作数限制、机密值脱敏和现有数组限制。凭据值只发送到 Host 保存，绝不回读。Host 报告存在本地配置文档时，页眉会显示“打开配置文件”。
 
 在「订阅模型」区域中，每个 Host 授权条目都有独立的一行，显示连接状态和登录操作；匹配的账户卡片显示在该行内。没有匹配授权条目的账户卡片仍显示在此区域。账户卡片显示 Host 投影的 ChatGPT 套餐、额度窗口和 credits，以及 DeepSeek 身份和钱包余额；只有账户 key 与非空提供方身份仍匹配时，刷新失败才会保留已就绪数据并提示可能陈旧（ChatGPT 使用邮箱，DeepSeek 使用联系方式或姓名）。没有身份的成功读取结果只显示本次读取，不可用的余额不会显示为零。退出登录和授权完成后都会重新读取账户及授权流程。页面不直接处理 grant。离开或刷新页面只会取消帧订阅，只有显式点击“取消登录”才会终止尝试。
 
@@ -97,7 +97,7 @@ Host 拥有恢复后的上下文和既有前缀。模型与组合修改遵循其
 
 持久化事件在执行期间更新转录。临时助手输出显示在共享流式 Markdown 外框中，直到持久化助手记录或结算将其替换。maxLiveTextChars 只保留可见尾部并明确提示截断；maxLiveEvents 拒绝超量呈现历史并取消轮次。重新加载恢复持久化历史，不恢复临时片段。
 
-- 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式标签、Plan 切换和权限菜单。在其他 profile 中，没有可选预设时模式标签显示为静态内容；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限菜单。欢迎页使用内置吉祥物图集和当前轮次状态，尚未读取桌宠偏好或自定义形态。
+- 随附 native-web 模板会安装 Standard 和 Minimal Agent 预设、plan-mode Provider 和 permission-preset Provider，因此其中可使用模式标签、Plan 切换和权限菜单。在其他 profile 中，没有可选预设时模式标签显示为静态内容；仅在 Host 提供相应 Provider 时才显示 Plan 切换和权限菜单。欢迎页显示产品标识和当前轮次状态。
 - 当前模型目录没有提供上下文窗口大小，因此用量摘要不显示上下文百分比。
 - 其他模型片段呈现仍属于独立工作。
 - 侧边栏在手动分组视图中通过上移/下移控件持久化 Workspace 和组内会话排序；尚未提供拖动或跨 Workspace 移动 Session 的手势、更多 Session 搜索结果页和 Native Schedule 任务中心。当前 prompt 路径支持图片附件；更广泛的附件/资源管理、不透明凭据 grant 编辑和其他插件的设置仍属于独立的原生 Client 工作。
