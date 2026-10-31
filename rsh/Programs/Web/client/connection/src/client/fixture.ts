@@ -957,8 +957,8 @@ function buildAlphaLog(): SessionEvent[] {
   toolTurn(
     70,
     'web_search',
-    '{"queries":["deepseek harness architecture"]}',
-    'Search results for deepseek harness architecture.',
+    '{"queries":["redspark harness architecture"]}',
+    'Search results for redspark harness architecture.',
     WEB_SEARCH_META,
   )
   toolTurn(
