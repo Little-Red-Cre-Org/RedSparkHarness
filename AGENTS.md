@@ -1,6 +1,6 @@
 # AGENTS.md
 
-DeepSeek Harness is an all-plugin Cordis agent harness. Read [rsh/Docs/architecture.md](rsh/Docs/architecture.md) before changing source packages under `rsh/`; follow [rsh/Docs/AGENTS.md](rsh/Docs/AGENTS.md) for documentation.
+RedSpark Harness is an all-plugin Cordis agent harness. Read [rsh/Docs/architecture.md](rsh/Docs/architecture.md) before changing source packages under `rsh/`; follow [rsh/Docs/AGENTS.md](rsh/Docs/AGENTS.md) for documentation.
 
 ## Pre-stable APIs and released Session data
 
