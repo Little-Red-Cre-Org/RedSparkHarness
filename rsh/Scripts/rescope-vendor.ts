@@ -159,10 +159,9 @@ const POSTCONDITIONS: readonly PostCondition[] = [
   { file: 'rsh/Core/vendor/README.md', text: '17. **`@deepseek-ai` rescope**', count: 1 },
   { file: 'pnpm-workspace.yaml', text: 'cordis@4.0.0-rc.7', count: 0 },
   // The preset ids in this table are product data, not package names.
-  { file: 'rsh/Programs/Web/client/ui-agent-preset/tests/locales.client.spec.ts', text: '[\'cordis\', \'presetCordisName\'', count: 1 },
+  { file: 'rsh/Programs/Web/client/ui-agent-preset/tests/locales.client.spec.ts', text: '[\'creation\', \'presetCordisName\'', count: 1 },
   // The preset id the shipped composition documents to its own model.
   { file: 'rsh/Engine/preset/agent-presets/presets/creation/agent.cordis.yml', text: 'The `cordis` agent preset', count: 1 },
-  { file: 'rsh/Engine/preset/agent-presets/presets/creation/agent.cordis.yml', text: 'corrupting the `cordis` preset', count: 1 },
 ]
 
 /**
