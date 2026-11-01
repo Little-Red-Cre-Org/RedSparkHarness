@@ -254,6 +254,8 @@
 }
 
 .codeBlock {
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
   margin: 8px 0 0;
   padding: 12px;
   max-height: 320px;
@@ -416,6 +418,7 @@
 .stateChipMuted {
   padding: 2px 8px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 11px;
   line-height: 18px;
 }
