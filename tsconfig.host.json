@@ -271,6 +271,7 @@
     { "path": "./rsh/Modules/Official/automation/task-scheduler" },
     { "path": "./rsh/Engine/schedule/schedule" },
     { "path": "./rsh/Engine/context/time-context" },
+    { "path": "./rsh/Engine/context/context-insight" },
     { "path": "./rsh/Engine/context/file-reference" },
     { "path": "./rsh/Engine/context/file-reference-local" },
     { "path": "./rsh/Engine/context/tmux-context" },

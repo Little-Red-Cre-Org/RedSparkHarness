@@ -591,6 +591,8 @@
       "@deepseek-ai/dsh-task-scheduler": ["./rsh/Modules/Official/automation/task-scheduler/src"],
       "@deepseek-ai/dsh-terminal": ["./rsh/Modules/Official/terminal/terminal/src"],
       "@deepseek-ai/dsh-terminal-bash": ["./rsh/Modules/Official/terminal/terminal-bash/src"],
+      "@deepseek-ai/dsh-context-insight": ["./rsh/Engine/context/context-insight/src"],
+      "@deepseek-ai/dsh-context-insight/*": ["./rsh/Engine/context/context-insight/src/*"],
       "@deepseek-ai/dsh-time-context": ["./rsh/Engine/context/time-context/src"],
       "@deepseek-ai/dsh-time-context/invariant": ["./rsh/Engine/context/time-context/src/invariant.ts"],
       "@deepseek-ai/dsh-timeout": ["./rsh/Core/util/timeout/src"],
