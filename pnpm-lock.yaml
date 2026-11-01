@@ -2287,6 +2287,25 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  rsh/Engine/context/context-insight:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../Core/vendor/schemastery
+        version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../Core/vendor/cordis
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-session-projection':
+        specifier: workspace:^
+        version: link:../../session/session-projection
+
   rsh/Engine/context/file-reference:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -9704,6 +9723,9 @@ importers:
       '@deepseek-ai/dsh-compaction-tool-result-pruner':
         specifier: workspace:^
         version: link:../../Engine/compaction/compaction-tool-result-pruner
+      '@deepseek-ai/dsh-context-insight':
+        specifier: workspace:^
+        version: link:../../Engine/context/context-insight
       '@deepseek-ai/dsh-cordis-bridge':
         specifier: workspace:^
         version: link:../../Core/runtime-diagnostics/cordis-bridge
