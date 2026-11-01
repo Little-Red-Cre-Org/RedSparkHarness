@@ -2289,16 +2289,16 @@ importers:
 
   rsh/Engine/context/context-insight:
     dependencies:
-      '@deepseek-ai/schemastery':
-        specifier: link:../../../Core/vendor/schemastery
-        version: link:../../../Core/vendor/schemastery
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@deepseek-ai/cordis':
+      '@deepseek-ai/dsh-commands':
         specifier: workspace:^
-        version: link:../../../Core/vendor/cordis
+        version: link:../../../Modules/Official/interaction/commands
+      '@deepseek-ai/dsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
