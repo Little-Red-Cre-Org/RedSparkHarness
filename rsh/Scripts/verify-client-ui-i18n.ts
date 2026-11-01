@@ -238,7 +238,7 @@ export function findUiI18nViolations(file: string, sourceText: string): UiI18nVi
       && ts.isStringLiteral(attribute.initializer)
       && attribute.initializer.text === 'true')
     let current = node.parent
-    while (current !== undefined && !ts.isSourceFile(current)) {
+    while (!ts.isSourceFile(current)) {
       if (ts.isJsxElement(current) && marksHidden(current.openingElement.attributes)) return true
       if (ts.isJsxSelfClosingElement(current) && marksHidden(current.attributes)) return true
       if (ts.isJsxFragment(current)) return false
