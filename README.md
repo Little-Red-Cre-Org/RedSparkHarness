@@ -54,15 +54,61 @@ The following links belong to the upstream project and are retained as developme
 - Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
 - Join <a href="https://discord.gg/Ycq5dCaS4">DeepSeek Harness Discord community</a>.
 
-## Contributing
+## Related projects
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+RedSpark maintains two repositories; they are separate projects, not a parent and a fork.
+
+| | This repository | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
+|---|---|---|
+| What it is | The Agent product: desktop, Web, TUI and SDK surfaces | The research effort that gives a harness a lifecycle |
+| Built on | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (TypeScript, Cordis plugins) | [Harness²](https://github.com/google-research/harness2) (Python) |
+| What it optimises | Delivery: interface, model access, Sessions, presets | Generations of a harness: lineage, pointer, atomic switch, rollback |
+| Language | TypeScript | Python |
+
+Harness² optimises what a harness contains; RSI Harness adds how one generation becomes the next; this repository is the layer that turns the result into a product.
+
+### The `rsi/` directory
+
+`rsi/` in this repository is an **embedded copy** of the RSI Harness engine (29 files, 28 shared by name), so the product can call it without a second checkout. The two copies have diverged: this one renames the engine's `golden` assertion to `smoke`.
+
+When changing the engine, change it in [RSI-Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) first and sync the result here; do not treat this copy as the source of truth.
 
 ## Development
 
-Start with the [development guide](rsh/Docs/development.md) and [architecture documentation](rsh/Docs/architecture.md).
+Start with the [development guide](rsh/Docs/development.md) and [architecture documentation](rsh/Docs/architecture.md). For agents, follow [AGENTS.md](AGENTS.md).
 
-For agents, follow [AGENTS.md](AGENTS.md).
+### Prerequisites
+
+Node.js `^22.19.0 || >=24.0.0` and pnpm. The repository pins its toolchain; `pnpm install` at the root installs every workspace package.
+
+### Build and run
+
+```bash
+pnpm install
+pnpm run build          # libraries, then the Web client
+pnpm run dev:web        # the Web development server
+```
+
+The desktop application builds through its own entry points:
+
+```bash
+pnpm run package:desktop:win:x64:unsigned
+```
+
+### Check your change
+
+```bash
+pnpm run typecheck      # tsc -b across the whole graph
+pnpm run lint           # oxlint, whole repository
+pnpm run test           # unit and client tests
+```
+
+Repository gates run as `tsx rsh/Scripts/run-gates.ts <mode>`; `hygiene` and `doc-sync` are the two that catch structural and documentation drift.
+
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Citation
 
