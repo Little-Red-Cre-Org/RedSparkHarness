@@ -75,15 +75,62 @@ pnpm dsh web
   </tbody>
 </table>
 
-## 参与贡献
+## 相关项目
 
-参见 [CONTRIBUTING.md](CONTRIBUTING.zh.md)。
+RedSpark 有两个仓库；它们是**两个独立项目**，不是父子，也不是 fork 关系。
+
+| | 本仓库 | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
+|---|---|---|
+| 是什么 | Agent 产品：桌面端、Web、TUI 与 SDK | 让 harness 拥有「生命周期」的研究项目 |
+| 底座 | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（TypeScript、Cordis 插件） | [Harness²](https://github.com/google-research/harness2)（Python） |
+| 优化什么 | 交付：界面、模型接入、会话、预设 | harness 的代际演进：血缘、指针、原子切换、回滚 |
+| 语言 | TypeScript | Python |
+
+Harness² 优化的是 harness 的「内容」，RSI Harness 补齐「一代如何变成下一代」，本仓库是把结果做成产品的那一层。
+
+### `rsi/` 目录
+
+本仓库的 `rsi/` 是 RSI Harness 引擎的**内嵌副本**（29 个文件，28 个同名），让产品不必再检出一份就能调用。两份内容已经分叉：这一份把引擎里的 `golden` 断言改名为 `smoke`。
+
+改动引擎时，先在 [RSI-Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) 改，再同步到这里；不要把这份副本当成来源。
+
 
 ## 开发
 
-请先阅读[开发指南](rsh/Docs/development.zh.md)与[架构文档](rsh/Docs/architecture.zh.md)。
+从[开发指南](rsh/Docs/development.zh.md)与[架构文档](rsh/Docs/architecture.zh.md)开始。给 Agent 看的规则在 [AGENTS.md](AGENTS.md)。
 
-面向 agent：请遵循 [AGENTS.md](AGENTS.md)。
+### 前置条件
+
+Node.js `^22.19.0 || >=24.0.0` 与 pnpm。仓库固定了工具链；在根目录执行 `pnpm install` 会安装全部工作区包。
+
+### 构建与运行
+
+```bash
+pnpm install
+pnpm run build          # libraries, then the Web client
+pnpm run dev:web        # the Web development server
+```
+
+桌面应用走自己的入口构建：
+
+```bash
+pnpm run package:desktop:win:x64:unsigned
+```
+
+### 提交前自查
+
+```bash
+pnpm run typecheck      # tsc -b across the whole graph
+pnpm run lint           # oxlint, whole repository
+pnpm run test           # unit and client tests
+```
+
+仓库门禁统一走 `tsx rsh/Scripts/run-gates.ts <mode>`；其中 `hygiene` 管结构漂移、`doc-sync` 管文档漂移。
+
+
+## 参与贡献
+
+参见 [CONTRIBUTING.md](CONTRIBUTING.zh.md)。
 
 ## 引用
 

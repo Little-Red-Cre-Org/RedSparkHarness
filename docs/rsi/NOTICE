@@ -1,0 +1,16 @@
+RSI Harness
+Copyright 2026 Little-Red-Cre-Org
+
+This product is a derivative work of Harness² (https://github.com/google-research/harness2),
+Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.
+
+The files under harness2/, third_party/, docs/ (except docs/RSI-*.md and docs/ARCHITECTURE.md),
+scripts/, tests/, assets/, MANIFEST.in, and the upstream portions of pyproject.toml originate
+from Harness² and retain their original copyright and license notices.
+
+New material authored for RSI Harness -- including docs/ARCHITECTURE.md, docs/RSI-DESIGN.md,
+docs/RSI-ROADMAP.md, and future service/ packages -- is likewise released under the
+Apache License, Version 2.0.
+
+Third-party code under third_party/ and the benchmarks and datasets fetched into dependencies/
+retain their own upstream licenses; see third_party/README.md and dependencies/README.md.
