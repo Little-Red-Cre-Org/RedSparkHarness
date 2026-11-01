@@ -7,7 +7,7 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 Native Web 应用可以列出一个 Session 的后台任务，并跟随已提交的变更。任务行有意省略持有它的 Agent 对象，因为该对象无法跨越传输层。应用必须安装 Native 任务注册表与本控制器。
 
@@ -15,7 +15,7 @@ Native Web 应用可以列出一个 Session 的后台任务，并跟随已提交
 
 - [参考](#reference)
 - [不变量](#invariants)
-- [开发说明](#dev-note)
+- [开发备注](#dev-note)
 - [模型体验](#model-experience)
 - [已知限制与待办](#known-limitations-and-deferred-work)
 
@@ -36,7 +36,7 @@ Native Web profile 在 Native 任务注册表之后安装本控制器。它需�
 不发布运行时不变式伴随包，因为本控制器只读取注册表已提交的任务状态，不维护第二份副本。
 
 <a id="dev-note"></a>
-## 开发说明
+## 开发备注
 
 Native 任务注册表拥有任务状态与取消能力。本包拥有已认证的浏览器投影。
 

@@ -99,6 +99,25 @@ function flatten(state: Map<SessionId, NativeSessionJob[]>): NativeSessionJob[] 
   return [...state.values()].flat().sort((left, right) => left.startedAt - right.startedAt)
 }
 
+/** One answer to a session/jobs/list request: the rows, or a generic failure. */
+type JobsListResult =
+  | { readonly ok: true; readonly value: NativeSessionJob[] }
+  | { readonly ok: false; readonly error: JobsListFailure }
+
+/** The generic failure a jobs request answers with. */
+type JobsListFailure = {
+  readonly code: string
+  readonly message: string
+  readonly details: Record<string, unknown>
+}
+
+/**
+ * Host-side projection of the Native job registry onto browser-safe rows.
+ *
+ * Reads the registry on demand rather than subscribing to it: the registry
+ * publishes no change notification, so the follow feed re-reads at most once
+ * per interval and diffs the result.
+ */
 export class NativeJobsController {
   private state: Map<SessionId, NativeSessionJob[]>
   // A fresh controller has no previous re-read, so the first one is never held back.
@@ -108,7 +127,10 @@ export class NativeJobsController {
     this.state = projectAll(agents, jobs)
   }
 
-  /** Read the current list without advancing the delta cursor. */
+  /**
+   * Read the current list without advancing the delta cursor.
+   * @returns every tracked job, ordered by start time.
+   */
   list(): NativeSessionJob[] {
     return flatten(this.state)
   }
@@ -124,7 +146,11 @@ export class NativeJobsController {
     return elapsed >= this.minPollIntervalMs ? 0 : this.minPollIntervalMs - elapsed
   }
 
-  /** Re-read the registry and return everything that changed since the last poll. */
+  /**
+   * Re-read the registry and return everything that changed since the last poll.
+   * @param now - injectable clock reading, recorded as this poll's timestamp.
+   * @returns the upsert, remove and session-gone frames the change produced.
+   */
   poll(now: number = Date.now()): NativeSessionJobsFrame[] {
     this.lastPollAt = now
     const next = projectAll(this.agents, this.jobs)
@@ -133,7 +159,14 @@ export class NativeJobsController {
     return delta
   }
 
-  handle(endpoint: string, payload: unknown, signal: AbortSignal) {
+  /**
+   * Answer one /api/session/jobs/list request.
+   * @param endpoint - the RPC endpoint name being answered.
+   * @param payload - request body; the endpoint accepts an empty object.
+   * @param signal - caller cancellation.
+   * @returns an ok result carrying every row, or a generic failure.
+   */
+  handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<JobsListResult> {
     try {
       if (!jobsEndpoints.has(endpoint)) throw new Error('unsupported jobs endpoint')
       emptyRequest.parse(payload)
@@ -149,6 +182,12 @@ export class NativeJobsController {
     }
   }
 
+  /**
+   * Serve the /api/session/jobs/follow SSE feed.
+   * @param request - the incoming Fetch request; the body must be an empty object.
+   * @param lifetime - the plugin's lifetime signal, aborted when it unloads.
+   * @returns a streamed event response, or 400 when the body is not an empty object.
+   */
   async follow(request: Request, lifetime: AbortSignal): Promise<Response> {
     try { emptyRequest.parse(await request.json()) }
     catch { return new Response(null, { status: 400 }) }

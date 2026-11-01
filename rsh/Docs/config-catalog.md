@@ -3642,6 +3642,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-native-file-reference-local` ([`rsh/Modules/Official/fs/native-file-reference-local/src/index.ts`](../Modules/Official/fs/native-file-reference-local/src/index.ts))
 - `@deepseek-ai/dsh-native-headless` ([`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts))
 - `@deepseek-ai/dsh-native-jobs` ([`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts))
+- `@deepseek-ai/dsh-native-jobs-controller` ([`rsh/Programs/Web/api/native-jobs-controller/src/index.ts`](../Programs/Web/api/native-jobs-controller/src/index.ts))
 - `@deepseek-ai/dsh-native-model-execution` ([`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts))
 - `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
 - `@deepseek-ai/dsh-native-persona` ([`rsh/Engine/preset/native-persona/src/index.ts`](../Engine/preset/native-persona/src/index.ts))

@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Programs/Web/api/native-jobs-controller/README.md
 README.md: f1f0cb1c549937ab92dc6215e5f2733cd9ea9eb8
-README.zh.md: 356d99b8a51e548d9bc8a71cecdbc626ab376d57
+README.zh.md: 38c0b6157996ba69e3757fe6db310794c7f06443
