@@ -222,6 +222,31 @@ export function findUiI18nViolations(file: string, sourceText: string): UiI18nVi
     return undefined
   }
 
+  /**
+   * Whether an ancestor JSX element marks its subtree decorative.
+   *
+   * `aria-hidden="true"` makes the subtree invisible to assistive technology, which is how brand
+   * artwork states that its text is a drawing rather than copy a reader is meant to translate.
+   * @param node - the JSX text node being judged.
+   * @returns true when an enclosing element carries the attribute.
+   */
+  const insideAriaHidden = (node: ts.Node): boolean => {
+    const marksHidden = (attributes: ts.JsxAttributes): boolean => attributes.properties.some(attribute =>
+      ts.isJsxAttribute(attribute)
+      && attribute.name.getText(source) === 'aria-hidden'
+      && attribute.initializer !== undefined
+      && ts.isStringLiteral(attribute.initializer)
+      && attribute.initializer.text === 'true')
+    let current = node.parent
+    while (current !== undefined && !ts.isSourceFile(current)) {
+      if (ts.isJsxElement(current) && marksHidden(current.openingElement.attributes)) return true
+      if (ts.isJsxSelfClosingElement(current) && marksHidden(current.attributes)) return true
+      if (ts.isJsxFragment(current)) return false
+      current = current.parent
+    }
+    return false
+  }
+
   const hasExplicitStringReturn = (node: ts.Node): boolean => {
     let current = node.parent
     while (!ts.isSourceFile(current)) {
@@ -237,8 +262,9 @@ export function findUiI18nViolations(file: string, sourceText: string): UiI18nVi
   }
 
   const visit = (node: ts.Node): void => {
-    if (ts.isJsxText(node)) report(node, node.text, 'JSX text')
-
+    // Decorative brand artwork carries `aria-hidden="true"`: assistive technology never reads
+    // it and no locale can translate it, so its text is artwork rather than product copy.
+    if (ts.isJsxText(node) && !insideAriaHidden(node)) report(node, node.text, 'JSX text')
     if (ts.isJsxAttribute(node)) {
       const name = node.name.getText(source)
       if (copyAttribute(name) && node.initializer !== undefined) {

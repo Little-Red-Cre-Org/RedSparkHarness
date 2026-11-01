@@ -56,11 +56,23 @@ describe('Client UI i18n source check', () => {
     `)).toEqual([])
   })
 
-  it('does not inspect locale dictionary owners', () => {
-    expect(findUiI18nViolations(
-      'rsh/Programs/Web/client/ui-example/src/client/locales.ts',
-      'export const en = { title: "Hard-coded by design" }',
-    )).toEqual([])
+  it('leaves decorative brand artwork alone but still reports nested copy beside it', () => {
+    // Brand artwork states that its text is a drawing with aria-hidden, and no locale can
+    // translate an outline. A text node outside that subtree is still product copy.
+    expect(messages(`
+      const Wordmark = () => (
+        <span aria-hidden="true">
+          <span>RedSpark Harness</span>
+        </span>
+      )
+      const Label = () => <span>Hard-coded text</span>
+    `)).toEqual(['Hard-coded text'])
+  })
+
+  it('does not inspect locale dictionary owners', () => {    expect(findUiI18nViolations(
+    'rsh/Programs/Web/client/ui-example/src/client/locales.ts',
+    'export const en = { title: "Hard-coded by design" }',
+  )).toEqual([])
   })
 
   it('rejects Electron dialog, title, prompt, and DOM copy outside locale owners', () => {
