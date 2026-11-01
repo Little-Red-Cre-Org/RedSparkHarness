@@ -5,8 +5,9 @@ kind: "guide"
 
 # RSI Harness 文档
 
-本目录是原 **RSI Harness** 仓库（`github.com/Little-Red-Cre-Org/RSI-Harness`）的文档，
-已并入本仓库。代码在同一检出里：`harness2/`（底座）与 `rsi/`（引擎，含 `rsi/tests/`）。
+[English](README.md) | 中文
+
+本目录是原 **RSI Harness** 仓库（`github.com/Little-Red-Cre-Org/RSI-Harness`）的文档，已并入本仓库。代码在同一检出里：`harness2/`（底座）与 `rsi/`（引擎，含 `rsi/tests/`）。
 
 ## 合并意味着什么
 
@@ -61,5 +62,4 @@ python -m pytest rsi/tests/ -q
 ## 与本仓库其他部分的关系
 
 - 本目录只放**文档**；代码在 `harness2/` 与 `rsi/`。
-- 本仓库的 `pytest.ini` 目前只收集 `python/sdk/tests`，**不包含 `rsi/tests`**，CI 也不跑它。
-  要让这 624 条测试成为真正的门禁，需要把 `rsi/tests` 加入 `testpaths` 并接进 CI。
+- 本仓库的 `pytest.ini` 目前只收集 `python/sdk/tests`，**不包含 `rsi/tests`**，CI 也不跑它。要让这 624 条测试成为真正的门禁，需要把 `rsi/tests` 加入 `testpaths` 并接进 CI。

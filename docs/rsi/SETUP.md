@@ -1,6 +1,6 @@
 # Setup guide
 
-Start with the [quick start](../README.md#install). This guide covers benchmark
+Start with the [quick start](README.md). This guide covers benchmark
 dependencies, model credentials, and the optional Codex executor. For individual
 benchmarks, see the [benchmark guides](BENCHMARKS.md).
 
@@ -77,10 +77,10 @@ harness2-check --bench lab
 Use `jb` for JobBench or `wb` for WorkBuddy-Bench. See the
 [benchmark guides](BENCHMARKS.md) for subset selection and licensing.
 
-The runner overlays and compatibility patches are included in
-[`third_party/`](../third_party/README.md). Setup clones supported upstream
-revisions under `dependencies/`, applies the patches, creates the benchmark
-environments, and downloads task data.
+The runner overlays and compatibility patches live under `third_party/` in the
+former RSI Harness checkout; they are not part of this repository. Setup clones
+supported upstream revisions under `dependencies/`, applies the patches, creates
+the benchmark environments, and downloads task data.
 
 Each benchmark environment lives inside its upstream checkout:
 
