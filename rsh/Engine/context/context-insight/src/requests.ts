@@ -29,7 +29,10 @@ export interface RequestHistoryState {
   readonly lastSeriesStart: number
 }
 
-/** The state a Session starts from before any request is logged. */
+/**
+ * The state a Session starts from before any request is logged.
+ * @returns an empty history with no series boundary.
+ */
 export function initialRequestHistoryState(): RequestHistoryState {
   return { rows: [], lastSeriesStart: 0 }
 }

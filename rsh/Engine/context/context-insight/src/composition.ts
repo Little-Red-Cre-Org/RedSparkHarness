@@ -64,7 +64,10 @@ function totalOf(totals: CompositionTotals): number {
   return COMPOSITION_CATEGORIES.reduce((sum, category) => sum + totals[category], 0)
 }
 
-/** The state a Session starts from before any event is folded. */
+/**
+ * The state a Session starts from before any event is folded.
+ * @returns every category at zero, with no recorded prompts or requests.
+ */
 export function initialCompositionState(): CompositionState {
   return {
     totals: { system: 0, tools: 0, user: 0, inject: 0, skill: 0, assistant: 0, tool: 0 },

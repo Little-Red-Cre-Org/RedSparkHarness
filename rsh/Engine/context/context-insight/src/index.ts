@@ -26,9 +26,11 @@ import {
 } from './requests.ts'
 import { formatContextReport } from './report.ts'
 
-/** Projection keys this plugin owns. */
+/** Projection key holding what this Session's context is made of. */
 export const COMPOSITION_KEY = 'contextComposition'
+/** Projection key holding one row per model request. */
 export const REQUESTS_KEY = 'contextRequests'
+/** Projection key holding per-day usage folded from the same log. */
 export const ACTIVITY_KEY = 'contextActivity'
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
@@ -42,8 +44,9 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 
-/** The `/context` command name and copy. */
+/** The `/context` command name typed by a user. */
 export const CONTEXT_COMMAND_NAME = 'context'
+/** The one-line description a command surface shows for `/context`. */
 export const CONTEXT_COMMAND_DESCRIPTION = "Show what this Session's context is made of"
 
 /** Host plugin: the three folds, plus the command when a command service is composed. */

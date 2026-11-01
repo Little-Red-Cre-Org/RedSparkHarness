@@ -26,7 +26,10 @@ export interface ActivityState {
   readonly days: Readonly<Record<string, ActivityDay>>
 }
 
-/** The state a Session starts from. */
+/**
+ * The state a Session starts from, before any event is folded.
+ * @returns empty per-day activity.
+ */
 export function initialActivityState(): ActivityState {
   return { days: {} }
 }
