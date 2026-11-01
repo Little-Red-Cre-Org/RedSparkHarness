@@ -319,6 +319,7 @@ export function shippedNativeProfileComposition(
           { id: 'storage-domain', plugin: '@deepseek-ai/dsh-storage-domain', scope: ROOT,
             config: { backend: 'json' } },
           { id: 'session-projections', plugin: '@deepseek-ai/dsh-session-projection', scope: ROOT },
+          { id: 'context-insight', plugin: '@deepseek-ai/dsh-context-insight', scope: ROOT },
           { id: 'session-projection-cache', plugin: '@deepseek-ai/dsh-session-projection-cache', scope: ROOT,
             config: { writeEveryEvents: 200, writeIntervalMs: 5000 } },
           { id: 'session-query', plugin: '@deepseek-ai/dsh-session-query-sqlite', scope: ROOT,

@@ -12,7 +12,6 @@
  * @module @deepseek-ai/dsh-cordis-bridge
  */
 
-import { Context } from '@deepseek-ai/cordis'
 import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 
 /** A Cordis plugin module as shipped: a name plus the function that installs it. */
@@ -45,6 +44,9 @@ export interface BridgedPlugin {
  * @returns completion after the plugin's effects have been disposed.
  */
 export async function hostCordisPlugin(bridged: BridgedPlugin): Promise<() => Promise<void>> {
+  // Loaded here rather than at module scope: `@deepseek-ai/cordis` is an optional peer, so a
+  // deployment that never bridges a Cordis plugin must be able to import this module without it.
+  const { Context } = await import('@deepseek-ai/cordis')
   const ctx = new Context()
   for (const [name, service] of Object.entries(bridged.services)) {
     ctx.provide(name as never, service as never)

@@ -443,6 +443,7 @@
       "@deepseek-ai/dsh-compat-settings-adapters": ["./rsh/Compatibility/DSH/bridge/compat-settings-adapters/src"],
       "@deepseek-ai/dsh-compat-settings-definition": ["./rsh/Compatibility/DSH/bridge/compat-settings-definition/src"],
       "@deepseek-ai/dsh-compat-tool-fs": ["./rsh/Compatibility/DSH/bridge/compat-tool-fs/src"],
+      "@deepseek-ai/dsh-context-insight": ["./rsh/Engine/context/context-insight/src"],
       "@deepseek-ai/dsh-credentials": ["./rsh/Modules/Official/credentials/credentials/src"],
       "@deepseek-ai/dsh-credentials/invariant": ["./rsh/Modules/Official/credentials/credentials/src/invariant.ts"],
       "@deepseek-ai/dsh-credentials-local": ["./rsh/Modules/Official/credentials/credentials-local/src"],

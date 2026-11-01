@@ -3616,6 +3616,7 @@ export interface Config {
 - `@deepseek-ai/dsh-compat-settings-adapters`（[`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts)）
 - `@deepseek-ai/dsh-compat-settings-definition`（[`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)）
 - `@deepseek-ai/dsh-compat-tool-fs`（[`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts)）
+- `@deepseek-ai/dsh-context-insight`（[`rsh/Engine/context/context-insight/src/index.ts`](../Engine/context/context-insight/src/index.ts)）
 - `@deepseek-ai/dsh-cordis-bridge`（[`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts)）
 - `@deepseek-ai/dsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
 - `@deepseek-ai/dsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
