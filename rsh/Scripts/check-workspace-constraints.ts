@@ -304,7 +304,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-client-native-session': [
     'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
-    'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/native-*.js',
+    'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/jobs-types.js', 'lib/native-*.js',
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
   '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],

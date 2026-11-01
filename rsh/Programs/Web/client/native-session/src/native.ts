@@ -79,6 +79,8 @@ declare module '@deepseek-ai/dsh-native-runtime' {
     clientNativeSession: NativeSessionClient
     /** Read-only Native schedule catalog selected by the browser composition. */
     clientNativeSchedule: NativeScheduleClient
+    /** Read-only Native background-job catalog selected by the browser composition. */
+    clientNativeSessionJobs: NativeSessionJobsClient
     /** Native Workspace RPC Consumer selected by the browser composition. */
     clientNativeWorkspace: import('./workspaces.ts').NativeWorkspaceClient
     /** Native directory chooser and browser selected by the browser composition. */
@@ -94,6 +96,8 @@ import type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearch
 export type { NativeSessionListFrame, NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage, NativeSessionTitleProjection } from './list-types.ts'
 import type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
 export type { NativeScheduleFrame, NativeScheduledJob } from './schedule-types.ts'
+import type { NativeSessionJob, NativeSessionJobsFrame } from './jobs-types.ts'
+export type { NativeSessionJob, NativeSessionJobsFrame } from './jobs-types.ts'
 
 /** Browser parser capacity, resolved by the native Client profile. */
 export interface NativeSessionClientConfig {
@@ -114,6 +118,22 @@ export interface NativeScheduleClient {
    * @returns baseline, upsert, and remove frames from the Host.
    */
   follow(signal: AbortSignal): AsyncIterable<NativeScheduleFrame>
+}
+
+/** Read-only browser access to Agent-owned background jobs. */
+export interface NativeSessionJobsClient {
+  /**
+   * List every background job the Host currently holds.
+   * @param signal - caller cancellation.
+   * @returns browser-safe rows without captured arguments or retained output.
+   */
+  list(signal?: AbortSignal): Promise<readonly NativeSessionJob[]>
+  /**
+   * Follow one complete baseline and every subsequent job change.
+   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * @returns baseline, upsert, remove, and session-gone frames from the Host.
+   */
+  follow(signal: AbortSignal): AsyncIterable<NativeSessionJobsFrame>
 }
 
 /** Read-only file tree and preview operations scoped to one Session workspace. */
@@ -931,6 +951,19 @@ const scheduleFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('upsert'), job: scheduledJobSchema }),
   z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
 ])
+const sessionJobSchema = z.strictObject({
+  id: z.string().min(1), sessionId: z.string().min(1), kind: z.string().min(1), label: z.string(),
+  status: z.enum(['running', 'stopping', 'completed', 'failed', 'cancelled']),
+  detail: z.string().optional(),
+  startedAt: z.number().int().refine(Number.isSafeInteger),
+  finishedAt: z.number().int().refine(Number.isSafeInteger).optional(),
+})
+const sessionJobsFrameSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('baseline'), jobs: z.array(sessionJobSchema) }),
+  z.strictObject({ type: z.literal('upsert'), job: sessionJobSchema }),
+  z.strictObject({ type: z.literal('remove'), id: z.string().min(1) }),
+  z.strictObject({ type: z.literal('session-gone'), sessionId: z.string().min(1) }),
+])
 const llmProviderSchema = z.strictObject({ id: z.string().min(1), name: z.string() })
 const nativeAgentPresetListSchema = z.strictObject({
   default: z.string().nullable(),
@@ -1011,6 +1044,27 @@ function scheduleFrame(value: unknown): NativeScheduleFrame {
     case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(scheduleJob) }
     case 'upsert': return { type: 'upsert', job: scheduleJob(frame.job) }
     case 'remove': return frame
+  }
+}
+
+function sessionJob(value: unknown): NativeSessionJob {
+  const job = sessionJobSchema.parse(value)
+  const { detail, finishedAt, ...rest } = job
+  return {
+    ...rest,
+    sessionId: job.sessionId as SessionId,
+    ...(detail === undefined ? {} : { detail }),
+    ...(finishedAt === undefined ? {} : { finishedAt }),
+  }
+}
+
+function sessionJobsFrame(value: unknown): NativeSessionJobsFrame {
+  const frame = sessionJobsFrameSchema.parse(value)
+  switch (frame.type) {
+    case 'baseline': return { type: 'baseline', jobs: frame.jobs.map(sessionJob) }
+    case 'upsert': return { type: 'upsert', job: sessionJob(frame.job) }
+    case 'remove': return frame
+    case 'session-gone': return { type: 'session-gone', sessionId: frame.sessionId as SessionId }
   }
 }
 
@@ -1809,6 +1863,36 @@ function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSess
   }
 }
 
+function createNativeSessionJobsClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
+  lifetime: AbortSignal): NativeSessionJobsClient {
+  return {
+    async list(signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'session/jobs/list', {}, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      if (!Array.isArray(result.value)) throw new TypeError('invalid native session jobs list')
+      return result.value.map(sessionJob)
+    },
+    async *follow(signal) {
+      const accepted = AbortSignal.any([lifetime, signal])
+      const responseOperation = rpc.response
+      if (responseOperation === undefined) throw new Error('native session jobs Client: selected carrier has no Fetch response operation')
+      try {
+        const response = await responseOperation('/api', 'session/jobs/follow', {}, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native session jobs follow: invalid response HTTP ${response.status}`)
+        }
+        const events = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        for await (const { data } of events) yield sessionJobsFrame(JSON.parse(data))
+        if (!accepted.aborted) throw new Error('native session jobs follow: stream ended')
+      } catch (error: unknown) {
+        if (!accepted.aborted) throw error
+      }
+    },
+  }
+}
+
 function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
   lifetime: AbortSignal): NativeWorkspaceFilesClient {
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal): Promise<T> {
@@ -1848,7 +1932,7 @@ function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: Nati
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
   requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker',
-    'clientNativeWorkspaceFiles'],
+    'clientNativeWorkspaceFiles', 'clientNativeSessionJobs'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
@@ -1856,12 +1940,14 @@ export const plugin: NativePlugin = {
       const rpc = context.require('clientConnection').rpc
       const client = createNativeSessionClient(rpc, config, context.signal)
       const schedules = createNativeScheduleClient(rpc, config, context.signal)
+      const sessionJobs = createNativeSessionJobsClient(rpc, config, context.signal)
       const workspaceFiles = createNativeWorkspaceFilesClient(rpc, config, context.signal)
       const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
       context.own(() => clients.workspace.close())
       context.provide('clientNativeSession', client)
       context.provide('clientNativeSchedule', schedules)
+      context.provide('clientNativeSessionJobs', sessionJobs)
       context.provide('clientNativeWorkspaceFiles', workspaceFiles)
       context.provide('clientNativeWorkspace', clients.workspace)
       context.provide('clientNativeDirectoryPicker', clients.directoryPicker)

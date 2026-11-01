@@ -12,6 +12,7 @@ import {
   ipcMain,
   Menu,
   protocol,
+  screen,
   shell,
   type IpcMainInvokeEvent,
 } from 'electron'
@@ -39,6 +40,7 @@ import { startupFailureDocument } from './startup-document.ts'
 import { DesktopPetWindow } from './pet-window.ts'
 import { parsePetPresentation } from './pet-presentation.ts'
 import { showTaskNotification } from './task-notification.ts'
+import { windowGeometry, type DesktopWindowGeometry } from './window-geometry.ts'
 
 const SCHEME = 'dsh-app'
 const DESKTOP_LOG_FILE = 'desktop.log'
@@ -119,13 +121,73 @@ function developmentHostInspectPort(enabled: boolean): number | undefined {
   return port
 }
 
-function createWindow(preload: string, show = false): BrowserWindow {
+/**
+ * Resolve the opening geometry, tolerating a call before the app is ready.
+ *
+ * `screen` throws outside the ready phase, and the fatal-startup path creates
+ * an emergency window to report that very failure; falling back to the
+ * designed size keeps that path from throwing a second error on top of it.
+ * @param preferred - designed logical size of the window being opened.
+ * @param minimum - smallest logical size that window supports.
+ * @returns geometry fitted to the primary display, or the design when no display can be read.
+ */
+function openingGeometry(
+  preferred: { readonly width: number; readonly height: number },
+  minimum: { readonly width: number; readonly height: number },
+): DesktopWindowGeometry {
+  try {
+    return windowGeometry(screen.getPrimaryDisplay(), preferred, minimum)
+  } catch {
+    return { ...preferred, x: 0, y: 0 }
+  }
+}
+
+/** Designed logical size of the main shell window, before fitting to a display. */
+const MAIN_WINDOW_SIZE = { width: 1280, height: 840 } as const
+/** Smallest logical size the main shell window lays out correctly at. */
+const MAIN_WINDOW_MINIMUM = { width: 880, height: 600 } as const
+
+/**
+ * Create one shell window, fitted to the primary display.
+ * @param preload - absolute preload script path for the window's role.
+ * @param show - whether to reveal the window before its first paint.
+ * @param preferred - designed logical size, defaulting to the main window's.
+ * @param minimum - smallest supported logical size, defaulting to the main window's.
+ * @returns the created window, before any navigation.
+ */
+function createWindow(
+  preload: string,
+  show = false,
+  preferred: { readonly width: number; readonly height: number } = MAIN_WINDOW_SIZE,
+  minimum: { readonly width: number; readonly height: number } = MAIN_WINDOW_MINIMUM,
+): BrowserWindow {
+  return createFramedWindow(preload, show, openingGeometry(preferred, minimum), minimum)
+}
+
+/**
+ * Create one shell window at the resolved geometry.
+ * @param preload - absolute preload script path for the window's role.
+ * @param show - whether to reveal the window before its first paint.
+ * @param geometry - logical-pixel size and position, already fitted to a display.
+ * @param minimum - smallest logical size that window supports.
+ * @returns the created window, before any navigation.
+ */
+function createFramedWindow(
+  preload: string,
+  show: boolean,
+  geometry: DesktopWindowGeometry,
+  minimum: { readonly width: number; readonly height: number },
+): BrowserWindow {
   const window = new BrowserWindow({
     icon: join(app.getAppPath(), 'renderer', 'redspark.png'),
-    width: 1280,
-    height: 840,
-    minWidth: 880,
-    minHeight: 600,
+    width: geometry.width,
+    height: geometry.height,
+    x: geometry.x,
+    y: geometry.y,
+    // The fitted size may be smaller than the design minimum on a small screen;
+    // a minimum above the requested size would reopen the overflow it prevents.
+    minWidth: Math.min(minimum.width, geometry.width),
+    minHeight: Math.min(minimum.height, geometry.height),
     show,
     ...(process.platform === 'win32' ? {
       titleBarStyle: 'hidden' as const,
@@ -674,8 +736,9 @@ async function main(): Promise<void> {
       pluginWindow.focus()
       return
     }
-    pluginWindow = createWindow(managementPreload)
-    pluginWindow.setSize(900, 620)
+    // The plugin manager asks for its own smaller window; passing the size here
+    // rather than resizing afterwards keeps the two windows on one code path.
+    pluginWindow = createWindow(managementPreload, false, { width: 900, height: 620 }, { width: 640, height: 480 })
     pluginWindow.setTitle(messages.pluginWindowTitle)
     pluginWindow.once('ready-to-show', () => { pluginWindow?.show() })
     pluginWindow.once('closed', () => { pluginWindow = undefined })

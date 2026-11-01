@@ -12,16 +12,25 @@
       "path": "../../../../Core/vendor/cordis"
     },
     {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../api/session-controller/tsconfig.client.json"
     },
     {
       "path": "../../host/open-in-app"
     },
     {
+      "path": "../connection/tsconfig.client.json"
+    },
+    {
       "path": "../locale"
     },
     {
       "path": "../store"
+    },
+    {
+      "path": "../native-session"
     },
     {
       "path": "../ui-conversation"
