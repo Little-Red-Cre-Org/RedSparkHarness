@@ -374,6 +374,7 @@ export function shippedNativeProfileComposition(
         config: { path: join(options.profileDirectory ?? join(home, 'profiles', name), 'task-scheduler.sqlite') },
       }] : []),
       ...(profile === 'native-web' ? [{ id: 'schedule-controller', plugin: '@deepseek-ai/dsh-native-schedule-controller', scope: ROOT }] : []),
+      ...(profile === 'native-web' ? [{ id: 'jobs-controller', plugin: '@deepseek-ai/dsh-native-jobs-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'workspace', plugin: '@deepseek-ai/dsh-workspace', scope: ROOT }] : []),
       { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },

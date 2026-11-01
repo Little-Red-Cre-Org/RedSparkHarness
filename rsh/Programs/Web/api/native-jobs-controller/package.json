@@ -1,0 +1,42 @@
+{
+  "name": "@deepseek-ai/dsh-native-jobs-controller",
+  "description": "Native Web background-job Host endpoints",
+  "version": "1.0.0",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
+    "directory": "rsh/Programs/Web/api/native-jobs-controller"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./native": { "types": "./lib/types/native.d.ts", "default": "./lib/native.js" },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["hostConnection", "agents", "jobs"],
+      "optional": [],
+      "provides": []
+    }
+  },
+  "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-native-agent": "workspace:^",
+    "@deepseek-ai/dsh-native-jobs": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-client-native-session": "workspace:^"
+  },
+  "scripts": { "bundle": "tsdown" }
+}

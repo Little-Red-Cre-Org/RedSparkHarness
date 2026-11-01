@@ -26,6 +26,10 @@
       "types": "./lib/types/list-types.d.ts",
       "default": "./lib/list-types.js"
     },
+    "./jobs-types": {
+      "types": "./lib/types/jobs-types.d.ts",
+      "default": "./lib/jobs-types.js"
+    },
     "./package.json": "./package.json",
     "./follow-types": {
       "types": "./lib/types/follow-types.d.ts",
@@ -62,6 +66,7 @@
       "provides": [
         "clientNativeSession",
         "clientNativeSchedule",
+        "clientNativeSessionJobs",
         "clientNativeWorkspace",
         "clientNativeDirectoryPicker",
         "clientNativeWorkspaceFiles"
@@ -77,6 +82,7 @@
     "lib/human.js",
     "lib/workspaces.js",
     "lib/schedule-types.js",
+    "lib/jobs-types.js",
     "lib/native-*.js",
     "lib/shared-*.js",
     "lib/workspaces-*.js",
