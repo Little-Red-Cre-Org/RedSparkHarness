@@ -10,7 +10,7 @@ describe('preset display copy', () => {
     ['standard', 'presetStandardName', 'presetStandardDescription'],
     ['ptc', 'presetPtcName', 'presetPtcDescription'],
     ['minimal', 'presetMinimalName', 'presetMinimalDescription'],
-    ['cordis', 'presetCordisName', 'presetCordisDescription'],
+    ['creation', 'presetCordisName', 'presetCordisDescription'],
   ] as const)('localizes the shipped %s preset in English and Chinese', (id, nameKey, descriptionKey) => {
     const preset = { id, trust: 'system' as const, name: 'file name', description: 'file description' }
 

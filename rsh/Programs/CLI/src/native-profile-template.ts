@@ -115,11 +115,11 @@ const NATIVE_AGENT_PRESET_INSTALLATIONS = [
     config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
   { id: 'preset-ptc', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'ptc',
     config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
-  { id: 'preset-cordis', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'cordis',
-    config: { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
+  { id: 'preset-creation', plugin: '@deepseek-ai/dsh-agent-preset-standing', scope: 'creation',
+    config: { id: 'creation', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
   { id: 'persona-standard', plugin: '@deepseek-ai/dsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
   { id: 'persona-ptc', plugin: '@deepseek-ai/dsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
-  { id: 'persona-cordis', plugin: '@deepseek-ai/dsh-native-persona', scope: 'cordis', config: CREATION_PERSONA },
+  { id: 'persona-creation', plugin: '@deepseek-ai/dsh-native-persona', scope: 'creation', config: CREATION_PERSONA },
   { id: 'code-tool-ptc', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'ptc',
     config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] } },
 ] as const
@@ -259,7 +259,7 @@ export function shippedNativeProfileComposition(
   return {
     formatVersion: 1,
     scopes: profile === 'native-web' || profile === 'native-tui'
-      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }, { id: 'ptc', parent: ROOT }, { id: 'cordis', parent: ROOT }]
+      ? [{ id: ROOT }, { id: 'standard', parent: ROOT }, { id: 'minimal', parent: ROOT }, { id: 'ptc', parent: ROOT }, { id: 'creation', parent: ROOT }]
       : [{ id: ROOT }],
     installations: [
       {

@@ -56,7 +56,7 @@ export function createElectronBuilderConfig(
   return {
     appId,
     productName: 'RedSpark Harness',
-    artifactName: 'deepseek-harness-${version}-${os}-${arch}.${ext}',
+    artifactName: 'redspark-harness-${version}-${os}-${arch}.${ext}',
     directories: { output: unsigned ? join(buildPaths.root, 'unsigned-artifacts') : buildPaths.artifacts },
     asar: true,
     files: [

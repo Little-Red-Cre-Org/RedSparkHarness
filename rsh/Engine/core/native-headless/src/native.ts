@@ -44,6 +44,7 @@ import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExtern
   NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
   NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@deepseek-ai/dsh-native-tools'
 import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
+import { interpolatePromptText } from '@deepseek-ai/dsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
 import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
 import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
@@ -229,6 +230,51 @@ function allowedToolNames(value: unknown): string[] | undefined {
   const names = value.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
   if (names.length !== value.length || new Set(names).size !== names.length) throw new Error(message)
   return names
+}
+
+/** The three profile values a persona template may reference. */
+interface PromptVariableSource {
+  readonly model: string
+  readonly provider: string
+  readonly cwd: string
+}
+
+/**
+ * Strict prompt variables for one Session's profile configuration.
+ *
+ * A stored system prompt from before variable interpolation existed keeps its literal
+ * `{{model}}` references, so restoring it renders those references with these same values
+ * before the drift check.
+ * @param config - Session configuration supplying model, provider, and cwd.
+ * @returns the variable map handed to prompt rendering and history comparison.
+ */
+function promptVariables(config: PromptVariableSource): Readonly<Record<string, string>> {
+  return { model: config.model, provider: config.provider, cwd: config.cwd }
+}
+
+/**
+ * Compare a stored system prompt with the one this configuration produces now.
+ *
+ * The stored text is interpolated first: a Session written before interpolation renders the
+ * placeholders literally, and comparing raw text would reject every such Session. A stored text
+ * that does not reference a variable is unaffected.
+ * @param stored - the system message text read back from the Session.
+ * @param current - the system prompt assembled for this execution.
+ * @param variables - values to interpolate into the stored text.
+ * @returns whether both texts agree once the stored one is rendered.
+ */
+function sameRenderedPrompt(
+  stored: string,
+  current: string,
+  variables: Readonly<Record<string, string>>,
+): boolean {
+  if (stored === current) return true
+  if (!stored.includes('{{')) return false
+  try {
+    return interpolatePromptText('stored system prompt', stored, variables) === current
+  } catch {
+    return false
+  }
 }
 
 /** Validate native Program turn settings.
@@ -743,7 +789,10 @@ export class NativeHeadlessApplication implements NativeApplication {
       else signal.addEventListener('abort', onRootAbort, { once: true })
     }
     try {
-      const promptContext = config.allowedTools === undefined ? undefined : { allowedTools: config.allowedTools }
+      const promptContext = {
+        ...config.allowedTools === undefined ? {} : { allowedTools: config.allowedTools },
+        variables: promptVariables(config),
+      }
       const additions = await this.promptSections?.render(agent.scope, promptContext) ?? ''
       const systemPrompt = additions === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${additions}`
       const root = await this.fs.resolve(config.cwd, { signal })
@@ -761,7 +810,8 @@ export class NativeHeadlessApplication implements NativeApplication {
       (event) => { constructorEvents.push(event) }) : undefined
       if (fresh !== undefined && forkSeed !== undefined) {
         const priorSystem = fresh.deriveMessages().findLast(message => message.role === 'system')
-        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== systemPrompt)) {
+        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
+          || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
           throw new Error('native-headless: fork source systemPrompt differs from profile configuration')
         }
       }
@@ -860,7 +910,8 @@ export class NativeHeadlessApplication implements NativeApplication {
         }
         if (request.resume) {
           const priorSystem = session.deriveMessages().findLast(message => message.role === 'system')
-          if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text' || priorSystem.content[0].text !== systemPrompt)) {
+          if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
+            || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
             throw new Error('native-headless: resumed Session systemPrompt differs from profile configuration')
           }
         }
@@ -1119,6 +1170,7 @@ export class NativeHeadlessApplication implements NativeApplication {
             const programSchemas = externalProgramSchemas
             const promptSections = await this.promptSections?.render(agent.scope, {
               allowedTools: delegation.toolNames, programSchemas,
+              variables: { ...promptVariables(config), cwd: delegation.cwd },
             }) ?? ''
             captureSignal.throwIfAborted()
             const promptText = promptSections === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${promptSections}`

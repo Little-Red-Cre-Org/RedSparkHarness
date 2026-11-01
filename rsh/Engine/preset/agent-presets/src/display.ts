@@ -43,7 +43,7 @@ const BUILT_IN_PRESET_KEYS: Readonly<Partial<Record<string, PresetLocaleKeys>>> 
   standard: { name: 'presetStandardName', description: 'presetStandardDescription' },
   ptc: { name: 'presetPtcName', description: 'presetPtcDescription' },
   minimal: { name: 'presetMinimalName', description: 'presetMinimalDescription' },
-  cordis: { name: 'presetCordisName', description: 'presetCordisDescription' },
+  creation: { name: 'presetCordisName', description: 'presetCordisDescription' },
 }
 
 /**

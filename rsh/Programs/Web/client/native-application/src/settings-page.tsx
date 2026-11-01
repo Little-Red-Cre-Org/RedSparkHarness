@@ -1,20 +1,15 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
-import type { NativeAccountSummary } from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeAuthorizationEntry } from '@deepseek-ai/dsh-client-native-session/native'
 import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
-import type { AuthorizationFrame, AuthorizationSettlement } from '@deepseek-ai/dsh-authorization/types'
 import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
-  ModelsSettingsStyles, RiskConfirmation, Switch,
+  RiskConfirmation, Switch,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
 import type { ConversationLocaleKey } from './locales.ts'
-import { AccountCard } from './account-card.tsx'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
@@ -27,13 +22,10 @@ import css from './general-settings.module.css'
 type Translate = (key: ConversationLocaleKey) => string
 type JsonObject = Record<string, unknown>
 const FULL_ACCESS_PRESET = 'danger-full-access'
-const styles = ModelsSettingsStyles
 type SettingsPathOp = { op: 'set'; path: string[]; value: unknown } | { op: 'unset'; path: string[] }
-/** Settings, credential, authorization and account operations selected from the Native Session client. */
+/** Settings, credential and model operations selected from the Native Session client. */
 export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'settingsOpenDocument' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
-  | 'authorizationList' | 'authorizationBegin' | 'authorizationFrames' | 'authorizationAnswer' | 'authorizationDecline' | 'authorizationCancel'
-  | 'accountsList' | 'accountsUsage' | 'accountsBalance' | 'accountsSignOut'
   | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'modelCatalog'
   | 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
   | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'pluginInventoryList'>
@@ -131,194 +123,6 @@ export function nativeSettingsDiff(
   return operations
 }
 
-function AuthorizationRow({ entry, actions, t, onSettled, onRefresh, refreshClick, children }: {
-  entry: NativeAuthorizationEntry
-  actions: NativeSettingsActions
-  t: Translate
-  onSettled: () => Promise<boolean>
-  onRefresh: () => void
-  refreshClick: number
-  children?: ReactNode
-}) {
-  const [attemptId, setAttemptId] = useState(entry.attemptId)
-  const [frames, setFrames] = useState<AuthorizationFrame[]>([])
-  const [method, setMethod] = useState(entry.methods[0]?.id)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [error, setError] = useState<string>()
-  const [lost, setLost] = useState(false)
-  const [stopped, setStopped] = useState<string>()
-  const retried = useRef<string>()
-  // Parent callbacks may change identity on every render; only a new attempt resubscribes.
-  const settledRef = useRef(onSettled)
-  settledRef.current = onSettled
-  const attemptRef = useRef(attemptId)
-  attemptRef.current = attemptId
-  const listedAttempt = useRef(entry.attemptId)
-
-  // Undefined means not subscribed; refresh may resubscribe once per attempt.
-  // Clearing `stopped` must not replace a Sign in attempt the list does not list yet.
-  useEffect(() => {
-    const listed = entry.attemptId
-    const listedChanged = listed !== listedAttempt.current
-    listedAttempt.current = listed
-    if (listed === undefined || listed === stopped) return
-    if (!listedChanged && attemptRef.current !== undefined && attemptRef.current !== listed) return
-    setAttemptId(listed)
-  }, [entry, stopped])
-
-  // Only the Settings button increments this; a settled refresh must not clear the cap.
-  useEffect(() => {
-    setStopped(undefined)
-  }, [refreshClick])
-
-  useEffect(() => {
-    if (attemptId === undefined) return
-    const controller = new AbortController()
-    let settlement: AuthorizationSettlement | undefined
-    // The attempt may settle before this subscription; the refreshed record then decides what to show.
-    const lose = async (): Promise<void> => {
-      setAttemptId(undefined)
-      setAnswers({})
-      if (retried.current === attemptId) {
-        setLost(false)
-        setStopped(attemptId)
-        return
-      }
-      retried.current = attemptId
-      await settledRef.current()
-      setLost(true)
-    }
-    setFrames([])
-    setAnswers({})
-    setStopped(undefined)
-    void (async () => {
-      try {
-        for await (const frame of actions.authorizationFrames(entry.key, attemptId, controller.signal)) {
-          setLost(false)
-          setFrames(current => [...current, frame])
-          if (frame.type === 'prompt-closed') {
-            setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== frame.promptId)))
-          }
-          if (frame.type === 'settled') {
-            settlement = frame.settlement
-            void settledRef.current()
-          }
-        }
-        if (settlement !== undefined) setAttemptId(undefined)
-        else if (!controller.signal.aborted) await lose()
-      } catch {
-        if (!controller.signal.aborted) await lose()
-      }
-    })()
-    return () => { controller.abort() }
-  }, [actions, attemptId, entry.key])
-
-  const answer = async (id: string, promptId: string, value: string): Promise<void> => {
-    setError(undefined)
-    try {
-      await actions.authorizationAnswer(entry.key, id, promptId, value)
-      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
-    }
-    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
-  }
-  const decline = async (id: string, promptId: string): Promise<void> => {
-    setError(undefined)
-    try {
-      await actions.authorizationDecline(entry.key, id, promptId)
-      setAnswers(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== promptId)))
-    }
-    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
-  }
-  const cancel = async (id: string): Promise<void> => {
-    setError(undefined)
-    try {
-      await actions.authorizationCancel(entry.key, id)
-      if (attemptRef.current === id) setAnswers({})
-    }
-    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
-  }
-  const begin = async (): Promise<void> => {
-    setError(undefined)
-    setLost(false)
-    setStopped(undefined)
-    try {
-      const attempt = await actions.authorizationBegin(entry.key, method)
-      setAttemptId(attempt.attemptId)
-    } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : String(cause)) }
-  }
-
-  const settled = [...frames].reverse().find(frame => frame.type === 'settled')
-  return <div className={styles['authorizationGroup']} role="group" aria-label={entry.label}>
-    <div className={styles['authorizationRow']}>
-      <span className={styles['authorizationIdentity']}>
-        <span className={styles['rowName']}>{entry.label}</span>
-        <span className={styles['authorizationStatus']}>{entry.configured
-          ? t('authorizationConnected') : t('authorizationNotConnected')}</span>
-      </span>
-      <span className={styles['rowActions']}>
-        {attemptId === undefined ? <>
-          {entry.methods.length > 1 ? <label className={styles['field']}>
-            <span className={styles['fieldLabel']}>{t('signInMethod')}</span>
-            <select className={`${styles['input']} ${styles['selectInput']}`} aria-label={t('signInMethod')} value={method}
-              onChange={(event) => { setMethod(event.target.value) }}>
-              {entry.methods.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
-            </select>
-          </label> : null}
-          <button type="button" className={styles['secondaryButton']} onClick={() => { void begin() }}>
-            {entry.configured ? t('authorizationReconnect') : t('authorizationLoginAdd')}
-          </button>
-        </> : <button type="button" className={styles['secondaryButton']}
-          onClick={() => { void cancel(attemptId) }}>{t('cancelSignIn')}</button>}
-      </span>
-    </div>
-    {attemptId === undefined ? null : <>
-      {frames.map((frame, index) => {
-        if (frame.type !== 'prompt' || frames.slice(index + 1).some(later => later.type === 'prompt-closed' && later.promptId === frame.promptId)) return null
-        const value = answers[frame.promptId] ?? (frame.prompt.kind === 'select' ? frame.prompt.options[0]?.id ?? '' : '')
-        return <form key={frame.promptId} className={styles['authorizationPrompt']} onSubmit={(event) => {
-          event.preventDefault()
-          void answer(attemptId, frame.promptId, value)
-        }}>
-          <label className={styles['field']}>
-            <span className={styles['fieldLabel']}>{frame.prompt.message}</span>
-            {frame.prompt.kind === 'select'
-              ? <select className={`${styles['input']} ${styles['selectInput']}`} aria-label={frame.prompt.message} value={value} onChange={(event) => {
-                setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
-              }}>
-                {frame.prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
-              : <input className={styles['input']} type={frame.prompt.kind === 'secret' ? 'password' : 'text'} autoComplete={frame.prompt.kind === 'secret' ? 'off' : undefined}
-                placeholder={frame.prompt.placeholder} aria-label={frame.prompt.message} value={value} onChange={(event) => {
-                  setAnswers(current => ({ ...current, [frame.promptId]: event.target.value }))
-                }} />}
-          </label>
-          <span className={styles['editorActions']}>
-            <button type="button" className={styles['secondaryButton']} onClick={() => { void decline(attemptId, frame.promptId) }}>{t('decline')}</button>
-            <button type="submit" className={styles['primaryButton']} disabled={value.length === 0}>{t('authorizationAnswer')}</button>
-          </span>
-        </form>
-      })}
-    </>}
-    {attemptId === undefined || settled !== undefined ? null : frames.map((frame, index) => frame.type === 'notice' ? <div key={index} className={styles['authorizationMessage']} role="status">
-      <span>{frame.notice.message}</span>
-      {frame.notice.url === undefined ? null : <a href={frame.notice.url} target="_blank" rel="noreferrer">{frame.notice.url}</a>}
-      {frame.notice.code === undefined ? null : <code className={styles['authorizationCode']}>{frame.notice.code}</code>}
-    </div> : null)}
-    {settled?.type !== 'settled' || settled.settlement === 'authorized' ? null : <p className={settled.settlement === 'failed' ? styles['error'] : undefined} role="status">{t(settled.settlement === 'cancelled'
-      ? 'authorizationCancelled' : 'authorizationFailed')}
-    {settled.settlement === 'failed' && settled.message !== undefined ? <> {settled.message}</> : null}
-    {settled.settlement === 'failed' && settled.code !== undefined ? <> <code>{settled.code}</code></> : null}
-    </p>}
-    {lost && attemptId === undefined && !entry.configured ? <p className={styles['error']} role="alert">{t('signInIncomplete')}</p> : null}
-    {stopped !== undefined && stopped === entry.attemptId ? <>
-      <p className={styles['error']} role="alert">{t('authorizationDisconnected')}</p>
-      <button type="button" className={styles['secondaryButton']} onClick={onRefresh}>{t('refreshSettings')}</button>
-    </> : null}
-    {error === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {error}</p>}
-    {children}
-  </div>
-}
-
 function userSection(value: unknown): JsonObject {
   if (!isObject(value)) throw new TypeError('Settings user layer must be an object')
   return value
@@ -355,7 +159,7 @@ function permissionLabel(value: string, t: Translate): string {
  * @returns the content for the selected Settings navigation entry.
  */
 export function SettingsPage({ actions, t, section, useLocale, useTheme, setLocale, setThemePreference, setFontSize,
-  onAuthorized, onDocumentAvailabilityChange }: {
+  onDocumentAvailabilityChange }: {
   actions: NativeSettingsActions
   t: Translate
   section: string
@@ -364,7 +168,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   setLocale: NativeLocaleService['setLocale']
   setThemePreference: NativeThemeService['setPreference']
   setFontSize: NativeThemeService['setFontSize']
-  onAuthorized?: () => void
   onDocumentAvailabilityChange?: (available: boolean) => void
 }) {
   const [pendingDefault, setPendingDefault] = useState(readPendingDefault)
@@ -375,8 +178,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [namespaces, setNamespaces] = useState<readonly NativeSettingsDescriptor[]>([])
   const [limits, setLimits] = useState<{ maxCredentialRefsPerRead: number; maxSettingsOperations: number }>()
   const [credentials, setCredentials] = useState<Readonly<Record<string, { configured: boolean; source?: string; writable: boolean }>>>({})
-  const [authorizationEntries, setAuthorizationEntries] = useState<readonly NativeAuthorizationEntry[]>([])
-  const [accounts, setAccounts] = useState<readonly NativeAccountSummary[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -384,33 +185,14 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [error, setError] = useState<string>()
   const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
-  const [authorizationError, setAuthorizationError] = useState<string>()
-  const [accountsError, setAccountsError] = useState<string>()
   const [notice, setNotice] = useState<string>()
-  const [refreshClick, setRefreshClick] = useState(0)
-  const [modelsReload, setModelsReload] = useState(0)
-  const [accountRefreshClick, setAccountRefreshClick] = useState(0)
+  const [modelsReload] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
-  const accountRefreshes = useRef(0)
   const resetDrafts = useRef(false)
   const translate = useRef(t)
   translate.current = t
-
-  const refreshAccounts = useCallback(async (signal?: AbortSignal): Promise<void> => {
-    const request = ++accountRefreshes.current
-    const latest = () => request === accountRefreshes.current
-    setAccountsError(undefined)
-    try {
-      const summaries = await actions.accountsList(signal)
-      if (latest() && !signal?.aborted) setAccounts(summaries)
-    } catch (cause: unknown) {
-      if (latest() && !signal?.aborted) setAccountsError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      if (latest() && !signal?.aborted) setAccountRefreshClick(count => count + 1)
-    }
-  }, [actions])
 
   const refresh = useCallback(async (keepDrafts: boolean, signal?: AbortSignal): Promise<boolean> => {
     const request = ++refreshes.current
@@ -419,16 +201,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     setLoading(true)
     setError(undefined)
     setCredentialError(undefined)
-    setAuthorizationError(undefined)
-    try {
-      const entries = await actions.authorizationList(signal)
-      if (latest()) setAuthorizationEntries(entries)
-    } catch (cause: unknown) {
-      if (latest()) {
-        setAuthorizationError(cause instanceof Error ? cause.message : String(cause))
-      }
-    }
-    await refreshAccounts(signal)
     try {
       const description = await actions.settingsDescribe(signal)
       const rows = description.namespaces
@@ -473,22 +245,7 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
       }
       return false
     } finally { if (latest()) setLoading(false) }
-  }, [actions, onDocumentAvailabilityChange, refreshAccounts, setFontSize, setLocale, setThemePreference])
-
-  // Any terminal outcome (including failed/cancelled/lost) may follow a committed credential: refresh accounts, then models.
-  const authorizationSettled = useCallback(async (): Promise<boolean> => {
-    const refreshed = await refresh(true)
-    setModelsReload(current => current + 1)
-    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
-    return refreshed
-  }, [onAuthorized, refresh])
-
-  const signOutAccount = useCallback(async (key: string): Promise<void> => {
-    await actions.accountsSignOut(key)
-    await refresh(true)
-    setModelsReload(current => current + 1)
-    try { onAuthorized?.() } catch { /* model controls refresh only when the conversation is ready */ }
-  }, [actions, onAuthorized, refresh])
+  }, [actions, onDocumentAvailabilityChange, setFontSize, setLocale, setThemePreference])
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -496,16 +253,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     return () => { lifetime.abort() }
   }, [refresh])
 
-  // Rows lose their local attempt on unmount; re-read the list when Models reappears so an in-flight login resumes.
-  const shownSection = useRef(section)
-  useEffect(() => {
-    if (shownSection.current === section) return
-    shownSection.current = section
-    if (section !== 'models') return
-    const lifetime = new AbortController()
-    actions.authorizationList(lifetime.signal).then((entries) => { setAuthorizationEntries(entries) }, () => {})
-    return () => { lifetime.abort() }
-  }, [actions, section])
 
   const save = async (row: NativeSettingsDescriptor): Promise<void> => {
     setSaving(row.namespace)
@@ -580,35 +327,10 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   }
 
   const refreshButton = <button type="button" disabled={loading}
-    onClick={() => {
-      setRefreshClick(count => count + 1)
-      void authorizationSettled()
-    }}>{t('refreshSettings')}</button>
-  const refreshAuthorization = (): void => {
-    setRefreshClick(count => count + 1)
-    void authorizationSettled()
-  }
-
-  const subscriptionContent = <>
-    {authorizationError === undefined ? null : <p className={styles['error']} role="alert">{t('authorizationError')}: {authorizationError}</p>}
-    {accountsError === undefined ? null : <p className={styles['error']} role="alert">{t('accountListError')}: {accountsError}</p>}
-    {authorizationEntries.map((entry) => {
-      const account = accounts.find(candidate => candidate.key === entry.key)
-      return <AuthorizationRow key={entry.key} entry={entry} actions={actions} t={t}
-        onSettled={authorizationSettled} onRefresh={refreshAuthorization} refreshClick={refreshClick}>
-        {account === undefined ? null : <AccountCard account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-          onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={entry.configured} />}
-      </AuthorizationRow>
-    })}
-    {accounts.filter(account => !authorizationEntries.some(entry => entry.key === account.key)).map(account => <AccountCard
-      key={account.key} account={account} actions={actions} t={t} refreshClick={accountRefreshClick}
-      onRefreshAccounts={() => refreshAccounts()} onSignOut={signOutAccount} signOutAvailable={account.status === 'ready'} />)}
-  </>
+    onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
 
   if (section === 'models') return <div>
-    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload}>
-      {subscriptionContent}
-    </ModelsSettingsPage>
+    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload} />
   </div>
   if (section === 'plugins') return <PluginsSection actions={actions} t={t} />
   if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
@@ -731,49 +453,71 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     {notice === undefined ? null : <p role="status">{notice}</p>}
     {error === undefined ? null : <p role="alert">{t('error')}: {error}</p>}
     <details className={css.advanced}>
-      <summary><span>{t('settingsAdvanced')}</span><span className={css.description}>{t('settingsAdvancedDescription')}</span></summary>
-      {refreshButton}
-      {!loading && error === undefined && namespaces.length === 0 ? <p>{t('noSettings')}</p> : null}
-      {credentialError === undefined ? null : <p role="alert">{t('credentialError')}: {credentialError}</p>}
-      {namespaces.map(row => <section key={row.namespace} aria-label={row.namespace}>
-        <h3>{row.namespace}</h3>
-        <p>{t(row.applies === 'live' ? 'appliesLive' : 'appliesRestart')} · {t('revision')}: {row.revision}</p>
-        <details><summary>{t('settingsSchema')}</summary>
-          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(row.schema, null, 2)}</pre>
-        </details>
-        <label>{t('userOverrides')}
-          <textarea aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
-            value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
-            onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }}
-            style={{ display: 'block', width: '100%', fontFamily: 'monospace' }} />
-        </label>
-        <button type="button" disabled={saving !== undefined || loading}
-          onClick={() => { void save(row) }}>{saving === row.namespace ? t('savingSettings') : t('saveSettings')}</button>
-        {row.credentialRefs.length === 0 ? null : <div>
-          <h4>{t('credentials')}</h4>
-          {row.credentialRefs.map((ref) => {
-            const info = credentials[ref]
-            return <form key={ref} aria-label={`${t('credential')} ${ref}`} onSubmit={(event) => {
-              event.preventDefault()
-              const value = credentialDrafts[ref] ?? ''
-              if (value.length > 0) void writeCredential(ref, value)
-            }}>
-              <p><code>{ref}</code> · {info?.configured === true ? t('configured') : t('notConfigured')}
-                {info?.source === undefined ? null : ` · ${info.source}`}</p>
-              <label>{t('credentialValue')}
-                <input type="password" autoComplete="new-password" aria-label={`${t('credentialValue')} ${ref}`}
-                  value={credentialDrafts[ref] ?? ''} disabled={saving !== undefined || info?.writable === false}
-                  onChange={(event) => { setCredentialDrafts(current => ({ ...current, [ref]: event.target.value })) }} />
-              </label>
-              <button type="submit" disabled={saving !== undefined || info?.writable === false || (credentialDrafts[ref] ?? '').length === 0}>
-                {saving === ref ? t('savingCredential') : t('saveCredential')}
-              </button>
-              {info?.configured === true && info.writable ? <button type="button" disabled={saving !== undefined}
-                onClick={() => { void removeCredential(ref) }}>{t('removeCredential')}</button> : null}
-            </form>
-          })}
-        </div>}
-      </section>)}
+      <summary className={css.advancedSummary}>
+        <span className={css.advancedSummaryText}>
+          <span className={css.advancedTitle}>{t('settingsAdvanced')}</span>
+          <span className={css.description}>{t('settingsAdvancedDescription')}</span>
+        </span>
+      </summary>
+      <div className={css.advancedToolbar}>
+        {refreshButton}
+        {!loading && error === undefined && namespaces.length === 0 ? <p className={css.emptyNote}>{t('noSettings')}</p> : null}
+      </div>
+      {credentialError === undefined ? null : <p className={css.inlineAlert} role="alert">{t('credentialError')}: {credentialError}</p>}
+      <div className={css.namespaceList}>
+        {namespaces.map(row => <section className={css.namespaceCard} key={row.namespace} aria-label={row.namespace}>
+          <header className={css.namespaceHeader}>
+            <h3 className={css.namespaceName}>{row.namespace}</h3>
+            <p className={css.namespaceMeta}>{t(row.applies === 'live' ? 'appliesLive' : 'appliesRestart')} · {t('revision')}: {row.revision}</p>
+          </header>
+          <details className={css.schemaBlock}>
+            <summary className={css.schemaSummary}>{t('settingsSchema')}</summary>
+            <pre className={css.codeBlock}>{JSON.stringify(row.schema, null, 2)}</pre>
+          </details>
+          <label className={css.field}>
+            <span className={css.fieldLabel}>{t('userOverrides')}</span>
+            <textarea className={css.codeEditor} aria-label={`${t('userOverrides')} ${row.namespace}`} rows={14} spellCheck={false}
+              value={drafts[row.namespace] ?? pretty(row.user)} disabled={loading || saving === row.namespace}
+              onChange={(event) => { setDrafts(current => ({ ...current, [row.namespace]: event.target.value })) }} />
+          </label>
+          <div className={css.cardActions}>
+            <button className={css.primaryButton} type="button" disabled={saving !== undefined || loading}
+              onClick={() => { void save(row) }}>{saving === row.namespace ? t('savingSettings') : t('saveSettings')}</button>
+          </div>
+          {row.credentialRefs.length === 0 ? null : <div className={css.credentialGroup}>
+            <h4 className={css.credentialTitle}>{t('credentials')}</h4>
+            {row.credentialRefs.map((ref) => {
+              const info = credentials[ref]
+              return <form className={css.credentialCard} key={ref} aria-label={`${t('credential')} ${ref}`} onSubmit={(event) => {
+                event.preventDefault()
+                const value = credentialDrafts[ref] ?? ''
+                if (value.length > 0) void writeCredential(ref, value)
+              }}>
+                <div className={css.credentialHead}>
+                  <code className={css.credentialName}>{ref}</code>
+                  <span className={info?.configured === true ? css.stateChipOn : css.stateChipOff}>
+                    {info?.configured === true ? t('configured') : t('notConfigured')}
+                  </span>
+                  {info?.source === undefined ? null : <span className={css.stateChipMuted}>{info.source}</span>}
+                </div>
+                <label className={css.field}>
+                  <span className={css.fieldLabel}>{t('credentialValue')}</span>
+                  <input className={css.textInput} type="password" autoComplete="new-password" aria-label={`${t('credentialValue')} ${ref}`}
+                    value={credentialDrafts[ref] ?? ''} disabled={saving !== undefined || info?.writable === false}
+                    onChange={(event) => { setCredentialDrafts(current => ({ ...current, [ref]: event.target.value })) }} />
+                </label>
+                <div className={css.cardActions}>
+                  <button className={css.primaryButton} type="submit" disabled={saving !== undefined || info?.writable === false || (credentialDrafts[ref] ?? '').length === 0}>
+                    {saving === ref ? t('savingCredential') : t('saveCredential')}
+                  </button>
+                  {info?.configured === true && info.writable ? <button className={css.secondaryButton} type="button" disabled={saving !== undefined}
+                    onClick={() => { void removeCredential(ref) }}>{t('removeCredential')}</button> : null}
+                </div>
+              </form>
+            })}
+          </div>}
+        </section>)}
+      </div>
     </details>
     <RiskConfirmation open={confirmingFullAccess} title={t('settingsPermissionConfirmTitle')}
       description={t('settingsPermissionConfirmDescription')} acknowledgeLabel={t('settingsPermissionAcknowledge')}

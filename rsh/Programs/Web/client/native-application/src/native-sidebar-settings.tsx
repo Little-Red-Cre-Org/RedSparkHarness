@@ -24,16 +24,6 @@ export function createNativeSettingsActions(client: NativeSessionClient): Native
     settingsOpenDocument: client.settingsOpenDocument.bind(client),
     credentialsDescribe: client.credentialsDescribe.bind(client), credentialsSet: client.credentialsSet.bind(client),
     credentialsUnset: client.credentialsUnset.bind(client),
-    authorizationList: client.authorizationList.bind(client),
-    authorizationBegin: client.authorizationBegin.bind(client),
-    authorizationFrames: client.authorizationFrames.bind(client),
-    authorizationAnswer: client.authorizationAnswer.bind(client),
-    authorizationDecline: client.authorizationDecline.bind(client),
-    authorizationCancel: client.authorizationCancel.bind(client),
-    accountsList: client.accountsList.bind(client),
-    accountsUsage: client.accountsUsage.bind(client),
-    accountsBalance: client.accountsBalance.bind(client),
-    accountsSignOut: client.accountsSignOut.bind(client),
     modelsListProviders: client.modelsListProviders.bind(client),
     modelsListConfigurableProviders: client.modelsListConfigurableProviders.bind(client),
     modelsDiscover: client.modelsDiscover.bind(client),
@@ -67,7 +57,7 @@ type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
  * @returns the sidebar controls and optional Settings panel.
  */
 export function NativeSidebarSettings({
-  wide, useLocale, useTheme, settingsActions, refreshModelControls, setLocale, toggleTheme,
+  wide, useLocale, useTheme, settingsActions, setLocale, toggleTheme,
   setThemePreference, setFontSize, t,
 }: NativeSidebarSettingsProps) {
   const locale = useLocale(snapshot => snapshot.locale)
@@ -147,8 +137,7 @@ export function NativeSidebarSettings({
       <SettingsPage actions={settingsActions} t={t} section={settingsSection}
         useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
         setThemePreference={setThemePreference} setFontSize={setFontSize}
-        onDocumentAvailabilityChange={setHasSettingsDocument}
-        onAuthorized={() => { void refreshModelControls() }} />
+        onDocumentAvailabilityChange={setHasSettingsDocument} />
     </SettingsPanel> : null}
   </>
 }
