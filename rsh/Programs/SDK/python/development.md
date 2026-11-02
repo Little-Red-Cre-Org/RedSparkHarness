@@ -78,7 +78,7 @@ python rsh/Scripts/build-python-release.py --package sdk --output-dir dist-pytho
 python rsh/Scripts/build-python-release.py --package runtime --platform macos-arm64 --runtime-exe dist-exe/redspark-harness-sdk-runtime-macos-arm64 --output-dir dist-python
 pip install \
   "dist-python/deepseek_harness_sdk-$version-py3-none-any.whl" \
-  "dist-python/deepseek_harness_runtime_bin-$version-py3-none-macosx_14_0_arm64.whl"
+  "dist-python/redspark_harness_runtime_bin-$version-py3-none-macosx_14_0_arm64.whl"
 ```
 
 The runtime distribution is wheel-only. The release pipeline publishes five platform wheels with the pure SDK wheel: Linux x64, Linux arm64, macOS 14 or newer on arm64 and x64, and Windows x64 (`win_amd64`). A `python-v<repository-version>` tag is accepted only when it matches the repository version; prerelease repository versions such as `0.0.1-rc.1` use their normalized PEP 440 spelling, such as `0.0.1rc1`, inside wheel filenames and metadata.

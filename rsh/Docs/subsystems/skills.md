@@ -171,7 +171,7 @@ Skill names are kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`). The source label is p
 
 ```ts type-equiv
 /** Origin bucket for a skill contribution. */
-type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
+type SkillSource = 'project-rsh' | 'project-agents' | 'runtime' | 'user-rsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
 ```
 
 ## Summaries, candidates, and complete definitions

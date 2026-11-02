@@ -141,7 +141,7 @@ runtime-windows-x64:
     - uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python rsh/Scripts/smoke-python-runtime.py --scenario all --exe $exe
     - .ci-python\Scripts\python.exe rsh/Scripts/build-python-release.py --package runtime --tag $env:CI_COMMIT_TAG --platform $env:PLATFORM --runtime-exe $exe --output-dir "release/$env:PLATFORM"
     - python -m venv .wheel-smoke
-    - .wheel-smoke\Scripts\python.exe -m pip install "release/sdk/deepseek_harness_sdk-$env:RSH_WHEEL_VERSION-py3-none-any.whl" "release/win-x64/deepseek_harness_runtime_bin-$env:RSH_WHEEL_VERSION-py3-none-win_amd64.whl"
+    - .wheel-smoke\Scripts\python.exe -m pip install "release/sdk/deepseek_harness_sdk-$env:RSH_WHEEL_VERSION-py3-none-any.whl" "release/win-x64/redspark_harness_runtime_bin-$env:RSH_WHEEL_VERSION-py3-none-win_amd64.whl"
     - Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
     - Remove-Item Env:RSH_RUNTIME_MODE -ErrorAction SilentlyContinue
     - $blackbox = Join-Path $env:TEMP "dsh-sdk-blackbox-$([guid]::NewGuid())"
@@ -179,11 +179,11 @@ publish-python:
   script:
     - test "$(find release -name '*.whl' | wc -l | tr -d ' ')" = 6
     - test -f "release/sdk/deepseek_harness_sdk-${RSH_WHEEL_VERSION}-py3-none-any.whl"
-    - test -f "release/linux-x64/deepseek_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-manylinux_2_28_x86_64.whl"
-    - test -f "release/linux-arm64/deepseek_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-manylinux_2_28_aarch64.whl"
-    - test -f "release/macos-arm64/deepseek_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-macosx_14_0_arm64.whl"
-    - test -f "release/macos-x64/deepseek_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-macosx_14_0_x86_64.whl"
-    - test -f "release/win-x64/deepseek_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-win_amd64.whl"
+    - test -f "release/linux-x64/redspark_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-manylinux_2_28_x86_64.whl"
+    - test -f "release/linux-arm64/redspark_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-manylinux_2_28_aarch64.whl"
+    - test -f "release/macos-arm64/redspark_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-macosx_14_0_arm64.whl"
+    - test -f "release/macos-x64/redspark_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-macosx_14_0_x86_64.whl"
+    - test -f "release/win-x64/redspark_harness_runtime_bin-${RSH_WHEEL_VERSION}-py3-none-win_amd64.whl"
     - python -m twine check release/*/*.whl
     - export TWINE_USERNAME=gitlab-ci-token
     - export TWINE_PASSWORD="$CI_JOB_TOKEN"

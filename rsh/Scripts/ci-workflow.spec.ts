@@ -660,7 +660,7 @@ describe('Python release workflows', () => {
     expect(pythonCompat.strategy).toMatchObject({ matrix: { python: ['3.10', '3.14'] } })
     const pythonCompatSteps = JSON.stringify(pythonCompat.steps)
     expect(pythonCompatSteps).toContain('dist/deepseek_harness_sdk-$VERSION-py3-none-any.whl')
-    expect(pythonCompatSteps).toContain('dist/deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl')
+    expect(pythonCompatSteps).toContain('dist/redspark_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl')
     expect(pythonCompatSteps).not.toContain('--find-links')
     const validateSteps = JSON.stringify(validate.steps)
     const authorize = validate.steps.filter(isRecord).find(step => step.name === 'Authorize publication request')

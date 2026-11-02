@@ -171,7 +171,7 @@ skill 名称为 kebab-case（`^[a-z0-9]+(?:-[a-z0-9]+)*$`）。来源标签是�
 
 ```ts type-equiv
 /** Origin bucket for a skill contribution. */
-type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
+type SkillSource = 'project-rsh' | 'project-agents' | 'runtime' | 'user-rsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
 ```
 
 ## 摘要、候选项与完整定义

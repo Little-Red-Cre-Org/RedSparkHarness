@@ -108,7 +108,7 @@ const START_PATTERN = /__RSH_PERSISTENT_PWSH_START_[^_]+(?:-[^_]+)*__/
 const END_PATTERN = /__RSH_PERSISTENT_PWSH_END_[^:]+:/
 
 class StubTerminalSession implements TerminalBackendSession {
-  readonly motd = '__DSH_PERSISTENT_PWSH_PROMPT__ '
+  readonly motd = '__RSH_PERSISTENT_PWSH_PROMPT__ '
   readonly pid = 123
   statusValue: TerminalSessionStatus = { kind: 'running' }
   scrollback = this.motd

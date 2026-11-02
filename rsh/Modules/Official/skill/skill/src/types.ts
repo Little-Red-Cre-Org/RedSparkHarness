@@ -1,7 +1,7 @@
 /** Cordis-free skill catalog and provider vocabulary. */
 
 /** Origin bucket for a skill contribution. */
-export type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
+export type SkillSource = 'project-rsh' | 'project-agents' | 'runtime' | 'user-rsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
 
 /** Optional provider-specific base used by loaded skill bodies to resolve relative resources. */
 export type SkillResourceBase =
