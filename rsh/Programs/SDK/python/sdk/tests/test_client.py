@@ -1129,7 +1129,7 @@ for line in sys.stdin:
 """.strip()
     )
 
-    module_dir = tmp_path / "deepseek_harness_runtime"
+    module_dir = tmp_path / "redspark_harness_runtime"
     module_dir.mkdir()
     (module_dir / "__init__.py").write_text(
         f"""
@@ -1139,7 +1139,7 @@ def resolve_bundled_launch_args(mode=None):
     )
 
     monkeypatch.syspath_prepend(str(tmp_path))
-    monkeypatch.delitem(sys.modules, "deepseek_harness_runtime", raising=False)
+    monkeypatch.delitem(sys.modules, "redspark_harness_runtime", raising=False)
 
 
 def test_client_default_launch_uses_bundled_dsh_sdk_profile_and_explicit_home(
@@ -1200,7 +1200,7 @@ def test_client_rejects_an_implicit_default_dsh_home(
 
 
 def test_client_reports_missing_bundled_runtime_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delitem(sys.modules, "deepseek_harness_runtime", raising=False)
+    monkeypatch.delitem(sys.modules, "redspark_harness_runtime", raising=False)
     monkeypatch.setattr(sys, "path", [])
 
     with pytest.raises(FileNotFoundError, match="Install redspark-harness-runtime-bin"):

@@ -44,7 +44,7 @@ const OUTPUT_BASENAME = 'redspark-harness-sdk-runtime'
 const DEFAULT_NODE_RANGE = 'node24'
 const OUT_DIR = 'dist-exe'
 /** Python package destination; created when absent. */
-const PYTHON_RUNTIME_DIR = 'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime'
+const PYTHON_RUNTIME_DIR = 'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime'
 /** The deployed closure doubles as the node-mode carrier. */
 const PYTHON_NODE_SUBDIR = 'node'
 /** Legacy deploy may hoist peer-specialized workspace packages back here. */

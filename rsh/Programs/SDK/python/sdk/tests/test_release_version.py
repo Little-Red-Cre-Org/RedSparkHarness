@@ -123,7 +123,7 @@ def test_stage_runtime_copies_platform_payload(
 
     build_python_release.stage_runtime(destination, "1.2.3", executable, executable.name)
 
-    runtime_dir = destination / "src" / "deepseek_harness_runtime" / "runtime"
+    runtime_dir = destination / "src" / "redspark_harness_runtime" / "runtime"
     assert {
         path.name: path.read_bytes()
         for path in runtime_dir.glob("redspark-harness-sdk-runtime-*")
@@ -131,7 +131,7 @@ def test_stage_runtime_copies_platform_payload(
     pyproject = (destination / "pyproject.toml").read_text()
     assert 'license = "MIT"' in pyproject
     assert 'license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]' in pyproject
-    assert 'dsh = "deepseek_harness_runtime:main"' in pyproject
+    assert 'dsh = "redspark_harness_runtime:main"' in pyproject
     assert (destination / "platforms.json").read_bytes() == (
         ROOT / "rsh" / "Programs" / "SDK" / "python" / "sdk-runtime" / "platforms.json"
     ).read_bytes()

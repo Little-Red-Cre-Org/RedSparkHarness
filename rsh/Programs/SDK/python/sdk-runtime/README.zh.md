@@ -6,7 +6,7 @@ RedSpark Harness Python SDK 的平台运行时 wheel 包。它把普通 `dsh` CL
 
 ## 安装命令与产物
 
-wheel 包会安装 `dsh` 控制台命令和 `deepseek_harness_runtime` Python 模块。`dsh` 将参数转发给内置可执行程序，并要求非空 `RSH_HOME`；它不会回退到 `~/.dsh`。
+wheel 包会安装 `dsh` 控制台命令和 `redspark_harness_runtime` Python 模块。`dsh` 将参数转发给内置可执行程序，并要求非空 `RSH_HOME`；它不会回退到 `~/.dsh`。
 
 生产可执行程序位于模块的 `runtime/` 目录，命名为 `redspark-harness-sdk-runtime-<platform>-<arch>`；Windows 使用 `.exe` 后缀。Linux 与 macOS wheel 包含目标平台原生的 `-rg` 伴随程序，Windows 包含 `-rg.exe`，macOS 还包含 `node-pty` 使用的 `-spawn-helper`。已发布目标是 Linux x64、Linux arm64、macOS arm64、macOS x64 与 Windows x64。wheel 包标签必须与载荷严格匹配；不发布 Windows arm64 wheel 包。
 

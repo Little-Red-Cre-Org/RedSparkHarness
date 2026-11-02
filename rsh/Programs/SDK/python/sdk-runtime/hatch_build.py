@@ -73,7 +73,7 @@ class RuntimeBuildHook(BuildHookInterface):
                 f"unsupported RSH_RUNTIME_PLATFORM_TAG {platform_tag!r}; expected one of {supported}"
             )
         expected_executable = matches[0][1]
-        runtime_dir = Path(self.root) / "src" / "deepseek_harness_runtime" / "runtime"
+        runtime_dir = Path(self.root) / "src" / "redspark_harness_runtime" / "runtime"
         runtime_files = sorted(
             runtime_dir.glob("redspark-harness-sdk-runtime-*") if runtime_dir.is_dir() else []
         )

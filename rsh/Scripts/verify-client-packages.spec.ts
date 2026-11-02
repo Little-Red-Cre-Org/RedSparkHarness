@@ -292,10 +292,10 @@ describe('manifest declarations', () => {
         name: '@f/a', dsh: { client: { external: 'react', inject: ['@f/b', 1] } },
       },
       'rsh/g/b/package.json': { name: '@f/b', dsh: { client: {} } },
-      'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/package.json': {
+      'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/package.json': {
         name: '@f/deployed', dsh: { client: { external: 'not-source' } },
       },
-      'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/node_modules/@f/b/package.json': {
+      'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/node_modules/@f/b/package.json': {
         name: '@f/b', dsh: { client: {} },
       },
     }

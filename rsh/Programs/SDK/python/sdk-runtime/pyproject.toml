@@ -18,15 +18,15 @@ Issues = "https://github.com/deepseek-ai/redspark-harness/issues"
 Source = "https://github.com/deepseek-ai/redspark-harness"
 
 [project.scripts]
-dsh = "deepseek_harness_runtime:main"
+dsh = "redspark_harness_runtime:main"
 
 # Include the injected dsh executable and sidecars; exclude the dev-only node closure.
 [tool.hatch.build]
-artifacts = ["src/deepseek_harness_runtime/runtime/redspark-harness-sdk-runtime-*"]
-exclude = ["src/deepseek_harness_runtime/runtime/node"]
+artifacts = ["src/redspark_harness_runtime/runtime/redspark-harness-sdk-runtime-*"]
+exclude = ["src/redspark_harness_runtime/runtime/node"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/deepseek_harness_runtime"]
+packages = ["src/redspark_harness_runtime"]
 
 [tool.hatch.build.targets.wheel.hooks.custom]
 

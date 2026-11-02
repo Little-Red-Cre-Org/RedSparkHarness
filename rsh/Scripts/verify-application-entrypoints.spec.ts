@@ -28,7 +28,7 @@ describe('application entrypoints', () => {
   it('excludes the deployed Python runtime but still rejects adjacent source launchers', () => {
     const root = fixture()
     const owner = 'rsh/Programs/SDK/python/sdk-runtime'
-    const deployed = `${owner}/src/deepseek_harness_runtime/runtime/node`
+    const deployed = `${owner}/src/redspark_harness_runtime/runtime/node`
     write(root, `${deployed}/package.json`, JSON.stringify({ bin: 'runtime-bootstrap.mjs' }))
     write(root, `${deployed}/runtime-bootstrap.mjs`, '#!/usr/bin/env node\n')
     expect(applicationEntrypointViolations(root)).toEqual([])

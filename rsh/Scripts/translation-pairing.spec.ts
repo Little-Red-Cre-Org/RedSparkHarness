@@ -336,8 +336,8 @@ describe('translation scope discovery', () => {
     'rsh/example/lib/README.md',
     'output/package/README.md',
     'coverage/report/README.md',
-    'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/redspark-harness-sdk-runtime-macos-arm64/README.md',
-    'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/README.md',
+    'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/redspark-harness-sdk-runtime-macos-arm64/README.md',
+    'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/README.md',
   ])('excludes non-source or non-README path %s', (file) => {
     expect(isTranslationScopeFile(file)).toBe(false)
   })

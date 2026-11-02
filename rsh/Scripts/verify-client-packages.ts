@@ -187,7 +187,7 @@ export function readClientDeclarations(root: string): ClientDeclarations {
   const malformed: string[] = []
   const declarations = globSync(MANIFEST_GLOBS, {
     cwd: root,
-    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**'],
+    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**'],
   })
     .map(normalizePath)
     .sort()

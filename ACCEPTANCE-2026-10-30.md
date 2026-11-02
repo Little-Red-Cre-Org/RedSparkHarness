@@ -39,9 +39,9 @@ pnpm run build
 |---|---|---|
 | `C:\Users\<user>\.redspark` | **在用，RSH 真往里写** | 61 文件（含 `profiles/desktop/*`、`storages/session_projcache/*`、`settings.yaml`、`.credentials.yaml`） |
 | `C:\Users\<user>\.redspark\desktop\user-data` | **打包版 Electron 用这里** | 44 文件 / 17 顶层项，`Local Storage`、`Network`、`Preferences`、`Local State` 齐全 |
-| `C:\Users\<user>\.dsh` | DSH 的，未被 RSH 读写 | RSH 继承 `DSH_HOME=~/.dsh` 时被拒绝并回落 |
+| `C:\Users\<user>\.dsh` | DSH 的，未被 RSH 读写 | RSH 继承 `RSH_HOME=~/.dsh` 时被拒绝并回落 |
 | `%APPDATA%\RedSpark Harness` | **旧残留，不是 RSH 在用** | 1 文件（`Local State` 490B，00:40:46）＋ 空 `logs`；**是都水探针副产物** |
-| `%APPDATA%\@deepseek-ai\dsh-desktop` | DSH userData | 628 文件，RSH 未写 |
+| `%APPDATA%\@redspark\dsh-desktop` | DSH userData | 628 文件，RSH 未写 |
 
 > **userData 隔离已修复（02:20 提交 `cf84602962`）**：原判定「打包后 userData 会与 DSH 撞车」成立且已被实证推翻修复。修法取代码层：
 >
@@ -59,7 +59,7 @@ pnpm run build
 
 | 判据 | 实测原文 |
 |---|---|
-| 产物内 manifest 无 `productName` | 从 app.asar 抽出 `package.json`：`"name": "@deepseek-ai/dsh-desktop"`，**无 `productName` 字段** |
+| 产物内 manifest 无 `productName` | 从 app.asar 抽出 `package.json`：`"name": "@redspark/rsh-desktop"`，**无 `productName` 字段** |
 | builder 的 `productName` 不进 asar | `app-builder-lib@26.15.3/out/appInfo.js:54` | `this.productName = info.config.productName \|\| info.metadata.productName \|\| info.metadata.name;` —— 这是 builder 自己的属性 |
 | builder 的 `name` 取自 metadata | `appInfo.js:116` | `return this.info.metadata.name;` —— 与 `productName` 是两个独立 getter |
 | 无 `extraMetadata` 注入 | `git grep extraMetadata` 在 desktop 下零命中；`electron-builder.config.mjs` 全文无此键 |
@@ -75,15 +75,15 @@ electron-updater AppUpdater.js:550    const cacheDir = path.join(this.app.baseCa
 app-builder-lib appInfo.js:126-127    get updaterCacheDirName() { return this.sanitizedName.toLowerCase() + "-updater" }
 ```
 
-`updaterCacheDirName` 确实由 `name`（`@deepseek-ai/dsh-desktop`）推导，与显示名无关。磁盘实测 `%LOCALAPPDATA%\@redsparkrsh-desktop-updater` 存在，含 `installer.exe`（317,151,681 B，10-29 11:34），**是 DSH 自己的更新缓存**。
+`updaterCacheDirName` 确实由 `name`（`@redspark/rsh-desktop`）推导，与显示名无关。磁盘实测 `%LOCALAPPDATA%\@redsparkrsh-desktop-updater` 存在，含 `installer.exe`（317,151,681 B，10-29 11:34），**是 DSH 自己的更新缓存**。
 
 **但这处不影响本次验收**：本次是 unsigned 打包，`electron-builder.config.mjs:53` 为 `const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(...)`，产物 `resources\` 下**没有 `app-update.yml`**（实测 `Test-Path` = False），所以更新器不会启用。**签名发布版才需要处理这处**，单列。
 
-**继承保护**（都水实现）：进程若从 DSH 会话继承 `DSH_HOME=~/.dsh`，会被拒绝并回落到 `.redspark`。四种情形实测：
+**继承保护**（都水实现）：进程若从 DSH 会话继承 `RSH_HOME=~/.dsh`，会被拒绝并回落到 `.redspark`。四种情形实测：
 
 ```
-不设 DSH_HOME              -> C:\Users\zzn19\.redspark
-继承 DSH_HOME=~/.dsh       -> C:\Users\zzn19\.redspark   ← 被拒绝
+不设 RSH_HOME              -> C:\Users\zzn19\.redspark
+继承 RSH_HOME=~/.dsh       -> C:\Users\zzn19\.redspark   ← 被拒绝
 继承带尾斜杠               -> C:\Users\zzn19\.redspark
 显式配置 ~/.redspark       -> C:\Users\zzn19\.redspark
 ```
@@ -92,8 +92,8 @@ app-builder-lib appInfo.js:126-127    get updaterCacheDirName() { return this.sa
 
 | 红线 | 实测 | 结论 |
 |---|---|---|
-| 不改 `@deepseek-ai/*` 包名 | 357 个 package.json 全是 `@deepseek-ai/*` | ✅ 守住 |
-| 不改 `DSH_*` 环境变量 | `DSH_HOME_ENV = 'DSH_HOME'` 原样 | ✅ 守住 |
+| 不改 `@redspark/*` 包名 | 357 个 package.json 全是 `@redspark/*` | ✅ 守住 |
+| 不改 `RSH_*` 环境变量 | `RSH_HOME_ENV = 'RSH_HOME'` 原样 | ✅ 守住 |
 | 代码未被品牌替换改坏 | 构建 exit 0、测试过、RSI import 成功 | ✅ 未见损坏 |
 
 品牌替换实际改动：新增行含 `RedSpark Harness` **309 行**，含 `RedSpark` 668 行。所有 `package.json` 的 `repository` URL 已指向本仓库。
@@ -143,7 +143,7 @@ rsh/Programs/Desktop/.desktop-build/development/project/package.json
   "profile": { "runtime": "native", ... }
 
 rsh.profile.json:201-208
-  { "id": "subagents", "plugin": "@deepseek-ai/dsh-native-subagent",
+  { "id": "subagents", "plugin": "@redspark/rsh-native-subagent",
     "config": { "providerName": "spawn" } }     ← 只有 spawn，没有 acp
 ```
 
@@ -152,7 +152,7 @@ Native 侧的 `dsh-acp-child` **在设计上就没有「启动任意 command 的
 ```
 rsh/Programs/CLI/src/native-acp-child-runtime-launcher.ts:27
   function fixedChildProcess(...) {
-    const manifestPath = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh/package.json'))
+    const manifestPath = fileURLToPath(import.meta.resolve('@redspark/dsh/package.json'))
     ↑ 硬编 dsh 自己，无法注入其他 command
 
 rsh/Modules/Official/subagent/acp-child/src/native.ts:54
@@ -164,7 +164,7 @@ rsh/Modules/Official/subagent/acp-child/src/native.ts:54
 **要打通，二选一**（属架构级改动，本 PR 不做）：
 
 - **A**：桌面端切回 legacy runtime（Compatibility 组装）—— 代价是丢失 Native 的一批能力
-- **B**：在 `@deepseek-ai/*` 之外新写一个 Native driver —— 不破坏包名规矩，但是新包
+- **B**：在 `@redspark/*` 之外新写一个 Native driver —— 不破坏包名规矩，但是新包
 
 ### 2. 真实模型跑一轮 —— 缺可用 key
 
@@ -210,7 +210,7 @@ PID 54624  "…\RedSpark Harness.exe" --type=utility … --user-data-dir="C:\Use
 PID 60000  "…\RedSpark Harness.exe" --type=renderer --user-data-dir="C:\Users\zzn19\.redspark\desktop\user-data" … --app-path="…\win-unpacked\resources\app.asar"
 ```
 
-**这是决定性证据**：三个子进程的 `--user-data-dir` 全部指向 `.redspark`，不是 `@deepseek-ai\dsh-desktop`。
+**这是决定性证据**：三个子进程的 `--user-data-dir` 全部指向 `.redspark`，不是 `@redspark\dsh-desktop`。
 
 **两者此刻并存**：RSH 4 进程与 DSH 13 进程同时存活 —— 单实例锁不互踢，隔离在运行态成立。
 
@@ -271,7 +271,7 @@ D:\RedSparkHarness\rsh\Programs\Desktop\.desktop-build\targets\win-x64\unsigned-
 | `resources\app.asar` | 17,007,742 B，mtime 02:35:05 | 同 | 一致 |
 | `lib\main.js` 内 `setPath` | **line 13889**（530,991 B，解出 528,983 字符） | 13889 | 一字不差 |
 | `~\.redspark\desktop\user-data` | 44 文件 / 17 顶层项 | 44 / 17 | 一致 |
-| `@deepseek-ai\dsh-desktop` | 628 文件，mtime 2026-10-29 22:01:58 **未变** | 628 | 一致 |
+| `@redspark\dsh-desktop` | 628 文件，mtime 2026-10-29 22:01:58 **未变** | 628 | 一致 |
 | 窗口标题（PID 54644） | `RedSpark Harness` | 同 | 一致 |
 | 并存 | RSH 4 进程 + DSH 12 进程 | 同 | 一致 |
 

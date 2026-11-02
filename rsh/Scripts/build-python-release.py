@@ -215,7 +215,7 @@ def stage_runtime(destination: Path, version: str, executable: Path, executable_
     copy_package(ROOT / "rsh" / "Programs" / "SDK" / "python" / "sdk-runtime", destination)
     stage_license_files(destination, include_notices=True)
     rewrite_version(destination / "pyproject.toml", version)
-    runtime_dir = destination / "src" / "deepseek_harness_runtime" / "runtime"
+    runtime_dir = destination / "src" / "redspark_harness_runtime" / "runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)
     source_directory = executable.parent
     for filename in runtime_filenames(executable_name):

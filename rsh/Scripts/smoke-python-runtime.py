@@ -997,7 +997,7 @@ def assert_installed_wheel_environment() -> Path:
 
     prefix = Path(sys.prefix).resolve()
     imported: dict[str, Path] = {}
-    for name in ("deepseek_harness", "deepseek_harness_runtime"):
+    for name in ("deepseek_harness", "redspark_harness_runtime"):
         module = importlib.import_module(name)
         module_file = getattr(module, "__file__", None)
         if not isinstance(module_file, str):
@@ -1009,9 +1009,9 @@ def assert_installed_wheel_environment() -> Path:
             raise AssertionError(f"installed module {name} came from the repository checkout: {path}")
         imported[name] = path
 
-    runtime_module = sys.modules["deepseek_harness_runtime"]
+    runtime_module = sys.modules["redspark_harness_runtime"]
     executable = runtime_module.bundled_runtime_path().resolve()
-    runtime_package = imported["deepseek_harness_runtime"].parent
+    runtime_package = imported["redspark_harness_runtime"].parent
     if not executable.is_relative_to(runtime_package):
         raise AssertionError(f"bundled runtime came from outside the installed runtime wheel: {executable}")
     runtime_files = importlib.metadata.files("redspark-harness-runtime-bin") or []

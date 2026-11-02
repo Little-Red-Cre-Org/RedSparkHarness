@@ -29,7 +29,7 @@ difference is the entire gap:
 | | Compatibility | Native |
 |---|---|---|
 | Registry | `ctx.subagents.registerProvider()` | `externalSubagentDriver` service |
-| Plugin | `@deepseek-ai/dsh-subagent-acp` | `@deepseek-ai/dsh-acp-child` |
+| Plugin | `@redspark/rsh-subagent-acp` | `@redspark/rsh-acp-child` |
 | Child command | config `command` / `args` / `env`, any executable | fixed launcher, dsh CLI only |
 | Start capabilities | `agentOptions/outputSchema/depthLimit/toolFilter/persona` all `false` | one-shot, route from the parent's provider catalog |
 
@@ -44,7 +44,7 @@ driver does not, and cannot be configured to.
 
 ```ts
 function fixedChildProcess(request: NativeAcpChildRuntimeRequest, cwd: string, home: string, overlay: string): FixedChildProcess {
-  const manifestPath = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh/package.json'))
+  const manifestPath = fileURLToPath(import.meta.resolve('@redspark/dsh/package.json'))
   const packageRoot = dirname(manifestPath)
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as CliManifest
   const bin = typeof manifest.bin === 'object' && manifest.bin !== null
@@ -55,7 +55,7 @@ function fixedChildProcess(request: NativeAcpChildRuntimeRequest, cwd: string, h
 
 Read the argument list of the function. It takes `cwd`, `home`, and `overlay`,
 and **not a command**. The executable is derived from
-`@deepseek-ai/dsh`'s own `package.json` `bin`, resolved from this module's import
+`@redspark/dsh`'s own `package.json` `bin`, resolved from this module's import
 graph. There is no field on any layer above it that could substitute a
 different executable, because there is no parameter to carry one.
 
@@ -131,7 +131,7 @@ Rejected. Three reasons, in increasing severity:
 2. `fixedChildProcess` would still need a new parameter, a new validation path,
    and a decision about what `--profile` means for a non-dsh child — because a
    Python process cannot boot a dsh profile. The overlay argument, the
-   `DSH_HOME` write, and the `native-acp-dsh-child` template all become
+   `RSH_HOME` write, and the `native-acp-dsh-child` template all become
    conditional on "is this child a dsh child", which is exactly the branch the
    design avoids today.
 3. Every consumer that reasons about the driver would need the same conditional.
@@ -141,7 +141,7 @@ Rejected. Three reasons, in increasing severity:
 Net: you would be adding a mode switch to a package whose entire value is that
 it has no mode switch.
 
-### Candidate B — a separate Native external driver package, outside `@deepseek-ai/*`
+### Candidate B — a separate Native external driver package, outside `@redspark/*`
 
 Recommended. A new package, e.g. `dsh-native-subagent-acp-external`, that
 implements `NativeExternalSubagentDriver` and spawns a configured command. It
@@ -151,7 +151,7 @@ would:
   `native.ts:566`, so `dsh-native-subagent` selects it by `providerName` with no
   change to the subagent Provider;
 - own a `command` / `args` / `env` / `cwd` config of its own, mirroring what
-  `@deepseek-ai/dsh-subagent-acp` already does — the shape is proven, and its
+  `@redspark/rsh-subagent-acp` already does — the shape is proven, and its
   README documents every field;
 - answer the route question explicitly. Either it declares no route (an opaque
   foreign child, like Compatibility's `acp` provider, whose capabilities are all

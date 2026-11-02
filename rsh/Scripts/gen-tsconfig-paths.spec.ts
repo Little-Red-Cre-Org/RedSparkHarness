@@ -149,7 +149,7 @@ describe('generated tsconfig package aliases', () => {
     const workspaceDir = join(fixtureRoot, 'rsh/Programs/SDK/packages/native-probe')
     const artifactDir = join(
       fixtureRoot,
-      'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/node_modules/@redspark/rsh-agent-instructions',
+      'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/node_modules/@redspark/rsh-agent-instructions',
     )
     try {
       mkdirSync(join(workspaceDir, 'src'), { recursive: true })

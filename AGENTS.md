@@ -14,7 +14,7 @@ Public APIs are pre-stable; update every consumer. [Session version/status](rsh/
 rsh/
   Core/             Infrastructure, utilities, subprocesses, storage, Typert
     vendor/         Pinned Cordis sources and synchronization instructions
-    native/         @deepseek-ai/node-addon-system source of record
+    native/         @redspark/node-addon-system source of record
   Engine/           Agent execution, models, context, Session and workflow packages
   Modules/
     Official/       First-party tools, providers and integrations
@@ -78,7 +78,7 @@ Real-API tests and demos read `DEEPSEEK_API_KEY`, optional `DEEPSEEK_BASE_URL`, 
 
 ## Conventions
 
-- Every npm package is `@deepseek-ai/dsh-<name>`; vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. Cordis-free packages, mixed native/compatibility packages, and compatibility-only packages follow the explicit [native package policy](rsh/Scripts/native-package-policy.ts); `check-workspace-constraints` and `verify-native-dependencies` enforce their peer and source rules.
+- Every npm package is `@redspark/rsh-<name>`; vendored packages are rescoped ([mapping](rsh/Docs/rescope.md)) and `private: true`. Cordis-free packages, mixed native/compatibility packages, and compatibility-only packages follow the explicit [native package policy](rsh/Scripts/native-package-policy.ts); `check-workspace-constraints` and `verify-native-dependencies` enforce their peer and source rules.
 - ESM everywhere (`"type": "module"`). Use package names across packages and `.ts` in local relative imports. Config subprocesses run built `lib/` under plain Node; source regressions use their declared launcher ([testing policy](rsh/Docs/testing.md#test-subprocess-launch-modes)). The `dsh` CLI source launch runs through tsx's ESM-only hook (`node --import tsx/esm`); modules it reaches must stay ESM (no CJS-only exports) — Node's native TypeScript modes are unavailable across the engines range ([source-launch contract](.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.md)). Raw/Web `cordis.yml` bare plugins must appear in their resolver manifest's `dependencies`; `verify-cordis-config` enforces it.
 - **Registrations are effects**: every contribution goes through `ctx.effect()` / `ctx.on()`; a registry's `register()` returns the disposer.
 - **Runtime invariants assert owned relationships.** Publish `./invariant` only when independent observations can diverge. Otherwise omit its source and wiring and record why in its README; empty installers and checks of service presence, plugin metadata, effects, or fixed examples are invalid ([package invariant rules](rsh/AGENTS.md)).

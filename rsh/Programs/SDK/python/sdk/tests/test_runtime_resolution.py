@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-import deepseek_harness_runtime as runtime
+import redspark_harness_runtime as runtime
 import pytest
 
-from deepseek_harness_runtime import (
+from redspark_harness_runtime import (
     RUNTIME_MODE_ENV_VAR,
     bundled_package_dir,
     main,
@@ -203,7 +203,7 @@ def test_windows_console_branch_preserves_real_child_io_and_completion(tmp_path:
         f"raise SystemExit({returncode})\n", encoding="utf-8",
     )
     driver = (
-        "import deepseek_harness_runtime as runtime; from types import SimpleNamespace; "
+        "import redspark_harness_runtime as runtime; from types import SimpleNamespace; "
         f"runtime.sys = SimpleNamespace(platform='win32', argv=['dsh', 'argument with spaces', '中文']); "
         f"runtime.resolve_bundled_launch_args = lambda: ({sys.executable!r}, {str(child)!r}); runtime.main()"
     )

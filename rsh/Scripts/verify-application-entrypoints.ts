@@ -92,7 +92,7 @@ const SOURCE_PATTERNS = [
 ]
 
 const SOURCE_EXCLUDES = [
-  'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**',
+  'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**',
   '**/node_modules/**',
   '**/lib/**',
   '**/dist/**',
@@ -119,7 +119,7 @@ function manifestBinViolations(root: string): string[] {
   const failures: string[] = []
   const manifests = [...new Set(globSync([...WORKSPACE_MANIFEST_GLOBS, 'rsh/**/package.json'], {
     cwd: root,
-    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**'],
+    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**'],
   }))]
     .filter(path => !path.replaceAll('\\', '/').startsWith('rsh/Core/vendor/'))
     .sort()
