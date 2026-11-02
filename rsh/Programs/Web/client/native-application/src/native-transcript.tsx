@@ -6,7 +6,7 @@ import {
   ChatReasoningDisclosure, ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, JsonBlock, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
@@ -115,7 +115,7 @@ function formatTime(time: number, locale: 'en' | 'zh'): string {
   }).format(time)
 }
 
-function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdownLabels, imageGroupClassName }: {
+function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdownLabels, imageGroupClassName, renderSlot }: {
   event: SessionEvent
   stepStartedAt: number | undefined
   locale: 'en' | 'zh'
@@ -124,6 +124,7 @@ function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdo
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
   markdownLabels: MarkdownLabels
   imageGroupClassName: string | undefined
+  renderSlot: PropsRenderSlots<'native.conversation.message.actions'>['renderSlot']
 }) {
   const message = transcriptMessage(event)
   if (message === null) return null
@@ -168,9 +169,25 @@ function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdo
       {formatTime(event.time, locale)}
     </ChatMessageActionMeta>,
   ]
+  // A finalized assistant message may host contributed actions (message
+  // feedback, and whatever else registers). The entry is addressed by the
+  // durable message id, delivered through the owner props exactly as the
+  // browser-side transcript does. An interrupted partial addresses no settled
+  // message, so it contributes no actions — matching the browser transcript.
+  //
+  // The contributions sit beside the standard copy and metadata, never in
+  // place of them: an empty slot (nobody registered, or nothing for this
+  // message) leaves the original row exactly as it was.
+  const messageId = event.type === 'assistant/message' && event.data.interrupted !== true
+    ? event.data.message.id
+    : undefined
+  const contributed = messageId === undefined
+    ? null
+    : renderSlot('native.conversation.message.actions', { messageId })
   const actions = event.type === 'assistant/message' ? <ChatMessageActionRow>
     {text.length === 0 ? null : <ChatMessageCopyAction text={text} copyLabel={t('copy')} copiedLabel={t('copied')} />}
     {stats}
+    {contributed}
   </ChatMessageActionRow> : undefined
   return <ChatAssistantMessage eventSeq={event.seq} actions={actions}>
     {content.map((block, index) => block.type === 'text'
@@ -189,7 +206,7 @@ function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdo
  * @returns grouped Native transcript rows.
  */
 export function NativeTranscript({
-  snapshot, sessionId, locale, loadImage, t, markdownLabels, imageGroupClassName, truncatedClassName, activity,
+  snapshot, sessionId, locale, loadImage, t, markdownLabels, imageGroupClassName, truncatedClassName, activity, renderSlot,
 }: {
   snapshot: ConversationSnapshot
   sessionId: SessionId
@@ -200,6 +217,7 @@ export function NativeTranscript({
   imageGroupClassName: string | undefined
   truncatedClassName: string | undefined
   activity?: string | undefined
+  renderSlot: PropsRenderSlots<'native.conversation.message.actions'>['renderSlot']
 }) {
   const workflows = useMemo(
     () => new Map(workflowRunsFromSessionEvents(snapshot.events).map(run => [run.seq, run.data])),
@@ -221,7 +239,7 @@ export function NativeTranscript({
           ? <Message key={event.seq} event={event}
             stepStartedAt={event.type === 'assistant/message' ? stepStarts.get(`${event.data.turn}:${event.data.step}`) : undefined}
             locale={locale} t={t} sessionId={sessionId} loadImage={loadImage} markdownLabels={markdownLabels}
-            imageGroupClassName={imageGroupClassName} />
+            imageGroupClassName={imageGroupClassName} renderSlot={renderSlot} />
           : <ToolCard key={event.seq} block={card} locale={locale} cwd={snapshot.header?.cwd} />
       })
       return turn === undefined

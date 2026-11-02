@@ -20,6 +20,9 @@ const props = {
   sessionId: 'parent' as SessionId, locale: 'en' as const, loadImage: async () => new Blob(),
   t: makeTranslate(en), markdownLabels: { code: { copyLabel: 'Copy code', copiedLabel: 'Copied' }, footnotes: 'Footnotes' },
   imageGroupClassName: undefined, truncatedClassName: undefined,
+  // No Native slot renders inside this fixture; the transcript still owns the
+  // standard row, which is what this suite asserts.
+  renderSlot: () => null,
 }
 
 it('inserts exactly one run at its start sequence and keeps the ordinary tool row on restore and append', () => {

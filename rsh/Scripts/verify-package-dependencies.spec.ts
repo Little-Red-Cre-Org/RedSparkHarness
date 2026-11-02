@@ -240,6 +240,7 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-native-application': [
         '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment',
         '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory',
+        '@deepseek-ai/dsh-client-ui-workflow-run',
       ],
       '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
       '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
@@ -258,6 +259,7 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-goal': ['react'],
       '@deepseek-ai/dsh-client-ui-approval': ['react'],
       '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
+      '@deepseek-ai/dsh-client-ui-workflow-run': ['react'],
       '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
       '@deepseek-ai/dsh-client-native-application': [
         'react',
@@ -460,7 +462,6 @@ describe('package dependency scope', () => {
       '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
       '@deepseek-ai/dsh-native-model-selection/types',
       '@deepseek-ai/dsh-session/event-validation',
-      '@deepseek-ai/dsh-session/surface',
       '@deepseek-ai/dsh-tool-todo/client-native',
     ]) {
       expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports[specifier]).toBeUndefined()

@@ -274,6 +274,7 @@ const SAFE_HOST_DEPENDENCY_EXPORTS = {
   '@deepseek-ai/dsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
   '@deepseek-ai/dsh-subprocess/native': ['disposeChildConnection'],
   '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
+  '@deepseek-ai/dsh-session/surface': ['isAppendSurfaceEvent'],
   '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
   '@deepseek-ai/schemastery': ['default'],
 } as const satisfies HostDependencyExports
@@ -288,6 +289,8 @@ const PEER_REQUIRED_HOST_EXPORTS = {
     'IconCodeOutline16', 'IconEditOutline16', 'IconGoalOutline16', 'IconInspectOutline12', 'IconSearchOutline16', 'IconSparkle16',
     'ReadBlock', 'SearchBlock', 'StateDot', 'TerminalBlock', 'WebBlock', 'diffTotals', 'fileExtension', 'fileSizeText',
     'IconSettingsOutline16', 'IconUserOutline16', 'JsonTree', 'MarkdownText', 'Tooltip', 'extractMarkdownPlainText',
+    'Menu', 'Tag', 'LinkIcon', 'classifyLinkPath',
+    'IconFolderOpenOutline16', 'IconRightUpOutline16', 'IconSkillOutline16',
   ],
   '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
   '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],

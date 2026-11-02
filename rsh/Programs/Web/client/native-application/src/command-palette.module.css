@@ -1,0 +1,48 @@
+/**
+ * Slash-command palette rows.
+ *
+ * The list shell itself is `ui-primitives`' Menu — only the row layout is
+ * local, because a command row is a name plus a description plus an optional
+ * hint, which the generic `MenuItem` label does not describe. Tokens follow
+ * `conversation.module.css` so the palette reads as part of the composer.
+ */
+
+/* Anchors the portaled list above the composer textarea. */
+.commandPalette {
+  min-width: 280px;
+  max-width: 520px;
+}
+
+.commandRow {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* The command name is the addressable part; it never wraps or truncates. */
+.commandName {
+  flex: none;
+  font-family: var(--dsw-alias-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* The summary takes the remaining width and yields first. */
+.commandDescription {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* An argument hint, right-aligned and dimmer than the summary. */
+.commandHint {
+  flex: none;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
+}

@@ -161,6 +161,7 @@
     "verify-client-packages": "tsx rsh/Scripts/verify-client-packages.ts",
     "verify-native-client-entries": "tsx rsh/Scripts/verify-native-client-entries.ts",
     "verify-host-project-entries": "tsx rsh/Scripts/verify-host-project-entries.ts",
+    "verify-native-build-output": "tsx rsh/Scripts/verify-native-build-output.ts",
     "verify-client-ui-i18n": "tsx rsh/Scripts/verify-client-ui-i18n.ts",
     "verify-no-bare-dispatcher": "tsx rsh/Scripts/verify-no-bare-dispatcher.ts",
     "verify-vendored-links": "tsx rsh/Scripts/verify-vendored-links.ts",

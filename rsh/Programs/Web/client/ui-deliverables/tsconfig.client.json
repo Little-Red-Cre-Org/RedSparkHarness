@@ -8,6 +8,7 @@
   "include": [
     "src/client",
     "src/presented.ts",
+    "src/native.tsx",
     "src/css-modules.d.ts"
   ],
   "references": [

@@ -432,6 +432,15 @@ function ciStaticGates(options: { ownsBuild: boolean }): Gate[] {
   return [
     ...ciSharedStaticGates(),
     ...options.ownsBuild ? [ciBuildGate()] : [],
+    // Post-build: the Host loads exports["./native"] from lib/, which only exists
+    // after the build that produces it. A run without its own build has no such
+    // output, so the row joins the graph only where the build belongs to it.
+    ...options.ownsBuild
+      ? [pnpmScript('native-build-output', 'verify-native-build-output', {
+        label: 'native build output',
+        needs: ['build'],
+      })]
+      : [],
     ...docSyncLeafGates({
       includeDocTypecheck: options.ownsBuild,
       ...options.ownsBuild

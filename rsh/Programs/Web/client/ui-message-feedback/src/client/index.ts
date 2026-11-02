@@ -25,6 +25,7 @@ import { FeedbackDialog } from './FeedbackDialog.tsx'
 import { MessageFeedbackActions } from './MessageFeedbackActions.tsx'
 import type { FeedbackDialogInjected, MessageFeedbackInjected } from './slots.ts'
 import { FeedbackSurface } from './surface.ts'
+import type { FeedbackSurfaceTransport } from './surface.ts'
 import { en, zh } from './locales.ts'
 
 export type {
@@ -52,10 +53,20 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-message-feedback: dictionaries')
 
   const surfaces = new Map<SessionId, FeedbackSurface>()
+  // The browser build reaches the Host through two generated Remote namespaces,
+  // whose replies are already the two-level shape the surface consumes (a
+  // carrier outcome holding the business result). The Native build wraps direct
+  // calls into the same shape, so one surface implementation serves both.
+  const transport: FeedbackSurfaceTransport = {
+    list: request => ctx.remote.messageFeedback.list(request),
+    put: request => ctx.remote.messageFeedback.put(request),
+    delete: request => ctx.remote.messageFeedback.delete(request),
+    recordSession: request => ctx.remote.sessionFeedback.record(request),
+  }
   const surfaceFor = (sessionId: SessionId): FeedbackSurface => {
     let surface = surfaces.get(sessionId)
     if (surface === undefined) {
-      surface = new FeedbackSurface(ctx, sessionId)
+      surface = new FeedbackSurface(transport, sessionId)
       surfaces.set(sessionId, surface)
     }
     return surface

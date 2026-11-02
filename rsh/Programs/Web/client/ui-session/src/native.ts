@@ -8,15 +8,37 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
 import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import { renderSessionArea } from './client/session-provider.tsx'
 
+/** Owner currency of the per-message action strip inside the Native transcript. */
+export interface NativeMessageActionsOwnerProps {
+  /** Durable identity of the assistant message the actions address. */
+  messageId: MessageId
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /** Actions adjacent to the Native Session presentation header. */
     'native.conversation.actions': { kind: 'list'; scope: 'root' }
+    /**
+     * Ordered actions for one finalized Native assistant message.
+     *
+     * The scope is `session` (the entry is injected with the Session id the
+     * transcript is rendering); the addressed message travels through the
+     * owner props, exactly as the browser-side `conversation.chat.assistant-actions`
+     * delivers it. A fresh `id` adds an action and reusing one replaces that
+     * entry. With no entries the transcript's standard row (copy plus the
+     * token/duration/time metadata) still renders.
+     */
+    'native.conversation.message.actions': {
+      kind: 'list'
+      scope: 'session'
+      owner: NativeMessageActionsOwnerProps
+    }
   }
 }
 
