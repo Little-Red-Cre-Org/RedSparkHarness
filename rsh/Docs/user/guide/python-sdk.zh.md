@@ -83,7 +83,7 @@ python rsh/Programs/SDK/python/sdk/examples/minimal.py `
 ```python
 from pathlib import Path
 
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 workspace = Path("/absolute/path/to/disposable-workspace").resolve()
 dsh_home = Path("/absolute/path/to/example-dsh-home").resolve()

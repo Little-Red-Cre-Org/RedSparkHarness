@@ -7,7 +7,7 @@ import argparse
 import os
 from pathlib import Path
 
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 
 def main() -> None:

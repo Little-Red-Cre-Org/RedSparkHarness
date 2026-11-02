@@ -17,7 +17,7 @@ Python SDK 没有独立的应用入口。默认情况下，它以 `--profile sdk
 每次启动都必须显式指定 Harness home。请传入 `dsh_home`，或在子进程环境中提供非空的 `RSH_HOME`。SDK 刻意不会发现 `~/.dsh`。
 
 ```py
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 with RedSparkHarness(
     dsh_home="/absolute/path/to/isolated-dsh-home",

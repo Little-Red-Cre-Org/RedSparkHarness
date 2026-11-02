@@ -29,7 +29,7 @@ addopts = "-q"
 testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/deepseek_harness"]
+packages = ["src/redspark_harness"]
 
 # Editable installs see runtime executables injected after installation instead
 # of freezing a wheel snapshot.

@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 
 class MockCompletionHandler(BaseHTTPRequestHandler):

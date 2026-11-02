@@ -250,7 +250,7 @@ describe('parsePyprojectRequirements', () => {
       'docs = ["sphinx>=7"]',
       '',
       '[tool.hatch.build.targets.wheel]',
-      'packages = ["src/deepseek_harness"]',
+      'packages = ["src/redspark_harness"]',
       '',
       '[tool.pytest.ini_options]',
       'testpaths = ["tests"]',

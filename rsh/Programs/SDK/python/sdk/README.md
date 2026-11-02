@@ -17,7 +17,7 @@ The Python SDK has no separate application entrypoint. By default, it launches t
 Every launch requires an explicit Harness home. Pass `dsh_home` or provide a non-empty `RSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
 
 ```py
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 with RedSparkHarness(
     dsh_home="/absolute/path/to/isolated-dsh-home",

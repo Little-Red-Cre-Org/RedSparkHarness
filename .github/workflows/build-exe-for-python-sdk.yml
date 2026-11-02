@@ -122,7 +122,7 @@ jobs:
 
   sdk-wheel:
     needs: plan
-    name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+    name: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -143,8 +143,8 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
-          path: dist-python/deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          name: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          path: dist-python/redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
           if-no-files-found: error
           retention-days: 7
 
@@ -300,7 +300,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          name: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
           path: dist-python
 
       - name: Install local SDK and runtime wheels into a clean venv (POSIX)
@@ -308,7 +308,7 @@ jobs:
         if: runner.os != 'Windows'
         env:
           RUNTIME_WHEEL: ${{ steps.runtime-posix.outputs.wheel }}
-          SDK_WHEEL: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          SDK_WHEEL: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
         run: |
           set -euo pipefail
           venv="$(python -c 'import tempfile; print(tempfile.mkdtemp(prefix="dsh-sdk-smoke-"))')"
@@ -325,7 +325,7 @@ jobs:
         shell: pwsh
         env:
           RUNTIME_WHEEL: ${{ steps.runtime-windows.outputs.wheel }}
-          SDK_WHEEL: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          SDK_WHEEL: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
         run: |
           $venv = (& python -c 'import tempfile; print(tempfile.mkdtemp(prefix="dsh-sdk-smoke-"))').Trim()
           python -m venv $venv
@@ -470,7 +470,7 @@ jobs:
         env:
           RUNNER_ARCH: ${{ runner.arch }}
           RUNTIME_WHEEL: ${{ steps.runtime-posix.outputs.wheel }}
-          SDK_WHEEL: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          SDK_WHEEL: redspark_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
         run: |
           set -euo pipefail
           case "$RUNNER_ARCH" in

@@ -7,8 +7,8 @@ import sys
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from urllib.request import Request, urlopen
 
-from deepseek_harness import RedSparkHarness, DeepSeekHarnessConfig
-from deepseek_harness.errors import JsonRpcError, TransportClosedError
+from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness.errors import JsonRpcError, TransportClosedError
 
 launcher, home, workspace, patch, *arguments = sys.argv[1:]
 goal_control = arguments[-1:] == ["goal-control"]

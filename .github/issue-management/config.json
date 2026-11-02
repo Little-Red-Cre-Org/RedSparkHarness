@@ -1,9 +1,9 @@
 {
-  "organization": "deepseek-harness",
-  "repository": "deepseek-harness",
+  "organization": "Little-Red-Cre-Org",
+  "repository": "RedSparkHarness",
   "projectNumber": 1,
-  "projectTitle": "DSH Issue Management",
-  "lifecycleActor": "dsh-issue-management",
+  "projectTitle": "RSH Issue Management",
+  "lifecycleActor": "rsh-issue-management",
   "priorityField": "Priority",
   "startDateField": "Start Date",
   "projectTimeZone": "Asia/Shanghai",

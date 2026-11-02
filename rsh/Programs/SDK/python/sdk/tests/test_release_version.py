@@ -92,7 +92,7 @@ def test_stage_sdk_keeps_distribution_module_and_runtime_pin_distinct(tmp_path: 
     assert '"redspark-harness-runtime-bin==1.2.3"' in pyproject
     assert 'license-files = ["LICENSE"]' in pyproject
     assert (destination / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
-    assert (destination / "src" / "deepseek_harness" / "__init__.py").is_file()
+    assert (destination / "src" / "redspark_harness" / "__init__.py").is_file()
 
 
 @pytest.mark.parametrize(

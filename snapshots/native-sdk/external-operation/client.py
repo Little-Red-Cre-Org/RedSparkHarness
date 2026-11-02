@@ -2,7 +2,7 @@
 import json
 import sys
 
-from deepseek_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
 
 launcher, home, workspace, model_patch, external_patch, session_id, task, recovery_task = sys.argv[1:]
 config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,

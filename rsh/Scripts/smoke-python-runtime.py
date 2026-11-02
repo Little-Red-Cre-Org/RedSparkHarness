@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from deepseek_harness import RunResult
+    from redspark_harness import RunResult
 
 
 EXPECTED_TEXT = "runtime smoke ok"
@@ -997,7 +997,7 @@ def assert_installed_wheel_environment() -> Path:
 
     prefix = Path(sys.prefix).resolve()
     imported: dict[str, Path] = {}
-    for name in ("deepseek_harness", "redspark_harness_runtime"):
+    for name in ("redspark_harness", "redspark_harness_runtime"):
         module = importlib.import_module(name)
         module_file = getattr(module, "__file__", None)
         if not isinstance(module_file, str):
@@ -1022,7 +1022,7 @@ def assert_installed_wheel_environment() -> Path:
 
 def smoke_sdk_live() -> None:
     """Run a real-model, tool-using two-turn task through installed wheels."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     api_key = os.environ.get("DEEPSEEK_API_KEY")
     base_url = os.environ.get("DEEPSEEK_BASE_URL")
@@ -1134,7 +1134,7 @@ def safe_turn_end(value: object) -> object:
 
 
 def smoke_sdk_default(base_url: str) -> None:
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-default-") as temporary:
         root = Path(temporary).resolve()
@@ -1279,7 +1279,7 @@ def write_native_sdk_model_patch(path: Path, cwd: Path, sessions: Path, base_url
 def run_installed_native_turn(home: Path, cwd: Path, patch: Path, session_id: str, task: str,
                               executable: Path):
     """Run one Native SDK turn through the installed Python package's bundled executable."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with RedSparkHarness(
         provider="fixture",
@@ -1522,7 +1522,7 @@ def smoke_sdk_native_skills(base_url: str, executable: Path, reference: dict[str
 def smoke_sdk_native_staged_files(base_url: str, executable: Path,
                                   reference: dict[str, object]) -> None:
     """Exercise staged-file receipts, builtin access, denial, and cold recovery in installed wheels."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     global NATIVE_STAGED_FILES_GATE
     records = reference["records"]
@@ -1908,7 +1908,7 @@ def smoke_sdk_native_inbox(base_url: str, executable: Path, reference: dict[str,
 
 
 def smoke_sdk_custom(base_url: str, executable: Path) -> None:
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-custom-") as temporary:
         root = Path(temporary).resolve()
@@ -2038,7 +2038,7 @@ def smoke_sdk_minimal(
     base_url: str, executable: Path, update_snapshots: bool, *, in_history: bool = False,
 ) -> None:
     """Exercise the shipped standalone minimal profile through the packaged executable."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     # One mock model serves every scenario of a run, so the snapshot takes this turn's slice.
     first_request = len(MockModelHandler.requests)
@@ -2094,7 +2094,7 @@ def smoke_sdk_minimal(
 
 def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
     """Exercise real grep and glob spawns through the packaged executable."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-fs-search-") as temporary:
         root = Path(temporary).resolve()
@@ -2130,7 +2130,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
 
 def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
     """A shell command starting with `node` must reach the machine's Node, not the executable."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-spawn-node-") as temporary:
         root = Path(temporary).resolve()
@@ -2162,7 +2162,7 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
 
 def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
     """Discover and call an external stdio MCP tool through the packaged client."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-mcp-") as temporary:
         root = Path(temporary).resolve()
@@ -2203,7 +2203,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
 
 def smoke_sdk_profile_plugin(base_url: str) -> None:
     """Install an external bundle through Python's dsh command and load it in the SDK."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-profile-plugin-") as temporary:
         root = Path(temporary).resolve()
@@ -2300,7 +2300,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
 
 def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
     """Drive and compare the advanced SDK/executable behavioral snapshot."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-snapshot-") as temporary:
         root = Path(temporary).resolve()
@@ -2374,7 +2374,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
 
 def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
     """Snapshot two isolated sessions across complete SDK runtime restarts."""
-    from deepseek_harness import RedSparkHarness
+    from redspark_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-restart-") as temporary:
         root = Path(temporary).resolve()

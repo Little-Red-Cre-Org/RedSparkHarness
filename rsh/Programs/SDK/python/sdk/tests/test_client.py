@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from deepseek_harness import RedSparkHarness, HarnessClient, HarnessConfig, Notification, RunResult, SdkProtocolError
-from deepseek_harness.errors import JsonRpcError
+from redspark_harness import RedSparkHarness, HarnessClient, HarnessConfig, Notification, RunResult, SdkProtocolError
+from redspark_harness.errors import JsonRpcError
 
 
 def test_high_level_sdk_runs_turn_and_collects_final_response(tmp_path: Path) -> None:
@@ -983,7 +983,7 @@ for line in sys.stdin:
 
 
 def test_public_signatures_omit_unsupported_wire_parameters() -> None:
-    from deepseek_harness import DeepSeekHarnessConfig, Session
+    from redspark_harness import DeepSeekHarnessConfig, Session
 
     assert "session_root" not in inspect.signature(HarnessClient.initialize).parameters
     assert "system_prompt" not in inspect.signature(HarnessClient.initialize).parameters

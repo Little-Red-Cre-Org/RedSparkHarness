@@ -43,7 +43,7 @@ uv run --project rsh/Programs/SDK/python/sdk python rsh/Scripts/smoke-python-run
 交互式冒烟测试需要环境变量或仓库根目录 `.env` 中存在 `DEEPSEEK_API_KEY`：
 
 ```python
-from deepseek_harness import RedSparkHarness
+from redspark_harness import RedSparkHarness
 
 with RedSparkHarness(dsh_home="/absolute/path/to/test-dsh-home") as harness:
     print(harness.run("say hi").final_response)
@@ -77,7 +77,7 @@ PY
 python rsh/Scripts/build-python-release.py --package sdk --output-dir dist-python
 python rsh/Scripts/build-python-release.py --package runtime --platform macos-arm64 --runtime-exe dist-exe/redspark-harness-sdk-runtime-macos-arm64 --output-dir dist-python
 pip install \
-  "dist-python/deepseek_harness_sdk-$version-py3-none-any.whl" \
+  "dist-python/redspark_harness_sdk-$version-py3-none-any.whl" \
   "dist-python/redspark_harness_runtime_bin-$version-py3-none-macosx_14_0_arm64.whl"
 ```
 

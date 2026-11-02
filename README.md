@@ -2,13 +2,13 @@
 
 English | [中文](README.zh.md)
 
-RedSpark Harness (SPH) is RedSpark's agent platform, developed from [DeepSeek AI](https://deepseek.com)'s open-source project [RedSpark Harness](https://github.com/deepseek-ai/deepseek-harness). RedSpark is our organization and the name reserved for our future model; no RedSpark model is available yet. Model providers retain their actual names.
+RedSpark Harness (SPH) is RedSpark's agent platform, developed from [DeepSeek AI](https://deepseek.com)'s open-source project [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness). RedSpark is our organization and the name reserved for our future model; no RedSpark model is available yet. Model providers retain their actual names.
 
 Our desktop and Web interfaces share a crimson, warm-white and charcoal theme, a flame-and-star mark, and Kitsune (赤绯), our animated welcome-screen companion. Click her to wave; pause motion with the adjacent control. Reduced-motion preferences disable animation by default; Enable motion explicitly opts in for the current welcome screen. This is an in-app sprite companion, not a Live2D model or an operating-system overlay. The supplied RedSpark artwork belongs to the project identity; upstream copyright and license notices are retained. Internal `dsh` commands, `RSH_*` environment variables and package identifiers remain compatible with upstream.
 
 It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
 
-Upstream reference documentation (retained for development): [RedSpark Harness docs](https://deepseek-harness.github.io/deepseek-harness/). Fork-specific delivery: [local acceptance guide](ACCEPTANCE.md).
+Upstream reference documentation (retained for development): [RedSpark Harness docs](https://redspark-harness.github.io/redspark-harness/). Fork-specific delivery: [local acceptance guide](ACCEPTANCE.md).
 
 ## Developer preview
 
@@ -50,7 +50,7 @@ For the Electron desktop client, run `pnpm run start:desktop` after building. Th
 
 The following links belong to the upstream project and are retained as development resources. RedSpark changes are maintained in [our repository](https://github.com/Little-Red-Cre/RedSparkHarness).
 
-- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
+- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/redspark-harness/discussions).
 - Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
 - Join <a href="https://discord.gg/Ycq5dCaS4">RedSpark Harness Discord community</a>.
 
@@ -61,7 +61,7 @@ RedSpark maintains two repositories; they are separate projects, not a parent an
 | | This repository | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
 |---|---|---|
 | What it is | The Agent product: desktop, Web, TUI and SDK surfaces | The research effort that gives a harness a lifecycle |
-| Built on | [RedSpark Harness](https://github.com/deepseek-ai/deepseek-harness) (TypeScript, Cordis plugins) | [Harness²](https://github.com/google-research/harness2) (Python) |
+| Built on | [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness) (TypeScript, Cordis plugins) | [Harness²](https://github.com/google-research/harness2) (Python) |
 | What it optimises | Delivery: interface, model access, Sessions, presets | Generations of a harness: lineage, pointer, atomic switch, rollback |
 | Language | TypeScript | Python |
 
@@ -118,7 +118,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
   author={DeepSeek-AI},
   year={2026},
   publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
+  howpublished={\url{https://github.com/deepseek-ai/redspark-harness}},
 }
 ```
 

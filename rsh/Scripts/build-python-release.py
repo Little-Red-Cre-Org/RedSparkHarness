@@ -82,7 +82,7 @@ def main() -> None:
         if args.package == "sdk":
             stage_sdk(staging, wheel_version)
             environment = None
-            expected = output_dir / f"deepseek_harness_sdk-{wheel_version}-py3-none-any.whl"
+            expected = output_dir / f"redspark_harness_sdk-{wheel_version}-py3-none-any.whl"
         else:
             platform_tag, executable_name = PLATFORMS[args.platform]
             stage_runtime(staging, wheel_version, args.runtime_exe.resolve(), executable_name)

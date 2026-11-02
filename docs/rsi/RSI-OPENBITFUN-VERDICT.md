@@ -64,7 +64,7 @@ lib.rs:71 | pub mod session_state;
 
 它只做两件事：
 1. **插件源投影**：把一份 `package.json` 里 `dsh.bundle.patch` / `dsh.profile.bundles` 声明的 Cordis 插件行，投影成 OpenBitFun 的"插件源"（`source_adapter.rs:307 pub fn load_dsh_package_adapter`）。
-2. **会话导入**：只读 `$RSH_HOME/sessions/**/session.jsonl`（`session.rs:14 SOURCE_REVISION = "dsh-session-v1"`，`session.rs:23 ECOSYSTEM = "deepseek-harness"`，`session.rs:62` 只匹配 `session.jsonl` 或 `session.jsonl.zstd`）。
+2. **会话导入**：只读 `$RSH_HOME/sessions/**/session.jsonl`（`session.rs:14 SOURCE_REVISION = "dsh-session-v1"`，`session.rs:23 ECOSYSTEM = "redspark-harness"`，`session.rs:62` 只匹配 `session.jsonl` 或 `session.jsonl.zstd`）。
 
 **它跟"把 RSI 引擎接进来"没有关系。** 它接的是 dsh 的**配置文件和历史记录**，不是 dsh 的运行时。
 

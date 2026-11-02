@@ -2,13 +2,13 @@
 
 [English](README.md) | 中文
 
-RedSpark Harness（SPH）是 RedSpark 的 Agent 平台，基于 [DeepSeek AI](https://deepseek.com) 的开源项目 [RedSpark Harness](https://github.com/deepseek-ai/deepseek-harness) 进行开发。RedSpark 是我们的组织名，也是未来自有模型的名称；目前尚未发布 RedSpark 模型。模型服务商保持其实际名称。
+RedSpark Harness（SPH）是 RedSpark 的 Agent 平台，基于 [DeepSeek AI](https://deepseek.com) 的开源项目 [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness) 进行开发。RedSpark 是我们的组织名，也是未来自有模型的名称；目前尚未发布 RedSpark 模型。模型服务商保持其实际名称。
 
 桌面端与 Web 端共用绯红、暖白、炭黑主题、火焰星芒标记，以及欢迎页动态伙伴赤绯（Kitsune）。点击角色可挥手，旁边的按钮可暂停动效；默认遵循系统的减少动态效果偏好；“启用动效”可为当前欢迎页明确开启动画。这是应用内精灵动画伙伴，不是 Live2D 模型或系统级悬浮窗口。用户提供的 RedSpark 设计图用于本项目品牌，上游版权与许可证声明继续保留。内部 `dsh` 命令、`RSH_*` 环境变量和包标识保持上游兼容。
 
 它构建于**一切皆插件**的架构之上，由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)。
 
-上游参考文档（保留供开发使用）：[RedSpark Harness 文档](https://deepseek-harness.github.io/deepseek-harness/)。本项目交付见[本地验收说明](ACCEPTANCE.md)。
+上游参考文档（保留供开发使用）：[RedSpark Harness 文档](https://redspark-harness.github.io/redspark-harness/)。本项目交付见[本地验收说明](ACCEPTANCE.md)。
 
 ## 开发者预览
 
@@ -54,7 +54,7 @@ pnpm dsh web
 
 以下链接属于上游项目，保留用于开发参考。RedSpark 的变更维护在[我们的仓库](https://github.com/Little-Red-Cre/RedSparkHarness)。
 
-- 通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
+- 通过 [GitHub Discussions](https://github.com/deepseek-ai/redspark-harness/discussions) 提交反馈或 bug 报告。
 - 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
 - 欢迎加入 RedSpark Harness 企微群：扫码添加企微小助手并填写入群问卷，完成后小助手会邀请你入群。
 
@@ -82,7 +82,7 @@ RedSpark 有两个仓库；它们是**两个独立项目**，不是父子，也�
 | | 本仓库 | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
 |---|---|---|
 | 是什么 | Agent 产品：桌面端、Web、TUI 与 SDK | 让 harness 拥有「生命周期」的研究项目 |
-| 底座 | [RedSpark Harness](https://github.com/deepseek-ai/deepseek-harness)（TypeScript、Cordis 插件） | [Harness²](https://github.com/google-research/harness2)（Python） |
+| 底座 | [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness)（TypeScript、Cordis 插件） | [Harness²](https://github.com/google-research/harness2)（Python） |
 | 优化什么 | 交付：界面、模型接入、会话、预设 | harness 的代际演进：血缘、指针、原子切换、回滚 |
 | 语言 | TypeScript | Python |
 
@@ -140,7 +140,7 @@ pnpm run test           # unit and client tests
   author={DeepSeek-AI},
   year={2026},
   publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
+  howpublished={\url{https://github.com/deepseek-ai/redspark-harness}},
 }
 ```
 

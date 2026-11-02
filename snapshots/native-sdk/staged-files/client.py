@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 from urllib.request import Request, urlopen
 
-from deepseek_harness import RedSparkHarness, DeepSeekHarnessConfig
-from deepseek_harness.errors import JsonRpcError
+from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness.errors import JsonRpcError
 
 launcher, home, workspace, patch, control_url = sys.argv[1:]
 scene = Path(__file__).parent

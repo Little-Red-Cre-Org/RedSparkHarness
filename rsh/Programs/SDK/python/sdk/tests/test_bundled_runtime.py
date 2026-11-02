@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from deepseek_harness import RedSparkHarness, HarnessClient, HarnessConfig
-from deepseek_harness.errors import JsonRpcError, TransportClosedError
+from redspark_harness import RedSparkHarness, HarnessClient, HarnessConfig
+from redspark_harness.errors import JsonRpcError, TransportClosedError
 from redspark_harness_runtime import (
     RUNTIME_MODE_ENV_VAR,
     bundled_package_dir,
