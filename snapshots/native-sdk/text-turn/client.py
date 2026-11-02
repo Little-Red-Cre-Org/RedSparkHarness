@@ -7,7 +7,7 @@ import sys
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from urllib.request import Request, urlopen
 
-from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
 from redspark_harness.errors import JsonRpcError, TransportClosedError
 
 launcher, home, workspace, patch, *arguments = sys.argv[1:]
@@ -15,7 +15,7 @@ goal_control = arguments[-1:] == ["goal-control"]
 scheduled_origin = arguments[-1:] == ["scheduled-origin"]
 task = arguments[0] if arguments else "say hello through native SDK"
 profile_args = {"profile": "native-sdk"} if goal_control or scheduled_origin else {}
-config = DeepSeekHarnessConfig(dsh_bin=launcher, dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, dsh_home=home,
     **profile_args,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key"})

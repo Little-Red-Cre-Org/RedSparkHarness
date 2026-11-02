@@ -983,32 +983,32 @@ for line in sys.stdin:
 
 
 def test_public_signatures_omit_unsupported_wire_parameters() -> None:
-    from redspark_harness import DeepSeekHarnessConfig, Session
+    from redspark_harness import RedSparkHarnessConfig, Session
 
     assert "session_root" not in inspect.signature(HarnessClient.initialize).parameters
     assert "system_prompt" not in inspect.signature(HarnessClient.initialize).parameters
     assert "profile" not in inspect.signature(HarnessClient.session_prompt).parameters
     assert "profile" not in inspect.signature(RedSparkHarness.run).parameters
     assert "profile" not in inspect.signature(Session.run).parameters
-    assert "system_prompt" not in DeepSeekHarnessConfig.__dataclass_fields__
-    assert "max_tokens" in DeepSeekHarnessConfig.__dataclass_fields__
-    assert "reasoning_effort" in DeepSeekHarnessConfig.__dataclass_fields__
+    assert "system_prompt" not in RedSparkHarnessConfig.__dataclass_fields__
+    assert "max_tokens" in RedSparkHarnessConfig.__dataclass_fields__
+    assert "reasoning_effort" in RedSparkHarnessConfig.__dataclass_fields__
     assert "max_tokens" in inspect.signature(HarnessClient.initialize).parameters
     assert "reasoning_effort" in inspect.signature(HarnessClient.initialize).parameters
     assert "client_name" not in HarnessConfig.__dataclass_fields__
     assert "client_version" not in HarnessConfig.__dataclass_fields__
     assert {"dsh_bin", "profile", "patches", "dsh_home"} <= set(
-        DeepSeekHarnessConfig.__dataclass_fields__
+        RedSparkHarnessConfig.__dataclass_fields__
     )
     assert {"dsh_bin", "profile", "patches", "dsh_home"} <= set(
         HarnessConfig.__dataclass_fields__
     )
-    assert "initialize_timeout_seconds" in DeepSeekHarnessConfig.__dataclass_fields__
+    assert "initialize_timeout_seconds" in RedSparkHarnessConfig.__dataclass_fields__
     assert "initialize_timeout_seconds" in HarnessConfig.__dataclass_fields__
-    assert DeepSeekHarnessConfig().initialize_timeout_seconds == 30.0
+    assert RedSparkHarnessConfig().initialize_timeout_seconds == 30.0
     assert HarnessConfig().initialize_timeout_seconds == 30.0
     for removed in ("cordis", "session_root", "runtime_bin", "bridge_bin", "launch_args_override"):
-        assert removed not in DeepSeekHarnessConfig.__dataclass_fields__
+        assert removed not in RedSparkHarnessConfig.__dataclass_fields__
         assert removed not in HarnessConfig.__dataclass_fields__
     assert "_launch_args" not in HarnessConfig.__dataclass_fields__
     assert "session_root" not in RunResult.__dataclass_fields__

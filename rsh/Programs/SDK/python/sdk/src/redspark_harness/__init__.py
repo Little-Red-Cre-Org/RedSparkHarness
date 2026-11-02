@@ -1,4 +1,4 @@
-from .api import RedSparkHarness, DeepSeekHarnessConfig, RunResult, Session
+from .api import RedSparkHarness, RedSparkHarnessConfig, RunResult, Session
 from .client import HarnessClient, HarnessConfig
 from .errors import SdkProtocolError
 from .models import (ApprovalOutcome, ApprovalRequest, IncomingRequest, InitializeResponse, JsonObject,
@@ -8,7 +8,7 @@ from .models import (ApprovalOutcome, ApprovalRequest, IncomingRequest, Initiali
 
 __all__ = [
     "RedSparkHarness",
-    "DeepSeekHarnessConfig",
+    "RedSparkHarnessConfig",
     "Session",
     "RunResult",
     "HarnessClient",

@@ -12,7 +12,7 @@ from .models import (InitializeResponse, JsonObject, NativeSdkPromptContentBlock
 
 
 @dataclass(slots=True)
-class DeepSeekHarnessConfig:
+class RedSparkHarnessConfig:
     """Configuration for launching the local RedSpark Harness SDK runtime.
 
     The runtime inherits the caller's environment by default, so existing
@@ -60,14 +60,14 @@ class RedSparkHarness:
 
     def __init__(
         self,
-        config: DeepSeekHarnessConfig | None = None,
+        config: RedSparkHarnessConfig | None = None,
         *,
         _launch_args: tuple[str, ...] | None = None,
         **kwargs: object,
     ) -> None:
         if config is not None and kwargs:
-            raise TypeError("pass either DeepSeekHarnessConfig or keyword options, not both")
-        self.config = config or DeepSeekHarnessConfig(**kwargs)
+            raise TypeError("pass either RedSparkHarnessConfig or keyword options, not both")
+        self.config = config or RedSparkHarnessConfig(**kwargs)
         cwd = str(Path(self.config.cwd or Path.cwd()).resolve())
         runtime_cwd = str(Path(self.config.runtime_cwd).resolve()) if self.config.runtime_cwd is not None else cwd
         self._cwd = cwd

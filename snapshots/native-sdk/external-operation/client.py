@@ -2,10 +2,10 @@
 import json
 import sys
 
-from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
 
 launcher, home, workspace, model_patch, external_patch, session_id, task, recovery_task = sys.argv[1:]
-config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
     patches=(model_patch, external_patch), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1"})
 

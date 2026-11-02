@@ -3,10 +3,10 @@
 import json
 import sys
 
-from redspark_harness import RedSparkHarness, DeepSeekHarnessConfig
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
 
 launcher, home, workspace, model_patch, session_id, task, recovery_task = sys.argv[1:]
-config = DeepSeekHarnessConfig(
+config = RedSparkHarnessConfig(
     dsh_bin=None if launcher == "-" else launcher,
     profile="native-sdk",
     patches=(model_patch,),
