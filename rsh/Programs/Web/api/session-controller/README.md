@@ -57,7 +57,7 @@ The user-invocable `skills/list` metadata includes the winning provider’s opti
 |---|---:|---|
 | `nativeOpen` | platform-detected | Whether Session workspace paths can be handed to a native desktop opener |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-api-session-controller) is the exhaustive source for accepted fields and their JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-api-session-controller) is the exhaustive source for accepted fields and their JSDoc.
 
 -----
 

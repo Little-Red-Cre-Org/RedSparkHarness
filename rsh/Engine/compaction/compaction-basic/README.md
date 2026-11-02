@@ -59,7 +59,7 @@ You can verify success by watching the conversation continue past the point wher
 
 ### Tuning when condensation starts
 
-All settings are optional. The defaults start condensing at 80% of the routed model's context window and keep the newest 16% verbatim; the table below is the complete policy surface, and the generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-compaction-basic) is the exhaustive source.
+All settings are optional. The defaults start condensing at 80% of the routed model's context window and keep the newest 16% verbatim; the table below is the complete policy surface, and the generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-compaction-basic) is the exhaustive source.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -156,7 +156,7 @@ Read these pages when the package-level contract is not enough; they move from t
 - [Tool-result pruner](../compaction-tool-result-pruner/README.md) — the optional companion that trims oversized tool outputs first.
 - [Human /compact command](../command-compact/README.md) — on-demand condensation without waiting for pressure.
 - [Token meter](../../llm/token-meter/README.md) — the measurement service that decides when to condense.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-compaction-basic) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-compaction-basic) — every accepted config field and its source declaration.
 
 -----
 

@@ -60,7 +60,7 @@ Native accepts `maxReferences` (default `3`) and `maxReferenceBytes` (fixed defa
 
 The automatic budget is `max(65536, floor(contextWindow × 4 × referenceContextFraction))` bytes per source. Model context capacity is measured in tokens; four bytes per token is a sizing heuristic, not an exact token conversion. A missing route, LLM service, adapter, or capacity uses 64 KiB; other model metadata lookup errors and cancellation fail preparation. Direct content is snapshotted and reference IDs are validated before this asynchronous lookup.
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-reference) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-reference) is the exhaustive source for every accepted field and its JSDoc.
 
 -----
 
@@ -110,7 +110,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Session-reference spill reuse](../../../../.agents/notes/implemented/bug-fix/2026-09-05-session-reference-spill-reuse.md) — snapshot identity, omission notices, storage ownership, and alternatives.
 - [Session-query subsystem](../../../Docs/subsystems/session-query.md) — the read service that supplies session surfaces.
 - [Context group map](../README.md) — sibling request-context packages.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-reference) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-reference) — every accepted config field and its source declaration.
 
 -----
 

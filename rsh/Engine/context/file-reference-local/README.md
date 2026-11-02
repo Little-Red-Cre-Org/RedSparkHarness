@@ -89,7 +89,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [File-reference seam](../file-reference/README.md) — the service contracts, Native provider entry, and `@file` grammar this provider implements.
 - [Session-reference subsystem](../../../Docs/subsystems/session-reference.md) — the shared file-reference contract behind host UIs.
-- [Filesystem tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs) — the `read` tool whose namespace discovery must match.
+- [Filesystem tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-tool-fs) — the `read` tool whose namespace discovery must match.
 - [Context group map](../README.md) — sibling request-context packages.
 
 -----

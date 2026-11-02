@@ -55,7 +55,7 @@ The published native entry and CommonJS migration verifier run without Cordis in
 
 Live-event write batching is not configuration: the batching window is the seam's internal scheduling policy inside each write handle.
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-persistence-jsonl) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-persistence-jsonl) is the exhaustive source for every accepted field and its JSDoc.
 
 ### On-disk layout
 

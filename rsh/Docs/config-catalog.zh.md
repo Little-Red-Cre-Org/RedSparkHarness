@@ -11,7 +11,7 @@
 
 `Requires:` 行列出插件通过 `inject` 注入的服务键：其 `cordis.yml` 树还必须加载这些服务的提供者。范围遵循 `rsh/` 下 harness 包的 manifest 匹配规则；配置树还可能加载的 vendored cordis 插件（`hmr`、控制台日志记录器等）固定为上游源代码（参见 [vendoring policy](../Core/vendor/README.md)），未收录于此目录。
 
-<a id="deepseek-aidsh-acp"></a>
+<a id="redsparkrsh-acp"></a>
 
 ## `@redspark/rsh-acp`
 
@@ -35,7 +35,7 @@ export interface AcpConfig {
 
 来源：[`rsh/Programs/ACP/packages/acp/src/index.ts:75`](../Programs/ACP/packages/acp/src/index.ts)
 
-<a id="deepseek-aidsh-agent-default-model"></a>
+<a id="redsparkrsh-agent-default-model"></a>
 
 ## `@redspark/rsh-agent-default-model`
 
@@ -51,7 +51,7 @@ export interface Config {
 
 来源：[`rsh/Engine/core/agent-default-model/src/index.ts:42`](../Engine/core/agent-default-model/src/index.ts)
 
-<a id="deepseek-aidsh-agent-instructions"></a>
+<a id="redsparkrsh-agent-instructions"></a>
 
 ## `@redspark/rsh-agent-instructions`
 
@@ -83,7 +83,7 @@ export interface Config {
 
 来源：[`rsh/Engine/context/agent-instructions/src/config.ts:18`](../Engine/context/agent-instructions/src/config.ts)
 
-<a id="deepseek-aidsh-agent-loop"></a>
+<a id="redsparkrsh-agent-loop"></a>
 
 ## `@redspark/rsh-agent-loop`
 
@@ -115,7 +115,7 @@ export interface Config {
 
 来源：[`rsh/Engine/core/agent-loop/src/index.ts:279`](../Engine/core/agent-loop/src/index.ts)
 
-<a id="deepseek-aidsh-agent-presets"></a>
+<a id="redsparkrsh-agent-presets"></a>
 
 ## `@redspark/rsh-agent-presets`
 
@@ -161,7 +161,7 @@ export type PresetTrust = 'system' | 'user'
 
 来源：[`rsh/Engine/preset/agent-presets/src/preset.ts:52`](../Engine/preset/agent-presets/src/preset.ts)
 
-<a id="deepseek-aidsh-agent-tool-presentation"></a>
+<a id="redsparkrsh-agent-tool-presentation"></a>
 
 ## `@redspark/rsh-agent-tool-presentation`
 
@@ -185,7 +185,7 @@ export interface Config {
 
 来源：[`rsh/Engine/core/agent-tool-presentation/src/index.ts:38`](../Engine/core/agent-tool-presentation/src/index.ts)
 
-<a id="deepseek-aidsh-api-gateway"></a>
+<a id="redsparkrsh-api-gateway"></a>
 
 ## `@redspark/rsh-api-gateway`
 
@@ -201,7 +201,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/api/gateway/src/index.ts:119`](../Programs/Web/api/gateway/src/index.ts)
 
-<a id="deepseek-aidsh-api-session-controller"></a>
+<a id="redsparkrsh-api-session-controller"></a>
 
 ## `@redspark/rsh-api-session-controller`
 
@@ -217,7 +217,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/api/session-controller/src/index.ts:71`](../Programs/Web/api/session-controller/src/index.ts)
 
-<a id="deepseek-aidsh-api-settings-controller"></a>
+<a id="redsparkrsh-api-settings-controller"></a>
 
 ## `@redspark/rsh-api-settings-controller`
 
@@ -233,7 +233,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/api/settings-controller/src/index.ts:39`](../Programs/Web/api/settings-controller/src/index.ts)
 
-<a id="deepseek-aidsh-api-workspace-files"></a>
+<a id="redsparkrsh-api-workspace-files"></a>
 
 ## `@redspark/rsh-api-workspace-files`
 
@@ -261,7 +261,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/api/workspace-files/src/index.ts:70`](../Programs/Web/api/workspace-files/src/index.ts)
 
-<a id="deepseek-aidsh-archify"></a>
+<a id="redsparkrsh-archify"></a>
 
 ## `@redspark/rsh-archify`
 
@@ -285,7 +285,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/skill/archify/src/shared.ts:37`](../Modules/Official/skill/archify/src/shared.ts)
 
-<a id="deepseek-aidsh-attachment-local"></a>
+<a id="redsparkrsh-attachment-local"></a>
 
 ## `@redspark/rsh-attachment-local`
 
@@ -317,7 +317,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/attachment/attachment-local/src/config.ts:27`](../Modules/Official/attachment/attachment-local/src/config.ts)
 
-<a id="deepseek-aidsh-bash-local"></a>
+<a id="redsparkrsh-bash-local"></a>
 
 ## `@redspark/rsh-bash-local`
 
@@ -335,7 +335,7 @@ export interface Config extends LocalConfig {
 
 来源：[`rsh/Modules/Official/shell/bash-local/src/controller.ts:15`](../Modules/Official/shell/bash-local/src/controller.ts)
 
-<a id="deepseek-aidsh-bash-sandbox"></a>
+<a id="redsparkrsh-bash-sandbox"></a>
 
 ## `@redspark/rsh-bash-sandbox`
 
@@ -346,11 +346,11 @@ export interface Config extends LocalConfig {
 export type Config = LocalConfig
 ```
 
-依赖：[`LocalConfig`](#deepseek-aidsh-bash-local)
+依赖：[`LocalConfig`](#redsparkrsh-bash-local)
 
 来源：[`rsh/Modules/Official/shell/bash-sandbox/src/index.ts:14`](../Modules/Official/shell/bash-sandbox/src/index.ts)
 
-<a id="deepseek-aidsh-client-connection"></a>
+<a id="redsparkrsh-client-connection"></a>
 
 ## `@redspark/rsh-client-connection`
 
@@ -396,7 +396,7 @@ export interface ConnectionRecoveryConfig {
 
 来源： [`rsh/Programs/Web/client/connection/src/index.ts:73`](../Programs/Web/client/connection/src/index.ts)
 
-<a id="deepseek-aidsh-client-hmr"></a>
+<a id="redsparkrsh-client-hmr"></a>
 
 ## `@redspark/rsh-client-hmr`
 
@@ -412,7 +412,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/client/hmr/src/index.ts:31`](../Programs/Web/client/hmr/src/index.ts)
 
-<a id="deepseek-aidsh-code-runtime-worker-thread"></a>
+<a id="redsparkrsh-code-runtime-worker-thread"></a>
 
 ## `@redspark/rsh-code-runtime-worker-thread`
 
@@ -449,7 +449,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/code-runtime/code-runtime-worker-thread/src/index.ts:25`](../Modules/Official/code-runtime/code-runtime-worker-thread/src/index.ts)
 
-<a id="deepseek-aidsh-compaction-basic"></a>
+<a id="redsparkrsh-compaction-basic"></a>
 
 ## `@redspark/rsh-compaction-basic`
 
@@ -495,7 +495,7 @@ export interface ModelCompactPolicyConfig extends CompactionPolicyConfig {
 
 来源：[`rsh/Engine/compaction/compaction-basic/src/types.ts:38`](../Engine/compaction/compaction-basic/src/types.ts)
 
-<a id="deepseek-aidsh-compaction-tool-result-pruner"></a>
+<a id="redsparkrsh-compaction-tool-result-pruner"></a>
 
 ## `@redspark/rsh-compaction-tool-result-pruner`
 
@@ -515,7 +515,7 @@ export interface ToolResultPruneConfig {
 
 来源：[`rsh/Engine/compaction/compaction-tool-result-pruner/src/types.ts:5`](../Engine/compaction/compaction-tool-result-pruner/src/types.ts)
 
-<a id="deepseek-aidsh-cordis-host-runner"></a>
+<a id="redsparkrsh-cordis-host-runner"></a>
 
 ## `@redspark/rsh-cordis-host-runner`
 
@@ -531,7 +531,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/extensions/cordis-host-runner/src/index.ts:88`](../Modules/Official/extensions/cordis-host-runner/src/index.ts)
 
-<a id="deepseek-aidsh-credentials-local"></a>
+<a id="redsparkrsh-credentials-local"></a>
 
 ## `@redspark/rsh-credentials-local`
 
@@ -551,7 +551,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/credentials/credentials-local/src/document.ts:12`](../Modules/Official/credentials/credentials-local/src/document.ts)
 
-<a id="deepseek-aidsh-e2b"></a>
+<a id="redsparkrsh-e2b"></a>
 
 ## `@redspark/rsh-e2b`
 
@@ -569,7 +569,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/e2b/e2b/src/index.ts:45`](../Modules/Official/e2b/e2b/src/index.ts)
 
-<a id="deepseek-aidsh-experimental-agent-team"></a>
+<a id="redsparkrsh-experimental-agent-team"></a>
 
 ## `@redspark/rsh-experimental-agent-team`
 
@@ -593,7 +593,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Community/experimental/agent-team/src/types.ts:130`](../Modules/Community/experimental/agent-team/src/types.ts)
 
-<a id="deepseek-aidsh-experimental-code-runtime-python"></a>
+<a id="redsparkrsh-experimental-code-runtime-python"></a>
 
 ## `@redspark/rsh-experimental-code-runtime-python`
 
@@ -660,7 +660,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Community/experimental/code-runtime-python/src/index.ts:42`](../Modules/Community/experimental/code-runtime-python/src/index.ts)
 
-<a id="deepseek-aidsh-experimental-inspector"></a>
+<a id="redsparkrsh-experimental-inspector"></a>
 
 ## `@redspark/rsh-experimental-inspector`
 
@@ -728,7 +728,7 @@ export interface InspectorOptions {
 
 来源：[`rsh/Modules/Community/experimental/inspector/src/index.ts:66`](../Modules/Community/experimental/inspector/src/index.ts)
 
-<a id="deepseek-aidsh-experimental-tool-agent-team"></a>
+<a id="redsparkrsh-experimental-tool-agent-team"></a>
 
 ## `@redspark/rsh-experimental-tool-agent-team`
 
@@ -746,7 +746,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts:17`](../Modules/Community/experimental/tool-agent-team/src/index.ts)
 
-<a id="deepseek-aidsh-file-reference-local"></a>
+<a id="redsparkrsh-file-reference-local"></a>
 
 ## `@redspark/rsh-file-reference-local`
 
@@ -766,7 +766,7 @@ export interface Config {
 
 来源：[`rsh/Engine/context/file-reference-local/src/index.ts:34`](../Engine/context/file-reference-local/src/index.ts)
 
-<a id="deepseek-aidsh-fs-local"></a>
+<a id="redsparkrsh-fs-local"></a>
 
 ## `@redspark/rsh-fs-local`
 
@@ -785,7 +785,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/fs/fs-local/src/backend.ts:41`](../Modules/Official/fs/fs-local/src/backend.ts)
 
-<a id="deepseek-aidsh-fs-sandbox"></a>
+<a id="redsparkrsh-fs-sandbox"></a>
 
 ## `@redspark/rsh-fs-sandbox`
 
@@ -801,11 +801,11 @@ export interface Config {
 export type Config = LocalConfig
 ```
 
-依赖：[`LocalConfig`](#deepseek-aidsh-fs-local)
+依赖：[`LocalConfig`](#redsparkrsh-fs-local)
 
 来源：[`rsh/Modules/Official/fs/fs-sandbox/src/index.ts:43`](../Modules/Official/fs/fs-sandbox/src/index.ts)
 
-<a id="deepseek-aidsh-goal"></a>
+<a id="redsparkrsh-goal"></a>
 
 ## `@redspark/rsh-goal`
 
@@ -821,7 +821,7 @@ export interface Config {
 
 来源：[`rsh/Engine/goal/goal/src/index.ts:174`](../Engine/goal/goal/src/index.ts)
 
-<a id="deepseek-aidsh-headless"></a>
+<a id="redsparkrsh-headless"></a>
 
 ## `@redspark/rsh-headless`
 
@@ -837,7 +837,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bundle/headless/src/index.ts:34`](../Compatibility/DSH/bundle/headless/src/index.ts)
 
-<a id="deepseek-aidsh-hooks-claude-code"></a>
+<a id="redsparkrsh-hooks-claude-code"></a>
 
 ## `@redspark/rsh-hooks-claude-code`
 
@@ -875,7 +875,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/hooks/hooks-claude-code/src/index.ts:44`](../Modules/Official/hooks/hooks-claude-code/src/index.ts)
 
-<a id="deepseek-aidsh-hooks-codex"></a>
+<a id="redsparkrsh-hooks-codex"></a>
 
 ## `@redspark/rsh-hooks-codex`
 
@@ -902,7 +902,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:44`](../Modules/Official/hooks/hooks-codex/src/index.ts)
 
-<a id="deepseek-aidsh-host-directory-picker-browse"></a>
+<a id="redsparkrsh-host-directory-picker-browse"></a>
 
 ## `@redspark/rsh-host-directory-picker-browse`
 
@@ -916,7 +916,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/host/directory-picker-browse/src/index.ts:181`](../Programs/Web/host/directory-picker-browse/src/index.ts)
 
-<a id="deepseek-aidsh-host-frontend-static"></a>
+<a id="redsparkrsh-host-frontend-static"></a>
 
 ## `@redspark/rsh-host-frontend-static`
 
@@ -932,7 +932,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/host/frontend-static/src/index.ts:30`](../Programs/Web/host/frontend-static/src/index.ts)
 
-<a id="deepseek-aidsh-host-open-in-app"></a>
+<a id="redsparkrsh-host-open-in-app"></a>
 
 ## `@redspark/rsh-host-open-in-app`
 
@@ -963,7 +963,7 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/host/open-in-app/src/index.ts:50`](../Programs/Web/host/open-in-app/src/index.ts)
 
-<a id="deepseek-aidsh-host-webserver"></a>
+<a id="redsparkrsh-host-webserver"></a>
 
 ## `@redspark/rsh-host-webserver`
 
@@ -975,7 +975,7 @@ type Config = HttpWebServerConfig
 
 来源：[`rsh/Programs/Web/host/webserver/src/index.ts:27`](../Programs/Web/host/webserver/src/index.ts)
 
-<a id="deepseek-aidsh-invariants"></a>
+<a id="redsparkrsh-invariants"></a>
 
 ## `@redspark/rsh-invariants`
 
@@ -993,7 +993,7 @@ export interface Config {
 
 来源：[`rsh/Core/runtime-diagnostics/invariants/src/index.ts:15`](../Core/runtime-diagnostics/invariants/src/index.ts)
 
-<a id="deepseek-aidsh-jobs-local"></a>
+<a id="redsparkrsh-jobs-local"></a>
 
 ## `@redspark/rsh-jobs-local`
 
@@ -1010,7 +1010,7 @@ export interface Config {
 
 来源：[`rsh/Engine/jobs/jobs-local/src/index.ts:31`](../Engine/jobs/jobs-local/src/index.ts)
 
-<a id="deepseek-aidsh-llm-deepseek"></a>
+<a id="redsparkrsh-llm-deepseek"></a>
 
 ## `@redspark/rsh-llm-deepseek`
 
@@ -1097,7 +1097,7 @@ export interface DeepSeekCatalogModel {
 
 来源：[`rsh/Modules/Official/llm/llm-deepseek/src/config.ts:74`](../Modules/Official/llm/llm-deepseek/src/config.ts)
 
-<a id="deepseek-aidsh-llm-pi-ai"></a>
+<a id="redsparkrsh-llm-pi-ai"></a>
 
 ## `@redspark/rsh-llm-pi-ai`
 
@@ -1372,7 +1372,7 @@ export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['
 
 来源：[`rsh/Modules/Official/llm/llm-pi-ai/src/config.ts:224`](../Modules/Official/llm/llm-pi-ai/src/config.ts)
 
-<a id="deepseek-aidsh-llm-replay"></a>
+<a id="redsparkrsh-llm-replay"></a>
 
 ## `@redspark/rsh-llm-replay`
 
@@ -1451,7 +1451,7 @@ export interface ReplayModelConfig {
 
 来源：[`rsh/Tests/test-support/llm-replay/src/index.ts:1133`](../Tests/test-support/llm-replay/src/index.ts)
 
-<a id="deepseek-aidsh-llm-retry"></a>
+<a id="redsparkrsh-llm-retry"></a>
 
 ## `@redspark/rsh-llm-retry`
 
@@ -1464,7 +1464,7 @@ export type Config = Readonly<Record<string, never>>
 
 来源：[`rsh/Engine/llm/llm-retry/src/index.ts:25`](../Engine/llm/llm-retry/src/index.ts)
 
-<a id="deepseek-aidsh-lsp-stdio"></a>
+<a id="redsparkrsh-lsp-stdio"></a>
 
 ## `@redspark/rsh-lsp-stdio`
 
@@ -1506,7 +1506,7 @@ export interface LspLocalServerConfig {
 
 来源：[`rsh/Modules/Official/lsp/lsp-stdio/src/index.ts:82`](../Modules/Official/lsp/lsp-stdio/src/index.ts)
 
-<a id="deepseek-aidsh-mcp-client"></a>
+<a id="redsparkrsh-mcp-client"></a>
 
 ## `@redspark/rsh-mcp-client`
 
@@ -1582,7 +1582,7 @@ export interface ReconnectConfig {
 
 来源：[`rsh/Modules/Official/mcp/mcp-client/src/index.ts:52`](../Modules/Official/mcp/mcp-client/src/index.ts)
 
-<a id="deepseek-aidsh-message-feedback"></a>
+<a id="redsparkrsh-message-feedback"></a>
 
 ## `@redspark/rsh-message-feedback`
 
@@ -1598,7 +1598,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/feedback/message-feedback/src/index.ts:32`](../Modules/Official/feedback/message-feedback/src/index.ts)
 
-<a id="deepseek-aidsh-permission-presets"></a>
+<a id="redsparkrsh-permission-presets"></a>
 
 ## `@redspark/rsh-permission-presets`
 
@@ -1637,7 +1637,7 @@ export interface PresetSpec {
 
 来源：[`rsh/Modules/Official/interaction/permission-presets/src/index.ts:125`](../Modules/Official/interaction/permission-presets/src/index.ts)
 
-<a id="deepseek-aidsh-persona"></a>
+<a id="redsparkrsh-persona"></a>
 
 ## `@redspark/rsh-persona`
 
@@ -1666,7 +1666,7 @@ export interface Config {
 
 来源：[`rsh/Engine/preset/persona/src/index.ts:30`](../Engine/preset/persona/src/index.ts)
 
-<a id="deepseek-aidsh-plan-mode"></a>
+<a id="redsparkrsh-plan-mode"></a>
 
 ## `@redspark/rsh-plan-mode`
 
@@ -1682,7 +1682,7 @@ export interface PlanModeConfig {
 
 来源：[`rsh/Modules/Official/plan/plan-mode/src/common.ts:66`](../Modules/Official/plan/plan-mode/src/common.ts)
 
-<a id="deepseek-aidsh-plugin-package-inventory-deepseek"></a>
+<a id="redsparkrsh-plugin-package-inventory-deepseek"></a>
 
 ## `@redspark/rsh-plugin-package-inventory-deepseek`
 
@@ -1698,7 +1698,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/llm/plugin-package-inventory-deepseek/src/config.ts:5`](../Modules/Official/llm/plugin-package-inventory-deepseek/src/config.ts)
 
-<a id="deepseek-aidsh-pwsh-local"></a>
+<a id="redsparkrsh-pwsh-local"></a>
 
 ## `@redspark/rsh-pwsh-local`
 
@@ -1731,7 +1731,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/pwsh-local/src/index.ts:58`](../Modules/Official/shell/pwsh-local/src/index.ts)
 
-<a id="deepseek-aidsh-pwsh-sandbox"></a>
+<a id="redsparkrsh-pwsh-sandbox"></a>
 
 ## `@redspark/rsh-pwsh-sandbox`
 
@@ -1749,11 +1749,11 @@ export interface Config {
 export type Config = LocalConfig
 ```
 
-依赖：[`LocalConfig`](#deepseek-aidsh-pwsh-local)
+依赖：[`LocalConfig`](#redsparkrsh-pwsh-local)
 
 来源：[`rsh/Modules/Official/shell/pwsh-sandbox/src/index.ts:40`](../Modules/Official/shell/pwsh-sandbox/src/index.ts)
 
-<a id="deepseek-aidsh-repeat-tool-reminder"></a>
+<a id="redsparkrsh-repeat-tool-reminder"></a>
 
 ## `@redspark/rsh-repeat-tool-reminder`
 
@@ -1787,7 +1787,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/guard/repeat-tool-reminder/src/index.ts:27`](../Modules/Official/guard/repeat-tool-reminder/src/index.ts)
 
-<a id="deepseek-aidsh-sandbox-local"></a>
+<a id="redsparkrsh-sandbox-local"></a>
 
 ## `@redspark/rsh-sandbox-local`
 
@@ -1819,7 +1819,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/sandbox/sandbox-local/src/backend.ts:45`](../Modules/Official/sandbox/sandbox-local/src/backend.ts)
 
-<a id="deepseek-aidsh-sandbox-policy"></a>
+<a id="redsparkrsh-sandbox-policy"></a>
 
 ## `@redspark/rsh-sandbox-policy`
 
@@ -1848,7 +1848,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/sandbox/sandbox-policy/src/index.ts:70`](../Modules/Official/sandbox/sandbox-policy/src/index.ts)
 
-<a id="deepseek-aidsh-sdk-app"></a>
+<a id="redsparkrsh-sdk-app"></a>
 
 ## `@redspark/rsh-sdk-app`
 
@@ -1864,7 +1864,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bundle/sdk-app/src/index.ts:23`](../Compatibility/DSH/bundle/sdk-app/src/index.ts)
 
-<a id="deepseek-aidsh-sdk-jsonrpc-server"></a>
+<a id="redsparkrsh-sdk-jsonrpc-server"></a>
 
 ## `@redspark/rsh-sdk-jsonrpc-server`
 
@@ -1888,7 +1888,7 @@ export interface JsonRpcConfig {
 
 来源：[`rsh/Programs/SDK/packages/server/src/index.ts:25`](../Programs/SDK/packages/server/src/index.ts)
 
-<a id="deepseek-aidsh-session-log-deepseek"></a>
+<a id="redsparkrsh-session-log-deepseek"></a>
 
 ## `@redspark/rsh-session-log-deepseek`
 
@@ -1904,7 +1904,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/llm/session-log-deepseek/src/config.ts:5`](../Modules/Official/llm/session-log-deepseek/src/config.ts)
 
-<a id="deepseek-aidsh-session-log-export"></a>
+<a id="redsparkrsh-session-log-export"></a>
 
 ## `@redspark/rsh-session-log-export`
 
@@ -1923,7 +1923,7 @@ export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 来源：[`rsh/Engine/session-query/session-log-export/src/index.ts:46`](../Engine/session-query/session-log-export/src/index.ts)
 
-<a id="deepseek-aidsh-session-persistence-jsonl"></a>
+<a id="redsparkrsh-session-persistence-jsonl"></a>
 
 ## `@redspark/rsh-session-persistence-jsonl`
 
@@ -1948,7 +1948,7 @@ export type JsonlCompression = 'zstd' | 'none'
 
 来源：[`rsh/Engine/session/session-persistence-jsonl/src/backend.ts:95`](../Engine/session/session-persistence-jsonl/src/backend.ts)
 
-<a id="deepseek-aidsh-session-projection-cache"></a>
+<a id="redsparkrsh-session-projection-cache"></a>
 
 ## `@redspark/rsh-session-projection-cache`
 
@@ -1972,7 +1972,7 @@ export interface Config {
 
 来源：[`rsh/Engine/session/session-projection-cache/src/index.ts:58`](../Engine/session/session-projection-cache/src/index.ts)
 
-<a id="deepseek-aidsh-session-query-sqlite"></a>
+<a id="redsparkrsh-session-query-sqlite"></a>
 
 ## `@redspark/rsh-session-query-sqlite`
 
@@ -2023,7 +2023,7 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 
 来源：[`rsh/Engine/session-query/session-query-sqlite/src/index.ts:64`](../Engine/session-query/session-query-sqlite/src/index.ts)
 
-<a id="deepseek-aidsh-session-reference"></a>
+<a id="redsparkrsh-session-reference"></a>
 
 ## `@redspark/rsh-session-reference`
 
@@ -2045,7 +2045,7 @@ export interface Config {
 
 来源：[`rsh/Engine/context/session-reference/src/config.ts:11`](../Engine/context/session-reference/src/config.ts)
 
-<a id="deepseek-aidsh-session-telemetry-otel"></a>
+<a id="redsparkrsh-session-telemetry-otel"></a>
 
 ## `@redspark/rsh-session-telemetry-otel`
 
@@ -2090,7 +2090,7 @@ export enum SessionTelemetryMode {
 
 来源：[`rsh/Engine/session/session-telemetry-otel/src/index.ts:100`](../Engine/session/session-telemetry-otel/src/index.ts)
 
-<a id="deepseek-aidsh-session-title"></a>
+<a id="redsparkrsh-session-title"></a>
 
 ## `@redspark/rsh-session-title`
 
@@ -2113,7 +2113,7 @@ export interface SessionTitleConfig {
 
 来源：[`rsh/Engine/session/session-title/src/index.ts:57`](../Engine/session/session-title/src/index.ts)
 
-<a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
+<a id="redsparkrsh-session-title-all-prompts-llm"></a>
 
 ## `@redspark/rsh-session-title-all-prompts-llm`
 
@@ -2128,7 +2128,7 @@ export type Config = SessionTitleLlmConfig
 
 来源：[`rsh/Engine/session/session-title-all-prompts-llm/src/index.ts:16`](../Engine/session/session-title-all-prompts-llm/src/index.ts)
 
-<a id="deepseek-aidsh-session-title-first-prompt-llm"></a>
+<a id="redsparkrsh-session-title-first-prompt-llm"></a>
 
 ## `@redspark/rsh-session-title-first-prompt-llm`
 
@@ -2143,7 +2143,7 @@ export type Config = SessionTitleLlmConfig
 
 来源：[`rsh/Engine/session/session-title-first-prompt-llm/src/index.ts:16`](../Engine/session/session-title-first-prompt-llm/src/index.ts)
 
-<a id="deepseek-aidsh-settings-file"></a>
+<a id="redsparkrsh-settings-file"></a>
 
 ## `@redspark/rsh-settings-file`
 
@@ -2163,7 +2163,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/settings/settings-file/src/index.ts:23`](../Modules/Official/settings/settings-file/src/index.ts)
 
-<a id="deepseek-aidsh-shell-env"></a>
+<a id="redsparkrsh-shell-env"></a>
 
 ## `@redspark/rsh-shell-env`
 
@@ -2177,7 +2177,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/shell-env/src/index.ts:27`](../Modules/Official/shell/shell-env/src/index.ts)
 
-<a id="deepseek-aidsh-skill"></a>
+<a id="redsparkrsh-skill"></a>
 
 ## `@redspark/rsh-skill`
 
@@ -2191,7 +2191,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/skill/skill/src/index.ts:65`](../Modules/Official/skill/skill/src/index.ts)
 
-<a id="deepseek-aidsh-skill-filesystem"></a>
+<a id="redsparkrsh-skill-filesystem"></a>
 
 ## `@redspark/rsh-skill-filesystem`
 
@@ -2233,7 +2233,7 @@ export interface SkillWatchConfigInput {
 
 来源：[`rsh/Modules/Official/skill/skill-filesystem/src/config.ts:14`](../Modules/Official/skill/skill-filesystem/src/config.ts)
 
-<a id="deepseek-aidsh-spill-local"></a>
+<a id="redsparkrsh-spill-local"></a>
 
 ## `@redspark/rsh-spill-local`
 
@@ -2262,7 +2262,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/spill/spill-local/src/index.ts:31`](../Modules/Official/spill/spill-local/src/index.ts)
 
-<a id="deepseek-aidsh-spill-policy"></a>
+<a id="redsparkrsh-spill-policy"></a>
 
 ## `@redspark/rsh-spill-policy`
 
@@ -2282,7 +2282,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/spill/spill-policy/src/index.ts:61`](../Modules/Official/spill/spill-policy/src/index.ts)
 
-<a id="deepseek-aidsh-storage-domain"></a>
+<a id="redsparkrsh-storage-domain"></a>
 
 ## `@redspark/rsh-storage-domain`
 
@@ -2305,7 +2305,7 @@ export interface Config {
 
 来源：[`rsh/Core/storage/storage-domain/src/index.ts:48`](../Core/storage/storage-domain/src/index.ts)
 
-<a id="deepseek-aidsh-storage-json"></a>
+<a id="redsparkrsh-storage-json"></a>
 
 ## `@redspark/rsh-storage-json`
 
@@ -2326,7 +2326,7 @@ export interface Config {
 
 来源：[`rsh/Core/storage/storage-json/src/index.ts:26`](../Core/storage/storage-json/src/index.ts)
 
-<a id="deepseek-aidsh-storage-sqlite"></a>
+<a id="redsparkrsh-storage-sqlite"></a>
 
 ## `@redspark/rsh-storage-sqlite`
 
@@ -2366,7 +2366,7 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 
 来源：[`rsh/Core/storage/storage-sqlite/src/index.ts:24`](../Core/storage/storage-sqlite/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-acp"></a>
+<a id="redsparkrsh-subagent-acp"></a>
 
 ## `@redspark/rsh-subagent-acp`
 
@@ -2419,7 +2419,7 @@ export type PermissionPolicy = 'allow' | 'reject'
 
 来源：[`rsh/Compatibility/DSH/subagent/subagent-acp/src/index.ts:27`](../Compatibility/DSH/subagent/subagent-acp/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-claude-code"></a>
+<a id="redsparkrsh-subagent-claude-code"></a>
 
 ## `@redspark/rsh-subagent-claude-code`
 
@@ -2454,7 +2454,7 @@ export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[numbe
 
 来源：[`rsh/Modules/Official/subagent/subagent-claude-code/src/index.ts:39`](../Modules/Official/subagent/subagent-claude-code/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-codex"></a>
+<a id="redsparkrsh-subagent-codex"></a>
 
 ## `@redspark/rsh-subagent-codex`
 
@@ -2483,7 +2483,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bridge/subagent-codex/src/index.ts:36`](../Compatibility/DSH/bridge/subagent-codex/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-dsh-sdk"></a>
+<a id="redsparkrsh-subagent-dsh-sdk"></a>
 
 ## `@redspark/rsh-subagent-dsh-sdk`
 
@@ -2539,7 +2539,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-fork-in-process"></a>
+<a id="redsparkrsh-subagent-fork-in-process"></a>
 
 ## `@redspark/rsh-subagent-fork-in-process`
 
@@ -2555,7 +2555,7 @@ export interface Config {
 
 来源：[`rsh/Engine/subagent/subagent-fork-in-process/src/index.ts:31`](../Engine/subagent/subagent-fork-in-process/src/index.ts)
 
-<a id="deepseek-aidsh-subagent-spawn-in-process"></a>
+<a id="redsparkrsh-subagent-spawn-in-process"></a>
 
 ## `@redspark/rsh-subagent-spawn-in-process`
 
@@ -2571,7 +2571,7 @@ export interface Config {
 
 来源：[`rsh/Engine/subagent/subagent-spawn-in-process/src/index.ts:25`](../Engine/subagent/subagent-spawn-in-process/src/index.ts)
 
-<a id="deepseek-aidsh-subprocess-e2b"></a>
+<a id="redsparkrsh-subprocess-e2b"></a>
 
 ## `@redspark/rsh-subprocess-e2b`
 
@@ -2587,7 +2587,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/e2b/subprocess-e2b/src/index.ts:26`](../Modules/Official/e2b/subprocess-e2b/src/index.ts)
 
-<a id="deepseek-aidsh-system-prompt"></a>
+<a id="redsparkrsh-system-prompt"></a>
 
 ## `@redspark/rsh-system-prompt`
 
@@ -2619,7 +2619,7 @@ export interface Config {
 
 来源：[`rsh/Engine/core/system-prompt/src/index.ts:242`](../Engine/core/system-prompt/src/index.ts)
 
-<a id="deepseek-aidsh-task-scheduler"></a>
+<a id="redsparkrsh-task-scheduler"></a>
 
 ## `@redspark/rsh-task-scheduler`
 
@@ -2649,7 +2649,7 @@ export interface SchedulerOptions {
 
 来源： [`rsh/Modules/Official/automation/task-scheduler/src/index.ts:18`](../Modules/Official/automation/task-scheduler/src/index.ts)
 
-<a id="deepseek-aidsh-terminal-bash"></a>
+<a id="redsparkrsh-terminal-bash"></a>
 
 ## `@redspark/rsh-terminal-bash`
 
@@ -2699,7 +2699,7 @@ export type ShellDialect = 'bash' | 'pwsh'
 
 来源：[`rsh/Modules/Official/terminal/terminal-bash/src/config.ts:10`](../Modules/Official/terminal/terminal-bash/src/config.ts)
 
-<a id="deepseek-aidsh-time-context"></a>
+<a id="redsparkrsh-time-context"></a>
 
 ## `@redspark/rsh-time-context`
 
@@ -2717,7 +2717,7 @@ export interface Config {
 
 来源：[`rsh/Engine/context/time-context/src/index.ts:49`](../Engine/context/time-context/src/index.ts)
 
-<a id="deepseek-aidsh-tmux-context"></a>
+<a id="redsparkrsh-tmux-context"></a>
 
 ## `@redspark/rsh-tmux-context`
 
@@ -2733,7 +2733,7 @@ export interface Config {
 
 来源：[`rsh/Engine/context/tmux-context/src/index.ts:36`](../Engine/context/tmux-context/src/index.ts)
 
-<a id="deepseek-aidsh-token-meter"></a>
+<a id="redsparkrsh-token-meter"></a>
 
 ## `@redspark/rsh-token-meter`
 
@@ -2746,7 +2746,7 @@ export type TokenMeterConfig = Record<string, never>
 
 来源：[`rsh/Engine/llm/token-meter/src/types.ts:3`](../Engine/llm/token-meter/src/types.ts)
 
-<a id="deepseek-aidsh-tool-bash"></a>
+<a id="redsparkrsh-tool-bash"></a>
 
 ## `@redspark/rsh-tool-bash`
 
@@ -2762,7 +2762,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/tool-bash/src/index.ts:33`](../Modules/Official/shell/tool-bash/src/index.ts)
 
-<a id="deepseek-aidsh-tool-bash-persistent"></a>
+<a id="redsparkrsh-tool-bash-persistent"></a>
 
 ## `@redspark/rsh-tool-bash-persistent`
 
@@ -2784,7 +2784,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/tool-bash-persistent/src/index.ts:435`](../Modules/Official/shell/tool-bash-persistent/src/index.ts)
 
-<a id="deepseek-aidsh-tool-fs"></a>
+<a id="redsparkrsh-tool-fs"></a>
 
 ## `@redspark/rsh-tool-fs`
 
@@ -2806,7 +2806,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/fs/tool-fs/src/index.ts:24`](../Modules/Official/fs/tool-fs/src/index.ts)
 
-<a id="deepseek-aidsh-tool-fs-search"></a>
+<a id="redsparkrsh-tool-fs-search"></a>
 
 ## `@redspark/rsh-tool-fs-search`
 
@@ -2841,7 +2841,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/fs/tool-fs-search/src/index.ts:73`](../Modules/Official/fs/tool-fs-search/src/index.ts)
 
-<a id="deepseek-aidsh-tool-goal"></a>
+<a id="redsparkrsh-tool-goal"></a>
 
 ## `@redspark/rsh-tool-goal`
 
@@ -2857,7 +2857,7 @@ export interface Config {
 
 来源：[`rsh/Engine/goal/tool-goal/src/index.ts:27`](../Engine/goal/tool-goal/src/index.ts)
 
-<a id="deepseek-aidsh-tool-jobs"></a>
+<a id="redsparkrsh-tool-jobs"></a>
 
 ## `@redspark/rsh-tool-jobs`
 
@@ -2891,7 +2891,7 @@ export type CompletionDelivery = 'quiet' | 'wakeup'
 
 来源：[`rsh/Engine/jobs/tool-jobs/src/index.ts:31`](../Engine/jobs/tool-jobs/src/index.ts)
 
-<a id="deepseek-aidsh-tool-lsp"></a>
+<a id="redsparkrsh-tool-lsp"></a>
 
 ## `@redspark/rsh-tool-lsp`
 
@@ -2911,7 +2911,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/lsp/tool-lsp/src/index.ts:57`](../Modules/Official/lsp/tool-lsp/src/index.ts)
 
-<a id="deepseek-aidsh-tool-present"></a>
+<a id="redsparkrsh-tool-present"></a>
 
 ## `@redspark/rsh-tool-present`
 
@@ -2927,7 +2927,7 @@ export interface Config {
 
 来源： [`rsh/Modules/Official/fs/tool-present/src/index.ts:15`](../Modules/Official/fs/tool-present/src/index.ts)
 
-<a id="deepseek-aidsh-tool-pwsh"></a>
+<a id="redsparkrsh-tool-pwsh"></a>
 
 ## `@redspark/rsh-tool-pwsh`
 
@@ -2943,7 +2943,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/tool-pwsh/src/index.ts:52`](../Modules/Official/shell/tool-pwsh/src/index.ts)
 
-<a id="deepseek-aidsh-tool-pwsh-persistent"></a>
+<a id="redsparkrsh-tool-pwsh-persistent"></a>
 
 ## `@redspark/rsh-tool-pwsh-persistent`
 
@@ -2965,7 +2965,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/shell/tool-pwsh-persistent/src/index.ts:472`](../Modules/Official/shell/tool-pwsh-persistent/src/index.ts)
 
-<a id="deepseek-aidsh-tool-ralph"></a>
+<a id="redsparkrsh-tool-ralph"></a>
 
 ## `@redspark/rsh-tool-ralph`
 
@@ -2987,7 +2987,7 @@ export interface Config {
 
 来源：[`rsh/Engine/workflow/tool-ralph/src/index.ts:24`](../Engine/workflow/tool-ralph/src/index.ts)
 
-<a id="deepseek-aidsh-tool-session-query"></a>
+<a id="redsparkrsh-tool-session-query"></a>
 
 ## `@redspark/rsh-tool-session-query`
 
@@ -3008,7 +3008,7 @@ export interface SessionQueryToolConfig {
 
 来源：[`rsh/Engine/session-query/tool-session-query/src/index.ts:30`](../Engine/session-query/tool-session-query/src/index.ts)
 
-<a id="deepseek-aidsh-tool-skill"></a>
+<a id="redsparkrsh-tool-skill"></a>
 
 ## `@redspark/rsh-tool-skill`
 
@@ -3024,7 +3024,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/skill/tool-skill/src/index.ts:42`](../Modules/Official/skill/tool-skill/src/index.ts)
 
-<a id="deepseek-aidsh-tool-str-replace-editor"></a>
+<a id="redsparkrsh-tool-str-replace-editor"></a>
 
 ## `@redspark/rsh-tool-str-replace-editor`
 
@@ -3042,7 +3042,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/fs/tool-str-replace-editor/src/index.ts:505`](../Modules/Official/fs/tool-str-replace-editor/src/index.ts)
 
-<a id="deepseek-aidsh-tool-subagent"></a>
+<a id="redsparkrsh-tool-subagent"></a>
 
 ## `@redspark/rsh-tool-subagent`
 
@@ -3112,7 +3112,7 @@ export interface Config {
 
 来源：[`rsh/Engine/subagent/tool-subagent/src/config.ts:8`](../Engine/subagent/tool-subagent/src/config.ts)
 
-<a id="deepseek-aidsh-tool-terminal"></a>
+<a id="redsparkrsh-tool-terminal"></a>
 
 ## `@redspark/rsh-tool-terminal`
 
@@ -3130,7 +3130,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/terminal/tool-terminal/src/config.ts:11`](../Modules/Official/terminal/tool-terminal/src/config.ts)
 
-<a id="deepseek-aidsh-tool-todo"></a>
+<a id="redsparkrsh-tool-todo"></a>
 
 ## `@redspark/rsh-tool-todo`
 
@@ -3152,7 +3152,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/todo/tool-todo/src/index.ts:30`](../Modules/Official/todo/tool-todo/src/index.ts)
 
-<a id="deepseek-aidsh-tool-web"></a>
+<a id="redsparkrsh-tool-web"></a>
 
 ## `@redspark/rsh-tool-web`
 
@@ -3180,7 +3180,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/web/tool-web/src/config.ts:20`](../Modules/Official/web/tool-web/src/config.ts)
 
-<a id="deepseek-aidsh-tool-workflow"></a>
+<a id="redsparkrsh-tool-workflow"></a>
 
 ## `@redspark/rsh-tool-workflow`
 
@@ -3198,7 +3198,7 @@ export interface Config {
 
 来源：[`rsh/Engine/workflow/tool-workflow/src/index.ts:32`](../Engine/workflow/tool-workflow/src/index.ts)
 
-<a id="deepseek-aidsh-tools"></a>
+<a id="redsparkrsh-tools"></a>
 
 ## `@redspark/rsh-tools`
 
@@ -3234,7 +3234,7 @@ export type ToolPresentationMode = 'native' | 'ptc' | 'both'
 
 来源：[`rsh/Engine/core/tools/src/index.ts:652`](../Engine/core/tools/src/index.ts)
 
-<a id="deepseek-aidsh-typert-loader"></a>
+<a id="redsparkrsh-typert-loader"></a>
 
 ## `@redspark/rsh-typert-loader`
 
@@ -3250,7 +3250,7 @@ export interface Config {
 
 来源：[`rsh/Core/typert/loader/src/index.ts:47`](../Core/typert/loader/src/index.ts)
 
-<a id="deepseek-aidsh-user-approval"></a>
+<a id="redsparkrsh-user-approval"></a>
 
 ## `@redspark/rsh-user-approval`
 
@@ -3271,7 +3271,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bridge/compat-user-approval/src/index.ts:64`](../Compatibility/DSH/bridge/compat-user-approval/src/index.ts)
 
-<a id="deepseek-aidsh-web"></a>
+<a id="redsparkrsh-web"></a>
 
 ## `@redspark/rsh-web`
 
@@ -3292,7 +3292,7 @@ export interface WebRuntimeConfig {
 
 来源：[`rsh/Modules/Official/web/web/src/index.ts:47`](../Modules/Official/web/web/src/index.ts)
 
-<a id="deepseek-aidsh-web-app"></a>
+<a id="redsparkrsh-web-app"></a>
 
 ## `@redspark/rsh-web-app`
 
@@ -3319,7 +3319,7 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bundle/web-app/src/index.ts:44`](../Compatibility/DSH/bundle/web-app/src/index.ts)
 
-<a id="deepseek-aidsh-web-fetch-http"></a>
+<a id="redsparkrsh-web-fetch-http"></a>
 
 ## `@redspark/rsh-web-fetch-http`
 
@@ -3343,7 +3343,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/web/web-fetch-http/src/config.ts:15`](../Modules/Official/web/web-fetch-http/src/config.ts)
 
-<a id="deepseek-aidsh-web-search-deepseek"></a>
+<a id="redsparkrsh-web-search-deepseek"></a>
 
 ## `@redspark/rsh-web-search-deepseek`
 
@@ -3371,7 +3371,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/web/web-search-deepseek/src/config.ts:24`](../Modules/Official/web/web-search-deepseek/src/config.ts)
 
-<a id="deepseek-aidsh-web-search-exa"></a>
+<a id="redsparkrsh-web-search-exa"></a>
 
 ## `@redspark/rsh-web-search-exa`
 
@@ -3395,7 +3395,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/web/web-search-exa/src/config.ts:17`](../Modules/Official/web/web-search-exa/src/config.ts)
 
-<a id="deepseek-aidsh-web-search-perplexity"></a>
+<a id="redsparkrsh-web-search-perplexity"></a>
 
 ## `@redspark/rsh-web-search-perplexity`
 
@@ -3419,7 +3419,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/web/web-search-perplexity/src/config.ts:17`](../Modules/Official/web/web-search-perplexity/src/config.ts)
 
-<a id="deepseek-aidsh-webhook-github"></a>
+<a id="redsparkrsh-webhook-github"></a>
 
 ## `@redspark/rsh-webhook-github`
 
@@ -3441,7 +3441,7 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/webhook/webhook-github/src/index.ts:17`](../Modules/Official/webhook/webhook-github/src/index.ts)
 
-<a id="deepseek-aidsh-workflow-worker-thread"></a>
+<a id="redsparkrsh-workflow-worker-thread"></a>
 
 ## `@redspark/rsh-workflow-worker-thread`
 

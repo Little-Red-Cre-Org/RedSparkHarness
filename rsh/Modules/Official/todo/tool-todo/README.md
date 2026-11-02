@@ -45,7 +45,7 @@ Choose it when one agent session should own the task list and whole-list updates
 |---|---|---|
 | `allowParallelInProgress` | required | Whether several todos may be `in_progress` at once; also selects the active-status clause of the model description |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-todo) is the exhaustive source for the accepted field.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-todo) is the exhaustive source for the accepted field.
 
 The native `./native` entry selects `tools` and `activeSessions` from the profile and requires the same explicit parallelism setting. A successful call awaits durable `todo/write` acceptance before returning its counts. `readTodos(owner, signal)` reconstructs the standing list from the retained writer, including restored and fork-inherited events; the next `turn/start` clears it. The native registry owns Agent attribution, cancellation and registration disposal.
 
@@ -119,8 +119,8 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Todo subsystem](../../../../Docs/subsystems/todo.md) — the `todo/write` event payload, ownership rules, and `TodoItem`.
 - [todo group map](../README.md) — the sibling group page and its package table.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-todo) — the `todo_write` schema the model receives.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-todo) — every accepted config field and its source declaration.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-todo) — the `todo_write` schema the model receives.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-todo) — every accepted config field and its source declaration.
 - [todo_write tool Agent Note](../../../../../.agents/notes/archived/feature/2026-06-29-todo-write-tool.md) — the original design, alternatives, and dropped fields.
 - [parallel in-progress Agent Note](../../../../../.agents/notes/archived/feature/2026-07-26-todo-parallel-in-progress.md) — why the active-count cap is a deployment policy.
 
@@ -133,7 +133,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The model sees the generated [`todo_write` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-todo): an object with one required `todos` array of `{ content, status }` items, where `status` is `pending`, `in_progress`, or `completed`. The description is the composed whole-list instruction whose active-status clause follows `allowParallelInProgress`.
+The model sees the generated [`todo_write` schema](../../../../Docs/tool-catalog.md#redsparkrsh-tool-todo): an object with one required `todos` array of `{ content, status }` items, where `status` is `pending`, `in_progress`, or `completed`. The description is the composed whole-list instruction whose active-status clause follows `allowParallelInProgress`.
 
 #### Token effect
 

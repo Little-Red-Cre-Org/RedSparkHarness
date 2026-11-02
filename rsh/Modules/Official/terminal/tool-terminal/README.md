@@ -59,7 +59,7 @@ The tools need `ctx.terminals` — a backend must be mounted — and the system-
 | `enableRunInBackground` | `true` | Expose and accept `run_in_background`; `false` removes the schema field and rejects the argument |
 | `maxResultBytes` | `262144` | UTF-8 cap (minimum `64`) for each complete terminal result after wait, session, pagination, truncation, and job-status metadata |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-terminal) and [tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-terminal) are the exhaustive sources for config fields and schemas.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-terminal) and [tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-terminal) are the exhaustive sources for config fields and schemas.
 
 ### Background sends
 
@@ -109,7 +109,7 @@ Foreground sends use terminal call and result cards; background sends and the ot
 
 Read these pages when the package-level contract is not enough. They move from the generated schemas to the service contract, the backend, and the background-job surface.
 
-- [Tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-terminal) — the six generated schemas and result shapes.
+- [Tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-terminal) — the six generated schemas and result shapes.
 - [Terminal subsystem reference](../../../../Docs/subsystems/terminal.md) — the service contract and shared types behind the tools.
 - [terminal service](../terminal/README.md) — session operations, owner fencing, and cleanup semantics.
 - [terminal-bash backend](../terminal-bash/README.md) — the shipped shell backend that provides sessions.
@@ -145,7 +145,7 @@ Prefix-stable while the registration scope and guidance text are unchanged.
 
 #### What the model sees
 
-The six generated schemas are listed in the [`dsh-tool-terminal` catalog section](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-terminal). Their fixed schema tokens are present whenever this plugin is active; agent-scoped tool filtering may hide them.
+The six generated schemas are listed in the [`dsh-tool-terminal` catalog section](../../../../Docs/tool-catalog.md#redsparkrsh-tool-terminal). Their fixed schema tokens are present whenever this plugin is active; agent-scoped tool filtering may hide them.
 
 #### Token effect
 

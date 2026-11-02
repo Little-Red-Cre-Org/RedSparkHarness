@@ -46,7 +46,7 @@ kind: "package-reference"
 | `watch` | `true` | 监听文档并热发布外部编辑 |
 | `debounceMs` | `100` | watcher 写入稳定窗口（毫秒） |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 原生 Host 入口通过 `@redspark/rsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。`@redspark/rsh-settings-file/native` 还导出 `resolveNativeSettingsConfig` 和 `parseNativeSettingsDocument`，供需要复用 Provider 路径与解析规则、但不启动 Host 的读取方使用。每个已注册用户分节变化时都会携带递增后的 revision 发出 `settings/document-updated`，即使解析值保持相等。
 
@@ -118,7 +118,7 @@ YAML 渲染把缓存文本解析成可变的保留注释树，再对一个 names
 - [设置包映射](../README.zh.md)——用户设置能力的两个包。
 - [原子写入](../../../../Core/util/atomic-write/README.zh.md)——每次写入都使用的写锁与原子替换。
 - [主目录路径](../../../../Core/util/home-paths/README.zh.md)——`$RSH_HOME` 解析与规范化监听路径。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-settings-file)——每个受支持配置字段及其源声明。
 
 -----
 

@@ -68,7 +68,7 @@ Every operation first uses `lstat` to reject a missing path, a final symlink, or
 | `maxLines` | `5000` | Default and largest page size in lines; a larger `limit` is refused |
 | `maxEntries` | `2000` | Cap on returned directory entries; the rest is dropped and reported cut |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-api-workspace-files) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-api-workspace-files) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Failures
 

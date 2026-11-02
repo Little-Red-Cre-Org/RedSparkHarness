@@ -45,7 +45,7 @@ Load the plugin together with the skill registry and at least one provider. The 
 |---|---|---|
 | `catalogDescriptionMaxLength` | `500` | Maximum normalized description length rendered in the session catalog; minimum 3 |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-skill) is the exhaustive source for every accepted field.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-skill) is the exhaustive source for every accepted field.
 
 Native Host profiles select this package's `./native` entry alongside the Native `dsh-skill`, `dsh-native-tools`, and request-context providers. The Native consumer provides `skillInvocations` for manual Skill routing: it accepts only a user-invocable definition when the caller supplies the same `requestContexts` registry, its install scope contains the selected Agent scope, and its exact request-context registration remains the nearest winner before and after loading. Matching instructions are prepared through the shared request-context service, while catalog publication still checks the exact captured `skill` tool registration.
 
@@ -101,7 +101,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Skill subsystem reference](../../../../Docs/subsystems/skills.md) — the registry and provider vocabulary behind the catalog.
 - [skill package](../skill/README.md) — the registry and the shared `renderSkillContent` rendering.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-skill) — the exact `skill` schema the model receives.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-skill) — the exact `skill` schema the model receives.
 - [User-explicit skill invocation Agent Note](../../../../../.agents/notes/archived/feature/2026-08-08-user-explicit-skill-invocation.md) — the `/name` gesture design.
 
 -----
@@ -142,7 +142,7 @@ The initial durable catalog is appended after the existing reusable prefix. Dyna
 
 #### What the model sees
 
-The model sees the generated [`skill` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-skill).
+The model sees the generated [`skill` schema](../../../../Docs/tool-catalog.md#redsparkrsh-tool-skill).
 
 #### Token effect
 

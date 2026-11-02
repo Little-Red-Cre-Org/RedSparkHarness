@@ -119,7 +119,7 @@ Cordis 入口使用包含存储历史的按需协调器。Native 入口在反馈
 - [会话遥测 seam](../session-telemetry/README.zh.md)——捕获约定、记录词汇与脱敏 waterfall。
 - [会话遥测子系统](../../../Docs/subsystems/session-telemetry.zh.md)——能力拆分与类型声明。
 - [匿名用户身份](../../../Core/identity/anonymous-user-id/README.zh.md)——作为 OTel Resource `user.id` 上报的 id。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-telemetry-otel)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-session-telemetry-otel)——每个受支持配置字段及其源声明。
 
 -----
 

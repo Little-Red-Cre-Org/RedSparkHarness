@@ -44,7 +44,7 @@ kind: "package-reference"
 | `toolName` | `workflow` | 要注册的面向模型工具名称。 |
 | `maxResultChars` | `50000` | 渲染结果上限；更长的 JSON 会被截断并附上提示。 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-workflow)是每个受支持字段的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-tool-workflow)是每个受支持字段的穷尽式真源。
 
 Native 组合会挂载 `@redspark/rsh-tool-workflow/native`，并传入一个在作用域内 Native workflow Definition 可见的 `provider` 名称；worker Provider 需要单独安装。根调用会在返回结果前将运行与子 agent 进度记录到调用方 Session。
 
@@ -128,7 +128,7 @@ Use the <toolName> tool ONLY when the user explicitly asks for a workflow or for
 
 #### 模型看到什么
 
-工具可见时，已生成的默认 [`workflow` schema](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-workflow) 包含完整的 JavaScript 钩子与元数据约定；`toolName` 可以重命名该定义，模型会提交脚本、元数据与可选 args。
+工具可见时，已生成的默认 [`workflow` schema](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-workflow) 包含完整的 JavaScript 钩子与元数据约定；`toolName` 可以重命名该定义，模型会提交脚本、元数据与可选 args。
 
 #### Token 影响
 

@@ -45,7 +45,7 @@ kind: "package-reference"
 | `syncTimeoutMs` | `5000` | 脚本最初同步片段的 VM 超时时间，单位为毫秒。 |
 | `disposeGraceMs` | `5000` | 旧 Provider 强制结算运行并终止 worker 前的期限。 |
 
-负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
+负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
 
 ### Native profile 配置
 

@@ -59,7 +59,7 @@ kind: "package-reference"
 
 ### 调整压缩开始的时机
 
-所有设置都可选。默认在已路由模型上下文窗口的 80% 处开始压缩，并逐字保留最新的 16%；下表是完整的策略面，生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-compaction-basic)是穷尽式真源。
+所有设置都可选。默认在已路由模型上下文窗口的 80% 处开始压缩，并逐字保留最新的 16%；下表是完整的策略面，生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-compaction-basic)是穷尽式真源。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
@@ -156,7 +156,7 @@ kind: "package-reference"
 - [工具结果修剪器](../compaction-tool-result-pruner/README.zh.md)——先修剪超大工具输出的可选配套工具。
 - [人类 /compact 命令](../command-compact/README.zh.md)——无需等待压力的按需压缩。
 - [Token meter](../../llm/token-meter/README.zh.md)——决定何时压缩的测量服务。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-compaction-basic)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-compaction-basic)——每个受支持配置字段及其源声明。
 
 -----
 

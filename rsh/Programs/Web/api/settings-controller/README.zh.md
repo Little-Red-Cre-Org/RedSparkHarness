@@ -43,7 +43,7 @@ kind: "package-reference"
 | `nativeOpen` | 平台探测 | Agent preset 目录能否交给原生桌面打开器 |
 | `authorizationKeys` | `[]` | 浏览器可以列出和启动的已注册账号流的凭据 key |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-api-settings-controller)是所有受支持字段及其 JSDoc 的完整来源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-api-settings-controller)是所有受支持字段及其 JSDoc 的完整来源。
 
 -----
 

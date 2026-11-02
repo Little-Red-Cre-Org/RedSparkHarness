@@ -43,7 +43,7 @@ kind: "package-reference"
 | `provider` | 必填 | 新 agent 使用的已注册提供方路由 |
 | `model` | 必填 | 新 agent 使用的、由提供方持有的模型 id |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-agent-default-model)是所有受支持字段的完整参考。`reasoningEffort` 刻意不是配置字段：它属于设置层，因此完整保存的选择可以在下一个选定的模型没有推理强度时清除旧值，而组合配置值会再次被继承。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-default-model)是所有受支持字段的完整参考。`reasoningEffort` 刻意不是配置字段：它属于设置层，因此完整保存的选择可以在下一个选定的模型没有推理强度时清除旧值，而组合配置值会再次被继承。
 
 ### 读取与更改默认值
 
@@ -92,7 +92,7 @@ await ctx.agentDefaultModel.saveSelection({ provider, model, reasoningEffort: 'h
 
 - [Core 子系统](../../../Docs/subsystems/core.zh.md)——`Agent` 句柄与 `AgentOptions` 路由选择。
 - [agent-loop 包](../agent-loop/README.zh.md)——agent 在请求时如何解析提供方与模型。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-agent-default-model)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-default-model)——每个受支持配置字段及其源声明。
 - [core 分组地图](../README.zh.md)——core 各包如何组合。
 
 -----

@@ -49,7 +49,7 @@ create 请求可携带 `expectedRef`：`null` 要求当前没有 Goal；id/revis
 |---|---|---|
 | `defaultMaxGoalRounds` | `256` | 当 create 请求省略上限时应用的 Round 上限 |
 
-`defaultMaxGoalRounds` 必须是正的安全整数；指定了自身上限的 create 请求会覆盖它。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-goal)是每个受支持字段的穷尽式真源。
+`defaultMaxGoalRounds` 必须是正的安全整数；指定了自身上限的 create 请求会覆盖它。生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-goal)是每个受支持字段的穷尽式真源。
 
 ### 会话投影
 
@@ -135,7 +135,7 @@ view.activation                        // 'armed' | 'disarmed' — not persisted
 
 - [goal 子系统](../../../Docs/subsystems/goal.zh.md)——goal 类型、持久的变更载荷与生成的服务 API。
 - [goal 组地图](../README.zh.md)——goal 各包及其组合方式。
-- [生成的配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-goal)——每个受支持配置字段及其源声明。
+- [生成的配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-goal)——每个受支持配置字段及其源声明。
 - [goal 领域 Agent Note](../../../../.agents/notes/implemented/feature/2026-07-19-persisted-same-session-goal-domain.zh.md)——领域设计、备选方案与决策。
 
 -----

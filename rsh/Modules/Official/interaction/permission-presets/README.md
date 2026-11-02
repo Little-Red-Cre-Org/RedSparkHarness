@@ -51,7 +51,7 @@ The plugin config defines the preset table and the default for fresh sessions. E
 | `presets` | `workspace-write`, `danger-full-access` | Table of preset name → sandbox/approval bundle |
 | `defaultPreset` | inferred | Preset pinned into fresh sessions; required when composition defaults match no preset |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-permission-presets) is the exhaustive source for every accepted field and its JSDoc. The name `custom` is reserved for the derived not-a-preset state and cannot name a table entry. Mounting requires a confining bash executor (one that reports a `sandboxMode`) and the approval service.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-permission-presets) is the exhaustive source for every accepted field and its JSDoc. The name `custom` is reserved for the derived not-a-preset state and cannot name a table entry. Mounting requires a confining bash executor (one that reports a `sandboxMode`) and the approval service.
 
 ### Switching presets
 

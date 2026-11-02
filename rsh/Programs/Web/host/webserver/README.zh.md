@@ -91,7 +91,7 @@ Core `HttpRouteTable` 先查精确表，再遍历前缀表取最长匹配，最�
 - [HTTP routes 子系统](../../../../Docs/subsystems/http-routes.zh.md)——共享 Host／Native 路由约定与排空 table。
 - [SPA dist 服务器](../frontend-static/README.zh.md)——回退席位的随附持有者。
 - [Web 配置树启动与传输分层](../../../../../.agents/notes/implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.zh.md)——功能插件为何拥有每条路由。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-host-webserver)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-host-webserver)——每个受支持配置字段及其源声明。
 
 -----
 

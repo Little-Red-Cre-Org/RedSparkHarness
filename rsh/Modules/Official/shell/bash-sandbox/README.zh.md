@@ -41,7 +41,7 @@ kind: "package-reference"
 
 ### 最小配置
 
-本执行器自身不携带任何沙箱配置：默认模式与工作区根目录来自 `ctx.sandboxPolicy`，runner 选择属于 `ctx.sandbox` 提供方。它自己的配置就是本地执行器的旋钮，逐字继承；生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-bash-sandbox)是穷尽式真源。
+本执行器自身不携带任何沙箱配置：默认模式与工作区根目录来自 `ctx.sandboxPolicy`，runner 选择属于 `ctx.sandbox` 提供方。它自己的配置就是本地执行器的旋钮，逐字继承；生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-bash-sandbox)是穷尽式真源。
 
 原生入口要求原生 `subprocess`、`sandbox` 和 `sandboxPolicy` 服务，并提供 `shell`。将它与 `dsh-subprocess-local/native`、`dsh-sandbox-local/native` 和 `dsh-native-sandbox-policy/native` 组合使用。原生配置沿用本地 Bash 的预算字段；策略 Provider 必须明确指定模式与绝对工作区根目录。原生受限调用将 runner 的精确 argv 交给托管 subprocess；runner 失败后不会改用无隔离 Bash 重试。
 
@@ -126,7 +126,7 @@ kind: "package-reference"
 
 #### 模型看到的内容
 
-基线是生成的 [`dsh-tool-bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。通过公布表明启用隔离的 `sandboxMode` 能力，此后端会为 `bash` 增加 `sandbox_permissions`（enum 为 `workspace-write` | `danger-full-access`）与 `justification`。策略归属方会另行贡献当前且不区分具体能力的 `sandbox:policy` 上下文。
+基线是生成的 [`dsh-tool-bash` schema](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-bash)。通过公布表明启用隔离的 `sandboxMode` 能力，此后端会为 `bash` 增加 `sandbox_permissions`（enum 为 `workspace-write` | `danger-full-access`）与 `justification`。策略归属方会另行贡献当前且不区分具体能力的 `sandbox:policy` 上下文。
 
 #### Token 影响
 

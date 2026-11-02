@@ -55,7 +55,7 @@ kind: "package-reference"
 |---|---|---|
 | `enableRunInBackground` | `true` | 暴露 `run_in_background`；为 `false` 时拒绝强制后台调用 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-bash)是每个受支持字段及其 JSDoc 的穷尽式真源；生成的[工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)携带完整参数 schema。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-bash)是每个受支持字段及其 JSDoc 的穷尽式真源；生成的[工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-bash)携带完整参数 schema。
 
 ### 运行命令
 
@@ -121,8 +121,8 @@ kind: "package-reference"
 - [shell-env](../shell-env/README.zh.md)——每次调用都会收到的受管 `RSH_*` 环境。
 - [tool-jobs](../../../../Engine/jobs/tool-jobs/README.zh.md)——后台运行的 `job_output`、`job_list` 与 `job_kill` 控制。
 - [沙箱 Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-06-sandbox.zh.md)——升权与模式切换的理由。
-- [生成的工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)——`bash` 参数 schema 的确切内容。
-- [生成的配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-bash)——每个受支持配置字段及其源声明。
+- [生成的工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-bash)——`bash` 参数 schema 的确切内容。
+- [生成的配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-bash)——每个受支持配置字段及其源声明。
 
 -----
 
@@ -156,7 +156,7 @@ Check the [exit code: N] marker on every bash result; investigate failures befor
 
 #### 模型看到什么
 
-模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)。在原生 profile 中，仅当同时选定任务注册表及其控制工具时才会出现 `run_in_background`；选定 shell 约束命令且原生审批策略为 `ask` 时才会出现 `sandbox_permissions` 和 `justification`。按 agent 作用域限制工具可以移除该 agent 的定义。
+模型会看到生成的 [`bash` schema](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-bash)。在原生 profile 中，仅当同时选定任务注册表及其控制工具时才会出现 `run_in_background`；选定 shell 约束命令且原生审批策略为 `ask` 时才会出现 `sandbox_permissions` 和 `justification`。按 agent 作用域限制工具可以移除该 agent 的定义。
 
 #### Token 影响
 

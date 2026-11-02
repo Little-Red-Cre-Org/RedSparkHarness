@@ -62,7 +62,7 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 |---|---|---|
 | `dshHome` | `$RSH_HOME`，然后 `~/.dsh` | 暴露为 `RSH_HOME` 的 Harness 主目录绝对路径 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-shell-env)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-shell-env)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 可能出什么问题
 
@@ -112,7 +112,7 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 - [tool-bash](../tool-bash/README.zh.md)——消费本环境的 bash 工具。
 - [tool-pwsh](../tool-pwsh/README.zh.md)——消费本环境的 pwsh 工具。
 - [home paths 包](../../../../Core/util/home-paths/README.zh.md)——`RSH_HOME` 如何解析。
-- [生成的配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-shell-env)——每个受支持配置字段及其源声明。
+- [生成的配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-shell-env)——每个受支持配置字段及其源声明。
 
 -----
 

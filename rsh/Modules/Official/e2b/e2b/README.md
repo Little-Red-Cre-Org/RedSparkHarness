@@ -52,7 +52,7 @@ Three settings matter: an API key (or the `E2B_API_KEY` environment variable), a
 | `cwd` | `/home/user/workspace` | Remote working directory the family shares; absolute POSIX path |
 | `timeoutMs` | `300,000` | Sandbox lifetime in milliseconds; the sandbox is deleted when it expires |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-e2b) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-e2b) is the exhaustive source for every accepted field and its JSDoc.
 
 ### What you get
 
@@ -105,7 +105,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [E2B provider family map](../README.md) — the three packages and the opt-in composition.
 - [Subprocess subsystem](../../../../Docs/subsystems/subprocess.md) — the subprocess seam contract and the generated Cordis surface, including `ctx.e2b`.
 - [Portable execution-world decision](../../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.md) — why consumers delegate to `ctx.fs` and `ctx.subprocess`, and what stays in the host.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-e2b) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-e2b) — every accepted config field and its source declaration.
 
 -----
 

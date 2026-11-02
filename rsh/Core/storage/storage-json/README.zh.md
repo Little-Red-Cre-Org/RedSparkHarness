@@ -56,7 +56,7 @@ kind: "package-reference"
 |---|---|---|
 | `root` | 必填 | 保存 `<unit>.json` 文件与 `<unit>/` 目录树的目录；按需以 `0o700` 创建 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-storage-json)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-storage-json)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 可观察行为
 

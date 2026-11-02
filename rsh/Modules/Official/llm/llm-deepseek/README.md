@@ -70,7 +70,7 @@ A request selects the route with `provider: deepseek-official`; the model id pas
 | `fileQuotaCleanupBatch` | `100` | Oldest harness-owned files removed before one quota retry |
 | `retryPolicy` | normal, 5 retries | Provider-owned retry policy executed by `dsh-llm-retry` |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-llm-deepseek) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-llm-deepseek) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Streaming with thinking and images
 

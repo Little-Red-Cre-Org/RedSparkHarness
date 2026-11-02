@@ -59,7 +59,7 @@ These fields configure the retained Cordis compatibility entry only; the Native 
 | `plan` | Run in native planning mode, deny execution approval, and return the completed plan as the final answer |
 | `bypassPermissions` | Explicitly set the SDK's dangerous confirmation and bypass permission checks |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) documents the retained Cordis entry. Its provider name, optional model, environment, and permission mode do not configure the Native entry. The compatibility entry preserves prior Claude behavior: a configured model passes unchanged to each query, credential-shaped ambient variables are removed before the explicit `env` overlay, and the SDK loads host user, project, and local settings relative to the parent Session cwd.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subagent-claude-code) documents the retained Cordis entry. Its provider name, optional model, environment, and permission mode do not configure the Native entry. The compatibility entry preserves prior Claude behavior: a configured model passes unchanged to each query, credential-shaped ambient variables are removed before the explicit `env` overlay, and the SDK loads host user, project, and local settings relative to the parent Session cwd.
 
 ### Native external driver
 
@@ -138,7 +138,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Codex compatibility bridge](../../../../Compatibility/DSH/bridge/subagent-codex/README.md) — the legacy Cordis adapter for the Codex product.
 - [Official Codex app-server product](../codex-app-server/README.md) — the native app-server protocol and external-child driver owner.
 - [Claude Code and Codex backends](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) — every accepted Cordis config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subagent-claude-code) — every accepted Cordis config field and its source declaration.
 
 -----
 

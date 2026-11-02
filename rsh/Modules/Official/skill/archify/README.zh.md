@@ -51,7 +51,7 @@ Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固
 | `requestPhrases` | 内置列表 | 让请求符合自动加载条件的动作短语。 |
 | `diagramPhrases` | 内置列表 | 必须与一个动作短语同时出现的图表领域短语。 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-archify)是所有可接受字段的完整来源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-archify)是所有可接受字段的完整来源。
 
 ### 可观察的成功与失败
 

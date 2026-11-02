@@ -43,7 +43,7 @@ Mount this package as a Loader entry in a profile that serves browser configurat
 | `nativeOpen` | platform-detected | Whether Agent preset directories can be handed to a native desktop opener |
 | `authorizationKeys` | `[]` | Credential keys whose registered account flows the browser may list and start |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-api-settings-controller) is the exhaustive source for accepted fields and their JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-api-settings-controller) is the exhaustive source for accepted fields and their JSDoc.
 
 -----
 

@@ -52,7 +52,7 @@ kind: "package-reference"
 | `cwd` | `/home/user/workspace` | 家族共享的远程工作目录；必须是绝对 POSIX 路径 |
 | `timeoutMs` | `300,000` | 沙箱生命周期（毫秒）；到期后沙箱被删除 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-e2b)完整列出了每个受支持字段及其 JSDoc，是这些信息的真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-e2b)完整列出了每个受支持字段及其 JSDoc，是这些信息的真源。
 
 ### 你能得到什么
 
@@ -105,7 +105,7 @@ kind: "package-reference"
 - [E2B 提供方家族地图](../README.zh.md)——三个包与可选组合。
 - [子进程子系统](../../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定与生成的 Cordis 表面，包括 `ctx.e2b`。
 - [可移植执行世界决策](../../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.zh.md)——消费方为何委托给 `ctx.fs` 与 `ctx.subprocess`，以及留在宿主中的内容。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-e2b)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-e2b)——每个受支持配置字段及其源声明。
 
 -----
 

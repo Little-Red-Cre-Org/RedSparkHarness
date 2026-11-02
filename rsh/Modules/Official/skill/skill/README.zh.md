@@ -43,7 +43,7 @@ kind: "package-reference"
 |---|---|---|
 | `collectCacheMaxEntries` | `128` | 内存中保留的已完成 cwd/提供方目录数 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-skill)是每个受支持字段的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-skill)是每个受支持字段的穷尽式真源。
 
 Native Host profile 选择本包的 `./native` 入口，该入口提供按 scope 解析的 `skills` 服务。Native 提供方通过 `registerProvider(scope, create)` 注册，并取得仅属于该注册的中止信号与 `invalidate()` 回调；`list`、`snapshot` 和 `get` 使用调用方传入的动态 Agent scope。Native 提供方的异步释放函数会中止信号，并等待该注册的 `list` 和 `get` 工作结束。`NativeSkillRegistry.dispose()` 会关闭查找准入，并等待已接纳的 `list`、`snapshot`、`get` 调用及提供方工作结束。Native Definition 还声明 `skillInvocations`；该能力由 `dsh-tool-skill` 提供，用于通过选定 Program 的 `requestContexts` 注册表路由手动 Skill 调用，详见 [Skills 子系统参考](../../../../Docs/subsystems/skills.zh.md)。Cordis 组合仍可使用 Cordis 根入口。
 
@@ -117,7 +117,7 @@ Skill 摘要保留胜出提供方可选的指令文件 `path`，供提供文件�
 - [skill 子系统参考](../../../../Docs/subsystems/skills.zh.md)——注册表、提供方约定与本地发现优先级。
 - [skill-filesystem 包](../skill-filesystem/README.zh.md)——从磁盘发现 skill 的随附本地提供方。
 - [tool-skill 包](../tool-skill/README.zh.md)——渲染会话目录与 `skill` 工具的消费方。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-skill)——每个配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-skill)——每个配置字段及其源声明。
 - [skill 调用策略 Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-28-skill-invocation-policy.zh.md)——模型与用户调用控制的依据。
 
 -----

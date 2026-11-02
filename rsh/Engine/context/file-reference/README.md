@@ -82,7 +82,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Cordis local file-reference provider](../file-reference-local/README.md) — the Cordis local-workspace implementation of this seam.
 - [Session-reference subsystem](../../../Docs/subsystems/session-reference.md) — the shared file-reference and session-reference contracts behind host UIs.
 - [Context group map](../README.md) — sibling request-context packages.
-- [Filesystem tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs) — the `read` tool that referenced paths are meant for.
+- [Filesystem tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-tool-fs) — the `read` tool that referenced paths are meant for.
 
 -----
 

@@ -39,7 +39,7 @@ Mount this plugin in any composition that should support dynamic packages — it
 |---|---|---|
 | `vmTimeoutMs` | `5000` | Milliseconds the synchronous portion of a host half may run in the vm before evaluation is aborted |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-cordis-host-runner) is the exhaustive source for every accepted field.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-cordis-host-runner) is the exhaustive source for every accepted field.
 
 ### What a run does
 
@@ -95,7 +95,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Tool package](../tool-cordis/README.md) — the model-facing tools that call this service.
 - [Client runner](../cordis-client-runner/README.md) — the browser half that answers run requests and loads browser-half code.
 - [UI package](../ui-cordis/README.md) — the panel users approve and operate runs with.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-cordis-host-runner) — every accepted config field.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-cordis-host-runner) — every accepted config field.
 - [Extensions subsystem](../../../../Docs/subsystems/extensions.md) — the generated `ctx.cordisInspect` and `ctx.dynamicCordisRunner` API and `cordis/*` events.
 - [Self-referential Cordis toolset Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-08-self-referential-cordis-toolset.md) — sandbox semantics, lifecycle, and composition rationale.
 

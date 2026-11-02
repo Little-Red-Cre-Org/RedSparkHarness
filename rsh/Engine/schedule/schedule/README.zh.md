@@ -59,7 +59,7 @@ Native profile 必须提供 `activeSessions` 和 `tools`；省略 `config` 或�
 
 创建成功会返回带 id、目标时间、状态与交付模式的提醒；`schedule_list` 按创建顺序显示所有待处理提醒；按 id 取消会移除待处理提醒，未知或已结束的 id 会报告 `schedule_not_found` 且不改变任何内容。
 
-无法成为提醒的输入——空提示词、多于一个 selector、无效时区、非未来或超出范围的时间、低于 5 分钟的重复间隔——会返回稳定的错误代码而不是成功。生成的[工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)拥有每个工具接受的精确参数。
+无法成为提醒的输入——空提示词、多于一个 selector、无效时区、非未来或超出范围的时间、低于 5 分钟的重复间隔——会返回稳定的错误代码而不是成功。生成的[工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-schedule)拥有每个工具接受的精确参数。
 
 ### 提醒何时触发
 
@@ -145,7 +145,7 @@ Native Host runtime 为每个确切的 live 根 owner 保持 timer projection。
 当包级约定不够用时阅读以下页面。它们从共享子系统约定逐步进入精确工具 schema，以及交付设计背后的决策证据。
 
 - [仅限会话内的 Schedule 子系统](../../../Docs/subsystems/schedule.zh.md)——带精确类型定义的持久记录、转换、视图与交付约定。
-- [生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)——模型接收的 `schedule_create`、`schedule_list` 与 `schedule_delete` 完整 schema。
+- [生成的工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-schedule)——模型接收的 `schedule_create`、`schedule_list` 与 `schedule_delete` 完整 schema。
 - [持久 Web Schedule 决策](../../../../.agents/notes/implemented/feature/2026-08-05-durable-web-schedule.zh.md)——本包背后的持久化与生命周期决策。
 - [Native Session Schedule 决策](../../../../.agents/notes/implemented/feature/2026-10-15-native-session-schedule.zh.md)——Native Host 入口的 owner 选择与 idle 交付语义。
 - [对话式交付决策](../../../../.agents/notes/archived/simplification/2026-08-09-conversational-schedule-delivery.md)——无回执边界与 follow-up 交付。
@@ -162,7 +162,7 @@ Native Host runtime 为每个确切的 live 根 owner 保持 timer projection。
 
 #### 模型看到什么
 
-Cordis overlay 会向其加载后创建的 live 根 Agent 提供三个生成的工具 schema。对于 Native profile，owner 附加会在首个模型请求捕获工具快照前完成；若 profile 的工具 allowlist 允许，这个请求就会包含三个 schema。[生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-schedule)拥有精确的参数与结果 schema。工具结果包含上文所述的规范 JSON 值。
+Cordis overlay 会向其加载后创建的 live 根 Agent 提供三个生成的工具 schema。对于 Native profile，owner 附加会在首个模型请求捕获工具快照前完成；若 profile 的工具 allowlist 允许，这个请求就会包含三个 schema。[生成的工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-schedule)拥有精确的参数与结果 schema。工具结果包含上文所述的规范 JSON 值。
 
 #### Token 影响
 

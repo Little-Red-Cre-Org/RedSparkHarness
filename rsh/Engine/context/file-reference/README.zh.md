@@ -82,7 +82,7 @@ UI 通过 `activeAtToken` 识别活动 `@` token，用查询文本调用 `list`�
 - [Cordis 本地文件引用提供方](../file-reference-local/README.zh.md)——本 seam 的 Cordis 本地工作区实现。
 - [会话引用子系统](../../../Docs/subsystems/session-reference.zh.md)——宿主 UI 背后的共享文件引用与会话引用约定。
 - [上下文组地图](../README.zh.md)——相邻的请求上下文包。
-- [文件系统工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-fs)——被引用路径所对应的 `read` 工具。
+- [文件系统工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-fs)——被引用路径所对应的 `read` 工具。
 
 -----
 

@@ -75,7 +75,7 @@ electron-updater AppUpdater.js:550    const cacheDir = path.join(this.app.baseCa
 app-builder-lib appInfo.js:126-127    get updaterCacheDirName() { return this.sanitizedName.toLowerCase() + "-updater" }
 ```
 
-`updaterCacheDirName` 确实由 `name`（`@deepseek-ai/dsh-desktop`）推导，与显示名无关。磁盘实测 `%LOCALAPPDATA%\@deepseek-aidsh-desktop-updater` 存在，含 `installer.exe`（317,151,681 B，10-29 11:34），**是 DSH 自己的更新缓存**。
+`updaterCacheDirName` 确实由 `name`（`@deepseek-ai/dsh-desktop`）推导，与显示名无关。磁盘实测 `%LOCALAPPDATA%\@redsparkrsh-desktop-updater` 存在，含 `installer.exe`（317,151,681 B，10-29 11:34），**是 DSH 自己的更新缓存**。
 
 **但这处不影响本次验收**：本次是 unsigned 打包，`electron-builder.config.mjs:53` 为 `const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(...)`，产物 `resources\` 下**没有 `app-update.yml`**（实测 `Test-Path` = False），所以更新器不会启用。**签名发布版才需要处理这处**，单列。
 
@@ -254,7 +254,7 @@ D:\RedSparkHarness\rsh\Programs\Desktop\.desktop-build\targets\win-x64\unsigned-
 | 无安装包 | 已有 233.1 MB exe，02:35:12，进程级验证通过 | 臣 02:14 打包成功 |
 | 「修复前不传参也会落到 DSH 目录，由打包产物证明」 | 打包产物证明的是**修复后不依赖传参**；修复前的落点**没有实测到**（写盘前即退出，delta 0、mtime 未变） | 武库（02:55 复核） |
 
-**仍待办（不阻塞本 PR）**：签名发布版的自动更新缓存目录 `%LOCALAPPDATA%\@deepseek-aidsh-desktop-updater` 由 `name` 推导，与 DSH 同名。unsigned 产物不写 `app-update.yml`，故本次不受影响；正式签名发布前需处理。
+**仍待办（不阻塞本 PR）**：签名发布版的自动更新缓存目录 `%LOCALAPPDATA%\@redsparkrsh-desktop-updater` 由 `name` 推导，与 DSH 同名。unsigned 产物不写 `app-update.yml`，故本次不受影响；正式签名发布前需处理。
 
 ---
 

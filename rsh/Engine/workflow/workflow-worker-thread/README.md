@@ -45,7 +45,7 @@ Loading the engine registers `ctx.workflowEngine`; adding `dsh-tool-workflow` on
 | `syncTimeoutMs` | `5000` | VM timeout for the script's initial synchronous slice, in milliseconds. |
 | `disposeGraceMs` | `5000` | Bound before the legacy run is force-settled and its worker terminated. |
 
-An owning consumer may set `WorkflowStartRequest.subagentProvider` and `WorkflowStartRequest.maxTotalAgents` for one run — engine-level policy, not script hooks; the ordinary `workflow` tool leaves both unset, and a per-run total-child cap may lower but never raise the configured ceiling. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-workflow-worker-thread) is the exhaustive source for every accepted field.
+An owning consumer may set `WorkflowStartRequest.subagentProvider` and `WorkflowStartRequest.maxTotalAgents` for one run — engine-level policy, not script hooks; the ordinary `workflow` tool leaves both unset, and a per-run total-child cap may lower but never raise the configured ceiling. The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-workflow-worker-thread) is the exhaustive source for every accepted field.
 
 ### Native profile configuration
 

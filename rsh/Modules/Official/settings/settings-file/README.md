@@ -46,7 +46,7 @@ Choose it as the default user-settings store: one human-readable document that u
 | `watch` | `true` | Watch the document and hot-publish external edits |
 | `debounceMs` | `100` | Watcher write-settle window, in milliseconds |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
 
 The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@redspark/rsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation. `@redspark/rsh-settings-file/native` also exports `resolveNativeSettingsConfig` and `parseNativeSettingsDocument` for readers that need the provider's path and parse rules without starting a Host. Each changed registered user section emits `settings/document-updated` with its incremented revision, even when its resolved value remains equal.
 
@@ -118,7 +118,7 @@ Read these pages when the provider-level contract is not enough. They move from 
 - [Settings package map](../README.md) — the two packages of the user-settings capability.
 - [Atomic write](../../../../Core/util/atomic-write/README.md) — the writer lock and atomic replacement every write uses.
 - [Home paths](../../../../Core/util/home-paths/README.md) — `$RSH_HOME` resolution and canonical watch paths.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-settings-file) — every accepted config field and its source declaration.
 
 -----
 

@@ -59,7 +59,7 @@ kind: "package-reference"
 | `enableRunInBackground` | `true` | 公开并接受 `run_in_background`；设为 `false` 时移除 schema 字段并拒绝该参数 |
 | `maxResultBytes` | `262144` | 每个完整终端结果的 UTF-8 上限（最小值 `64`）；在等待、会话、分页、截断与任务状态元数据全部加入后计算 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-terminal)与[工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-terminal)是配置字段与 schema 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-terminal)与[工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-terminal)是配置字段与 schema 的穷尽式真源。
 
 ### 后台发送
 
@@ -109,7 +109,7 @@ kind: "package-reference"
 
 当包级约定不够用时阅读以下页面。它们从生成的 schema 进入服务约定、后端与后台任务接口面。
 
-- [工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-terminal)——6 个生成的 schema 与结果形态。
+- [工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-terminal)——6 个生成的 schema 与结果形态。
 - [终端子系统参考](../../../../Docs/subsystems/terminal.zh.md)——工具背后的服务约定与共享类型。
 - [terminal 服务](../terminal/README.zh.md)——会话操作、所有者限制与清理语义。
 - [terminal-bash 后端](../terminal-bash/README.zh.md)——提供会话的随附 shell 后端。
@@ -145,7 +145,7 @@ Use a terminal session only when work needs persistent terminal state or interac
 
 #### 模型看到什么
 
-6 个生成的 schema 列在 [`dsh-tool-terminal` 目录章节](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-terminal)中。此插件活跃时，请求中会包含它们的固定 schema token；按 agent 范围过滤工具时可能隐藏这些 schema。
+6 个生成的 schema 列在 [`dsh-tool-terminal` 目录章节](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-terminal)中。此插件活跃时，请求中会包含它们的固定 schema token；按 agent 范围过滤工具时可能隐藏这些 schema。
 
 #### Token 影响
 

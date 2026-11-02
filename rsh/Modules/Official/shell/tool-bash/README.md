@@ -55,7 +55,7 @@ The single config field toggles background support.
 |---|---|---|
 | `enableRunInBackground` | `true` | Expose `run_in_background`; when `false`, forced background calls are rejected |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-bash) is the exhaustive source for every accepted field and its JSDoc; the generated [tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash) carries the full argument schema.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-bash) is the exhaustive source for every accepted field and its JSDoc; the generated [tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-bash) carries the full argument schema.
 
 ### Running a command
 
@@ -121,8 +121,8 @@ Read these pages when the package-level contract is not enough. They move from t
 - [shell-env](../shell-env/README.md) — the managed `RSH_*` environment every call receives.
 - [tool-jobs](../../../../Engine/jobs/tool-jobs/README.md) — `job_output`, `job_list`, and `job_kill` controls for background runs.
 - [sandbox Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-06-sandbox.md) — escalation and mode-switching rationale.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash) — the exact `bash` argument schema.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-bash) — every accepted config field and its source declaration.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-bash) — the exact `bash` argument schema.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-bash) — every accepted config field and its source declaration.
 
 -----
 
@@ -156,7 +156,7 @@ Prefix-stable while the registration scope and prompt text are unchanged. Plugin
 
 #### What the model sees
 
-The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-bash). In native profiles, `run_in_background` appears only when the job registry and its control tools are selected; `sandbox_permissions` and `justification` appear when the selected shell confines commands and native approval policy is `ask`. Agent-scoped tool restrictions can remove the definition for that agent.
+The model sees the generated [`bash` schema](../../../../Docs/tool-catalog.md#redsparkrsh-tool-bash). In native profiles, `run_in_background` appears only when the job registry and its control tools are selected; `sandbox_permissions` and `justification` appear when the selected shell confines commands and native approval policy is `ask`. Agent-scoped tool restrictions can remove the definition for that agent.
 
 #### Token effect
 

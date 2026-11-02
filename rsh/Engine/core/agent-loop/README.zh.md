@@ -54,7 +54,7 @@ kind: "package-reference"
 | `agents[].sessionId` | — | 确切身份：首次使用创建，重新挂载时恢复已实体化的历史 |
 | `agents[].resumeSessionId` | — | 加载这个持久化会话而不是创建新会话；与 `sessionId` 互斥 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-agent-loop)是每个受支持字段的穷尽式真源。适配器会校验有效推理强度，循环则把它记录在请求头中。`maxParallelToolCalls` 也是整个 `agent-loop` 设置分节，因此叠加在该条目之上的用户层无需重启即可限制下一组工具调用。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-loop)是每个受支持字段的穷尽式真源。适配器会校验有效推理强度，循环则把它记录在请求头中。`maxParallelToolCalls` 也是整个 `agent-loop` 设置分节，因此叠加在该条目之上的用户层无需重启即可限制下一组工具调用。
 
 ### 以编程方式创建或恢复 agent
 

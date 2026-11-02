@@ -39,7 +39,7 @@ The agent works through the task, streams each non-empty provider reasoning delt
 |---|---|---|
 | `task` | required | The task text for the single run |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-headless) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-headless) is the exhaustive source for every accepted field and its JSDoc.
 
 ### When to use it
 
@@ -99,7 +99,7 @@ Read these pages when you want to go deeper into the shared core, the sibling GU
 - [dsh-base](../base/README.md) — the shared core headless runs on.
 - [dsh-web-app](../web-app/README.md) — the interactive browser sibling for multi-turn work.
 - [dsh-cmdline](../../boot/cmdline/README.md) — how the launcher hands the command line to the app.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-headless) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-headless) — every accepted config field and its source declaration.
 
 -----
 

@@ -44,7 +44,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@redspark/rsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@redspark/rsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
-<a id="deepseek-aidsh-tool-ask-user"></a>
+<a id="redsparkrsh-tool-ask-user"></a>
 
 ## `@redspark/rsh-tool-ask-user`
 
@@ -118,7 +118,7 @@ Source: [`rsh/Modules/Official/interaction/tool-ask-user/src/index.ts`](../Modul
 
 ask_user_question pauses the tool call until the active UI provider returns a human answer.
 
-<a id="deepseek-aidsh-tools"></a>
+<a id="redsparkrsh-tools"></a>
 
 ## `@redspark/rsh-tools`
 
@@ -150,7 +150,7 @@ Source: [`rsh/Engine/core/tools/src/ptc.ts`](../Engine/core/tools/src/ptc.ts)
 
 Owned by the tool registry as a reserved transport outside filterable capability layers under `mode: ptc` / `mode: both` (see the PTC mode Agent Note). Under `ptc` it is the registry's only wire contribution; the other visible capabilities are declared in a generated SDK section in the loaded runtime's language, and a program calls them through bindings scheduled under the native concurrency contract (submission-ordered starts and policy; concurrency-safe bodies overlap up to `maxParallelSubCalls`) that re-enter the complete guarded tool pipeline and link each nested execution to this outer result.
 
-<a id="deepseek-aidsh-plan-mode"></a>
+<a id="redsparkrsh-plan-mode"></a>
 
 ## `@redspark/rsh-plan-mode`
 
@@ -177,7 +177,7 @@ Source: [`rsh/Modules/Official/plan/plan-mode/src/index.ts`](../Modules/Official
 
 exit_plan_mode stays in the model-facing schema while planning is inactive so transitions add no tool-catalog churn on top of the plan-policy change. Its execute path rejects calls outside plan mode; in plan mode it presents the plan over the user-questions seam (approve / keep planning with feedback), and approval logs plan mode inactive at the step boundary.
 
-<a id="deepseek-aidsh-tool-bash"></a>
+<a id="redsparkrsh-tool-bash"></a>
 
 ## `@redspark/rsh-tool-bash`
 
@@ -221,7 +221,7 @@ Source: [`rsh/Modules/Official/shell/tool-bash/src/index.ts`](../Modules/Officia
 
 The bash tool is the model-facing consumer of the bash executor seam. A `run_in_background` run registers with the generic `ctx.jobs` runtime and is collected/stopped through the `job_*` tools from `@redspark/rsh-tool-jobs`; the `enableRunInBackground` config (default true) removes the parameter entirely when disabled.
 
-<a id="deepseek-aidsh-tool-present"></a>
+<a id="redsparkrsh-tool-present"></a>
 
 ## `@redspark/rsh-tool-present`
 
@@ -264,7 +264,7 @@ Source: [`rsh/Modules/Official/fs/tool-present/src/index.ts`](../Modules/Officia
 
 Deliveries belong to the calling Session; Web ui-deliverables supplies source-file opening and cards.
 
-<a id="deepseek-aidsh-tool-pwsh"></a>
+<a id="redsparkrsh-tool-pwsh"></a>
 
 ## `@redspark/rsh-tool-pwsh`
 
@@ -308,7 +308,7 @@ Source: [`rsh/Modules/Official/shell/tool-pwsh/src/index.ts`](../Modules/Officia
 
 The pwsh tool is the PowerShell-dialect consumer of the bash executor seam for Windows compositions (a PowerShell executor such as `@redspark/rsh-pwsh-local` backs `ctx.shell`); it mirrors the bash tool call-for-call minus sandbox controls — `run_in_background` runs register with the generic `ctx.jobs` runtime and are collected/stopped through the `job_*` tools, and the managed `RSH_*` environment comes from `@redspark/rsh-shell-env`. Each call runs in a fresh process (no persistent PTY session), with native `C:\...` paths and `$env:NAME` variables.
 
-<a id="deepseek-aidsh-tool-code-runtime"></a>
+<a id="redsparkrsh-tool-code-runtime"></a>
 
 ## `@redspark/rsh-tool-code-runtime`
 
@@ -341,7 +341,7 @@ Source: [`rsh/Modules/Official/code-runtime/tool-code-runtime/src/native.ts`](..
 
 Native run_code is registered by the selected code-tool Consumer. This catalog harvest uses the TypeScript worker-thread Provider; selecting the Python Provider changes the code parameter description and SDK language.
 
-<a id="deepseek-aidsh-tool-cordis"></a>
+<a id="redsparkrsh-tool-cordis"></a>
 
 ## `@redspark/rsh-tool-cordis`
 
@@ -579,7 +579,7 @@ Source: [`rsh/Modules/Official/extensions/tool-cordis/src/index.ts`](../Modules/
 
 Not in any shipped tree (a deliberate opt-in — dynamic package code reaches the real runtime, see .agents/notes/implemented/feature/2026-07-08-self-referential-cordis-toolset.md). The toolset injects `ctx.dynamicCordisRunner` from `@redspark/rsh-cordis-host-runner`, which owns the definition registry and the vm sandbox; a composition missing it never activates the tools. A running package may register ADDITIONAL model-visible tools until it is stopped, undefined, or DSH restarts; a full changed request header logs those tool-set changes.
 
-<a id="deepseek-aidsh-tool-bash-persistent"></a>
+<a id="redsparkrsh-tool-bash-persistent"></a>
 
 ## `@redspark/rsh-tool-bash-persistent`
 
@@ -606,7 +606,7 @@ Source: [`rsh/Modules/Official/shell/tool-bash-persistent/src/index.ts`](../Modu
 
 One owner-isolated persistent bash tool; deployment composition supplies the PTY backend and may override the model-facing environment description.
 
-<a id="deepseek-aidsh-tool-pwsh-persistent"></a>
+<a id="redsparkrsh-tool-pwsh-persistent"></a>
 
 ## `@redspark/rsh-tool-pwsh-persistent`
 
@@ -633,7 +633,7 @@ Source: [`rsh/Modules/Official/shell/tool-pwsh-persistent/src/index.ts`](../Modu
 
 One owner-isolated persistent pwsh tool, the Windows counterpart of the persistent bash tool; deployment composition supplies a pwsh-dialect PTY backend and may override the model-facing environment description.
 
-<a id="deepseek-aidsh-tool-str-replace-editor"></a>
+<a id="redsparkrsh-tool-str-replace-editor"></a>
 
 ## `@redspark/rsh-tool-str-replace-editor`
 
@@ -739,7 +739,7 @@ Source: [`rsh/Modules/Official/fs/tool-str-replace-editor/src/index.ts`](../Modu
 
 Standalone view/create/unique literal replace/line insert tool over the filesystem seam; it composes with any shell or terminal API.
 
-<a id="deepseek-aidsh-tool-fs"></a>
+<a id="redsparkrsh-tool-fs"></a>
 
 ## `@redspark/rsh-tool-fs`
 
@@ -856,7 +856,7 @@ Source: [`rsh/Modules/Official/fs/tool-fs/src/index.ts`](../Modules/Official/fs/
 
 The read-before-write/edit policy is added by `@redspark/rsh-fs-observation-policy` (an `fs/*` event-gate plugin, no schema change); a deployment that loads these tools is expected to also load it. The image tool is not registered without `ctx.attachments`; its schema is route-independent, and execution refuses unless the exact routed model declares image input.
 
-<a id="deepseek-aidsh-tool-fs-search"></a>
+<a id="redsparkrsh-tool-fs-search"></a>
 
 ## `@redspark/rsh-tool-fs-search`
 
@@ -916,7 +916,7 @@ Source: [`rsh/Modules/Official/fs/tool-fs-search/src/index.ts`](../Modules/Offic
 
 glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments.
 
-<a id="deepseek-aidsh-tool-terminal"></a>
+<a id="redsparkrsh-tool-terminal"></a>
 
 ## `@redspark/rsh-tool-terminal`
 
@@ -1081,7 +1081,7 @@ Source: [`rsh/Modules/Official/terminal/tool-terminal/src/index.ts`](../Modules/
 
 The six terminal tools are opt-in and complement one-shot shell/filesystem tools. `terminal_send(run_in_background: true)` registers with `ctx.jobs`; TUI, named key sequences, BEL, resize, auto-start, and cross-agent sharing are absent from the schema.
 
-<a id="deepseek-aidsh-tool-goal"></a>
+<a id="redsparkrsh-tool-goal"></a>
 
 ## `@redspark/rsh-tool-goal`
 
@@ -1175,7 +1175,7 @@ Source: [`rsh/Engine/goal/tool-goal/src/index.ts`](../Engine/goal/tool-goal/src/
 
 create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.
 
-<a id="deepseek-aidsh-task-scheduler"></a>
+<a id="redsparkrsh-task-scheduler"></a>
 
 ## `@redspark/rsh-task-scheduler`
 
@@ -1250,7 +1250,7 @@ Source: [`rsh/Modules/Official/automation/task-scheduler/src/tools.ts`](../Modul
 
 Opt-in persisted one-shot and fixed-interval Agent tasks. Management is scoped to the creating session; execution uses independent sessions. Completed means Agent-turn completion, not verified code correctness.
 
-<a id="deepseek-aidsh-schedule"></a>
+<a id="redsparkrsh-schedule"></a>
 
 ## `@redspark/rsh-schedule`
 
@@ -1347,7 +1347,7 @@ Source: [`rsh/Engine/schedule/schedule/src/tools.ts`](../Engine/schedule/schedul
 
 Cordis registers tools on root Agent scopes created after its overlay loads; the Native Host entry attaches to existing and future exact root Session owners before the first model request snapshot. The first Native turn includes these schemas when its tool allowlist permits them. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier.
 
-<a id="deepseek-aidsh-tool-lsp"></a>
+<a id="redsparkrsh-tool-lsp"></a>
 
 ## `@redspark/rsh-tool-lsp`
 
@@ -1395,7 +1395,7 @@ Source: [`rsh/Modules/Official/lsp/tool-lsp/src/index.ts`](../Modules/Official/l
 
 The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@redspark/rsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.
 
-<a id="deepseek-aidsh-tool-ralph"></a>
+<a id="redsparkrsh-tool-ralph"></a>
 
 ## `@redspark/rsh-tool-ralph`
 
@@ -1426,7 +1426,7 @@ Source: [`rsh/Engine/workflow/tool-ralph/src/index.ts`](../Engine/workflow/tool-
 
 A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap.
 
-<a id="deepseek-aidsh-tool-skill"></a>
+<a id="redsparkrsh-tool-skill"></a>
 
 ## `@redspark/rsh-tool-skill`
 
@@ -1451,7 +1451,7 @@ Load the full instructions for an available skill. Call this with the exact skil
 
 Source: [`rsh/Modules/Official/skill/tool-skill/src/index.ts`](../Modules/Official/skill/tool-skill/src/index.ts)
 
-<a id="deepseek-aidsh-tool-session-query"></a>
+<a id="redsparkrsh-tool-session-query"></a>
 
 ## `@redspark/rsh-tool-session-query`
 
@@ -1686,7 +1686,7 @@ Source: [`rsh/Engine/session-query/tool-session-query/src/index.ts`](../Engine/s
 
 The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies.
 
-<a id="deepseek-aidsh-tool-subagent"></a>
+<a id="redsparkrsh-tool-subagent"></a>
 
 ## `@redspark/rsh-tool-subagent`
 
@@ -1744,7 +1744,7 @@ Source: [`rsh/Engine/subagent/tool-subagent/src/index.ts`](../Engine/subagent/to
 
 The registered delegation name is the load-time `toolName` config (default `subagent`); the default schema above has model selection off, while the discovery schema is shown as the fixed companion available in an enabled Session. Web presets sample the Plugins preference for each new top-level Session and preserve that decision for its child Sessions; `subagent_fork` remains fixed-route. Each instance independently controls whether it reads model-selection settings and its background behavior through `modelSelectionSettings`, `backgroundMode`, and `enableRunInBackground`.
 
-<a id="deepseek-aidsh-tool-subagent-control"></a>
+<a id="redsparkrsh-tool-subagent-control"></a>
 
 ## `@redspark/rsh-tool-subagent-control`
 
@@ -1819,7 +1819,7 @@ Source: [`rsh/Engine/subagent/tool-subagent-control/src/index.ts`](../Engine/sub
 
 The globally named control tools over continuable background subagents: provider-bound `tool-subagent` instances register distinct delegation tools, while this package registers `send_message` and `interrupt_agent` once, plus `list_agents` from its separately loaded `/list-agents` plugin (whose catalog rows use the sessionProjections and live Agent registries).
 
-<a id="deepseek-aidsh-tool-jobs"></a>
+<a id="redsparkrsh-tool-jobs"></a>
 
 ## `@redspark/rsh-tool-jobs`
 
@@ -1892,7 +1892,7 @@ Source: [`rsh/Engine/jobs/tool-jobs/src/index.ts`](../Engine/jobs/tool-jobs/src/
 
 The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`.
 
-<a id="deepseek-aidsh-experimental-tool-agent-team"></a>
+<a id="redsparkrsh-experimental-tool-agent-team"></a>
 
 ## `@redspark/rsh-experimental-tool-agent-team`
 
@@ -2182,7 +2182,7 @@ Source: [`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts`](../M
 
 All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names.
 
-<a id="deepseek-aidsh-tool-todo"></a>
+<a id="redsparkrsh-tool-todo"></a>
 
 ## `@redspark/rsh-tool-todo`
 
@@ -2232,7 +2232,7 @@ Source: [`rsh/Modules/Official/todo/tool-todo/src/index.ts`](../Modules/Official
 
 todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task.
 
-<a id="deepseek-aidsh-tool-workflow"></a>
+<a id="redsparkrsh-tool-workflow"></a>
 
 ## `@redspark/rsh-tool-workflow`
 
@@ -2327,7 +2327,7 @@ Constraints: concurrency and total-agent caps apply; no filesystem, network, tim
 
 Source: [`rsh/Engine/workflow/tool-workflow/src/index.ts`](../Engine/workflow/tool-workflow/src/index.ts)
 
-<a id="deepseek-aidsh-tool-web"></a>
+<a id="redsparkrsh-tool-web"></a>
 
 ## `@redspark/rsh-tool-web`
 

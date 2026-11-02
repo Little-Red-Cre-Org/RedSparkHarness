@@ -50,7 +50,7 @@ The cache opens its domain through the storage stack, so base mounts `storage`, 
 | `writeEveryEvents` | required | Committed events per session that force a durable checkpoint write between mandatory points |
 | `writeIntervalMs` | required | Longest time a dirty checkpoint may stay unwritten between mandatory points |
 
-The plugin injects `storageDomain`, `sessionProjections`, and `sessions`. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-projection-cache) is the exhaustive source for every accepted field and its JSDoc.
+The plugin injects `storageDomain`, `sessionProjections`, and `sessions`. The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-projection-cache) is the exhaustive source for every accepted field and its JSDoc.
 
 The Cordis-free `./native` entry provides the Native Host `sessionProjectionCache` service. It requires `activeSessions`, `sessionProjections`, and `storageDomain`, and accepts the same two required throttle fields. Native owner detach marks the owner state detached before calling its listener remover. If removal throws, the cache still attempts the final checkpoint, evicts the owner state, and reports that same error; a callback left registered cannot schedule cache work. Provider close attempts both observer removers and every owner listener remover, drains final writes, and closes the domain before reporting cleanup failures.
 

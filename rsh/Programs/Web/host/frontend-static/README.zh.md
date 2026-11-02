@@ -81,7 +81,7 @@ kind: "package-reference"
 - [Webserver](../webserver/README.zh.md)——本插件占据的回退席位与它运行的 index 转换器。
 - [dsh-web-app 组合包](../../../../Compatibility/DSH/bundle/web-app/README.zh.md)——解析 `distIndex` 并挂载本插件的应用。
 - [HTTP 服务器子系统](../../../../Docs/subsystems/web-server.zh.md)——回退席位如何融入路由表。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-host-frontend-static)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-host-frontend-static)——每个受支持配置字段及其源声明。
 
 -----
 

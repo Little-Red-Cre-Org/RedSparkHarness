@@ -55,7 +55,7 @@ kind: "package-reference"
 
 实时事件的写入批处理不是配置：批处理窗口是该 seam 在每个写句柄内部的调度策略。
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-persistence-jsonl)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-session-persistence-jsonl)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 磁盘布局
 

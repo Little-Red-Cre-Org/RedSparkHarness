@@ -99,7 +99,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Host runner](../cordis-host-runner/README.md) — the registry, sandbox, and run round trip these tools delegate to.
 - [Client runner](../cordis-client-runner/README.md) — the browser half that answers run requests and loads browser-half code.
 - [UI package](../ui-cordis/README.md) — the panel and tool cards users operate definitions with.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-cordis) — the exact schemas the model receives.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-cordis) — the exact schemas the model receives.
 - [Extensions subsystem](../../../../Docs/subsystems/extensions.md) — the generated `ctx.cordisInspect` and `ctx.dynamicCordisRunner` API.
 - [Self-referential Cordis toolset Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-08-self-referential-cordis-toolset.md) — design home: sandbox semantics, dynamic-package lifecycle, and composition.
 
@@ -112,7 +112,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The conversation model sees the generated [`cordis_inspect_list`, `cordis_inspect_query`, `cordis_inspect_self`, `cordis_define`, `cordis_run`, `cordis_stop`, and `cordis_undefine` schemas](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-cordis) whenever this plugin is visible.
+The conversation model sees the generated [`cordis_inspect_list`, `cordis_inspect_query`, `cordis_inspect_self`, `cordis_define`, `cordis_run`, `cordis_stop`, and `cordis_undefine` schemas](../../../../Docs/tool-catalog.md#redsparkrsh-tool-cordis) whenever this plugin is visible.
 
 #### Token effect
 

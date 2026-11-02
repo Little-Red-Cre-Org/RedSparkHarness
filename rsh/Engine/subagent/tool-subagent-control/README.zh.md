@@ -99,7 +99,7 @@ kind: "package-reference"
 
 - [Subagent 子系统](../../../Docs/subsystems/subagent.zh.md)——可继续子级、Activation、inbox、中断与后续消息权限。
 - [dsh-tool-subagent](../tool-subagent/README.zh.md)——启动可继续子级的委派工具。
-- [生成工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-subagent-control)——三个工具的 schema。
+- [生成工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-subagent-control)——三个工具的 schema。
 
 -----
 
@@ -110,7 +110,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-已生成的 [schema](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-subagent-control)：`send_message` 接受 `agent_id` 与 `message`；`interrupt_agent` 接受 `agent_id`；`list_agents` 接受可选的 `scope` 枚举。
+已生成的 [schema](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-subagent-control)：`send_message` 接受 `agent_id` 与 `message`；`interrupt_agent` 接受 `agent_id`；`list_agents` 接受可选的 `scope` 枚举。
 
 #### Token 影响
 

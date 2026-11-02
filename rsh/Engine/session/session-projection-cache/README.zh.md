@@ -50,7 +50,7 @@ kind: "package-reference"
 | `writeEveryEvents` | 必填 | 在各必写点之间强制一次持久检查点写入的每会话已提交事件数 |
 | `writeIntervalMs` | 必填 | 各必写点之间脏检查点最长可保持未写入的时间 |
 
-本插件注入 `storageDomain`、`sessionProjections` 与 `sessions`。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-projection-cache)是每个受支持字段及其 JSDoc 的穷尽式真源。
+本插件注入 `storageDomain`、`sessionProjections` 与 `sessions`。生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-session-projection-cache)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 Cordis-free 的 `./native` 入口提供 Native Host `sessionProjectionCache` 服务。它要求 `activeSessions`、`sessionProjections` 与 `storageDomain`，并接受相同的两个必填节流字段。Native owner 脱离时会在调用其监听器移除函数前将 owner 状态标记为已脱离。若移除抛出异常，缓存仍会尝试最终检查点、移出 owner 状态，并原样报告该异常；仍注册的回调不能排入缓存工作。Provider 关闭时会尝试移除两个 observer 和所有 owner 监听器，排空最终写入，关闭存储域，然后报告清理错误。
 

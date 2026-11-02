@@ -47,7 +47,7 @@ The only required configuration is the guidance text the agent follows while pla
 |---|---|---|
 | `section` | required | Guidance for the `plan:policy` prompt section (Cordis) or the plan-mode entry notice (native) while plan mode is active |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-plan-mode) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-plan-mode) is the exhaustive source for every accepted field and its JSDoc.
 
 <a id="model-and-human-interactions"></a>
 ### Entering and leaving plan mode
@@ -129,8 +129,8 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Plan mode subsystem reference](../../../../Docs/subsystems/plan.md) — how plan mode behaves, its configuration, and the exit tool's contract.
 - [plan/ package map](../README.md) — the group and its single package.
-- [exit_plan_mode tool catalog entry](../../../../Docs/tool-catalog.md#deepseek-aidsh-plan-mode) — the exact schema the model receives.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-plan-mode) — every accepted config field and its meaning.
+- [exit_plan_mode tool catalog entry](../../../../Docs/tool-catalog.md#redsparkrsh-plan-mode) — the exact schema the model receives.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-plan-mode) — every accepted config field and its meaning.
 - [Plan-specific collaboration state](../../../../../.agents/notes/implemented/simplification/2026-07-22-plan-specific-collaboration-state.md) — the design decision behind plan mode.
 
 -----
@@ -176,7 +176,7 @@ The user block is append-only conversation growth. Entering or leaving plan mode
 
 #### What the model sees
 
-The [`exit_plan_mode` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-plan-mode) remains available in both states; execution outside plan mode fails, while an approved in-mode review returns the canonical `{ approved: true }` value and renders the existing confirmation text. Rejection remains a failed call carrying review feedback, and a dismissed review a failed call naming the user's takeover.
+The [`exit_plan_mode` schema](../../../../Docs/tool-catalog.md#redsparkrsh-plan-mode) remains available in both states; execution outside plan mode fails, while an approved in-mode review returns the canonical `{ approved: true }` value and renders the existing confirmation text. Rejection remains a failed call carrying review feedback, and a dismissed review a failed call naming the user's takeover.
 
 #### Token effect
 

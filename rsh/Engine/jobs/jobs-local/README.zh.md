@@ -43,7 +43,7 @@ kind: "package-reference"
 |---|---|---|
 | `maxConcurrentJobsPerOwner` | `10` | 每个精确所有者，或共享的无主桶中，`running` 加 `stopping` 任务的最大数量 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-jobs-local)是每个受支持字段的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-jobs-local)是每个受支持字段的穷尽式真源。
 
 ### 每个所有者得到什么
 

@@ -44,7 +44,7 @@ While the script runs, the parent turn waits: the tool starts the run, awaits it
 | `toolName` | `workflow` | The model-facing tool name to register. |
 | `maxResultChars` | `50000` | Rendered-result ceiling; longer JSON is truncated with a notice. |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-workflow) is the exhaustive source for every accepted field.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-tool-workflow) is the exhaustive source for every accepted field.
 
 Native compositions mount `@redspark/rsh-tool-workflow/native` with a `provider` name visible in the scoped Native workflow Definition; the worker Provider is installed separately. Root calls record run and child progress in the invoking Session before returning the result.
 
@@ -128,7 +128,7 @@ Prefix-stable while the plugin scope and guidance text are unchanged. Activation
 
 #### What the model sees
 
-When visible, the generated default [`workflow` schema](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-workflow) carries the complete JavaScript hook and metadata contract; `toolName` can rename the definition, and the model submits script, metadata, and optional args.
+When visible, the generated default [`workflow` schema](../../../Docs/tool-catalog.md#redsparkrsh-tool-workflow) carries the complete JavaScript hook and metadata contract; `toolName` can rename the definition, and the model submits script, metadata, and optional args.
 
 #### Token effect
 

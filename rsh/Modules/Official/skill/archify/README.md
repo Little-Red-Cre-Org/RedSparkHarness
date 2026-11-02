@@ -51,7 +51,7 @@ The shipped Cordis base row needs no configuration. A later profile patch can ad
 | `requestPhrases` | built-in list | Action phrases that qualify a request for automatic loading. |
 | `diagramPhrases` | built-in list | Diagram-domain phrases that must accompany one action phrase. |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-archify) is the exhaustive source for accepted fields.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-archify) is the exhaustive source for accepted fields.
 
 ### Observable success and failures
 

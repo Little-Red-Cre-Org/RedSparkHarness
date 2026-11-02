@@ -59,7 +59,7 @@ One-time reminders come in two forms: after a delay — for example "in 30 minut
 
 A successful create returns the reminder with its id, target time, state, and delivery mode; `schedule_list` shows all pending reminders in the order you created them; canceling by id removes a pending reminder, and an unknown or already-finished id reports `schedule_not_found` without changing anything.
 
-Input that cannot become a reminder — an empty prompt, more than one selector, an invalid time zone, a non-future or out-of-range time, a repeating interval below 5 minutes — returns a stable error code instead of succeeding. The generated [tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) owns the exact arguments each tool accepts.
+Input that cannot become a reminder — an empty prompt, more than one selector, an invalid time zone, a non-future or out-of-range time, a repeating interval below 5 minutes — returns a stable error code instead of succeeding. The generated [tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-schedule) owns the exact arguments each tool accepts.
 
 ### When reminders fire
 
@@ -145,7 +145,7 @@ The Native Host runtime keeps a timer projection for each exact live root owner.
 Read these pages when the package-level contract is not enough. They move from the shared subsystem contracts to the exact tool schemas and the decision evidence behind the delivery design.
 
 - [Session-local Schedule subsystem](../../../Docs/subsystems/schedule.md) — durable record, transition, view, and delivery contracts with the exact type definitions.
-- [Generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) — the complete `schedule_create`, `schedule_list`, and `schedule_delete` schemas the model receives.
+- [Generated tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-schedule) — the complete `schedule_create`, `schedule_list`, and `schedule_delete` schemas the model receives.
 - [Durable Web Schedule decision](../../../../.agents/notes/implemented/feature/2026-08-05-durable-web-schedule.md) — persistence and lifecycle decisions behind the package.
 - [Native Session Schedule decision](../../../../.agents/notes/implemented/feature/2026-10-15-native-session-schedule.md) — Native Host owner selection and idle-delivery semantics.
 - [Conversational delivery decision](../../../../.agents/notes/archived/simplification/2026-08-09-conversational-schedule-delivery.md) — the no-receipt boundary and follow-up delivery.
@@ -162,7 +162,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The Cordis overlay exposes the three generated tool schemas to live root Agents created after it loads. For a Native profile, owner attachment completes before the first model request's tool snapshot, so that request includes the three schemas when its tool allowlist permits them. The [generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-schedule) owns the exact argument and result schemas. Tool results contain the canonical JSON values described above.
+The Cordis overlay exposes the three generated tool schemas to live root Agents created after it loads. For a Native profile, owner attachment completes before the first model request's tool snapshot, so that request includes the three schemas when its tool allowlist permits them. The [generated tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-schedule) owns the exact argument and result schemas. Tool results contain the canonical JSON values described above.
 
 #### Token effect
 

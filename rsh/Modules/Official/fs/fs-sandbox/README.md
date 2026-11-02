@@ -39,7 +39,7 @@ Load the shared policy service, then this backend, then the tools; the read-befo
 - name: '@redspark/rsh-tool-fs'
 ```
 
-The backend's config is unchanged from the local backend's (`cwd` resolution default and `diffBasisMaxBytes` overwrite bound); the [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-fs-sandbox) is the exhaustive source.
+The backend's config is unchanged from the local backend's (`cwd` resolution default and `diffBasisMaxBytes` overwrite bound); the [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-fs-sandbox) is the exhaustive source.
 
 ### Native profile composition
 

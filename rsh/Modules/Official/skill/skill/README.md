@@ -43,7 +43,7 @@ Load the plugin like any Cordis plugin. The only configuration limits how many c
 |---|---|---|
 | `collectCacheMaxEntries` | `128` | Completed cwd/provider catalogs kept in memory |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-skill) is the exhaustive source for every accepted field.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-skill) is the exhaustive source for every accepted field.
 
 Native Host profiles select this package's `./native` entry, which provides the scope-aware `skills` service. A Native provider registers with `registerProvider(scope, create)` and receives a registration-specific abort signal and `invalidate()` callback; `list`, `snapshot`, and `get` use the dynamic Agent scope supplied by their caller. Native provider disposers abort their signal and wait for that registration's `list` and `get` work to settle. `NativeSkillRegistry.dispose()` closes lookup admission and waits for admitted `list`, `snapshot`, and `get` calls and provider work to settle. The Native Definition also declares `skillInvocations`, which `dsh-tool-skill` provides for manual Skill routing through the selected Program's `requestContexts` registry; see the [Skills subsystem reference](../../../../Docs/subsystems/skills.md). The Cordis root entry remains available for Cordis compositions.
 
@@ -117,7 +117,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Skill subsystem reference](../../../../Docs/subsystems/skills.md) — the registry, provider contract, and local discovery priority.
 - [skill-filesystem package](../skill-filesystem/README.md) — the shipped local provider that discovers skills from disk.
 - [tool-skill package](../tool-skill/README.md) — the consumer that renders the session catalog and the `skill` tool.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-skill) — every config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-skill) — every config field and its source declaration.
 - [Skill invocation policy Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-28-skill-invocation-policy.md) — the rationale for the model and user invocation controls.
 
 -----

@@ -91,7 +91,7 @@ Read these when the server contract is not enough: the subsystem reference, then
 - [HTTP routes subsystem](../../../../Docs/subsystems/http-routes.md) — the shared Host and Native route contracts and draining table.
 - [SPA dist server](../frontend-static/README.md) — the shipped owner of the fallback seat.
 - [Web config-tree boot and transport layering](../../../../../.agents/notes/implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.md) — why feature plugins own every route.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-host-webserver) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-host-webserver) — every accepted config field and its source declaration.
 
 -----
 

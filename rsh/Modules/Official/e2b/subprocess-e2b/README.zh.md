@@ -39,7 +39,7 @@ kind: "package-reference"
 |---|---|---|
 | `pollMs` | `20` | 包检查运行中命令状态的频率（毫秒） |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subprocess-e2b)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 运行命令
 
@@ -121,7 +121,7 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 - [子进程 seam 包](../../../../Core/subprocess/subprocess/README.zh.md)——本提供方实现的抽象约定。
 - [Bash 执行器](../../shell/bash-local/README.zh.md)——向模型渲染所启动命令的消费方。
 - [PTY 终端后端](../../terminal/terminal-bash/README.zh.md)——渲染终端会话的消费方。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subprocess-e2b)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)——每个受支持配置字段及其源声明。
 
 -----
 

@@ -59,7 +59,7 @@ dsh --profile <name>
 | `plan` | 使用原生规划模式，拒绝执行审批，并把完整计划作为最终答案返回 |
 | `bypassPermissions` | 显式设置 SDK 的危险确认并跳过权限检查 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)记录保留的 Cordis 入口。其提供方名称、可选模型、环境和权限模式不配置 Native 入口。兼容入口保留既有 Claude 行为：配置模型会原样传给每次 query，凭证类环境变量会先从父环境移除再叠加显式 `env`，SDK 会相对于父 Session cwd 读取宿主用户、项目和本地设置。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-claude-code)记录保留的 Cordis 入口。其提供方名称、可选模型、环境和权限模式不配置 Native 入口。兼容入口保留既有 Claude 行为：配置模型会原样传给每次 query，凭证类环境变量会先从父环境移除再叠加显式 `env`，SDK 会相对于父 Session cwd 读取宿主用户、项目和本地设置。
 
 ### Native 外部 driver
 
@@ -138,7 +138,7 @@ dsh --profile <name>
 - [Codex 兼容桥接包](../../../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)——Codex 产品的旧版 Cordis 适配器。
 - [Official Codex app-server 产品包](../codex-app-server/README.zh.md)——native app-server 协议与外部 child driver 的 owner。
 - [Claude Code 与 Codex 后端](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)——产品提供方的设计记录。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-claude-code)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-claude-code)——每个受支持配置字段及其源声明。
 
 -----
 

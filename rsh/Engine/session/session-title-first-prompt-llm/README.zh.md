@@ -37,7 +37,7 @@ kind: "package-reference"
 
 ### 配置
 
-插件接受完整必填的[共享 LLM 配置](../session-title-llm/README.zh.md#configuration)：`targetWords`、`targetCjkCharacters`、`maxInputBytes`、`maxOutputTokens`、`timeoutMs`，以及可选成对的 `provider`/`model` 路由。同时省略二者，会继承当前已记录主请求的确切路由；同时设置二者，则让标题生成使用独立路由。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-title-first-prompt-llm)是每个受支持字段的穷尽式真源。
+插件接受完整必填的[共享 LLM 配置](../session-title-llm/README.zh.md#configuration)：`targetWords`、`targetCjkCharacters`、`maxInputBytes`、`maxOutputTokens`、`timeoutMs`，以及可选成对的 `provider`/`model` 路由。同时省略二者，会继承当前已记录主请求的确切路由；同时设置二者，则让标题生成使用独立路由。生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-session-title-first-prompt-llm)是每个受支持字段的穷尽式真源。
 
 ### 失败与恢复
 
