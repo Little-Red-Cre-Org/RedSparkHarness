@@ -997,10 +997,10 @@ def test_public_signatures_omit_unsupported_wire_parameters() -> None:
     assert "reasoning_effort" in inspect.signature(HarnessClient.initialize).parameters
     assert "client_name" not in HarnessConfig.__dataclass_fields__
     assert "client_version" not in HarnessConfig.__dataclass_fields__
-    assert {"dsh_bin", "profile", "patches", "dsh_home"} <= set(
+    assert {"dsh_bin", "profile", "patches", "rsh_home"} <= set(
         RedSparkHarnessConfig.__dataclass_fields__
     )
-    assert {"dsh_bin", "profile", "patches", "dsh_home"} <= set(
+    assert {"dsh_bin", "profile", "patches", "rsh_home"} <= set(
         HarnessConfig.__dataclass_fields__
     )
     assert "initialize_timeout_seconds" in RedSparkHarnessConfig.__dataclass_fields__
@@ -1157,7 +1157,7 @@ def test_client_default_launch_uses_bundled_dsh_sdk_profile_and_explicit_home(
     with HarnessClient(HarnessConfig(
         profile="sdk",
         patches=("sdk.patch.yml",),
-        dsh_home=str(home),
+        rsh_home=str(home),
         env={"ENV_DUMP": str(env_dump), "RSH_HOME": str(tmp_path / "env-home")},
     )) as client:
         init = client.initialize(provider="deepseek-official", cwd="/workspace", model="deepseek-v4-pro")
@@ -1195,7 +1195,7 @@ def test_client_rejects_an_implicit_default_dsh_home(
     _install_fake_bundled_dsh(tmp_path, monkeypatch)
     monkeypatch.delenv("RSH_HOME", raising=False)
 
-    with pytest.raises(ValueError, match="explicit dsh_home or non-empty RSH_HOME"):
+    with pytest.raises(ValueError, match="explicit rsh_home or non-empty RSH_HOME"):
         HarnessClient(HarnessConfig(env={})).start()
 
 
@@ -1204,4 +1204,4 @@ def test_client_reports_missing_bundled_runtime_dependency(monkeypatch: pytest.M
     monkeypatch.setattr(sys, "path", [])
 
     with pytest.raises(FileNotFoundError, match="Install redspark-harness-runtime-bin"):
-        HarnessClient(HarnessConfig(dsh_home="/explicit/home")).start()
+        HarnessClient(HarnessConfig(rsh_home="/explicit/home")).start()

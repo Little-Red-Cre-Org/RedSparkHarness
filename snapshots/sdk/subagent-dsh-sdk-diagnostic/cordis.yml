@@ -36,8 +36,8 @@
     enabled: true
 
 - insert:
-    - id: subagent-dsh-sdk-diagnostic
-      name: '@redspark/rsh-subagent-dsh-sdk'
+    - id: subagent-rsh-sdk-diagnostic
+      name: '@redspark/rsh-subagent-rsh-sdk'
       config:
         providerName: dsh-sdk-diagnostic
         profile: sdk
@@ -49,15 +49,15 @@
         env:
           RSH_TELEMETRY_DISABLED: '1'
           RSH_TEST_CHILD_FAILURE: '1'
-    - id: tool-subagent-dsh-sdk-diagnostic
+    - id: tool-subagent-rsh-sdk-diagnostic
       name: '@redspark/rsh-tool-subagent'
       config:
         provider: dsh-sdk-diagnostic
         toolName: subagent_dsh_sdk
         backgroundMode: one-shot
         maxDepth: provider-managed
-    - id: subagent-dsh-sdk-diagnostic-background
-      name: '@redspark/rsh-subagent-dsh-sdk'
+    - id: subagent-rsh-sdk-diagnostic-background
+      name: '@redspark/rsh-subagent-rsh-sdk'
       config:
         providerName: dsh-sdk-diagnostic-background
         profile: sdk
@@ -70,7 +70,7 @@
           RSH_TELEMETRY_DISABLED: '1'
           RSH_TEST_CHILD_FAILURE: '1'
           FAKE_INIT_GO: .dsh-sdk-background-release
-    - id: tool-subagent-dsh-sdk-diagnostic-background
+    - id: tool-subagent-rsh-sdk-diagnostic-background
       name: '@redspark/rsh-tool-subagent'
       config:
         provider: dsh-sdk-diagnostic-background
@@ -78,4 +78,4 @@
         backgroundMode: one-shot
         maxDepth: provider-managed
     - id: release-dsh-sdk-background-on-job-output
-      name: '../../../rsh/Programs/CLI/tests/profiles/sdk/fixtures/subagent-dsh-sdk-release-on-job-output.ts'
+      name: '../../../rsh/Programs/CLI/tests/profiles/sdk/fixtures/subagent-rsh-sdk-release-on-job-output.ts'

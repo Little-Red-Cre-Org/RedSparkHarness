@@ -14,13 +14,13 @@ The native-sdk profile composes the production in-process subagent tool. Session
 
 The Python SDK has no separate application entrypoint. By default, it launches the bundled `dsh` CLI with `--profile sdk`. A new standard `sdk` profile selects the Native Runtime; an existing profile keeps the runtime declared by its `package.json`. The selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior. `native-sdk` remains an explicit Native alias.
 
-Every launch requires an explicit Harness home. Pass `dsh_home` or provide a non-empty `RSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
+Every launch requires an explicit Harness home. Pass `rsh_home` or provide a non-empty `RSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
 
 ```py
 from redspark_harness import RedSparkHarness
 
 with RedSparkHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     cwd="/absolute/path/to/workspace",
     provider="deepseek-official",
     model="deepseek-v4-flash",
@@ -64,7 +64,7 @@ For an invocation-specific change, pass one or more patch files. They become abs
 
 ```py
 with RedSparkHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     profile="sdk",
     patches=("/absolute/path/to/first.patch.json", "/absolute/path/to/last.patch.json"),
 ) as harness:

@@ -34,11 +34,11 @@
 
 - insert:
     - id: mock-llm
-      name: '../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
       disabled: !!js process.env.RSH_SNAPSHOT !== 'record'
 
-    - id: subagent-dsh-sdk
-      name: '@redspark/rsh-subagent-dsh-sdk'
+    - id: subagent-rsh-sdk
+      name: '@redspark/rsh-subagent-rsh-sdk'
       config:
         profile: sdk
         patches: !!js JSON.parse(process.env.RSH_TEST_CHILD_PATCHES ?? '[]')
@@ -56,8 +56,8 @@
           - provider: mock
             model: mock-routed
 
-    - id: tool-subagent-dsh-sdk
-      name: '../../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
+    - id: tool-subagent-rsh-sdk
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
       config:
         provider: dsh-sdk
         toolName: subagent

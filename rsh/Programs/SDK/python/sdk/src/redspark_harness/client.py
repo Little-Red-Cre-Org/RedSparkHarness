@@ -31,7 +31,7 @@ class HarnessConfig:
     dsh_bin: str | None = None
     profile: str = "sdk"
     patches: tuple[str, ...] = ()
-    dsh_home: str | None = None
+    rsh_home: str | None = None
     cwd: str | None = None
     env: dict[str, str] | None = None
     initialize_timeout_seconds: float = 30.0
@@ -559,13 +559,13 @@ class HarnessClient:
         else:
             base = (str(Path(self.config.dsh_bin).expanduser().resolve()),)
 
-        if self.config.dsh_home is not None:
-            if not self.config.dsh_home.strip():
-                raise ValueError("HarnessConfig requires a non-empty dsh_home")
-            env["RSH_HOME"] = str(Path(self.config.dsh_home).expanduser().resolve())
+        if self.config.rsh_home is not None:
+            if not self.config.rsh_home.strip():
+                raise ValueError("HarnessConfig requires a non-empty rsh_home")
+            env["RSH_HOME"] = str(Path(self.config.rsh_home).expanduser().resolve())
         elif not env.get("RSH_HOME", "").strip():
             raise ValueError(
-                "HarnessConfig requires an explicit dsh_home or non-empty RSH_HOME; "
+                "HarnessConfig requires an explicit rsh_home or non-empty RSH_HOME; "
                 "the Python SDK never uses ~/.dsh implicitly"
             )
 

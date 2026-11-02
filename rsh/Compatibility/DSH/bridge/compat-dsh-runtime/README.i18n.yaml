@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Compatibility/DSH/bridge/compat-dsh-runtime/README.md
-README.md: 82fda3d54d6f481eac9ef16ca1c5fbfe4f7aedf4
-README.zh.md: 41e9b0b0d43fe72a01cd3bd868342f6214a42f6a
+README.md: df072d561b39b8c5517e4017468b272e04b7f977
+README.zh.md: 3f1114276c2c0bff48a3280f72b9dded531f63df

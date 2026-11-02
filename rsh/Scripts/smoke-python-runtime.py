@@ -45,7 +45,7 @@ MCP_PROMPT = "Exercise the packaged MCP client with one external stdio server."
 MCP_TEXT = "MCP client smoke ok"
 PROFILE_PLUGIN_PROMPT = "Verify the Python-installed dsh profile plugin."
 PROFILE_PLUGIN_TEXT = "profile plugin smoke ok"
-PROFILE_PLUGIN_MARKER = "PYTHON_INSTALLED_DSH_PROFILE_PLUGIN"
+PROFILE_PLUGIN_MARKER = "PYTHON_INSTALLED_RSH_PROFILE_PLUGIN"
 NATIVE_EXTERNAL_OPERATION_PROMPT = "Delegate one filesystem change to an external child and report completion."
 NATIVE_EXTERNAL_OPERATION_COLD_PROMPT = "Continue after an external SDK process restart."
 NATIVE_EXTERNAL_OPERATION_CHILD_PROMPT = "Create one file using the write tool, then report the result."
@@ -309,13 +309,13 @@ def write_advanced_profile_patch(root: Path, name: str, sessions: Path) -> Path:
     ])
 
 
-def ensure_legacy_sdk_profile(executable: Path | None, dsh_home: Path, cwd: Path) -> None:
+def ensure_legacy_sdk_profile(executable: Path | None, rsh_home: Path, cwd: Path) -> None:
     """Create the Cordis SDK template under an explicit custom profile name."""
     dsh = executable or Path(sysconfig.get_path("scripts")) / ("dsh.exe" if IS_WINDOWS else "dsh")
     result = subprocess.run(
         [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
         cwd=cwd,
-        env={**os.environ, "RSH_HOME": str(dsh_home)},
+        env={**os.environ, "RSH_HOME": str(rsh_home)},
         text=True,
         capture_output=True,
         check=False,
@@ -1033,8 +1033,8 @@ def smoke_sdk_live() -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-live-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
         marker = root / "live-api-marker.txt"
         session_id = "installed-wheel-live-api"
         shell_tool = "pwsh" if IS_WINDOWS else "bash"
@@ -1047,7 +1047,7 @@ def smoke_sdk_live() -> None:
             provider="deepseek-official",
             model="deepseek-v4-flash",
             cwd=str(root),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             env={
                 "RSH_PERMISSION_MODE": "danger-full-access",
                 "RSH_TELEMETRY_DISABLED": "1",
@@ -1138,13 +1138,13 @@ def smoke_sdk_default(base_url: str) -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-default-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
         with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             env={
                 "RSH_PERMISSION_MODE": "danger-full-access",
                 "RSH_TELEMETRY_DISABLED": "1",
@@ -1285,7 +1285,7 @@ def run_installed_native_turn(home: Path, cwd: Path, patch: Path, session_id: st
         provider="fixture",
         model="fixture-model",
         cwd=str(cwd),
-        dsh_home=str(home),
+        rsh_home=str(home),
         profile="native-sdk",
         patches=(str(patch),),
         env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1",
@@ -1596,7 +1596,7 @@ def smoke_sdk_native_staged_files(base_url: str, executable: Path,
         NATIVE_STAGED_FILES_GATE = (started, release)
         try:
             with ThreadPoolExecutor(max_workers=1) as executor, RedSparkHarness(
-                provider="fixture", model="fixture-model", cwd=str(cwd), dsh_home=str(home),
+                provider="fixture", model="fixture-model", cwd=str(cwd), rsh_home=str(home),
                 profile="native-sdk", patches=(str(patch),), allowed_tools=("read_file", "write_file"),
                 workspace_write_root=str(cwd),
                 env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1",
@@ -1912,16 +1912,16 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-custom-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_advanced_profile_patch(root, "custom.patch.yml", sessions)
         with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
             dsh_bin=str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
@@ -2044,8 +2044,8 @@ def smoke_sdk_minimal(
     first_request = len(MockModelHandler.requests)
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-minimal-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
         patches = ()
         if in_history:
             patch = root / "in-history.patch.yml"
@@ -2064,7 +2064,7 @@ def smoke_sdk_minimal(
             model="smoke-model",
             cwd=str(root),
             dsh_bin=str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="sdk-minimal",
             patches=patches,
             api_key="sk-keyless-smoke",
@@ -2099,9 +2099,9 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-fs-search-") as temporary:
         root = Path(temporary).resolve()
         (root / "needle.txt").write_text(f"{FS_SEARCH_MARKER}\n")
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_profile_patch(root, "fs-search.patch.yml", sessions, [
             {"id": "skill-filesystem", "disabled": True},
             {"id": "tool-fs-search", "config": {"sampleOverCapGlobResults": False}},
@@ -2111,7 +2111,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
             model="smoke-model",
             cwd=str(root),
             dsh_bin=str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
@@ -2134,16 +2134,16 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-spawn-node-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_profile_patch(root, "spawn-node.patch.yml", sessions, [])
         with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
             dsh_bin=str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
@@ -2166,11 +2166,11 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-mcp-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
         server_script = root / "mcp_server.py"
         server_script.write_text(MCP_SERVER_SCRIPT)
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_mcp_patch(root, sessions, server_script)
         discovery_log = server_script.with_suffix(".log")
         with RedSparkHarness(
@@ -2178,7 +2178,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
             model="smoke-model",
             cwd=str(root),
             dsh_bin=None if executable is None else str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
@@ -2207,7 +2207,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-profile-plugin-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
+        rsh_home = root / "home"
         plugin = root / "plugin"
         plugin.mkdir()
         (plugin / "package.json").write_text(json.dumps({
@@ -2237,7 +2237,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
         }], indent=2))
 
         dsh = Path(sysconfig.get_path("scripts")) / ("dsh.exe" if IS_WINDOWS else "dsh")
-        environment = {**os.environ, "RSH_HOME": str(dsh_home)}
+        environment = {**os.environ, "RSH_HOME": str(rsh_home)}
         initialized = subprocess.run(
             [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
             cwd=root,
@@ -2266,7 +2266,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
                 f"returncode={installed.returncode} (0x{installed.returncode & 0xffffffff:08x}) "
                 f"stdout={installed.stdout!r} stderr={installed.stderr!r}"
             )
-        manifest = json.loads((dsh_home / "profiles" / "legacy-sdk" / "package.json").read_text())
+        manifest = json.loads((rsh_home / "profiles" / "legacy-sdk" / "package.json").read_text())
         if "dsh-python-blackbox-plugin" not in manifest.get("dependencies", {}):
             raise AssertionError(f"dsh plugin did not record the external dependency: {manifest}")
         if "dsh-python-blackbox-plugin" not in manifest["dsh"]["profile"]["bundles"]:
@@ -2276,7 +2276,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             env={
                 "RSH_PERMISSION_MODE": "danger-full-access",
@@ -2295,7 +2295,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
             ) from error
 
         assert result.final_response == PROFILE_PLUGIN_TEXT, result.final_response
-        assert_zstd_session_log(dsh_home / "sessions")
+        assert_zstd_session_log(rsh_home / "sessions")
 
 
 def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
@@ -2304,9 +2304,9 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-snapshot-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_advanced_profile_patch(root, "snapshot.patch.yml", sessions)
         feedback_patch = write_profile_patch(root, "feedback.patch.yml", sessions, [{"insert": [
             {"id": "snapshot-workflow-order", "name": (
@@ -2325,7 +2325,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             model="smoke-model",
             cwd=str(root),
             dsh_bin=str(executable),
-            dsh_home=str(dsh_home),
+            rsh_home=str(rsh_home),
             profile="legacy-sdk",
             patches=(str(patch), str(feedback_patch)),
             env={
@@ -2378,9 +2378,9 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-restart-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
-        ensure_legacy_sdk_profile(executable, dsh_home, root)
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
+        ensure_legacy_sdk_profile(executable, rsh_home, root)
         patch = write_advanced_profile_patch(root, "restart.patch.yml", sessions)
         first_request = len(MockModelHandler.requests)
 
@@ -2390,7 +2390,7 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
                 model="smoke-model",
                 cwd=str(root),
                 dsh_bin=str(executable),
-                dsh_home=str(dsh_home),
+                rsh_home=str(rsh_home),
                 profile="legacy-sdk",
                 patches=(str(patch),),
                 env={
@@ -2443,12 +2443,12 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
 def smoke_direct(base_url: str, executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="dsh-direct-") as temporary:
         root = Path(temporary).resolve()
-        dsh_home = root / "home"
-        sessions = dsh_home / "sessions"
+        rsh_home = root / "home"
+        sessions = rsh_home / "sessions"
         patch = write_profile_patch(root, "direct.patch.yml", sessions, [])
         environment = {
             **os.environ,
-            "RSH_HOME": str(dsh_home),
+            "RSH_HOME": str(rsh_home),
             "RSH_PERMISSION_MODE": "danger-full-access",
             "RSH_TELEMETRY_DISABLED": "1",
             "DEEPSEEK_API_KEY": "sk-keyless-smoke",

@@ -10,7 +10,7 @@ config = RedSparkHarnessConfig(
     dsh_bin=None if launcher == "-" else launcher,
     profile="native-sdk",
     patches=(model_patch,),
-    dsh_home=home,
+    rsh_home=home,
     cwd=workspace,
     provider="fixture",
     model="fixture-model",

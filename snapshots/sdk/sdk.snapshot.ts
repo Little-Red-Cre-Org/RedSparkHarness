@@ -89,11 +89,11 @@ const RUNTIME_WORKSPACE_ENTRIES = [
   '.snapshot-patches',
 ] as const
 const dshSdkDiagnosticChildPatch = fileURLToPath(new URL(
-  './subagent-dsh-sdk-diagnostic/child.cordis.yml',
+  './subagent-rsh-sdk-diagnostic/child.cordis.yml',
   import.meta.url,
 ))
 const dshSdkChildConfig = fileURLToPath(new URL(
-  '../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
+  '../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/child.patch.yml',
   import.meta.url,
 ))
 
@@ -134,7 +134,7 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
   'subagent-continuable': {
     environment: { RSH_SNAPSHOT_HUMAN_STEER: '1' },
   },
-  'subagent-dsh-sdk-diagnostic': {
+  'subagent-rsh-sdk-diagnostic': {
     environment: { RSH_TEST_CHILD_PATCH: dshSdkDiagnosticChildPatch },
   },
   'persistent-tools': {
@@ -147,7 +147,7 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
       excludes: ['workspace-write'],
     },
   },
-  'subagent-dsh-sdk-dynamic-route': {
+  'subagent-rsh-sdk-dynamic-route': {
     environment: { RSH_TEST_PARENT_PROVIDER: 'deepseek-official' },
     dshSdkChild: {
       config: dshSdkChildConfig,
@@ -550,7 +550,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   ])]
   const rshHome = join(cwd, '.dsh')
   initializeSdkCompatibilityProfile(rshHome, 'legacy-sdk')
-  if (scenario.name === 'subagent-dsh-sdk-diagnostic') {
+  if (scenario.name === 'subagent-rsh-sdk-diagnostic') {
     for (const childName of ['foreground', 'background']) {
       initializeSdkCompatibilityProfile(join(rshHome, 'children', childName), 'sdk')
     }

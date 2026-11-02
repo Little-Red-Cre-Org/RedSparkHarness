@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs'
 import type { Context } from '@redspark/cordis'
 
-export const name = 'subagent-dsh-sdk-release-on-job-output'
+export const name = 'subagent-rsh-sdk-release-on-job-output'
 export const inject = ['tools']
 
 /**

@@ -32,7 +32,7 @@ class RedSparkHarnessConfig:
     dsh_bin: str | None = None
     profile: str = "sdk"
     patches: tuple[str, ...] = ()
-    dsh_home: str | None = None
+    rsh_home: str | None = None
     env: dict[str, str] = field(default_factory=dict)
     initialize_timeout_seconds: float = 30.0
     request_timeout_seconds: float | None = None
@@ -82,7 +82,7 @@ class RedSparkHarness:
                 dsh_bin=self.config.dsh_bin,
                 profile=self.config.profile,
                 patches=self.config.patches,
-                dsh_home=self.config.dsh_home,
+                rsh_home=self.config.rsh_home,
                 cwd=runtime_cwd,
                 env=env,
                 initialize_timeout_seconds=self.config.initialize_timeout_seconds,

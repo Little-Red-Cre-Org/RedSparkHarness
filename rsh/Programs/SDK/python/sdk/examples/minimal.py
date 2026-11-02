@@ -27,17 +27,17 @@ def main() -> None:
     parser.add_argument("--model", default=os.environ.get("RSH_MODEL", "deepseek-v4-flash"))
     parser.add_argument("--max-tokens", type=int)
     args = parser.parse_args()
-    if args.dsh_home is None:
+    if args.rsh_home is None:
         parser.error("--dsh-home or a non-empty RSH_HOME is required")
 
     workspace = args.workspace.resolve()
-    dsh_home = args.dsh_home.resolve()
+    rsh_home = args.rsh_home.resolve()
     with RedSparkHarness(
         provider=args.provider,
         model=args.model,
         max_tokens=args.max_tokens,
         cwd=str(workspace),
-        dsh_home=str(dsh_home),
+        rsh_home=str(rsh_home),
         profile=args.profile,
     ) as harness:
         result = harness.run(args.prompt, session_id=args.session_id)

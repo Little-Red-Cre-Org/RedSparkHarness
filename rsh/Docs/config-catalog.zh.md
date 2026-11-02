@@ -2483,9 +2483,9 @@ export interface Config {
 
 来源：[`rsh/Compatibility/DSH/bridge/subagent-codex/src/index.ts:36`](../Compatibility/DSH/bridge/subagent-codex/src/index.ts)
 
-<a id="redsparkrsh-subagent-dsh-sdk"></a>
+<a id="redsparkrsh-subagent-rsh-sdk"></a>
 
-## `@redspark/rsh-subagent-dsh-sdk`
+## `@redspark/rsh-subagent-rsh-sdk`
 
 需要：`subagents`
 
@@ -2537,7 +2537,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts)
+来源：[`rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts)
 
 <a id="redsparkrsh-subagent-fork-in-process"></a>
 

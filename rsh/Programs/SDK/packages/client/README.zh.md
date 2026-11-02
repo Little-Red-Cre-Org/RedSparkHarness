@@ -109,7 +109,7 @@ console.log(result.finalResponse)
 - [SDK 协议格式](../../../../Engine/subagent/sdk-protocol/README.zh.md)——本客户端使用的 JSON-RPC 方法与载荷结构。
 - [JSON-RPC 服务插件](../server/README.zh.md)——服务本客户端的运行时插件。
 - [Python SDK](../../python/README.zh.md) — 共享同一运行时对端与协议的设计孪生。
-- [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
+- [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
 - [Native SDK 服务端](../native-server/README.zh.md) — 新建标准 `sdk` profile 使用的运行时插件。
 - [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — legacy profile 使用的 Cordis 应用。
 

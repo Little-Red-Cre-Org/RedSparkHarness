@@ -86,13 +86,13 @@ from pathlib import Path
 from redspark_harness import RedSparkHarness
 
 workspace = Path("/absolute/path/to/disposable-workspace").resolve()
-dsh_home = Path("/absolute/path/to/example-dsh-home").resolve()
+rsh_home = Path("/absolute/path/to/example-dsh-home").resolve()
 with RedSparkHarness(
     provider="deepseek-official",
     model="deepseek-v4-flash",
     max_tokens=49_152,
     cwd=str(workspace),
-    dsh_home=str(dsh_home),
+    rsh_home=str(rsh_home),
     profile="sdk-minimal",
 ) as harness:
     result = harness.run(
@@ -155,7 +155,7 @@ dsh plugin --profile sdk-minimal add file:C:/work/my-plugin-bundle
 | 面向模型的工具 | Linux／macOS 上的持久 `bash` 或 Windows 上的 `pwsh` |
 | Shell 超时 | 300 秒 |
 | 运行时上下文与 compaction | 不存在 |
-| 会话持久化 | `<dsh_home>/sessions` 下的未压缩 JSONL |
+| 会话持久化 | `<rsh_home>/sessions` 下的未压缩 JSONL |
 
 该 profile 的唯一组合包会在空根之上插入完整配置树，且不包含 `dsh-base`，因此基础 profile 以后新增的工具不会隐式出现。它包含 SDK 协议、一个由环境配置的 DeepSeek 适配器、本地执行与持久化；文件系统工具、settings、托管凭据、遥测、Web 工具、subagent、本地指令发现和 compaction 均不存在。它固定使用 `danger-full-access`，因此按平台选择的持久 shell 可以修改运行时可见的任何路径；应使用一次性 checkout 或容器。
 

@@ -45,7 +45,7 @@ An interactive smoke test needs `DEEPSEEK_API_KEY` in the environment or reposit
 ```python
 from redspark_harness import RedSparkHarness
 
-with RedSparkHarness(dsh_home="/absolute/path/to/test-dsh-home") as harness:
+with RedSparkHarness(rsh_home="/absolute/path/to/test-dsh-home") as harness:
     print(harness.run("say hi").final_response)
 ```
 
@@ -56,7 +56,7 @@ Alternatively export a non-empty `RSH_HOME`. The SDK rejects a launch that would
 Repository contributors can select either development route; both execute the normal `dsh --profile sdk` launcher:
 
 - Set `RSH_RUNTIME_MODE=node` to use the built Node carrier on system Node `>=22.19`. The build script refreshes this carrier, but distributions never include or auto-select it.
-- Set `dsh_bin` to the absolute built `rsh/Programs/CLI/lib/bin.js` path to exercise the checkout's CLI directly. Supply an explicit `dsh_home`, plus `profile` and ordered `patches` as needed.
+- Set `dsh_bin` to the absolute built `rsh/Programs/CLI/lib/bin.js` path to exercise the checkout's CLI directly. Supply an explicit `rsh_home`, plus `profile` and ordered `patches` as needed.
 
 `rsh/Programs/SDK/python/sdk/tests/manual_sdk_agent_smoke.py` uses the internal `_launch_args` test adapter to exercise the unbuilt TypeScript CLI under tsx. Arbitrary argv replacement is intentionally absent from the public SDK.
 

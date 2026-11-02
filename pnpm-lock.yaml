@@ -39,7 +39,7 @@ overrides:
 patchedDependencies:
   '@electron/osx-sign@1.3.3': 280e7b2816caf01423097d24e79107a66afeb563a348630ce9928ae8499a5861
   '@yao-pkg/pkg@6.21.0': 28edd2180c36691c481522ef81f6f6614505f45e491aad542ac4663d4e6b3ff8
-  node-pty@1.2.0-beta.15: 8a6cefc66406ad56588f10a2dbcc22f3ca87ef630849b59b52fbb3ce6ba6f56a
+  node-pty@1.2.0-beta.15: 8b4b73b11d3886d08cb69b7fca1f09ac8c6ae088b812441c280716400c4c3ffe
 
 importers:
 
@@ -1435,7 +1435,7 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/subagent/tool-subagent
 
-  rsh/Compatibility/DSH/subagent/subagent-dsh-sdk:
+  rsh/Compatibility/DSH/subagent/subagent-rsh-sdk:
     dependencies:
       '@redspark/rsh-brand':
         specifier: workspace:^
@@ -1761,7 +1761,7 @@ importers:
         version: 3.1.1
       node-pty:
         specifier: 1.2.0-beta.15
-        version: 1.2.0-beta.15(patch_hash=8a6cefc66406ad56588f10a2dbcc22f3ca87ef630849b59b52fbb3ce6ba6f56a)
+        version: 1.2.0-beta.15(patch_hash=8b4b73b11d3886d08cb69b7fca1f09ac8c6ae088b812441c280716400c4c3ffe)
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -4205,6 +4205,9 @@ importers:
 
   rsh/Engine/session/session-persistence-jsonl:
     dependencies:
+      '@redspark/node-addon-system':
+        specifier: workspace:^
+        version: link:../../../Core/native/system/packages/entry
       '@redspark/rsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
@@ -4220,9 +4223,6 @@ importers:
       '@redspark/rsh-session-format-v2-to-v3':
         specifier: workspace:^
         version: link:../session-format-v2-to-v3
-      '@redspark/node-addon-system':
-        specifier: workspace:^
-        version: link:../../../Core/native/system/packages/entry
       '@redspark/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
@@ -4347,9 +4347,6 @@ importers:
 
   rsh/Engine/session/session-telemetry-otel:
     dependencies:
-      '@redspark/schemastery':
-        specifier: link:../../../Core/vendor/schemastery
-        version: link:../../../Core/vendor/schemastery
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
@@ -4368,6 +4365,9 @@ importers:
       '@opentelemetry/sdk-logs':
         specifier: ^0.220.0
         version: 0.220.0(@opentelemetry/api@1.9.1)
+      '@redspark/schemastery':
+        specifier: link:../../../Core/vendor/schemastery
+        version: link:../../../Core/vendor/schemastery
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -5678,12 +5678,12 @@ importers:
 
   rsh/Modules/Community/experimental/webworker-runtime:
     dependencies:
-      '@redspark/rsh-util-crypto':
-        specifier: workspace:^
-        version: link:../../../../Core/util/crypto
       '@noble/hashes':
         specifier: ^2.3.0
         version: 2.3.0
+      '@redspark/rsh-util-crypto':
+        specifier: workspace:^
+        version: link:../../../../Core/util/crypto
       '@yarnpkg/parsers':
         specifier: ^3.1.0
         version: 3.1.0
@@ -5709,6 +5709,9 @@ importers:
       '@redspark/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../../../Core/vendor/loader
+      '@redspark/node-addon-system':
+        specifier: workspace:^
+        version: link:../../../../Core/native/system/packages/entry
       '@redspark/rsh-api-gateway':
         specifier: workspace:^
         version: link:../../../../Programs/Web/api/gateway
@@ -5748,9 +5751,6 @@ importers:
       '@redspark/rsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
-      '@redspark/node-addon-system':
-        specifier: workspace:^
-        version: link:../../../../Core/native/system/packages/entry
       '@types/picomatch':
         specifier: ^3.0.2
         version: 3.0.2
@@ -7325,6 +7325,9 @@ importers:
 
   rsh/Modules/Official/llm/llm-pi-ai:
     dependencies:
+      '@earendil-works/pi-ai':
+        specifier: ^1.0.0
+        version: 1.0.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(supports-color@9.4.0)(zod@4.4.3))(@smithy/signature-v4@5.7.3)(supports-color@9.4.0)(undici@8.11.2)(ws@8.21.0)(zod@4.4.3)
       '@redspark/rsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
@@ -7340,9 +7343,6 @@ importers:
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
-      '@earendil-works/pi-ai':
-        specifier: ^1.0.0
-        version: 1.0.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(supports-color@9.4.0)(zod@4.4.3))(@smithy/signature-v4@5.7.3)(supports-color@9.4.0)(undici@8.11.2)(ws@8.21.0)(zod@4.4.3)
       jose:
         specifier: 6.2.3
         version: 6.2.3
@@ -7594,6 +7594,9 @@ importers:
       '@agentclientprotocol/sdk':
         specifier: 1.4.0
         version: 1.4.0(zod@4.4.3)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(supports-color@9.4.0)(zod@4.4.3)
       '@redspark/rsh-attachment':
         specifier: workspace:^
         version: link:../../attachment/attachment
@@ -7621,13 +7624,16 @@ importers:
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
-        version: 1.32.1(supports-color@9.4.0)(zod@4.4.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@modelcontextprotocol/server-everything':
+        specifier: ^2026.7.4
+        version: 2026.7.4(supports-color@9.4.0)
+      '@modelcontextprotocol/server-filesystem':
+        specifier: ^2026.7.4
+        version: 2026.7.10(supports-color@9.4.0)(zod@4.4.3)
       '@redspark/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
@@ -7649,12 +7655,6 @@ importers:
       '@redspark/rsh-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
-      '@modelcontextprotocol/server-everything':
-        specifier: ^2026.7.4
-        version: 2026.7.4(supports-color@9.4.0)
-      '@modelcontextprotocol/server-filesystem':
-        specifier: ^2026.7.4
-        version: 2026.7.10(supports-color@9.4.0)(zod@4.4.3)
 
   rsh/Modules/Official/plan/plan-mode:
     dependencies:
@@ -7765,6 +7765,9 @@ importers:
 
   rsh/Modules/Official/sandbox/sandbox-local:
     dependencies:
+      '@redspark/node-addon-system':
+        specifier: workspace:^
+        version: link:../../../../Core/native/system/packages/entry
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -7780,9 +7783,6 @@ importers:
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
-      '@redspark/node-addon-system':
-        specifier: workspace:^
-        version: link:../../../../Core/native/system/packages/entry
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -7958,6 +7958,9 @@ importers:
       '@redspark/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
+      '@redspark/node-addon-system':
+        specifier: workspace:^
+        version: link:../../../../Core/native/system/packages/entry
       '@redspark/rsh-bash-local':
         specifier: workspace:^
         version: link:../bash-local
@@ -7979,9 +7982,6 @@ importers:
       '@redspark/rsh-subprocess-local':
         specifier: workspace:^
         version: link:../../../../Core/subprocess/subprocess-local
-      '@redspark/node-addon-system':
-        specifier: workspace:^
-        version: link:../../../../Core/native/system/packages/entry
 
   rsh/Modules/Official/shell/pwsh-local:
     dependencies:
@@ -8715,6 +8715,9 @@ importers:
 
   rsh/Modules/Official/subagent/codex-app-server:
     dependencies:
+      '@openai/codex':
+        specifier: 0.162.1
+        version: 0.162.1
       '@redspark/rsh-json-rpc-line':
         specifier: workspace:^
         version: link:../../../../Core/util/json-rpc-line
@@ -8733,9 +8736,6 @@ importers:
       '@redspark/rsh-timeout':
         specifier: workspace:^
         version: link:../../../../Core/util/timeout
-      '@openai/codex':
-        specifier: 0.162.1
-        version: 0.162.1
       eventsource-parser:
         specifier: ^3.1.0
         version: 3.1.0
@@ -8791,15 +8791,15 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 0.93.0
         version: 0.93.0(zod@4.4.3)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(supports-color@9.4.0)(zod@4.4.3)
       '@redspark/rsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
-        version: 1.32.1(supports-color@9.4.0)(zod@4.4.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -9106,15 +9106,15 @@ importers:
 
   rsh/Modules/Official/web/tool-web:
     dependencies:
+      '@joplin/turndown-plugin-gfm':
+        specifier: ^1.0.67
+        version: 1.0.67
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
-      '@joplin/turndown-plugin-gfm':
-        specifier: ^1.0.67
-        version: 1.0.67
       turndown:
         specifier: ^7.2.4
         version: 7.2.4
@@ -9383,15 +9383,15 @@ importers:
 
   rsh/Modules/Official/webhook/webhook-github:
     dependencies:
+      '@octokit/webhooks':
+        specifier: ^14.2.0
+        version: 14.2.0
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
-      '@octokit/webhooks':
-        specifier: ^14.2.0
-        version: 14.2.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -10147,12 +10147,12 @@ importers:
       '@redspark/rsh-subagent-codex':
         specifier: workspace:^
         version: link:../../Compatibility/DSH/bridge/subagent-codex
-      '@redspark/rsh-subagent-dsh-sdk':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/subagent/subagent-dsh-sdk
       '@redspark/rsh-subagent-fork-in-process':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent-fork-in-process
+      '@redspark/rsh-subagent-rsh-sdk':
+        specifier: workspace:^
+        version: link:../../Compatibility/DSH/subagent/subagent-rsh-sdk
       '@redspark/rsh-subagent-spawn-in-process':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent-spawn-in-process
@@ -10359,6 +10359,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1067.0
         version: 3.1067.0
+      '@electron/notarize':
+        specifier: 2.5.0
+        version: 2.5.0(supports-color@9.4.0)
       '@redspark/rsh':
         specifier: workspace:^
         version: link:../CLI
@@ -10368,9 +10371,6 @@ importers:
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../Engine/core/session
-      '@electron/notarize':
-        specifier: 2.5.0
-        version: 2.5.0(supports-color@9.4.0)
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -10576,6 +10576,9 @@ importers:
       '@redspark/cosmokit':
         specifier: link:../../../../Core/vendor/cosmokit
         version: link:../../../../Core/vendor/cosmokit
+      '@redspark/node-addon-system':
+        specifier: workspace:^
+        version: link:../../../../Core/native/system/packages/entry
       '@redspark/rsh':
         specifier: workspace:^
         version: link:../../../CLI
@@ -10969,9 +10972,6 @@ importers:
       '@redspark/rsh-workspace-definition':
         specifier: workspace:^
         version: link:../../../../Engine/workspace/workspace-definition
-      '@redspark/node-addon-system':
-        specifier: workspace:^
-        version: link:../../../../Core/native/system/packages/entry
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -11053,7 +11053,7 @@ importers:
         version: 18.3.31
       node-pty:
         specifier: 1.2.0-beta.15
-        version: 1.2.0-beta.15(patch_hash=8a6cefc66406ad56588f10a2dbcc22f3ca87ef630849b59b52fbb3ce6ba6f56a)
+        version: 1.2.0-beta.15(patch_hash=8b4b73b11d3886d08cb69b7fca1f09ac8c6ae088b812441c280716400c4c3ffe)
 
   rsh/Programs/TUI/terminal-ui:
     dependencies:
@@ -12489,6 +12489,21 @@ importers:
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
     devDependencies:
+      '@lexical/headless':
+        specifier: ^0.49.0
+        version: 0.49.0(typescript@6.0.3)
+      '@lexical/history':
+        specifier: ^0.49.0
+        version: 0.49.0(typescript@6.0.3)
+      '@lexical/plain-text':
+        specifier: ^0.49.0
+        version: 0.49.0(typescript@6.0.3)
+      '@lexical/text':
+        specifier: ^0.49.0
+        version: 0.49.0(typescript@6.0.3)
+      '@lexical/utils':
+        specifier: ^0.49.0
+        version: 0.49.0(typescript@6.0.3)
       '@redspark/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
@@ -12573,21 +12588,6 @@ importers:
       '@redspark/rsh-workspace':
         specifier: workspace:^
         version: link:../../../../Modules/Official/workspace/workspace
-      '@lexical/headless':
-        specifier: ^0.49.0
-        version: 0.49.0(typescript@6.0.3)
-      '@lexical/history':
-        specifier: ^0.49.0
-        version: 0.49.0(typescript@6.0.3)
-      '@lexical/plain-text':
-        specifier: ^0.49.0
-        version: 0.49.0(typescript@6.0.3)
-      '@lexical/text':
-        specifier: ^0.49.0
-        version: 0.49.0(typescript@6.0.3)
-      '@lexical/utils':
-        specifier: ^0.49.0
-        version: 0.49.0(typescript@6.0.3)
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -28126,7 +28126,7 @@ snapshots:
 
   node-int64@0.4.0: {}
 
-  node-pty@1.2.0-beta.15(patch_hash=8a6cefc66406ad56588f10a2dbcc22f3ca87ef630849b59b52fbb3ce6ba6f56a):
+  node-pty@1.2.0-beta.15(patch_hash=8b4b73b11d3886d08cb69b7fca1f09ac8c6ae088b812441c280716400c4c3ffe):
     dependencies:
       node-addon-api: 7.1.1
 

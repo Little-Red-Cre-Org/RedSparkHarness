@@ -43,7 +43,7 @@ subagent 包家族让 agent（智能体）将任务委派给子 agent、继续�
 
 - [Subagent 子系统](../../Docs/subsystems/subagent.zh.md)——服务约定、提供方约定与终态结果语义。
 - [Native SDK 外部子任务](../../Modules/Official/subagent/sdk-child/README.zh.md)——opt-in Native Module 及其当前权限边界。
-- [DSH SDK 兼容提供方](../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md)——保留给兼容 profile 的旧 Cordis 提供方。
+- [DSH SDK 兼容提供方](../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.zh.md)——保留给兼容 profile 的旧 Cordis 提供方。
 - [Subagent 能力 seam](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)——委派能力家族的设计记录。
 - [可继续的 subagent](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)——接受后续轮次的持久子级。
 - [tool-subagent-control README](tool-subagent-control/README.zh.md)——后续消息、中断与列举接口。

@@ -8,7 +8,7 @@
  * is the session's workspace cwd. This plugin uses named
  * exports only; a default would hide its loader metadata (see
  * `rsh/Docs/postmortem/0001-acp-default-export-drops-inject.md`).
- * @module @redspark/rsh-subagent-dsh-sdk
+ * @module @redspark/rsh-subagent-rsh-sdk
  */
 
 import type { Context } from '@redspark/cordis'
@@ -27,7 +27,7 @@ import {
   type SdkRunSpec,
 } from './run.ts'
 
-export const name = 'subagent-dsh-sdk'
+export const name = 'subagent-rsh-sdk'
 export const inject = ['subagents']
 
 /** Config: how to spawn and drive the child SDK runtime process. */
@@ -103,7 +103,7 @@ function resolveConfiguredFile(field: string, value: string): string {
   } catch {
     // The diagnostic below owns missing, inaccessible, and non-file paths uniformly.
   }
-  throw new TypeError(`subagent-dsh-sdk ${field} must name an existing file: ${path}`)
+  throw new TypeError(`subagent-rsh-sdk ${field} must name an existing file: ${path}`)
 }
 
 /** DSH SDK can apply Agent route options while the other start features remain child-owned. */
@@ -147,10 +147,10 @@ class SdkSubagentProvider implements SubagentProvider {
     }
     let cwd: string
     try {
-      cwd = resolveChildCwd('subagent-dsh-sdk', this.config.cwd, request.parent.session.header.cwd)
+      cwd = resolveChildCwd('subagent-rsh-sdk', this.config.cwd, request.parent.session.header.cwd)
     } catch (error: unknown) {
       const failure = sdkConfigurationFailure(error)
-      this.ctx.logger.warn(`subagent-dsh-sdk "${this.name}": child start failed: %o`, error)
+      this.ctx.logger.warn(`subagent-rsh-sdk "${this.name}": child start failed: %o`, error)
       throw failure
     }
     const route = resolveSdkRoute(this.config, request.agentOptions)
@@ -168,7 +168,7 @@ class SdkSubagentProvider implements SubagentProvider {
       onError: (error, stopReason) => {
         // The seam forbids `result` rejecting, so a child-level failure is
         // flattened to a stop reason — preserve it here rather than losing it.
-        this.ctx.logger.warn(`subagent-dsh-sdk "${this.name}": child run failed (${stopReason}): ${error.message}`)
+        this.ctx.logger.warn(`subagent-rsh-sdk "${this.name}": child run failed (${stopReason}): ${error.message}`)
       },
     }
     return startSdkRun(request, spec)
@@ -178,13 +178,13 @@ class SdkSubagentProvider implements SubagentProvider {
 export function apply(ctx: Context, config: Config): void {
   // schemastery (Config) has already filled every defaulted field.
   const resolved = config as ResolvedConfig
-  assertPositiveFinite('subagent-dsh-sdk', 'shutdownTimeoutMs', resolved.shutdownTimeoutMs)
-  assertPositiveFinite('subagent-dsh-sdk', 'disposeEofGraceMs', resolved.disposeEofGraceMs)
-  assertPositiveFinite('subagent-dsh-sdk', 'disposeGraceMs', resolved.disposeGraceMs)
+  assertPositiveFinite('subagent-rsh-sdk', 'shutdownTimeoutMs', resolved.shutdownTimeoutMs)
+  assertPositiveFinite('subagent-rsh-sdk', 'disposeEofGraceMs', resolved.disposeEofGraceMs)
+  assertPositiveFinite('subagent-rsh-sdk', 'disposeGraceMs', resolved.disposeGraceMs)
   if (resolved.maxTokens !== undefined && (!Number.isSafeInteger(resolved.maxTokens) || resolved.maxTokens <= 0)) {
-    throw new TypeError('subagent-dsh-sdk maxTokens must be a positive safe integer')
+    throw new TypeError('subagent-rsh-sdk maxTokens must be a positive safe integer')
   }
-  if (!isAbsolute(resolved.rshHome)) throw new TypeError('subagent-dsh-sdk rshHome must be an absolute path')
+  if (!isAbsolute(resolved.rshHome)) throw new TypeError('subagent-rsh-sdk rshHome must be an absolute path')
   const launchPaths: ResolvedConfig = {
     ...resolved,
     patches: resolved.patches.map((path, index) => resolveConfiguredFile(`patches[${String(index)}]`, path)),
@@ -192,7 +192,7 @@ export function apply(ctx: Context, config: Config): void {
   }
   // Interpret a relative configured cwd against the harness launch directory
   // ONCE, at load, and fail a misconfigured directory here — not per start.
-  const configuredCwd = validateConfiguredCwd('subagent-dsh-sdk', resolved.cwd)
+  const configuredCwd = validateConfiguredCwd('subagent-rsh-sdk', resolved.cwd)
   const validated: ResolvedConfig = configuredCwd === undefined
     ? launchPaths
     : { ...launchPaths, cwd: configuredCwd }

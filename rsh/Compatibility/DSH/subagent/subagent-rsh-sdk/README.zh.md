@@ -3,13 +3,13 @@ description: "面向用户与维护者的进程外 SDK subagent 后端，用于�
 kind: "package-reference"
 ---
 
-# @redspark/rsh-subagent-dsh-sdk
+# @redspark/rsh-subagent-rsh-sdk
 
 [English](README.md) | 中文
 
 ## 概述
 
-`dsh-subagent-dsh-sdk` 在全新的 RedSpark Harness 子进程中运行每个委派任务，子进程拥有自己的 profile、会话、模型路由与工具。父级提供任务与工作目录，每个子进程使用其已配置的运行时，并与父级对话保持隔离。父级只会收到子进程最终的 assistant 文本或安全错误；中间消息与工具流量保留在子进程内。当委派需要完整的 Harness 运行时而不是共享进程内状态时，选择此后端，并接受每次运行都要启动新进程的成本。
+`dsh-subagent-rsh-sdk` 在全新的 RedSpark Harness 子进程中运行每个委派任务，子进程拥有自己的 profile、会话、模型路由与工具。父级提供任务与工作目录，每个子进程使用其已配置的运行时，并与父级对话保持隔离。父级只会收到子进程最终的 assistant 文本或安全错误；中间消息与工具流量保留在子进程内。当委派需要完整的 Harness 运行时而不是共享进程内状态时，选择此后端，并接受每次运行都要启动新进程的成本。
 
 ## 目录
 
@@ -51,13 +51,13 @@ kind: "package-reference"
 | `disposeEofGraceMs` | `6000` | stdin EOF 之后、平台终止之前的宽限 |
 | `disposeGraceMs` | `3000` | 终止后的退出确认宽限 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-dsh-sdk)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-rsh-sdk)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 请求 `agentOptions` 会分别覆盖 `provider`、`model` 与 `maxTokens`。`reasoningEffort` 没有提供方实例默认值：请求省略时保持缺省，由所选子模型解析自身默认值。面向模型的 subagent 工具可在每次调用时选择提供方／模型／推理强度；`maxTokens` 仍由工具配置或本提供方默认值在部署侧控制。
 
 ```yaml
-- id: subagent-dsh-sdk
-  name: '@redspark/rsh-subagent-dsh-sdk'
+- id: subagent-rsh-sdk
+  name: '@redspark/rsh-subagent-rsh-sdk'
   config:
     providerName: dsh-sdk
     profile: sdk
@@ -127,7 +127,7 @@ kind: "package-reference"
 - [dsh-subagent seam](../../../../Engine/subagent/subagent/README.zh.md)——本提供方注册于其上的注册表与启动 API。
 - [ACP subagent 后端](../subagent-acp/README.zh.md)——经 Agent Client Protocol 的兄弟进程外提供方。
 - [TypeScript SDK 客户端](../../../../Programs/SDK/packages/client/README.zh.md)——本后端用以驱动子进程的 stdio JSON-RPC 客户端。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-dsh-sdk)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subagent-rsh-sdk)——每个受支持配置字段及其源声明。
 
 -----
 

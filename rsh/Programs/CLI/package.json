@@ -282,7 +282,7 @@
                             "@redspark/rsh-subagent-acp":  "workspace:^",
                             "@redspark/rsh-subagent-claude-code":  "workspace:^",
                             "@redspark/rsh-subagent-codex":  "workspace:^",
-                            "@redspark/rsh-subagent-dsh-sdk":  "workspace:^",
+                            "@redspark/rsh-subagent-rsh-sdk":  "workspace:^",
                             "@redspark/rsh-subagent-fork-in-process":  "workspace:^",
                             "@redspark/rsh-subagent-spawn-in-process":  "workspace:^",
                             "@redspark/rsh-system-prompt":  "workspace:^",

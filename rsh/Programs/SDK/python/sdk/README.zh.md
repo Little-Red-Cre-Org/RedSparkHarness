@@ -14,13 +14,13 @@ native-sdk 配置组合生产的进程内子代理工具。Session 树订阅收�
 
 Python SDK 没有独立的应用入口。默认情况下，它以 `--profile sdk` 启动内置的 `dsh` CLI。新建的标准 `sdk` profile 会选择 Native Runtime；已有 profile 则继续使用其 `package.json` 声明的 runtime。所选 profile 负责 JSON-RPC 服务器、agent（智能体）组合、凭据、持久化、工具和关闭流程。`native-sdk` 仍是显式 Native 别名。
 
-每次启动都必须显式指定 Harness home。请传入 `dsh_home`，或在子进程环境中提供非空的 `RSH_HOME`。SDK 刻意不会发现 `~/.dsh`。
+每次启动都必须显式指定 Harness home。请传入 `rsh_home`，或在子进程环境中提供非空的 `RSH_HOME`。SDK 刻意不会发现 `~/.dsh`。
 
 ```py
 from redspark_harness import RedSparkHarness
 
 with RedSparkHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     cwd="/absolute/path/to/workspace",
     provider="deepseek-official",
     model="deepseek-v4-flash",
@@ -64,7 +64,7 @@ dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
 
 ```py
 with RedSparkHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     profile="sdk",
     patches=("/absolute/path/to/first.patch.json", "/absolute/path/to/last.patch.json"),
 ) as harness:

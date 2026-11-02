@@ -44,8 +44,8 @@
         maxDepth: 'provider-managed'
 
     # providerName is omitted to exercise the shipped `dsh-sdk` default.
-    - id: subagent-dsh-sdk
-      name: '@redspark/rsh-subagent-dsh-sdk'
+    - id: subagent-rsh-sdk
+      name: '@redspark/rsh-subagent-rsh-sdk'
       config:
         profile: sdk
         patches: !!js JSON.parse(process.env.RSH_TEST_CHILD_PATCHES ?? '[]')

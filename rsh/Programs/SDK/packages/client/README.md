@@ -112,7 +112,7 @@ Read these pages when the client contract is not enough. They move from the wire
 - [SDK wire protocol](../../../../Engine/subagent/sdk-protocol/README.md) — the JSON-RPC methods and payload shapes this client speaks.
 - [JSON-RPC serving plugin](../server/README.md) — the runtime plugin that serves this client.
 - [Python SDK](../../python/README.md) — the design twin that shares the same runtime peer and protocol.
-- [SDK subagent backend](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of this client.
+- [SDK subagent backend](../../../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.md) — a harness-internal consumer of this client.
 - [Native SDK server](../native-server/README.md) — the runtime plugin used by a new standard `sdk` profile.
 - [SDK application bundle](../../../../Compatibility/DSH/bundle/sdk-app/README.md) — the Cordis application used by legacy profiles.
 

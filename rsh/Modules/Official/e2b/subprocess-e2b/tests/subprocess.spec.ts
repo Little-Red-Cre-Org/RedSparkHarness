@@ -414,23 +414,23 @@ describe('E2BSubprocessHandle', () => {
       RSH_STALE: '',
       HOME: controlEnvs?.HOME,
     })
-    const command = fake.commandsSeen.find(value => value.includes('exec "$dsh_e2b_env_bin" -i'))!
-    expect(command).toContain('"$dsh_e2b_setsid" --wait -- "$dsh_e2b_bash" -c')
+    const command = fake.commandsSeen.find(value => value.includes('exec "$rsh_e2b_env_bin" -i'))!
+    expect(command).toContain('"$rsh_e2b_setsid" --wait -- "$rsh_e2b_bash" -c')
     expect(command).not.toContain('DEEPSEEK_API_KEY')
     expect(command).not.toContain('RSH_MODE')
     expect(command).not.toContain('FOO-BAR')
     expect(command).not.toContain('explicit-secret')
     expect(command).not.toContain('hyphen-value')
-    expect(command).not.toContain('${!dsh_e2b_name}')
+    expect(command).not.toContain('${!rsh_e2b_name}')
     const environmentProbe = fake.commandsSeen.find(value => value.includes('env -0 | base64'))
     expect(environmentProbe).toContain('getent passwd "$(id -u)"')
-    expect(environmentProbe).toContain('test -n "$dsh_e2b_home" -a -d "$dsh_e2b_home"')
+    expect(environmentProbe).toContain('test -n "$rsh_e2b_home" -a -d "$rsh_e2b_home"')
     expect(environmentProbe).not.toContain('"$PWD"')
     expect(command).toContain('mapfile -d')
-    expect(command).toContain('dsh_e2b_node="$(command -v node)"')
-    expect(command).toContain('"$dsh_e2b_env_bin" -i "$dsh_e2b_node" -e')
-    expect(command).toContain('"$dsh_e2b_env_bin" -i -- "${dsh_e2b_env[@]}" "$@"')
-    expect(command).toContain('exec "$dsh_e2b_env_bin" -i -- "${dsh_e2b_env[@]}"')
+    expect(command).toContain('rsh_e2b_node="$(command -v node)"')
+    expect(command).toContain('"$rsh_e2b_env_bin" -i "$rsh_e2b_node" -e')
+    expect(command).toContain('"$rsh_e2b_env_bin" -i -- "${rsh_e2b_env[@]}" "$@"')
+    expect(command).toContain('exec "$rsh_e2b_env_bin" -i -- "${rsh_e2b_env[@]}"')
     expect(command).toContain('>&2 2>/dev/null')
     expect(command).not.toContain('2>/dev/null >&2')
     expect(command).toContain('base64')
@@ -762,10 +762,10 @@ describe('E2BSubprocessHandle', () => {
     await handle.done
     expect(handle.collected.stdout!.readFrom(0)).toEqual({ text: 'cd', nextOffset: 4, lossy: true })
     expect(fake.removed).toContain('/runtime/oversize/stdout.log')
-    const command = fake.commandsSeen.find(value => value.includes('dsh_e2b_tee='))!
-    expect(command).toContain('"$dsh_e2b_head" -c 3')
+    const command = fake.commandsSeen.find(value => value.includes('rsh_e2b_tee='))!
+    expect(command).toContain('"$rsh_e2b_head" -c 3')
     expect(command).toContain('/runtime/oversize/stdout.log')
-    expect(command).toContain('"$dsh_e2b_tee" --output-error=warn-nopipe')
+    expect(command).toContain('"$rsh_e2b_tee" --output-error=warn-nopipe')
     expect(command).not.toContain('tee -a')
   })
 

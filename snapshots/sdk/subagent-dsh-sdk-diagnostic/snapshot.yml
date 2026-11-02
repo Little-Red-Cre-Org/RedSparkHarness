@@ -1,5 +1,5 @@
 version: 1
-scenario: subagent-dsh-sdk-diagnostic
+scenario: subagent-rsh-sdk-diagnostic
 profile: legacy-sdk
 composition: sdk-dsh-sdk-diagnostic
 recording: live

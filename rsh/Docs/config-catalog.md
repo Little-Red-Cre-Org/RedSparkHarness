@@ -2481,9 +2481,9 @@ Depends on: [`CodexPermissionMode`](../Modules/Official/subagent/codex-app-serve
 
 Source: [`rsh/Compatibility/DSH/bridge/subagent-codex/src/index.ts:36`](../Compatibility/DSH/bridge/subagent-codex/src/index.ts)
 
-<a id="redsparkrsh-subagent-dsh-sdk"></a>
+<a id="redsparkrsh-subagent-rsh-sdk"></a>
 
-## `@redspark/rsh-subagent-dsh-sdk`
+## `@redspark/rsh-subagent-rsh-sdk`
 
 Requires: `subagents`
 
@@ -2535,7 +2535,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-dsh-sdk/src/index.ts)
+Source: [`rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts)
 
 <a id="redsparkrsh-subagent-fork-in-process"></a>
 

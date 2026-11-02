@@ -15,7 +15,7 @@ first_bytes = (scene / "first.txt").read_bytes()
 second_bytes = (scene / "second.txt").read_bytes()
 image_data = base64.b64encode((scene / "image.png").read_bytes()).decode("ascii")
 session_id = "sdk-staged-files"
-config = RedSparkHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, profile="native-sdk", rsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     allowed_tools=("read_file",), request_timeout_seconds=20,
     env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1"})

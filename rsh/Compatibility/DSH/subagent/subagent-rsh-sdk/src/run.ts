@@ -7,7 +7,7 @@
  * `ctx.subprocess` — the subprocess seam's documented exception for
  * SDK-managed transports — so this driver applies the seam's shared env scrub.
  *
- * @module @redspark/rsh-subagent-dsh-sdk/run
+ * @module @redspark/rsh-subagent-rsh-sdk/run
  */
 
 import { randomUUID } from 'node:crypto'
@@ -109,7 +109,7 @@ function failureDiagnostic(facts: SdkFailureFacts): string {
 
 class SdkRunFailure extends Error {
   constructor(readonly facts: SdkFailureFacts, cause: unknown) {
-    super(`subagent-dsh-sdk: ${failureDiagnostic(facts)}`, { cause })
+    super(`subagent-rsh-sdk: ${failureDiagnostic(facts)}`, { cause })
     this.name = 'SdkRunFailure'
   }
 }

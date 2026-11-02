@@ -17,5 +17,5 @@ Native SDK children use the opt-in [`sdk-child` Module](../../../Modules/Officia
 
 | Package | Purpose |
 |---|---|
-| [`subagent-dsh-sdk/`](subagent-dsh-sdk/README.md) | Legacy Cordis `ctx.subagents` provider for a separate SDK-profile child runtime |
+| [`subagent-rsh-sdk/`](subagent-rsh-sdk/README.md) | Legacy Cordis `ctx.subagents` provider for a separate SDK-profile child runtime |
 | [`subagent-acp/`](subagent-acp/README.md) | Legacy Cordis `ctx.subagents` provider for an out-of-process ACP child runtime |

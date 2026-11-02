@@ -59,7 +59,7 @@ def _client(
     _select_mode(mode, monkeypatch)
     return HarnessClient(
         HarnessConfig(
-            dsh_home=str(tmp_path / "home"),
+            rsh_home=str(tmp_path / "home"),
             profile=profile,
             patches=tuple(str(patch) for patch in patches),
             cwd=str(tmp_path),
@@ -105,7 +105,7 @@ def test_python_sdk_applies_an_ordered_profile_patch(
     harness = RedSparkHarness(
         model="deepseek-v4-flash",
         cwd=str(tmp_path),
-        dsh_home=str(tmp_path / "home"),
+        rsh_home=str(tmp_path / "home"),
         patches=(str(patch),),
         env={"RSH_PERMISSION_MODE": "danger-full-access"},
         api_key="sk-dummy-for-boot",

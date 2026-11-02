@@ -86,13 +86,13 @@ from pathlib import Path
 from redspark_harness import RedSparkHarness
 
 workspace = Path("/absolute/path/to/disposable-workspace").resolve()
-dsh_home = Path("/absolute/path/to/example-dsh-home").resolve()
+rsh_home = Path("/absolute/path/to/example-dsh-home").resolve()
 with RedSparkHarness(
     provider="deepseek-official",
     model="deepseek-v4-flash",
     max_tokens=49_152,
     cwd=str(workspace),
-    dsh_home=str(dsh_home),
+    rsh_home=str(rsh_home),
     profile="sdk-minimal",
 ) as harness:
     result = harness.run(
@@ -155,7 +155,7 @@ Pass `patches=("/absolute/path/to/editor.patch.yml",)` when constructing `RedSpa
 | Model-facing tool | Persistent `bash` on Linux/macOS or `pwsh` on Windows |
 | Shell timeout | 300 seconds |
 | Runtime context and compaction | Absent |
-| Session persistence | Uncompressed JSONL under `<dsh_home>/sessions` |
+| Session persistence | Uncompressed JSONL under `<rsh_home>/sessions` |
 
 The profile's sole bundle inserts the complete tree over an empty root and does not include `dsh-base`; later base-profile tools therefore cannot appear implicitly. It contains the SDK protocol, one environment-configured DeepSeek adapter, local execution, and persistence, while filesystem tools, settings, managed credentials, telemetry, Web tools, subagents, local instruction discovery, and compaction are absent. It pins `danger-full-access`, so the platform-selected persistent shell can modify any path visible to the runtime; use a disposable checkout or container.
 
