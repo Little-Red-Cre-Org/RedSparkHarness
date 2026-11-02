@@ -14,17 +14,17 @@ import {
 const RSH_PACKAGE = '@redspark/rsh'
 const CORDIS_PACKAGE = '@redspark/cordis'
 const SDK_CLIENT_PACKAGE = '@redspark/rsh-sdk-client'
-const NESTED_DSH_ALIAS = 'dsh-previous'
-const NESTED_DSH_PATH = `node_modules/${NESTED_DSH_ALIAS}`
-const OLD_CANONICAL_DSH_PATH = `${NESTED_DSH_PATH}/node_modules/${RSH_PACKAGE}`
-const NESTED_SDK_CLIENT_PATH = `${NESTED_DSH_PATH}/node_modules/${SDK_CLIENT_PACKAGE}`
+const NESTED_RSH_ALIAS = 'dsh-previous'
+const NESTED_RSH_PATH = `node_modules/${NESTED_RSH_ALIAS}`
+const OLD_CANONICAL_RSH_PATH = `${NESTED_RSH_PATH}/node_modules/${RSH_PACKAGE}`
+const NESTED_SDK_CLIENT_PATH = `${NESTED_RSH_PATH}/node_modules/${SDK_CLIENT_PACKAGE}`
 const ROOT_SDK_CLIENT_PATH = `node_modules/${SDK_CLIENT_PACKAGE}`
 const REACT_PACKAGES = ['react', 'react-dom'] as const
 const DEPENDENCY_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
 const TIMEOUT_MS = 300_000
 
 /** Synthetic incompatible versions used to expose cross-release placement errors. */
-export const SYNTHETIC_DSH_VERSIONS = ['0.1.0', '0.2.0'] as const
+export const SYNTHETIC_RSH_VERSIONS = ['0.1.0', '0.2.0'] as const
 
 interface MutableRegistryManifest {
   name: string
@@ -75,7 +75,7 @@ export function buildDualDshRegistry(index: RegistryIndex, sourceVersion: string
     const source = versions.get(sourceVersion)
     if (source === undefined) throw new Error(`${name} has no workspace version ${sourceVersion}`)
     dshPackages++
-    output.set(name, new Map(SYNTHETIC_DSH_VERSIONS.map(version => [
+    output.set(name, new Map(SYNTHETIC_RSH_VERSIONS.map(version => [
       version,
       cloneForVersion(source, sourceVersion, version),
     ])))
@@ -121,7 +121,7 @@ function setDifference(left: ReadonlySet<string>, right: ReadonlySet<string>): s
  * @returns Counts for the verified DSH packages and dependency edges.
  */
 export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInstallLayoutSummary {
-  const [nestedVersion, rootVersion] = SYNTHETIC_DSH_VERSIONS
+  const [nestedVersion, rootVersion] = SYNTHETIC_RSH_VERSIONS
   const errors: string[] = []
   const namesByVersion = new Map<string, Set<string>>([
     [nestedVersion, new Set()],
@@ -142,8 +142,8 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
     const expectedPaths = version === rootVersion
       ? [`node_modules/${name}`]
       : name === RSH_PACKAGE
-        ? [NESTED_DSH_PATH, OLD_CANONICAL_DSH_PATH]
-        : [`${NESTED_DSH_PATH}/node_modules/${name}`]
+        ? [NESTED_RSH_PATH, OLD_CANONICAL_RSH_PATH]
+        : [`${NESTED_RSH_PATH}/node_modules/${name}`]
     if (!expectedPaths.includes(path)) {
       const expectedPath = expectedPaths.join(' or ')
       errors.push(`${path}: expected ${name}@${version} at ${expectedPath}`)
@@ -160,7 +160,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
           errors.push(`${path}: ${field} ${dependency} does not resolve`)
           continue
         }
-        if (targetPath === OLD_CANONICAL_DSH_PATH
+        if (targetPath === OLD_CANONICAL_RSH_PATH
           && (path !== NESTED_SDK_CLIENT_PATH || dependency !== RSH_PACKAGE)) {
           errors.push(`${path}: only the old SDK client may resolve the extra canonical CLI at ${targetPath}`)
         }
@@ -183,25 +183,25 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
     }
   }
 
-  const oldAlias = packageLock.packages[NESTED_DSH_PATH]
-  const oldCanonical = packageLock.packages[OLD_CANONICAL_DSH_PATH]
-  if (oldAlias === undefined || packageNameAtPath(NESTED_DSH_PATH, oldAlias) !== RSH_PACKAGE) {
-    errors.push(`${NESTED_DSH_PATH}: expected ${RSH_PACKAGE}@${nestedVersion}`)
+  const oldAlias = packageLock.packages[NESTED_RSH_PATH]
+  const oldCanonical = packageLock.packages[OLD_CANONICAL_RSH_PATH]
+  if (oldAlias === undefined || packageNameAtPath(NESTED_RSH_PATH, oldAlias) !== RSH_PACKAGE) {
+    errors.push(`${NESTED_RSH_PATH}: expected ${RSH_PACKAGE}@${nestedVersion}`)
   }
-  if (oldCanonical === undefined || packageNameAtPath(OLD_CANONICAL_DSH_PATH, oldCanonical) !== RSH_PACKAGE) {
-    errors.push(`${OLD_CANONICAL_DSH_PATH}: expected ${RSH_PACKAGE}@${nestedVersion}`)
+  if (oldCanonical === undefined || packageNameAtPath(OLD_CANONICAL_RSH_PATH, oldCanonical) !== RSH_PACKAGE) {
+    errors.push(`${OLD_CANONICAL_RSH_PATH}: expected ${RSH_PACKAGE}@${nestedVersion}`)
   }
   if (oldAlias !== undefined && oldCanonical !== undefined) {
     for (const field of [...DEPENDENCY_FIELDS, 'peerDependenciesMeta'] as const) {
       if (JSON.stringify(oldAlias[field] ?? {}) !== JSON.stringify(oldCanonical[field] ?? {})) {
-        errors.push(`${OLD_CANONICAL_DSH_PATH}: ${field} differs from the dsh-previous release metadata`)
+        errors.push(`${OLD_CANONICAL_RSH_PATH}: ${field} differs from the dsh-previous release metadata`)
       }
     }
   }
 
   const sdkClients = [
     { path: ROOT_SDK_CLIENT_PATH, version: rootVersion, cliPath: `node_modules/${RSH_PACKAGE}` },
-    { path: NESTED_SDK_CLIENT_PATH, version: nestedVersion, cliPath: OLD_CANONICAL_DSH_PATH },
+    { path: NESTED_SDK_CLIENT_PATH, version: nestedVersion, cliPath: OLD_CANONICAL_RSH_PATH },
   ] as const
   for (const sdk of sdkClients) {
     const manifest = packageLock.packages[sdk.path]
@@ -238,7 +238,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
     }
   }
 
-  const cliPaths = [`node_modules/${RSH_PACKAGE}`, NESTED_DSH_PATH, OLD_CANONICAL_DSH_PATH]
+  const cliPaths = [`node_modules/${RSH_PACKAGE}`, NESTED_RSH_PATH, OLD_CANONICAL_RSH_PATH]
   for (const cliPath of cliPaths) {
     const cli = packageLock.packages[cliPath]
     if (cli === undefined) continue
@@ -277,7 +277,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
 
   const nestedNames = namesByVersion.get(nestedVersion) ?? new Set<string>()
   const rootNames = namesByVersion.get(rootVersion) ?? new Set<string>()
-  if (!nestedNames.has(RSH_PACKAGE)) errors.push(`${NESTED_DSH_PATH}: missing ${RSH_PACKAGE}@${nestedVersion}`)
+  if (!nestedNames.has(RSH_PACKAGE)) errors.push(`${NESTED_RSH_PATH}: missing ${RSH_PACKAGE}@${nestedVersion}`)
   if (!rootNames.has(RSH_PACKAGE)) errors.push(`node_modules/${RSH_PACKAGE}: missing ${RSH_PACKAGE}@${rootVersion}`)
   const onlyNested = setDifference(nestedNames, rootNames)
   const onlyRoot = setDifference(rootNames, nestedNames)
@@ -303,10 +303,10 @@ function workspaceVersion(root: string): string {
 async function main(): Promise<void> {
   const root = resolve(import.meta.dirname, '..', '..')
   const index = buildDualDshRegistry(buildRegistryIndex(root), workspaceVersion(root))
-  const [nestedVersion, rootVersion] = SYNTHETIC_DSH_VERSIONS
+  const [nestedVersion, rootVersion] = SYNTHETIC_RSH_VERSIONS
   const result = await resolveNpmPackageLock(index, {
     [RSH_PACKAGE]: rootVersion,
-    [NESTED_DSH_ALIAS]: `npm:${RSH_PACKAGE}@${nestedVersion}`,
+    [NESTED_RSH_ALIAS]: `npm:${RSH_PACKAGE}@${nestedVersion}`,
   }, TIMEOUT_MS)
   if (result.archiveRequests !== 0) throw new Error(`npm requested ${String(result.archiveRequests)} package archive(s)`)
   const summary = assertDualDshInstallLayout(result.packageLock)

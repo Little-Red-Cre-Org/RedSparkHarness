@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto'
 import { brandString } from '@redspark/rsh-brand'
 import {
   RedSparkHarness,
-  type DeepSeekHarnessOptions,
+  type RshHarnessOptions,
   type HarnessNotification,
   JsonRpcResponseError,
   SdkProtocolError,
@@ -115,7 +115,7 @@ class SdkRunFailure extends Error {
 }
 
 /** Runtime constructor seam replaced only by package-local fake-runtime tests. */
-export const internals: { createHarness(options: DeepSeekHarnessOptions): RedSparkHarness } = {
+export const internals: { createHarness(options: RshHarnessOptions): RedSparkHarness } = {
   createHarness: options => new RedSparkHarness(options),
 }
 

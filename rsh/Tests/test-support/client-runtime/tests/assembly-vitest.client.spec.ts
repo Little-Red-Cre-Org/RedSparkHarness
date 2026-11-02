@@ -17,7 +17,7 @@ afterAll(async () => {
   for (const start of expired) {
     await expect(start()).rejects.toThrow('after its test fixture closed')
   }
-  expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+  expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
 })
 
 describe('createClientTest', () => {
@@ -46,7 +46,7 @@ describe('createClientTest', () => {
   test('does not boot an unused start fixture', ({ mock, start }) => {
     expired.push(start)
     expect(mock.log.streams()).toEqual([])
-    expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+    expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
   })
 
   test('owns a fresh mock when only the mock fixture is requested', ({ mock }) => {
@@ -60,5 +60,5 @@ const missingConnection = createClientTest({ roster: webApp.pick(['@redspark/rsh
 missingConnection('keeps a rejected startup with its caller and releases its globals', async ({ start }) => {
   expired.push(start)
   await expect(start()).rejects.toThrow('provides no `connection` service')
-  expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+  expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
 })

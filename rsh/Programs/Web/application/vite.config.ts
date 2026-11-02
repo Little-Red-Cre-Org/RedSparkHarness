@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 import { clientBuildEnvironmentDefines } from '../../../Scripts/client-build-environment.ts'
 
 const src = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url))
-const STANDALONE_ERROR = 'rsh/Programs/Web/application is not a standalone application: bare Vite cannot inject window.__DSH_BOOT__. '
+const STANDALONE_ERROR = 'rsh/Programs/Web/application is not a standalone application: bare Vite cannot inject window.__RSH_BOOT__. '
   + 'From a repository checkout, run `pnpm dsh web`; an installed package uses `dsh web`. '
   + 'For client-plugin HMR, run `pnpm dsh web` together with `pnpm run dev:web`.'
 

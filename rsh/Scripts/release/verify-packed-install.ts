@@ -159,7 +159,7 @@ function main(): void {
       execaSync('pnpm', args, {
         cwd: root,
         env: {
-          RSH_PACKED_DSH_BIN: bin,
+          RSH_PACKED_BIN: bin,
           RSH_PACKED_CONSUMER_ROOT: consumerRoot,
         },
         stdio: 'inherit',

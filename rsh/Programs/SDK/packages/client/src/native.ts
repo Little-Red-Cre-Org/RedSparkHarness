@@ -1,4 +1,4 @@
 /** Native Host SDK adapter surface. */
 
-export { createNativeDeepSeekHarness } from './api.ts'
-export type { NativeDeepSeekHarnessOptions } from './types.ts'
+export { createNativeRshHarness } from './api.ts'
+export type { NativeRshHarnessOptions } from './types.ts'

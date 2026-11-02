@@ -7,7 +7,7 @@ import { TestClient, remoteDefaultResponses, webApp } from '../src/assembly/inde
 /** The Gateway client and what it injects: the Typert registry and the Connection. */
 const API_ROSTER = webApp.closure(['@redspark/rsh-api-gateway'])
 const TYPERT_ONLY = webApp.pick(['@redspark/rsh-typert-registry'])
-const globals = globalThis as { __DSH_TRANSPORT__?: ClientTransportHooks }
+const globals = globalThis as { __RSH_TRANSPORT__?: ClientTransportHooks }
 
 describe('TestClient (node environment)', () => {
   it('boots the api roster, connects, and flushes without a DOM', async () => {
@@ -33,7 +33,7 @@ describe('TestClient (node environment)', () => {
       try { await dispose() } finally { await client.dispose() }
     })
     await expect(client.dispose()).rejects.toThrow('teardown boom')
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(mock.log.streams('$events').map(stream => stream.state)).toEqual(['cancelled'])
     await client.dispose() // idempotent after a failed teardown
   })
@@ -42,7 +42,7 @@ describe('TestClient (node environment)', () => {
     const failing = { apply(): void { throw new Error('apply boom') } }
     await expect(TestClient.start({ roster: TYPERT_ONLY, provide: { '@redspark/rsh-typert-registry': failing } }, RemoteMock.create()))
       .rejects.toThrow(/apply boom|typert-registry/)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     const mock = RemoteMock.create().load(remoteDefaultResponses)
     const client = await TestClient.start({ roster: API_ROSTER }, mock)
     onTestFinished(() => client.dispose())
@@ -53,7 +53,7 @@ describe('TestClient (node environment)', () => {
     const roster = webApp.closure(['@redspark/rsh-api-remotes'])
     await expect(TestClient.start({ roster, provide: { '@redspark/rsh-api-remotes': { apply() {} } } }, RemoteMock.create()))
       .rejects.toThrow('@redspark/rsh-api-remotes cannot be provided; its remote.<ns> services are the tier\'s proxies')
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('reports unmatched requests alongside a failed teardown instead of hiding them', async () => {
@@ -70,7 +70,7 @@ describe('TestClient (node environment)', () => {
     })
     await mock.dispatch('nowhere/call', []).catch(() => undefined)
     await expect(client.dispose()).rejects.toThrow(/nowhere\/call \(unary\)[\s\S]*also failed to dispose: teardown boom/)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(mock.log.streams('$events').map(stream => stream.state)).toEqual(['cancelled'])
   })
 
@@ -80,31 +80,31 @@ describe('TestClient (node environment)', () => {
     const first = client.dispose()
     const second = client.dispose()
     await second
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     await first
   })
 
   it('refuses to mount without a DOM before installing the transport', async () => {
     await expect(TestClient.start({ roster: API_ROSTER }, RemoteMock.create(), { mount: true }))
       .rejects.toThrow('mount requires a DOM')
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('fails loud, then restores the transport, when the roster cannot provide a connection', async () => {
     await expect(TestClient.start({ roster: TYPERT_ONLY }, RemoteMock.create()))
       .rejects.toThrow('provides no `connection` service')
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('skips readiness on request and restores a pre-existing transport on dispose', async () => {
     const previous: ClientTransportHooks = { fetch: () => Promise.reject(new Error('unused')) }
-    globals.__DSH_TRANSPORT__ = previous
-    onTestFinished(() => { delete globals.__DSH_TRANSPORT__ })
+    globals.__RSH_TRANSPORT__ = previous
+    onTestFinished(() => { delete globals.__RSH_TRANSPORT__ })
     const client = await TestClient.start({ roster: TYPERT_ONLY }, RemoteMock.create(), { awaitConnected: false })
-    expect(globals.__DSH_TRANSPORT__).not.toBe(previous)
+    expect(globals.__RSH_TRANSPORT__).not.toBe(previous)
     expect(client.ctx.get('typert')).toBeDefined()
     expect(() => client.connection).toThrow('provides no `connection` service')
     await client.dispose()
-    expect(globals.__DSH_TRANSPORT__).toBe(previous)
+    expect(globals.__RSH_TRANSPORT__).toBe(previous)
   })
 })

@@ -3,7 +3,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  DEFAULT_DSH_HOME_DISPLAY,
+  DEFAULT_RSH_HOME_DISPLAY,
   RSH_HOME_DIR_NAME,
   canonicalizeWatchPath,
   defaultDshHome,
@@ -21,7 +21,7 @@ afterEach(() => {
 describe('dsh path helpers', () => {
   it('owns the shared default DSH home directory name', () => {
     expect(RSH_HOME_DIR_NAME).toBe('.redspark')
-    expect(DEFAULT_DSH_HOME_DISPLAY).toBe('~/.redspark')
+    expect(DEFAULT_RSH_HOME_DISPLAY).toBe('~/.redspark')
     expect(defaultDshHome()).toBe(join(homedir(), '.redspark'))
   })
 

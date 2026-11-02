@@ -13,7 +13,7 @@ import type { InitializeResult } from '@redspark/rsh-sdk-protocol'
 import type { NativeSdkChildApprovalRelay, NativeSdkChildRuntime } from './native.ts'
 import { createNativeHarnessClient, createProcessHarnessClient, HarnessClient, isRecord, SdkProtocolError } from './client.ts'
 import type { RuntimeProcessOptions } from './types.ts'
-import type { ContentBlock, DeepSeekHarnessOptions, HarnessNotification, NativeDeepSeekHarnessOptions,
+import type { ContentBlock, RshHarnessOptions, HarnessNotification, NativeRshHarnessOptions,
   NativeSdkPromptContentBlock, RunResult, SdkPromptContentBlock, SessionUploadFileResult } from './types.ts'
 
 /**
@@ -28,7 +28,7 @@ export class RedSparkHarness implements AsyncDisposable {
   private readonly cwd: string
   private readonly provider: string
   private readonly model: string
-  private readonly reasoningEffort: DeepSeekHarnessOptions['reasoningEffort']
+  private readonly reasoningEffort: RshHarnessOptions['reasoningEffort']
   private readonly maxTokens: number | undefined
   private readonly maxSteps: number | undefined
   private readonly allowedTools: readonly string[] | undefined
@@ -38,7 +38,7 @@ export class RedSparkHarness implements AsyncDisposable {
   private closed = false
 
   /** @param options - dsh launch configuration plus the session route, effort, and output cap. */
-  constructor(options: DeepSeekHarnessOptions, clientFactory: () => HarnessClient) {
+  constructor(options: RshHarnessOptions, clientFactory: () => HarnessClient) {
     this.createClient = clientFactory
     this.clientInstance = this.createClient()
     // Absolute before the handshake: the child spawns relative to THIS
@@ -160,12 +160,12 @@ export class RedSparkHarness implements AsyncDisposable {
  * @param options - high-level harness options.
  * @returns a harness bound to the supplied runtime process.
  */
-export function createProcessDeepSeekHarness(
+export function createProcessRshHarness(
   runtime: RuntimeProcessOptions,
-  options: DeepSeekHarnessOptions = {},
+  options: RshHarnessOptions = {},
 ): RedSparkHarness {
   const Constructor = RedSparkHarness as unknown as new (
-    publicOptions: DeepSeekHarnessOptions,
+    publicOptions: RshHarnessOptions,
     clientFactory: () => HarnessClient,
   ) => RedSparkHarness
   return new Constructor({
@@ -182,11 +182,11 @@ export function createProcessDeepSeekHarness(
  * @returns a high-level Harness bound to that one child runtime.
  */
 export function createNativeSdkChildHarness(
-  options: NativeDeepSeekHarnessOptions,
+  options: NativeRshHarnessOptions,
   runtime: NativeSdkChildRuntime,
   approvalRelay?: NativeSdkChildApprovalRelay,
 ): RedSparkHarness {
-  const launch: DeepSeekHarnessOptions = {
+  const launch: RshHarnessOptions = {
     profile: 'native-sdk',
     ...options.cwd === undefined ? {} : { cwd: options.cwd },
     ...options.dshHome === undefined ? {} : { dshHome: options.dshHome },
@@ -206,7 +206,7 @@ export function createNativeSdkChildHarness(
     ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot },
   }
   const Constructor = RedSparkHarness as unknown as new (
-    publicOptions: DeepSeekHarnessOptions,
+    publicOptions: RshHarnessOptions,
     clientFactory: () => HarnessClient,
   ) => RedSparkHarness
   return new Constructor(launch, () => createNativeHarnessClient(

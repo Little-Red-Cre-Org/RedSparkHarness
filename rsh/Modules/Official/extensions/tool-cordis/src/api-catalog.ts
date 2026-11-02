@@ -637,7 +637,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'graph(): WebBootGraph',
         description: 'Current composed entry graph (stable object between changes).',
         parameters: [],
-        returns: 'the graph served as `window.__DSH_BOOT__`.',
+        returns: 'the graph served as `window.__RSH_BOOT__`.',
       },
       {
         signature: 'clientPath(id: string): string | undefined',

@@ -162,7 +162,7 @@ it('boots without ui-chat and does not select another conversation view implicit
   mountAssembledApp('?fixture', { exclude: ['@redspark/rsh-client-ui-chat'] })
 
   const tree = await screen.findByRole('tree', { name: 'Sessions' }, { timeout: 10_000 })
-  const boot = Reflect.get(window, '__DSH_BOOT__') as { entries: Array<{ id: string }> } | undefined
+  const boot = Reflect.get(window, '__RSH_BOOT__') as { entries: Array<{ id: string }> } | undefined
   expect(boot?.entries.some(entry => entry.id === '@redspark/rsh-client-ui-chat')).toBe(false)
   const sessionTitle = await within(tree).findByText('Fixture 历史会话')
   fireEvent.click(sessionTitle)

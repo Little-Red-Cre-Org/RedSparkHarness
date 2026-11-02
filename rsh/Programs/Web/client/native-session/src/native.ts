@@ -67,7 +67,7 @@ export interface NativeFileUpload {
 }
 
 interface NativeFileUploadGlobal {
-  __DSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
+  __RSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
 }
 
 /** Original durable image identity from the Session message protocol. */
@@ -1770,7 +1770,7 @@ export function createNativeSessionClient(
         const headers = { 'content-type': 'application/octet-stream' }
         const request: RequestInit & { duplex?: 'half' } = { method: 'POST', headers, body: file.data, signal: accepted,
           ...(file.data instanceof ReadableStream ? { duplex: 'half' as const } : {}) }
-        const uploadFetch = (globalThis as NativeFileUploadGlobal).__DSH_FILE_UPLOAD__?.fetch
+        const uploadFetch = (globalThis as NativeFileUploadGlobal).__RSH_FILE_UPLOAD__?.fetch
         let response: Response
         if (uploadFetch !== undefined) {
           response = await uploadFetch(resolveApiUrl(endpoint), request)

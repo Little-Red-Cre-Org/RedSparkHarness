@@ -53,7 +53,7 @@ export async function createNativeDesktopRuntime(
     : runtimeDir
   const bundle = await prepareNativeClientBundle(projectDir, bundleRuntimeDir, !allowLinkedPackages)
   if (bundle === undefined) throw new Error('dsh desktop: native Host requires rsh.client.json')
-  const assets = createNativeDesktopAssetHandler(runtimeDir, bundle, 'globalThis.__DSH_TRANSPORT__={ownsHost:true}')
+  const assets = createNativeDesktopAssetHandler(runtimeDir, bundle, 'globalThis.__RSH_TRANSPORT__={ownsHost:true}')
   const channels = new Map<string, ConnectionFetchHandler>()
   let api: ConnectionFetchHandler | undefined
   const carrier: NativePlugin = {

@@ -7,7 +7,7 @@ const container = document.getElementById('root')
 if (container === null) throw new Error('native web: missing #root')
 const root = container
 const page = new BootPage(root)
-const injected = (globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__
+const injected = (globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__
 
 function showFailure(reason: unknown): void {
   root.dataset.nativeBootState = 'failed'

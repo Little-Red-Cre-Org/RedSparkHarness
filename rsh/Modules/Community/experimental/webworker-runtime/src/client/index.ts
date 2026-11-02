@@ -25,7 +25,7 @@ export {
 
 /** Transport global the connection plugin reads instead of building an HTTP carrier. */
 interface ClientTransportGlobal {
-  __DSH_TRANSPORT__?: {
+  __RSH_TRANSPORT__?: {
     fetch: TunnelFetch
     openStream: (endpoint: string, payload: unknown, signal: AbortSignal) => AsyncIterable<unknown>
     loadBundle: (url: string) => Promise<void>
@@ -36,7 +36,7 @@ interface ClientTransportGlobal {
 
 /** Upload hook consumed by the independent Client file-upload service. */
 interface ClientFileUploadGlobal {
-  __DSH_FILE_UPLOAD__?: ClientFileUploadHooks
+  __RSH_FILE_UPLOAD__?: ClientFileUploadHooks
 }
 
 /** Inputs for {@link connectWorkerHost}. */
@@ -75,11 +75,11 @@ export interface WorkerHostConnection {
 
 /** Boot-readiness deferred shared with the client entry's pre-boot await. */
 interface BootReadyGlobal {
-  __DSH_BOOT_READY__?: PromiseWithResolvers<void>
+  __RSH_BOOT_READY__?: PromiseWithResolvers<void>
 }
 
 function bootReadyGate(): PromiseWithResolvers<void> {
-  return (globalThis as BootReadyGlobal).__DSH_BOOT_READY__ ??= Promise.withResolvers<void>()
+  return (globalThis as BootReadyGlobal).__RSH_BOOT_READY__ ??= Promise.withResolvers<void>()
 }
 
 /**
@@ -127,8 +127,8 @@ export async function chooseWorkerHostSource(
  * Order is fixed by the web boot protocol: the transport global must exist
  * before any bundle executes; the injection table then reproduces the served
  * boot rows — the `__ModuleLoader__` registration queue, the parser-preload
- * bundles, `__DSH_BOOT__`, the theme bootstrap — in table order. The
- * boot-readiness deferred (`__DSH_BOOT_READY__`) is installed before the
+ * bundles, `__RSH_BOOT__`, the theme bootstrap — in table order. The
+ * boot-readiness deferred (`__RSH_BOOT_READY__`) is installed before the
  * first await and settles with the handshake, so a client entry evaluating
  * concurrently in the same document holds at its pre-boot await until every
  * row has taken effect, and surfaces a failed handshake instead of
@@ -149,7 +149,7 @@ export async function connectWorkerHost(worker: Worker, options?: WorkerHostConn
       (options?.overlays ?? []).map(overlay => new URL(overlay, document.baseURI).href),
     )
     const payload = await tunnel.bootPayload()
-    ;(globalThis as ClientTransportGlobal).__DSH_TRANSPORT__ = {
+    ;(globalThis as ClientTransportGlobal).__RSH_TRANSPORT__ = {
       fetch: (input, init) => tunnel.fetch(input, init),
       openStream: (endpoint, payload, signal) => tunnel.open(endpoint, payload, signal),
       loadBundle: (url: string) => tunnel.loadBundle(url),
@@ -157,7 +157,7 @@ export async function connectWorkerHost(worker: Worker, options?: WorkerHostConn
       // the privileged surface stays reachable off loopback authorities.
       ownsHost: true,
     }
-    ;(globalThis as ClientFileUploadGlobal).__DSH_FILE_UPLOAD__ = {
+    ;(globalThis as ClientFileUploadGlobal).__RSH_FILE_UPLOAD__ = {
       fetch: (input, init) => tunnel.fetch(input, init),
     }
     await applyIndexInjections(payload.injections, src => tunnel.loadBundle(src))

@@ -56,7 +56,7 @@ function nativePage(html: string, bundle: NativeClientBundle, transportScript: s
   if (head === null) throw new Error('dsh desktop: native frontend has no head element')
   if (/<\/script/iu.test(transportScript)) throw new Error('dsh desktop: transport script closes its element')
   const wire = JSON.stringify(bundle.wire).replaceAll('<', '\\u003c')
-  const markup = `<script>${transportScript}</script><script>globalThis.__DSH_NATIVE_CLIENT_BOOT__ = ${wire}</script>`
+  const markup = `<script>${transportScript}</script><script>globalThis.__RSH_NATIVE_CLIENT_BOOT__ = ${wire}</script>`
   const at = head.index + head[0].length
   return `${html.slice(0, at)}${markup}${html.slice(at)}`
 }

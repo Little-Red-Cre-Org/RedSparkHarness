@@ -229,7 +229,7 @@ Signed packaging emits generic-provider channel metadata for the deployment sele
 
 ## Low-level development overrides
 
-An unpackaged Electron process uses `.desktop-build/development/project` under its application directory as its development project. `RSH_DESKTOP_NODE_BINARY`, `RSH_DESKTOP_PNPM_ENTRY`, and `RSH_DESKTOP_DSH_DIR` select explicit runtime resources. Packaged applications ignore these variables, resolve signed resources from `process.resourcesPath`, and use the managed Desktop profile.
+An unpackaged Electron process uses `.desktop-build/development/project` under its application directory as its development project. `RSH_DESKTOP_NODE_BINARY`, `RSH_DESKTOP_PNPM_ENTRY`, and `RSH_DESKTOP_RSH_DIR` select explicit runtime resources. Packaged applications ignore these variables, resolve signed resources from `process.resourcesPath`, and use the managed Desktop profile.
 
 ## Known limitations
 

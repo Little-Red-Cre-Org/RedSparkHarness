@@ -44,10 +44,10 @@ it('loads the built native asset routes in an installed consumer without Cordis'
       'const nativeHead = await handler.fetch(new Request("https://dsh.example/native.html", { method: "HEAD" }))',
       'const asset = await handler.fetch(new Request("https://dsh.example/.dsh/native-client/profile.js"))',
       'const staticAsset = await handler.fetch(new Request("https://dsh.example/native.js"))',
-      'if (page.status !== 200 || !(await page.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
-      '  || nativeAlias.status !== 200 || !(await nativeAlias.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
+      'if (page.status !== 200 || !(await page.text()).includes("__RSH_NATIVE_CLIENT_BOOT__")',
+      '  || nativeAlias.status !== 200 || !(await nativeAlias.text()).includes("__RSH_NATIVE_CLIENT_BOOT__")',
       '  || nativeHead.status !== 200 || (await nativeHead.text()) !== ""',
-      '  || !(await fallback.text()).includes("__DSH_NATIVE_CLIENT_BOOT__")',
+      '  || !(await fallback.text()).includes("__RSH_NATIVE_CLIENT_BOOT__")',
       '  || (await asset.text()) !== "export default true"',
       '  || (await staticAsset.text()) !== "globalThis.nativePage = true") process.exitCode = 1',
     ].join('\n'))

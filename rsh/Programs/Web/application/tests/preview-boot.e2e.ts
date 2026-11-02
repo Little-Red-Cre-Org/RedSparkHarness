@@ -320,7 +320,7 @@ async function bootPreview(origin: string, browser: Browser): Promise<void> {
     await page.locator('[data-composer-input][data-placeholder="Describe what you want to build, / commands, @ files or sessions"]')
       .waitFor({ timeout: 30_000 })
     const clientPackages = await page.evaluate(() => {
-      const graph = Reflect.get(window, '__DSH_BOOT__') as { entries?: Array<{ id: string }> } | undefined
+      const graph = Reflect.get(window, '__RSH_BOOT__') as { entries?: Array<{ id: string }> } | undefined
       return graph?.entries?.map(entry => entry.id) ?? null
     })
     if (clientPackages === null) throw new Error('preview client graph is absent after boot')
@@ -331,7 +331,7 @@ async function bootPreview(origin: string, browser: Browser): Promise<void> {
       interface PreviewTransport {
         fetch(input: string, init: RequestInit): Promise<Response>
       }
-      const transport = (globalThis as typeof globalThis & { __DSH_TRANSPORT__?: PreviewTransport }).__DSH_TRANSPORT__
+      const transport = (globalThis as typeof globalThis & { __RSH_TRANSPORT__?: PreviewTransport }).__RSH_TRANSPORT__
       if (transport === undefined) throw new Error('preview transport is absent after boot')
       const response = await transport.fetch('/api/session/list', {
         method: 'POST',
@@ -478,8 +478,8 @@ async function bootEmptyPreview(origin: string, browser: Browser): Promise<void>
     await page.getByRole('textbox', { name: 'Choose workspace' }).waitFor({ timeout: HERO_TIMEOUT_MS })
     const sessionCount = await page.evaluate(async () => {
       const transport = (globalThis as typeof globalThis & {
-        __DSH_TRANSPORT__?: { fetch(input: string, init: RequestInit): Promise<Response> }
-      }).__DSH_TRANSPORT__
+        __RSH_TRANSPORT__?: { fetch(input: string, init: RequestInit): Promise<Response> }
+      }).__RSH_TRANSPORT__
       if (transport === undefined) throw new Error('empty preview transport is absent after boot')
       const response = await transport.fetch('/api/session/list', {
         method: 'POST',

@@ -56,6 +56,6 @@ export default (options: Parameters<typeof bundle>[0]): UserConfig[] => bundle(o
     ...config,
     banner: pdfLicenseBanner(),
     plugins: [config.plugins, pdfWorker],
-    define: { ...config.define, __DSH_PDFJS_ASSETS__: pdfAssets() },
+    define: { ...config.define, __RSH_PDFJS_ASSETS__: pdfAssets() },
   } : config,
 )

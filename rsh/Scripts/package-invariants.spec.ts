@@ -269,7 +269,7 @@ describe('package invariant gate', () => {
         'export default (options) => bundle(options).map(config =>',
         "  config.name?.endsWith('/client') === true ? { ...config,",
         '    banner: pdfLicenseBanner(), plugins: [config.plugins, pdfWorker],',
-        '    define: { ...config.define, __DSH_PDFJS_ASSETS__: pdfAssets() },',
+        '    define: { ...config.define, __RSH_PDFJS_ASSETS__: pdfAssets() },',
         '  } : config,',
         ')',
       ),

@@ -30,7 +30,7 @@ The package is private and excluded from releases. The Worker never accesses liv
 <a id="runtime-layout"></a>
 ## Runtime layout
 
-The Host plugin starts the Worker and connects a dedicated `MessagePort`. The Client plugin reads the injected `globalThis.__DSH_INSPECTOR__` bootstrap and opens a separate authenticated WebSocket directly to the Worker. Chrome DevTools connects to the Worker's CDP WebSocket. A private `node:inspector.Session` per DevTools connection attaches from the Worker to the Host main thread, so Host Console evaluation, Sources, breakpoints, and resume remain available while Host JavaScript is paused.
+The Host plugin starts the Worker and connects a dedicated `MessagePort`. The Client plugin reads the injected `globalThis.__RSH_INSPECTOR__` bootstrap and opens a separate authenticated WebSocket directly to the Worker. Chrome DevTools connects to the Worker's CDP WebSocket. A private `node:inspector.Session` per DevTools connection attaches from the Worker to the Host main thread, so Host Console evaluation, Sources, breakpoints, and resume remain available while Host JavaScript is paused.
 
 The source tree follows those execution environments: `client/` and `host/` provide mirrored adapter entry paths, `worker/` contains only Worker-thread orchestration and Chrome protocol state, and `shared/` contains environment-independent Cordis and network models, normalized realm backend interfaces, and the internal bridge protocol. Worker-side Client and Host adapters are mirrored under `worker/realms/`; a Client adapter in that directory still executes in the Worker.
 

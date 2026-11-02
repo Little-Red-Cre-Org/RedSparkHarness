@@ -333,7 +333,7 @@ beforeEach(() => {
   harness.reset()
   vi.stubEnv('RSH_DESKTOP_NODE_BINARY', 'test-node')
   vi.stubEnv('RSH_DESKTOP_PNPM_ENTRY', 'test-pnpm')
-  vi.stubEnv('RSH_DESKTOP_DSH_DIR', 'test-runtime')
+  vi.stubEnv('RSH_DESKTOP_RSH_DIR', 'test-runtime')
   vi.stubGlobal('process', { ...process, resourcesPath: resources })
   vi.stubEnv('RSH_DESKTOP_HOST_INSPECT_PORT', undefined)
 })

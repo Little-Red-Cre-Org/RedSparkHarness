@@ -64,8 +64,8 @@ export interface ClientTransportHooks {
 
 /** Page global carrying {@link ClientTransportHooks}; absent in the served web app. */
 interface ClientTransportGlobal {
-  __DSH_TRANSPORT__?: ClientTransportHooks
-  __DSH_CONNECTION_RECOVERY__?: unknown
+  __RSH_TRANSPORT__?: ClientTransportHooks
+  __RSH_CONNECTION_RECOVERY__?: unknown
 }
 
 /**
@@ -145,8 +145,8 @@ function watchBrowserNetwork(controller: ConnectionController): () => void {
  */
 export function createConnectionHandle(fixtureRpc?: ClientConnectionRpc): { handle: ConnectionHandle; dispose(): Promise<void> } {
   const pageLocation = typeof location === 'undefined' ? undefined : location
-  const transport = (globalThis as ClientTransportGlobal).__DSH_TRANSPORT__
-  const recovery = resolveConnectionConfig((globalThis as ClientTransportGlobal).__DSH_CONNECTION_RECOVERY__)
+  const transport = (globalThis as ClientTransportGlobal).__RSH_TRANSPORT__
+  const recovery = resolveConnectionConfig((globalThis as ClientTransportGlobal).__RSH_CONNECTION_RECOVERY__)
   const rpc = fixtureRpc ?? transport?.rpc ?? createWebConnectionRpc(transport?.fetch, transport?.openStream)
   let generationSource: ConnectionGenerationSource | undefined
   let owner: ConnectionOwner | undefined

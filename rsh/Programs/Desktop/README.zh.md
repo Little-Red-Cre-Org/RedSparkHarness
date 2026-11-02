@@ -229,7 +229,7 @@ pnpm run prepare:desktop
 
 ## 底层开发覆盖项
 
-未打包的 Electron 进程使用应用目录下的 `.desktop-build/development/project` 作为开发项目。`RSH_DESKTOP_NODE_BINARY`、`RSH_DESKTOP_PNPM_ENTRY` 和 `RSH_DESKTOP_DSH_DIR` 用于选择明确的运行时资源。打包应用会忽略这些变量，从 `process.resourcesPath` 解析签名资源，并使用受管 Desktop profile。
+未打包的 Electron 进程使用应用目录下的 `.desktop-build/development/project` 作为开发项目。`RSH_DESKTOP_NODE_BINARY`、`RSH_DESKTOP_PNPM_ENTRY` 和 `RSH_DESKTOP_RSH_DIR` 用于选择明确的运行时资源。打包应用会忽略这些变量，从 `process.resourcesPath` 解析签名资源，并使用受管 Desktop profile。
 
 ## 已知限制
 

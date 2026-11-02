@@ -11,7 +11,7 @@ describe('native Web page entry', () => {
     vi.resetModules()
     bootNativeClientEntry.mockReset()
     document.body.innerHTML = '<div id="root"></div>'
-    delete (globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__
+    delete (globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
 
@@ -35,7 +35,7 @@ describe('native Web page entry', () => {
     const stop = vi.fn(async () => undefined)
     const wire = { formatVersion: 1, modules: [], selections: [] }
     bootNativeClientEntry.mockResolvedValue({ stop, diagnostics: () => [] })
-    ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = wire
+    ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = wire
     const container = document.querySelector<HTMLElement>('#root')
 
     await import('../src/native-main.ts')
@@ -55,7 +55,7 @@ describe('native Web page entry', () => {
 
   it('keeps startup errors visible on the page', async () => {
     bootNativeClientEntry.mockRejectedValue(new Error('renderer failed'))
-    ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = {}
+    ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = {}
 
     await import('../src/native-main.ts')
     await vi.waitFor(() => { expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('failed') })
@@ -67,7 +67,7 @@ describe('native Web page entry', () => {
   it('renders non-Error startup reasons as text', async () => {
     const reason: unknown = 'profile unavailable'
     bootNativeClientEntry.mockImplementation(async () => { throw reason })
-    ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = {}
+    ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = {}
 
     await import('../src/native-main.ts')
     await vi.waitFor(() => { expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('failed') })
@@ -77,7 +77,7 @@ describe('native Web page entry', () => {
   })
 
   it('does not render a page failure after pagehide cancels pending startup', async () => {
-    ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = {}
+    ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = {}
     let signal: AbortSignal | undefined
     bootNativeClientEntry.mockImplementation((_container, _wire, _base, _importer, lifetime: AbortSignal) => {
       signal = lifetime
@@ -99,7 +99,7 @@ describe('native Web page entry', () => {
     const cleanupError = new Error('cleanup failed')
     const stop = vi.fn(async () => { throw cleanupError })
     bootNativeClientEntry.mockResolvedValue({ stop, diagnostics: () => [] })
-    ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = {}
+    ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = {}
 
     await import('../src/native-main.ts')
     await vi.waitFor(() => { expect(document.querySelector('#root')?.getAttribute('data-native-boot-state')).toBe('ready') })

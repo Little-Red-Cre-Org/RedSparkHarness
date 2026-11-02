@@ -5,7 +5,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { execa } from 'execa'
 import { expect, it, vi } from 'vitest'
 
-const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const PACKED_BIN = process.env.RSH_PACKED_BIN
 const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const PARENT_TASK = 'PACKED_JOBS_PARENT_TASK_3c8f2d'
 const ALPHA_TASK = 'PACKED_JOBS_ALPHA_TASK_3c8f2d'

@@ -80,7 +80,7 @@ jobs:
 
       # Sourcemaps carry complete sources and stay off the deployment platform.
       # index.html is the served page, which cannot boot without a host
-      # injecting window.__DSH_BOOT__; replacing it with the worker page makes
+      # injecting window.__RSH_BOOT__; replacing it with the worker page makes
       # the deployment root the usable entry instead of a page that never boots.
       - name: Shape the upload
         run: |

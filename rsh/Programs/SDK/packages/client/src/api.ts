@@ -1,14 +1,14 @@
 /** Public SDK facade that supplies the Program-owned standard dsh launcher. */
 
 import {
-  RedSparkHarness as SdkDeepSeekHarness,
+  RedSparkHarness as SdkRshHarness,
   HarnessSession,
   createNativeHarnessClient,
 } from '@redspark/rsh-sdk-runtime'
 import type {
-  DeepSeekHarnessOptions,
+  RshHarnessOptions,
   LegacySdkPromptContentBlock,
-  NativeDeepSeekHarnessOptions,
+  NativeRshHarnessOptions,
   NativeSdkPromptContentBlock,
   RunOptions,
   RunResult,
@@ -22,8 +22,8 @@ import type { HarnessClient } from './client.ts'
 import { HarnessClient as ProgramHarnessClient } from './client.ts'
 
 /** High-level public SDK facade using the Program-owned standard dsh launcher. */
-export class RedSparkHarness extends SdkDeepSeekHarness {
-  constructor(options: DeepSeekHarnessOptions = {}, clientFactory?: () => HarnessClient) {
+export class RedSparkHarness extends SdkRshHarness {
+  constructor(options: RshHarnessOptions = {}, clientFactory?: () => HarnessClient) {
     super(options, clientFactory ?? (() => new ProgramHarnessClient(options)))
   }
 
@@ -34,11 +34,11 @@ export class RedSparkHarness extends SdkDeepSeekHarness {
 
 export { HarnessSession }
 
-export function createProcessDeepSeekHarness(
+export function createProcessRshHarness(
   runtime: RuntimeProcessOptions,
-  options: DeepSeekHarnessOptions = {},
+  options: RshHarnessOptions = {},
 ): RedSparkHarness {
-  const launch: DeepSeekHarnessOptions = {
+  const launch: RshHarnessOptions = {
     ...runtime.cwd === undefined ? {} : { processCwd: runtime.cwd },
     ...options,
   }
@@ -51,11 +51,11 @@ export function createProcessDeepSeekHarness(
  * @param childConnection - Host-owned managed stdio connection capability.
  * @returns a Harness that runs through the fixed native-sdk profile.
  */
-export function createNativeDeepSeekHarness(
-  options: NativeDeepSeekHarnessOptions,
+export function createNativeRshHarness(
+  options: NativeRshHarnessOptions,
   childConnection: ChildConnectionDefinition,
 ): RedSparkHarness {
-  const launch: DeepSeekHarnessOptions = {
+  const launch: RshHarnessOptions = {
     profile: 'native-sdk',
     ...options.cwd === undefined ? {} : { cwd: options.cwd },
     ...options.provider === undefined ? {} : { provider: options.provider },

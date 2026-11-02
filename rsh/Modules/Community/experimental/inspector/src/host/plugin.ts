@@ -48,7 +48,7 @@ export async function apply(ctx: Context, config: HostPluginConfig): Promise<voi
       }))
       disposers.push(ctx.provide('inspector', createInspectorService(handle.source)))
       disposers.push(ctx.on('webserver/index-inject', (table: IndexInjection[]) => {
-        table.push({ kind: 'global', name: '__DSH_INSPECTOR__', value: handle.endpoint.client })
+        table.push({ kind: 'global', name: '__RSH_INSPECTOR__', value: handle.endpoint.client })
       }))
       // This readiness URL is emitted while the plugin tree is still loading, before a logger sink is guaranteed.
       console.log(`dsh inspector: ${handle.endpoint.devtoolsFrontendUrl}`)

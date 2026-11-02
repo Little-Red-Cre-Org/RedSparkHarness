@@ -40,7 +40,7 @@
 # ── web-only host rows, the transport layer, and the browser roster ─────────
 
 # `dsh.client` rows are the browser roster the modules node half scans into
-# window.__DSH_BOOT__; the modules row is simultaneously a host row.
+# window.__RSH_BOOT__; the modules row is simultaneously a host row.
 - insert:
     - id: task-scheduler
       name: '@redspark/rsh-task-scheduler'
@@ -191,7 +191,7 @@
 
     # ── browser plugin roster (dsh.client rows; node halves are layer-2 hosts) ──
 
-    # Dual-face: the node half scans this tree, composes window.__DSH_BOOT__,
+    # Dual-face: the node half scans this tree, composes window.__RSH_BOOT__,
     # and serves /plugins/<id>/client.js; the browser half is the module table
     # the shell kernel constructs before cordis exists (adopted as a plugin
     # entry by the kernel, never fetched).

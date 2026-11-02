@@ -23,7 +23,7 @@ import {
   TransportClosedError,
   type HarnessNotification,
 } from '../src/index.ts'
-import { createProcessDeepSeekHarness } from '../src/api.ts'
+import { createProcessRshHarness } from '../src/api.ts'
 import { HarnessClient as ProgramHarnessClient } from '../src/client.ts'
 import type { RuntimeProcessOptions } from '../src/launch.ts'
 
@@ -57,7 +57,7 @@ function textBlocks(text: string): { type: 'text'; text: string }[] {
 }
 
 function harnessWith(env: Record<string, string> = {}, extra: LaunchOverrides = {}): RedSparkHarness {
-  const harness = createProcessDeepSeekHarness(fakeLaunch(env, extra))
+  const harness = createProcessRshHarness(fakeLaunch(env, extra))
   cleanups.push(() => harness.close())
   return harness
 }
@@ -78,7 +78,7 @@ describe('RedSparkHarness', () => {
     const shutdownFile = join(dir, 'shutdown.jsonl')
     const requested = Promise.withResolvers<ApprovalRequestParams>()
     const lateDecision = Promise.withResolvers<'allowed-once'>()
-    const harness = createProcessDeepSeekHarness(fakeLaunch({
+    const harness = createProcessRshHarness(fakeLaunch({
       FAKE_APPROVAL_REQUEST: '1', FAKE_APPROVAL_RESPONSE: responseFile, FAKE_SHUTDOWN_FILE: shutdownFile,
     }), {
       provider: 'fake-provider', model: 'fake-model',
@@ -222,7 +222,7 @@ describe('RedSparkHarness', () => {
   it('sends the configured cwd/provider/model/reasoningEffort/maxTokens in the handshake exactly once', async () => {
     const dir = await tempDir('sdk-client-init-')
     const recordFile = join(dir, 'init.jsonl')
-    const harness = createProcessDeepSeekHarness(fakeLaunch({ FAKE_RECORD_INIT: recordFile }), {
+    const harness = createProcessRshHarness(fakeLaunch({ FAKE_RECORD_INIT: recordFile }), {
       cwd: dir,
       provider: 'custom-provider',
       model: 'custom-model',
@@ -255,7 +255,7 @@ describe('RedSparkHarness', () => {
     await mkdir(inner)
     const relativeCwd = relative(process.cwd(), inner)
     expect(isAbsolute(relativeCwd)).toBe(false)
-    const harness = createProcessDeepSeekHarness(
+    const harness = createProcessRshHarness(
       fakeLaunch({ FAKE_RECORD_INIT: recordFile, FAKE_ECHO_CWD_IN_INIT: '1' }, { cwd: relativeCwd }),
     )
     cleanups.push(() => harness.close())
@@ -290,7 +290,7 @@ describe('RedSparkHarness', () => {
     const initialize = vi.spyOn(HarnessClient.prototype, 'initialize').mockRejectedValue(initializeError)
     const close = vi.spyOn(HarnessClient.prototype, 'close').mockRejectedValue(cleanupError)
     try {
-      const harness = createProcessDeepSeekHarness(fakeLaunch())
+      const harness = createProcessRshHarness(fakeLaunch())
       const failedClient = harness.client
       const failure = await harness.start().catch((error: unknown) => error)
       expect(failure).toBeInstanceOf(AggregateError)
@@ -311,7 +311,7 @@ describe('RedSparkHarness', () => {
     const initialize = vi.spyOn(HarnessClient.prototype, 'initialize').mockReturnValue(initializeResult)
     const close = vi.spyOn(HarnessClient.prototype, 'close').mockResolvedValue()
     try {
-      const harness = createProcessDeepSeekHarness(fakeLaunch())
+      const harness = createProcessRshHarness(fakeLaunch())
       const original = harness.client
       const pending = harness.start()
       await harness.close()
@@ -349,7 +349,7 @@ describe('RedSparkHarness', () => {
   it('supports await using disposal', async () => {
     let captured: RedSparkHarness
     {
-      await using harness = createProcessDeepSeekHarness(fakeLaunch())
+      await using harness = createProcessRshHarness(fakeLaunch())
       captured = harness
       const result = await harness.run('scoped')
       expect(result.finalResponse).toBe('hello from fake runtime')

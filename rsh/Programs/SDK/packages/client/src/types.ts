@@ -2,10 +2,10 @@
 
 export type {
   ContentBlock,
-  DeepSeekHarnessOptions,
+  RshHarnessOptions,
   HarnessClientOptions,
   HarnessNotification,
-  NativeDeepSeekHarnessOptions,
+  NativeRshHarnessOptions,
   NotificationFilter,
   NativeExternalOperationEvent,
   NativeExternalOperationSessionEvent,

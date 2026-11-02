@@ -21,7 +21,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 export const RSH_HOME_DIR_NAME = '.redspark'
 
 /** Stable user-facing display form for the default RedSpark Harness home. */
-export const DEFAULT_DSH_HOME_DISPLAY = `~/${RSH_HOME_DIR_NAME}`
+export const DEFAULT_RSH_HOME_DISPLAY = `~/${RSH_HOME_DIR_NAME}`
 
 /**
  * On-disk directory name of the upstream RedSpark Harness home this fork must
@@ -163,10 +163,10 @@ export function dshCachePath(optionsOrSegment: { dshHome?: string } | string = {
  * Describe a resolved harness home symbolically for user-facing display.
  *
  * It never returns an absolute machine path: the default home is labelled
- * `~/.dsh`, and any configured home is labelled `$RSH_HOME`.
+ * `~/.redspark`, and any configured home is labelled `$RSH_HOME`.
  * @param resolvedHome - the absolute path returned by {@link resolveDshHome}.
- * @returns `~/.dsh` for the default home, otherwise `$RSH_HOME`.
+ * @returns `~/.redspark` for the default home, otherwise `$RSH_HOME`.
  */
 export function dshHomeDisplay(resolvedHome: string): string {
-  return resolvedHome === resolve(defaultDshHome()) ? DEFAULT_DSH_HOME_DISPLAY : `$${RSH_HOME_ENV}`
+  return resolvedHome === resolve(defaultDshHome()) ? DEFAULT_RSH_HOME_DISPLAY : `$${RSH_HOME_ENV}`
 }

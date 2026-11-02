@@ -21,9 +21,9 @@ import {
   HarnessSession,
   SdkProtocolError,
 } from '@redspark/rsh-sdk-client'
-import { createProcessDeepSeekHarness } from '../../../../../Programs/SDK/packages/client/src/api.ts'
+import { createProcessRshHarness } from '../../../../../Programs/SDK/packages/client/src/api.ts'
 import type { RuntimeProcessOptions } from '../../../../../Programs/SDK/packages/client/src/launch.ts'
-import type { DeepSeekHarnessOptions } from '@redspark/rsh-sdk-client'
+import type { RshHarnessOptions } from '@redspark/rsh-sdk-client'
 import { ReasoningEffortId } from '@redspark/rsh-llm'
 import * as sdk from '../src/index.ts'
 import {
@@ -42,7 +42,7 @@ const existingPatch = fileURLToPath(new URL(
   import.meta.url,
 ))
 const defaultCreateHarness = runInternals.createHarness.bind(runInternals)
-let createdHarnessOptions: DeepSeekHarnessOptions[] = []
+let createdHarnessOptions: RshHarnessOptions[] = []
 
 beforeEach(() => {
   createdHarnessOptions = []
@@ -60,7 +60,7 @@ beforeEach(() => {
       ...options.disposeEofGraceMs === undefined ? {} : { disposeEofGraceMs: options.disposeEofGraceMs },
       ...options.disposeGraceMs === undefined ? {} : { disposeGraceMs: options.disposeGraceMs },
     }
-    return createProcessDeepSeekHarness(runtime, options)
+    return createProcessRshHarness(runtime, options)
   }
 })
 

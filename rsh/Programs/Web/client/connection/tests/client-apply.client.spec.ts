@@ -16,12 +16,12 @@ import {
 
 type Win = {
   location?: { hostname: string; search: string; origin?: string }
-  __DSH_TRANSPORT__?: ClientTransportHooks
+  __RSH_TRANSPORT__?: ClientTransportHooks
 }
 
 afterEach(() => {
   delete (globalThis as Win).location
-  delete (globalThis as Win).__DSH_TRANSPORT__
+  delete (globalThis as Win).__RSH_TRANSPORT__
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })
@@ -75,7 +75,7 @@ async function mount(): Promise<ConnectionHandle> {
 describe('connection client apply', () => {
   it('uses Host bootstrap timing when Gateway starts without overrides', async () => {
     vi.useFakeTimers()
-    vi.stubGlobal('__DSH_CONNECTION_RECOVERY__', {
+    vi.stubGlobal('__RSH_CONNECTION_RECOVERY__', {
       backoffBaseMs: 10, backoffMaxMs: 10, generationReadyTimeoutMs: 20,
     })
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -100,7 +100,7 @@ describe('connection client apply', () => {
   })
 
   it.each([{ generationReadyTimeoutMs: 0 }, { backoffFactor: NaN }])('rejects malformed bootstrap recovery before publishing the service: %j', (recovery) => {
-    vi.stubGlobal('__DSH_CONNECTION_RECOVERY__', recovery)
+    vi.stubGlobal('__RSH_CONNECTION_RECOVERY__', recovery)
     const ctx = new Context()
     expect(() => { apply(ctx) }).toThrow()
     expect(ctx.get('connection')).toBeUndefined()
@@ -491,7 +491,7 @@ describe('connection client apply', () => {
       call: vi.fn(async (_channel: string, endpoint: string, payload: unknown) => ({ ok: true as const, value: { endpoint, payload } })),
       open: vi.fn((_channel: string, endpoint: string) => (async function *(): AsyncGenerator { yield endpoint })()),
     }
-    ;(globalThis as Win).__DSH_TRANSPORT__ = { rpc }
+    ;(globalThis as Win).__RSH_TRANSPORT__ = { rpc }
     const handle = await mount()
     expect(handle.rpc).toBe(rpc)
     await expect(handle.rpc.call('/api', 'session/list', { args: [] })).resolves.toEqual({
@@ -507,7 +507,7 @@ describe('connection client apply', () => {
         yield { endpoint, payload }
       })(),
     )
-    ;(globalThis as Win).__DSH_TRANSPORT__ = {
+    ;(globalThis as Win).__RSH_TRANSPORT__ = {
       fetch: vi.fn<RpcFetch>(),
       openStream,
       ownsHost: true,

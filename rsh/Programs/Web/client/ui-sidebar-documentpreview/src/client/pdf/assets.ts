@@ -11,7 +11,7 @@ export type PdfAssetMap = Readonly<Record<PdfAssetKind, Readonly<Record<string, 
 
 declare global {
   /** Inline artifact data supplied by the package-local build configuration. */
-  const __DSH_PDFJS_ASSETS__: PdfAssetMap
+  const __RSH_PDFJS_ASSETS__: PdfAssetMap
 }
 
 /** Public methods required by PDF.js's BinaryDataFactory option. */
@@ -25,7 +25,7 @@ export interface PdfBinaryDataFactory {
  * @param assets - build-inlined base64 resources, read only when a PDF is opened.
  * @returns the constructor passed to PDF.js getDocument.
  */
-export function createPdfBinaryDataFactory(assets: PdfAssetMap = __DSH_PDFJS_ASSETS__): new () => PdfBinaryDataFactory {
+export function createPdfBinaryDataFactory(assets: PdfAssetMap = __RSH_PDFJS_ASSETS__): new () => PdfBinaryDataFactory {
   return class implements PdfBinaryDataFactory {
     fetch({ kind, filename }: { readonly kind: PdfAssetKind; readonly filename: string }): Promise<Uint8Array> {
       return Promise.resolve().then(() => {

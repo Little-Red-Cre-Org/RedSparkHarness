@@ -54,7 +54,7 @@ describe('Web development entry', () => {
       expect(result.exitCode).not.toBe(0)
       expect(result.stderr).toContain('rsh/Programs/Web/application is not a standalone application')
       expect(result.stderr).toContain('dsh web')
-      expect(result.stderr).toContain('window.__DSH_BOOT__')
+      expect(result.stderr).toContain('window.__RSH_BOOT__')
       expect(existsSync(marker), 'Vite called Server.listen before rejecting standalone serve mode').toBe(false)
     } finally {
       rmSync(probeRoot, { recursive: true, force: true })

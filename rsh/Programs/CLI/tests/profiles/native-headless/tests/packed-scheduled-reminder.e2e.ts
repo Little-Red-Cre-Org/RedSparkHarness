@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const PACKED_BIN = process.env.RSH_PACKED_BIN
 const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-scheduled-reminder'
 const FIRST_TASK = 'Create the scheduled reminder from the tool fixture.'

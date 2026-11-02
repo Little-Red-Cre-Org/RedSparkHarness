@@ -7,7 +7,7 @@ import { isAbsolute, join, relative, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const PACKED_BIN = process.env.RSH_PACKED_BIN
 const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-skills'
 const FIRST_TASK = '/review Apply the review skill to the requested change, then summarize its instruction.'

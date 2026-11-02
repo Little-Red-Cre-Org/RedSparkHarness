@@ -1,7 +1,7 @@
 /**
  * Node half of the client module system (`dsh.client` dual-face package): scans
  * the host Loader's entries for packages declaring `dsh.client`, composes the
- * `window.__DSH_BOOT__` entry graph (wire single source: {@link WebBootEntry}
+ * `window.__RSH_BOOT__` entry graph (wire single source: {@link WebBootEntry}
  * in `./client/manifest.ts`) in module-graph order, serves one-or-more-plugin
  * combo scripts plus their source maps,
  * contributes the registration facade, application preloads, bootstrap scripts,
@@ -473,7 +473,7 @@ window.__ModuleLoader__={
   for (const batch of bootstrap) {
     rows.push({ kind: 'script-src', placement: 'head', src: batch.url })
   }
-  rows.push({ kind: 'global', name: '__DSH_BOOT__', value: graph })
+  rows.push({ kind: 'global', name: '__RSH_BOOT__', value: graph })
   return rows
 }
 
@@ -551,7 +551,7 @@ export class ClientModuleRegistry extends Service {
 
   /**
    * Current composed entry graph (stable object between changes).
-   * @returns the graph served as `window.__DSH_BOOT__`.
+   * @returns the graph served as `window.__RSH_BOOT__`.
    */
   graph(): WebBootGraph {
     return this.composed

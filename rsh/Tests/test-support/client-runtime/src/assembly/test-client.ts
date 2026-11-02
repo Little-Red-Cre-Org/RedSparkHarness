@@ -1,7 +1,7 @@
 /**
  * Whole-client test carrier: boots an {@link AssemblyPlan} through the
  * production `bootClient` over an in-process module table, with a
- * `RemoteMock` installed as the Connection carrier through `__DSH_TRANSPORT__.rpc`.
+ * `RemoteMock` installed as the Connection carrier through `__RSH_TRANSPORT__.rpc`.
  * @module @redspark/rsh-client-test-runtime/src/assembly/test-client
  */
 import { Context, type Plugin } from '@redspark/cordis'
@@ -31,7 +31,7 @@ export interface TestClientOptions {
 
 /** Page global the connection plugin reads its carrier from. */
 interface TransportGlobal {
-  __DSH_TRANSPORT__?: ClientTransportHooks
+  __RSH_TRANSPORT__?: ClientTransportHooks
 }
 
 const transportGlobal = globalThis as TransportGlobal
@@ -55,7 +55,7 @@ class SharedGlobals {
    * @param transport - carrier the next `connection` apply reads.
    */
   install(transport: ClientTransportHooks): void {
-    transportGlobal.__DSH_TRANSPORT__ = transport
+    transportGlobal.__RSH_TRANSPORT__ = transport
   }
 
   /**
@@ -65,7 +65,7 @@ class SharedGlobals {
    */
   acquire(transport: ClientTransportHooks): () => void {
     if (this.holders === 0) {
-      this.previousTransport = transportGlobal.__DSH_TRANSPORT__
+      this.previousTransport = transportGlobal.__RSH_TRANSPORT__
       this.removeShims = installJsdomShims()
     }
     this.holders += 1
@@ -75,8 +75,8 @@ class SharedGlobals {
       if (this.holders > 0) return
       this.removeShims?.()
       this.removeShims = undefined
-      if (this.previousTransport === undefined) delete transportGlobal.__DSH_TRANSPORT__
-      else transportGlobal.__DSH_TRANSPORT__ = this.previousTransport
+      if (this.previousTransport === undefined) delete transportGlobal.__RSH_TRANSPORT__
+      else transportGlobal.__RSH_TRANSPORT__ = this.previousTransport
       this.previousTransport = undefined
     }
   }

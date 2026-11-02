@@ -52,7 +52,7 @@ describe('Desktop Web asset routes', () => {
     expect((await handler.fetch(new Request('https://dsh.example/.dsh/native-client/profile.js'))).status).toBe(404)
     const page = await handler.fetch(new Request('https://dsh.example/'))
     expect(page.headers.get('content-type')).toBe('text/html; charset=utf-8')
-    expect(await page.text()).toContain('globalThis.__DSH_TRANSPORT__')
+    expect(await page.text()).toContain('globalThis.__RSH_TRANSPORT__')
     expect(host.emit).toHaveBeenCalledOnce()
 
     const pluginRequest = new Request('https://dsh.example/plugins/renderer.js')

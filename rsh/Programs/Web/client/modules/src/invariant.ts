@@ -29,7 +29,7 @@ const install: InvariantInstaller = (ctx, fail) => {
     if (host === undefined) return // browser side / host without the node half: nothing to audit
     for (const row of host.graph().entries) {
       if (host.clientPath(row.id) === undefined) {
-        fail(`web plugin graph row "${row.id}" advertises ${row.url} but resolves no client bundle path — the served __DSH_BOOT__ would 404 on fetch`)
+        fail(`web plugin graph row "${row.id}" advertises ${row.url} but resolves no client bundle path — the served __RSH_BOOT__ would 404 on fetch`)
       }
     }
   }, { global: true })

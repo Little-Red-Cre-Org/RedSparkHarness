@@ -25,7 +25,7 @@ export type {
   NativeSdkPromptContentBlock,
   SessionUploadFileResult,
   SdkPromptContentBlock,
-  DeepSeekHarnessOptions,
+  RshHarnessOptions,
   HarnessClientOptions,
   HarnessNotification,
   NotificationFilter,

@@ -54,7 +54,7 @@ describe('runtime export roots', () => {
     mkdirSync(join(packageDirectory, 'src'), { recursive: true })
     writeFileSync(join(packageDirectory, 'lib/index.js'), 'module.exports = { ready: true }\n')
     writeFileSync(join(packageDirectory, 'lib/client.js'),
-      'export const renderIndexInjections = html => html + "<script>__DSH_BOOT_READY__</script>"\n')
+      'export const renderIndexInjections = html => html + "<script>__RSH_BOOT_READY__</script>"\n')
     writeFileSync(join(packageDirectory, 'src/base.css'), 'body { color: black }\n')
     writeFileSync(packageJson, `${JSON.stringify(manifest)}\n`)
 
@@ -83,7 +83,7 @@ describe('runtime export roots', () => {
       const renderer = loader.requireFrom(`${DEFAULT_ROOT}/workspace`)(`${name}/client`) as {
         renderIndexInjections(html: string): string
       }
-      expect(renderer.renderIndexInjections('<html></html>')).toContain('__DSH_BOOT_READY__')
+      expect(renderer.renderIndexInjections('<html></html>')).toContain('__RSH_BOOT_READY__')
 
       manifest.exports['./missing'] = { types: './lib/types/missing.d.ts', default: './lib/missing.js' }
       writeFileSync(packageJson, `${JSON.stringify(manifest)}\n`)

@@ -12,7 +12,7 @@ import { renderIndexInjections, type IndexInjection } from '@redspark/rsh-http-r
 /** Desktop stream endpoint shared with the injected browser transport. */
 export const DESKTOP_STREAM_PATH = '/.dsh/remote-stream'
 const HTML_CONTENT_TYPE = 'text/html; charset=utf-8'
-const DESKTOP_TRANSPORT_SCRIPT = `globalThis.__DSH_TRANSPORT__={
+const DESKTOP_TRANSPORT_SCRIPT = `globalThis.__RSH_TRANSPORT__={
   ownsHost:true,
   async *openStream(endpoint,payload,signal){
     const response=await fetch(${JSON.stringify(DESKTOP_STREAM_PATH)},{

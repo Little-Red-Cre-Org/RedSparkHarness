@@ -40,7 +40,7 @@ afterAll(async () => { await browser?.close() })
 async function routeBuiltApplication(page: Page, boot?: unknown): Promise<void> {
   if (boot !== undefined) {
     await page.addInitScript((wire) => {
-      ;(globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__ = wire
+      ;(globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__ = wire
     }, boot)
   }
   await page.route('https://dsh.example/**', async (route) => {

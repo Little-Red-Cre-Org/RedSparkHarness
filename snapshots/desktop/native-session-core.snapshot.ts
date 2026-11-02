@@ -140,7 +140,7 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
     const page = await host.fetch(new Request('dsh-app://app/'))
     expect(page.status).toBe(200)
     const html = await page.text()
-    expect(html).toContain('__DSH_NATIVE_CLIENT_BOOT__')
+    expect(html).toContain('__RSH_NATIVE_CLIENT_BOOT__')
     expect(html).toContain('ownsHost:true')
     const bundle = /"bundle":"([^"]+)"/u.exec(html)?.[1]
     if (bundle === undefined) throw new Error('Desktop omitted native Client bundle')

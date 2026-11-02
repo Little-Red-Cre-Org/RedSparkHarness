@@ -6,7 +6,7 @@ import { isAbsolute, join, relative, sep } from 'node:path'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const PACKED_BIN = process.env.RSH_PACKED_BIN
 const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const TASK = 'PACKED_CODE_RUNTIME_TASK_8a42d1'
 const SUCCESS_ID = 'packed-code-runtime-success'

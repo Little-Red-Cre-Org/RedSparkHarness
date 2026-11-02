@@ -107,7 +107,7 @@ function runtimeResources(): RuntimeResources {
     ?? join(process.resourcesPath, 'runtime', 'node', process.platform === 'win32' ? 'node.exe' : 'node')
   const pnpm = (development ? process.env.RSH_DESKTOP_PNPM_ENTRY : undefined)
     ?? join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
-  const dsh = (development ? process.env.RSH_DESKTOP_DSH_DIR : undefined) ?? join(process.resourcesPath, 'dsh')
+  const dsh = (development ? process.env.RSH_DESKTOP_RSH_DIR : undefined) ?? join(process.resourcesPath, 'dsh')
   return { node, pnpm, dsh }
 }
 

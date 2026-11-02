@@ -49,7 +49,7 @@ function splice(html: string, at: number, markup: string): string {
   return `${html.slice(0, at)}${markup}${html.slice(at)}`
 }
 
-const READY_MARKUP = '<script>(globalThis.__DSH_BOOT_READY__ ??= Promise.withResolvers()).resolve()</script>'
+const READY_MARKUP = '<script>(globalThis.__RSH_BOOT_READY__ ??= Promise.withResolvers()).resolve()</script>'
 
 /** Render page inputs with the same deterministic order in Web and Desktop.
  * @param html - source index document.

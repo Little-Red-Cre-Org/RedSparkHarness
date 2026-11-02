@@ -17,7 +17,7 @@ const SIDEBAR = '@redspark/rsh-client-ui-sidebar'
 /** Declared by ui-sidebar, whose SlotMap merge is outside this package's compilation face. */
 const SIDEBAR_SETTINGS = 'sidebar.settings' as never
 const BRAND = '@redspark/rsh-client-ui-brand-official'
-const globals = globalThis as { __DSH_TRANSPORT__?: unknown; EventSource?: unknown; ResizeObserver?: unknown }
+const globals = globalThis as { __RSH_TRANSPORT__?: unknown; EventSource?: unknown; ResizeObserver?: unknown }
 /** The whole roster's first boot pays the cold module transform of every plugin package. */
 const COLD_BOOT_TIMEOUT_MS = 60_000
 
@@ -40,12 +40,12 @@ describe('TestClient (jsdom)', () => {
     const container = client.container!
     expect(document.body.contains(container)).toBe(true)
     expect(container.childElementCount).toBeGreaterThan(0)
-    expect(globals.__DSH_TRANSPORT__).toBeDefined()
+    expect(globals.__RSH_TRANSPORT__).toBeDefined()
     expect(globals.EventSource).toBeDefined()
     expect(globals.ResizeObserver).toBeDefined()
     await client.dispose()
     expect(document.body.contains(container)).toBe(false)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
     expect(globals.ResizeObserver).toBeUndefined()
     await client.dispose()
@@ -84,10 +84,10 @@ describe('TestClient (jsdom)', () => {
     expect(mockA.log.calls('session/rename')).toHaveLength(2)
     expect(mockB.log.calls('session/rename')).toHaveLength(1)
     await a.dispose()
-    expect(globals.__DSH_TRANSPORT__).toBeDefined()
+    expect(globals.__RSH_TRANSPORT__).toBeDefined()
     expect(globals.EventSource).toBeDefined()
     await b.dispose()
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
   })
 
@@ -103,7 +103,7 @@ describe('TestClient (jsdom)', () => {
     await expect(TestClient.start({ roster: API_ROSTER }, RemoteMock.create().load(remoteDefaultResponses), { mount: true }))
       .rejects.toThrow('mount requested, but the roster provides no `uiRenderer`')
     expect(document.body.childElementCount).toBe(before)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('creates no mount element when the roster cannot be loaded', async () => {
@@ -111,7 +111,7 @@ describe('TestClient (jsdom)', () => {
     const before = document.body.childElementCount
     await expect(TestClient.start({ roster }, RemoteMock.create(), { mount: true })).rejects.toThrow()
     expect(document.body.childElementCount).toBe(before)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('mounts into a caller-supplied element and leaves it in place on dispose', async () => {
@@ -175,7 +175,7 @@ describe('TestClient (jsdom)', () => {
     const mock = RemoteMock.create().stream('$events', openStream([]))
     await expect(TestClient.start({ roster }, mock, { connectTimeoutMs: 300 }))
       .rejects.toThrow(/connection state is \S+ after 300ms; unmatched: \[unary workspace\/follow\]; streams: \[.*\$events \(open\).*\]/)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
   })
 })

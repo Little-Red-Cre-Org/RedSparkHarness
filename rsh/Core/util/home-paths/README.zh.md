@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`@redspark/rsh-home-paths` 让包作者能够解析统一的 RedSpark Harness 数据根目录，并由它派生子路径。显式路径优先于 `$RSH_HOME`，后者优先于 `~/.dsh`；空白环境变量会被忽略。其公开辅助函数可以在不暴露机器绝对路径的情况下显示根目录，仅展开单独或当前用户的波浪号形式，并规范化最终路径段尚不存在的监听目标。请把它作为库依赖直接使用，不要通过 `cordis.yml` 加载。
+`@redspark/rsh-home-paths` 让包作者能够解析统一的 RedSpark Harness 数据根目录，并由它派生子路径。显式路径优先于 `$RSH_HOME`，后者优先于 `~/.redspark`；空白环境变量会被忽略。其公开辅助函数可以在不暴露机器绝对路径的情况下显示根目录，仅展开单独或当前用户的波浪号形式，并规范化最终路径段尚不存在的监听目标。请把它作为库依赖直接使用，不要通过 `cordis.yml` 加载。
 
 ## 目录
 
@@ -31,12 +31,12 @@ kind: "package-library"
 ```ts
 import { resolveDshHome, dshHomePath, dshCachePath } from '@redspark/rsh-home-paths'
 
-const home = resolveDshHome()                // configured path, else $RSH_HOME, else ~/.dsh
+const home = resolveDshHome()                // configured path, else $RSH_HOME, else ~/.redspark
 const settings = dshHomePath('settings')     // join one child onto the resolved home
-const cache = dshCachePath('models')         // $RSH_HOME/cache/models, default ~/.dsh/cache/models
+const cache = dshCachePath('models')         // $RSH_HOME/cache/models, default ~/.redspark/cache/models
 ```
 
-显式配置的路径优先级最高，然后是 `$RSH_HOME`，最后是默认的 `~/.dsh`。空或仅含空白的 `$RSH_HOME` 视为未设置，因此空白的覆盖值绝不会把主目录解析到当前工作目录。
+显式配置的路径优先级最高，然后是 `$RSH_HOME`，最后是默认的 `~/.redspark`。空或仅含空白的 `$RSH_HOME` 视为未设置，因此空白的覆盖值绝不会把主目录解析到当前工作目录。
 
 `dshCachePath(...segments)` 从解析出的主目录下的 `cache` 目录派生路径。不传路径段时返回缓存目录本身。传入首个选项对象 `dshCachePath({ dshHome: home }, ...segments)` 可使用显式配置的主目录，遵循相同的优先级与波浪号展开规则。它返回绝对路径，不会创建目录。
 
@@ -44,7 +44,7 @@ const cache = dshCachePath('models')         // $RSH_HOME/cache/models, default 
 
 ### 展示主目录
 
-面向用户的路径请以符号形式渲染根目录，而不是机器路径：默认主目录显示为 `~/.dsh`，任何已配置的主目录显示为 `$RSH_HOME`。展示形式绝不会泄露机器的绝对路径。
+面向用户的路径请以符号形式渲染根目录，而不是机器路径：默认主目录显示为 `~/.redspark`，任何已配置的主目录显示为 `$RSH_HOME`。展示形式绝不会泄露机器的绝对路径。
 
 ### 展开用户路径
 
@@ -74,7 +74,7 @@ const cache = dshCachePath('models')         // $RSH_HOME/cache/models, default 
 
 ### 解析规则
 
-`resolveDshHome` 先读显式覆盖值，然后读 `$RSH_HOME`，最后回退到操作系统主目录拼接 `.dsh`。选中的值经过波浪号展开并规范化为绝对路径；`dshHomePath` 用 Node 的平台路径规则拼接子路径段。`dshHomeDisplay` 把解析出的路径与默认根目录比较并返回符号标签，因此已配置的主目录绝不泄露其绝对路径。
+`resolveDshHome` 先读显式覆盖值，然后读 `$RSH_HOME`，最后回退到操作系统主目录拼接 `.redspark`。选中的值经过波浪号展开并规范化为绝对路径；`dshHomePath` 用 Node 的平台路径规则拼接子路径段。`dshHomeDisplay` 把解析出的路径与默认根目录比较并返回符号标签，因此已配置的主目录绝不泄露其绝对路径。
 
 ### 规范化机制
 

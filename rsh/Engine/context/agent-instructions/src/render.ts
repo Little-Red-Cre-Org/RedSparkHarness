@@ -5,7 +5,7 @@
  */
 
 import { basename, dirname } from 'node:path'
-import { DEFAULT_DSH_HOME_DISPLAY, RSH_HOME_ENV } from '@redspark/rsh-home-paths'
+import { DEFAULT_RSH_HOME_DISPLAY, RSH_HOME_ENV } from '@redspark/rsh-home-paths'
 import type { InstructionFile, LoadedInstructionFile } from './files.ts'
 
 const SYSTEM_REMINDER_OPEN = '<system-reminder>'
@@ -109,7 +109,7 @@ export function scopeForDisplayPath(displayPath: string): string {
   // home renders as `$RSH_HOME`. Both must map back to the single user-global
   // scope, or a renamed home (e.g. `~/.redspark`) would key the same file under
   // a directory scope that no baseline scope ever matches.
-  const userGlobalPrefixes = [DEFAULT_DSH_HOME_DISPLAY, `$${RSH_HOME_ENV}`]
+  const userGlobalPrefixes = [DEFAULT_RSH_HOME_DISPLAY, `$${RSH_HOME_ENV}`]
   if (userGlobalPrefixes.some(prefix => displayPath === `${prefix}/${USER_GLOBAL_FILE}`)) return USER_GLOBAL_DIRECTORY
   return dirname(displayPath)
 }

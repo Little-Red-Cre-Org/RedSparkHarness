@@ -607,7 +607,7 @@ describe('Client Remote transport readiness', () => {
   it.each([false, true])('replaces a stalled carrier and restores events (socket opened: %s)', async (autoOpen) => {
     await withFakeWebSocket('https://harness.example', async () => {
       vi.useFakeTimers()
-      vi.stubGlobal('__DSH_CONNECTION_RECOVERY__', {
+      vi.stubGlobal('__RSH_CONNECTION_RECOVERY__', {
         backoffBaseMs: 10, backoffMaxMs: 10, generationReadyTimeoutMs: 100,
       })
       Object.assign(globalThis.location, { hostname: 'harness.example', search: '' })

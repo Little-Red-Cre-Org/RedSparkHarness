@@ -172,7 +172,7 @@ export class ClientSourceCatalog {
  * @returns A lazy catalog, or `undefined` outside the assembled web application.
  */
 export function discoverInspectorClientSourceCatalog(): ClientSourceCatalog | undefined {
-  const graph = Reflect.get(globalThis, '__DSH_BOOT__') as unknown
+  const graph = Reflect.get(globalThis, '__RSH_BOOT__') as unknown
   if (typeof graph !== 'object' || graph === null) return undefined
   const entries = Reflect.get(graph, 'entries') as unknown
   if (!Array.isArray(entries)) return undefined

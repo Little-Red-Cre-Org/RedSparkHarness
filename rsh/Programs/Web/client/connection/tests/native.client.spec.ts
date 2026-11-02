@@ -9,7 +9,7 @@ afterEach(() => { vi.unstubAllGlobals() })
 describe('native Client connection', () => {
   it('shares browser RPC and waits for generation cleanup on Host stop', async () => {
     const rpc = { call: vi.fn(), open: vi.fn() }
-    vi.stubGlobal('__DSH_TRANSPORT__', { rpc, ownsHost: true })
+    vi.stubGlobal('__RSH_TRANSPORT__', { rpc, ownsHost: true })
     let connection: ConnectionHandle | undefined
     const consumer: NativePlugin = {
       apiVersion: 1,

@@ -6,7 +6,7 @@ Status: resolved
 
 ## Executive summary
 
-A Web agent changed the GUI source but did not know which URL and process hosted its session. It delegated acceptance to the user, then treated a bare Vite HTTP 200 as success despite a missing `window.__DSH_BOOT__` white screen, and finally validated a replacement `dsh web` server on another port while the original page had already picked up rebuilt artifacts. The fix makes the current URL and runtime mode model-visible and shell-queryable, rejects standalone Vite before listen, and verifies production refresh and development HMR against external state.
+A Web agent changed the GUI source but did not know which URL and process hosted its session. It delegated acceptance to the user, then treated a bare Vite HTTP 200 as success despite a missing `window.__RSH_BOOT__` white screen, and finally validated a replacement `dsh web` server on another port while the original page had already picked up rebuilt artifacts. The fix makes the current URL and runtime mode model-visible and shell-queryable, rejects standalone Vite before listen, and verifies production refresh and development HMR against external state.
 
 ## Summary
 
@@ -25,7 +25,7 @@ No change in this investigation restarted or modified the read-only 3081 and 308
 ## Timeline
 
 - In turn 2, after editing the theme, the agent's sequence-30939 message told the user to run `pnpm run demo:tui` or open an unspecified Web application. It ran no assembled Web acceptance.
-- In turn 3, the agent read `rsh/Programs/Web/application/package.json`, launched bare Vite on port 5173 at sequence 31865, observed HTTP 200, and declared success. The browser instead threw `client-modules: window.__DSH_BOOT__ is missing or not an object` and rendered a white page.
+- In turn 3, the agent read `rsh/Programs/Web/application/package.json`, launched bare Vite on port 5173 at sequence 31865, observed HTTP 200, and declared success. The browser instead threw `client-modules: window.__RSH_BOOT__ is missing or not an object` and rendered a white page.
 - In turn 4, the agent found the full `dsh web` path, rebuilt the shell, launched an unmanaged process on port 3334 at sequence 34309, and checked only that this replacement returned 200 with a boot manifest at sequence 34441. It never probed port 3081.
 - In turn 5, the user reported at sequence 34556 that 3081 already showed the new theme. Only then, at sequence 34681, did the agent inspect the existing process and remove the redundant server.
 
@@ -33,7 +33,7 @@ No change in this investigation restarted or modified the read-only 3081 and 308
 
 The Web assembly had no model-visible identity for the current GUI, canonical URL, or runtime mode. The session cwd correctly identified the user's selected Workspace, but the model treated that project directory as the application directory. No durable record related the GUI source checkout, built artifacts, serving process, target origin, and browser acceptance.
 
-The wrong startup path looked legitimate because bare Vite returned HTTP 200. `window.__DSH_BOOT__` is injected only by the full host, so transport readiness did not imply application readiness. The first regression test repeated this mistake in another form: a timeout killed Vite and satisfied a nonzero-exit assertion. Live reproduction exposed that false positive.
+The wrong startup path looked legitimate because bare Vite returned HTTP 200. `window.__RSH_BOOT__` is injected only by the full host, so transport readiness did not imply application readiness. The first regression test repeated this mistake in another form: a timeout killed Vite and satisfied a nonzero-exit assertion. Live reproduction exposed that false positive.
 
 Background process semantics were also bypassed with shell `&`, so job identity, completion notices, collection, and cleanup did not apply. Verifying port 3334 therefore proved only that a second service worked.
 

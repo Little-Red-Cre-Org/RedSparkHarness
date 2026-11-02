@@ -91,7 +91,7 @@ class MissingUnaryRule extends Error {}
 /**
  * Endpoint-named Remote mock. `dispatch` / `open` are the core; `rpc` is the
  * same core as the Connection carrier the `connection` plugin accepts through
- * `__DSH_TRANSPORT__.rpc`.
+ * `__RSH_TRANSPORT__.rpc`.
  */
 export class RemoteMock {
   /**
