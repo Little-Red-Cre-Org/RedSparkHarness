@@ -42,7 +42,7 @@ const PYTHON_RUNTIME_MANIFEST = 'rsh/Programs/SDK/python/sdk-runtime/package.jso
  * Its own manifest declares the full legacy superset, so it is retained as a leaf rather than
  * walked; the runtime closure supplies every peer it needs.
  */
-const CLI_MANIFEST_PACKAGE = '@redspark/dsh'
+const CLI_MANIFEST_PACKAGE = '@redspark/rsh'
 const CLI_MANIFEST = 'rsh/Programs/CLI/package.json'
 const NATIVE_CLI_ROOT_IMPORTS = [
   ['rsh/Programs/CLI/src/bin.ts', '@redspark/rsh-app-boot', '@redspark/rsh-launch-environment/layers'],

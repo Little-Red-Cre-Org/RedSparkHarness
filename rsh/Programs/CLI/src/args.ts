@@ -12,7 +12,7 @@
  *
  * `web` is a hardcoded alias for `--profile web`; `plugin` manages a profile's
  * plugin dependencies by forwarding to pnpm.
- * @module @redspark/dsh/args
+ * @module @redspark/rsh/args
  */
 
 import { Command, CommanderError } from 'commander'

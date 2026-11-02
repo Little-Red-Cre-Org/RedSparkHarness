@@ -10359,7 +10359,7 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1067.0
         version: 3.1067.0
-      '@redspark/dsh':
+      '@redspark/rsh':
         specifier: workspace:^
         version: link:../CLI
       '@redspark/rsh-home-paths':
@@ -10404,7 +10404,7 @@ importers:
 
   rsh/Programs/DesktopHost:
     dependencies:
-      '@redspark/dsh':
+      '@redspark/rsh':
         specifier: workspace:^
         version: link:../CLI
       '@redspark/rsh-client-connection':
@@ -10426,7 +10426,7 @@ importers:
 
   rsh/Programs/SDK/packages/client:
     dependencies:
-      '@redspark/dsh':
+      '@redspark/rsh':
         specifier: workspace:*
         version: link:../../../CLI
       '@redspark/rsh-home-paths':
@@ -10576,7 +10576,7 @@ importers:
       '@redspark/cosmokit':
         specifier: link:../../../../Core/vendor/cosmokit
         version: link:../../../../Core/vendor/cosmokit
-      '@redspark/dsh':
+      '@redspark/rsh':
         specifier: workspace:^
         version: link:../../../CLI
       '@redspark/rsh-agent':

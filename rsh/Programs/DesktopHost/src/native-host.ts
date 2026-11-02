@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import {
   expandNativeProfilePresets, loadNativeProfile, readNativeProfile, profileDirectoryReloadMode,
-} from '@redspark/dsh/native-profile'
+} from '@redspark/rsh/native-profile'
 import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@redspark/rsh-client-connection/native-host'
 import { createNativeDesktopAssetHandler, prepareNativeClientBundle } from '@redspark/rsh-native-web-assets'
 import type {} from '@redspark/rsh-native-web-session-controller'

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-client` lets TypeScript callers drive Harness over stdio JSON-RPC. `RedSparkHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent idles; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves all six root `subagent/external-operation` variants and their fields unchanged. `NativeExternalOperationEvent` is the canonical Engine union; `NativeExternalOperationSessionEvent` adds its Session envelope. Native Sessions reopen from durable history after a runtime restart. It resolves the same-version `@redspark/dsh` executable by default or accepts `dshBin`; it owns and reaps the child process across runs through `close()` or `await using`. Callers choose profile and launch settings.
+`dsh-sdk-client` lets TypeScript callers drive Harness over stdio JSON-RPC. `RedSparkHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent idles; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves all six root `subagent/external-operation` variants and their fields unchanged. `NativeExternalOperationEvent` is the canonical Engine union; `NativeExternalOperationSessionEvent` adds its Session envelope. Native Sessions reopen from durable history after a runtime restart. It resolves the same-version `@redspark/rsh` executable by default or accepts `dshBin`; it owns and reaps the child process across runs through `close()` or `await using`. Callers choose profile and launch settings.
 
 ## Table of Contents
 
@@ -143,7 +143,7 @@ None in the client process. Profile, patch, provider, model, and history choices
 
 These limits define when the client is a poor fit or needs special care. They are current package constraints, not a comparison with other SDK clients or a task backlog.
 
-- **No bundled-runtime resolution** — the client resolves the same-version `@redspark/dsh` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
+- **No bundled-runtime resolution** — the client resolves the same-version `@redspark/rsh` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
 - **Compatibility-profile cancellation** — compatibility profiles have no prompt-cancel method; abandoning their turn means closing the runtime (see the [protocol limitations](../../../../Engine/subagent/sdk-protocol/README.md#known-limitations-and-deferred-work)).
 - **No per-prompt result** — low-level `prompt()` returns only an enqueue receipt; high-level `run()` owns receipt-to-idle collection.
 - **No general server-initiated request API** — the only mapped request is Native `approval/request`, used by an explicitly bound SDK child approval relay; standard `native-sdk` does not install that relay.

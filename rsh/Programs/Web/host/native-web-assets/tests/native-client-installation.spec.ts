@@ -120,7 +120,7 @@ it('accepts Client packages hoisted beside the runtime in a flattened install', 
     await mkdir(project)
     await mkdir(runtime, { recursive: true })
     await mkdir(client)
-    await writeFile(join(runtime, 'package.json'), JSON.stringify({ name: '@redspark/dsh' }))
+    await writeFile(join(runtime, 'package.json'), JSON.stringify({ name: '@redspark/rsh' }))
     await writeFile(join(client, 'package.json'), JSON.stringify({
       name: 'hoisted-client', type: 'module', exports: { './native': './native.mjs' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },

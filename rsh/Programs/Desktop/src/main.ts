@@ -17,7 +17,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { desktopUserDataPath, resolveDesktopPaths } from './paths.ts'
-import { setCliPackageRoot } from '@redspark/dsh/native-profile'
+import { setCliPackageRoot } from '@redspark/rsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'

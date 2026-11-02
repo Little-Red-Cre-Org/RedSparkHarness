@@ -10,7 +10,7 @@ import { parseArgs } from 'node:util'
 import { virtualStoreDirectories } from './gen-third-party-notices.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
-const TARGET_PACKAGE = '@redspark/dsh'
+const TARGET_PACKAGE = '@redspark/rsh'
 const DEFAULT_TIMEOUT_MS = 300_000
 const TERMINATION_GRACE_MS = 1_000
 const FORCED_EXIT_TIMEOUT_MS = 5_000
@@ -488,7 +488,7 @@ export async function resolveNpmPackageLock(
 /**
  * Resolve the CLI install graph once without downloading package archives.
  * @param index - Package metadata exposed through the local registry.
- * @param targetVersion - Version of `@redspark/dsh` to install.
+ * @param targetVersion - Version of `@redspark/rsh` to install.
  * @param timeoutMs - Hard wall-clock limit for the npm child process.
  * @returns Timing and registry-request observations.
  */

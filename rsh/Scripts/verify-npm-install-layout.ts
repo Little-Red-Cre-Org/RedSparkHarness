@@ -11,7 +11,7 @@ import {
   type RegistryIndex,
 } from './benchmark-npm-resolution.ts'
 
-const RSH_PACKAGE = '@redspark/dsh'
+const RSH_PACKAGE = '@redspark/rsh'
 const CORDIS_PACKAGE = '@redspark/cordis'
 const SDK_CLIENT_PACKAGE = '@redspark/rsh-sdk-client'
 const NESTED_DSH_ALIAS = 'dsh-previous'

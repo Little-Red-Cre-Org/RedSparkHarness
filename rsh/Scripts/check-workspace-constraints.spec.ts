@@ -201,9 +201,9 @@ describe('dsh family version coherence', () => {
 
   it('rejects the root-named CLI app on a stale shared version', () => {
     expect(checkDshFamilyVersion(
-      { name: '@redspark/dsh', version: '0.1.2-alpha.5' },
+      { name: '@redspark/rsh', version: '0.1.2-alpha.5' },
       '0.1.2-rc.1',
-    )).toBe('@redspark/dsh: package.json version must match root version 0.1.2-rc.1')
+    )).toBe('@redspark/rsh: package.json version must match root version 0.1.2-rc.1')
   })
 
   it('accepts a manifest carrying the shared version', () => {
@@ -270,7 +270,7 @@ describe('Cordis peer classification', () => {
     {
       name: 'application distribution and ordinary schema dependency',
       manifests: [
-        { dir: 'rsh/Programs/CLI', manifest: { name: '@redspark/dsh' } },
+        { dir: 'rsh/Programs/CLI', manifest: { name: '@redspark/rsh' } },
         {
           dir: 'rsh/Programs/Web/api/native-web-session-controller',
           manifest: {
@@ -335,7 +335,7 @@ describe('Cordis peer classification', () => {
       dir: 'rsh/Programs/SDK/packages/client',
       manifest: {
         name: '@redspark/rsh-sdk-client',
-        dependencies: { '@redspark/dsh': 'workspace:*' },
+        dependencies: { '@redspark/rsh': 'workspace:*' },
         peerDependencies: {
           '@redspark/rsh-llm': 'workspace:^',
           '@redspark/rsh-sdk-protocol': 'workspace:^',

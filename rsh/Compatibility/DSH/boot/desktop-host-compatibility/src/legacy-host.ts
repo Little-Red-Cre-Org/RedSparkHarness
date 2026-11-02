@@ -33,7 +33,7 @@ function isProjectPath(projectDir: string, target: string): boolean {
 }
 
 function desktopPatches(runtimeDir: string, projectDir: string, allowLinkedPackages: boolean): PatchOptions[] {
-  const dshRoot = dirname(packageManifestPath(runtimeDir, '@redspark/dsh'))
+  const dshRoot = dirname(packageManifestPath(runtimeDir, '@redspark/rsh'))
   const profile = loadProfileDirectory('dsh desktop', projectDir, join(dshRoot, 'package.json'))
   for (const layer of profile.layers) {
     if (!allowLinkedPackages && !isProjectPath(projectDir, layer.packageDir) && !isProjectPath(runtimeDir, layer.packageDir)) {

@@ -9,7 +9,7 @@ import { once } from 'node:events'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { profileDirectoryRuntime } from '@redspark/dsh/native-profile'
+import { profileDirectoryRuntime } from '@redspark/rsh/native-profile'
 import type { DesktopHostRuntime } from './runtime.ts'
 import { openDesktopHostPipes } from './pipes.ts'
 import {

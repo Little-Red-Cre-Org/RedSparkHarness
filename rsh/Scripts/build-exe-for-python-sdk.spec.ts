@@ -88,7 +88,7 @@ describe('Python runtime executable builder CLI', () => {
     expect(cliManifest.dependencies).toHaveProperty('@redspark/rsh-subprocess-local')
     expect(cliManifest.devDependencies).not.toHaveProperty('@redspark/rsh-subprocess-local')
     expect(runtimeManifest.dependencies).toHaveProperty('@redspark/rsh-subprocess-local')
-    expect(bootstrap).toContain("import('@redspark/dsh/lib/bin.js')")
+    expect(bootstrap).toContain("import('@redspark/rsh/lib/bin.js')")
     expect(bootstrap).toContain('await runCli()')
     expect(bootstrap).toContain("import('@redspark/rsh-subprocess-local/runner')")
     expect(bootstrap).toContain('await runSelectedSubprocessRunner(selection)')

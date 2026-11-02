@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`RedSparkHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@redspark/dsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`RedSparkHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@redspark/rsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
 
 ## 目录
 
@@ -142,7 +142,7 @@ Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessS
 
 这些限制说明本客户端何时不合适或需要特别注意。它们是当前包约束，不是与其他 SDK 客户端的对比或任务积压。
 
-- **无捆绑运行时解析**——客户端解析同版本 `@redspark/dsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
+- **无捆绑运行时解析**——客户端解析同版本 `@redspark/rsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
 - **兼容 profile 的取消限制**——兼容 profile 没有提示词取消方法；放弃其轮次意味着关闭运行时（见[协议限制](../../../../Engine/subagent/sdk-protocol/README.zh.md#known-limitations-and-deferred-work)）。
 - **没有逐提示词结果**——低层 `prompt()` 只返回入队回执；高层 `run()` 负责从回执到 idle 的收集。
 - **没有通用的服务端主动请求 API**——唯一映射的请求是 Native `approval/request`，仅供明确绑定的 SDK child approval relay 使用；标准 `native-sdk` 不安装该 relay。

@@ -71,7 +71,7 @@ describe('npm resolution benchmark', () => {
       devDependencies: { ignored: '^1.0.0' },
     })
     writeJson(root, 'rsh/Programs/CLI/package.json', {
-      name: '@redspark/dsh',
+      name: '@redspark/rsh',
       version: '0.1.0',
       dependencies: { '@redspark/rsh-child': 'workspace:^', external: '^2.0.0' },
       devDependencies: { ignored: 'workspace:^' },
@@ -84,8 +84,8 @@ describe('npm resolution benchmark', () => {
     const index = buildRegistryIndex(root)
 
     expect(index.get('external')?.get('2.0.0')).toMatchObject({ dependencies: { child: '^1.0.0' } })
-    expect(index.get('@redspark/dsh')?.get('0.1.0')).toEqual({
-      name: '@redspark/dsh',
+    expect(index.get('@redspark/rsh')?.get('0.1.0')).toEqual({
+      name: '@redspark/rsh',
       version: '0.1.0',
       dependencies: { '@redspark/rsh-child': '^0.1.0', external: '^2.0.0' },
     })
@@ -93,8 +93,8 @@ describe('npm resolution benchmark', () => {
 
   it('runs npm against the local registry without requesting an archive', async () => {
     const index: RegistryIndex = new Map([[
-      '@redspark/dsh',
-      new Map([['0.1.0', { name: '@redspark/dsh', version: '0.1.0' }]]),
+      '@redspark/rsh',
+      new Map([['0.1.0', { name: '@redspark/rsh', version: '0.1.0' }]]),
     ]])
     const result = await benchmarkNpmResolution(index, '0.1.0', 10_000)
 
@@ -106,22 +106,22 @@ describe('npm resolution benchmark', () => {
 
   it('returns npm placement for two aliased package versions without requesting archives', async () => {
     const index: RegistryIndex = new Map([[
-      '@redspark/dsh',
+      '@redspark/rsh',
       new Map([
-        ['0.1.0', { name: '@redspark/dsh', version: '0.1.0' }],
-        ['0.2.0', { name: '@redspark/dsh', version: '0.2.0' }],
+        ['0.1.0', { name: '@redspark/rsh', version: '0.1.0' }],
+        ['0.2.0', { name: '@redspark/rsh', version: '0.2.0' }],
       ]),
     ]])
 
     const result = await resolveNpmPackageLock(index, {
-      '@redspark/dsh': '0.2.0',
-      'dsh-previous': 'npm:@redspark/dsh@0.1.0',
+      '@redspark/rsh': '0.2.0',
+      'dsh-previous': 'npm:@redspark/rsh@0.1.0',
     }, 10_000)
 
     expect(result.archiveRequests).toBe(0)
-    expect(result.packageLock.packages['node_modules/@redspark/dsh']?.version).toBe('0.2.0')
+    expect(result.packageLock.packages['node_modules/@redspark/rsh']?.version).toBe('0.2.0')
     expect(result.packageLock.packages['node_modules/dsh-previous']).toMatchObject({
-      name: '@redspark/dsh',
+      name: '@redspark/rsh',
       version: '0.1.0',
     })
   })
@@ -141,8 +141,8 @@ describe('npm resolution benchmark', () => {
     process.env.npm_config_omit = 'peer'
     try {
       const index: RegistryIndex = new Map([
-        ['@redspark/dsh', new Map([['0.1.0', {
-          name: '@redspark/dsh',
+        ['@redspark/rsh', new Map([['0.1.0', {
+          name: '@redspark/rsh',
           version: '0.1.0',
           peerDependencies: { '@redspark/rsh-peer': '1.0.0' },
         }]])],
@@ -152,7 +152,7 @@ describe('npm resolution benchmark', () => {
         }]])],
       ])
 
-      const result = await resolveNpmPackageLock(index, { '@redspark/dsh': '0.1.0' }, 10_000)
+      const result = await resolveNpmPackageLock(index, { '@redspark/rsh': '0.1.0' }, 10_000)
 
       expect(result.archiveRequests).toBe(0)
       expect(result.packageLock.packages['node_modules/@redspark/rsh-peer']?.version).toBe('1.0.0')

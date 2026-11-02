@@ -19,7 +19,7 @@ import {
   type WorkspacePackageManifest,
 } from './verify-package-dependencies.ts'
 
-const TARGET_PACKAGE = '@redspark/dsh'
+const TARGET_PACKAGE = '@redspark/rsh'
 const CORDIS = '@redspark/cordis'
 
 interface Options {

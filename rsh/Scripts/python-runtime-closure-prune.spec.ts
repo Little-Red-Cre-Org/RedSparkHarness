@@ -259,10 +259,10 @@ describe('missingStagedNeighbours', () => {
 
   it('skips packages the caller excluded and neighbours outside the scope', () => {
     const nodeModules = staging({
-      '@redspark/dsh': { optionalDependencies: { '@redspark/legacy': '1' } },
+      '@redspark/rsh': { optionalDependencies: { '@redspark/legacy': '1' } },
       '@scope/presets': { dependencies: { 'third-party-payload': '1' } },
     })
 
-    expect(missingStagedNeighbours(nodeModules, ['@redspark/dsh'])).toEqual([])
+    expect(missingStagedNeighbours(nodeModules, ['@redspark/rsh'])).toEqual([])
   })
 })

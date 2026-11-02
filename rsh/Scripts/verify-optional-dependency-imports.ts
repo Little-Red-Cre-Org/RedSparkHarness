@@ -43,7 +43,7 @@ const root = resolve(import.meta.dirname, '..', '..')
 const PUBLISHED_SOURCE = /^rsh\/.+\/src\//
 
 /** The only binary whose declared legacy branches are preflighted at runtime. */
-const OPTIONAL_BINARY_PACKAGE = '@redspark/dsh'
+const OPTIONAL_BINARY_PACKAGE = '@redspark/rsh'
 
 /** How a manifest marked a dependency optional, for the violation message. */
 type OptionalKind = 'optionalDependencies' | 'peerDependenciesMeta'

@@ -49,7 +49,7 @@ function desktopRelease(): DesktopRelease {
   const version = manifestVersion(join(APP_ROOT, 'package.json'), 'desktop package')
   const dshVersion = manifestVersion(resolve(APP_ROOT, '..', '..', '..', 'package.json'), 'root dsh package')
   if (version !== dshVersion) {
-    throw new Error(`desktop runtime: Electron ${version} must bind the same version of @redspark/dsh, found ${dshVersion}`)
+    throw new Error(`desktop runtime: Electron ${version} must bind the same version of @redspark/rsh, found ${dshVersion}`)
   }
   const runtime = JSON.parse(readFileSync(join(RUNTIME_ROOT, 'versions.json'), 'utf8')) as Record<string, unknown>
   return parseDesktopRelease({

@@ -3,7 +3,7 @@
  * profile's patch layers through the include plugin's patch algorithm without
  * booting or evaluating `!!js`, with one source layer per bundle, the
  * profile's own patch file, and each `--patch` overlay.
- * @module @redspark/dsh/dump-config
+ * @module @redspark/rsh/dump-config
  */
 
 import { existsSync } from 'node:fs'

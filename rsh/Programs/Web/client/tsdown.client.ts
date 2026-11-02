@@ -58,7 +58,7 @@ function styleInjectionModule(
  * Everything else under @redspark/* is either a module-table entry
  * (external) or a leak the purity gate rejects.
  */
-export const INLINE_SAFE = /^(?:@redspark\/dsh-(?:file-reference|session|llm|tools|brand|deque|output-retention|typert-protocol|util-crypto|util-values|util-workspace-path)(?:\/|$)|@redspark\/dsh-token-meter\/client$|@redspark\/dsh-host-open-in-app\/shared$|@redspark\/dsh-agent-presets\/display$|@redspark\/dsh-spill-policy\/notice$)/
+export const INLINE_SAFE = /^(?:@redspark\/rsh-(?:file-reference|session|llm|tools|brand|deque|output-retention|typert-protocol|util-crypto|util-values|util-workspace-path)(?:\/|$)|@redspark\/rsh-token-meter\/client$|@redspark\/rsh-host-open-in-app\/shared$|@redspark\/rsh-agent-presets\/display$|@redspark\/rsh-spill-policy\/notice$)/
 
 /**
  * Vendored framework libraries: rescoped into @redspark, so the gate below
@@ -69,7 +69,7 @@ export const INLINE_SAFE = /^(?:@redspark\/dsh-(?:file-reference|session|llm|too
 const VENDORED_LIBRARY = /^@redspark\/(cosmokit|schemastery)(\/|$)/
 
 /** Generated descriptor/codec contribution with no shared runtime identity. */
-const GENERATED_REMOTE = /^@redspark\/dsh-[a-z0-9]+(?:-[a-z0-9]+)*\/remote$/
+const GENERATED_REMOTE = /^@redspark\/rsh-[a-z0-9]+(?:-[a-z0-9]+)*\/remote$/
 
 /**
  * Workspace mode replaces an empty config array with the root defaults. A

@@ -84,7 +84,7 @@ const applicationPackageDirectories = new Set([
 ])
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
-  '@redspark/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  '@redspark/rsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
   '@redspark/rsh-desktop-host': [
     'lib/*.js',
     'lib/types/**/*.d.ts',
@@ -601,7 +601,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
  */
 export function checkDshFamilyVersion(manifest: PackageManifest, expected: string | undefined): string | undefined {
   const name = manifest.name
-  if (name !== '@redspark/dsh' && name?.startsWith('@redspark/rsh-') !== true) return undefined
+  if (name !== '@redspark/rsh' && name?.startsWith('@redspark/rsh-') !== true) return undefined
   if (manifest.version !== expected) {
     return `${name}: package.json version must match root version ${expected ?? '(missing)'}`
   }

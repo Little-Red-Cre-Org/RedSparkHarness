@@ -32,7 +32,7 @@ describe('desktop package-set selection', () => {
     const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
       .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
     const available = new Map<string, PackedDesktopPackage>([
-      ['@redspark/dsh', packed('@redspark/dsh', {
+      ['@redspark/rsh', packed('@redspark/rsh', {
         dependencies: { external: '^2.0.0', '@redspark/rsh-native-consumer': '1.0.0' },
         optionalDependencies: {
           ...compatibilityEdges,
@@ -44,7 +44,7 @@ describe('desktop package-set selection', () => {
         },
       })],
       [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
-        dependencies: { '@redspark/dsh': '^1.0.0' },
+        dependencies: { '@redspark/rsh': '^1.0.0' },
         optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
       })],
       [DESKTOP_COMPATIBILITY_HOST_PACKAGE, packed(DESKTOP_COMPATIBILITY_HOST_PACKAGE, {
@@ -107,7 +107,7 @@ describe('desktop package-set selection', () => {
     ])
     const selected = selectDesktopPackageSets(available)
     expect(selected.packages.map(entry => entry.manifest.name)).toEqual([
-      '@redspark/dsh',
+      '@redspark/rsh',
       DESKTOP_HOST_PACKAGE,
       '@redspark/rsh-native-consumer',
       '@redspark/rsh-native-peer',
@@ -142,18 +142,18 @@ describe('desktop package-set selection', () => {
     const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
       .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
     const available = new Map<string, PackedDesktopPackage>([
-      ['@redspark/dsh', packed('@redspark/dsh', {
+      ['@redspark/rsh', packed('@redspark/rsh', {
         dependencies: { '@redspark/rsh-native-missing': '^1.0.0' },
         optionalDependencies: compatibilityEdges,
       })],
       [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
-        dependencies: { '@redspark/dsh': '^1.0.0' },
+        dependencies: { '@redspark/rsh': '^1.0.0' },
         optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
       })],
     ])
     expect(() => selectDesktopPackageSets(available)).toThrow(/unpacked internal package/u)
     expect(() => selectDesktopPackageSets(new Map([
-      ['@redspark/dsh', packed('@redspark/dsh')],
+      ['@redspark/rsh', packed('@redspark/rsh')],
     ]))).toThrow(/omit @redspark\/dsh-desktop-host/u)
   })
 
@@ -161,12 +161,12 @@ describe('desktop package-set selection', () => {
     const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
       .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
     const available = new Map<string, PackedDesktopPackage>([
-      ['@redspark/dsh', packed('@redspark/dsh', {
+      ['@redspark/rsh', packed('@redspark/rsh', {
         dependencies: { '@redspark/rsh-native-consumer': '1.0.0' },
         optionalDependencies: compatibilityEdges,
       })],
       [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
-        dependencies: { '@redspark/dsh': '^1.0.0' },
+        dependencies: { '@redspark/rsh': '^1.0.0' },
         optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
       })],
       [DESKTOP_COMPATIBILITY_HOST_PACKAGE, packed(DESKTOP_COMPATIBILITY_HOST_PACKAGE)],
@@ -184,7 +184,7 @@ describe('desktop package-set selection', () => {
     ])
     const selected = selectDesktopPackageSets(available)
     expect(selected.packages.map(entry => entry.manifest.name)).toEqual([
-      '@redspark/dsh',
+      '@redspark/rsh',
       DESKTOP_HOST_PACKAGE,
       '@redspark/rsh-native-consumer',
       '@redspark/rsh-native-peer',
@@ -198,12 +198,12 @@ describe('desktop package-set selection', () => {
     const compatibilityEdges = Object.fromEntries(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
       .filter(name => name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE).map(name => [name, '^1.0.0']))
     const available = new Map<string, PackedDesktopPackage>([
-      ['@redspark/dsh', packed('@redspark/dsh', {
+      ['@redspark/rsh', packed('@redspark/rsh', {
         dependencies: { '@redspark/rsh-native-consumer': '1.0.0' },
         optionalDependencies: compatibilityEdges,
       })],
       [DESKTOP_HOST_PACKAGE, packed(DESKTOP_HOST_PACKAGE, {
-        dependencies: { '@redspark/dsh': '^1.0.0' },
+        dependencies: { '@redspark/rsh': '^1.0.0' },
         optionalDependencies: { [DESKTOP_COMPATIBILITY_HOST_PACKAGE]: '^1.0.0' },
       })],
       ['@redspark/rsh-native-consumer', packed('@redspark/rsh-native-consumer', {

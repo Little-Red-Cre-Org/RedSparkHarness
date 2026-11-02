@@ -30,7 +30,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@redspark/dsh": "workspace:*",
+    "@redspark/rsh": "workspace:*",
     "@redspark/rsh-home-paths": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-sdk-runtime": "workspace:^"

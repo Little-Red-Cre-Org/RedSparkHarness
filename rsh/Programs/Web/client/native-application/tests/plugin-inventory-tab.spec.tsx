@@ -9,7 +9,7 @@ afterEach(cleanup)
 
 const inventory: NativePluginInventory = { entries: [
   { id: '8cbde858-aadc-4a3f-b4f0-1276c0ce066d', name: 'cordis-plugin-alpha', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'ready' },
-  { id: 'cc2ef3a5-110c-4f67-8b89-2a945cd5f2fc', name: 'dsh-client-tool-beta', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'failed', failure: 'activation' },
+  { id: 'cc2ef3a5-110c-4f67-8b89-2a945cd5f2fc', name: 'rsh-client-tool-beta', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'failed', failure: 'activation' },
   { id: '9a56c8ad-5877-46b2-9a7f-9ba0bd90e754', name: 'cleanup-error', scope: '05b294cc-89d7-494b-b1aa-ebb945ab3443', state: 'failed', failure: 'cleanup' },
   { id: 'cd247758-bbba-4355-bef2-e1f3b5be0a1c', name: 'gamma', scope: '734a848e-ff23-48a3-8dc4-780ff89393de', state: 'disposed' },
 ] }
@@ -59,7 +59,7 @@ it('loads and protects inventory responses while exposing scope and plugin detai
   expect(screen.queryByText('alpha')).toBeNull()
   fireEvent.click(scopeButton)
   expect(scopeButton.getAttribute('aria-expanded')).toBe('true')
-  const failedCard = screen.getByText('dsh-client-tool-beta').closest('li')!
+  const failedCard = screen.getByText('rsh-client-tool-beta').closest('li')!
   fireEvent.click(failedCard.querySelector('button')!)
   expect(within(failedCard).getByText(en.settingsPluginListFailure)).toBeTruthy()
   expect(within(failedCard).getByText(en.settingsPluginListFailureActivation)).toBeTruthy()
@@ -73,7 +73,7 @@ it('loads and protects inventory responses while exposing scope and plugin detai
   expect(screen.getByText(en.settingsPluginListEmptySearch)).toBeTruthy()
 })
 
-it.each(['CC2EF3A5', 'DSh-CLIENT-TOOL-BETA'])('filters plugin names and ids without case sensitivity: %s', async (query) => {
+it.each(['CC2EF3A5', 'rsh-client-tool-beta'])('filters plugin names and ids without case sensitivity: %s', async (query) => {
   renderTab(vi.fn<NativeSessionClient['pluginInventoryList']>(async () => inventory))
 
   await screen.findByText('alpha')
@@ -100,7 +100,7 @@ it('folds native and storage infrastructure plugins until shown or searched', as
   renderTab(vi.fn<NativeSessionClient['pluginInventoryList']>(async () => ({ entries: [
     ...inventory.entries,
     { id: 'native-1', name: '@redspark/rsh-native-agent', scope: inventory.entries[0]!.scope, state: 'ready' },
-    { id: 'storage-1', name: 'dsh-storage-local', scope: inventory.entries[0]!.scope, state: 'ready' },
+    { id: 'storage-1', name: 'rsh-storage-local', scope: inventory.entries[0]!.scope, state: 'ready' },
   ] })))
 
   expect(await screen.findByText('alpha')).toBeTruthy()

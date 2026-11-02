@@ -79,7 +79,7 @@ const FIXTURE = {
   'rsh/f/unsafe-native-types-consumer/src/types.tsx': "import '@redspark/cordis'\nexport interface NativeTypes { value: string }\n",
 
   'rsh/f/cli/package.json': JSON.stringify({
-    name: '@redspark/dsh',
+    name: '@redspark/rsh',
     version: '0.0.1',
     bin: { f: 'lib/bin.js' },
     optionalDependencies: { '@f/opt': '*' },
@@ -89,7 +89,7 @@ const FIXTURE = {
   'rsh/f/cli/src/compatibility.ts': "import { runtimeValue } from '@f/opt'\nexport const compatibility = runtimeValue\n",
 
   'rsh/f/cli-static-violation/package.json': JSON.stringify({
-    name: '@redspark/dsh',
+    name: '@redspark/rsh',
     version: '0.0.1',
     bin: { f: 'lib/bin.js' },
     optionalDependencies: { '@f/opt': '*' },

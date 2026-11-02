@@ -15,7 +15,7 @@ import ts from 'typescript'
 const SLOTS_MODULE = '@redspark/rsh-client-ui-slots'
 
 /** Cheap textual prefilter for a slot-contract merge, quote-style agnostic. */
-const MERGE_HEAD = /declare module ['"]@redspark\/dsh-client-ui-slots['"]/
+const MERGE_HEAD = /declare module ['"]@redspark\/rsh-client-ui-slots['"]/
 
 /** Cheap textual prefilter for a registration call site. */
 const REGISTER_HEAD = /\.register\(/

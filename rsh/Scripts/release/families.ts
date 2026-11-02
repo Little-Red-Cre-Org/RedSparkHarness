@@ -367,7 +367,7 @@ class DshFamily extends ReleaseFamily {
     validateTarballPayload(files, member.name)
   }
 
-  readonly installedEntry = { packageName: '@redspark/dsh', binPath: 'lib/bin.js' }
+  readonly installedEntry = { packageName: '@redspark/rsh', binPath: 'lib/bin.js' }
 }
 
 /** `rsh/Core/vendor/*`: every package keeps its own version line, so every package has its own tag. */

@@ -53,6 +53,6 @@
     "pnpm": "11.28.5",
     "tar": "^7.5.0",
     "typescript": "^6.0.3",
-    "@redspark/dsh": "workspace:^"
+    "@redspark/rsh": "workspace:^"
   }
 }

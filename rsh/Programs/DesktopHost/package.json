@@ -11,7 +11,7 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@redspark/dsh": "workspace:^",
+    "@redspark/rsh": "workspace:^",
     "@redspark/rsh-client-connection": "workspace:^",
     "@redspark/rsh-native-web-assets": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",

@@ -5,7 +5,7 @@ const selectorName = 'RSH_SUBPROCESS_RUNNER'
 const selection = process.env[selectorName]
 
 if (selection === undefined) {
-  const { runCli } = await import('@redspark/dsh/lib/bin.js')
+  const { runCli } = await import('@redspark/rsh/lib/bin.js')
   await runCli()
 } else {
   Reflect.deleteProperty(process.env, selectorName)

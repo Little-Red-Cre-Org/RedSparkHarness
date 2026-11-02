@@ -63,7 +63,7 @@ export function readStagedPackages(nodeModules: string): Map<string, StagedPacka
  * install can skip them. A packaged runtime resolves `optionalDependencies` eagerly, which is what
  * drags the legacy assembly into the Python wheel.
  */
-export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@redspark/dsh']
+export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@redspark/rsh']
 
 /**
  * Optional neighbours that are legacy assembly rather than runtime needs.

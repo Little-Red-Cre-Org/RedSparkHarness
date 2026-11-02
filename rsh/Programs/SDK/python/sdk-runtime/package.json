@@ -7,7 +7,7 @@
   "dependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/cosmokit": "workspace:^",
-    "@redspark/dsh": "workspace:^",
+    "@redspark/rsh": "workspace:^",
     "@redspark/rsh-agent": "workspace:^",
     "@redspark/rsh-agent-instructions": "workspace:^",
     "@redspark/rsh-agent-presets": "workspace:^",

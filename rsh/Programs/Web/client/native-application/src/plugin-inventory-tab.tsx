@@ -168,5 +168,5 @@ function Fact({ label, value }: { readonly label: string; readonly value: string
 
 function shortName(name: string): string {
   const unscoped = name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name
-  return unscoped.replace(/^cordis:/, '').replace(/^cordis-plugin-/, '').replace(/^dsh-(?:host-|client-)?/, '')
+  return unscoped.replace(/^cordis:/, '').replace(/^cordis-plugin-/, '').replace(/^rsh-(?:host-|client-)?/, '')
 }

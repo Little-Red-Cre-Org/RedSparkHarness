@@ -252,7 +252,7 @@ describe('verifyRuntimeClosure', () => {
     const dependencies = Object.fromEntries(plugins.map(plugin => [plugin, 'workspace:^']))
     const root = fixture({
       'rsh/Programs/CLI/package.json': {
-        name: '@redspark/dsh',
+        name: '@redspark/rsh',
         dependencies,
         optionalDependencies: { '@redspark/cordis': 'workspace:^' },
       },

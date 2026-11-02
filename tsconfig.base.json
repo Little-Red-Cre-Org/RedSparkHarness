@@ -28,7 +28,7 @@
     // not declaration path aliases, keep each package/vendor source compiled
     // under its own tsconfig boundary.
     "paths": {
-      "@redspark/dsh/native-profile": ["./rsh/Programs/CLI/src/native-profile.ts"],
+      "@redspark/rsh/native-profile": ["./rsh/Programs/CLI/src/native-profile.ts"],
       "@redspark/rsh-desktop-host/native-host": ["./rsh/Programs/DesktopHost/src/native-host.ts"],
       "@redspark/rsh-tool-todo/native": ["./rsh/Modules/Official/todo/tool-todo/src/native.ts"],
       "@redspark/rsh-plan-mode/native": ["./rsh/Modules/Official/plan/plan-mode/src/native.ts"],

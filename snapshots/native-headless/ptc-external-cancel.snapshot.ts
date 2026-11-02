@@ -20,7 +20,7 @@ const fixtureOutput = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSIO
 const installedRoot = process.env.RSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT === undefined
   ? undefined : resolve(process.env.RSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT)
 const bin = installedRoot === undefined ? join(root, 'rsh/Programs/CLI/lib/bin.js')
-  : join(installedRoot, 'node_modules/@redspark/dsh/lib/bin.js')
+  : join(installedRoot, 'node_modules/@redspark/rsh/lib/bin.js')
 const contextProbe = pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href
 const task = 'Delegate a nested task through the external child and cancel it during the nested request.'
 

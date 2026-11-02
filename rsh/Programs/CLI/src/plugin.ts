@@ -7,7 +7,7 @@
  * removed or bundle-less dependency leaves it). Reconciling by installed
  * state, not by dependency diff, means `update` activates a package that
  * gained its `dsh.bundle` declaration in a newer version.
- * @module @redspark/dsh/plugin
+ * @module @redspark/rsh/plugin
  */
 
 import { spawnSync } from 'node:child_process'

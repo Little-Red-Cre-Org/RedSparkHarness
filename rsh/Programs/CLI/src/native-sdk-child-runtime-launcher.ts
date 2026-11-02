@@ -21,7 +21,7 @@ interface CliManifest {
 }
 
 function resolveNativeSdkChildRuntime(request: NativeSdkChildRuntimeRequest, home: string, overlay: string): RuntimeProcessOptions {
-  const packageManifestPath = fileURLToPath(import.meta.resolve('@redspark/dsh/package.json'))
+  const packageManifestPath = fileURLToPath(import.meta.resolve('@redspark/rsh/package.json'))
   const packageRoot = dirname(packageManifestPath)
   const manifest = JSON.parse(readFileSync(packageManifestPath, 'utf8')) as CliManifest
   const bin = typeof manifest.bin === 'object' && manifest.bin !== null

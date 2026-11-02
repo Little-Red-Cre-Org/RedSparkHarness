@@ -35,7 +35,7 @@ export function writePackage(modules: string, name: string, fields: Record<strin
 export function runtimeFixture(
   root: string, version = '1.0.0', nodeVersion = '24.17.0', includeCompatibilityHost = false,
 ): DesktopRuntimeDescriptor {
-  const names = ['@redspark/dsh', '@redspark/rsh-desktop-host', '@redspark/rsh-client-connection',
+  const names = ['@redspark/rsh', '@redspark/rsh-desktop-host', '@redspark/rsh-client-connection',
     ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
   for (const name of names) writePackage(join(root, 'node_modules'), name, { version })
   if (includeCompatibilityHost) {
@@ -55,7 +55,7 @@ export function runtimeFixture(
     return { name, version, file, bytes: body.byteLength,
       integrity: `sha512-${createHash('sha512').update(body).digest('base64')}` }
   }
-  const packageNames = ['@redspark/dsh', '@redspark/rsh-client-connection', '@redspark/rsh-desktop-host',
+  const packageNames = ['@redspark/rsh', '@redspark/rsh-client-connection', '@redspark/rsh-desktop-host',
     ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
   const packages = packageNames.map(name => record(name, `${name.split('/').at(-1)}.tgz`))
     .sort((left, right) => left.name.localeCompare(right.name))

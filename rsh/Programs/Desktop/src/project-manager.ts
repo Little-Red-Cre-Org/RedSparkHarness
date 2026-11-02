@@ -13,7 +13,7 @@ import {
   refuseLegacyPatch, shippedNativeProfileClientComposition, shippedNativeProfileComposition,
   migrateNativeLegacyConfig, validateNativeLegacyConfig,
   type NativeProfileChildRouteProvider, type NativeProfileConfig,
-} from '@redspark/dsh/native-profile'
+} from '@redspark/rsh/native-profile'
 import { NativeScope, parseNativeEntryManifest,
   type NativeEntryManifest, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { parseNativeClientProfile, type NativeClientProfile } from '@redspark/rsh-native-web-assets/native-client'
@@ -135,7 +135,7 @@ interface NativeDesktopCandidatePreflight extends NativeDesktopPreflight {
 
 const PROJECT_NAME = '@redspark/rsh-desktop-runtime'
 const SESSION_STORAGE_PACKAGE = '@redspark/rsh-session-persistence-jsonl'
-const RSH_PACKAGE = '@redspark/dsh'
+const RSH_PACKAGE = '@redspark/rsh'
 const CORE_BUILD_PACKAGE = '@redspark/rsh-subprocess-local'
 const DESKTOP_PROFILE_BUNDLES = ['@redspark/rsh-base', '@redspark/rsh-web-app'] as const
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\nstrictDepBuilds: true\n'

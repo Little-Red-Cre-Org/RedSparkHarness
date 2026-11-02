@@ -29,7 +29,7 @@ import { capture } from '../../../Scripts/release/process.ts'
 import { tarballFiles } from '../../../Scripts/release/tarball.ts'
 import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 
-const RSH_PACKAGE = '@redspark/dsh'
+const RSH_PACKAGE = '@redspark/rsh'
 const ROOT_PACKAGES = [RSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..', '..')

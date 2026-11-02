@@ -64,7 +64,7 @@ export function resolveDshBinFromManifests(dshManifestUrl: string, clientManifes
   const bin = typeof dshManifest.bin === 'object' && dshManifest.bin !== null
     ? (dshManifest.bin as Record<string, unknown>).dsh
     : dshManifest.bin
-  if (typeof bin !== 'string' || bin === '') throw new Error('@redspark/dsh declares no dsh executable')
+  if (typeof bin !== 'string' || bin === '') throw new Error('@redspark/rsh declares no dsh executable')
   return resolve(dirname(fileURLToPath(dshManifestUrl)), bin)
 }
 
@@ -74,7 +74,7 @@ export function resolveDshBinFromManifests(dshManifestUrl: string, clientManifes
  */
 export function installedDshBin(): string {
   return resolveDshBinFromManifests(
-    import.meta.resolve('@redspark/dsh/package.json'),
+    import.meta.resolve('@redspark/rsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }
@@ -100,7 +100,7 @@ export function resolveDshNodeLaunchFromManifests(
   const sourceFiles = [sourceBin, sourceTsconfig]
   if (sourceFiles.some(path => !existsSync(path))) {
     throw new Error(
-      `@redspark/dsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
+      `@redspark/rsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
     )
   }
   const loader = options.sourceLoaderUrl ?? import.meta.resolve('tsx/esm')
@@ -116,7 +116,7 @@ export function resolveDshNodeLaunchFromManifests(
  */
 function installedDshNodeLaunch(): DshNodeLaunch {
   return resolveDshNodeLaunchFromManifests(
-    import.meta.resolve('@redspark/dsh/package.json'),
+    import.meta.resolve('@redspark/rsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }

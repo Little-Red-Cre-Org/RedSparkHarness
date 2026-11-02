@@ -38,7 +38,7 @@ describe('desktop development project', () => {
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(dependencies, '@scope'), { recursive: true })
     mkdirSync(join(dependencies, '@redspark', 'dsh'), { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"1.2.3"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/rsh","version":"1.2.3"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     writeFileSync(join(dependencies, '@redspark', 'dsh', 'package.json'), '{}\n')
@@ -64,7 +64,7 @@ describe('desktop development project', () => {
     const manifest = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>
     }
-    expect(manifest.dependencies['@redspark/dsh']).toBe('1.2.3')
+    expect(manifest.dependencies['@redspark/rsh']).toBe('1.2.3')
     expect(manifest.dependencies['@redspark/rsh-desktop-host']).toBe('1.2.3')
   })
 
@@ -77,7 +77,7 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(adapter, 'lib'), { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"1.2.3"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/rsh","version":"1.2.3"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     writeFileSync(join(adapter, 'lib', 'runtime.js'), '')
@@ -101,7 +101,7 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(dependencies, { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"2.0.0"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/rsh","version":"2.0.0"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     await expect(prepareDevelopmentProject({

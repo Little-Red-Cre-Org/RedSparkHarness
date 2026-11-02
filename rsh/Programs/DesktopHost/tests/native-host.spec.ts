@@ -33,7 +33,7 @@ async function fixture(linked: readonly string[] = [], options: {
   const workspace = join(root, 'workspace')
   await Promise.all([mkdir(project), mkdir(runtime), mkdir(cli, { recursive: true })])
   await writeFile(join(workspace, 'pnpm-workspace.yaml'), 'packages: []\n')
-  await writeFile(join(cli, 'package.json'), JSON.stringify({ name: '@redspark/dsh', version: '1.0.0', type: 'module' }))
+  await writeFile(join(cli, 'package.json'), JSON.stringify({ name: '@redspark/rsh', version: '1.0.0', type: 'module' }))
   await writeFile(join(runtime, 'package.json'), '{}')
   await mkdir(join(runtime, 'node_modules', '@redspark'), { recursive: true })
   const dshLink = join(runtime, 'node_modules', '@redspark', 'dsh')

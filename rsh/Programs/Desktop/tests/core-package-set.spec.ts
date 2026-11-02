@@ -41,7 +41,7 @@ function packageSetProject(): {
   const dshBody = Buffer.from('dsh')
   const baseBody = Buffer.from('base')
   const hostBody = Buffer.from('host')
-  const dsh = record('@redspark/dsh', 'dsh.tgz', dshBody)
+  const dsh = record('@redspark/rsh', 'dsh.tgz', dshBody)
   const base = record('@redspark/rsh-base', 'dsh-base.tgz', baseBody)
   const host = record('@redspark/rsh-desktop-host', 'dsh-desktop-host.tgz', hostBody)
   writeFileSync(join(packageDir, dsh.file), dshBody)
@@ -64,7 +64,7 @@ describe('desktop core package set', () => {
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
     expect(desktopDshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
-      '@redspark/dsh': 'file:./desktop-packages/dsh.tgz',
+      '@redspark/rsh': 'file:./desktop-packages/dsh.tgz',
       '@redspark/rsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
     })
     expect(packageSet.ignoredOptionalDependencies).toEqual([...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort())
@@ -104,19 +104,19 @@ describe('desktop core package set', () => {
   })
 
   it('rejects registry resolutions for names supplied by the local package set', () => {
-    const dsh = record('@redspark/dsh', 'dsh.tgz', Buffer.from('dsh'))
+    const dsh = record('@redspark/rsh', 'dsh.tgz', Buffer.from('dsh'))
     const host = record('@redspark/rsh-desktop-host', 'host.tgz', Buffer.from('host'))
     const packageSet = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
       ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() })
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@redspark/dsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
+        "packages:\n  '@redspark/rsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
         packageSet,
       )
     }).not.toThrow()
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@redspark/dsh@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
+        "packages:\n  '@redspark/rsh@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
     }).toThrow(/outside the local package set/u)

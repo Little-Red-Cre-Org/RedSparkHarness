@@ -149,7 +149,7 @@ describe('release families', () => {
   it('names one tag for the whole dsh family and one per vendored package', () => {
     const dsh = releaseFamily('dsh')
     const vendor = releaseFamily('vendor')
-    const cli = member('rsh/Programs/CLI', '@redspark/dsh')
+    const cli = member('rsh/Programs/CLI', '@redspark/rsh')
     const cordis = { ...member('rsh/Core/vendor/cordis', '@redspark/cordis'), version: '4.0.1' }
 
     expect(dsh.tagFor(cli)).toBe('dsh-v0.0.1')
@@ -174,7 +174,7 @@ describe('release families', () => {
 
   it('rejects a family whose members disagree on the shared version', () => {
     const dsh = releaseFamily('dsh')
-    const members = [member('rsh/Programs/CLI', '@redspark/dsh'), { ...member('rsh/Programs/Web/application', '@redspark/rsh-web-frontend'), version: '0.0.2' }]
+    const members = [member('rsh/Programs/CLI', '@redspark/rsh'), { ...member('rsh/Programs/Web/application', '@redspark/rsh-web-frontend'), version: '0.0.2' }]
 
     expect(() => { dsh.verifyVersions(members) }).toThrow(/must share one version/)
     expect(() => { dsh.verifyVersions([members[0]!]) }).not.toThrow()
@@ -338,7 +338,7 @@ describe('release families', () => {
   })
 
   it('drives the installed entry only for the family that publishes one', () => {
-    expect(releaseFamily('dsh').installedEntry).toEqual({ packageName: '@redspark/dsh', binPath: 'lib/bin.js' })
+    expect(releaseFamily('dsh').installedEntry).toEqual({ packageName: '@redspark/rsh', binPath: 'lib/bin.js' })
     expect(releaseFamily('vendor').installedEntry).toBeUndefined()
   })
 

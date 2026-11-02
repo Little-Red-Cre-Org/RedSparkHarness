@@ -23,7 +23,7 @@ export function requireCompatibilityRuntime(
       resolveOptional(specifier)
     } catch (cause: unknown) {
       throw new Error(
-        `dsh: compatibility mode requires optional packages; reinstall @redspark/dsh with optional dependencies enabled (${specifier} is unavailable)`,
+        `dsh: compatibility mode requires optional packages; reinstall @redspark/rsh with optional dependencies enabled (${specifier} is unavailable)`,
         { cause },
       )
     }

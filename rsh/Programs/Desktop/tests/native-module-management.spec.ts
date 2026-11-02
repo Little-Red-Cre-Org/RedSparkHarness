@@ -9,7 +9,7 @@ import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
 import type { NativeDesktopInstallationId, NativeDesktopScopeId } from '../src/native-module-management.ts'
 import { brandString } from '@redspark/rsh-brand'
-import { expandNativeProfilePresets, readNativeProfile } from '@redspark/dsh/native-profile'
+import { expandNativeProfilePresets, readNativeProfile } from '@redspark/rsh/native-profile'
 import { parseNativeClientProfile, prepareNativeClientProfileBundle } from '@redspark/rsh-native-web-assets/native-client'
 import { readDesktopRuntime, writeDesktopRuntime } from '../src/runtime-tree.ts'
 import type { DesktopBackendState } from '../src/backend-controller.ts'
@@ -167,13 +167,13 @@ if (command === 'add' || command === 'remove') {
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
   if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
     rmSync(${JSON.stringify(failReservedInstall)})
-    const reserved = join(modules, '@redspark/dsh')
+    const reserved = join(modules, '@redspark/rsh')
     if (existsSync(reserved)) {
       if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
       else rmSync(reserved, { recursive: true, force: true })
     }
     mkdirSync(reserved, { recursive: true })
-    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@redspark/dsh', version: '1.0.0' }))
+    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@redspark/rsh', version: '1.0.0' }))
     process.exitCode = 1
   }
 } else if (command === 'install') {
@@ -832,7 +832,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
       if (emptyRestartCalls === 1) throw new Error('New Host start failed')
       emptyProfileRestored = !existsSync(emptyLock)
         && !existsSync(join(emptyFixture.profile, 'node_modules/@fixture/new-client'))
-        && existsSync(join(emptyFixture.profile, 'node_modules/@redspark/dsh'))
+        && existsSync(join(emptyFixture.profile, 'node_modules/@redspark/rsh'))
         && !existsSync(join(emptyFixture.profile, 'node_modules/@redspark/cordis'))
         && !existsSync(join(emptyFixture.profile, 'desktop-packages-pending'))
     },
@@ -888,8 +888,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
   const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(reservedMarker, '')
-  const profileDsh = join(profile, 'node_modules', '@redspark/dsh')
-  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@redspark/dsh')
+  const profileDsh = join(profile, 'node_modules', '@redspark/rsh')
+  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@redspark/rsh')
   let oldHostRestartedAfterReservedFailure = false
   const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {

@@ -36,7 +36,7 @@ function createWorkspace(): string {
 describe('DSH package license gate', () => {
   it('checks unhyphenated CLI and dsh-prefixed package names while ignoring private root and other families', () => {
     const root = createWorkspace()
-    writeManifest(root, 'rsh/Programs/CLI/package.json', { name: '@redspark/dsh', license: 'MIT' })
+    writeManifest(root, 'rsh/Programs/CLI/package.json', { name: '@redspark/rsh', license: 'MIT' })
     writeManifest(root, 'rsh/Engine/core/agent/package.json', {
       name: '@redspark/rsh-agent',
       license: 'BSD-3-Clause',

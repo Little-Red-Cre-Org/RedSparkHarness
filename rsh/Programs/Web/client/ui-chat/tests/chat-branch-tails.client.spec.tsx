@@ -678,7 +678,7 @@ describe('MessageItem arms', () => {
       } as never}
       />,
     )
-    fireEvent.click(view.getByRole('button', { name: /^上下文注入\s*@redspark\/dsh-system-prompt$/ }))
+    fireEvent.click(view.getByRole('button', { name: /^上下文注入\s*@redspark\/rsh-system-prompt$/ }))
     const rows = [...view.container.querySelectorAll('[data-context-sections] div')].map(node => node.textContent)
     expect(rows).toEqual(['sandbox:policyworkspace-write', 'workspace/repo'])
   })

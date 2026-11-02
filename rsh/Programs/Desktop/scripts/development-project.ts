@@ -88,9 +88,9 @@ function mirrorDependencyLinks(sourceRoot: string, destinationRoot: string): voi
  */
 export async function prepareDevelopmentProject(options: DevelopmentProjectOptions): Promise<string> {
   const cliManifest = readManifest(join(options.cliDir, 'package.json'))
-  if (cliManifest.name !== '@redspark/dsh' || cliManifest.version !== options.release.version) {
+  if (cliManifest.name !== '@redspark/rsh' || cliManifest.version !== options.release.version) {
     throw new Error(
-      `desktop development: rsh/Programs/CLI must be @redspark/dsh@${options.release.version}, found `
+      `desktop development: rsh/Programs/CLI must be @redspark/rsh@${options.release.version}, found `
       + `${String(cliManifest.name)}@${String(cliManifest.version)}`,
     )
   }

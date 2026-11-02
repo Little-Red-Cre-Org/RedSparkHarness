@@ -27,7 +27,7 @@ describe('CLI Cordis compatibility preflight', () => {
         if (specifier === missing) throw new Error('missing fixture')
         return specifier
       })
-    }).toThrow(`dsh: compatibility mode requires optional packages; reinstall @redspark/dsh with optional dependencies enabled (${missing} is unavailable)`)
+    }).toThrow(`dsh: compatibility mode requires optional packages; reinstall @redspark/rsh with optional dependencies enabled (${missing} is unavailable)`)
     expect(resolved).toEqual(dependencies.slice(0, dependencies.indexOf(missing) + 1))
   })
 })

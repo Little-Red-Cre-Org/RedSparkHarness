@@ -25,7 +25,7 @@ interface FixedChildProcess {
 }
 
 function fixedChildProcess(request: NativeAcpChildRuntimeRequest, cwd: string, home: string, overlay: string): FixedChildProcess {
-  const manifestPath = fileURLToPath(import.meta.resolve('@redspark/dsh/package.json'))
+  const manifestPath = fileURLToPath(import.meta.resolve('@redspark/rsh/package.json'))
   const packageRoot = dirname(manifestPath)
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as CliManifest
   const bin = typeof manifest.bin === 'object' && manifest.bin !== null

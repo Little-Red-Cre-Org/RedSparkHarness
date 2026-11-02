@@ -1,4 +1,4 @@
-# `@redspark/dsh`
+# `@redspark/rsh`
 
 [English](README.md) | 中文
 

@@ -25,7 +25,7 @@ const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
  * CLI package that owns the executable entry. It is a closure leaf: its own manifest declares the
  * legacy superset, so the prune keeps the package without following those edges.
  */
-const CLI_PACKAGE = '@redspark/dsh'
+const CLI_PACKAGE = '@redspark/rsh'
 /**
  * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
  * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
