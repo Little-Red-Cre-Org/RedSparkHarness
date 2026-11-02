@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Core/native/system/packages/darwin-arm64/README.md
-README.md: 71cfaacc9bc442341b3a9d57389c2cb1904fbb70
-README.zh.md: 5e54c8155009b98e3336ea612535ce08e56817ae
+README.md: 2b4dff8c3b2410eaf716e6194484363455ed6a73
+README.zh.md: d04e01342536c090c7d44105f18f689fa4ec3609

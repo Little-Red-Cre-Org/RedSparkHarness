@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Compatibility/DSH/bridge/compat-fs-policy/README.md
-README.md: bdb420f123fab0a09978b87dfde1815dec35dd38
-README.zh.md: 041899436037aa920aae80347ad4fcf4cc12ffa4
+README.md: 872007c8d164e6e1b335f59bb4aa42244866f3ce
+README.zh.md: f6819df9bd33d04bbc4de3c0e53ef8bd90cc5580
