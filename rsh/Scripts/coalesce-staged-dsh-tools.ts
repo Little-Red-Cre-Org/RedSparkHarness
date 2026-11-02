@@ -47,7 +47,7 @@ type DependencyResolution = { url: string } | { error: string }
  * @param repositoryRoot - workspace root containing the package importers and lockfile.
  * @returns the number of nested package copies removed.
  */
-export async function coalesceStagedDshToolsPeer(
+export async function coalesceStagedRshToolsPeer(
   staging: string,
   repositoryRoot = REPOSITORY_ROOT,
 ): Promise<number> {

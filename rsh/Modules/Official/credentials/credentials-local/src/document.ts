@@ -2,7 +2,7 @@
 import { stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { Document, isMap, isScalar, parseDocument, type YAMLError } from 'yaml'
-import { canonicalizeWatchPath, resolveDshHome } from '@redspark/rsh-home-paths'
+import { canonicalizeWatchPath, resolveRshHome } from '@redspark/rsh-home-paths'
 import { credentialRef, parseCredentialKey, type ApiKeyRecord, type CredentialKey, type CredentialRecord, type CredentialRef } from '@redspark/rsh-credentials/native'
 
 /** Basename of the credentials document inside the harness home. */
@@ -13,7 +13,7 @@ export interface Config {
   /** Credentials document path; defaults to `.credentials.yaml` under the harness home. */
   path?: string
   /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
   /** Watcher write-settle window in milliseconds; defaults to 100. */
@@ -35,7 +35,7 @@ export interface ResolvedSpec {
  */
 export function resolveSpec(config: Config): ResolvedSpec {
   return {
-    filename: resolve(config.path ?? join(resolveDshHome(config.dshHome), CREDENTIALS_FILENAME)),
+    filename: resolve(config.path ?? join(resolveRshHome(config.rshHome), CREDENTIALS_FILENAME)),
     watch: config.watch ?? true,
     debounceMs: config.debounceMs ?? 100,
   }

@@ -14,12 +14,12 @@ function resolveConfig(input: unknown): string | undefined {
   }
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (key !== 'dshHome') throw new Error(`shell-env: unknown native configuration field ${key}`)
+    if (key !== 'rshHome') throw new Error(`shell-env: unknown native configuration field ${key}`)
   }
-  if (fields.dshHome !== undefined && typeof fields.dshHome !== 'string') {
-    throw new Error('shell-env: dshHome must be a string')
+  if (fields.rshHome !== undefined && typeof fields.rshHome !== 'string') {
+    throw new Error('shell-env: rshHome must be a string')
   }
-  return fields.dshHome
+  return fields.rshHome
 }
 
 /** Provide one scoped registry whose contributors release with their native installation. */
@@ -27,9 +27,9 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-shell-env', targets: ['host'],
   requires: [], optional: [], provides: ['shellEnv'],
   resolve(input) {
-    const dshHome = resolveConfig(input)
+    const rshHome = resolveConfig(input)
     return (context) => {
-      context.provide('shellEnv', new ShellEnvController<NativeToolExecution>(dshHome, call => call.session.header.id))
+      context.provide('shellEnv', new ShellEnvController<NativeToolExecution>(rshHome, call => call.session.header.id))
     }
   },
 }

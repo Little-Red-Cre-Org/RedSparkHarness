@@ -154,9 +154,9 @@ function contribution(
       const standing = resolvePolicy(call)
       const policy = await policyFor(call, args, standing)
       const cwd = workdir(call, args.workdir, standing)
-      const dshEnv = shellEnv.collect(call)
+      const rshEnv = shellEnv.collect(call)
       const request = {
-        command: args.command, dshEnv,
+        command: args.command, rshEnv,
         ...cwd === undefined ? {} : { workdir: cwd },
         ...args.timeoutMs === undefined ? {} : { timeoutMs: args.timeoutMs },
         ...policy === undefined ? {} : { sandboxPolicy: policy },

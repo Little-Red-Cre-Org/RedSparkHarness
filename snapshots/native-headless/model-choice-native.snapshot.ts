@@ -163,7 +163,7 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
           { id: 'app', config: { cwd: workspace, provider: 'selection-fixture', model: patch.defaultModel,
             systemPrompt: patch.systemPrompt ?? 'Read fixture.txt, then continue with the selected model.', maxSteps: 3 } },
           { id: 'fs', config: { cwd: workspace } }, { id: 'storage', config: { root: sessions, compression: 'none' } },
-          { id: 'credentials', config: { dshHome: selectedHome, watch: false } },
+          { id: 'credentials', config: { rshHome: selectedHome, watch: false } },
           { id: 'model', config: { providers: {
             'selection-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
               apiKeyEnv: 'MODEL_CHOICE_KEY', api: 'openai-completions', compat: { maxTokensField: 'max_tokens' }, models: [

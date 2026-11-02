@@ -12,7 +12,7 @@ import { existsSync, statSync } from 'node:fs'
 import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { parseArgs } from 'node:util'
-import { coalesceStagedDshToolsPeer } from './coalesce-staged-dsh-tools.ts'
+import { coalesceStagedRshToolsPeer } from './coalesce-staged-dsh-tools.ts'
 import { resolveLinuxNodePtyAddon, resolveWindowsNodePtyAddons } from './build-exe-for-python-sdk-native-pty.ts'
 import { preservePnpmWorkspaceState } from './preserve-pnpm-workspace-state.ts'
 import { installedMatching, missingStagedNeighbours, OPTIONAL_EDGES_EXCLUDED_FOR, pruneStagedClosure } from './python-runtime-closure-prune.ts'
@@ -331,7 +331,7 @@ class SingleExeBuild {
     } else {
       // Pruning already removed nested copies of anything outside the closure. Coalescing a tree that
       // still holds them requires each peer to resolve, which the pruned tree no longer guarantees.
-      const coalescedToolsCopies = await coalesceStagedDshToolsPeer(this.staging)
+      const coalescedToolsCopies = await coalesceStagedRshToolsPeer(this.staging)
       if (coalescedToolsCopies > 0) {
         console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @redspark/rsh-tools peer copies.`)
       }

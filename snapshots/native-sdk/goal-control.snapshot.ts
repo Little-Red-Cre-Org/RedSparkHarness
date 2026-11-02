@@ -281,8 +281,8 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `${controlUrl}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
   ] }))
-  const harness = new RedSparkHarness({ profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
-    dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
+  const harness = new RedSparkHarness({ profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+    rshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
   const serializeRun = (result: RunResult) => ({ finalResponse: result.finalResponse, events: result.events,

@@ -26,7 +26,7 @@ export const MAX_IMAGE_COMPRESSION_CONCURRENCY = 8
 /** Local attachment backend configuration. */
 export interface Config {
   /** Explicit harness home; omitted follows `RSH_HOME`, then `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Maximum encoded bytes accepted for one submitted image. */
   maxImageBytes?: number
   /** Maximum image count accepted in one submitted message. */
@@ -48,7 +48,7 @@ export interface Config {
 }
 
 const CONFIG_FIELDS = new Set([
-  'dshHome', 'maxImageBytes', 'maxImagesPerMessage', 'maxMessageImageBytes',
+  'rshHome', 'maxImageBytes', 'maxImagesPerMessage', 'maxMessageImageBytes',
   'maxImagePixels', 'maxImageDimension', 'normalizedImageMaxPixels',
   'normalizedImageMaxDimension', 'normalizedImageMaxBytes', 'imageCompressionConcurrency',
 ])
@@ -65,9 +65,9 @@ export function parseConfig(input: unknown): Config {
   const fields = input as Record<string, unknown>
   for (const [name, value] of Object.entries(fields)) {
     if (!CONFIG_FIELDS.has(name)) throw new Error(`attachment-local: unknown configuration field ${name}`)
-    if (name === 'dshHome') {
+    if (name === 'rshHome') {
       if (typeof value !== 'string' || value.length === 0) {
-        throw new Error('attachment-local: dshHome must be a nonempty path')
+        throw new Error('attachment-local: rshHome must be a nonempty path')
       }
     } else if (typeof value !== 'number') {
       throw new Error(`attachment-local: ${name} must be a positive integer`)

@@ -49,7 +49,7 @@ The accepted fields, at a glance:
 
 ```ts
 export interface Config {
-  dshHome?: string
+  rshHome?: string
   projectRootMarkers?: string[]
   maxBytes: number
   maxSourceBytes?: number
@@ -65,7 +65,7 @@ export interface Config {
 | `projectRootMarkers` | `['.git']` | Directory names that mark the project root |
 | `instructionFileCandidates` | `['AGENTS.md', 'CLAUDE.md']` | Base file names loaded in each project directory |
 | `localInstructionFileCandidates` | `['AGENTS.local.md', 'CLAUDE.local.md']` | Local overlay file names loaded after the base files |
-| `dshHome` | `$RSH_HOME` or `~/.dsh` | Directory containing the user-global `AGENTS.md` |
+| `rshHome` | `$RSH_HOME` or `~/.dsh` | Directory containing the user-global `AGENTS.md` |
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-agent-instructions) is the exhaustive source for every accepted field and its JSDoc.
 

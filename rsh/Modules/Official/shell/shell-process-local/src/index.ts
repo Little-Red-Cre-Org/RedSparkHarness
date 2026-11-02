@@ -164,7 +164,7 @@ export class LocalShellController implements ShellOperations {
       ...request.signal ? { signal: request.signal } : {},
       ...request.stdin !== undefined ? { stdin: request.stdin } : {},
       ...request.env !== undefined ? { env: request.env } : {},
-      ...request.dshEnv !== undefined ? { dshEnv: request.dshEnv } : {},
+      ...request.rshEnv !== undefined ? { rshEnv: request.rshEnv } : {},
       sandboxPolicy: request.sandboxPolicy,
       ...request.onOutput === undefined ? {} : { onOutput: request.onOutput },
     }
@@ -187,7 +187,7 @@ export class LocalShellController implements ShellOperations {
       },
       graceMs: this.config.graceMs,
       signal,
-      env: { ...this.dialect.envOverrides, ...spec.env, ...spec.dshEnv },
+      env: { ...this.dialect.envOverrides, ...spec.env, ...spec.rshEnv },
     }
   }
 

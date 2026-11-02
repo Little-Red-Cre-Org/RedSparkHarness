@@ -21,19 +21,19 @@ Ambient host state.
 
 it('isolates replay skill discovery from every ambient host root', async () => {
   const ambient = await mkdtemp(join(tmpdir(), 'dsh-web-ambient-skills-'))
-  const dshHome = join(ambient, 'dsh-home')
+  const rshHome = join(ambient, 'dsh-home')
   const agentsHome = join(ambient, 'agents-home')
   const bundled = join(ambient, 'bundled')
   await Promise.all([
-    writeSkill(join(dshHome, 'skills'), 'ambient-dsh'),
+    writeSkill(join(rshHome, 'skills'), 'ambient-dsh'),
     writeSkill(join(agentsHome, 'skills'), 'ambient-agents'),
     writeSkill(bundled, 'ambient-bundled'),
   ])
 
-  const originalDshHome = process.env.RSH_HOME
+  const originalRshHome = process.env.RSH_HOME
   const originalAgentsHome = process.env.RSH_AGENTS_HOME
   const originalBundled = process.env.RSH_BUNDLED_SKILL_DIR
-  process.env.RSH_HOME = dshHome
+  process.env.RSH_HOME = rshHome
   process.env.RSH_AGENTS_HOME = agentsHome
   process.env.RSH_BUNDLED_SKILL_DIR = bundled
   let scaffold: WebScaffold | undefined
@@ -62,8 +62,8 @@ it('isolates replay skill discovery from every ambient host root', async () => {
     try {
       await scaffold?.close()
     } finally {
-      if (originalDshHome === undefined) delete process.env.RSH_HOME
-      else process.env.RSH_HOME = originalDshHome
+      if (originalRshHome === undefined) delete process.env.RSH_HOME
+      else process.env.RSH_HOME = originalRshHome
       if (originalAgentsHome === undefined) delete process.env.RSH_AGENTS_HOME
       else process.env.RSH_AGENTS_HOME = originalAgentsHome
       if (originalBundled === undefined) delete process.env.RSH_BUNDLED_SKILL_DIR

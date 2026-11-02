@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { EntryOptions } from '@redspark/cordis-plugin-loader'
 import { applyEntryPatches, entryListSchema, type PatchOptions } from '@redspark/cordis-plugin-include'
-import { exactPackageSpecifier, parseDshClient } from '@redspark/rsh-client-modules/client'
+import { exactPackageSpecifier, parseRshClient } from '@redspark/rsh-client-modules/client'
 import * as yaml from 'js-yaml'
 import { ClientRoster, type ClientRosterRow } from './roster.ts'
 
@@ -65,7 +65,7 @@ export function bundleRoster(bundles: readonly string[], anchor: string = fileUR
     if (manifest.name !== name) {
       throw new Error(`client-test-runtime: ${manifestPath} names ${JSON.stringify(manifest.name)}, expected ${name}`)
     }
-    const declaration = parseDshClient(name, manifest.dsh?.client)
+    const declaration = parseRshClient(name, manifest.dsh?.client)
     if (declaration === undefined || declaration.platform !== 'web') continue
     if (disabled !== undefined && disabled !== null && typeof disabled !== 'boolean') {
       throw new Error(`client-test-runtime: browser row ${name} has a \`disabled\` value this reader cannot evaluate (a !!js expression)`)

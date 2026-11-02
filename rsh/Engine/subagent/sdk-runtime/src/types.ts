@@ -52,13 +52,13 @@ export type SdkApprovalHandler = (
 /** Launch and timeout options for {@link HarnessClient}. */
 export interface HarnessClientOptions {
   /** Absolute or caller-relative dsh CLI module; omitted resolves this package's same-version dependency. */
-  dshBin?: string
+  rshBin?: string
   /** Named profile serving the SDK protocol (default `sdk`). */
   profile?: string
   /** Ordered per-launch profile patches; relative paths resolve before spawn. */
   patches?: string[]
   /** Explicit Harness home for this child; relative paths resolve before spawn. */
-  dshHome?: string
+  rshHome?: string
   /** Working directory for the dsh process itself. */
   processCwd?: string
   /**
@@ -105,7 +105,7 @@ export interface RshHarnessOptions extends HarnessClientOptions {
 }
 
 /** Native Host options that retain the standard dsh launcher and fix the `native-sdk` profile. */
-export interface NativeRshHarnessOptions extends Omit<RshHarnessOptions, 'dshBin' | 'profile' | 'patches'> {}
+export interface NativeRshHarnessOptions extends Omit<RshHarnessOptions, 'rshBin' | 'profile' | 'patches'> {}
 
 /** One owned session activity interval, from enqueue receipt through idle. */
 export interface RunResult {

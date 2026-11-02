@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import type { NativeApplication, NativePlugin } from '@redspark/rsh-native-runtime'
 import { installProxyFromEnvironment } from '@redspark/rsh-http-proxy'
 import { loadLayeredEnv } from '@redspark/rsh-launch-environment/layers'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { loadNativeProfile, readNativeProfile, refuseLegacyPatch, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
 import { migrateNativeLegacyConfig } from './native-legacy-config.ts'
@@ -78,7 +78,7 @@ export async function runNativeProfile(options: {
   args: readonly string[]
   home?: string
 }): Promise<void> {
-  const home = options.home ?? resolveDshHome()
+  const home = options.home ?? resolveRshHome()
   const environment = loadLayeredEnv('dsh')
   const profileDirectory = join(home, 'profiles', options.profile)
   refuseLegacyPatch(join(profileDirectory, 'cordis.yml'))

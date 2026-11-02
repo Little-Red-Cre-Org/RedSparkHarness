@@ -152,7 +152,7 @@ function executableSourceViolations(root: string): string[] {
   return failures
 }
 
-function referencesDshCli(source: string): boolean {
+function referencesRshCli(source: string): boolean {
   return source.includes('rsh/Programs/CLI/src/bin.ts')
 }
 
@@ -175,7 +175,7 @@ function rootDemoViolations(root: string): string[] {
       continue
     }
     if (policy.kind === 'dsh-direct') {
-      if (!referencesDshCli(command)) failures.push(`package.json scripts.${name}: application demo must launch rsh/Programs/CLI/src/bin.ts`)
+      if (!referencesRshCli(command)) failures.push(`package.json scripts.${name}: application demo must launch rsh/Programs/CLI/src/bin.ts`)
       if (referencesPackageEntry(command)) failures.push(`package.json scripts.${name}: application demo must not launch a package entry directly`)
       continue
     }
@@ -190,7 +190,7 @@ function rootDemoViolations(root: string): string[] {
       continue
     }
     const source = readFileSync(wrapperPath, 'utf8')
-    if (!referencesDshCli(source)) failures.push(`${wrapper}: application demo wrapper must launch rsh/Programs/CLI/src/bin.ts`)
+    if (!referencesRshCli(source)) failures.push(`${wrapper}: application demo wrapper must launch rsh/Programs/CLI/src/bin.ts`)
     if (referencesPackageEntry(source)) failures.push(`${wrapper}: application demo wrapper must not launch a package entry directly`)
   }
   return failures

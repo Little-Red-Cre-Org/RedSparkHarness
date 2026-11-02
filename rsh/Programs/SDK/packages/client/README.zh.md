@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`RedSparkHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@redspark/rsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`RedSparkHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@redspark/rsh` 可执行文件，也可接受 `rshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
 
 ## 目录
 
@@ -55,7 +55,7 @@ console.log(result.finalResponse)
 
 `HarnessClientOptions.onApprovalRequest` 通过 `(request, signal) => outcome` 处理 Native approval 问题。返回值可为 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；省略回调时会以 `unavailable` 关闭处理。关闭 client 或取消 parent 请求会中止 signal。回调迟到的结果会被忽略，runtime 会对该请求回复 `cancelled`。
 
-`@redspark/rsh-sdk-client/native` 为 Native Module 提供 `createNativeRshHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeRshHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
+`@redspark/rsh-sdk-client/native` 为 Native Module 提供 `createNativeRshHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeRshHarnessOptions` 不包含 `rshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
 
 可选的 `dsh-sdk-child` Module 会快照所选提供方配置与父 Session 实际启用的 Native Headless 内建文件权限。只有确切的父级 `write_file` 权限、`approvalRequired`、workspace-write 根，以及绑定当前 parent owner 与 turn 的 `dsh-sdk` driver callback 同时存在时，child 才获得 `write_file`；缺少该 authority 时不能新增 writer。只有这一真实 relay 组合会在私有 child profile 中安装 `ask` 策略的 Native Approval。请求、取消与单次决策都会返回既有 parent approval authority，并由它作为唯一的持久 approval 事件写入者。child 使用共享 sandbox policy 与 process-sandbox backend；backend 仍允许其临时目录语义，Windows enforcement 在适用时为 partial（部分）。launcher 会把 child 已解析的 cwd 与精确私有 home 传给 `ProcessSandbox.confineChildProcess`，因此 workspace-write profile 替换 `/tmp` 时仍能访问提供方 overlay，也不会暴露同级临时路径。除非现有策略授权覆盖该目录，否则所选 cwd 保持只读。该 profile 为 opt-in，不改变标准 `native-sdk`。
 
@@ -142,7 +142,7 @@ Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessS
 
 这些限制说明本客户端何时不合适或需要特别注意。它们是当前包约束，不是与其他 SDK 客户端的对比或任务积压。
 
-- **无捆绑运行时解析**——客户端解析同版本 `@redspark/rsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
+- **无捆绑运行时解析**——客户端解析同版本 `@redspark/rsh` 包（或调用方提供的 `rshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
 - **兼容 profile 的取消限制**——兼容 profile 没有提示词取消方法；放弃其轮次意味着关闭运行时（见[协议限制](../../../../Engine/subagent/sdk-protocol/README.zh.md#known-limitations-and-deferred-work)）。
 - **没有逐提示词结果**——低层 `prompt()` 只返回入队回执；高层 `run()` 负责从回执到 idle 的收集。
 - **没有通用的服务端主动请求 API**——唯一映射的请求是 Native `approval/request`，仅供明确绑定的 SDK child approval relay 使用；标准 `native-sdk` 不安装该 relay。

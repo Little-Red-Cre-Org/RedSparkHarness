@@ -3,13 +3,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  checkDshFamilyVersion,
+  checkRshFamilyVersion,
   checkCordisPeerPolicy,
   checkWorkspaceManifest,
   collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
-  expectedDshPackageFiles,
+  expectedRshPackageFiles,
   type WorkspaceManifest,
 } from './check-workspace-constraints.ts'
 
@@ -193,33 +193,33 @@ describe('runtime-layer constraints', () => {
 describe('dsh family version coherence', () => {
 
   it('rejects a package carrying a stale shared version', () => {
-    expect(checkDshFamilyVersion(
+    expect(checkRshFamilyVersion(
       { name: '@redspark/rsh-http-proxy', version: '0.1.2-alpha.5' },
       '0.1.2-rc.1',
     )).toBe('@redspark/rsh-http-proxy: package.json version must match root version 0.1.2-rc.1')
   })
 
   it('rejects the root-named CLI app on a stale shared version', () => {
-    expect(checkDshFamilyVersion(
+    expect(checkRshFamilyVersion(
       { name: '@redspark/rsh', version: '0.1.2-alpha.5' },
       '0.1.2-rc.1',
     )).toBe('@redspark/rsh: package.json version must match root version 0.1.2-rc.1')
   })
 
   it('accepts a manifest carrying the shared version', () => {
-    expect(checkDshFamilyVersion(
+    expect(checkRshFamilyVersion(
       { name: '@redspark/rsh-http-proxy', version: '0.1.2-rc.1' },
       '0.1.2-rc.1',
     )).toBeUndefined()
   })
 
   it('leaves other sequences to their own version lines', () => {
-    expect(checkDshFamilyVersion({ name: '@redspark/cordis', version: '4.0.1' }, '0.1.2-rc.1')).toBeUndefined()
-    expect(checkDshFamilyVersion(
+    expect(checkRshFamilyVersion({ name: '@redspark/cordis', version: '4.0.1' }, '0.1.2-rc.1')).toBeUndefined()
+    expect(checkRshFamilyVersion(
       { name: '@redspark/node-addon-system', version: '0.1.1' },
       '0.1.2-rc.1',
     )).toBeUndefined()
-    expect(checkDshFamilyVersion({ version: '0.1.2-alpha.5' }, '0.1.2-rc.1')).toBeUndefined()
+    expect(checkRshFamilyVersion({ version: '0.1.2-alpha.5' }, '0.1.2-rc.1')).toBeUndefined()
   })
 })
 
@@ -390,7 +390,7 @@ describe('Cordis peer classification', () => {
 
 describe('package payload constraints', () => {
   it('includes a runtime adapter exported as a separate bundle', () => {
-    expect(expectedDshPackageFiles({
+    expect(expectedRshPackageFiles({
       name: '@redspark/rsh-private-runtime',
       exports: {
         './runtime': {
@@ -406,7 +406,7 @@ describe('package payload constraints', () => {
   })
 
   it('includes a runtime Definition adapter exported as a separate bundle', () => {
-    expect(expectedDshPackageFiles({
+    expect(expectedRshPackageFiles({
       name: '@redspark/rsh-private-runtime-definition',
       exports: {
         './runtime': {
@@ -441,7 +441,7 @@ describe('package payload constraints', () => {
     ['@redspark/rsh-session-projection-cache', ['lib/native.js', 'lib/shared-*.js']],
     ['@redspark/rsh-native-agent', ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js']],
   ] as const)('includes native entry dependencies for %s', (name, extras) => {
-    expect(expectedDshPackageFiles({ name })).toEqual([
+    expect(expectedRshPackageFiles({ name })).toEqual([
       'lib/index.js',
       ...extras,
       'lib/types/**/*.d.ts',
@@ -449,27 +449,27 @@ describe('package payload constraints', () => {
   })
 
   it('includes the emitted Workflow type module required by its root bundle', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-workflow' })).toContain('lib/types.js')
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-workflow' })).toContain('lib/types.js')
   })
 
   it('includes the separately published Todo Client entry', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-tool-todo' })).toContain('lib/client-native.js')
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-tool-todo' })).toContain('lib/client-native.js')
   })
 
   it('keeps the Native archive bundle beside the Client entry', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-session-log-export' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-session-log-export' })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 
   it('publishes the ACP child research license with its native entries', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-acp-child' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-acp-child' })).toEqual([
       'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 
   it('includes the Native projection bundle and emitted type runtime', () => {
-    expect(expectedDshPackageFiles({
+    expect(expectedRshPackageFiles({
       name: '@redspark/rsh-session-projection',
       exports: {
         './types': {
@@ -483,19 +483,19 @@ describe('package payload constraints', () => {
   })
 
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-sandbox' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sandbox' })).toEqual([
       'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 
   it('keeps the SDK client shared chunks while requiring exact owner package files', () => {
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-sdk-client' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-client' })).toEqual([
       'lib/*.js', 'lib/types/**/*.d.ts',
     ])
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-sdk-runtime' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-runtime' })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
     ])
-    expect(expectedDshPackageFiles({ name: '@redspark/rsh-sdk-child' })).toEqual([
+    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-child' })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
     ])
   })

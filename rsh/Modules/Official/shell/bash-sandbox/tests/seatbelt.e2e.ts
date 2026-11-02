@@ -94,7 +94,7 @@ describe.skipIf(!seatbeltUsable)('bash-sandbox: real Seatbelt confinement throug
     await bash.run(bash.resolve({
       command: 'true',
       env: { BASH_ENV: hook },
-      dshEnv: {
+      rshEnv: {
         RSH_BASH_ENV_INSIDE: insideProbe,
         RSH_BASH_ENV_OUTSIDE: outsideProbe,
       },

@@ -195,13 +195,13 @@ function runStagedToolsProbe(fixture: ReturnType<typeof createStagedToolsFixture
   const probe = join(fixture.staging, 'probe.mjs')
   const helper = pathToFileURL(resolve(root, 'rsh/Scripts/coalesce-staged-dsh-tools.ts')).href
   writeFileSync(probe, `
-import { coalesceStagedDshToolsPeer } from ${JSON.stringify(helper)}
+import { coalesceStagedRshToolsPeer } from ${JSON.stringify(helper)}
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const staging = process.argv[2]
 try {
-  const removed = await coalesceStagedDshToolsPeer(staging, process.argv[3])
+  const removed = await coalesceStagedRshToolsPeer(staging, process.argv[3])
   const rootTools = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-tools/lib/index.js')).href)
   const rootNative = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-native-tools/lib/index.js')).href)
   const rootSession = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-session/lib/index.js')).href)

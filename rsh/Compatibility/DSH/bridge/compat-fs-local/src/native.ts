@@ -20,14 +20,14 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-compat-fs-local',
   targets: ['host'],
-  requires: ['compatDshRuntime'],
+  requires: ['compatRshRuntime'],
   provides: ['fs'],
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
     validateLegacyFilesystemManifest(require('@redspark/rsh-fs-local/package.json') as CompatPackageManifest)
     return async (native) => {
-      const runtime = native.require('compatDshRuntime')
+      const runtime = native.require('compatRshRuntime')
       const mount = runtime.mount('@redspark/rsh-fs-local', LegacyLocalFileSystem, config)
       native.own(() => mount.dispose())
       await mount.ready

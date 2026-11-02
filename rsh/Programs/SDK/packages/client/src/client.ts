@@ -2,11 +2,11 @@
 
 import { HarnessClient as SdkHarnessClient } from '@redspark/rsh-sdk-runtime'
 import type { HarnessClientOptions, RuntimeProcessOptions } from '@redspark/rsh-sdk-runtime'
-import { resolveDshLaunch } from './launch.ts'
+import { resolveRshLaunch } from './launch.ts'
 
 /** Low-level public SDK client using the Program-owned dsh launcher. */
 export class HarnessClient extends SdkHarnessClient {
-  constructor(options: HarnessClientOptions = {}, runtime: RuntimeProcessOptions = resolveDshLaunch(options)) {
+  constructor(options: HarnessClientOptions = {}, runtime: RuntimeProcessOptions = resolveRshLaunch(options)) {
     super(options, runtime)
   }
 }

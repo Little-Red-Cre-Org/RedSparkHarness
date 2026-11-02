@@ -29,18 +29,18 @@ Use these helpers wherever a package must agree with the rest of the harness abo
 ### Resolving the home
 
 ```ts
-import { resolveDshHome, dshHomePath, dshCachePath } from '@redspark/rsh-home-paths'
+import { resolveRshHome, rshHomePath, rshCachePath } from '@redspark/rsh-home-paths'
 
-const home = resolveDshHome()                // configured path, else $RSH_HOME, else ~/.redspark
-const settings = dshHomePath('settings')     // join one child onto the resolved home
-const cache = dshCachePath('models')         // $RSH_HOME/cache/models, default ~/.redspark/cache/models
+const home = resolveRshHome()                // configured path, else $RSH_HOME, else ~/.redspark
+const settings = rshHomePath('settings')     // join one child onto the resolved home
+const cache = rshCachePath('models')         // $RSH_HOME/cache/models, default ~/.redspark/cache/models
 ```
 
 An explicit configured path has the highest precedence, then `$RSH_HOME`, then the default `~/.redspark`. An empty or whitespace-only `$RSH_HOME` is treated as unset, so a blank override never resolves the home to the current working directory.
 
-`dshCachePath(...segments)` derives paths from the resolved home's `cache` directory. With no segments it returns the cache directory itself. Pass an initial options object, `dshCachePath({ dshHome: home }, ...segments)`, to use an explicit configured home with the same precedence and tilde expansion. It returns an absolute path without creating directories.
+`rshCachePath(...segments)` derives paths from the resolved home's `cache` directory. With no segments it returns the cache directory itself. Pass an initial options object, `rshCachePath({ rshHome: home }, ...segments)`, to use an explicit configured home with the same precedence and tilde expansion. It returns an absolute path without creating directories.
 
-`resolveDshProfileExecution(name, home)` reads the selected profile's `package.json` and returns its declared runtime and reload mode. A missing manifest selects legacy execution; an existing manifest must declare `runtime: 'native'` with `config: 'rsh.profile.json'`, or declare `bundles: [...]` for legacy execution. `runtime: 'legacy'` cannot declare native config fields. The parser reads without writing and rejects an existing manifest that declares neither runtime nor bundles. The CLI and SDK share this parser so source launch decisions match CLI startup; see the [native configuration migration reference](../../../Docs/native-config-migration.md) for the full rules.
+`resolveRshProfileExecution(name, home)` reads the selected profile's `package.json` and returns its declared runtime and reload mode. A missing manifest selects legacy execution; an existing manifest must declare `runtime: 'native'` with `config: 'rsh.profile.json'`, or declare `bundles: [...]` for legacy execution. `runtime: 'legacy'` cannot declare native config fields. The parser reads without writing and rejects an existing manifest that declares neither runtime nor bundles. The CLI and SDK share this parser so source launch decisions match CLI startup; see the [native configuration migration reference](../../../Docs/native-config-migration.md) for the full rules.
 
 ### Displaying a home
 
@@ -74,7 +74,7 @@ The package is built on one principle: all harness user data lives under one roo
 
 ### Resolution rules
 
-`resolveDshHome` reads the explicit override, then `$RSH_HOME`, then falls back to the operating-system home joined with `.redspark`. The chosen value is tilde-expanded and normalized to an absolute path; `dshHomePath` joins child segments with Node's platform path rules. `dshHomeDisplay` compares the resolved path against the default root and returns the symbolic label, so a configured home never leaks its absolute path.
+`resolveRshHome` reads the explicit override, then `$RSH_HOME`, then falls back to the operating-system home joined with `.redspark`. The chosen value is tilde-expanded and normalized to an absolute path; `rshHomePath` joins child segments with Node's platform path rules. `dshHomeDisplay` compares the resolved path against the default root and returns the symbolic label, so a configured home never leaks its absolute path.
 
 ### Canonicalization mechanics
 

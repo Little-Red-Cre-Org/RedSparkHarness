@@ -12,7 +12,7 @@ import {
 } from '@redspark/rsh-native-runtime'
 import { launchEnvironmentProvider, type LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import { loadLayeredEnv } from '@redspark/rsh-launch-environment/layers'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
 import { nativeAcpChildRuntimeLauncher } from './native-acp-child-runtime-launcher.ts'
 import {
@@ -508,7 +508,7 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
  * @returns the profile with ready preset installations and folder summaries.
  */
 export function expandNativeProfilePresets(profile: NativeProfileConfig,
-  anchors: readonly ReturnType<typeof createRequire>[], home = resolveDshHome()): Promise<NativeProfileConfig> {
+  anchors: readonly ReturnType<typeof createRequire>[], home = resolveRshHome()): Promise<NativeProfileConfig> {
   return nativeAgentPresetFolders(profile, home, anchors)
 }
 /** Read the same strict composition used by native boot, without importing plugin code. */
@@ -518,7 +518,7 @@ export function readNativeProfile(options: {
   home?: string
   profileDir?: string
 }): NativeProfileConfig {
-  const home = options.home ?? resolveDshHome()
+  const home = options.home ?? resolveRshHome()
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   const runtime = options.profileDir === undefined ? profileRuntime(options.profile, home) : profileDirectoryRuntime(profileDir)
   if (runtime !== 'native') {
@@ -554,7 +554,7 @@ export async function loadNativeProfile(options: {
   previous?: LoadedNativeProfile
   onApplication?: (application: NativeApplication) => void
 }): Promise<LoadedNativeProfile> {
-  const home = options.home ?? resolveDshHome()
+  const home = options.home ?? resolveRshHome()
   const environment = options.target === 'host' ? options.environment ?? loadLayeredEnv('dsh') : undefined
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   let profile = readNativeProfile({

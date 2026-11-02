@@ -35,7 +35,7 @@ export function buildSkillRoots(config: ResolvedConfig, projectRoot?: string): S
   roots.push(...config.customSkillDirs.map(path => ({ path, source: 'custom' as const, rank: CUSTOM_RANK })))
   if (config.includeDefaultRoots) {
     roots.push(
-      { path: join(config.dshHome, 'skills'), source: 'user-dsh', rank: USER_DSH_RANK, skipSystem: true },
+      { path: join(config.rshHome, 'skills'), source: 'user-dsh', rank: USER_DSH_RANK, skipSystem: true },
       { path: join(config.agentsHome, 'skills'), source: 'user-agents', rank: USER_AGENTS_RANK },
     )
   }

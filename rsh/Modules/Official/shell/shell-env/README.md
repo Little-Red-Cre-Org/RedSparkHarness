@@ -56,11 +56,11 @@ Contributors must declare every key they return; returning an undeclared or non-
 
 ### Choosing the Harness home
 
-The single config field picks the home directory exposed as `RSH_HOME`; the default resolution order is the `dshHome` config, then ambient `$RSH_HOME`, then `~/.dsh`.
+The single config field picks the home directory exposed as `RSH_HOME`; the default resolution order is the `rshHome` config, then ambient `$RSH_HOME`, then `~/.dsh`.
 
 | Field | Default | Meaning |
 |---|---|---|
-| `dshHome` | `$RSH_HOME`, then `~/.dsh` | Absolute Harness home exposed as `RSH_HOME` |
+| `rshHome` | `$RSH_HOME`, then `~/.dsh` | Absolute Harness home exposed as `RSH_HOME` |
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-shell-env) is the exhaustive source for every accepted field and its JSDoc.
 
@@ -96,7 +96,7 @@ This section explains the design decisions behind the registry and points at the
 
 ### Collection
 
-`collect(execution)` starts from the built-ins, adds the session id when the execution carries an agent, then merges each registered contributor's resolved values sorted by contributor name. The result is a frozen, key-sorted snapshot passed through `ShellExecRequest.dshEnv`. `list()` enumerates declarations without running resolvers, so it cannot reflect execution-dependent values.
+`collect(execution)` starts from the built-ins, adds the session id when the execution carries an agent, then merges each registered contributor's resolved values sorted by contributor name. The result is a frozen, key-sorted snapshot passed through `ShellExecRequest.rshEnv`. `list()` enumerates declarations without running resolvers, so it cannot reflect execution-dependent values.
 
 </details>
 

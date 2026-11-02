@@ -19,7 +19,7 @@ const LEGACY_PLUGINS = new Set([
 ])
 
 /** Cordis operations exposed only to Compatibility/DSH adapters. */
-export interface CompatDshRuntime {
+export interface CompatRshRuntime {
   /** Shared Cordis service and event scope for the selected DSH adapter set. */
   readonly context: Context
   /** Start one allowlisted plugin as a shared Loader entry.
@@ -29,7 +29,7 @@ export interface CompatDshRuntime {
    * @returns its activation promise and Loader-backed mutations.
    * @throws when the host is disposed, the name is unsupported or duplicate, or activation fails.
    */
-  mount(packageName: string, plugin: Plugin, config?: unknown): CompatDshMount
+  mount(packageName: string, plugin: Plugin, config?: unknown): CompatRshMount
   /** Update one entry after draining dependent Native contributions.
    * @param packageName - mounted Loader entry name.
    * @param config - replacement Cordis configuration.
@@ -70,7 +70,7 @@ export interface CompatDshRuntime {
    * @param participant - async withdrawal and restoration functions.
    * @returns a disposer that unregisters the participant.
    */
-  registerLifecycleParticipant(participant: CompatDshLifecycleParticipant): () => void
+  registerLifecycleParticipant(participant: CompatRshLifecycleParticipant): () => void
   /**
    * Coordinate observed-event forwarding so the identical event is not sent back between buses synchronously.
    * @param scope - native scope whose event is being bridged.
@@ -83,7 +83,7 @@ export interface CompatDshRuntime {
 }
 
 /** Native contributions that follow one or more Loader entries. */
-export interface CompatDshLifecycleParticipant {
+export interface CompatRshLifecycleParticipant {
   /** Withdraw exposed resources and await work admitted through them.
    * @returns when no admitted work or listener remains.
    */
@@ -95,7 +95,7 @@ export interface CompatDshLifecycleParticipant {
 }
 
 /** Native-owned Cordis entry. Register dispose with the Native context before awaiting ready. */
-export interface CompatDshMount {
+export interface CompatRshMount {
   readonly ready: Promise<void>
   /** Update this entry's config after dependent Native work drains.
    * @param config - replacement Cordis configuration.
@@ -114,7 +114,7 @@ export interface CompatDshMount {
 }
 
 declare module '@redspark/rsh-native-runtime' {
-  interface NativeServices { compatDshRuntime: CompatDshRuntime }
+  interface NativeServices { compatRshRuntime: CompatRshRuntime }
 }
 
 /** Require the verified Cordis release before creating a runtime.
@@ -150,7 +150,7 @@ export const plugin: NativePlugin = {
   name: '@redspark/rsh-compat-dsh-runtime',
   targets: ['host'],
   requires: [],
-  provides: ['compatDshRuntime'],
+  provides: ['compatRshRuntime'],
   resolve(input) {
     resolveConfig(input)
     const require = createRequire(import.meta.url)
@@ -167,7 +167,7 @@ export const plugin: NativePlugin = {
       await context.plugin(Loader)
       const loader = context.loader
       const mounts = new Map<string, MountState>()
-      const participants = new Set<CompatDshLifecycleParticipant>()
+      const participants = new Set<CompatRshLifecycleParticipant>()
       const activeObservations: { scope: object; target: object; observation: object; actor: object | undefined }[] = []
       let disposed = false
       // One Loader tree has one writer. Keep rejected operations from poisoning later entries in the queue.
@@ -180,7 +180,7 @@ export const plugin: NativePlugin = {
         return result
       }
       const withLifecycle = async <T>(operation: () => Promise<T>): Promise<T> => {
-        const paused: CompatDshLifecycleParticipant[] = []
+        const paused: CompatRshLifecycleParticipant[] = []
         const failures: unknown[] = []
         let result: T | undefined
         // The Native dependency graph registers policy before consumer bridges, so restore in dependency order.
@@ -221,7 +221,7 @@ export const plugin: NativePlugin = {
         }
       }
 
-      const runtime: CompatDshRuntime = {
+      const runtime: CompatRshRuntime = {
         context,
         mount(packageName, legacyPlugin, config) {
           if (disposed) throw new Error('compat-dsh-runtime: host is disposed')
@@ -381,7 +381,7 @@ export const plugin: NativePlugin = {
         if (failures.length === 1) throw failures[0]
         if (failures.length > 1) throw new AggregateError(failures, 'compat-dsh-runtime: Loader teardown failed')
       })
-      native.provide('compatDshRuntime', runtime)
+      native.provide('compatRshRuntime', runtime)
     }
   },
 }

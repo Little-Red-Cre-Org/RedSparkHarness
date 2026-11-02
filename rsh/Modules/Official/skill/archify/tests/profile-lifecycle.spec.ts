@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
 const probeModule = fileURLToPath(new URL('./fixtures/skill-probe.mjs', import.meta.url))
-const dshBin = join(repoRoot, 'rsh', 'Programs', 'CLI', 'src', 'bin.ts')
+const rshBin = join(repoRoot, 'rsh', 'Programs', 'CLI', 'src', 'bin.ts')
 const tsxEsm = pathToFileURL(createRequire(join(repoRoot, 'package.json')).resolve('tsx/esm')).href
 const cleanups: Array<() => Promise<unknown>> = []
 
@@ -25,7 +25,7 @@ function runCli(
   args: readonly string[],
   extraEnv: Readonly<NodeJS.ProcessEnv> = {},
 ): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, ['--import', tsxEsm, dshBin, ...args], {
+  const result = spawnSync(process.execPath, ['--import', tsxEsm, rshBin, ...args], {
     cwd,
     encoding: 'utf8',
     timeout: 90_000,

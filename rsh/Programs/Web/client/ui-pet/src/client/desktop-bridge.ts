@@ -11,5 +11,5 @@ export interface PetDesktopBridge {
  * @returns The bridge when the carrier exposes it.
  */
 export function desktopBridge(): PetDesktopBridge | undefined {
-  return (window as Window & { dshDesktop?: { pet?: PetDesktopBridge } }).dshDesktop?.pet
+  return (window as Window & { rshDesktop?: { pet?: PetDesktopBridge } }).rshDesktop?.pet
 }

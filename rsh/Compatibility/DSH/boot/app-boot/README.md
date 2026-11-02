@@ -119,7 +119,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [dsh app](../../../../Programs/CLI/README.md) — the `dsh` bin that consumes these helpers.
 - [dsh-cmdline](../cmdline/README.md) — the launcher-to-app command-line handoff the bins use.
 - [Profile bundles](../../bundle/README.md) — installable patch layers composed into `dsh --profile`.
-- [dsh-home-paths](../../../../Core/util/home-paths/README.md) — the Harness-home resolver (`resolveDshHome`).
+- [dsh-home-paths](../../../../Core/util/home-paths/README.md) — the Harness-home resolver (`resolveRshHome`).
 - [Configuration source ownership](../../../../../.agents/notes/implemented/architecture/2026-08-04-configuration-source-ownership.md) — why a discovered file may not decide bootstrap behavior.
 - [Profile plugin bundles](../../../../../.agents/notes/implemented/architecture/2026-08-05-profile-plugin-bundles.md) — the profile and bundle composition design.
 - [User-patch HMR tests](../../../../../.agents/notes/implemented/testing/2026-09-09-user-patch-hmr-test-delivery.md) — ownership of transaction behavior and native filesystem delivery.

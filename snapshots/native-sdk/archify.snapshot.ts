@@ -154,7 +154,7 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
         baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
     ] }))
 
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
       env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
       requestTimeoutMs: 20_000 }

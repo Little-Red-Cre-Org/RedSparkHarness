@@ -238,7 +238,7 @@ it('projects external child facts through both SDKs and cold-restores the native
       { id: 'policy', disabled: false },
       { id: 'file-tools', disabled: false },
     ] }))
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch, externalPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
       env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
     const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')

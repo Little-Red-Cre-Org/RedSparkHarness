@@ -56,11 +56,11 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 
 ### 选择 Harness 主目录
 
-唯一配置字段决定暴露为 `RSH_HOME` 的主目录；默认解析顺序为 `dshHome` 配置、环境变量 `$RSH_HOME`，然后是 `~/.dsh`。
+唯一配置字段决定暴露为 `RSH_HOME` 的主目录；默认解析顺序为 `rshHome` 配置、环境变量 `$RSH_HOME`，然后是 `~/.dsh`。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `dshHome` | `$RSH_HOME`，然后 `~/.dsh` | 暴露为 `RSH_HOME` 的 Harness 主目录绝对路径 |
+| `rshHome` | `$RSH_HOME`，然后 `~/.dsh` | 暴露为 `RSH_HOME` 的 Harness 主目录绝对路径 |
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-shell-env)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
@@ -96,7 +96,7 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 
 ### 收集
 
-`collect(execution)` 从内置键出发，当执行携带 agent 时加入会话 id，再按 contributor 名称排序合并每个已注册 contributor 解析出的值。结果是一个冻结、按键排序的快照，通过 `ShellExecRequest.dshEnv` 传递。`list()` 枚举声明而不运行 resolver，因此无法反映依赖执行的值。
+`collect(execution)` 从内置键出发，当执行携带 agent 时加入会话 id，再按 contributor 名称排序合并每个已注册 contributor 解析出的值。结果是一个冻结、按键排序的快照，通过 `ShellExecRequest.rshEnv` 传递。`list()` 枚举声明而不运行 resolver，因此无法反映依赖执行的值。
 
 </details>
 

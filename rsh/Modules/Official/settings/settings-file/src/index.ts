@@ -14,7 +14,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { withFileLock, writeFileAtomic } from '@redspark/rsh-atomic-write'
-import { canonicalizeWatchPath, resolveDshHome } from '@redspark/rsh-home-paths'
+import { canonicalizeWatchPath, resolveRshHome } from '@redspark/rsh-home-paths'
 import { SettingsProvider } from '@redspark/rsh-settings'
 import type { SettingsNamespace } from '@redspark/rsh-settings-definition/types'
 import { isMapLike, patchNode } from './yaml-patch.ts'
@@ -24,7 +24,7 @@ export interface Config {
   /** Settings document path; defaults to `settings.yaml` under the harness home. */
   path?: string
   /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
   /** Watcher write-settle window in milliseconds; defaults to 100. */
@@ -55,7 +55,7 @@ interface ResolvedSpec {
  * @returns the resolved file location, format, and watch behavior.
  */
 export function resolveSpec(config: Config): ResolvedSpec {
-  const filename = resolve(config.path ?? join(resolveDshHome(config.dshHome), 'settings.yaml'))
+  const filename = resolve(config.path ?? join(resolveRshHome(config.rshHome), 'settings.yaml'))
   const format = FORMATS[extname(filename)]
   if (format === undefined) {
     throw new Error(`settings-file: extension "${extname(filename)}" is not supported (use .yaml, .yml, or .json)`)
@@ -82,7 +82,7 @@ function isEEXIST(error: unknown): boolean {
 export class FileSettingsProvider extends SettingsProvider {
   static Config: z<Config> = z.object({
     path: z.string(),
-    dshHome: z.string(),
+    rshHome: z.string(),
     watch: z.boolean().default(true),
     debounceMs: z.number().min(0).default(100),
   })

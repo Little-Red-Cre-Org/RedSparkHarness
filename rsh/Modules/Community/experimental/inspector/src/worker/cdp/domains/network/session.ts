@@ -84,7 +84,7 @@ export class NetworkDomain {
         return {
           body: Buffer.from(body.bytes).toString('base64'),
           base64Encoded: true,
-          dshInspectorTruncated: body.truncated,
+          rshInspectorTruncated: body.truncated,
           ...(body.captureError === undefined ? {} : { dshInspectorCaptureError: body.captureError }),
         }
       }
@@ -92,7 +92,7 @@ export class NetworkDomain {
         const body = this.store.requestBody(params.requestId)
         return {
           postData: Buffer.from(body.bytes).toString('utf8'),
-          dshInspectorTruncated: body.truncated,
+          rshInspectorTruncated: body.truncated,
           ...(body.captureError === undefined ? {} : { dshInspectorCaptureError: body.captureError }),
         }
       }
@@ -183,7 +183,7 @@ export class NetworkDomain {
           requestId: event.requestId,
           timestamp,
           encodedDataLength: event.encodedDataLength,
-          dshInspectorTruncated: event.truncated,
+          rshInspectorTruncated: event.truncated,
         })
         this.stopRequest(session, event.requestKey)
         return

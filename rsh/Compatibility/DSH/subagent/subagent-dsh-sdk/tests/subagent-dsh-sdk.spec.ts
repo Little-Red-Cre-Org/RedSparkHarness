@@ -93,7 +93,7 @@ async function setup(fakeEnv: Record<string, string> = {}, config: Partial<sdk.C
     providerName: 'dsh-sdk',
     profile: 'sdk',
     patches: [],
-    dshHome: process.cwd(),
+    rshHome: process.cwd(),
     provider: 'fake-provider',
     model: 'fake-model',
     env: fakeEnv,
@@ -181,13 +181,13 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('resolves relative launch files at load and forwards absolute paths', async () => {
     const ctx = await setup({ FAKE_TEXT: 'explicit dsh child' }, {
-      dshBin: relative(process.cwd(), fakeRuntime),
+      rshBin: relative(process.cwd(), fakeRuntime),
       patches: [relative(process.cwd(), existingPatch)],
     })
     const run = await ctx.subagents.start('dsh-sdk', request())
     expect(text((await run.result).output)).toBe('explicit dsh child')
     expect(createdHarnessOptions[0]).toMatchObject({
-      dshBin: fakeRuntime,
+      rshBin: fakeRuntime,
       patches: [existingPatch],
     })
     await run.dispose()
@@ -423,7 +423,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       const pending = startSdkRun(request('p', controller.signal), {
         profile: 'sdk',
         patches: [],
-        dshHome: process.cwd(),
+        rshHome: process.cwd(),
         cwd: process.cwd(),
         provider: 'p',
         model: 'm',
@@ -454,7 +454,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       const pending = startSdkRun(request('p', controller.signal), {
         profile: 'sdk',
         patches: [],
-        dshHome: process.cwd(),
+        rshHome: process.cwd(),
         cwd: process.cwd(),
         provider: 'p',
         model: 'm',
@@ -539,7 +539,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       const spec: SdkRunSpec = {
         profile: 'sdk',
         patches: [],
-        dshHome: process.cwd(),
+        rshHome: process.cwd(),
         cwd: process.cwd(),
         provider: 'p',
         model: 'm',
@@ -629,7 +629,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     const start = (reason: 'error' | 'unknown-reason') => startSdkRun(request(), {
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       cwd: process.cwd(),
       provider: 'p',
       model: 'm',
@@ -668,7 +668,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
         {
           profile: 'sdk',
           patches: [],
-          dshHome: sentinel,
+          rshHome: sentinel,
           cwd: tmp,
           provider: 'p',
           model: 'm',
@@ -728,7 +728,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     const spec: SdkRunSpec = {
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       cwd: process.cwd(),
       provider: 'p',
       model: 'm',
@@ -747,7 +747,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     const spec: SdkRunSpec = {
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       cwd: process.cwd(),
       provider: 'p',
       model: 'm',
@@ -817,7 +817,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       providerName: 'sdk-hmr',
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       provider: 'p',
       model: 'm',
       env: {},
@@ -840,7 +840,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     const ctx = new Context()
     await ctx.plugin(SessionProjectionRegistry)
     await ctx.plugin(SubagentRuntime)
-    const base = { providerName: 'sdk', profile: 'sdk', patches: [], dshHome: process.cwd(), provider: 'p', model: 'm', env: {} }
+    const base = { providerName: 'sdk', profile: 'sdk', patches: [], rshHome: process.cwd(), provider: 'p', model: 'm', env: {} }
     await expect(ctx.plugin(sdk, { ...base, shutdownTimeoutMs: 0 })).rejects.toThrow('shutdownTimeoutMs must be a positive finite number')
     await expect(ctx.plugin(sdk, { ...base, disposeEofGraceMs: -1 })).rejects.toThrow('disposeEofGraceMs must be a positive finite number')
     await expect(ctx.plugin(sdk, { ...base, disposeGraceMs: Number.NaN })).rejects.toThrow('disposeGraceMs must be a positive finite number')
@@ -854,17 +854,17 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       providerName: 'sdk',
       profile: 'sdk',
       patches: [],
-      dshHome: './personal-home',
+      rshHome: './personal-home',
       provider: 'p',
       model: 'm',
       env: {},
-    })).rejects.toThrow('dshHome must be an absolute path')
+    })).rejects.toThrow('rshHome must be an absolute path')
     await ctx.fiber.dispose()
   })
 
   it.each([
-    { field: 'dshBin', override: { dshBin: './missing-dsh-bin' } },
-    { field: 'dshBin', override: { dshBin: '.' } },
+    { field: 'rshBin', override: { rshBin: './missing-dsh-bin' } },
+    { field: 'rshBin', override: { rshBin: '.' } },
     { field: 'patches[0]', override: { patches: ['./missing-child-patch.yml'] } },
   ])('rejects an invalid $field at load', async ({ field, override }) => {
     const ctx = new Context()
@@ -873,7 +873,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       providerName: 'sdk',
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       provider: 'p',
       model: 'm',
       env: {},
@@ -892,7 +892,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
         providerName: 'sdk',
         profile: 'sdk',
         patches: [],
-        dshHome: process.cwd(),
+        rshHome: process.cwd(),
         provider: 'p',
         model: 'm',
         maxTokens,
@@ -912,7 +912,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
         providerName: 'sdk',
         profile: 'sdk',
         patches: [],
-        dshHome: process.cwd(),
+        rshHome: process.cwd(),
         provider: 'p',
         model: 'm',
         maxTokens,
@@ -933,7 +933,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
       providerName: 'sdk',
       profile: 'sdk',
       patches: [],
-      dshHome: process.cwd(),
+      rshHome: process.cwd(),
       cwd: '',
       provider: 'p',
       model: 'm',

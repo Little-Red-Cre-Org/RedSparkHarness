@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount this provider when a delegation should run as a complete Harness runtime in its own process. The common path is explicit: mount the seam, mount this provider, configure `dshBin` when needed, and select the child `profile` and ordered `patches`.
+Mount this provider when a delegation should run as a complete Harness runtime in its own process. The common path is explicit: mount the seam, mount this provider, configure `rshBin` when needed, and select the child `profile` and ordered `patches`.
 
 ### When to choose it
 
@@ -38,10 +38,10 @@ The provider advertises `agentOptions: true`, with `outputSchema`/`depthLimit`/`
 | Field | Default | Meaning |
 |---|---|---|
 | `providerName` | `dsh-sdk` | Registry name on `ctx.subagents` |
-| `dshBin` | SDK dependency | Explicit dsh CLI module, resolved and checked at plugin load; omission uses the SDK dependency |
+| `rshBin` | SDK dependency | Explicit dsh CLI module, resolved and checked at plugin load; omission uses the SDK dependency |
 | `profile` | `sdk` | Named child profile |
 | `patches` | `[]` | Ordered per-launch profile patch files, resolved and checked at plugin load |
-| `dshHome` | required | Absolute isolated Harness home for every nested child process |
+| `rshHome` | required | Absolute isolated Harness home for every nested child process |
 | `cwd` | parent session cwd | Working-directory override for the child process and its SDK session |
 | `provider` | `deepseek-official` | Provider route sent in the child's `initialize` |
 | `model` | `deepseek-v4-flash` | Model sent in the child's `initialize` |
@@ -62,7 +62,7 @@ Request `agentOptions` override `provider`, `model`, and `maxTokens` independent
     providerName: dsh-sdk
     profile: sdk
     patches: ['./profiles/research-child.cordis.yml']
-    dshHome: !!js dshHomePath('children')
+    rshHome: !!js rshHomePath('children')
     maxTokens: 49152
     env:
       DEEPSEEK_API_KEY: !!js process.env.DEEPSEEK_API_KEY

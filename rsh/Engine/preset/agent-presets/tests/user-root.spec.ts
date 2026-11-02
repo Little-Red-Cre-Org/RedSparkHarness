@@ -1,8 +1,8 @@
 /**
  * The writable root is this package's own, not an assembly fact each app must
  * remember: a roster configured with only a `system` root still discovers and
- * authors into `<dshHome>/.agent-presets`, the way `dsh-skill-filesystem` owns
- * `<dshHome>/skills`. `includeUserRoot: false` is how a deployment — or a test
+ * authors into `<rshHome>/.agent-presets`, the way `dsh-skill-filesystem` owns
+ * `<rshHome>/skills`. `includeUserRoot: false` is how a deployment — or a test
  * pinning an exact roster — opts out.
  *
  * `$RSH_HOME` is repointed per test because the derived root is resolved in the

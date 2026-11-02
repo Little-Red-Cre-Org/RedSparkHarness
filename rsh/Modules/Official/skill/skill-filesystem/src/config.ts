@@ -2,7 +2,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import z from '@redspark/schemastery'
 import type Schema from '@redspark/schemastery'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import {
   DEFAULT_WATCH_MAX_PROJECTS,
   DEFAULT_WATCH_POLL_INTERVAL_MS,
@@ -17,7 +17,7 @@ export interface Config extends SkillWatchConfigInput {
   /** Whether project and user roots are included around custom roots. */
   includeDefaultRoots?: boolean
   /** RedSpark Harness config root. Defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Shared agent config root. Defaults to `$RSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string
   /** Additional skill roots scanned after project roots and before user roots. */
@@ -30,7 +30,7 @@ export interface Config extends SkillWatchConfigInput {
 export const Config: Schema<Config> = z.object({
   providerName: z.string().min(1).default('filesystem'),
   includeDefaultRoots: z.boolean().default(true),
-  dshHome: z.string(),
+  rshHome: z.string(),
   agentsHome: z.string(),
   customSkillDirs: z.array(z.string()).default([]),
   watch: z.boolean().default(true),
@@ -46,7 +46,7 @@ export const Config: Schema<Config> = z.object({
 export interface ResolvedConfig {
   readonly providerName: string
   readonly includeDefaultRoots: boolean
-  readonly dshHome: string
+  readonly rshHome: string
   readonly agentsHome: string
   readonly customSkillDirs: readonly string[]
   readonly watch: boolean
@@ -59,7 +59,7 @@ export interface ResolvedConfig {
 }
 
 const CONFIG_FIELDS = new Set([
-  'providerName', 'includeDefaultRoots', 'dshHome', 'agentsHome', 'customSkillDirs', 'watch',
+  'providerName', 'includeDefaultRoots', 'rshHome', 'agentsHome', 'customSkillDirs', 'watch',
   'watchUsePolling', 'watchStabilityThresholdMs', 'watchPollIntervalMs', 'watchMaxProjects',
   'watchFollowSymlinks', 'bundledSkillDir',
 ])
@@ -82,7 +82,7 @@ export function resolveSkillFilesystemConfig(input: unknown): ResolvedConfig {
   return {
     providerName: config.providerName ?? 'filesystem',
     includeDefaultRoots,
-    dshHome: resolveDshHome(config.dshHome),
+    rshHome: resolveRshHome(config.rshHome),
     agentsHome: resolve(config.agentsHome ?? process.env.RSH_AGENTS_HOME ?? join(homedir(), '.agents')),
     customSkillDirs: (config.customSkillDirs ?? []).map(path => resolve(path)),
     watch: config.watch ?? true,

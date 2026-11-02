@@ -26,11 +26,11 @@ declare module '@redspark/cordis' {
 
 export { ClientModuleSystem }
 export { exactPackageSpecifier, parseBootManifest, stripClientSuffix } from './manifest.ts'
-export { parseDshClient } from './dsh-client.ts'
+export { parseRshClient } from './dsh-client.ts'
 export type {
   BootManifest, BootModuleRow, BootPluginRow, ClientBootstrapModule, ClientBundleRegistration,
   ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget, ClientModuleRecord,
-  ClientModuleSystemOptions, DshWindow,
+  ClientModuleSystemOptions, RshWindow,
   WebBootEntry, WebBootGraph,
 } from './manifest.ts'
 

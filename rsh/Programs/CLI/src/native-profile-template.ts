@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { type NativeProfileConfig } from './native-profile-config.ts'
 
 const ROOT = 'root'
@@ -245,7 +245,7 @@ export function shippedNativeProfileComposition(
       { id: 'storage', plugin: '@redspark/rsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
       { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: ROOT,
-        config: { dshHome: home } },
+        config: { rshHome: home } },
       { id: 'fs', plugin: profile === 'native-sdk-dsh-child' ? '@redspark/rsh-fs-sandbox' : '@redspark/rsh-fs-local', scope: ROOT },
       { id: 'agent-instructions', plugin: '@redspark/rsh-agent-instructions', scope: ROOT,
         config: { maxBytes: 65_536 } },
@@ -379,7 +379,7 @@ export function shippedNativeProfileComposition(
       { id: 'storage', plugin: '@redspark/rsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
       { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: ROOT,
-        config: { dshHome: home } },
+        config: { rshHome: home } },
       { id: 'sandbox-policy', plugin: '@redspark/rsh-native-sandbox-policy', scope: ROOT,
         config: { mode: 'workspace-write', workspaceRoot: process.cwd() } },
       { id: 'fs', plugin: '@redspark/rsh-fs-sandbox', scope: ROOT },
@@ -408,7 +408,7 @@ export function shippedNativeProfileComposition(
       { id: 'bash-tool', plugin: windows ? '@redspark/rsh-tool-pwsh' : '@redspark/rsh-tool-bash', scope: ROOT },
       { id: 'credentials', plugin: '@redspark/rsh-credentials-local', scope: ROOT },
       { id: 'settings', plugin: '@redspark/rsh-settings-file', scope: ROOT,
-        config: { dshHome: home } },
+        config: { rshHome: home } },
       { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: ROOT,
         config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
       ...(profile === 'native-web' ? [
@@ -424,7 +424,7 @@ export function shippedNativeProfileComposition(
  * @param name - requested profile name.
  * @param home - Harness home containing the profile and Session store.
  */
-export function ensureShippedNativeProfile(name: string, home: string = resolveDshHome()): void {
+export function ensureShippedNativeProfile(name: string, home: string = resolveRshHome()): void {
   if (!isShippedNativeProfile(name)) return
   const profiles = join(home, 'profiles')
   const directory = join(profiles, name)

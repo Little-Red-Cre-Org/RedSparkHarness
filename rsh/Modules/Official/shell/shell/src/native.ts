@@ -14,7 +14,7 @@ export { RSH_ENV_PREFIX } from './types.ts'
 export type {
   ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead,
   ShellProcessStatus, ShellRunResult, ShellSandboxInfo,
-  CollectedOutput, DshEnvironment, DshEnvironmentKey,
+  CollectedOutput, RshEnvironment, RshEnvironmentKey,
 } from './types.ts'
 export { parseExitStatus } from './render.ts'
 export { canonicalShellResult } from './result.ts'

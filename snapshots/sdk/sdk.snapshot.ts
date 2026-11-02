@@ -548,14 +548,14 @@ async function runScenario(scenario: CorpusScenario): Promise<{
       .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]),
     ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : []),
   ])]
-  const dshHome = join(cwd, '.dsh')
-  initializeSdkCompatibilityProfile(dshHome, 'legacy-sdk')
+  const rshHome = join(cwd, '.dsh')
+  initializeSdkCompatibilityProfile(rshHome, 'legacy-sdk')
   if (scenario.name === 'subagent-dsh-sdk-diagnostic') {
     for (const childName of ['foreground', 'background']) {
-      initializeSdkCompatibilityProfile(join(dshHome, 'children', childName), 'sdk')
+      initializeSdkCompatibilityProfile(join(rshHome, 'children', childName), 'sdk')
     }
   }
-  const sessionsRoot = join(dshHome, 'sessions')
+  const sessionsRoot = join(rshHome, 'sessions')
   const replayFixtures = recording ? [] : await hydrateReplayFixtures(scenario, cwd)
   const fixtureContents = await Promise.all((await fixtureFiles(scenario)).map(file => readFile(file, 'utf8')))
   const primaryFixture = fixtureContents[0]
@@ -612,7 +612,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   const harness = new RedSparkHarness({
     profile: 'legacy-sdk',
     patches,
-    dshHome,
+    rshHome,
     processCwd: cwd,
     env,
     requestTimeoutMs: 110_000,
@@ -689,8 +689,8 @@ async function runScenario(scenario: CorpusScenario): Promise<{
 }
 
 /** Order logs parent-first, children by creation time (fixture layout order). */
-function orderLogs(logs: PersistedLog[], expectedCount: number, separateDshSdkChild: boolean): PersistedLog[] {
-  if (separateDshSdkChild) {
+function orderLogs(logs: PersistedLog[], expectedCount: number, separateRshSdkChild: boolean): PersistedLog[] {
+  if (separateRshSdkChild) {
     expect(logs).toHaveLength(expectedCount)
     return logs
   }

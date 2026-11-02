@@ -133,7 +133,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(alias, '.dsh'),
+      rshHome: join(alias, '.dsh'),
       agentsHome: join(alias, '.agents'),
       watch: true,
     })
@@ -175,7 +175,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchPollIntervalMs: 10,
@@ -208,7 +208,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchUsePolling: true,
@@ -249,7 +249,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchPollIntervalMs: 10,
@@ -296,7 +296,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchPollIntervalMs: 10,
@@ -324,7 +324,7 @@ describe('skill-filesystem watcher failures', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchPollIntervalMs: 10,
@@ -361,7 +361,7 @@ describe('skill-filesystem watcher failures', () => {
     let provider!: InstanceType<typeof SkillFileSystem.FileSystemSkillProvider>
     const disposeProvider = ctx.skills.registerProvider((control) => {
       provider = new SkillFileSystem.FileSystemSkillProvider(ctx, control, {
-        dshHome: join(home, '.dsh'),
+        rshHome: join(home, '.dsh'),
         agentsHome: join(home, '.agents'),
         watch: true,
         watchPollIntervalMs: 10,
@@ -398,7 +398,7 @@ describe('skill-filesystem watcher failures', () => {
     let provider!: InstanceType<typeof SkillFileSystem.FileSystemSkillProvider>
     const disposeProvider = ctx.skills.registerProvider((control) => {
       provider = new SkillFileSystem.FileSystemSkillProvider(ctx, control, {
-        dshHome: join(home, '.dsh'),
+        rshHome: join(home, '.dsh'),
         agentsHome: join(home, '.agents'),
         watch: true,
         watchPollIntervalMs: 10,
@@ -429,7 +429,7 @@ describe('skill-filesystem watcher failures', () => {
     let provider!: InstanceType<typeof SkillFileSystem.FileSystemSkillProvider>
     const disposeProvider = ctx.skills.registerProvider((control) => {
       provider = new SkillFileSystem.FileSystemSkillProvider(ctx, control, {
-        dshHome: join(home, '.dsh'),
+        rshHome: join(home, '.dsh'),
         agentsHome: join(home, '.agents'),
         watch: true,
         watchPollIntervalMs: 10,

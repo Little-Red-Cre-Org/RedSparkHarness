@@ -203,7 +203,7 @@ export function desktopCorePackageOverrides(packageSet: DesktopCorePackageSet): 
 }
 
 /** Return the local direct dependency spec for the dsh package. */
-export function desktopDshPackageSpec(packageSet: DesktopCorePackageSet): string {
+export function desktopRshPackageSpec(packageSet: DesktopCorePackageSet): string {
   const record = packageSet.packages.find(entry => entry.name === RSH_PACKAGE)
   if (record === undefined) throw new Error(`desktop package set: missing ${RSH_PACKAGE}`)
   return desktopCorePackageSpec(record)

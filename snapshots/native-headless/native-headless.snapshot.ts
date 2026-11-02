@@ -48,7 +48,7 @@ it('executes and restores a native profile through the published dsh command', a
     } },
     { id: 'tmux-context', plugin: '@redspark/rsh-native-tmux-context', scope: 'root', disabled: true },
   )
-  composition.installations.push({ id: 'agent-instructions', plugin: '@redspark/rsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
+  composition.installations.push({ id: 'agent-instructions', plugin: '@redspark/rsh-agent-instructions', scope: 'root', config: { rshHome: home, maxBytes: 65_536 } })
   writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify(composition))
   copyFileSync(join(scenario, 'workspace/AGENTS.md'), join(workspace, 'AGENTS.md'))
   mkdirSync(join(modules, '@redspark'), { recursive: true })

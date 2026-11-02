@@ -35,7 +35,7 @@ Choose it when a deployment restarts sessions and needs durable projection value
 
 Both throttle fields are required — flush cadence is a deployment choice with no universally correct value:
 
-The cache opens its domain through the storage stack, so base mounts `storage`, `storage-json` (root `dshHomePath('storages')`), and `storage-domain` (`backend: json`) before it:
+The cache opens its domain through the storage stack, so base mounts `storage`, `storage-json` (root `rshHomePath('storages')`), and `storage-domain` (`backend: json`) before it:
 
 ```yaml
 - id: session-projection-cache

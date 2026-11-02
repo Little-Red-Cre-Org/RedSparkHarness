@@ -38,8 +38,8 @@ async function run(root: string): Promise<ProfileReport> {
     RSH_AGENTS_HOME: join(home, 'agents'),
   }
   const harness = new RedSparkHarness({
-    dshBin: join(import.meta.dirname, '..', '..', '..', 'apps', 'cli', 'lib', 'bin.js'),
-    profile: 'sdk-minimal', dshHome: home, processCwd: cwd, cwd,
+    rshBin: join(import.meta.dirname, '..', '..', '..', 'apps', 'cli', 'lib', 'bin.js'),
+    profile: 'sdk-minimal', rshHome: home, processCwd: cwd, cwd,
     provider: 'bench', model: 'bench', patches: [patch], env,
     initializeTimeoutMs: 15_000, requestTimeoutMs: 15_000,
   })

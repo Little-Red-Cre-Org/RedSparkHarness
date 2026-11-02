@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { NpmPackageLock, RegistryIndex } from './benchmark-npm-resolution.ts'
 import {
-  assertDualDshInstallLayout,
-  buildDualDshRegistry,
+  assertDualRshInstallLayout,
+  buildDualRshRegistry,
 } from './verify-npm-install-layout.ts'
 
 function validLayout(): NpmPackageLock {
@@ -99,7 +99,7 @@ describe('npm install layout verifier', () => {
       }]])],
     ])
 
-    const dual = buildDualDshRegistry(index, '0.1.1-rc.2')
+    const dual = buildDualRshRegistry(index, '0.1.1-rc.2')
 
     expect([...dual.get('@redspark/rsh')?.keys() ?? []]).toEqual(['0.1.0', '0.2.0'])
     expect(dual.get('@redspark/rsh')?.get('0.1.0')?.dependencies).toEqual({
@@ -110,9 +110,9 @@ describe('npm install layout verifier', () => {
       '@redspark/rsh': '0.1.0',
     })
     expect(dual.get('@redspark/cordis')).toBe(index.get('@redspark/cordis'))
-    expect(assertDualDshInstallLayout(validLayout())).toEqual({
+    expect(assertDualRshInstallLayout(validLayout())).toEqual({
       dshPackagesPerVersion: 4,
-      checkedDshEdges: 10,
+      checkedRshEdges: 10,
     })
   })
 
@@ -126,7 +126,7 @@ describe('npm install layout verifier', () => {
       'node_modules/dsh-previous/node_modules/react-dom': { version: '18.3.1' },
     }
 
-    expect(() => assertDualDshInstallLayout({ ...layout, packages })).toThrow(
+    expect(() => assertDualRshInstallLayout({ ...layout, packages })).toThrow(
       /expected one shared react[\s\S]*expected one shared react-dom[\s\S]*range \^18\.2\.0 does not include 17\.0\.0/,
     )
   })
@@ -136,7 +136,7 @@ describe('npm install layout verifier', () => {
     const packages = { ...layout.packages }
     Reflect.deleteProperty(packages, 'node_modules/dsh-previous/node_modules/@redspark/rsh-leaf')
 
-    expect(() => assertDualDshInstallLayout({ ...layout, packages })).toThrow(
+    expect(() => assertDualRshInstallLayout({ ...layout, packages })).toThrow(
       'node_modules/dsh-previous/node_modules/@redspark/rsh-child: dependencies '
       + '@redspark/rsh-leaf resolves to node_modules/@redspark/rsh-leaf@0.2.0, expected 0.1.0',
     )
@@ -149,7 +149,7 @@ describe('npm install layout verifier', () => {
       'node_modules/dsh-previous/node_modules/@redspark/cordis': { version: '4.0.1' },
     }
 
-    expect(() => assertDualDshInstallLayout({ ...layout, packages })).toThrow(
+    expect(() => assertDualRshInstallLayout({ ...layout, packages })).toThrow(
       'expected one shared @redspark/cordis',
     )
   })

@@ -208,8 +208,8 @@ it('replays a native SDK turn with exact model input, output and durable Session
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
-  const harness = new RedSparkHarness({ dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
-    dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
+  const harness = new RedSparkHarness({ rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+    rshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
   try {

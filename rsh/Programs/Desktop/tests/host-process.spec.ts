@@ -76,7 +76,7 @@ afterEach(() => {
 describe('desktop host process', () => {
   it('reports a fatal event after readiness once and stops the child', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: '1.0.0' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: '1.0.0' })
 function onRequestFrame(frame) {
   if (frame.type === 1) process.send({ type: 'fatal', errorType: 'ValidationError', path: ['providers', 0, 'headers', 0], rule: 'schema' })
 }
@@ -104,7 +104,7 @@ function onRequestFrame(frame) {
 
   it('loads the resource entry with a separate profile and scrubs Node resolution overrides', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'split-runtime' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'split-runtime' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -126,7 +126,7 @@ function onRequestFrame(frame) {
   it('carries raw request and response bytes and shuts the child down cleanly', async () => {
     const project = projectWithHost(`
 const bodies = new Map()
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: process.env.NODE_OPTIONS ?? 'clean' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: process.env.NODE_OPTIONS ?? 'clean' })
 function onRequestFrame(frame) {
   if (frame.type === 1) {
     const request = JSON.parse(frame.payload)
@@ -148,7 +148,7 @@ function answer(streamId) {
     process.env.NODE_OPTIONS = '--require /path/that-must-not-reach-the-child'
     const host = new DesktopHostProcess(process.execPath, project, project)
     try {
-      await expect(host.start()).resolves.toMatchObject({ dshVersion: 'clean' })
+      await expect(host.start()).resolves.toMatchObject({ rshVersion: 'clean' })
       const response = await host.fetch(new Request('dsh-app://app/example', { method: 'POST', body: 'request' }))
       expect(response.status).toBe(200)
       await expect(response.text()).resolves.toBe('desktop:request')
@@ -163,7 +163,7 @@ function answer(streamId) {
   it('streams a large binary response in bounded raw frames', async () => {
     const size = 2 * 1024 * 1024
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'large-response' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'large-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -186,7 +186,7 @@ function onRequestFrame(frame) {
 
   it('stops an unfinished upload when the Host completes its response early', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'early-response' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'early-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 2) return
   responseStart(frame.streamId)
@@ -216,7 +216,7 @@ function onRequestFrame(frame) {
 
   it('stops a ready Host without reporting the teardown as a failure', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'clean-stop' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'clean-stop' })
 function onRequestFrame() {}
 `)
     const failures: Error[] = []
@@ -233,7 +233,7 @@ function onRequestFrame() {}
 
   it('still reports a child that fails while the teardown is in progress', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'crash-during-stop' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'crash-during-stop' })
 function onRequestFrame() {}
 process.on('message', message => { if (message.type === 'shutdown') process.exit(7) })
 `)
@@ -250,7 +250,7 @@ process.on('message', message => { if (message.type === 'shutdown') process.exit
 
   it('ignores a response end that arrives after the renderer cancels its stream', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'cancel-race' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'cancel-race' })
 const urls = new Map()
 function onRequestFrame(frame) {
   if (frame.type === 1) {
@@ -280,7 +280,7 @@ function onRequestFrame(frame) {
 
   it('rejects invalid response framing and a clean exit before readiness', async () => {
     const invalid = new DesktopHostProcess(process.execPath, projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 4, dshVersion: 'invalid-frame' })
+process.send({ type: 'ready', protocolVersion: 4, rshVersion: 'invalid-frame' })
 function onRequestFrame(frame) {
   if (frame.type === 1) responsePipe.write(Buffer.alloc(13))
 }

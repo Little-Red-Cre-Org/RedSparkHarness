@@ -17,7 +17,7 @@ import type {
   RuntimeProcessOptions,
 } from '@redspark/rsh-sdk-runtime'
 import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
-import { resolveDshLaunch } from './launch.ts'
+import { resolveRshLaunch } from './launch.ts'
 import type { HarnessClient } from './client.ts'
 import { HarnessClient as ProgramHarnessClient } from './client.ts'
 
@@ -65,7 +65,7 @@ export function createNativeRshHarness(
     ...options.maxSteps === undefined ? {} : { maxSteps: options.maxSteps },
     ...options.allowedTools === undefined ? {} : { allowedTools: options.allowedTools },
     ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot },
-    ...options.dshHome === undefined ? {} : { dshHome: options.dshHome },
+    ...options.rshHome === undefined ? {} : { rshHome: options.rshHome },
     ...options.processCwd === undefined ? {} : { processCwd: options.processCwd },
     ...options.env === undefined ? {} : { env: options.env },
     ...options.initializeTimeoutMs === undefined ? {} : { initializeTimeoutMs: options.initializeTimeoutMs },
@@ -75,7 +75,7 @@ export function createNativeRshHarness(
     ...options.disposeGraceMs === undefined ? {} : { disposeGraceMs: options.disposeGraceMs },
     ...options.onApprovalRequest === undefined ? {} : { onApprovalRequest: options.onApprovalRequest },
   }
-  const runtime = resolveDshLaunch(launch)
+  const runtime = resolveRshLaunch(launch)
   return new RedSparkHarness(launch, () => createNativeHarnessClient(launch, childConnection, runtime))
 }
 

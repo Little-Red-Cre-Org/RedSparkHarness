@@ -30,7 +30,7 @@ const SPAWN_TIMEOUT_MS = 60_000
 // The release version, including a prerelease such as 0.0.1-rc.1: `--version`
 // prints what this manifest carries, so no test may pin it to a literal.
 const cliVersion = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
-const dshBin = join(repoRoot, 'rsh/Programs/CLI/lib/bin.js')
+const rshBin = join(repoRoot, 'rsh/Programs/CLI/lib/bin.js')
 const invalidProvider = fileURLToPath(new URL('./fixtures/invalid-provider.native.json', import.meta.url))
 
 async function runBuiltBin(
@@ -50,7 +50,7 @@ async function runBuiltBin(
     Object.entries({ ...process.env, ...env, NODE_OPTIONS: nodeOptions })
       .filter((entry): entry is [string, string] => entry[1] !== undefined),
   )
-  const child = execa(process.execPath, [dshBin, ...args], {
+  const child = execa(process.execPath, [rshBin, ...args], {
     input: '',
     timeout: timeoutMs,
     killSignal: 'SIGKILL',
@@ -461,7 +461,7 @@ function startNativeProfileReload(fixture: ReturnType<typeof createNativeProfile
   const nodeOptions = [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning']
     .filter((value): value is string => value !== undefined && value.length > 0)
     .join(' ')
-  return execa(process.execPath, [dshBin, '--profile', 'native-reload', '--patch', fixture.patch], {
+  return execa(process.execPath, [rshBin, '--profile', 'native-reload', '--patch', fixture.patch], {
     cwd: fixture.home,
     reject: false,
     timeout: SPAWN_TIMEOUT_MS,
@@ -482,7 +482,7 @@ function startNativeProfileReload(fixture: ReturnType<typeof createNativeProfile
 }
 
 function startProfileLifecycle(fixture: ProfileLifecycleFixture, args: readonly string[] = []) {
-  return execa(process.execPath, [dshBin, '--profile', 'lifecycle', ...args], {
+  return execa(process.execPath, [rshBin, '--profile', 'lifecycle', ...args], {
     cwd: fixture.home,
     input: '',
     timeout: SPAWN_TIMEOUT_MS,
@@ -647,7 +647,7 @@ function createStartupFixture(): StartupFixture {
 }
 
 function startStartupProfile(fixture: StartupFixture, args: readonly string[]) {
-  return execa(process.execPath, [dshBin, '--profile', 'startup', ...args], {
+  return execa(process.execPath, [rshBin, '--profile', 'startup', ...args], {
     cwd: fixture.home,
     input: '',
     reject: false,
@@ -661,7 +661,7 @@ function startStartupProfile(fixture: StartupFixture, args: readonly string[]) {
   })
 }
 
-describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
+describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
   it('resolves the shipped native-headless profile through the public loader', async () => {
     const home = mkdtempSync(join(tmpdir(), 'rsh-native-headless-profile-'))
     try {
@@ -1317,7 +1317,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     writeFileSync(patch, JSON.stringify([{ insert: [
       { id: 'absolute-plugin', name: pluginPath, config: { marker } },
     ] }]))
-    const child = execa(process.execPath, [dshBin, '--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
+    const child = execa(process.execPath, [rshBin, '--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
       cwd: home,
       reject: false,
       timeout: SPAWN_TIMEOUT_MS,
@@ -1382,7 +1382,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       successText: 'ACP BUILT PROFILE OK',
     })
     const home = mkdtempSync(join(tmpdir(), 'dsh-built-acp-'))
-    const child = execa(process.execPath, [dshBin, '--profile', 'legacy-acp', '--from-default-profile', 'acp'], {
+    const child = execa(process.execPath, [rshBin, '--profile', 'legacy-acp', '--from-default-profile', 'acp'], {
       cwd: home,
       reject: false,
       timeout: SPAWN_TIMEOUT_MS,
@@ -1567,7 +1567,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
   it.skipIf(process.platform === 'win32')('runs through an installed-style symlink', async () => {
     const installation = mkdtempSync(join(tmpdir(), 'dsh-bin-link-'))
     const installedBin = join(installation, 'dsh')
-    symlinkSync(dshBin, installedBin)
+    symlinkSync(rshBin, installedBin)
     try {
       const result = await execa(process.execPath, [installedBin, '--version'], {
         input: '',
@@ -1882,7 +1882,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         dsh: { bundle: { patch: './cordis.patch.yml' } },
       }))
       writeFileSync(join(checkout, 'cordis.patch.yml'), '[]\n')
-      const result = await execa(process.execPath, [dshBin, 'plugin', '--profile', 'anchor', 'add', '.'], {
+      const result = await execa(process.execPath, [rshBin, 'plugin', '--profile', 'anchor', 'add', '.'], {
         cwd: checkout,
         input: '',
         timeout: SPAWN_TIMEOUT_MS,

@@ -4,7 +4,7 @@ import type { Context } from '@redspark/cordis'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import {
   validateSupportManifest,
-  type CompatDshLifecycleParticipant,
+  type CompatRshLifecycleParticipant,
   type CompatPackageManifest,
 } from '@redspark/rsh-compat-dsh-runtime/native'
 import type {} from '@redspark/rsh-fs'
@@ -54,7 +54,7 @@ function resolveConfig(input: unknown): Config {
 /** Bridge native filesystem, tool, prompt and observation slots to the supported legacy plugin. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-compat-tool-fs', targets: ['host'],
-  requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy', 'approval'], provides: ['compatToolFs'],
+  requires: ['fs', 'tools', 'promptSections', 'compatRshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy', 'approval'], provides: ['compatToolFs'],
   resolve(input) {
     const config = resolveConfig(input)
     const require = createRequire(import.meta.url)
@@ -62,7 +62,7 @@ export const plugin: NativePlugin = {
     validateSupportManifest('@redspark/rsh-system-prompt', require('@redspark/rsh-system-prompt/package.json') as CompatPackageManifest)
     validateSupportManifest('@redspark/rsh-tools', require('@redspark/rsh-tools/package.json') as CompatPackageManifest)
     return async (native) => {
-      const runtime = native.require('compatDshRuntime')
+      const runtime = native.require('compatRshRuntime')
       const legacy = runtime.context
       const policyEntrySelected = runtime.hasEntry('@redspark/rsh-fs-observation-policy')
       const active = new Set<Promise<unknown>>()
@@ -203,7 +203,7 @@ export const plugin: NativePlugin = {
           throw error
         }
       }
-      const participant: CompatDshLifecycleParticipant = { suspend, resume }
+      const participant: CompatRshLifecycleParticipant = { suspend, resume }
       const unregisterParticipant = runtime.registerLifecycleParticipant(participant)
       native.own(async () => {
         unregisterParticipant()

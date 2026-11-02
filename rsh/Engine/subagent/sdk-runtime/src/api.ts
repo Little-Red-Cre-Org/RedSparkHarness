@@ -189,7 +189,7 @@ export function createNativeSdkChildHarness(
   const launch: RshHarnessOptions = {
     profile: 'native-sdk',
     ...options.cwd === undefined ? {} : { cwd: options.cwd },
-    ...options.dshHome === undefined ? {} : { dshHome: options.dshHome },
+    ...options.rshHome === undefined ? {} : { rshHome: options.rshHome },
     ...options.processCwd === undefined ? {} : { processCwd: options.processCwd },
     ...options.env === undefined ? {} : { env: options.env },
     ...options.initializeTimeoutMs === undefined ? {} : { initializeTimeoutMs: options.initializeTimeoutMs },

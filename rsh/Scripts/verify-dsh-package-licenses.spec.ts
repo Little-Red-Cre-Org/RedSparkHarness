@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { inspectDshPackageLicenses } from './verify-dsh-package-licenses.ts'
+import { inspectRshPackageLicenses } from './verify-dsh-package-licenses.ts'
 
 const roots: string[] = []
 
@@ -46,7 +46,7 @@ describe('DSH package license gate', () => {
       license: 'BSD-3-Clause',
     })
 
-    expect(inspectDshPackageLicenses(root)).toEqual({
+    expect(inspectRshPackageLicenses(root)).toEqual({
       packageCount: 2,
       failures: [
         'rsh/Engine/core/agent/package.json: @redspark/rsh-agent must declare "license": "MIT"; found "BSD-3-Clause".',
@@ -58,7 +58,7 @@ describe('DSH package license gate', () => {
     const root = createWorkspace()
     writeManifest(root, 'rsh/Engine/core/agent/package.json', { name: '@redspark/rsh-agent' })
 
-    expect(inspectDshPackageLicenses(root).failures).toEqual([
+    expect(inspectRshPackageLicenses(root).failures).toEqual([
       'rsh/Engine/core/agent/package.json: @redspark/rsh-agent must declare "license": "MIT"; found undefined.',
     ])
   })
@@ -75,7 +75,7 @@ describe('DSH package license gate', () => {
       files: ['LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js'],
     })
 
-    expect(inspectDshPackageLicenses(root)).toEqual({ packageCount: 1, failures: [] })
+    expect(inspectRshPackageLicenses(root)).toEqual({ packageCount: 1, failures: [] })
   })
 
   it('rejects the research license for another package identity or repository path', () => {
@@ -92,7 +92,7 @@ describe('DSH package license gate', () => {
       files: ['LICENSE-REDSPARK-RESEARCH.txt'],
     })
 
-    expect(inspectDshPackageLicenses(root)).toEqual({
+    expect(inspectRshPackageLicenses(root)).toEqual({
       packageCount: 2,
       failures: [
         'rsh/Engine/subagent/acp-child/package.json: @redspark/rsh-acp-child must declare "license": "MIT"; '
@@ -114,7 +114,7 @@ describe('DSH package license gate', () => {
       files: 'lib/index.js',
     })
 
-    expect(inspectDshPackageLicenses(root).failures).toEqual([
+    expect(inspectRshPackageLicenses(root).failures).toEqual([
       'rsh/Modules/Official/subagent/acp-child/package.json: @redspark/rsh-acp-child must declare '
       + '"license": "SEE LICENSE IN LICENSE-REDSPARK-RESEARCH.txt"; found "MIT".',
       'rsh/Modules/Official/subagent/acp-child/package.json: @redspark/rsh-acp-child must include '
@@ -133,18 +133,18 @@ describe('DSH package license gate', () => {
       files: ['LICENSE-REDSPARK-RESEARCH.txt'],
     })
 
-    expect(inspectDshPackageLicenses(root).failures).toEqual([
+    expect(inspectRshPackageLicenses(root).failures).toEqual([
       'rsh/Modules/Official/subagent/acp-child/package.json: missing repository license LICENSE-REDSPARK-RESEARCH.txt.',
       'rsh/Modules/Official/subagent/acp-child/package.json: missing package license LICENSE-REDSPARK-RESEARCH.txt.',
     ])
 
     writeText(root, rootLicense, licenseText)
-    expect(inspectDshPackageLicenses(root).failures).toEqual([
+    expect(inspectRshPackageLicenses(root).failures).toEqual([
       'rsh/Modules/Official/subagent/acp-child/package.json: missing package license LICENSE-REDSPARK-RESEARCH.txt.',
     ])
 
     writeText(root, packageLicense, 'different license text\n')
-    expect(inspectDshPackageLicenses(root).failures).toEqual([
+    expect(inspectRshPackageLicenses(root).failures).toEqual([
       'rsh/Modules/Official/subagent/acp-child/package.json: package license LICENSE-REDSPARK-RESEARCH.txt '
       + 'must match repository LICENSE-REDSPARK-RESEARCH.txt.',
     ])

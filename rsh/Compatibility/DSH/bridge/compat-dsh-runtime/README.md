@@ -45,10 +45,10 @@ This Host-only set targets the RSH 0.1.5-rc.2 workspace packages. One support re
 
 | Native installer | Legacy mounts | Required native services | Configuration |
 |---|---|---|---|
-| `compat-fs-local` | `fs-local` | `compatDshRuntime`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
-| `compat-fs-policy` | `fs-observation-policy` | `compatDshRuntime`; provides `fsObservationPolicy` | Empty |
-| `compat-fs-sandbox` | `fs-sandbox`, internal `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
-| `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`, internal `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`; optional `fsObservationPolicy`, `sandboxPolicy` | Positive `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
+| `compat-fs-local` | `fs-local` | `compatRshRuntime`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
+| `compat-fs-policy` | `fs-observation-policy` | `compatRshRuntime`; provides `fsObservationPolicy` | Empty |
+| `compat-fs-sandbox` | `fs-sandbox`, internal `sandbox-policy-adapter` | `compatRshRuntime`, `sandboxPolicy`; provides `fs` | Local backend `cwd`, `diffBasisMaxBytes` |
+| `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`, internal `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatRshRuntime`, `fs`, `tools`, `promptSections`; optional `fsObservationPolicy`, `sandboxPolicy` | Positive `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
 
 Names in the table use the `@redspark/rsh-` prefix; internal mounts belong to this runtime's allowlist. The provider installs `RshPluginHost` and the vendored Loader in one Cordis Context, then creates one Loader entry per selected package. Native callers can update an entry's configuration, disable or enable it, and remove it. Before an entry mutation, Native participants withdraw their contributions and await in-flight tool calls, prompt assembly, and filesystem policy listeners. After Loader settles, participants rebuild from enabled entries and current services. Native profile replacement is separate: `NativeHost.replace` and CLI `dsh.profile.configReload: "live"` replace the Native installation after profile or patch changes. Module-code HMR, arbitrary plugins, Cordis application bundles, and Client adapters are unsupported. None of these installers creates a legacy Agent loop or Session writer.
 

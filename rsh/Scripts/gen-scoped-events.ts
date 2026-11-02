@@ -6,7 +6,7 @@
  * calls establish the routing-key type for that base. The generator searches
  * every event payload parameter and one property level for exactly one type
  * equivalent to that key. Each generated resolver compiles against the merged
- * `Events` parameter tuple. Zero matches require `@dshScopeScan unsupported`;
+ * `Events` parameter tuple. Zero matches require `@rshScopeScan unsupported`;
  * multiple matches are ambiguous and always fail loud.
  *
  *   `tsx rsh/Scripts/gen-scoped-events.ts`          -> write the generated source
@@ -193,7 +193,7 @@ class ScopedEventGenerator {
                 )
               }
               if (tag.present) {
-                this.violations.push(`${where} has @dshScopeScan metadata but is not a Scoped event`)
+                this.violations.push(`${where} has @rshScopeScan metadata but is not a Scoped event`)
               }
               continue
             }
@@ -218,7 +218,7 @@ class ScopedEventGenerator {
                 const keyLabel = this.typeText(keyType)
                 this.violations.push(
                   `${where} exposes no parameter or one-level property equivalent to routing key type ${keyLabel}; `
-                  + 'add @dshScopeScan unsupported only when the key is intentionally absent from the payload',
+                  + 'add @rshScopeScan unsupported only when the key is intentionally absent from the payload',
                 )
               }
               resolvers.push({ event, candidate: null })
@@ -226,7 +226,7 @@ class ScopedEventGenerator {
             }
             if (tag.unsupported) {
               this.violations.push(
-                `${where} has unnecessary @dshScopeScan unsupported; ${candidates[0]?.path} exposes the routing key`,
+                `${where} has unnecessary @rshScopeScan unsupported; ${candidates[0]?.path} exposes the routing key`,
               )
               continue
             }
@@ -335,20 +335,20 @@ function isThisParameter(parameter: ts.ParameterDeclaration): boolean {
   return ts.isIdentifier(parameter.name) && parameter.name.text === 'this'
 }
 
-/** Parse and validate the optional @dshScopeScan unsupported tag. */
+/** Parse and validate the optional @rshScopeScan unsupported tag. */
 function parseScopeTag(raw: string, where: string, violations: string[]): ScopeTag {
   const tags = raw
     .replace(/^\/\*\*/, '')
     .replace(/\*\/$/, '')
     .split('\n')
     .map(line => line.replace(/^\s*\*?\s?/, '').trim())
-    .filter(line => line.startsWith('@dshScopeScan'))
-  if (tags.length > 1) violations.push(`${where} has multiple @dshScopeScan tags`)
+    .filter(line => line.startsWith('@rshScopeScan'))
+  if (tags.length > 1) violations.push(`${where} has multiple @rshScopeScan tags`)
   if (tags.length === 0) return { present: false, unsupported: false }
-  const unsupported = tags[0] === '@dshScopeScan unsupported'
+  const unsupported = tags[0] === '@rshScopeScan unsupported'
   if (!unsupported) {
     violations.push(
-      `${where} has invalid scoped-event scan metadata '${tags[0]}'; expected '@dshScopeScan unsupported'`,
+      `${where} has invalid scoped-event scan metadata '${tags[0]}'; expected '@rshScopeScan unsupported'`,
     )
   }
   return { present: true, unsupported }

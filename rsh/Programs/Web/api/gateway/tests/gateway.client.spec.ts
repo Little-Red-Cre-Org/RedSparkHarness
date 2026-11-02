@@ -2201,7 +2201,7 @@ describe('Client Typert API', () => {
   it('normalizes worker-local structural stream failures without sharing class identity', async () => {
     const cases = [{
       failure: Object.assign(new Error('fixture Host rejected the stream'), {
-        dshRemoteStreamFailure: {
+        rshRemoteStreamFailure: {
           kind: 'remote' as const,
           code: 'fixture/rejected',
           details: { retry: false },
@@ -2217,7 +2217,7 @@ describe('Client Typert API', () => {
       },
     }, {
       failure: Object.assign(new Error('worker carrier stopped'), {
-        dshRemoteStreamFailure: { kind: 'carrier' as const },
+        rshRemoteStreamFailure: { kind: 'carrier' as const },
       }),
       assert: (error: unknown) => {
         expect(error).toBeInstanceOf(RemoteStreamCarrierError)

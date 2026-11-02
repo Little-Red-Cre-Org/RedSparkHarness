@@ -1381,7 +1381,7 @@ export class DesktopProjectManager {
   }
 
   /** Read the dsh version supplied by this application's verified resources. */
-  dshVersion(): string {
+  rshVersion(): string {
     return this.currentRuntime().release.version
   }
 

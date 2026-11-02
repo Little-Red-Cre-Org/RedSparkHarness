@@ -35,7 +35,7 @@ import type {} from '@redspark/rsh-session-projection'
 // Type-only: resolves the registry notification emitted after scope reparenting.
 import type {} from '@redspark/rsh-tools'
 import type { SettingsScope, SettingsService } from '@redspark/rsh-settings-definition'
-import { dshHomePath } from '@redspark/rsh-home-paths'
+import { rshHomePath } from '@redspark/rsh-home-paths'
 import { retainSettingsOwner } from './settings-owner.ts'
 import { discoverPresets, SHIPPED_PRESET_ROOT, USER_PRESET_DIR } from './discovery.ts'
 import { copyComposition, deleteComposition, presetExists, readComposition } from './authoring.ts'
@@ -190,7 +190,7 @@ export class AgentPresets extends TypertRemoteService {
     this.resolvedRoots = [
       ...config.includeShippedRoot ? [{ path: SHIPPED_PRESET_ROOT, trust: 'system' } satisfies PresetRoot] : [],
       ...config.roots,
-      ...config.includeUserRoot ? [{ path: dshHomePath(USER_PRESET_DIR), trust: 'user' } satisfies PresetRoot] : [],
+      ...config.includeUserRoot ? [{ path: rshHomePath(USER_PRESET_DIR), trust: 'user' } satisfies PresetRoot] : [],
     ]
     ctx.sessionProjections.register(agentPresetProjectionDefinition)
 

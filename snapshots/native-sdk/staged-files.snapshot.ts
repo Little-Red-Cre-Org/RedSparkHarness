@@ -231,7 +231,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
       baseURL: `${baseURL}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
   const imageBase64 = imageBytes.toString('base64')
-  const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+  const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
     patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model', allowedTools: ['read_file'],
     env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
   let firstResult: { finalResponse: string } | undefined
@@ -316,7 +316,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
     expect(images).toHaveLength(1)
     const image = images[0]
     if (image?.type !== 'image') throw new Error('native-sdk staged-files: missing durable image reference')
-    const attachments = new LocalAttachmentBackend({ dshHome: home })
+    const attachments = new LocalAttachmentBackend({ rshHome: home })
     const firstHandle = fileHandle(requests[0] as ModelRequest, 'first.txt')
     const secondHandle = fileHandle(requests[1] as ModelRequest, 'second.txt')
     const normalizedImagePath = imageHandle(requests[0] as ModelRequest)

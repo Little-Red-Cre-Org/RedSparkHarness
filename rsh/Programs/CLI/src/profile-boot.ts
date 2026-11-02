@@ -33,7 +33,7 @@ import {
   watchUserPatches,
   type Profile,
 } from '@redspark/rsh-app-boot'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { installProxyFromEnvironment } from '@redspark/rsh-http-proxy'
 import { RSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment'
 import { provideCmdline, type AppReady } from '@redspark/rsh-cmdline'
@@ -72,7 +72,7 @@ function createAppReady(): { service: AppReady; commit(): void } {
  * @returns the absolute patch-file path.
  */
 export function homePatchPath(): string {
-  return join(resolveDshHome(), PROFILE_PATCH_FILENAME)
+  return join(resolveRshHome(), PROFILE_PATCH_FILENAME)
 }
 
 /** Absolute path of this dsh installation's package.json (both anchors: src/ and lib/ sit one level under rsh/Programs/CLI). */
@@ -105,7 +105,7 @@ export const PROFILE_ROOT_FILENAME = 'cordis.yml'
 export function initializeProfileFromDefault(
   name: string,
   fromDefaultProfile: string,
-  home: string = resolveDshHome(),
+  home: string = resolveRshHome(),
 ): void {
   const dir = resolveProfileDir(name, home)
   const template = Object.hasOwn(PROFILE_TEMPLATES, fromDefaultProfile)

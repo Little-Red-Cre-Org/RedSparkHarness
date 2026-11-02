@@ -11,7 +11,7 @@ const MODULE = 'koffi'
 
 /** Opaque type descriptor standing in for a koffi type handle. */
 interface KoffiType {
-  readonly __dshKoffiType: string
+  readonly __rshKoffiType: string
   /** Byte size under the x64 ABI; struct layout guards compare against it. */
   readonly size: number
   /** Byte alignment under the x64 ABI. */
@@ -49,7 +49,7 @@ const PRIMITIVES: Record<string, number> = {
 }
 
 const token = (label: string, size: number, alignment = Math.min(size, 8) || 1): KoffiType =>
-  ({ __dshKoffiType: label, size, alignment })
+  ({ __rshKoffiType: label, size, alignment })
 
 const typeOf = (target: unknown): KoffiType => {
   if (typeof target === 'string') {
@@ -58,14 +58,14 @@ const typeOf = (target: unknown): KoffiType => {
     return token(target, size)
   }
   const descriptor = target as KoffiType | undefined
-  if (descriptor?.__dshKoffiType === undefined) {
+  if (descriptor?.__rshKoffiType === undefined) {
     throw new Error(`web-preview: koffi type ${JSON.stringify(target)} is not a stub descriptor`)
   }
   return descriptor
 }
 
 const describe = (target: unknown): string =>
-  typeof target === 'string' ? target : (target as KoffiType | undefined)?.__dshKoffiType ?? 'anonymous'
+  typeof target === 'string' ? target : (target as KoffiType | undefined)?.__rshKoffiType ?? 'anonymous'
 
 /**
  * Pointer type descriptor.
@@ -105,7 +105,7 @@ function struct(name: unknown, fields?: Record<string, unknown>): KoffiType {
  */
 function array(target: unknown, length: number): KoffiType {
   const element = typeOf(target)
-  return token(`array(${element.__dshKoffiType}, ${String(length)})`, element.size * length, element.alignment)
+  return token(`array(${element.__rshKoffiType}, ${String(length)})`, element.size * length, element.alignment)
 }
 
 /**

@@ -6,12 +6,12 @@ import {
   DEFAULT_RSH_HOME_DISPLAY,
   RSH_HOME_DIR_NAME,
   canonicalizeWatchPath,
-  defaultDshHome,
-  dshCachePath,
+  defaultRshHome,
+  rshCachePath,
   dshHomeDisplay,
-  dshHomePath,
+  rshHomePath,
   expandHomePath,
-  resolveDshHome,
+  resolveRshHome,
 } from '@redspark/rsh-home-paths'
 
 afterEach(() => {
@@ -22,7 +22,7 @@ describe('dsh path helpers', () => {
   it('owns the shared default DSH home directory name', () => {
     expect(RSH_HOME_DIR_NAME).toBe('.redspark')
     expect(DEFAULT_RSH_HOME_DISPLAY).toBe('~/.redspark')
-    expect(defaultDshHome()).toBe(join(homedir(), '.redspark'))
+    expect(defaultRshHome()).toBe(join(homedir(), '.redspark'))
   })
 
   it('expands tilde paths without changing non-tilde paths', () => {
@@ -36,24 +36,24 @@ describe('dsh path helpers', () => {
   it('resolves explicit path before RSH_HOME and the default', () => {
     const envHome = join(homedir(), 'env-dsh')
 
-    expect(resolveDshHome('/tmp/explicit-dsh', { RSH_HOME: '~/env-dsh' })).toBe(resolve('/tmp/explicit-dsh'))
-    expect(resolveDshHome(undefined, { RSH_HOME: '~/env-dsh' })).toBe(envHome)
-    expect(resolveDshHome(undefined, {})).toBe(defaultDshHome())
+    expect(resolveRshHome('/tmp/explicit-dsh', { RSH_HOME: '~/env-dsh' })).toBe(resolve('/tmp/explicit-dsh'))
+    expect(resolveRshHome(undefined, { RSH_HOME: '~/env-dsh' })).toBe(envHome)
+    expect(resolveRshHome(undefined, {})).toBe(defaultRshHome())
   })
 
   it('treats an empty or whitespace-only RSH_HOME as unset', () => {
-    expect(resolveDshHome(undefined, { RSH_HOME: '' })).toBe(defaultDshHome())
-    expect(resolveDshHome(undefined, { RSH_HOME: '   ' })).toBe(defaultDshHome())
+    expect(resolveRshHome(undefined, { RSH_HOME: '' })).toBe(defaultRshHome())
+    expect(resolveRshHome(undefined, { RSH_HOME: '   ' })).toBe(defaultRshHome())
   })
 
   it('joins child segments onto the resolved RSH_HOME', () => {
     vi.stubEnv('RSH_HOME', '~/env-dsh')
-    expect(dshHomePath()).toBe(join(homedir(), 'env-dsh'))
-    expect(dshHomePath('storages', 'cache')).toBe(join(homedir(), 'env-dsh', 'storages', 'cache'))
+    expect(rshHomePath()).toBe(join(homedir(), 'env-dsh'))
+    expect(rshHomePath('storages', 'cache')).toBe(join(homedir(), 'env-dsh', 'storages', 'cache'))
   })
 
   it('labels a resolved home by whether it is the default root', () => {
-    expect(dshHomeDisplay(resolve(defaultDshHome()))).toBe('~/.redspark')
+    expect(dshHomeDisplay(resolve(defaultRshHome()))).toBe('~/.redspark')
     expect(dshHomeDisplay('/some/other/root')).toBe('$RSH_HOME')
   })
 
@@ -66,8 +66,8 @@ describe('dsh path helpers', () => {
   ] as const)('resolves cache paths with RSH_HOME=%j', (home, expectedHome) => {
     vi.stubEnv('RSH_HOME', home)
     try {
-      expect(dshCachePath()).toBe(join(expectedHome, 'cache'))
-      expect(dshCachePath('models', 'index.json')).toBe(join(expectedHome, 'cache', 'models', 'index.json'))
+      expect(rshCachePath()).toBe(join(expectedHome, 'cache'))
+      expect(rshCachePath('models', 'index.json')).toBe(join(expectedHome, 'cache', 'models', 'index.json'))
     } finally {
       vi.unstubAllEnvs()
     }
@@ -76,10 +76,10 @@ describe('dsh path helpers', () => {
   it('resolves configured cache homes before the environment', () => {
     vi.stubEnv('RSH_HOME', '~/env-dsh')
     try {
-      expect(dshCachePath({ dshHome: '~/explicit-dsh' })).toBe(join(homedir(), 'explicit-dsh', 'cache'))
-      expect(dshCachePath({ dshHome: './explicit-dsh' }, 'attachments', 'request-images'))
+      expect(rshCachePath({ rshHome: '~/explicit-dsh' })).toBe(join(homedir(), 'explicit-dsh', 'cache'))
+      expect(rshCachePath({ rshHome: './explicit-dsh' }, 'attachments', 'request-images'))
         .toBe(resolve('./explicit-dsh/cache/attachments/request-images'))
-      expect(dshCachePath({}, 'attachments')).toBe(join(homedir(), 'env-dsh', 'cache', 'attachments'))
+      expect(rshCachePath({}, 'attachments')).toBe(join(homedir(), 'env-dsh', 'cache', 'attachments'))
     } finally {
       vi.unstubAllEnvs()
     }

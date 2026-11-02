@@ -69,7 +69,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined }, { plugin, scope, config: undefined },
-    { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: home } },
+    { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, rshHome: home } },
     { plugin: application, scope, config: appConfig },
     { plugin: executionPlugin, scope, config: undefined }, { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: models, scope, config: undefined },

@@ -9,7 +9,7 @@ import {
   DESKTOP_COMPATIBILITY_HOST_PACKAGE,
   DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
   desktopCorePackageOverrides,
-  desktopDshPackageSpec,
+  desktopRshPackageSpec,
   parseDesktopCorePackageSet,
   verifyDesktopCoreLockfile,
   verifyDesktopCorePackageSet,
@@ -62,7 +62,7 @@ describe('desktop core package set', () => {
   it('pins the direct dsh dependency and every internal package to local tarballs', () => {
     const { root, dsh, base, host } = packageSetProject()
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
-    expect(desktopDshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
+    expect(desktopRshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
       '@redspark/rsh': 'file:./desktop-packages/dsh.tgz',
       '@redspark/rsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',

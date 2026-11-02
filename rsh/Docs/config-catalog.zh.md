@@ -61,7 +61,7 @@ export interface Config {
 /** User-facing workspace instruction loader configuration. */
 export interface Config {
   /** Harness home containing the fixed user-global `AGENTS.md`; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Directory entries that identify the project root while walking upward from the session cwd. */
   projectRootMarkers?: string[]
   /** UTF-8 byte cap for one rendered baseline or dynamic batch; non-positive or non-finite disables loading. */
@@ -293,7 +293,7 @@ export interface Config {
 /** Local attachment backend configuration. */
 export interface Config {
   /** Explicit harness home; omitted follows `RSH_HOME`, then `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Maximum encoded bytes accepted for one submitted image. */
   maxImageBytes?: number
   /** Maximum image count accepted in one submitted message. */
@@ -541,7 +541,7 @@ export interface Config {
   /** Credentials document path; defaults to `.credentials.yaml` under the harness home. */
   path?: string
   /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
   /** Watcher write-settle window in milliseconds; defaults to 100. */
@@ -2153,7 +2153,7 @@ export interface Config {
   /** Settings document path; defaults to `settings.yaml` under the harness home. */
   path?: string
   /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
   /** Watcher write-settle window in milliseconds; defaults to 100. */
@@ -2171,7 +2171,7 @@ export interface Config {
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
   /** RedSpark Harness home directory exposed as `RSH_HOME`; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
 }
 ```
 
@@ -2205,7 +2205,7 @@ export interface Config extends SkillWatchConfigInput {
   /** Whether project and user roots are included around custom roots. */
   includeDefaultRoots?: boolean
   /** RedSpark Harness config root. Defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
   /** Shared agent config root. Defaults to `$RSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string
   /** Additional skill roots scanned after project roots and before user roots. */
@@ -2495,13 +2495,13 @@ export interface Config {
   /** Provider name on `ctx.subagents` (default `dsh-sdk`). */
   providerName: string
   /** Explicit dsh CLI module, resolved and checked at plugin load; omission uses the SDK dependency. */
-  dshBin?: string
+  rshBin?: string
   /** Named child profile (default `sdk`). */
   profile: string
   /** Ordered per-launch profile patch files, resolved and checked at plugin load. */
   patches: string[]
   /** Absolute isolated Harness home for every nested child process. */
-  dshHome: string
+  rshHome: string
   /**
    * Working directory override for the child process and its SDK session
    * workspace. Must be non-empty; a relative path resolves against the

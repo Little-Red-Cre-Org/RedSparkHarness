@@ -162,7 +162,7 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
       { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
       { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
       { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: 'root',
-        config: { agentsHome: home, dshHome: home, watch: false } },
+        config: { agentsHome: home, rshHome: home, watch: false } },
       { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' },
     ] }))
     writeFileSync(join(workspace, '.agents/skills/review/SKILL.md'), [
@@ -176,7 +176,7 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
         baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
     ] }))
 
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
       env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
       requestTimeoutMs: 20_000 }

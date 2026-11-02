@@ -7,7 +7,7 @@
  */
 import { Context } from '@redspark/cordis'
 import type {
-  BootManifest, ClientModuleCreateOptions, ClientModuleSystem, DshWindow,
+  BootManifest, ClientModuleCreateOptions, ClientModuleSystem, RshWindow,
 } from '@redspark/rsh-client-modules/client'
 import { bootClient } from './boot-client.ts'
 import { BootPage } from '@redspark/rsh-client-web/boot-page'
@@ -51,7 +51,7 @@ export class AppWebEntry {
       // row, or rejects it into the failure rendering below. An absent global
       // means no bootstrap owns the document and there is nothing to wait for.
       await (globalThis as { __RSH_BOOT_READY__?: { promise: Promise<void> } }).__RSH_BOOT_READY__?.promise
-      const win = globalThis as DshWindow
+      const win = globalThis as RshWindow
       const moduleLoader = win.__ModuleLoader__
       if (moduleLoader === undefined) {
         throw new Error('web boot: window.__ModuleLoader__ bootstrap facade is missing')

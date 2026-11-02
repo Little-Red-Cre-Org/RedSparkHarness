@@ -468,7 +468,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
 
     const directHome = join(home, 'direct-sdk-home')
     const direct = new RedSparkHarness({
-      profile: 'native-sdk', patches: [patch], dshHome: directHome, processCwd: root,
+      profile: 'native-sdk', patches: [patch], rshHome: directHome, processCwd: root,
       env: { RSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key' },
       cwd: home, provider: 'deepseek-official', model: 'sdk-child-fixture', maxSteps: 1,
       allowedTools: ['write_file'], workspaceWriteRoot: home,

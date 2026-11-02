@@ -1070,7 +1070,7 @@ describe('tool-owned UI presentation (presentCall / presentResult)', () => {
 })
 
 describe('the model-facing bash tool builds its request from named args only (no {...args} forward)', () => {
-  const recordingDshHome = join(spillDir, 'dsh-home')
+  const recordingRshHome = join(spillDir, 'dsh-home')
 
   /**
    * Records every {@link ShellExecRequest} the consumer hands to `resolve()`, so a
@@ -1097,7 +1097,7 @@ describe('the model-facing bash tool builds its request from named args only (no
         ...request.signal ? { signal: request.signal } : {},
         ...request.stdin !== undefined ? { stdin: request.stdin } : {},
         ...request.env !== undefined ? { env: request.env } : {},
-        ...request.dshEnv !== undefined ? { dshEnv: request.dshEnv } : {},
+        ...request.rshEnv !== undefined ? { rshEnv: request.rshEnv } : {},
         sandboxPolicy: request.sandboxPolicy,
       }
     }
@@ -1126,7 +1126,7 @@ describe('the model-facing bash tool builds its request from named args only (no
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(LocalJobRegistry)
     await ctx.plugin(ToolTasks)
-    await ctx.plugin(BashEnvPlugin, { dshHome: recordingDshHome })
+    await ctx.plugin(BashEnvPlugin, { rshHome: recordingRshHome })
     await ctx.plugin(RecordingBashExecutor)
     await ctx.plugin(ToolBash)
     return { ctx, bash: ctx.shell as RecordingBashExecutor }
@@ -1151,8 +1151,8 @@ describe('the model-facing bash tool builds its request from named args only (no
       agent,
     })
 
-    expect(bash.requests[0]?.dshEnv).toEqual({
-      RSH_HOME: recordingDshHome,
+    expect(bash.requests[0]?.rshEnv).toEqual({
+      RSH_HOME: recordingRshHome,
       RSH_SESSION_ID: 'request-fg',
       RSH_SHELL: '1',
     })
@@ -1177,8 +1177,8 @@ describe('the model-facing bash tool builds its request from named args only (no
     })
 
     expect(bash.requests[0]?.env).toBeUndefined()
-    expect(bash.requests[0]?.dshEnv).toEqual({
-      RSH_HOME: recordingDshHome,
+    expect(bash.requests[0]?.rshEnv).toEqual({
+      RSH_HOME: recordingRshHome,
       RSH_SESSION_ID: 'request-bg',
       RSH_SHELL: '1',
     })
@@ -1199,14 +1199,14 @@ describe('the model-facing bash tool builds its request from named args only (no
       })
     }
 
-    expect(bash.requests.map(request => request.dshEnv)).toEqual([
+    expect(bash.requests.map(request => request.rshEnv)).toEqual([
       {
-        RSH_HOME: recordingDshHome,
+        RSH_HOME: recordingRshHome,
         RSH_SESSION_ID: 'request-parent',
         RSH_SHELL: '1',
       },
       {
-        RSH_HOME: recordingDshHome,
+        RSH_HOME: recordingRshHome,
         RSH_SESSION_ID: 'request-child',
         RSH_SHELL: '1',
       },

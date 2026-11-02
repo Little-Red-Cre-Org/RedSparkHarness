@@ -472,7 +472,7 @@ describe('desktop main startup', () => {
     const normalPage = new JSDOM(readFileSync(new URL('../renderer/startup.html', import.meta.url), 'utf8'), {
       runScripts: 'outside-only',
     })
-    Object.defineProperty(normalPage.window, 'dshDesktop', { value: {
+    Object.defineProperty(normalPage.window, 'rshDesktop', { value: {
       protocolVersion: 1,
       locale: async () => resolveDesktopLocale('en'),
       backend: { status: async () => state, subscribe: () => () => {} },

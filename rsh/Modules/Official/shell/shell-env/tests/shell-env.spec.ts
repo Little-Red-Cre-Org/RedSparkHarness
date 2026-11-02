@@ -42,7 +42,7 @@ function execution(sessionId?: string): ToolExecution {
 describe('ShellEnvRegistry', () => {
   it('collects unconditional shell facts and the current agent session id', () => {
     const ctx = new Context()
-    const registry = new ShellEnvRegistry(ctx, { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(ctx, { rshHome: './test-dsh-home' })
 
     expect(registry.collect(execution())).toEqual({
       RSH_HOME: resolve('./test-dsh-home'),
@@ -67,7 +67,7 @@ describe('ShellEnvRegistry', () => {
 
   it('collects declared contributor variables and omits unavailable values', () => {
     const ctx = new Context()
-    const registry = new ShellEnvRegistry(ctx, { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(ctx, { rshHome: './test-dsh-home' })
     registry.register({
       name: 'optional-session-fact',
       variables: {
@@ -102,7 +102,7 @@ describe('ShellEnvRegistry', () => {
 
   it('rejects duplicate variable ownership at registration time', () => {
     const ctx = new Context()
-    const registry = new ShellEnvRegistry(ctx, { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(ctx, { rshHome: './test-dsh-home' })
     registry.register({
       name: 'first',
       variables: { RSH_SHARED: { description: 'First owner.' } },
@@ -117,7 +117,7 @@ describe('ShellEnvRegistry', () => {
   })
 
   it('rejects duplicate contributor names and malformed declarations', () => {
-    const registry = new ShellEnvRegistry(new Context(), { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(new Context(), { rshHome: './test-dsh-home' })
     registry.register({
       name: 'declared',
       variables: { RSH_DECLARED: { description: 'Declared fact.' } },
@@ -153,7 +153,7 @@ describe('ShellEnvRegistry', () => {
 
   it('rejects undeclared variables returned by a contributor', () => {
     const ctx = new Context()
-    const registry = new ShellEnvRegistry(ctx, { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(ctx, { rshHome: './test-dsh-home' })
     registry.register({
       name: 'drifted-provider',
       variables: { RSH_DECLARED: { description: 'Declared fact.' } },
@@ -164,7 +164,7 @@ describe('ShellEnvRegistry', () => {
   })
 
   it('rejects non-string values returned by a contributor', () => {
-    const registry = new ShellEnvRegistry(new Context(), { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(new Context(), { rshHome: './test-dsh-home' })
     registry.register({
       name: 'wrong-value-type',
       variables: { RSH_STRING: { description: 'String fact.' } },
@@ -176,7 +176,7 @@ describe('ShellEnvRegistry', () => {
 
   it('removes an effect-scoped contributor when its plugin is disposed', async () => {
     const ctx = new Context()
-    const registry = new ShellEnvRegistry(ctx, { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(ctx, { rshHome: './test-dsh-home' })
     const fiber = await ctx.plugin({
       inject: ['shellEnv'],
       apply(inner: Context) {
@@ -194,7 +194,7 @@ describe('ShellEnvRegistry', () => {
   })
 
   it('returns an explicit contributor disposer', () => {
-    const registry = new ShellEnvRegistry(new Context(), { dshHome: './test-dsh-home' })
+    const registry = new ShellEnvRegistry(new Context(), { rshHome: './test-dsh-home' })
     const dispose = registry.register({
       name: 'explicit-disposal',
       variables: { RSH_EXPLICIT_DISPOSAL: { description: 'Explicitly disposed fact.' } },

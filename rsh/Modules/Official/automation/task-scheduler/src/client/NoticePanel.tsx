@@ -34,7 +34,7 @@ export function NoticePanel(props: NoticeProps): ReactNode {
   const [creating, setCreating] = useState(false)
   const state = useNotices(s => s)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const desktop = typeof (globalThis as { dshDesktop?: { notifyTask?: unknown } }).dshDesktop?.notifyTask === 'function'
+  const desktop = typeof (globalThis as { rshDesktop?: { notifyTask?: unknown } }).rshDesktop?.notifyTask === 'function'
   const [permission, setPermission] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const enable = async (): Promise<void> => {
     try { setPermission(await Notification.requestPermission()) } catch { setPermission('denied') }

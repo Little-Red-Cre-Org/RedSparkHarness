@@ -81,11 +81,11 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
     { id: 'app', config: { cwd: workspace, provider: 'native-image-fixture', model: 'vision-fixture',
       systemPrompt: 'Use the registered MCP image tool.', maxSteps: 3, builtinTools: false } }, { id: 'fs', config: { cwd: workspace } },
-    { id: 'storage', config: { root: sessions, compression: 'none' } }, { id: 'attachments', config: { dshHome: home } },
+    { id: 'storage', config: { root: sessions, compression: 'none' } }, { id: 'attachments', config: { rshHome: home } },
     { id: 'mcp', config: { transport: 'stdio', serverName: 'fixture', command: process.execPath,
       args: ['--import', 'tsx/esm', join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')],
       cwd: root, env: {}, toolCallTimeoutMs: 10000, failOnStartupError: true, reconnect: { enabled: false } } },
-    { id: 'credentials', config: { dshHome: home, watch: false } },
+    { id: 'credentials', config: { rshHome: home, watch: false } },
     { id: 'model', config: { providers: { 'native-image-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
       apiKeyEnv: 'NATIVE_IMAGE_KEY', api: 'openai-completions', models: [{ id: 'vision-fixture', name: 'Fixture vision',
         input: ['text', 'image'], contextWindow: 4096, maxTokens: 512 }] } } } },
@@ -109,7 +109,7 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
     const image = results[0]?.data.message.content.flatMap(block => block.type === 'tool-result' ? block.content : [])
       .find(block => block.type === 'image')
     if (image?.type !== 'image') throw new Error('mcp-image-native: image was not persisted in the tool result')
-    const attachments = new LocalAttachmentBackend({ dshHome: home })
+    const attachments = new LocalAttachmentBackend({ rshHome: home })
     const stored = await attachments.readImage(image.attachment)
     expect(stored.data.byteLength).toBe(image.attachment.bytes)
     expect(image.attachment.attachmentId).toContain(createHash('sha256').update(stored.data).digest('hex'))

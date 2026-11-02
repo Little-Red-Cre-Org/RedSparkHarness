@@ -18,19 +18,19 @@ export function resolveNativeCredentialConfig(input: unknown): Config {
   }
   const fields = input as Record<string, unknown>
   for (const key of Object.keys(fields)) {
-    if (!['path', 'dshHome', 'watch', 'debounceMs'].includes(key)) {
+    if (!['path', 'rshHome', 'watch', 'debounceMs'].includes(key)) {
       throw new TypeError(`credentials-local: unknown native configuration field ${JSON.stringify(key)}`)
     }
   }
   if (fields['path'] !== undefined && typeof fields['path'] !== 'string') throw new TypeError('credentials-local: path must be a string')
-  if (fields['dshHome'] !== undefined && typeof fields['dshHome'] !== 'string') throw new TypeError('credentials-local: dshHome must be a string')
+  if (fields['rshHome'] !== undefined && typeof fields['rshHome'] !== 'string') throw new TypeError('credentials-local: rshHome must be a string')
   if (fields['watch'] !== undefined && typeof fields['watch'] !== 'boolean') throw new TypeError('credentials-local: watch must be a boolean')
   if (fields['debounceMs'] !== undefined && (typeof fields['debounceMs'] !== 'number' || !Number.isFinite(fields['debounceMs']) || fields['debounceMs'] < 0)) {
     throw new TypeError('credentials-local: debounceMs must be a non-negative finite number')
   }
   return Object.freeze({
     ...fields['path'] === undefined ? {} : { path: fields['path'] },
-    ...fields['dshHome'] === undefined ? {} : { dshHome: fields['dshHome'] },
+    ...fields['rshHome'] === undefined ? {} : { rshHome: fields['rshHome'] },
     ...fields['watch'] === undefined ? {} : { watch: fields['watch'] },
     ...fields['debounceMs'] === undefined ? {} : { debounceMs: fields['debounceMs'] },
   })

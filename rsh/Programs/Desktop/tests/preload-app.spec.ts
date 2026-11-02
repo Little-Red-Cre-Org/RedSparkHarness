@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { DESKTOP_IPC, type DshDesktopStartupApi } from '../src/ipc.ts'
+import { DESKTOP_IPC, type RshDesktopStartupApi } from '../src/ipc.ts'
 
 const electron = vi.hoisted(() => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
@@ -13,7 +13,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); vi.resetModules() }
 it.each(['https://shell/startup.html'])('exposes only the carrier marker to %s', async (url) => {
   vi.stubGlobal('location', new URL(url))
   await import('../src/preload-app.ts')
-  expect(electron.contextBridge.exposeInMainWorld).toHaveBeenCalledWith('dshDesktop', { protocolVersion: 1 })
+  expect(electron.contextBridge.exposeInMainWorld).toHaveBeenCalledWith('rshDesktop', { protocolVersion: 1 })
 })
 
 it('exposes task notifications and pet updates to the application document', async () => {
@@ -35,7 +35,7 @@ it('exposes task notifications and pet updates to the application document', asy
 it('provides startup controls and a removable state subscription to shell documents', async () => {
   vi.stubGlobal('location', new URL('dsh-app://shell/startup.html'))
   await import('../src/preload-app.ts')
-  const api = electron.contextBridge.exposeInMainWorld.mock.calls[0]?.[1] as DshDesktopStartupApi
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls[0]?.[1] as RshDesktopStartupApi
   await api.locale()
   await api.backend.status()
   await api.disablePlugins()

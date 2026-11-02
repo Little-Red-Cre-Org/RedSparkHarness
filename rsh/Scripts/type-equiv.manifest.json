@@ -1808,12 +1808,12 @@
     },
     {
       "doc": "rsh/Docs/subsystems/subprocess.md",
-      "symbol": "DshEnvironmentKey",
+      "symbol": "RshEnvironmentKey",
       "source": "rsh/Core/subprocess/subprocess/src/types.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/subprocess.md",
-      "symbol": "DshEnvironment",
+      "symbol": "RshEnvironment",
       "source": "rsh/Core/subprocess/subprocess/src/types.ts"
     },
     {

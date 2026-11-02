@@ -49,13 +49,13 @@ async function freePort(): Promise<number> {
   return port
 }
 
-function cleanEnvironment(root: string, dshHome: string): NodeJS.ProcessEnv {
+function cleanEnvironment(root: string, rshHome: string): NodeJS.ProcessEnv {
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) =>
     !/(?:KEY|SECRET|TOKEN|PASSWORD)/iu.test(name)))
   return {
     ...env,
     RSH_AGENTS_HOME: join(root, '.agents'),
-    RSH_HOME: dshHome,
+    RSH_HOME: rshHome,
     RSH_TELEMETRY_DISABLED: '1',
     NODE_NO_WARNINGS: '1',
     SSH_CONNECTION: '',
@@ -65,7 +65,7 @@ function cleanEnvironment(root: string, dshHome: string): NodeJS.ProcessEnv {
 }
 
 /** Start the public source CLI and wait for its authenticated readiness URL. */
-async function startWeb(root: string, dshHome: string, port: number): Promise<RunningWeb> {
+async function startWeb(root: string, rshHome: string, port: number): Promise<RunningWeb> {
   const child = spawn(process.execPath, [
     '--import', TSX_LOADER,
     RSH_SOURCE_BIN,
@@ -74,7 +74,7 @@ async function startWeb(root: string, dshHome: string, port: number): Promise<Ru
     '--port', String(port),
   ], {
     cwd: root,
-    env: cleanEnvironment(root, dshHome),
+    env: cleanEnvironment(root, rshHome),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   let output = ''
@@ -154,12 +154,12 @@ function describeSettings(port: number, host: string, cookie?: string): Promise<
 describe('dsh web authentication through the real CLI', () => {
   it('rejects a forged loopback Host and preserves the browser cookie across restart', { timeout: 180_000 }, async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-web-auth-real-cli-'))
-    const dshHome = join(root, '.dsh')
+    const rshHome = join(root, '.dsh')
     const port = await freePort()
     let first: RunningWeb | undefined
     let second: RunningWeb | undefined
     try {
-      first = await startWeb(root, dshHome, port)
+      first = await startWeb(root, rshHome, port)
       const firstUrl = new URL(first.launchUrl)
       expect(firstUrl.origin).toBe(`http://127.0.0.1:${String(port)}`)
       expect(firstUrl.pathname).toBe('/')
@@ -191,12 +191,12 @@ describe('dsh web authentication through the real CLI', () => {
 
       await stopWeb(first)
       first = undefined
-      second = await startWeb(root, dshHome, port)
+      second = await startWeb(root, rshHome, port)
       const secondUrl = new URL(second.launchUrl)
       expect(secondUrl.searchParams.get('token')).not.toBe(firstUrl.searchParams.get('token'))
       expect((await describeSettings(port, secondUrl.host, cookie)).status).toBe(200)
 
-      expect((await stat(join(dshHome, '.credentials.yaml'))).isFile()).toBe(true)
+      expect((await stat(join(rshHome, '.credentials.yaml'))).isFile()).toBe(true)
     } catch (error) {
       const evidence = [first?.output(), second?.output()].filter(value => value !== undefined).join('\n')
       throw new Error(`${error instanceof Error ? error.message : String(error)}\n${redact(evidence)}`, { cause: error })
@@ -210,11 +210,11 @@ describe('dsh web authentication through the real CLI', () => {
   // Windows stat modes do not describe ACL permissions; this case checks POSIX credentials storage.
   it.skipIf(process.platform === 'win32')('stores Web credentials in an owner-only file on POSIX', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-web-auth-modes-'))
-    const dshHome = join(root, '.dsh')
+    const rshHome = join(root, '.dsh')
     let running: RunningWeb | undefined
     try {
-      running = await startWeb(root, dshHome, 0)
-      expect((await stat(join(dshHome, '.credentials.yaml'))).mode & 0o777).toBe(0o600)
+      running = await startWeb(root, rshHome, 0)
+      expect((await stat(join(rshHome, '.credentials.yaml'))).mode & 0o777).toBe(0o600)
     } finally {
       if (running !== undefined) await stopWeb(running)
       await rm(root, { recursive: true, force: true })

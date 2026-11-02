@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`resolveConfig(input, label, extraFields)` 验证正有限数值的执行预算，并拒绝未知字段。Provider 向 `LocalShellController` 提供 `ShellDialect` 和受管理的 `subprocess` 服务。控制器先设置语法环境默认值，再叠加调用方环境，最后叠加可信的 `dshEnv`。前台运行分别报告超时和取消事实；后台句柄在受管理进程结束后结算。
+`resolveConfig(input, label, extraFields)` 验证正有限数值的执行预算，并拒绝未知字段。Provider 向 `LocalShellController` 提供 `ShellDialect` 和受管理的 `subprocess` 服务。控制器先设置语法环境默认值，再叠加调用方环境，最后叠加可信的 `rshEnv`。前台运行分别报告超时和取消事实；后台句柄在受管理进程结束后结算。
 
 本包不发布不变式伴生入口，因为 subprocess 服务负责进程归属和完成，而请求预算在构造控制器之前得到验证。
 

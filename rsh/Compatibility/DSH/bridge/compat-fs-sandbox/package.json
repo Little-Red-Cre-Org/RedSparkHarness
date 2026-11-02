@@ -5,7 +5,7 @@
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git", "directory": "rsh/Compatibility/DSH/bridge/compat-fs-sandbox" },
   "type": "module",
-  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["sandboxPolicy", "compatDshRuntime"], "optional": [], "provides": ["fs"] } },
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["sandboxPolicy", "compatRshRuntime"], "optional": [], "provides": ["fs"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

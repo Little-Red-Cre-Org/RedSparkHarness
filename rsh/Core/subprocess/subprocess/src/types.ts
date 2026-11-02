@@ -13,10 +13,10 @@ import type { Readable, Writable } from 'node:stream'
 export const RSH_ENV_PREFIX = 'RSH_' as const
 
 /** One environment key inside the managed {@link RSH_ENV_PREFIX} namespace. */
-export type DshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
+export type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
 
 /** Trusted RedSpark Harness variables for one child-process execution. */
-export type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>
+export type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>
 
 /** One captured stream: the (possibly truncated) text plus recovery info. */
 export interface CollectedOutput {

@@ -23,8 +23,8 @@ type PersistedSession = { readonly header: JsonObject; readonly events: readonly
 type RunResult = { readonly sessionId: string; readonly finalResponse: string; readonly events: JsonObject[] }
 type InstalledSdk = {
   RedSparkHarness: new (options: {
-    readonly dshBin: string
-    readonly dshHome: string
+    readonly rshBin: string
+    readonly rshHome: string
     readonly patches: string[]
     readonly cwd: string
     readonly provider: 'fixture'
@@ -220,11 +220,11 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
         { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
         { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
         { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: 'root',
-          config: { agentsHome: home, dshHome: home, watch: false } },
+          config: { agentsHome: home, rshHome: home, watch: false } },
         { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' },
       )
       await writeFile(profileConfig, JSON.stringify(composition))
-      const options = { dshBin: installedBin, dshHome: home, patches: [patch],
+      const options = { rshBin: installedBin, rshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
       const firstHarness = new RedSparkHarness(options)
       let first: RunResult

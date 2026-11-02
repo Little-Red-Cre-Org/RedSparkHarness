@@ -191,7 +191,7 @@ it('projects real Native Inbox edits and moves through both SDKs and process-col
       first = projected.first
       recovery = projected.recovery
     } else {
-      const options = { profile: 'native-sdk' as const, dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+      const options = { profile: 'native-sdk' as const, rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
         patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
         env: { ...process.env, NATIVE_INBOX_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
       const initial = new RedSparkHarness(options)

@@ -38,10 +38,10 @@ interface MutableRegistryManifest {
 /** Summary of a verified two-release npm layout. */
 export interface DshInstallLayoutSummary {
   readonly dshPackagesPerVersion: number
-  readonly checkedDshEdges: number
+  readonly checkedRshEdges: number
 }
 
-function isDshPackage(name: string): boolean {
+function isRshPackage(name: string): boolean {
   return name === RSH_PACKAGE || name.startsWith(`${RSH_PACKAGE}-`)
 }
 
@@ -52,7 +52,7 @@ function cloneForVersion(manifest: object, sourceVersion: string, version: strin
     const dependencies = cloned[field]
     if (dependencies === undefined) continue
     for (const [name, dependencyRange] of Object.entries(dependencies)) {
-      if (isDshPackage(name)) dependencies[name] = dependencyRange.replaceAll(sourceVersion, version)
+      if (isRshPackage(name)) dependencies[name] = dependencyRange.replaceAll(sourceVersion, version)
     }
   }
   return cloned
@@ -64,11 +64,11 @@ function cloneForVersion(manifest: object, sourceVersion: string, version: strin
  * @param sourceVersion - Workspace version copied into each synthetic release.
  * @returns Registry metadata containing both synthetic DSH releases and unchanged external packages.
  */
-export function buildDualDshRegistry(index: RegistryIndex, sourceVersion: string): RegistryIndex {
+export function buildDualRshRegistry(index: RegistryIndex, sourceVersion: string): RegistryIndex {
   const output = new Map(index)
   let dshPackages = 0
   for (const [name, versions] of index) {
-    if (!isDshPackage(name)) {
+    if (!isRshPackage(name)) {
       output.set(name, versions)
       continue
     }
@@ -120,7 +120,7 @@ function setDifference(left: ReadonlySet<string>, right: ReadonlySet<string>): s
  * @param packageLock - Metadata-only package lock produced by npm.
  * @returns Counts for the verified DSH packages and dependency edges.
  */
-export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInstallLayoutSummary {
+export function assertDualRshInstallLayout(packageLock: NpmPackageLock): DshInstallLayoutSummary {
   const [nestedVersion, rootVersion] = SYNTHETIC_RSH_VERSIONS
   const errors: string[] = []
   const namesByVersion = new Map<string, Set<string>>([
@@ -128,11 +128,11 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
     [rootVersion, new Set()],
   ])
   const installed = Object.entries(packageLock.packages)
-  let checkedDshEdges = 0
+  let checkedRshEdges = 0
 
   for (const [path, manifest] of installed) {
     const name = packageNameAtPath(path, manifest)
-    if (name === undefined || !isDshPackage(name)) continue
+    if (name === undefined || !isRshPackage(name)) continue
     const version = manifest.version
     if (version !== nestedVersion && version !== rootVersion) {
       errors.push(`${path}: expected DSH version ${nestedVersion} or ${rootVersion}, got ${String(version)}`)
@@ -151,7 +151,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
 
     for (const field of DEPENDENCY_FIELDS) {
       for (const dependency of Object.keys(manifest[field] ?? {})) {
-        if (!isDshPackage(dependency)) continue
+        if (!isRshPackage(dependency)) continue
         const targetPath = resolvePackagePath(packageLock.packages, path, dependency)
         const optionalPeer = field === 'peerDependencies'
           && manifest.peerDependenciesMeta?.[dependency]?.optional === true
@@ -164,7 +164,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
           && (path !== NESTED_SDK_CLIENT_PATH || dependency !== RSH_PACKAGE)) {
           errors.push(`${path}: only the old SDK client may resolve the extra canonical CLI at ${targetPath}`)
         }
-        checkedDshEdges++
+        checkedRshEdges++
         const targetManifest = packageLock.packages[targetPath]
         const targetVersion = targetManifest?.version
         if (packageNameAtPath(targetPath, targetManifest ?? {}) !== dependency) {
@@ -291,7 +291,7 @@ export function assertDualDshInstallLayout(packageLock: NpmPackageLock): DshInst
   }
 
   if (errors.length > 0) throw new Error(`invalid npm install layout:\n${errors.map(error => `  - ${error}`).join('\n')}`)
-  return { dshPackagesPerVersion: rootNames.size, checkedDshEdges }
+  return { dshPackagesPerVersion: rootNames.size, checkedRshEdges }
 }
 
 function workspaceVersion(root: string): string {
@@ -302,17 +302,17 @@ function workspaceVersion(root: string): string {
 
 async function main(): Promise<void> {
   const root = resolve(import.meta.dirname, '..', '..')
-  const index = buildDualDshRegistry(buildRegistryIndex(root), workspaceVersion(root))
+  const index = buildDualRshRegistry(buildRegistryIndex(root), workspaceVersion(root))
   const [nestedVersion, rootVersion] = SYNTHETIC_RSH_VERSIONS
   const result = await resolveNpmPackageLock(index, {
     [RSH_PACKAGE]: rootVersion,
     [NESTED_RSH_ALIAS]: `npm:${RSH_PACKAGE}@${nestedVersion}`,
   }, TIMEOUT_MS)
   if (result.archiveRequests !== 0) throw new Error(`npm requested ${String(result.archiveRequests)} package archive(s)`)
-  const summary = assertDualDshInstallLayout(result.packageLock)
+  const summary = assertDualRshInstallLayout(result.packageLock)
   console.log(
     `verify-npm-install-layout: ${String(summary.dshPackagesPerVersion)} DSH package(s) per release and `
-    + `${String(summary.checkedDshEdges)} internal edge(s) verified in ${(result.durationMs / 1000).toFixed(2)} s; `
+    + `${String(summary.checkedRshEdges)} internal edge(s) verified in ${(result.durationMs / 1000).toFixed(2)} s; `
     + `both releases share one Cordis installation; ${String(result.unknownPackages.length)} unavailable optional `
     + 'package name(s) ignored by npm.',
   )

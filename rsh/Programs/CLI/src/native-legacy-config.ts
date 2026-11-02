@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { extname, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { withFileLock, writeFileAtomic } from '@redspark/rsh-atomic-write'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import type { NativePresetFolderSummary } from '@redspark/rsh-agent-presets/native'
 import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import { parseNativeClientProfile } from '@redspark/rsh-native-web-assets/native-client'
@@ -158,7 +158,7 @@ function settingsDocument(profile: NativeProfileConfig): { filename: string; doc
   if (!['.yaml', '.yml', '.json'].includes(extension)) {
     throw new Error('settings-file: extension "' + extension + '" is not supported (use .yaml, .yml, or .json)')
   }
-  const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
+  const filename = configuredFilename ?? resolve(join(resolveRshHome(config.rshHome), 'settings.yaml'))
   const text = existsSync(filename) ? readFileSync(filename, 'utf8') : ''
   return { filename, document: parseNativeSettingsDocument(text, filename, extension === '.json' ? 'json' : 'yaml') }
 }

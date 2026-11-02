@@ -19,13 +19,13 @@ export function validateLegacySandboxManifest(manifest: CompatPackageManifest): 
 /** Provide a confining filesystem only when a native policy was selected. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-compat-fs-sandbox', targets: ['host'],
-  requires: ['sandboxPolicy', 'compatDshRuntime'], provides: ['fs'],
+  requires: ['sandboxPolicy', 'compatRshRuntime'], provides: ['fs'],
   resolve(input) {
     const config = resolveLocalFilesystemConfig(input)
     const require = createRequire(import.meta.url)
     validateLegacySandboxManifest(require('@redspark/rsh-fs-sandbox/package.json') as CompatPackageManifest)
     return async (native) => {
-      const runtime = native.require('compatDshRuntime')
+      const runtime = native.require('compatRshRuntime')
       const legacy = runtime.context
       const policy = native.require('sandboxPolicy')
       const legacyPolicy = {

@@ -89,7 +89,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       const notifications = new Set<Notification>()
       const notices = createNoticeController({
         dismiss: (id) => {
-          const desktop = (globalThis as unknown as { dshDesktop?: { notifyTask?: (value: unknown) => Promise<void> } }).dshDesktop
+          const desktop = (globalThis as unknown as { rshDesktop?: { notifyTask?: (value: unknown) => Promise<void> } }).rshDesktop
           void desktop?.notifyTask?.({ dismissId: id }).catch(() => {})
           for (const notification of notifications) if (notification.tag === `task-scheduler:${id}`) notification.close()
         },
@@ -106,9 +106,9 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         notify: (item, open) => {
           if (item.phase === 'due') return
           const content = nativeNoticeContent(item, t)
-          const desktop = (globalThis as unknown as { dshDesktop?: {
+          const desktop = (globalThis as unknown as { rshDesktop?: {
             notifyTask?: (value: { id: string; title: string; body: string; status: string; time: number }) => Promise<void>
-          } }).dshDesktop
+          } }).rshDesktop
           if (desktop?.notifyTask) {
             void desktop.notifyTask({ id: item.id, title: item.title, body: item.directReminder ? item.body : t('nativeOpenResult'),
               status: t(noticeStatus(item)), time: item.time })

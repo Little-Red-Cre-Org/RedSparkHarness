@@ -27,7 +27,7 @@ declare module '@redspark/rsh-native-runtime' {
     /**
      * Notify Native consumers that a scoped skill catalog may have changed.
      * @mode parallel
-     * @dshScopeScan unsupported
+     * @rshScopeScan unsupported
      */
     'skills/change': { mode: 'parallel'; args: []; result: void }
   }

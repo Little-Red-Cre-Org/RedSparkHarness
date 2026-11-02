@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { parseEnv } from 'node:util'
 import { resolve } from 'node:path'
-import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { createLaunchEnvironmentSnapshot, type LaunchEnvironmentSnapshot } from './native.ts'
 
 /** Exact names no discovered file may set. */
@@ -114,7 +114,7 @@ export function loadLayeredEnv(
   warn: (line: string) => void = line => void process.stderr.write(line),
   homeDirectory?: string,
 ): LaunchEnvironmentSnapshot {
-  const home = resolveDshHome(homeDirectory)
+  const home = resolveRshHome(homeDirectory)
   const inherited = { ...process.env } as Record<string, string>
   // Parse both layers first: a rejection must not leave one file applied.
   const project = readEnvLayer(binName, cwd, warn, home)

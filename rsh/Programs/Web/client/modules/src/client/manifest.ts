@@ -304,7 +304,7 @@ export interface ClientModuleLoaderTarget {
 }
 
 /** Window API of the web boot protocol: the host-injected graph and registration facade. */
-export interface DshWindow {
+export interface RshWindow {
   /** Host-composed entry graph, injected before the shell bundle runs; wire-boundary raw until {@link parseBootManifest}. */
   __RSH_BOOT__?: unknown
   /** HTML-installed facade: a pending registration queue, then the live module-system target. */

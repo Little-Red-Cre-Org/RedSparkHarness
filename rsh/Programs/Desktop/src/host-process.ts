@@ -36,7 +36,7 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
   const candidate = message as Record<string, unknown>
   switch (candidate.type) {
     case 'ready':
-      return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
+      return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.rshVersion === 'string'
     case 'fatal':
       return ['AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'UnknownError', 'ValidationError']
         .includes(candidate.errorType as string)
@@ -68,7 +68,7 @@ async function exitsWithin(exit: Promise<void>, milliseconds: number): Promise<b
 /** Ready facts reported by one installed dsh child. */
 export interface DesktopHostReady {
   readonly protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
-  readonly dshVersion: string
+  readonly rshVersion: string
 }
 
 /** One dsh backend running under the bundled upstream Node.js executable. */

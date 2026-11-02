@@ -45,7 +45,7 @@ export type DesktopUpdateState =
   | { readonly phase: 'error'; readonly version?: string; readonly errorType: DesktopErrorType; readonly logPath?: string }
 
 /** Narrow bridge exposed through context isolation. */
-export interface DshDesktopApi {
+export interface RshDesktopApi {
   readonly protocolVersion: 1
   locale(): Promise<DesktopLocale>
   readonly plugins: {
@@ -87,8 +87,8 @@ export interface NativeDesktopModuleManagementApi {
 }
 
 /** Startup-page controls, unavailable to backend-provided application documents. */
-export interface DshDesktopStartupApi extends Pick<DshDesktopApi, 'protocolVersion' | 'locale'> {
-  readonly backend: Omit<DshDesktopApi['backend'], 'retry'>
+export interface RshDesktopStartupApi extends Pick<RshDesktopApi, 'protocolVersion' | 'locale'> {
+  readonly backend: Omit<RshDesktopApi['backend'], 'retry'>
   disablePlugins(): Promise<void>
   restart(): Promise<void>
   resetConfiguration(): Promise<void>

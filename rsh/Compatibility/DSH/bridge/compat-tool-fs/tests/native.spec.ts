@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativeContext, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { plugin as compatRuntimePlugin } from '@redspark/rsh-compat-dsh-runtime/native'
-import type { CompatDshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
+import type { CompatRshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
 import { SUPPORT_RECORD, validateSupportManifest } from '@redspark/rsh-compat-dsh-runtime/native'
 import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
 import { FsError, type FileSystemOperations, type FsVersion, type FsWriteIntent } from '@redspark/rsh-fs/native'
@@ -135,18 +135,18 @@ it('bridges legacy tool results and prompt into Native registries, records one r
   let tools: NativeToolRegistry | undefined
   let prompt: NativePromptRegistry | undefined
   let agents: NativeAgentRegistry | undefined
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let filesystem: FileSystemOperations | undefined
   let nativeEvents: NativeContext['events'] | undefined
   const capture: NativePlugin = {
     apiVersion: 1, name: 'capture', targets: ['host'],
-    requires: ['application', 'tools', 'promptSections', 'agents', 'fs', 'compatDshRuntime'], provides: [],
+    requires: ['application', 'tools', 'promptSections', 'agents', 'fs', 'compatRshRuntime'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       tools = context.require('tools')
       prompt = context.require('promptSections')
       agents = context.require('agents')
-      runtime = context.require('compatDshRuntime')
+      runtime = context.require('compatRshRuntime')
       filesystem = context.require('fs')
       nativeEvents = context.events
     },
@@ -512,15 +512,15 @@ it('bridges legacy tool results and prompt into Native registries, records one r
 it('bridges legacy tool execution and write/edit waterfalls through native callbacks', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-tool-fs-waterfall-'))
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let filesystem: FileSystemOperations | undefined
   let tools: NativeToolRegistry | undefined
   let agents: NativeAgentRegistry | undefined
   const capture: NativePlugin = {
     apiVersion: 1, name: 'compat-waterfall-capture', targets: ['host'],
-    requires: ['compatDshRuntime', 'fs', 'tools', 'agents'], provides: [],
+    requires: ['compatRshRuntime', 'fs', 'tools', 'agents'], provides: [],
     resolve: () => (context) => {
-      runtime = context.require('compatDshRuntime')
+      runtime = context.require('compatRshRuntime')
       filesystem = context.require('fs')
       tools = context.require('tools')
       agents = context.require('agents')
@@ -870,16 +870,16 @@ it.each([
     resolve: () => (context) => { context.provide('model', model) },
   }
   let app: NativeApplication | undefined
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let tools: NativeToolRegistry | undefined
   let approval: NativeApprovalServiceDefinition | undefined
   const capture: NativePlugin = {
     apiVersion: 1, name: 'compat-approval-capture', targets: ['host'],
-    requires: ['application', 'approval', 'compatDshRuntime', 'tools'], provides: [],
+    requires: ['application', 'approval', 'compatRshRuntime', 'tools'], provides: [],
     resolve: () => (context) => {
       app = context.require('application')
       approval = context.require('approval')
-      runtime = context.require('compatDshRuntime')
+      runtime = context.require('compatRshRuntime')
       tools = context.require('tools')
     },
   }

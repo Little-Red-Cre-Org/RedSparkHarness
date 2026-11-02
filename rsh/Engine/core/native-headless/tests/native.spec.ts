@@ -235,7 +235,7 @@ async function fixture(
       ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
       ...(options.tmuxContext === undefined ? [] : [{ plugin: tmuxContextPlugin, scope, config: options.tmuxContext }]),
-      ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
+      ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, rshHome: directory } }] : []),
       toolsRequest,
       ...(skillDirectory === undefined ? [] : [
         { plugin: toolSkillPlugin, scope, config: undefined },

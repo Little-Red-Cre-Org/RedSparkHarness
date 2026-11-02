@@ -17,7 +17,7 @@ let context: Context | undefined
 afterEach(async () => {
   await context?.fiber.dispose()
   context = undefined
-  Reflect.deleteProperty(globalThis, '__dshTypertLoaderGate')
+  Reflect.deleteProperty(globalThis, '__rshTypertLoaderGate')
   if (root !== undefined) await rm(root, { recursive: true, force: true })
   root = undefined
 })
@@ -250,15 +250,15 @@ describe('typert loader', () => {
     const started = new Promise<void>((resolve) => { markStarted = resolve })
     let releaseImport: (() => void) | undefined
     const wait = new Promise<void>((resolve) => { releaseImport = resolve })
-    Reflect.set(globalThis, '__dshTypertLoaderGate', {
+    Reflect.set(globalThis, '__rshTypertLoaderGate', {
       started: (): void => { markStarted?.() },
       wait,
     })
     await writePackage(root, '@fixture/pending', {
       typertSource: [
         'import { z } from \'zod\'',
-        'globalThis.__dshTypertLoaderGate.started()',
-        'await globalThis.__dshTypertLoaderGate.wait',
+        'globalThis.__rshTypertLoaderGate.started()',
+        'await globalThis.__rshTypertLoaderGate.wait',
         'export const Pending = z.object({ id: z.string() })',
         'export const TYPERT = {',
         '  package: \'@fixture/pending\',',

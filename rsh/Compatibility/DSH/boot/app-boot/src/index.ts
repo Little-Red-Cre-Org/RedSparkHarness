@@ -14,14 +14,14 @@ import { Context, type FiberState } from '@redspark/cordis'
 import Loader, { type Entry, type EntryOptions } from '@redspark/cordis-plugin-loader'
 import Include, { applyEntryPatches, entryListSchema, type PatchOptions } from '@redspark/cordis-plugin-include'
 import Group from '@redspark/cordis-plugin-group'
-import { dshHomePath } from '@redspark/rsh-home-paths'
+import { rshHomePath } from '@redspark/rsh-home-paths'
 import type {} from '@redspark/cordis-plugin-hmr'
 import type {} from '@redspark/rsh-system-prompt'
 
 declare module '@redspark/cordis' {
   interface Context {
     /** Harness-home path resolver available to Loader `!!js` config expressions. */
-    dshHomePath?: typeof dshHomePath
+    rshHomePath?: typeof rshHomePath
   }
 }
 
@@ -671,7 +671,7 @@ export async function boot(
   let stage = 'host preparation failed'
   try {
     ctx.baseUrl = pathToFileURL(dirname(absoluteConfigPath)).href + '/'
-    ctx.provide('dshHomePath', dshHomePath)
+    ctx.provide('rshHomePath', rshHomePath)
     await ctx.plugin(Loader)
     await prepare?.(ctx)
     stage = 'plugin tree failed to load'

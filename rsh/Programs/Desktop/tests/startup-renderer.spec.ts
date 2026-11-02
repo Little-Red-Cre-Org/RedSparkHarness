@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { JSDOM } from 'jsdom'
 import { expect, it, onTestFinished, vi } from 'vitest'
 import type { DesktopBackendState } from '../src/backend-controller.ts'
-import type { DshDesktopStartupApi } from '../src/ipc.ts'
+import type { RshDesktopStartupApi } from '../src/ipc.ts'
 import { resolveDesktopLocale } from '../src/locale.ts'
 import { startupFailureDocument } from '../src/startup-document.ts'
 
@@ -20,7 +20,7 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
   const resetConfiguration = vi.fn(async () => {})
   const restart = vi.fn(async () => {})
   const queried = Promise.withResolvers<undefined>()
-  const api: DshDesktopStartupApi = {
+  const api: RshDesktopStartupApi = {
     protocolVersion: 1,
     locale: async () => resolveDesktopLocale(locale),
     backend: {
@@ -29,7 +29,7 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
     },
     disablePlugins, resetConfiguration, restart,
   }
-  Object.defineProperty(dom.window, 'dshDesktop', { value: api })
+  Object.defineProperty(dom.window, 'rshDesktop', { value: api })
   runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
   const document = dom.window.document
   const element = (selector: string): HTMLElement => {

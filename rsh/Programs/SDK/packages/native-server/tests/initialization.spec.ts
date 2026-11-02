@@ -126,7 +126,7 @@ it('runs without the optional subagent Provider and drains admitted model work a
     { plugin: agents, scope, config: undefined }, { plugin: execution, scope, config: undefined },
     { plugin: modelExecution, scope, config: undefined }, { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
     { plugin: storage, scope, config: { root: sessions, compression: 'none' } },
-    { plugin: attachments, scope, config: { dshHome: home } }, { plugin: model, scope, config: undefined },
+    { plugin: attachments, scope, config: { rshHome: home } }, { plugin: model, scope, config: undefined },
     { plugin: carrier, scope, config: undefined },
   ], 'host'))
   let done: Promise<unknown> | undefined

@@ -74,7 +74,7 @@ export async function canonicalizeWatchPath(path: string): Promise<string> {
  * Resolve the default RedSpark Harness home using Node's platform path rules.
  * @returns the absolute default harness home path.
  */
-export function defaultDshHome(): string {
+export function defaultRshHome(): string {
   return join(homedir(), RSH_HOME_DIR_NAME)
 }
 
@@ -100,9 +100,9 @@ export function expandHomePath(path: string): string {
  * @param env - environment mapping used to read `RSH_HOME`.
  * @returns the normalized absolute harness home path.
  */
-export function resolveDshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
-  const fromEnv = inheritableDshHome(env[RSH_HOME_ENV])
-  const selected = configured ?? fromEnv ?? defaultDshHome()
+export function resolveRshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
+  const fromEnv = inheritableRshHome(env[RSH_HOME_ENV])
+  const selected = configured ?? fromEnv ?? defaultRshHome()
   return resolve(expandHomePath(selected))
 }
 
@@ -127,7 +127,7 @@ export function resolveDshHome(configured?: string, env: Record<string, string |
  * @returns the accepted value, or undefined when the ambient value is absent,
  * blank, or points at an upstream DSH home.
  */
-function inheritableDshHome(value: string | undefined): string | undefined {
+function inheritableRshHome(value: string | undefined): string | undefined {
   if (value === undefined || value.trim().length === 0) return undefined
   const normalized = value.trim().replace(/[\\/]+$/u, '')
   if (basename(normalized) !== UPSTREAM_DSH_HOME_DIR_NAME) return value
@@ -135,7 +135,7 @@ function inheritableDshHome(value: string | undefined): string | undefined {
 }
 
 export {
-  resolveDshProfileDirectoryExecution, resolveDshProfileExecution, validateDshProfileName,
+  resolveRshProfileDirectoryExecution, resolveRshProfileExecution, validateRshProfileName,
 } from './profile-runtime.ts'
 export type { DshProfileExecution } from './profile-runtime.ts'
 
@@ -144,8 +144,8 @@ export type { DshProfileExecution } from './profile-runtime.ts'
  * @param segments - path segments appended to the Harness home; an empty list returns the home itself.
  * @returns the normalized absolute joined path.
  */
-export function dshHomePath(...segments: string[]): string {
-  return join(resolveDshHome(), ...segments)
+export function rshHomePath(...segments: string[]): string {
+  return join(resolveRshHome(), ...segments)
 }
 
 /**
@@ -154,9 +154,9 @@ export function dshHomePath(...segments: string[]): string {
  * @param segments - additional path segments after the first child, if any.
  * @returns the normalized absolute cache path.
  */
-export function dshCachePath(optionsOrSegment: { dshHome?: string } | string = {}, ...segments: string[]): string {
-  if (typeof optionsOrSegment === 'string') return dshHomePath('cache', optionsOrSegment, ...segments)
-  return join(resolveDshHome(optionsOrSegment.dshHome), 'cache', ...segments)
+export function rshCachePath(optionsOrSegment: { rshHome?: string } | string = {}, ...segments: string[]): string {
+  if (typeof optionsOrSegment === 'string') return rshHomePath('cache', optionsOrSegment, ...segments)
+  return join(resolveRshHome(optionsOrSegment.rshHome), 'cache', ...segments)
 }
 
 /**
@@ -164,9 +164,9 @@ export function dshCachePath(optionsOrSegment: { dshHome?: string } | string = {
  *
  * It never returns an absolute machine path: the default home is labelled
  * `~/.redspark`, and any configured home is labelled `$RSH_HOME`.
- * @param resolvedHome - the absolute path returned by {@link resolveDshHome}.
+ * @param resolvedHome - the absolute path returned by {@link resolveRshHome}.
  * @returns `~/.redspark` for the default home, otherwise `$RSH_HOME`.
  */
 export function dshHomeDisplay(resolvedHome: string): string {
-  return resolvedHome === resolve(defaultDshHome()) ? DEFAULT_RSH_HOME_DISPLAY : `$${RSH_HOME_ENV}`
+  return resolvedHome === resolve(defaultRshHome()) ? DEFAULT_RSH_HOME_DISPLAY : `$${RSH_HOME_ENV}`
 }

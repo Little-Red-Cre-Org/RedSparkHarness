@@ -19,7 +19,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-compat-fs-policy',
   targets: ['host'],
-  requires: ['compatDshRuntime'],
+  requires: ['compatRshRuntime'],
   provides: ['fsObservationPolicy'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
@@ -28,7 +28,7 @@ export const plugin: NativePlugin = {
     const require = createRequire(import.meta.url)
     validateLegacyPolicyManifest(require('@redspark/rsh-fs-observation-policy/package.json') as CompatPackageManifest)
     return async (native) => {
-      const runtime = native.require('compatDshRuntime')
+      const runtime = native.require('compatRshRuntime')
       const mount = runtime.mount('@redspark/rsh-fs-observation-policy', LegacyPolicy)
       native.own(() => mount.dispose())
       await mount.ready

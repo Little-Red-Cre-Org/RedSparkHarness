@@ -35,7 +35,7 @@ kind: "package-reference"
 
 两个节流字段均必填——写入节奏是部署选择，没有普适正确值：
 
-缓存通过存储栈打开自己的域，因此 base 先挂 `storage`、`storage-json`（根 `dshHomePath('storages')`）与 `storage-domain`（`backend: json`）：
+缓存通过存储栈打开自己的域，因此 base 先挂 `storage`、`storage-json`（根 `rshHomePath('storages')`）与 `storage-domain`（`backend: json`）：
 
 ```yaml
 - id: session-projection-cache

@@ -462,7 +462,7 @@ describe('HarnessClient', () => {
   })
 
   it('fails when the configured dsh CLI module does not exist', async () => {
-    const client = new HarnessClient({ dshBin: join(tmpdir(), 'dsh-no-such-runtime-bin') })
+    const client = new HarnessClient({ rshBin: join(tmpdir(), 'dsh-no-such-runtime-bin') })
     cleanups.push(() => client.close())
     await expect(client.request('initialize', {}, 1_000)).rejects.toThrow(TransportClosedError)
   })

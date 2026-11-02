@@ -7,7 +7,7 @@ import { expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
 import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
-import type { CompatDshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
+import type { CompatRshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
 import { plugin as compatRuntimePlugin } from '@redspark/rsh-compat-dsh-runtime/native'
 import type { FileSystemOperations } from '@redspark/rsh-fs/native'
 import { plugin as nativePolicyPlugin } from '@redspark/rsh-fs-observation-policy/native'
@@ -39,13 +39,13 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
   await mkdir(substituteDirectory)
   await writeFile(join(updatedDirectory, 'sample.txt'), 'from real provider\n'.repeat(5000))
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let tools: NativeToolRegistry | undefined
   let agents: NativeAgentRegistry | undefined
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'native-file-tool-capture', targets: ['host'], requires: ['compatDshRuntime', 'tools', 'agents'], provides: [],
+    apiVersion: 1, name: 'native-file-tool-capture', targets: ['host'], requires: ['compatRshRuntime', 'tools', 'agents'], provides: [],
     resolve: () => (context) => {
-      runtime = context.require('compatDshRuntime')
+      runtime = context.require('compatRshRuntime')
       tools = context.require('tools')
       agents = context.require('agents')
     },

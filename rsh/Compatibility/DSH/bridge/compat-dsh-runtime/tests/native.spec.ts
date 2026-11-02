@@ -1,7 +1,7 @@
 /** Native-owned activation, rollback, and removal of the optional Cordis runtime. */
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { expect, it } from 'vitest'
-import { plugin, validateCordisManifest, validateLoaderManifest, type CompatDshRuntime } from '../src/native.ts'
+import { plugin, validateCordisManifest, validateLoaderManifest, type CompatRshRuntime } from '../src/native.ts'
 
 it('rejects unknown host config and unsupported Cordis versions before activation', () => {
   expect(() => plugin.resolve({ enabled: true })).toThrow('configuration must be empty')
@@ -18,7 +18,7 @@ it('rejects unknown host config and unsupported Cordis versions before activatio
 
 it('mounts only allowlisted DSH plugins and awaits their removal without stopping other mounts', async () => {
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let disposeFirst: (() => Promise<void>) | undefined
   let signalTeardownStarted: (() => void) | undefined
   let finishTeardown: (() => void) | undefined
@@ -28,9 +28,9 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
   const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
   const firstDisposed = new Promise<void>((resolve) => { markFirstDisposed = resolve })
   const mountedPlugin: NativePlugin = {
-    apiVersion: 1, name: 'compat-mount-consumer', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
+    apiVersion: 1, name: 'compat-mount-consumer', targets: ['host'], requires: ['compatRshRuntime'], provides: [],
     resolve: () => async (context) => {
-      const compat = context.require('compatDshRuntime')
+      const compat = context.require('compatRshRuntime')
       const mount = compat.mount('@redspark/rsh-fs-local', (legacy) => {
         legacy.provide('compatTest', 'mounted')
         legacy.fiber.effect(() => async () => {
@@ -109,12 +109,12 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
 it('rolls back a partially activated legacy plugin and releases its Cordis resources', async () => {
   const scope = new NativeScope()
   let disposed = 0
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let failedError: unknown
   const failing: NativePlugin = {
-    apiVersion: 1, name: 'compat-mount-failure', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
+    apiVersion: 1, name: 'compat-mount-failure', targets: ['host'], requires: ['compatRshRuntime'], provides: [],
     resolve: () => async (context) => {
-      const compat = context.require('compatDshRuntime')
+      const compat = context.require('compatRshRuntime')
       const mount = compat.mount('@redspark/rsh-fs-observation-policy', async (legacy) => {
         legacy.effect(() => () => { disposed += 1 })
         await Promise.resolve()
@@ -152,14 +152,14 @@ it('rolls back a partially activated legacy plugin and releases its Cordis resou
 
 it.each(['suspend', 'resume'] as const)('recovers mount lifecycle after participant %s failure', async (phase) => {
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   const capture: NativePlugin = {
     apiVersion: 1,
     name: 'compat-lifecycle-capture',
     targets: ['host'],
-    requires: ['compatDshRuntime'],
+    requires: ['compatRshRuntime'],
     provides: [],
-    resolve: () => (native) => { runtime = native.require('compatDshRuntime') },
+    resolve: () => (native) => { runtime = native.require('compatRshRuntime') },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: undefined }, { plugin: capture, scope, config: undefined },

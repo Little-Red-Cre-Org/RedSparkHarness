@@ -15,7 +15,7 @@ import { readDesktopRuntime, writeDesktopRuntime } from '../src/runtime-tree.ts'
 import type { DesktopBackendState } from '../src/backend-controller.ts'
 import { runtimeFixture, writePackage } from './runtime-fixture.ts'
 
-(globalThis as Record<string, unknown>).__dshDesktopTestPrepareNativeClientProfileBundle = prepareNativeClientProfileBundle
+(globalThis as Record<string, unknown>).__rshDesktopTestPrepareNativeClientProfileBundle = prepareNativeClientProfileBundle
 
 const roots: string[] = []
 
@@ -82,7 +82,7 @@ function prepareFixture(root: string): { manager: DesktopProjectManager; profile
   // The runtime's native import bypasses Vitest source aliases.
   writePackage(join(runtime, 'node_modules'), '@redspark/rsh-native-web-assets',
     { exports: { './native-client': './index.js' } },
-    'export const prepareNativeClientProfileBundle = (...args) => globalThis.__dshDesktopTestPrepareNativeClientProfileBundle(...args)')
+    'export const prepareNativeClientProfileBundle = (...args) => globalThis.__rshDesktopTestPrepareNativeClientProfileBundle(...args)')
   const paths = resolveDesktopPaths(join(root, '.dsh'))
   const manager = new DesktopProjectManager(paths, { node: process.execPath, pnpm: writeNativePnpm(root), dsh: runtime })
   return { manager, profile: paths.profile }

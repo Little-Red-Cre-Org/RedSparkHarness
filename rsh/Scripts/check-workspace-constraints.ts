@@ -416,7 +416,7 @@ function sameStringList(actual: readonly string[] | undefined, expected: readonl
   return !!actual && actual.length === expected.length && actual.every((value, index) => value === expected[index])
 }
 
-export function expectedDshPackageFiles(manifest: PackageManifest): readonly string[] {
+export function expectedRshPackageFiles(manifest: PackageManifest): readonly string[] {
   const override = manifest.name ? packageFileOverrides[manifest.name] : undefined
   if (override !== undefined) return override
   const declaredPatch = manifest.dsh?.bundle?.patch
@@ -525,7 +525,7 @@ function isReleaseMemberDirectory(dir: string): boolean {
 }
 
 /** Whether a package belongs to the product library policy rather than an application root. */
-function isDshLibraryDirectory(dir: string): boolean {
+function isRshLibraryDirectory(dir: string): boolean {
   return !applicationDistributionDirectories.has(dir) && [
     'rsh/Core/',
     'rsh/Engine/',
@@ -546,7 +546,7 @@ function isDshLibraryDirectory(dir: string): boolean {
 
 /** Require Cordis according to whether a DSH library is native, mixed, or compatibility-only. */
 export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): string[] {
-  if (!isDshLibraryDirectory(dir) || manifest.name?.startsWith('@redspark/rsh-') !== true) return []
+  if (!isRshLibraryDirectory(dir) || manifest.name?.startsWith('@redspark/rsh-') !== true) return []
   const label = manifest.name
   const peer = manifest.peerDependencies?.['@redspark/cordis']
   const dev = manifest.devDependencies?.['@redspark/cordis']
@@ -599,7 +599,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
  * @returns one violation naming the manifest and the expected version, or
  * undefined when the manifest is compliant or not in the family.
  */
-export function checkDshFamilyVersion(manifest: PackageManifest, expected: string | undefined): string | undefined {
+export function checkRshFamilyVersion(manifest: PackageManifest, expected: string | undefined): string | undefined {
   const name = manifest.name
   if (name !== '@redspark/rsh' && name?.startsWith('@redspark/rsh-') !== true) return undefined
   if (manifest.version !== expected) {
@@ -616,7 +616,7 @@ export function checkDshFamilyVersion(manifest: PackageManifest, expected: strin
 export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): string[] {
   const errors = checkExperimentalManifest({ dir, manifest })
   const label = manifest.name ?? dir
-  const familyVersionError = checkDshFamilyVersion(manifest, repositoryVersion)
+  const familyVersionError = checkRshFamilyVersion(manifest, repositoryVersion)
   if (familyVersionError !== undefined) errors.push(familyVersionError)
   const isNativePackageDir = dir.startsWith('rsh/Core/native/system/packages/')
   const isPublicNativePackage = isNativePackageDir
@@ -701,7 +701,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     }
   }
 
-  if (isDshLibraryDirectory(dir) && manifest.name?.startsWith('@redspark/rsh-')) {
+  if (isRshLibraryDirectory(dir) && manifest.name?.startsWith('@redspark/rsh-')) {
     errors.push(...checkCordisPeerPolicy({ dir, manifest }))
     if (manifest.type !== 'module') {
       errors.push(`${label}: package.json must set "type": "module"`)
@@ -731,7 +731,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     if (invariantExport && (invariantExport.types === undefined || invariantExport.default === undefined)) {
       errors.push(`${label}: package.json exports["./invariant"] must declare both types and default targets`)
     }
-    const expectedFiles = expectedDshPackageFiles(manifest)
+    const expectedFiles = expectedRshPackageFiles(manifest)
     if (!sameStringList(manifest.files, expectedFiles)) {
       errors.push(`${label}: package.json files must be ${JSON.stringify(expectedFiles)}`)
     }

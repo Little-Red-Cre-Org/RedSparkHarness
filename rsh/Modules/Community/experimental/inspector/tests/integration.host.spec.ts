@@ -641,7 +641,7 @@ describe('experimental Inspector real Worker', () => {
       && event.params?.requestId === requestId)).toBe(false)
     const body = await cdp.call('Network.getResponseBody', { requestId })
     expect(Buffer.from(String(body.result?.body), 'base64').toString('utf8')).toBe(eventStream)
-    expect(body.result?.dshInspectorTruncated).toBe(true)
+    expect(body.result?.rshInspectorTruncated).toBe(true)
     expect(String(body.result?.dshInspectorCaptureError)).toContain('AbortError')
   })
 })

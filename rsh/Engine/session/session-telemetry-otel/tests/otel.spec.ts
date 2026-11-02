@@ -49,15 +49,15 @@ const servers: Server[] = []
 // The backend resolves the harness home's anonymous user id at construction;
 // pin RSH_HOME to a temp dir so the suite never touches the ambient ~/.dsh.
 let tempHome: string
-let previousDshHome: string | undefined
+let previousRshHome: string | undefined
 beforeAll(() => {
   tempHome = mkdtempSync(join(tmpdir(), 'dsh-otel-home-'))
-  previousDshHome = process.env.RSH_HOME
+  previousRshHome = process.env.RSH_HOME
   process.env.RSH_HOME = tempHome
 })
 afterAll(() => {
-  if (previousDshHome === undefined) delete process.env.RSH_HOME
-  else process.env.RSH_HOME = previousDshHome
+  if (previousRshHome === undefined) delete process.env.RSH_HOME
+  else process.env.RSH_HOME = previousRshHome
   rmSync(tempHome, { recursive: true, force: true })
 })
 

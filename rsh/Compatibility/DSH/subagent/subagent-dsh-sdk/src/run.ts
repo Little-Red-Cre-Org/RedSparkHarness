@@ -29,13 +29,13 @@ import { scrubbedParentEnv } from '@redspark/rsh-subprocess'
 /** Resolved spawn spec for an SDK runtime child process (no defaults — see Config). */
 export interface SdkRunSpec {
   /** Explicit dsh CLI module; omission resolves the SDK client's same-version dependency. */
-  dshBin?: string
+  rshBin?: string
   /** Named child profile. */
   profile: string
   /** Ordered per-launch profile patch files. */
   patches: string[]
   /** Absolute isolated Harness home for the nested runtime. */
-  dshHome: string
+  rshHome: string
   /**
    * Absolute working directory for the child process AND the workspace cwd
    * of its SDK session. The provider resolves it before this spec exists:
@@ -237,10 +237,10 @@ export async function startSdkRun(request: SubagentStartRequest, spec: SdkRunSpe
   const id = brandString<SessionId>(randomUUID())
 
   const harness = internals.createHarness({
-    ...spec.dshBin === undefined ? {} : { dshBin: spec.dshBin },
+    ...spec.rshBin === undefined ? {} : { rshBin: spec.rshBin },
     profile: spec.profile,
     patches: spec.patches,
-    dshHome: spec.dshHome,
+    rshHome: spec.rshHome,
     processCwd: spec.cwd,
     env: { ...scrubbedParentEnv(), ...spec.env },
     shutdownTimeoutMs: spec.shutdownTimeoutMs,

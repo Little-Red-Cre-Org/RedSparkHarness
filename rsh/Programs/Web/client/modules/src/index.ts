@@ -35,7 +35,7 @@ import type { Entry } from '@redspark/cordis-plugin-loader'
 import type { IndexInjection } from '@redspark/rsh-http-routes/client'
 import type {} from '@redspark/rsh-http-routes-cordis'
 import { exactPackageSpecifier, stripClientSuffix } from './client/manifest.ts'
-import { parseDshClient } from './client/dsh-client.ts'
+import { parseRshClient } from './client/dsh-client.ts'
 import type { WebBootBatch, WebBootBatchPhase, WebBootEntry, WebBootGraph } from './client/manifest.ts'
 
 export { stripClientSuffix } from './client/manifest.ts'
@@ -723,7 +723,7 @@ export class ClientModuleRegistry extends Service {
     const { packageName, path: pkgPath } = located
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>
     const dsh = pkg.dsh
-    const decl = parseDshClient(
+    const decl = parseRshClient(
       packageName,
       dsh !== null && typeof dsh === 'object' ? (dsh as Record<string, unknown>).client : undefined,
     )

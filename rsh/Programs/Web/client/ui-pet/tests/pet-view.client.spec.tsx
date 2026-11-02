@@ -16,7 +16,7 @@ import type { PetLifecycle } from '../src/client/activity-projection.ts'
 const SID = 'pet-test' as SessionId
 afterEach(() => {
   cleanup()
-  Reflect.deleteProperty(window, 'dshDesktop')
+  Reflect.deleteProperty(window, 'rshDesktop')
 })
 const snapshot: PetSnapshot = {
   enabled: true,
@@ -69,7 +69,7 @@ describe('desktop pet presentation', () => {
 
   it('hides the Electron carrier when the presentation unmounts', () => {
     const update = vi.fn(() => Promise.resolve())
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const view = render(<PetView {...viewProps({ ...snapshot, desktopEnabled: true }, session())} />)
 
     view.unmount()
@@ -81,7 +81,7 @@ describe('desktop pet presentation', () => {
 
   it('updates native status without hiding the desktop carrier between activities', () => {
     const update = vi.fn(() => Promise.resolve())
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const view = render(<PetView {...viewProps({ ...snapshot, desktopEnabled: true }, session())} />)
     update.mockClear()
 
@@ -93,7 +93,7 @@ describe('desktop pet presentation', () => {
 
   it('reports a carrier failure without leaving its native window visible', async () => {
     const update = vi.fn(() => Promise.reject(new Error('carrier unavailable')))
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const view = render(<PetView {...viewProps({ ...snapshot, desktopEnabled: true }, session())} />)
 
     await waitFor(() => { expect(view.getByRole('status').textContent).toBe('The desktop pet could not update. Toggle desktop display to retry.') })
@@ -156,7 +156,7 @@ describe('desktop pet presentation', () => {
 
   it('uses projected activity and each desktop sprite frame without requiring a Session id', async () => {
     const update = vi.fn(() => Promise.resolve())
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const sleeping: PetSnapshot = { ...snapshot, desktopEnabled: true, activities: new Map([[SID, 'sleeping']]) }
     const view = render(<PetView {...viewProps(sleeping, session())} />)
     await act(async () => {})
@@ -187,7 +187,7 @@ describe('desktop pet presentation', () => {
 
   it('handles an absent Session and an unavailable selected character without producing a native atlas', () => {
     const update = vi.fn(() => Promise.resolve())
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const props = {
       ...viewProps({ ...snapshot, desktopEnabled: true, pets: [] }, undefined as unknown as SessionSnapshot), sessionId: undefined,
     } as unknown as PetViewProps
@@ -199,7 +199,7 @@ describe('desktop pet presentation', () => {
   it('does not set an error after a stale carrier request rejects during unmount', async () => {
     const rejections: ((reason: unknown) => void)[] = []
     const update = vi.fn(() => new Promise<void>((_resolve, reject) => { rejections.push(reject) }))
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update } } })
     const view = render(<PetView {...viewProps({ ...snapshot, desktopEnabled: true }, session())} />)
     view.unmount()
     rejections[0]?.(new Error('stale carrier request'))
@@ -247,7 +247,7 @@ describe('desktop pet presentation', () => {
       ...snapshot, desktopEnabled: true, petId: 'imported-a', variant: 'normal', customPetIds: ['imported-a'],
       pets: [...snapshot.pets, { id: 'imported-a', name: 'Imported', variants: [{ id: 'normal', atlasUrl: 'data:image/png;base64,aGVsbG8=' }] }],
     }
-    Object.defineProperty(window, 'dshDesktop', { configurable: true, value: { pet: { update: vi.fn() } } })
+    Object.defineProperty(window, 'rshDesktop', { configurable: true, value: { pet: { update: vi.fn() } } })
     const props = {
       usePet: bindSnapshotSelector(createSnapshotStore(imported)), setEnabled, setDesktopEnabled, setPet, setVariant,
       importPet: vi.fn(async () => {}), removePet, t: makeTranslate(en),

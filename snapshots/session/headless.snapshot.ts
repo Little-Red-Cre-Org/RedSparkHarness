@@ -55,7 +55,7 @@ import { parseSessionLog, prepareSessionSnapshotFixtureForComparison } from '@re
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const snapshotsRoot = fileURLToPath(new URL('./', import.meta.url))
-const dshBin = join(repoRoot, 'rsh/Programs/CLI/src/bin.ts')
+const rshBin = join(repoRoot, 'rsh/Programs/CLI/src/bin.ts')
 const tsconfigPath = join(repoRoot, 'tsconfig.json')
 const editingCordisSkill = join(
   repoRoot,
@@ -916,7 +916,7 @@ describe('headless recorded-session snapshots', () => {
           label: `${scenario.name} headless snapshot`,
           tempDirPrefix: 'dsh-log-snap-',
           ...(scenario.manifest.workspace?.parent === 'outside-temp' ? { tempDirParent: outsideTempWorkspaceParent() } : {}),
-          binScript: dshBin,
+          binScript: rshBin,
           configPath: join(baseComposition.dir, 'cordis.yml'),
           binArgs: [
             '--profile', 'legacy-headless', '--from-default-profile', 'headless',

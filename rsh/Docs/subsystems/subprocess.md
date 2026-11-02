@@ -16,12 +16,12 @@ One provider's spawn working directories, executable paths, ordinary processes, 
 
 ```ts type-equiv
 /** One environment key inside the managed {@link RSH_ENV_PREFIX} namespace. */
-type DshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
+type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
 ```
 
 ```ts type-equiv
 /** Trusted RedSpark Harness variables for one child-process execution. */
-type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>
+type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>
 ```
 
 ```ts type-equiv

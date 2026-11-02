@@ -2,7 +2,7 @@
 import type { Context } from '@redspark/cordis'
 import * as modulesClient from '@redspark/rsh-client-modules/client'
 import type {
-  ClientBundleRegistration, ClientModuleCreateOptions, ClientModuleLoaderTarget, DshWindow,
+  ClientBundleRegistration, ClientModuleCreateOptions, ClientModuleLoaderTarget, RshWindow,
   WebBootEntry,
 } from '@redspark/rsh-client-modules/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -11,7 +11,7 @@ import { AppWebEntry } from '../src/boot.ts'
 const MODULES_ID = '@redspark/rsh-client-modules'
 const PROVIDER_CLIENT_ID = 'provider/client'
 const RUNTIME_CLIENT_ID = 'runtime/client'
-const win = globalThis as DshWindow
+const win = globalThis as RshWindow
 const transportGlobal = globalThis as {
   __RSH_TRANSPORT__?: { loadBundle(url: string): Promise<void> }
 }

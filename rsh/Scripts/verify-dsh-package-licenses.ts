@@ -67,7 +67,7 @@ function printable(value: unknown): string {
  * @param root - absolute repository root containing the workspace package.json.
  * @returns the checked package count and every package-license policy violation.
  */
-export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport {
+export function inspectRshPackageLicenses(root: string): DshPackageLicenseReport {
   let packageCount = 0
   const failures: string[] = []
 
@@ -77,11 +77,11 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
     if (file === 'package.json') continue
     const normalizedFile = file.split(sep).join('/')
     const name = manifest.name
-    const isDshPackage = typeof name === 'string' && RSH_PACKAGE_NAME.test(name)
+    const isRshPackage = typeof name === 'string' && RSH_PACKAGE_NAME.test(name)
     const isResearchLicensePath = normalizedFile === RESEARCH_LICENSE_PACKAGE.manifestPath
 
     if (isResearchLicensePath) {
-      if (isDshPackage) packageCount++
+      if (isRshPackage) packageCount++
       if (name !== RESEARCH_LICENSE_PACKAGE.name) {
         failures.push(
           `${normalizedFile}: expected package name ${RESEARCH_LICENSE_PACKAGE.name}; found ${printable(name)}.`,
@@ -119,7 +119,7 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
       continue
     }
 
-    if (!isDshPackage) continue
+    if (!isRshPackage) continue
     packageCount++
     if (manifest.license !== 'MIT') {
       failures.push(
@@ -132,7 +132,7 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
 }
 
 if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
-  const report = inspectDshPackageLicenses(ROOT)
+  const report = inspectRshPackageLicenses(ROOT)
   if (report.failures.length > 0) {
     process.stderr.write('verify-dsh-package-licenses: package-license policy violations found:\n')
     for (const failure of report.failures) process.stderr.write(`  ${failure}\n`)

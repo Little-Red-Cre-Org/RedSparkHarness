@@ -28,8 +28,8 @@ type RunResult = { readonly sessionId: string; readonly finalResponse: string; r
 type InstalledSdk = {
   RedSparkHarness: new (options: {
     readonly profile: 'native-sdk'
-    readonly dshBin: string
-    readonly dshHome: string
+    readonly rshBin: string
+    readonly rshHome: string
     readonly patches: string[]
     readonly cwd: string
     readonly provider: 'fixture'
@@ -196,7 +196,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
           baseURL, models: [{ id: MODEL }] } } } },
       ] }))
 
-      const options = { profile: 'native-sdk' as const, dshBin: installedBin, dshHome: home, patches: [patch],
+      const options = { profile: 'native-sdk' as const, rshBin: installedBin, rshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
       const bridgeHarness = new RedSparkHarness(options)
       let first: RunResult

@@ -42,7 +42,7 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `path` | `<harness home>/settings.yaml` | 设置文档路径；扩展名决定格式（`.yaml`、`.yml` 或 `.json`） |
-| `dshHome` | `$RSH_HOME` 或 `~/.dsh` | `path` 省略时使用的 harness home |
+| `rshHome` | `$RSH_HOME` 或 `~/.dsh` | `path` 省略时使用的 harness home |
 | `watch` | `true` | 监听文档并热发布外部编辑 |
 | `debounceMs` | `100` | watcher 写入稳定窗口（毫秒） |
 

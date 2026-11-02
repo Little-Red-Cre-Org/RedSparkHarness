@@ -16,7 +16,7 @@
       "targets": ["host"],
       "requires": [],
       "optional": [],
-      "provides": ["compatDshRuntime"]
+      "provides": ["compatRshRuntime"]
     }
   },
   "main": "lib/index.js",

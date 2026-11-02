@@ -8,7 +8,7 @@
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { parseDshArgs } from './args.ts'
+import { parseRshArgs } from './args.ts'
 import { ensureShippedNativeProfile } from './native-profile-template.ts'
 import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
@@ -27,7 +27,7 @@ function readVersion(): string {
  * @returns a promise that settles when the selected command mode finishes.
  */
 export async function runCli(): Promise<void> {
-  const invocation = parseDshArgs(process.argv.slice(2), readVersion())
+  const invocation = parseRshArgs(process.argv.slice(2), readVersion())
   if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
     ensureShippedNativeProfile(invocation.profile)
   }

@@ -10,7 +10,7 @@
 
 import { Service, type Context } from '@redspark/cordis'
 import z from '@redspark/schemastery'
-import type { DshEnvironment, DshEnvironmentKey } from '@redspark/rsh-shell/native'
+import type { RshEnvironment, RshEnvironmentKey } from '@redspark/rsh-shell/native'
 import type { ToolExecution } from '@redspark/rsh-tools'
 import { ShellEnvController } from './controller.ts'
 
@@ -26,12 +26,12 @@ export const inject: string[] = []
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
   /** RedSpark Harness home directory exposed as `RSH_HOME`; defaults to `$RSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  rshHome?: string
 }
 
 /** Runtime configuration schema for the shell-env plugin. */
 export const Config: z<Config> = z.object({
-  dshHome: z.string(),
+  rshHome: z.string(),
 })
 
 /** Model-visible metadata for one managed `RSH_*` environment variable. */
@@ -45,13 +45,13 @@ export interface BashEnvContributor {
   /** Stable contributor name used in diagnostics and duplicate detection. */
   name: string
   /** Complete set of `RSH_*` keys this contributor may return. */
-  variables: Readonly<Record<DshEnvironmentKey, BashEnvVariable>>
+  variables: Readonly<Record<RshEnvironmentKey, BashEnvVariable>>
   /**
    * Resolve this contributor's available values for one tool execution.
    * @param execution - the shell tool execution and its optional calling agent.
    * @returns a partial map containing only keys declared in {@link variables}.
    */
-  resolve(execution: ToolExecution): Readonly<Partial<Record<DshEnvironmentKey, string>>>
+  resolve(execution: ToolExecution): Readonly<Partial<Record<RshEnvironmentKey, string>>>
 }
 
 /** An enumerable declaration returned by {@link ShellEnvRegistry.list}. */
@@ -59,7 +59,7 @@ export interface BashEnvVariableInfo extends BashEnvVariable {
   /** Contributor that owns the variable. */
   contributor: string
   /** Declared `RSH_*` environment variable name. */
-  key: DshEnvironmentKey
+  key: RshEnvironmentKey
 }
 
 /**
@@ -79,7 +79,7 @@ export class ShellEnvRegistry extends Service {
    */
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'shellEnv')
-    this.controller = new ShellEnvController(config.dshHome, execution => execution.agent?.session.header.id)
+    this.controller = new ShellEnvController(config.rshHome, execution => execution.agent?.session.header.id)
   }
 
   /**
@@ -100,7 +100,7 @@ export class ShellEnvRegistry extends Service {
    * @param execution - the current tool execution.
    * @returns an immutable environment overlay containing built-ins and current contributions.
    */
-  collect(execution: ToolExecution): DshEnvironment {
+  collect(execution: ToolExecution): RshEnvironment {
     return this.controller.collect(execution)
   }
 

@@ -50,7 +50,7 @@ Default roots are scanned in this provider's rank order:
 | 100 | `project-dsh` | `<projectRoot>/.dsh/skills` |
 | 200 | `project-agents` | `<projectRoot>/.agents/skills` |
 | 300 | `custom` | `Config.customSkillDirs` |
-| 400 | `user-dsh` | `<dshHome>/skills` |
+| 400 | `user-dsh` | `<rshHome>/skills` |
 | 500 | `user-agents` | `<agentsHome>/skills` |
 
 The project root is the nearest ancestor containing `.git`; without one, the current cwd is used. The user DSH root skips its `.system` child. `includeDefaultRoots: false` omits the project and user rows plus the `$RSH_BUNDLED_SKILL_DIR` default so an isolated provider sees only its own configured roots; `bundledSkillDir` adds a bundled root at rank 600.
@@ -68,7 +68,7 @@ Load the plugin alongside the skill registry; it requires `ctx.skills`.
 |---|---|---|
 | `providerName` | `filesystem` | Unique provider name registered in the skill registry |
 | `includeDefaultRoots` | `true` | Include project and user roots around `customSkillDirs` |
-| `dshHome` | `$RSH_HOME` or `~/.dsh` | Harness config root; its `skills` subdirectory is scanned |
+| `rshHome` | `$RSH_HOME` or `~/.dsh` | Harness config root; its `skills` subdirectory is scanned |
 | `agentsHome` | `$RSH_AGENTS_HOME` or `~/.agents` | Shared agent config root scanned for compatible skills |
 | `customSkillDirs` | `[]` | Additional local skill roots, after project roots and before user roots |
 | `watch` | `true` | Watch local roots and invalidate the provider when the catalog may have changed |
@@ -134,7 +134,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Skill subsystem reference](../../../../Docs/subsystems/skills.md) — the registry contract and the local discovery priority table.
 - [skill package](../skill/README.md) — the registry this provider registers on.
 - [tool-skill package](../tool-skill/README.md) — how discovered skills reach the session catalog and the model.
-- [home-paths package](../../../../Core/util/home-paths/README.md) — how `dshHome` and `agentsHome` resolve.
+- [home-paths package](../../../../Core/util/home-paths/README.md) — how `rshHome` and `agentsHome` resolve.
 
 -----
 

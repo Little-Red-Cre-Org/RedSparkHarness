@@ -35,13 +35,13 @@ export interface Config {
   /** Provider name on `ctx.subagents` (default `dsh-sdk`). */
   providerName: string
   /** Explicit dsh CLI module, resolved and checked at plugin load; omission uses the SDK dependency. */
-  dshBin?: string
+  rshBin?: string
   /** Named child profile (default `sdk`). */
   profile: string
   /** Ordered per-launch profile patch files, resolved and checked at plugin load. */
   patches: string[]
   /** Absolute isolated Harness home for every nested child process. */
-  dshHome: string
+  rshHome: string
   /**
    * Working directory override for the child process and its SDK session
    * workspace. Must be non-empty; a relative path resolves against the
@@ -78,10 +78,10 @@ export interface Config {
 
 export const Config: z<Config> = z.object({
   providerName: z.string().default('dsh-sdk'),
-  dshBin: z.string(),
+  rshBin: z.string(),
   profile: z.string().default('sdk'),
   patches: z.array(z.string()).default([]),
-  dshHome: z.string().required(),
+  rshHome: z.string().required(),
   cwd: z.string(),
   provider: z.string().default('deepseek-official'),
   model: z.string().default('deepseek-v4-flash'),
@@ -93,7 +93,7 @@ export const Config: z<Config> = z.object({
 })
 
 /** The shape after schemastery applied the defaults (`cwd` and `maxTokens` have none). */
-type ResolvedConfig = Required<Omit<Config, 'cwd' | 'maxTokens' | 'dshBin'>> & Pick<Config, 'cwd' | 'maxTokens' | 'dshBin'>
+type ResolvedConfig = Required<Omit<Config, 'cwd' | 'maxTokens' | 'rshBin'>> & Pick<Config, 'cwd' | 'maxTokens' | 'rshBin'>
 
 /** Resolve one configured runtime file against the harness launch directory and require a regular file. */
 function resolveConfiguredFile(field: string, value: string): string {
@@ -155,10 +155,10 @@ class SdkSubagentProvider implements SubagentProvider {
     }
     const route = resolveSdkRoute(this.config, request.agentOptions)
     const spec: SdkRunSpec = {
-      ...this.config.dshBin === undefined ? {} : { dshBin: this.config.dshBin },
+      ...this.config.rshBin === undefined ? {} : { rshBin: this.config.rshBin },
       profile: this.config.profile,
       patches: this.config.patches,
-      dshHome: this.config.dshHome,
+      rshHome: this.config.rshHome,
       cwd,
       ...route,
       env: this.config.env,
@@ -184,11 +184,11 @@ export function apply(ctx: Context, config: Config): void {
   if (resolved.maxTokens !== undefined && (!Number.isSafeInteger(resolved.maxTokens) || resolved.maxTokens <= 0)) {
     throw new TypeError('subagent-dsh-sdk maxTokens must be a positive safe integer')
   }
-  if (!isAbsolute(resolved.dshHome)) throw new TypeError('subagent-dsh-sdk dshHome must be an absolute path')
+  if (!isAbsolute(resolved.rshHome)) throw new TypeError('subagent-dsh-sdk rshHome must be an absolute path')
   const launchPaths: ResolvedConfig = {
     ...resolved,
     patches: resolved.patches.map((path, index) => resolveConfiguredFile(`patches[${String(index)}]`, path)),
-    ...resolved.dshBin === undefined ? {} : { dshBin: resolveConfiguredFile('dshBin', resolved.dshBin) },
+    ...resolved.rshBin === undefined ? {} : { rshBin: resolveConfiguredFile('rshBin', resolved.rshBin) },
   }
   // Interpret a relative configured cwd against the harness launch directory
   // ONCE, at load, and fail a misconfigured directory here — not per start.

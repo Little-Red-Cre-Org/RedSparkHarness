@@ -930,7 +930,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     { plugin: storage, scope, config: { root: join(directory, 'sessions'), compression: 'none' } },
     { plugin: storageJson, scope, config: { root: join(directory, 'domains') } },
     { plugin: storageDomain, scope, config: { backend: 'json' } },
-    { plugin: attachmentStorage, scope, config: { dshHome: directory } },
+    { plugin: attachmentStorage, scope, config: { rshHome: directory } },
   ], 'host'))
   let pendingSelection: Promise<unknown> | undefined
   let pendingQueuedPrompt: Promise<unknown> | undefined

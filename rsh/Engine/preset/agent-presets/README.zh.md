@@ -31,7 +31,7 @@ kind: "package-reference"
 
 ### 原生 preset 目录
 
-原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<dshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
+原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<rshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
 
 ```json
 { "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@redspark/rsh-native-tools", "config": {} } ] }
@@ -47,7 +47,7 @@ kind: "package-reference"
 
 从 preset 组装的会话会运行该 preset `agent.cordis.yml` 所列插件：它的工具、提示词段落与 skill。加入同一 preset 的会话共享一份已安装的组装，且各会话的状态彼此隔离。subagent 会加入其父方的组装，因此它看到的工具与提示词段落和创建它的 agent 相同。
 
-可选的 preset 来自三类来源：本包 `presets/` 下随包交付的 preset、已配置的根目录，以及你自己放在 `<dshHome>/.agent-presets` 下的 preset。选择器会展示每个 preset 的显示名与描述；组装无法加载的 preset 会连同原因一起列出而不是被隐藏，因此你能看到该修什么或删什么。
+可选的 preset 来自三类来源：本包 `presets/` 下随包交付的 preset、已配置的根目录，以及你自己放在 `<rshHome>/.agent-presets` 下的 preset。选择器会展示每个 preset 的显示名与描述；组装无法加载的 preset 会连同原因一起列出而不是被隐藏，因此你能看到该修什么或删什么。
 
 ### 最小配置
 
@@ -67,7 +67,7 @@ kind: "package-reference"
 | `default` | 必填 | 部署 fallback preset id；模式选择关闭或没有用户默认值覆盖时使用 |
 | `roots` | `[]` | 按优先级排列的扫描目录；每项提供 `path`（开头的 `~` 会展开）与 `trust`（默认为 `user`） |
 | `includeShippedRoot` | `true` | 在全部已配置根目录之前，前置本包随附的 preset 作为 `system` 根目录 |
-| `includeUserRoot` | `true` | 在全部已配置根目录之后追加 `<dshHome>/.agent-presets` 作为 `user` 根目录 |
+| `includeUserRoot` | `true` | 在全部已配置根目录之后追加 `<rshHome>/.agent-presets` 作为 `user` 根目录 |
 
 生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-presets)是每个受支持字段及其 JSDoc 的穷尽式真源。
 

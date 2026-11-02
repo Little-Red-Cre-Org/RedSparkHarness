@@ -26,7 +26,7 @@ describe('runLoaderSmoke', () => {
       configPath: string
       args: string[]
       cwd: string
-      dshHome: string
+      rshHome: string
       agentsHome: string
       marker: string
       input: string
@@ -37,7 +37,7 @@ describe('runLoaderSmoke', () => {
       marker: 'present',
       input: '',
     })
-    expect(canonicalTempPath(output.dshHome)).toBe(canonicalTempPath(join(output.cwd, '.dsh')))
+    expect(canonicalTempPath(output.rshHome)).toBe(canonicalTempPath(join(output.cwd, '.dsh')))
     expect(canonicalTempPath(output.agentsHome)).toBe(canonicalTempPath(join(output.cwd, '.agents')))
     expect(result.stderr).toContain('fixture stderr')
     expect(existsSync(output.cwd)).toBe(false)
