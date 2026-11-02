@@ -91,12 +91,6 @@
     "@deepseek-ai/dsh-client-native-session": "workspace:^",
     "@deepseek-ai/dsh-client-ui-layout": "workspace:^"
   },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-native-session": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-layout": "workspace:^"
-  },
   "files": [
     "lib/index.js",
     "lib/client.js",

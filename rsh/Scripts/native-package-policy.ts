@@ -388,7 +388,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/credentials/authorization', ['./types']],
   ['rsh/Programs/Web/api/workspace-files', ['./native-types', './native-helpers']],
   ['rsh/Programs/Web/host/directory-picker', ['./types']],
-  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './workspaces', './schedule-types']],
+  ['rsh/Programs/Web/client/native-session', ['./follow-types', './model-controls', './human', './list-types', './jobs-types', './workspaces', './schedule-types']],
   ['rsh/Programs/Web/host/directory-picker-native', ['./native-picker']],
   ['rsh/Engine/core/native-model-execution', ['./model-selection', './model-directory', './adapter-directory', './responses-transport']],
   ['rsh/Engine/llm/native-model-selection', ['./types']],

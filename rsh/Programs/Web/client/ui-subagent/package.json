@@ -47,7 +47,8 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-client-locale": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-client-locale": "workspace:^",
@@ -61,7 +62,6 @@
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "@deepseek-ai/cordis": "workspace:^",
-    "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
@@ -75,5 +75,8 @@
     "lib/native.js",
     "lib/**/*.css",
     "lib/types/**/*.d.ts"
-  ]
+  ],
+  "dependencies": {
+    "react": "^18.2.0"
+  }
 }
