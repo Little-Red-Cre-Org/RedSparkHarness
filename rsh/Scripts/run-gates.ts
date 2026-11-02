@@ -315,6 +315,12 @@ function ciSharedStaticGates(): Gate[] {
     pnpmScript('client-packages', 'verify-client-packages', { label: 'client packages' }),
     pnpmScript('native-client-entries', 'verify-native-client-entries', { label: 'native client entries' }),
     pnpmScript('host-project-entries', 'verify-host-project-entries', { label: 'host project entries' }),
+    // Post-build: the Host loads exports["./native"] from lib/, which only exists
+    // after the build that produces it.
+    pnpmScript('native-build-output', 'verify-native-build-output', {
+      label: 'native build output',
+      needs: ['build'],
+    }),
     pnpmScript('client-ui-i18n', 'verify-client-ui-i18n', { label: 'client UI i18n' }),
     pnpmScript('no-bare-dispatcher', 'verify-no-bare-dispatcher', { label: 'proxy-aware dispatchers' }),
     pnpmScript('approval-policy', 'test:approval-policy', { label: 'Weighted approval policy' }),

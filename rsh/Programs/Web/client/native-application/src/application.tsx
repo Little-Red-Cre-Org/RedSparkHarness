@@ -13,6 +13,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
 import type {} from '@deepseek-ai/dsh-client-native-session/native'
 import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
 import type {} from '@deepseek-ai/dsh-client-ui-session/native'
+import type { NativeMessageActionsOwnerProps } from '@deepseek-ai/dsh-client-ui-session/native'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -38,6 +39,22 @@ import {
   type BusyEnterBehavior,
 } from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
+import { CommandPaletteMenu, useCommandPalette } from './command-palette.tsx'
+import type { CommandCatalogFace } from './command-palette.tsx'
+
+/**
+ * The child-slot dispatcher this application's own registrations provide.
+ *
+ * Both keys are declared in the `main` entry's `children` table below, so the
+ * framework hands the component a `renderSlot` narrowed to exactly them:
+ * `native.conversation.actions` fills the header action row (owner props are
+ * ignored), and `native.conversation.message.actions` fills one settled
+ * assistant message's action row, addressed by that message's durable id.
+ */
+type NativeConversationRenderSlot = {
+  (key: 'native.conversation.actions', owner: object): ReactNode
+  (key: 'native.conversation.message.actions', owner: NativeMessageActionsOwnerProps): ReactNode
+}
 import type { NativeSettingsActions } from './settings-page.tsx'
 import { requestNativeModelSettings } from './settings-request.ts'
 import css from './conversation.module.css'
@@ -89,7 +106,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
   createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-  refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
+  refreshModelControls, keepDraft, takeDraft, commands, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
@@ -114,8 +131,10 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   refreshModelControls: NativeConversationController['refreshModelControls']
   keepDraft: NativeConversationController['keepDraft']
   takeDraft: NativeConversationController['takeDraft']
+  /** Host command face for the composer's `/` palette. */
+  commands: CommandCatalogFace
   t: Translate
-  renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
+  renderSlot: NativeConversationRenderSlot
 }) {
   const activeLocale = useLocale(value => value.locale)
   const markdownLabels = useMemo<MarkdownLabels>(() => ({
@@ -134,6 +153,10 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const [draft, setDraft] = useState('')
   const draftRef = useRef(draft)
   const draftVersion = useRef(0)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+  // The `/` palette reads the draft it is filtering and calls the Host's
+  // command endpoints. `selected` is the Session whose catalog it fetched.
+  const palette = useCommandPalette(commands, selected)
   const [files, setFiles] = useState<readonly File[]>([])
   const filesRef = useRef(files)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -315,15 +338,22 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       />}
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
-        <textarea className={css.editor} aria-label={t('prompt')}
+        <textarea ref={editorRef} className={css.editor} aria-label={t('prompt')}
           placeholder={t(snapshot.selected === undefined ? 'composerChooseWorkspace' : 'composerPlaceholder')}
           value={draft} disabled={!inputReady || snapshot.selected === undefined || snapshot.submissionBusy}
           onChange={(event) => {
             draftVersion.current++
             draftRef.current = event.target.value
             setDraft(event.target.value)
+            // The palette filters on the caret, not just the text: typing `/`
+            // in the middle of a paragraph must not open it.
+            palette.observe(event.target.value, event.target.selectionStart)
           }} rows={1}
           onKeyDown={(event) => {
+            // The palette claims ArrowUp/Down/Enter/Escape/Tab only while it is
+            // open WITH a row, so Escape still stops a turn and Enter still
+            // sends a message that merely begins with a slash.
+            if (palette.keydown(event)) return
             if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
               && !event.nativeEvent.isComposing
               // oxlint-disable-next-line typescript/no-deprecated -- Safari IME composition Escape is only detectable via keyCode 229.
@@ -342,6 +372,16 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
               }
             }
           }} />
+        {palette.open
+          ? <CommandPaletteMenu rows={palette.rows} selected={palette.selected} editor={editorRef.current}
+            onSelect={(name) => {
+              // A pointer pick goes through the same path as a keyboard pick, so
+              // both submit exactly what `commandLine` builds.
+              const choice = palette.rows.find(row => row.name === name)
+              if (choice !== undefined) palette.pick(choice)
+            }}
+            onClose={() => { palette.close() }} />
+          : null}
       </label>
       <ChatComposerToolbar>
         <div className={css.toolbarOptions}>
@@ -446,7 +486,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             <section aria-label={t('facts')}>
               <NativeTranscript snapshot={snapshot} sessionId={selected} locale={activeLocale} loadImage={loadImage}
                 markdownLabels={markdownLabels} imageGroupClassName={css.images} truncatedClassName={css.extra}
-                activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} />
+                activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} renderSlot={renderSlot} />
               {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
                 answerHuman={answerHuman} prompt={snapshot.human}
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
@@ -517,7 +557,10 @@ export const plugin: NativePlugin = {
       }, NativeSidebarSettings)))
       context.own(slots.inject('main', () => slots.register({
         name: 'main', key: 'conversation', locale: 'nativeApplication',
-        children: { 'native.conversation.actions': { kind: 'list', scope: 'root' } },
+        children: {
+          'native.conversation.actions': { kind: 'list', scope: 'root' },
+          'native.conversation.message.actions': { kind: 'list', scope: 'session' },
+        },
         inject: () => ({
           hooks: { conversation: controller, locale: clientLocale },
           settingsActions,
@@ -612,7 +655,7 @@ export const plugin: NativePlugin = {
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
         t: Translate
-        renderSlot: (key: 'native.conversation.actions', owner: object) => ReactNode
+        renderSlot: NativeConversationRenderSlot
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale}
         settingsActions={settingsActions} listWorkspaces={listWorkspaces} chooseWorkspace={chooseWorkspace}
         addWorkspace={addWorkspace} listDirectory={listDirectory} createDirectory={createDirectory}
@@ -623,6 +666,7 @@ export const plugin: NativePlugin = {
         submitPending={submitPending} changePending={changePending} editPending={editPending}
         refreshPendingSubmissions={refreshPendingSubmissions}
         refreshModelControls={refreshModelControls} keepDraft={keepDraft} takeDraft={takeDraft}
+        commands={client}
         t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}
         themeService={clientTheme}>{slots.renderSlot('root', {})}</NativeOnboarding> })

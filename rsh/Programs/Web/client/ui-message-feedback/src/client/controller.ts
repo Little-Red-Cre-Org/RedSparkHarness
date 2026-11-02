@@ -13,7 +13,10 @@ import type { MessageId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { FeedbackRecord } from '@deepseek-ai/dsh-command-feedback/types'
 import type {
+  MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult,
   MessageFeedbackItem,
+  MessageFeedbackListRequest, MessageFeedbackListResult,
+  MessageFeedbackPutRequest, MessageFeedbackPutResult,
   MessageFeedbackRating,
 } from '@deepseek-ai/dsh-message-feedback/types'
 
@@ -78,9 +81,58 @@ function fail(code: string): MessageFeedbackActionFailure {
   return { ok: false, error: { code, message: describe(code) } }
 }
 
+/**
+ * The three Host calls this controller makes, isolated from how it reaches them.
+ *
+ * The browser build reads them off `ctx.remote.messageFeedback`, whose reply is
+ * a transport-level `RemoteResult` wrapping a business result; the Native build
+ * calls `clientNativeSession` straight through and receives the business result
+ * alone. Each transport therefore normalises to one two-level shape — a carrier
+ * outcome that holds either a carrier failure or the business result — so the
+ * controller can tell a broken connection apart from a rejected judgment while
+ * keeping its compare-and-set logic in one place.
+ */
+export interface MessageFeedbackTransport {
+  /** Read the Session's whole sidecar. */
+  list(request: MessageFeedbackListRequest): Promise<MessageFeedbackCarried<MessageFeedbackListResult>>
+  /** Create or replace one message's entry. */
+  put(request: MessageFeedbackPutRequest): Promise<MessageFeedbackCarried<MessageFeedbackPutResult>>
+  /** Delete one message's entry. */
+  delete(request: MessageFeedbackDeleteRequest): Promise<MessageFeedbackCarried<MessageFeedbackDeleteResult>>
+}
+
+/** A carrier outcome: the connection failed, or the Host answered. */
+export type MessageFeedbackCarried<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+
+/** Whether a value is an already-bound transport rather than a plugin context. */
+function isTransport(source: ClientContext | MessageFeedbackTransport): source is MessageFeedbackTransport {
+  return typeof (source as MessageFeedbackTransport).list === 'function'
+}
+
+/** Bind the browser plugin context's Remote namespace as a transport. */
+function remoteTransport(ctx: ClientContext): MessageFeedbackTransport {
+  const remote = ctx.remote.messageFeedback
+  return {
+    list: request => remote.list(request),
+    put: request => remote.put(request),
+    delete: request => remote.delete(request),
+  }
+}
+
 /** Carrier failure rendered with the Host-supplied code and message. */
 function carrierFailure(error: { code: string; message: string }): MessageFeedbackActionFailure {
   return { ok: false, error: { code: error.code, message: error.message } }
+}
+
+/**
+ * Business failure from a decoded result, whose members carry only a `code`.
+ * @param error - the Host's business failure, already discriminated.
+ * @returns the rejected branch with the human-readable description.
+ */
+function businessFailure(error: { readonly code: string }): MessageFeedbackActionFailure {
+  return fail(error.code)
 }
 
 /**
@@ -95,13 +147,19 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
   private disposed = false
 
   /**
-   * @param ctx - the browser plugin context carrying the messageFeedback Remote namespace.
+   * @param source - either the browser plugin context carrying the
+   * `messageFeedback` Remote namespace (bound here), or a transport the caller
+   * already bound (the Native build passes `clientNativeSession`).
    * @param sessionId - Session owning every addressed assistant message.
    */
   constructor(
-    private readonly ctx: ClientContext,
+    source: ClientContext | MessageFeedbackTransport,
     private readonly sessionId: SessionId,
-  ) {}
+  ) {
+    this.transport = isTransport(source) ? source : remoteTransport(source)
+  }
+
+  private readonly transport: MessageFeedbackTransport
 
   /** Return the cached immutable view. */
   getSnapshot = (): MessageFeedbackView => this.view
@@ -194,7 +252,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
     entry: FeedbackRecord,
     observed: MessageFeedbackItem | undefined,
   ): Promise<MessageFeedbackActionResult> {
-    const carried = await this.ctx.remote.messageFeedback.put({
+    const carried = await this.transport.put({
       sessionId: this.sessionId,
       messageId,
       rating,
@@ -209,7 +267,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
       return OK
     }
     if (result.error.code === 'version-conflict') this.commit(messageId, result.error.current)
-    return fail(result.error.code)
+    return businessFailure(result.error)
   }
 
   /** Commit one delete against the observed version and reconcile a conflict. */
@@ -217,7 +275,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
     messageId: MessageId,
     observed: MessageFeedbackItem,
   ): Promise<MessageFeedbackActionResult> {
-    const carried = await this.ctx.remote.messageFeedback.delete({
+    const carried = await this.transport.delete({
       sessionId: this.sessionId,
       messageId,
       ifVersion: observed.version,
@@ -229,7 +287,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
       return OK
     }
     if (result.error.code === 'version-conflict') this.commit(messageId, result.error.current)
-    return fail(result.error.code)
+    return businessFailure(result.error)
   }
 
   /** Drop subscribers and refuse further work when the owning fiber unloads. */
@@ -240,7 +298,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
 
   /** Fetch the whole sidecar and publish it as the seeded view. */
   private async load(): Promise<MessageFeedbackActionResult> {
-    const carried = await this.ctx.remote.messageFeedback.list({ sessionId: this.sessionId })
+    const carried = await this.transport.list({ sessionId: this.sessionId })
     if (this.disposed) return OK
     if (!carried.ok) {
       this.publish({ status: 'error', items: this.view.items, error: carried.error.message })
@@ -249,7 +307,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
     const result = carried.value
     if (!result.ok) {
       this.publish({ status: 'error', items: this.view.items, error: describe(result.error.code) })
-      return fail(result.error.code)
+      return businessFailure(result.error)
     }
     const items = new Map<MessageId, MessageFeedbackItem>()
     for (const item of result.value.items) items.set(item.messageId, item)

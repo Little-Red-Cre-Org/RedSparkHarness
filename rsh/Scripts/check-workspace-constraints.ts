@@ -224,6 +224,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-client-ui-goal': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-workflow-run': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-ui-trajectory': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-message-feedback': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-skill': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-subagent': ['lib/native.js', 'lib/**/*.css'],
+  '@deepseek-ai/dsh-client-ui-deliverables': ['lib/native.js', 'lib/**/*.css'],
   '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
   '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],
@@ -303,6 +307,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@deepseek-ai/dsh-native-jobs-controller': ['lib/native.js', 'lib/shared-*.js'],
+  '@deepseek-ai/dsh-client-ui-jobs': ['lib/native.js'],
+  '@deepseek-ai/dsh-client-ui-settings-general': ['lib/native.js'],
+  '@deepseek-ai/dsh-client-ui-settings-plugins': ['lib/native.js'],
   '@deepseek-ai/dsh-client-native-session': [
     'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
     'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/jobs-types.js', 'lib/native-*.js',
